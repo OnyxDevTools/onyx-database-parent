@@ -3,9 +3,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-
     <modelVersion>4.0.0</modelVersion>
-    <name>onyx-database-tests</name>
+    
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>Integration Tests for Onyx Database</description>
+    <url>http://onyxdevtools.com/products/onyx-database</url>
+    
     <artifactId>onyx-database-tests</artifactId>
 
     <parent>
@@ -226,7 +229,6 @@
         <dependency>
             <groupId>com.onyxdevtools</groupId>
             <artifactId>onyx-database</artifactId>
-            <version>${project.version}</version>
         </dependency>
 
         <dependency>
@@ -244,7 +246,6 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
         </dependency>
 
         <dependency>
@@ -269,31 +270,26 @@
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjrt</artifactId>
-            <version>${aspectj.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
-            <version>${httpclient.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>${httpclient.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpmime</artifactId>
-            <version>${httpclient.version}</version>
         </dependency>
 
         <dependency>
@@ -359,7 +355,6 @@
         <dependency>
             <groupId>trove</groupId>
             <artifactId>trove</artifactId>
-            <version>${trove.version}</version>
         </dependency>
 
         <dependency>
@@ -367,5 +362,6 @@
             <artifactId>undertow-servlet</artifactId>
             <version>${undertow.version}</version>
         </dependency>
+        
     </dependencies>
 </project>
