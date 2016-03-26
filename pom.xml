@@ -9,15 +9,50 @@
     <artifactId>onyx-database-parent</artifactId>
     <version>1.0.0</version>
     
-    <name>onyx-database-parent</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-database-parent</description>
+    <url>http://onyxdevtools.com/products/onyx-database</url>
+    
     <packaging>pom</packaging>
-
-    <url>http://onyxdevtools.com</url>
+    
     <organization>
         <name>Onyx Development Tools, Inc.</name>
         <url>http://onyxdevtools.com</url>
     </organization>
+    
+    <licenses>
+        <license>
+            <name>The GNU Affero General Public License, Version 3.0</name>
+            <url>http://www.gnu.org/licenses/agpl-3.0.en.html</url>
+        </license>
+    </licenses>
+    
+    <scm>
+        <connection>scm:git:git@github.com:OnyxDevTools/onyx-database-parent.git</connection>
+        <url>https://github.com/OnyxDevTools/onyx-database-parent.git</url>
+    </scm>
+    
+    <developers>
+        <developer>
+            <name>Tim Osborn</name>
+            <email>tim@onyxdevtools.com</email>
+            <organization>Onyx Development Tools, Inc.</organization>
+            <organizationUrl>http://www.onyxdevtools.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Chris Osborn</name>
+            <email>chris@onyxdevtools.com</email>
+            <organization>Onyx Development Tools, Inc.</organization>
+            <organizationUrl>http://www.onyxdevtools.com</organizationUrl>
+        </developer>
+    </developers>
+    
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <!-- settings -->
@@ -56,43 +91,11 @@
         <spring-security.version>3.2.5.RELEASE</spring-security.version>
         <guava.version>15.0</guava.version>
         <commons-cli.version>1.3.1</commons-cli.version>
+        <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
+        <nexus-staging-maven-plugin.version>1.6.3</nexus-staging-maven-plugin.version>
+        <maven-javadoc-plugin.version>2.9.1</maven-javadoc-plugin.version>
+        <maven-source-plugin.version>2.2.1</maven-source-plugin.version>
     </properties>
-
-    <distributionManagement>
-        <repository>
-            <id>onyx-maven-repo</id>
-            <url>file:${user.home}/onyxdevtools.github.io/maven2</url>
-        </repository>
-    </distributionManagement>
-
-    <repositories>
-        <repository>
-            <id>spring-releases</id>
-            <url>http://repo.spring.io/libs-release</url>
-        </repository>
-        <repository>
-            <id>spring-snapshots</id>
-            <name>Spring Snapshots</name>
-            <url>http://repo.spring.io/snapshot</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>spring-releases</id>
-            <url>http://repo.spring.io/libs-release</url>
-        </pluginRepository>
-        
-        <pluginRepository>
-            <id>googlecode-maven-install4j</id>
-            <name>googlecode-maven-install4j</name>
-            <url>http://maven-install4j.googlecode.com/svn/m2-repo</url>
-        </pluginRepository>
-        
-    </pluginRepositories>
 
     <modules>
         <module>onyx-database</module>
@@ -397,6 +400,65 @@
                             </fileset>
                         </filesets>
                     </configuration>
+                </plugin>
+                
+                <!-- signs all of the project's attached artifacts with GnuPG -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>${maven-gpg-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>sign-artifacts</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sign</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                
+                <!-- needed to deploy to maven --> 
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>${nexus-staging-maven-plugin.version}</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <serverId>ossrh</serverId>
+                        <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                        <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    </configuration>
+                </plugin>
+                
+                <!-- to make source code available on maven central --> 
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>${maven-source-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                
+                <!-- to make javadocs available on maven central   -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${maven-javadoc-plugin}</version>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
 
             </plugins>
