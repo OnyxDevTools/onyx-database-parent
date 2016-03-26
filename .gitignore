@@ -1,0 +1,12 @@
+*/target/**
+*/C:**
+*/onx:**
+*/hs*.log
+*/*.iml
+*.iml
+.idea/
+.idea/libraries/
+onyx-database-tests/C:/
+**/dependency-reduced-pom.xml
+*.oxd
+/onyx-database-tests/nbproject/

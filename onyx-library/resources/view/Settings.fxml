@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.text.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import com.onyx.view.components.RibbonMenuButton?>
+<GridPane fx:id="mainPane" stylesheets="onyx.css" alignment="center" minWidth="375.0" prefHeight="313.0" prefWidth="586.0"  xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.onyx.view.controller.ServerSettingsViewController">
+   <rowConstraints>
+      <RowConstraints vgrow="NEVER" />
+      <RowConstraints maxHeight="10.0" minHeight="10.0" prefHeight="10.0" vgrow="NEVER" />
+      <RowConstraints maxHeight="40.0" minHeight="40.0" prefHeight="40.0" vgrow="ALWAYS" />
+      <RowConstraints maxHeight="40.0" minHeight="40.0" prefHeight="40.0" vgrow="ALWAYS" />
+      <RowConstraints maxHeight="40.0" minHeight="40.0" prefHeight="40.0" vgrow="ALWAYS" />
+      <RowConstraints maxHeight="40.0" minHeight="40.0" prefHeight="40.0" vgrow="ALWAYS" />
+      <RowConstraints maxHeight="40.0" minHeight="40.0" prefHeight="40.0" vgrow="ALWAYS" />
+      <RowConstraints maxHeight="40.0" minHeight="40.0" prefHeight="40.0" vgrow="ALWAYS" />
+      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="15.0" prefHeight="15.0" vgrow="ALWAYS" />
+   </rowConstraints>
+   <columnConstraints>
+      <ColumnConstraints maxWidth="294.0" minWidth="146.0" prefWidth="157.0" />
+      <ColumnConstraints halignment="LEFT" hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="10.0" prefWidth="243.0" />
+   </columnConstraints>
+   <children>
+       <VBox styleClass="RibbonTab"  GridPane.columnSpan="2">
+           <children>
+               <ToolBar maxHeight="60.0" maxWidth="1.7976931348623157E308" minHeight="60.0" prefHeight="60.0" styleClass="RibbonMenu"  GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
+                   <items>
+                       <RibbonMenuButton fx:id="btnSave" alignment="BOTTOM_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#save" prefHeight="48.0" prefWidth="48.0" text="Save" textAlignment="CENTER" imagePath="icons/save.png">
+                           <font>
+                               <Font size="8.0" />
+                           </font>
+                       </RibbonMenuButton>
+
+                       <Separator orientation="VERTICAL" prefHeight="200.0" />
+                       <RibbonMenuButton fx:id="btnClose" alignment="BOTTOM_CENTER" contentDisplay="CENTER" mnemonicParsing="false" onAction="#close" prefHeight="48.0" prefWidth="48.0" text="Close" textAlignment="CENTER" imagePath="icons/cancel.png">
+                           <font>
+                               <Font size="8.0" />
+                           </font>
+                       </RibbonMenuButton>
+                   </items>
+                   <VBox.margin>
+                       <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
+                   </VBox.margin>
+               </ToolBar>
+           </children>
+           <effect>
+               <DropShadow height="3.0" radius="2.0" width="2.0" />
+           </effect>
+       </VBox>
+      <Label text="Database Location" GridPane.rowIndex="2">
+         <GridPane.margin>
+            <Insets left="25.0" />
+         </GridPane.margin>
+      </Label>
+      <HBox alignment="CENTER" style="-fx-spacing: 2;" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" GridPane.valignment="CENTER" GridPane.vgrow="ALWAYS">
+         <children>
+            <TextField fx:id="txtDatabaseLocation" onAction="#enableSave"  maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="2" HBox.hgrow="ALWAYS">
+               <GridPane.margin>
+                  <Insets right="25.0" />
+               </GridPane.margin>
+            </TextField>
+            <Button fx:id="btnExploreLocation" onAction="#exploreLocation" mnemonicParsing="false" prefHeight="25.0" prefWidth="25.0" text="..." />
+         </children>
+         <GridPane.margin>
+            <Insets right="25.0" />
+         </GridPane.margin>
+      </HBox>
+      <Label text="Database Username" GridPane.rowIndex="3">
+         <GridPane.margin>
+            <Insets left="25.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text="Database Password" GridPane.rowIndex="4">
+         <GridPane.margin>
+            <Insets left="25.0" />
+         </GridPane.margin>
+      </Label>
+      <TextField fx:id="txtDatabaseUsername" onAction="#enableSave" GridPane.columnIndex="1" GridPane.rowIndex="3">
+         <GridPane.margin>
+            <Insets right="25.0" />
+         </GridPane.margin>
+      </TextField>
+       <PasswordField fx:id="txtDatabasePassword" onAction="#enableSave" GridPane.columnIndex="1" GridPane.rowIndex="4">
+           <GridPane.margin>
+               <Insets right="25.0" />
+           </GridPane.margin>
+       </PasswordField>
+      <Label text="Email Server" GridPane.rowIndex="5">
+         <GridPane.margin>
+            <Insets left="25.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text="Email Username" GridPane.rowIndex="6">
+         <GridPane.margin>
+            <Insets left="25.0" />
+         </GridPane.margin>
+      </Label>
+      <Label text="Email Password" GridPane.rowIndex="7">
+         <GridPane.margin>
+            <Insets left="25.0" />
+         </GridPane.margin>
+      </Label>
+      <TextField fx:id="txtEmailServer"  onAction="#enableSave" GridPane.columnIndex="1" GridPane.rowIndex="5">
+         <GridPane.margin>
+            <Insets right="25.0" />
+         </GridPane.margin>
+      </TextField>
+      <TextField fx:id="txtEmailUsername" onAction="#enableSave" GridPane.columnIndex="1" GridPane.rowIndex="6">
+         <GridPane.margin>
+            <Insets right="25.0" />
+         </GridPane.margin>
+      </TextField>
+      <PasswordField fx:id="txtEmailPassword" onAction="#enableSave" GridPane.columnIndex="1" GridPane.rowIndex="7">
+         <GridPane.margin>
+            <Insets right="25.0" />
+         </GridPane.margin>
+      </PasswordField>
+   </children>
+</GridPane>

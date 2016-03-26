@@ -1,1 +1,2 @@
-# onyx-database-parent
+# onyxdb-parent
+Onyx Database Projects
