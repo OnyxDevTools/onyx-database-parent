@@ -3,11 +3,11 @@
 
     <modelVersion>4.0.0</modelVersion>
     
-    <groupId>com.onyxdevtools</groupId>
     <artifactId>onyx-remote-driver</artifactId>
-    <name>onyx-remote-driver</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-remote-driver</description>
-
+    <url>http://onyxdevtools.com/products/onyx-database</url>
+    
     <packaging>jar</packaging>
 
     <parent>
@@ -15,6 +15,13 @@
         <artifactId>onyx-database-parent</artifactId>
         <version>1.0.0</version>
     </parent>
+    
+    <licenses>
+        <license>
+            <name>The GNU Affero General Public License, Version 3.0</name>
+            <url>http://www.gnu.org/licenses/agpl-3.0.en.html</url>
+        </license>
+    </licenses>
 
     <build>
 

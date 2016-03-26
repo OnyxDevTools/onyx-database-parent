@@ -9,15 +9,43 @@
     <artifactId>onyx-database-parent</artifactId>
     <version>1.0.0</version>
     
-    <name>onyx-database-parent</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-database-parent</description>
+    <url>http://onyxdevtools.com/products/onyx-database</url>
+    
     <packaging>pom</packaging>
-
-    <url>http://onyxdevtools.com</url>
+    
     <organization>
         <name>Onyx Development Tools, Inc.</name>
         <url>http://onyxdevtools.com</url>
     </organization>
+    
+    <licenses>
+        <license>
+            <name>The GNU Affero General Public License, Version 3.0</name>
+            <url>http://www.gnu.org/licenses/agpl-3.0.en.html</url>
+        </license>
+    </licenses>
+    
+    <scm>
+      <connection>scm:git:git@github.com:OnyxDevTools/onyx-database-parent.git</connection>
+      <url>https://github.com/OnyxDevTools/onyx-database-parent.git</url>
+    </scm>
+    
+    <developers>
+        <developer>
+            <name>Tim Osborn</name>
+            <email>tim@onyxdevtools.com</email>
+            <organization>Onyx Development Tools, Inc.</organization>
+            <organizationUrl>http://www.onyxdevtools.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Chris Osborn</name>
+            <email>chris@onyxdevtools.com</email>
+            <organization>Onyx Development Tools, Inc.</organization>
+            <organizationUrl>http://www.onyxdevtools.com</organizationUrl>
+        </developer>
+    </developers>
 
     <properties>
         <!-- settings -->
@@ -57,13 +85,6 @@
         <guava.version>15.0</guava.version>
         <commons-cli.version>1.3.1</commons-cli.version>
     </properties>
-
-    <distributionManagement>
-        <repository>
-            <id>onyx-maven-repo</id>
-            <url>file:${user.home}/onyxdevtools.github.io/maven2</url>
-        </repository>
-    </distributionManagement>
 
     <repositories>
         <repository>

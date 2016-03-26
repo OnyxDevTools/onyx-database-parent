@@ -4,16 +4,24 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd " >
 
     <modelVersion>4.0.0</modelVersion>
-
+    
     <artifactId>onyx-library</artifactId>
-    <name>onyx-library</name>
-    <description>Common Libraries</description>
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>Common Onyx Libraries</description>
+    <url>http://onyxdevtools.com/products/onyx-database</url>
 
     <parent>
         <groupId>com.onyxdevtools</groupId>
         <artifactId>onyx-database-parent</artifactId>
         <version>1.0.0</version>
     </parent>
+    
+    <licenses>
+        <license>
+            <name>The GNU Affero General Public License, Version 3.0</name>
+            <url>http://www.gnu.org/licenses/agpl-3.0.en.html</url>
+        </license>
+    </licenses>
 
     <dependencies>
 
