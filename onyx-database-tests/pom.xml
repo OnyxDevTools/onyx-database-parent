@@ -33,6 +33,7 @@
                 <directory>../onyx-database-tests/resources</directory>
             </testResource>
         </testResources>
+        
         <plugins>
 
             <plugin>
