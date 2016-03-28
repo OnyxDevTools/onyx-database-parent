@@ -101,7 +101,6 @@
         <module>onyx-database</module>
         <module>onyx-remote-database</module>
         <module>onyx-remote-driver</module>
-        <module>onyx-library</module>
         <module>onyx-database-tests</module>
     </modules>
 
