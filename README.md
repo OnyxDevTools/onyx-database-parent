@@ -39,8 +39,8 @@ PersistenceManager manager = factory.getPersistenceManager();
  
 ```
 
+## Declare an Entity
 ```java
-# Declare an Entity
 
 package com.onyxdevtools.quickstart.entities;
 
@@ -68,8 +68,9 @@ public class Movie
  
 ```
 
+
+## Save an Entity
 ```java
-# Save an Entity
 
 Movie movie = new Movie();
 movie.movieId = 1;
@@ -91,8 +92,8 @@ manager.deleteEntity(movie);
  
 ```
 
+## Query Entities
 ```java
-# Query Entities
 
 Query query = new Query();
 query.setEntityType(Movie.class);
