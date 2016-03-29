@@ -1,37 +1,27 @@
 package com.onyxdevtools.quickstart.entities;
 
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
 @Entity
-public class Actor extends Person
+public class Actor extends Person implements IManagedEntity
 {
 
+    @Identifier
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    protected long actorId;
+    public int actorId;
 
-    @Relationship(type = RelationshipType.MANY_TO_MANY,
-            inverse = "actors",
+    @Attribute
+    public String firstName;
+
+    @Attribute
+    public String lastName;
+
+    @Relationship(type = RelationshipType.MANY_TO_ONE,
+            cascadePolicy = CascadePolicy.NONE,
             inverseClass = Movie.class,
-            fetchPolicy = FetchPolicy.LAZY,
-            cascadePolicy = CascadePolicy.NONE)
-    protected List<Movie> movies;
-
-    public long getActorId() {
-        return actorId;
-    }
-
-    public void setActorId(long actorId) {
-        this.actorId = actorId;
-    }
-
-    public List<Movie> getMovies() {
-        return movies;
-    }
-
-    public void setMovies(List<Movie> movies) {
-        this.movies = movies;
-    }
+            inverse = "actors")
+    public Movie movie;
 }
