@@ -4,15 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-<<<<<<< HEAD
-    <name>${project.groupId}:${project.artifactId}</name>
-=======
     
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Integration Tests for Onyx Database</description>
     <url>http://onyxdevtools.com/products/onyx-database</url>
-    
->>>>>>> develop
+
     <artifactId>onyx-database-tests</artifactId>
 
     <parent>
