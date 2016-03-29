@@ -5,7 +5,7 @@
 
 
     <modelVersion>4.0.0</modelVersion>
-    <name>onyx-database-tests</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <artifactId>onyx-database-tests</artifactId>
 
     <parent>

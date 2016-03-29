@@ -9,7 +9,7 @@
     <artifactId>onyx-database-parent</artifactId>
     <version>1.0.0</version>
     
-    <name>onyx-database-parent</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-database-parent</description>
     <packaging>pom</packaging>
 
@@ -100,6 +100,7 @@
         <module>onyx-remote-driver</module>
         <module>onyx-library</module>
         <module>onyx-database-tests</module>
+        <module>onyx-database-samples</module>
     </modules>
 
     <dependencyManagement>

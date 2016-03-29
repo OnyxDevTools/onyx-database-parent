@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>onyx-library</artifactId>
-    <name>onyx-library</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>Common Libraries</description>
 
     <parent>

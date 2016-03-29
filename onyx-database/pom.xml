@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>onyx-database</artifactId>
-    <name>onyx-database</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>Onyx Database</description>
 
     <packaging>jar</packaging>

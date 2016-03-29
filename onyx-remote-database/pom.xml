@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>onyx-remote-database</artifactId>
-    <name>onyx-remote-database</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>Onyx Remote Database</description>
 
     <packaging>jar</packaging>

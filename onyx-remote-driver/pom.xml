@@ -5,7 +5,7 @@
     
     <groupId>com.onyxdevtools</groupId>
     <artifactId>onyx-remote-driver</artifactId>
-    <name>onyx-remote-driver</name>
+    <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-remote-driver</description>
 
     <packaging>jar</packaging>
