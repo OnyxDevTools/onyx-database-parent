@@ -80,8 +80,8 @@ manager.saveEntity(movie);
  
 ```
 
+## Delete an Entity
 ```java
-# Delete an Entity
 
 Movie movie = new Movie();
 movie.movieId = 1;
