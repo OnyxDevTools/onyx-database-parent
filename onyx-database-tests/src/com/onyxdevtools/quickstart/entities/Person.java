@@ -1,5 +1,6 @@
 package com.onyxdevtools.quickstart.entities;
 
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
@@ -10,7 +11,7 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
  * Created by tosborn1 on 10/20/15.
  */
 @Entity
-public class Person extends ManagedEntity
+public class Person extends ManagedEntity implements IManagedEntity
 {
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)

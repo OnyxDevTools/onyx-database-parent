@@ -2,11 +2,14 @@ package com.onyx.relationship.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.RelationshipHydrationException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
+import com.onyx.helpers.PartitionHelper;
 import com.onyx.map.DiskMap;
+import com.onyx.map.node.RecordReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.CascadePolicy;
@@ -355,8 +358,17 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
     {
+        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.context);
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
-        records.put(indexValue, relationshipIdentifiers);
+
+        RelationshipReference entityId = null;
+        if(partitionValue != "" && partitionValue != null) {
+            SystemPartitionEntry relationshipDescriptor = this.context.getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.context));
+            entityId = new RelationshipReference(indexValue, relationshipDescriptor.getIndex());
+        } else {
+            entityId = new RelationshipReference(indexValue, 0L);
+        }
+        records.put(entityId, relationshipIdentifiers);
     }
 
 }
