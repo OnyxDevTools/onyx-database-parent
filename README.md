@@ -24,7 +24,7 @@ Go to the root directory of the project you wish to build and simply run this co
 	   
 #### Examples
 
-For a more detail set of samples go to: [onyx database samples](https://github.com/OnyxDevTools/onyx-database-samples) 
+For a more detail set of examples go to: [onyx database examples](https://github.com/OnyxDevTools/onyx-database-parent/onyx-database-examples) 
 
 Here are some simple examples:
 
