@@ -9,7 +9,8 @@ Requirements
 Onyx Database can run on any platform that supports Java JDK 1.8 or higher
 
 ### Platforms
-- JDK 1.8+
+- JDK 1.8+ (required)
+- Windows 7+ or Unix\Linux\OSX
 
 Documentation
 -------------
