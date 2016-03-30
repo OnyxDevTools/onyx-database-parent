@@ -9,7 +9,8 @@ Requirements
 Onyx Database can run on any platform that supports Java JDK 1.8 or higher
 
 ### Platforms
-- JDK 1.8+
+- JDK 1.8+ (required)
+- Windows 7+ or Unix\Linux\OSX
 
 Documentation
 -------------
@@ -80,8 +81,8 @@ manager.saveEntity(movie);
  
 ```
 
+## Delete an Entity
 ```java
-# Delete an Entity
 
 Movie movie = new Movie();
 movie.movieId = 1;
