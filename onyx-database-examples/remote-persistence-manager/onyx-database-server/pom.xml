@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     
-    <groupId>com.onyxdevtools.examples</groupId>
+    <groupId>com.onyxdevtools</groupId>
     <artifactId>onyx-database-server</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
@@ -35,7 +35,7 @@
         </dependency>
         
          <dependency>
-            <groupId>com.onyxdevtools.samples</groupId>
+            <groupId>com.onyxdevtools</groupId>
             <artifactId>data-model</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -44,6 +44,7 @@
     
     <build>
         <plugins>
+            
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
@@ -51,6 +52,7 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -58,6 +60,7 @@
                     <mainClass>com.onyxdevtools.quickstart.Main</mainClass>
                 </configuration>
             </plugin>
+            
         </plugins>
     </build>
     
