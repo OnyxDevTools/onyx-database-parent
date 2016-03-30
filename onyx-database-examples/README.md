@@ -1,4 +1,4 @@
-# onyx-database-samples
+# onyx-database-examples
 
 For tutorials and detailed documentation go to: [onyx database tutorials](http://onyxdevtools.com/learn/tutorials) 
 
