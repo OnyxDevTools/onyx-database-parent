@@ -4,7 +4,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     
-    <groupId>com.onyxdevtools.examples</groupId>
+    <groupId>com.onyxdevtools</groupId>
     <artifactId>quickstart</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
