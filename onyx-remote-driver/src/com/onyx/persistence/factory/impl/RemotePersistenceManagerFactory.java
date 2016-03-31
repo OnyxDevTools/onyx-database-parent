@@ -41,6 +41,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RMIClientSocketFactory;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.*;
 
 /**
@@ -276,7 +277,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * @since 1.0.0
      */
     @Override
-    public void close() throws IOException, SingletonException
+    public void close()
     {
         // Force lifecycle stop when done with container.
         // This is to free up threads and resources that the
@@ -290,7 +291,9 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         }
 
         if(context != null) {
-            context.shutdown();
+            try {
+                context.shutdown();
+            } catch (SingletonException ignore) {}
         }
         persistenceManager = null;
         context = null;

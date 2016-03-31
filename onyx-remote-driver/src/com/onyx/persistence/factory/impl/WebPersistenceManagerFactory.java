@@ -24,6 +24,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -157,9 +158,11 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
      * @since 1.0.0
      */
     @Override
-    public void close() throws IOException, SingletonException
+    public void close()
     {
-        context.shutdown();
+        try {
+            context.shutdown();
+        } catch (SingletonException ignore) {}
     }
 
     /**
