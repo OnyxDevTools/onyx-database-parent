@@ -96,7 +96,7 @@ public interface PersistenceManagerFactory
      * @throws java.io.IOException Failure to write checksum to database storage
      * @throws com.onyx.exception.SingletonException Accessing singletons that cannot have more than one instance
      */
-    void close() throws IOException, SingletonException;
+    void close();
 
     /**
      * Set Credentials. Set username and password
