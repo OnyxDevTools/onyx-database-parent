@@ -8,8 +8,8 @@
     <artifactId>onyx-database-server</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    
-    <name>onyx-database-server</name>
+
+    <name>${project.groupId}:onyx-database-examples:remote-persistence-manager:${project.artifactId}</name>
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

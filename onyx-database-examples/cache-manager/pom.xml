@@ -8,8 +8,8 @@
     <artifactId>cache-manager</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    
-    <name>cache-manager</name>
+
+    <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
