@@ -48,7 +48,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.quickstart.Main</mainClass>
+                    <mainClass>com.onyxdevtools.relationship.Main</mainClass>
                 </configuration>
             </plugin>
             
