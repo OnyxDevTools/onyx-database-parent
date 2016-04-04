@@ -47,7 +47,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.persist.Main</mainClass>
+                    <mainClass>com.onyxdevtools.embedded.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>

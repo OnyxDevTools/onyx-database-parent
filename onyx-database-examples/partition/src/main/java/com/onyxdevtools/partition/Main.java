@@ -1,7 +1,6 @@
 package com.onyxdevtools.partition;
 
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
@@ -94,6 +93,14 @@ public class Main extends AbstractDemo {
         List<CallLog> nsaIsWastingThereTimeListeningTo = manager.executeQuery(query);
         assertTrue("NSA is only listening to 1 call in area code 555", nsaIsWastingThereTimeListeningTo.size() == 1);
 
+        // Use Find By ID in Partition to fetch a call log within a partition
+        CallLog callLogInAreaCode555 =  (CallLog) manager.findByIdInPartition(CallLog.class, 1, 555);
+        CallLog callLogInAreaCode123 = (CallLog) manager.findByIdInPartition(CallLog.class, 1, 123);
+
+        // Make sure the CallLog(s) are 2 different entities.
+        assertTrue("The Destination Number should be different for each CallLog!", !callLogInAreaCode123.getDestinationNumber().equals(callLogInAreaCode555.getDestinationNumber()));
+
+        // Since we have defined an IdentifierGenerator of SEQUENCE, it is possible the identifiers for call log
         factory.close();
     }
 }

@@ -21,6 +21,7 @@ public class Main extends AbstractDemo
         factory.initialize();
         PersistenceManager manager = factory.getPersistenceManager();
 
+        //2
         // Create test data
         Book harryPotter = new Book();
         harryPotter.setTitle("Harry Potter, Deathly Hallows");

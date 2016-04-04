@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.onyxdevtools</groupId>
-    <artifactId>partition</artifactId>
+    <artifactId>lifecycle-events</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
@@ -48,7 +48,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.partition.Main</mainClass>
+                    <mainClass>com.onyxdevtools.lifecycle.Main</mainClass>
                 </configuration>
             </plugin>
 
