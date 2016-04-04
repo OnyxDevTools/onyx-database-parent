@@ -49,12 +49,14 @@ public class Main extends AbstractDemo {
         callToMom.setDestinationNumber("(555)323-2222");
         callToMom.setNSAListening(true);
         callToMom.setCallFrom(myPhoneNumber);
+        callToMom.setCallFromAreaCode(myPhoneNumber.getAreaCode());
         manager.saveEntity(callToMom);
 
         CallLog callToEdwardSnowden = new CallLog();
         callToEdwardSnowden.setDestinationNumber("(555)122-2341");
         callToEdwardSnowden.setNSAListening(false);
         callToEdwardSnowden.setCallFrom(myPhoneNumber);
+        callToEdwardSnowden.setCallFromAreaCode(myPhoneNumber.getAreaCode());
         manager.saveEntity(callToEdwardSnowden);
 
         // Create a call log for area code (123)
@@ -70,31 +72,27 @@ public class Main extends AbstractDemo {
         callToSomeoneShady.setDestinationNumber("(555)322-1143");
         callToSomeoneShady.setNSAListening(false);
         callToSomeoneShady.setCallFrom(mySecretPhone);
+        callToSomeoneShady.setCallFromAreaCode(mySecretPhone.getAreaCode());
+        manager.saveEntity(callToSomeoneShady);
 
         CallLog callToJoe = new CallLog();
         callToJoe.setDestinationNumber("(555)286-9987");
         callToJoe.setNSAListening(true);
         callToJoe.setCallFrom(mySecretPhone);
+        callToJoe.setCallFromAreaCode(mySecretPhone.getAreaCode());
         manager.saveEntity(callToJoe);
 
 
         // Create a query that includes the partition and flag for whether the NSA is listening
         // Area Code is partitioned and isNSAListening is indexed.  This should be an optimized query
-        //
-        // Note: Partition is the first criteria.  To optimize Onyx queries, try to use the criteria
-        //       that will filter the most records followed by less optimal predicates.  This will
-        //       reduce the query cost.
         QueryCriteria nsaListeningCriteria = new QueryCriteria(
-                  "callFrom.areaCode", QueryCriteriaOperator.EQUAL, 555
-            ).and("isNSAListening",    QueryCriteriaOperator.EQUAL, true);
+                  "isNSAListening", QueryCriteriaOperator.EQUAL, true);
 
         Query query = new Query(CallLog.class, nsaListeningCriteria);
-
+        query.setPartition(555);
 
         List<CallLog> nsaIsWastingThereTimeListeningTo = manager.executeQuery(query);
         assertTrue("NSA is only listening to 1 call in area code 555", nsaIsWastingThereTimeListeningTo.size() == 1);
-
-
 
         factory.close();
     }

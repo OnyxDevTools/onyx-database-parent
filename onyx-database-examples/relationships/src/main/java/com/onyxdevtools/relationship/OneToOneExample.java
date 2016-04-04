@@ -3,7 +3,6 @@ package com.onyxdevtools.relationship;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.persist.entities.*;
 import com.onyxdevtools.relationship.entities.Sailboat;
 import com.onyxdevtools.relationship.entities.Skipper;
 

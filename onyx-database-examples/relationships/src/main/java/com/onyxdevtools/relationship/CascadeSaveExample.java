@@ -5,7 +5,6 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.persist.entities.*;
 import com.onyxdevtools.relationship.entities.Episode;
 import com.onyxdevtools.relationship.entities.Season;
 import com.onyxdevtools.relationship.entities.Series;

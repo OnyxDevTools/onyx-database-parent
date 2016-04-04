@@ -1,4 +1,4 @@
-package com.onyxdevtools.persist.entities;
+package com.onyxdevtools.embedded.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;

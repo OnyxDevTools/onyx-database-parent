@@ -4,7 +4,6 @@ import com.onyx.persistence.collections.LazyRelationshipCollection;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.persist.entities.*;
 import com.onyxdevtools.relationship.entities.Actor;
 import com.onyxdevtools.relationship.entities.Episode;
 import com.onyxdevtools.relationship.entities.Season;

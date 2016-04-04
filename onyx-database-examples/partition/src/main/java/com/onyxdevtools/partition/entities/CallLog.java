@@ -34,10 +34,22 @@ public class CallLog extends ManagedEntity implements IManagedEntity
             fetchPolicy = FetchPolicy.NONE)
     protected CellPhone callFrom;
 
+    @Attribute
+    @Partition
+    protected int callFromAreaCode;
+
     @PreInsert
     protected void onInsertCallLog() throws Exception
     {
         this.timeDateStarted = new Date();
+    }
+
+    public int getCallFromAreaCode() {
+        return callFromAreaCode;
+    }
+
+    public void setCallFromAreaCode(int callFromAreaCode) {
+        this.callFromAreaCode = callFromAreaCode;
     }
 
     public long getCallLogId() {
