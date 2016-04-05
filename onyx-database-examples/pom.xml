@@ -21,7 +21,6 @@
     <module>indexes</module>
     <module>partition</module>
     <module>lifecycle-events</module>
-    <module>server</module>
   </modules>
 
 </project>

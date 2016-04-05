@@ -1,7 +1,5 @@
 package com.onyxdevtools.persist;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -15,7 +13,7 @@ import java.util.List;
 public class Main
 {
 
-    public static void main(String[] args) throws InitializationException, EntityException, IOException
+    public static void main(String[] args) throws IOException
     {
 
         PersistenceManagerFactory factory = new RemotePersistenceManagerFactory(); //1
@@ -26,7 +24,9 @@ public class Main
 
         factory.initialize();  //4
 
-        PersistenceManager manager = factory.getPersistenceManager();  //5
+        // The Socket Persistence Manager is an alternative PM used to increase performance and reduce network latency
+        PersistenceManager manager = ((RemotePersistenceManagerFactory)factory).getSocketPersistenceManager();  //5
+        // PersistenceManager manager = factory.getPersistenceManager();
 
         //Create an instance of an entity
         final Person person1 = new Person();
@@ -48,9 +48,6 @@ public class Main
         System.out.println("first person in the list: " + people.get(0).getFirstName() + " " + people.get(0).getLastName());
 
         factory.close(); //Close the embedded database after you're done with it
-        
-        System.exit(0); //just for this example, so that the app stops
-
     }
 
 }
