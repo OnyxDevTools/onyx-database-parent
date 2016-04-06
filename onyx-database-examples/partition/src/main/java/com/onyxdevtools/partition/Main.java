@@ -1,5 +1,6 @@
 package com.onyxdevtools.partition;
 
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -17,6 +18,7 @@ import java.util.List;
  * Created by tosborn1 on 3/31/16.
  */
 public class Main extends AbstractDemo {
+
     public static void main(String[] args) throws IOException
     {
 
@@ -38,49 +40,8 @@ public class Main extends AbstractDemo {
 
         PersistenceManager manager = factory.getPersistenceManager();
 
-        // Create a call log for area code (555)
-        CellPhone myPhoneNumber = new CellPhone();
-        myPhoneNumber.setCellPhoneNumber("(555)303-2322");
-        myPhoneNumber.setAreaCode(555);
-        manager.saveEntity(myPhoneNumber);
-
-        CallLog callToMom = new CallLog();
-        callToMom.setDestinationNumber("(555)323-2222");
-        callToMom.setNSAListening(true);
-        callToMom.setCallFrom(myPhoneNumber);
-        callToMom.setCallFromAreaCode(myPhoneNumber.getAreaCode());
-        manager.saveEntity(callToMom);
-
-        CallLog callToEdwardSnowden = new CallLog();
-        callToEdwardSnowden.setDestinationNumber("(555)122-2341");
-        callToEdwardSnowden.setNSAListening(false);
-        callToEdwardSnowden.setCallFrom(myPhoneNumber);
-        callToEdwardSnowden.setCallFromAreaCode(myPhoneNumber.getAreaCode());
-        manager.saveEntity(callToEdwardSnowden);
-
-        // Create a call log for area code (123)
-        // Note: Identifiers are not unique among partitions.  Since the entire object graph is saved,
-        //       it is possible in this example to have the same identifiers for a CallLog in area code 555 as well as 123
-
-        CellPhone mySecretPhone = new CellPhone();
-        mySecretPhone.setCellPhoneNumber("(123)936-3733");
-        mySecretPhone.setAreaCode(123);
-        manager.saveEntity(mySecretPhone);
-
-        CallLog callToSomeoneShady = new CallLog();
-        callToSomeoneShady.setDestinationNumber("(555)322-1143");
-        callToSomeoneShady.setNSAListening(false);
-        callToSomeoneShady.setCallFrom(mySecretPhone);
-        callToSomeoneShady.setCallFromAreaCode(mySecretPhone.getAreaCode());
-        manager.saveEntity(callToSomeoneShady);
-
-        CallLog callToJoe = new CallLog();
-        callToJoe.setDestinationNumber("(555)286-9987");
-        callToJoe.setNSAListening(true);
-        callToJoe.setCallFrom(mySecretPhone);
-        callToJoe.setCallFromAreaCode(mySecretPhone.getAreaCode());
-        manager.saveEntity(callToJoe);
-
+        // Insert test Call Log data
+        seedData(manager);
 
         // Create a query that includes the partition and flag for whether the NSA is listening
         // Area Code is partitioned and isNSAListening is indexed.  This should be an optimized query
@@ -102,5 +63,58 @@ public class Main extends AbstractDemo {
 
         // Since we have defined an IdentifierGenerator of SEQUENCE, it is possible the identifiers for call log
         factory.close();
+    }
+
+    /**
+     * Seed Cell phone log data
+     *
+     * @param manager Persistence Manager to use to seed data
+     * @throws EntityException Generic exception from persistence manager
+     */
+    protected static void seedData(PersistenceManager manager) throws EntityException
+    {
+        // Create a call log for area code (555)
+        CellPhone myPhoneNumber = new CellPhone();
+        myPhoneNumber.setCellPhoneNumber("(555) 303-2322");
+        myPhoneNumber.setAreaCode(555);
+        manager.saveEntity(myPhoneNumber);
+
+        CallLog callToMom = new CallLog();
+        callToMom.setDestinationNumber("(555) 323-2222");
+        callToMom.setNSAListening(true);
+        callToMom.setCallFrom(myPhoneNumber);
+        callToMom.setCallFromAreaCode(myPhoneNumber.getAreaCode());
+        manager.saveEntity(callToMom);
+
+        CallLog callToEdwardSnowden = new CallLog();
+        callToEdwardSnowden.setDestinationNumber("(555) 122-2341");
+        callToEdwardSnowden.setNSAListening(false);
+        callToEdwardSnowden.setCallFrom(myPhoneNumber);
+        callToEdwardSnowden.setCallFromAreaCode(myPhoneNumber.getAreaCode());
+        manager.saveEntity(callToEdwardSnowden);
+
+        // Create a call log for area code (123)
+        // Note: Identifiers are not unique among partitions.  Since the entire object graph is saved,
+        //       it is possible in this example to have the same identifiers for a CallLog in area code 555 as well as 123
+
+        CellPhone mySecretPhone = new CellPhone();
+        mySecretPhone.setCellPhoneNumber("(123) 936-3733");
+        mySecretPhone.setAreaCode(123);
+        manager.saveEntity(mySecretPhone);
+
+        CallLog callToSomeoneShady = new CallLog();
+        callToSomeoneShady.setDestinationNumber("(555) 322-1143");
+        callToSomeoneShady.setNSAListening(false);
+        callToSomeoneShady.setCallFrom(mySecretPhone);
+        callToSomeoneShady.setCallFromAreaCode(mySecretPhone.getAreaCode());
+        manager.saveEntity(callToSomeoneShady);
+
+        CallLog callToJoe = new CallLog();
+        callToJoe.setDestinationNumber("(555) 286-9987");
+        callToJoe.setNSAListening(true);
+        callToJoe.setCallFrom(mySecretPhone);
+        callToJoe.setCallFromAreaCode(mySecretPhone.getAreaCode());
+        manager.saveEntity(callToJoe);
+
     }
 }

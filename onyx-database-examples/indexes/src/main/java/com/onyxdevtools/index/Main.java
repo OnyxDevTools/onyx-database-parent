@@ -1,5 +1,6 @@
 package com.onyxdevtools.index;
 
+import com.onyx.exception.EntityException;
 import com.onyxdevtools.index.entities.Book;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -21,7 +22,27 @@ public class Main extends AbstractDemo
         factory.initialize();
         PersistenceManager manager = factory.getPersistenceManager();
 
-        //2
+        // Seed data with book test data
+        seedData(manager);
+
+        // Create a query to find children's books
+        // Note: This query has been optimized since the Book#genre attribute is indexed.
+        QueryCriteria childrenBookCriteria = new QueryCriteria("genre", QueryCriteriaOperator.EQUAL, "CHILDREN");
+        Query findBooksByGenreQuery = new Query(Book.class, childrenBookCriteria);
+
+        List<Book> childrenBooks = manager.executeQuery(findBooksByGenreQuery);
+        assertEquals("There should be 3 children's books", childrenBooks.size(), 3);
+
+        factory.close();
+    }
+
+    /**
+     * Insert test data into a test database
+     *
+     * @param manager Persistence Manager used to insert data
+     */
+    protected static void seedData(PersistenceManager manager) throws EntityException
+    {
         // Create test data
         Book harryPotter = new Book();
         harryPotter.setTitle("Harry Potter, Deathly Hallows");
@@ -48,15 +69,5 @@ public class Main extends AbstractDemo
         manager.saveEntity(theGiver);
         manager.saveEntity(twilight);
         manager.saveEntity(longWayDown);
-
-        // Create a query to find children's books
-        // Note: This query has been optimized since the Book#genre attribute is indexed.
-        QueryCriteria childrenBookCriteria = new QueryCriteria("genre", QueryCriteriaOperator.EQUAL, "CHILDREN");
-        Query findBooksByGenreQuery = new Query(Book.class, childrenBookCriteria);
-
-        List<Book> childrenBooks = manager.executeQuery(findBooksByGenreQuery);
-        assertEquals("There should be 3 children's books", childrenBooks.size(), 3);
-
-        factory.close();
     }
 }
