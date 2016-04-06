@@ -63,7 +63,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         {
             // Get Inverse Partition ID
             long partitionID = getPartitionId(relationshipObject);
-            Object id = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(entity).getIdentifier());
+            Object id = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
             boolean exists = getRecordControllerForEntity(relationshipObject).existsWithId(id);
             if(exists == true)
             {

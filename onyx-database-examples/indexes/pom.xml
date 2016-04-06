@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
+<project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    
+
     <groupId>com.onyxdevtools</groupId>
-    <artifactId>persisting-data</artifactId>
+    <artifactId>indexes</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-
     <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
-    
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <onyx-database.version>1.0.0</onyx-database.version>
     </properties>
-    
+
     <repositories>
         <repository>
             <id>onyx-mvn-repo</id>
@@ -25,7 +24,7 @@
             <url>http://onyxdevtools.github.io/maven2</url>
         </repository>
     </repositories>
-    
+
     <dependencies>
         <dependency>
             <groupId>com.onyxdevtools</groupId>
@@ -33,10 +32,10 @@
             <version>${onyx-database.version}</version>
         </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
-            
+
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
@@ -44,16 +43,16 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-            
+
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.persist.Main</mainClass>
+                    <mainClass>com.onyxdevtools.index.Main</mainClass>
                 </configuration>
             </plugin>
-            
+
         </plugins>
     </build>
-    
+
 </project>
