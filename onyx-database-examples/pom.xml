@@ -21,7 +21,7 @@
     <module>indexes</module>
     <module>partition</module>
     <module>lifecycle-events</module>
-    <module>spring-configuration</module>
+    <module>spring-example</module>
   </modules>
 
 </project>

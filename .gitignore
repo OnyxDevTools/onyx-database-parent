@@ -21,6 +21,6 @@ onyx-database-tests/C:/
 /onyx-database-examples/indexes/target/
 /onyx-database-examples/partition/target/
 /onyx-database-examples/lifecycle-events/target/
-/onyx-database-examples/spring-configuration/target/
+/onyx-database-examples/spring-example/target/
 .DS_Store
 */.DS_Store
