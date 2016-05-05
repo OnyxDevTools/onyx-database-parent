@@ -1,19 +1,19 @@
 package com.onyxdevtools.quickstart;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyxdevtools.quickstart.entities.Person;
+
+import java.io.IOException;
 import java.util.List;
 
 public class Main
 {
 
-    public static void main(String[] args) throws InitializationException, EntityException
+    public static void main(String[] args) throws IOException
     {
         //Create an instance of an entity
         final Person person1 = new Person();
@@ -39,5 +39,6 @@ public class Main
         System.out.println("records returned: " + people.size());
         System.out.println("first person in the list: " + people.get(0).getFirstName() + " " + people.get(0).getLastName());
 
+        factory.close();
     }
 }

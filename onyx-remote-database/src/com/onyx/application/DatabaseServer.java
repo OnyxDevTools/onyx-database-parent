@@ -411,7 +411,7 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
      *
      * This will determine the socket methodology and authorization methodology
      *
-     * @param Authorize socketDatabaseAuthrorize instance of socket authorization
+     * @param socketDatabaseAuthrorize socketDatabaseAuthrorize instance of socket authorization
      */
     protected void setupSocketSupportWithAuthorization(Authorize socketDatabaseAuthrorize)
     {
@@ -575,11 +575,17 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
      * @return PersistenceManager
      */
     @Override
-    public synchronized PersistenceManager getPersistenceManager()
+    public PersistenceManager getPersistenceManager()
     {
         if(persistenceManager == null)
         {
-            this.persistenceManager = super.getPersistenceManager();
+            try {
+                this.persistenceManager = new EmbeddedPersistenceManager(true);
+                ((EmbeddedPersistenceManager)this.persistenceManager).setJournalingEnabled(this.enableJournaling);
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+            this.persistenceManager.setContext(context);
         }
         return persistenceManager;
     }

@@ -10,7 +10,6 @@ import com.onyx.exception.RelationshipNotFoundException;
 import com.onyx.fetch.PartitionQueryController;
 import com.onyx.helpers.*;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.collections.LazyQueryCollection;
@@ -63,8 +62,27 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
     public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
 
+    /**
+     * Default constructor.  We do not want to export the object if in embedded mode.
+     * @throws RemoteException
+     */
     public EmbeddedPersistenceManager() throws RemoteException {
+        super();
+        UnicastRemoteObject.unexportObject(this, true);
+    }
 
+    /**
+     * Constructor with option to export RMI service
+     * @param export Should export RMI Service
+     * @throws RemoteException RMI Exception
+     */
+    public EmbeddedPersistenceManager(boolean export) throws RemoteException
+    {
+        super();
+        if(!export)
+        {
+            UnicastRemoteObject.unexportObject(this, true);
+        }
     }
 
     /**

@@ -16,8 +16,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -78,7 +76,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * Overridden constructor to include SchemaContext
      *
      * @since 1.0.0
-     * @param context Instance of context to determine how to store and structure data
+     * @param instance Instance of context to determine how to store and structure data
      */
     public EmbeddedPersistenceManagerFactory(String instance)
     {
@@ -99,10 +97,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
-                try {
-                    close();
-                } catch (SingletonException e){ } catch (IOException e) {
-                }
+                close();
             }
         });
     }
@@ -310,9 +305,11 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @throws com.onyx.exception.SingletonException Highlander, there can be only one
      */
     @Override
-    public void close() throws IOException, SingletonException
+    public void close()
     {
-        context.shutdown();
+        try {
+            context.shutdown();
+        } catch (SingletonException ignore) {}
         releaseLock();
     }
 

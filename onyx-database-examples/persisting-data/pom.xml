@@ -8,8 +8,8 @@
     <artifactId>persisting-data</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-    
-    <name>persisting-data</name>
+
+    <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -49,7 +49,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.quickstart.Main</mainClass>
+                    <mainClass>com.onyxdevtools.persist.Main</mainClass>
                 </configuration>
             </plugin>
             
