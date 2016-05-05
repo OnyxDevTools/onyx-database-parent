@@ -3,11 +3,7 @@ package com.onyxdevtools.relationship;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.quickstart.entities.CrewMember;
-import com.onyxdevtools.quickstart.entities.Sailboat;
 
-import com.onyxdevtools.quickstart.entities.CrewMember;
-import com.onyxdevtools.quickstart.entities.Sailboat;
 import com.onyxdevtools.relationship.entities.CrewMember;
 import com.onyxdevtools.relationship.entities.Sailboat;
 
@@ -27,7 +23,7 @@ public class OneToManyExample extends AbstractDemo
     {
     }
 
-    public static void demo() throws  IOException
+    public static void demo() throws IOException
     {
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 
