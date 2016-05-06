@@ -39,7 +39,10 @@ public class FindByIdExample
         final Season season = (Season) manager.findById(Season.class, 2015);
 
         // Confirm that season was retreived
-        System.out.println("The season has " + season.getConferences().size() + " conferences!");
+        if (season != null)
+        {
+            System.out.println("The season has " + season.getConferences().size() + " conferences!");
+        }
 
         factory.close(); // close the factory so that we can use it again
 
