@@ -18,6 +18,7 @@
     <module>remote-persistence-manager</module>
     <module>persisting-data</module>
     <module>relationships</module>
+    <module>querying</module>
     <module>indexes</module>
     <module>partition</module>
     <module>lifecycle-events</module>
