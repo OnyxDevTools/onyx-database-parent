@@ -8,6 +8,7 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 
 import com.onyxdevtools.example.querying.entities.League;
+import com.onyxdevtools.example.querying.entities.Season;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,11 +40,17 @@ public class FindExample
         League league = new League();
         league.setName("NFL"); // set the id
 
-        // invoke the manager#find method
+        // invoke the PersistenceManager#find method
         league = (League) manager.find(league);
 
         // Confirm that the other fields were populated
-        System.out.print("The description of the leage that was found is: '" + league.getDescription() + "'");
+        System.out.println("The description of the league that was found is: '" + league.getDescription() + "'");
+
+        // Or you can find an entity using the PersistenceManager#findById method
+        final Season season = (Season) manager.findById(Season.class, 2015);
+
+        // Confirm that season was retreived
+        System.out.println("The season has " + season.getConferences().size() + " conferences!");
 
         factory.close(); // close the factory so that we can use it again
 
