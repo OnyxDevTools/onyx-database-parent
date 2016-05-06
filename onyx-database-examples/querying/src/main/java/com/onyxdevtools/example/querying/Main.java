@@ -42,6 +42,7 @@ public class Main extends AbstractDemo
         factory.close(); //close the factory so that we can use it again
 
         FindExample.demo();
+        FindByIdExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
