@@ -32,6 +32,13 @@ public class Team extends ManagedEntity implements IManagedEntity
     )
     protected List<Player> players;
 
+    @Relationship(
+            type = RelationshipType.MANY_TO_ONE,
+            inverse = "teams",
+            inverseClass = Division.class
+    )
+    protected Division division;
+
     public Team()
     {
     }
@@ -54,6 +61,11 @@ public class Team extends ManagedEntity implements IManagedEntity
     public void setPlayers(List<Player> players)
     {
         this.players = players;
+    }
+
+    public void setDivision(Division division)
+    {
+        this.division = division;
     }
 
 }

@@ -30,7 +30,7 @@ public class Stats extends ManagedEntity implements IManagedEntity
     protected Player player;
 
     @Relationship(
-            type = RelationshipType.MANY_TO_MANY,
+            type = RelationshipType.ONE_TO_ONE,
             inverseClass = Season.class
     )
     protected Season season;

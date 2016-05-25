@@ -28,6 +28,7 @@ public class Conference extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
             inverseClass = Division.class,
+            inverse = "conference",
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.EAGER
     )
