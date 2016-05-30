@@ -355,50 +355,47 @@ public class EntityDescriptor implements Serializable
                 }
             }
 
-            if (!interfaceFound)
+            if(!interfaceFound)
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND + ": " +
-                    descriptor.inverseClass.getCanonicalName());
+                        descriptor.inverseClass.getCanonicalName());
             }
 
-            if ((descriptor.getType() != descriptor.getInverseClass()) &&
-                    ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
-                        (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
+            if(descriptor.getType() != descriptor.getInverseClass()
+                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
             {
                 throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
             }
 
-            if ((descriptor.inverseClass.getAnnotation(Entity.class) == null) &&
-                    ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
-                        (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
-            {
-                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " +
-                    descriptor.inverseClass.getCanonicalName());
-            }
+            if(descriptor.inverseClass.getAnnotation(Entity.class) == null
+                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " + descriptor.inverseClass.getCanonicalName());
 
-            if ((descriptor.inverse != null) && (descriptor.inverse.length() > 0) &&
-                    ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
-                        (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
-            {
 
+            if(descriptor.inverse != null && descriptor.inverse.length() > 0
+                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+            {
                 try
                 {
-                    final Field inverseField = descriptor.inverseClass.getDeclaredField(descriptor.inverse);
+                    Field inverseField = descriptor.inverseClass.getDeclaredField(descriptor.inverse);
 
-                    if ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) && (inverseField.getType() != List.class))
+                    if(descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                            && inverseField.getType() != List.class)
                     {
                         throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
                     }
-                    else if ((descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE) &&
-                            (inverseField.getType() != descriptor.getParentClass()))
+                    else if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE
+                            && inverseField.getType() != descriptor.getParentClass())
                     {
                         throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
                     }
-                }
-                catch (NoSuchFieldException e)
+                } catch (NoSuchFieldException e)
                 {
                     throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " on " +
-                        descriptor.getInverseClass(), e);
+                            descriptor.getInverseClass(), e);
                 }
             }
 
