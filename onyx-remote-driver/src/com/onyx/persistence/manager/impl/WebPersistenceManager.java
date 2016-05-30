@@ -1,6 +1,7 @@
 package com.onyx.persistence.manager.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.onyx.aggregate.Aggregator;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityClassNotFoundException;
@@ -694,6 +695,21 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         body.setId(referenceId);
         body.setType(entityType.getCanonicalName());
         return (IManagedEntity)this.performCall(getURL() + FIND_BY_REFERENCE_ID, null, entityType, body);
+    }
+
+    @Override
+    public void aggregate(Aggregator aggregator, Query query) throws EntityException {
+
+    }
+
+    @Override
+    public void aggregate(Class<Aggregator> aggregatorClass, Query query) throws EntityException {
+
+    }
+
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        return null;
     }
 
 }

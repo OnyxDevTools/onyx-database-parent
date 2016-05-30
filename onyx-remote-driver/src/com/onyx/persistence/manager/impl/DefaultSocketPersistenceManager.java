@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.aggregate.Aggregator;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
@@ -15,6 +16,7 @@ import com.onyx.util.ObjectUtil;
 
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -638,5 +640,20 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         } catch (RemoteException e) {
             throw new EntityException(e);
         }
+    }
+
+    @Override
+    public void aggregate(Aggregator aggregator, Query query) throws EntityException {
+
+    }
+
+    @Override
+    public void aggregate(Class<Aggregator> aggregatorClass, Query query) throws EntityException {
+
+    }
+
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        return null;
     }
 }

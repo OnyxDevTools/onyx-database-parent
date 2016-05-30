@@ -448,5 +448,16 @@ public interface PersistenceManager {
      *
      * @param query Query to execute and process by the aggregator
      */
-    void aggregate(Class<Aggregator> aggregatorClass) throws EntityException;
+    void aggregate(Class<Aggregator> aggregatorClass, Query query) throws EntityException;
+
+    /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    Map getMapWithReferenceId(Class entityType, long reference) throws EntityException;
 }

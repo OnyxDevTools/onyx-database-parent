@@ -1058,6 +1058,30 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     }
 
     /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException
+    {
+        if (context.getKillSwitch())
+            throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
+
+        IManagedEntity entity = EntityDescriptor.createNewEntity(entityType);
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
+        final RecordController recordController = context.getRecordController(descriptor);
+
+        // Find the object
+        return recordController.getMapWithReferenceId(reference);
+    }
+
+
+
+    /**
      * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
      *
      * @since 1.0.0

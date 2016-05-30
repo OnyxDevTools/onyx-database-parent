@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.aggregate.Aggregator;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
@@ -22,6 +23,7 @@ import com.onyx.util.ObjectUtil;
 import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -755,4 +757,18 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         return new QueryResult(query, this.executeLazyQuery(query));
     }
 
+    @Override
+    public void aggregate(Aggregator aggregator, Query query) throws EntityException {
+
+    }
+
+    @Override
+    public void aggregate(Class<Aggregator> aggregatorClass, Query query) throws EntityException {
+
+    }
+
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        return null;
+    }
 }

@@ -29,6 +29,15 @@ public interface Store {
     int write(ObjectBuffer serializable, long position);
 
     /**
+     * Read a buffer at position for a size
+     *
+     * @param position
+     * @param size
+     * @return
+     */
+    ObjectBuffer read(long position, int size);
+
+    /**
      * Write a serializable object
      *
      * @param position

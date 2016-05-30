@@ -218,22 +218,15 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
      * @param index Record Index
      * @return ManagedEntity
      */
-    @Override
     public Map getDict(int index)
     {
-        Object entity = values.get(index);
-        if (entity == null)
+        try
         {
-            try
-            {
-                entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), (long)identifiers.get(index));
-            } catch (EntityException e)
-            {
-                return null;
-            }
-            values.put(index, entity);
+            return persistenceManager.getMapWithReferenceId(entityDescriptor.getClazz(), (long)identifiers.get(index));
+        } catch (EntityException e)
+        {
+            return null;
         }
-        return entity;
     }
 
     /**
