@@ -11,6 +11,7 @@ import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.client.ClientProperties;
 import org.glassfish.tyrus.client.ThreadPoolConfig;
 import org.glassfish.tyrus.container.jdk.client.JdkClientContainer;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.xnio.Options;
 
@@ -30,6 +31,7 @@ import static io.undertow.Handlers.websocket;
 /**
  * Created by tosborn1 on 8/5/15.
  */
+@Ignore
 public class UndertowNetworkTest {
     @Test
     public void main() {

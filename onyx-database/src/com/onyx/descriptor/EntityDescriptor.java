@@ -283,7 +283,25 @@ public class EntityDescriptor implements Serializable
 
             if(descriptor.getType() != descriptor.getInverseClass() && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
             {
-                throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
+                throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH + ": " + descriptor.getParentClass().getCanonicalName());
+            }
+
+            // Verify a to many relationship is indeed a list
+            if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY || descriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY)
+            {
+                if(descriptor.getType() != List.class)
+                {
+                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVALID_TO_MANY_RELATIONSHIP + ": " + descriptor.getParentClass().getCanonicalName());
+                }
+            }
+
+            // Verify a to one relationship is not a list and is a managed entity
+            if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE || descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE)
+            {
+                if(!IManagedEntity.class.isAssignableFrom(descriptor.getType()))
+                {
+                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVALID_TO_ONE_RELATIONSHIP + ": " + descriptor.getParentClass().getCanonicalName());
+                }
             }
 
             if(descriptor.inverseClass.getAnnotation(Entity.class) == null && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
@@ -298,15 +316,15 @@ public class EntityDescriptor implements Serializable
 
                     if(descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE && inverseField.getType() != List.class)
                     {
-                        throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
+                        throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH + ": " + descriptor.getParentClass().getCanonicalName() + ": " + descriptor.inverseClass.getCanonicalName());
                     }
                     else if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE && inverseField.getType() != descriptor.getParentClass())
                     {
-                        throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
+                        throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH + ": " + descriptor.getParentClass().getCanonicalName() + ": " + descriptor.inverseClass.getCanonicalName());
                     }
                 } catch (NoSuchFieldException e)
                 {
-                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID, e);
+                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + ": " + descriptor.getParentClass().getCanonicalName() + ": " + descriptor.inverseClass.getCanonicalName(), e);
                 }
             }
 
@@ -330,11 +348,11 @@ public class EntityDescriptor implements Serializable
                     }
                     if(!listFound)
                     {
-                        throw new InvalidRelationshipTypeException(EntityClassNotFoundException.TO_MANY_INVALID_TYPE);
+                        throw new InvalidRelationshipTypeException(EntityClassNotFoundException.TO_MANY_INVALID_TYPE + ": " + descriptor.getParentClass().getCanonicalName());
                     }
                 } catch (NoSuchFieldException e)
                 {
-                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID, e);
+                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + ": " + descriptor.getParentClass().getCanonicalName(), e);
                 }
             }
         }

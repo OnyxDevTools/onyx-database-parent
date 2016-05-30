@@ -68,9 +68,6 @@ public class CompareUtil
             }
             return false;
         }
-
-
-
         else if(object instanceof Boolean && object == QueryCriteria.NULL_BOOLEAN_VALUE && (object2 instanceof Boolean || object2 == null))
         {
             if(object2 == null)
@@ -170,6 +167,11 @@ public class CompareUtil
      */
     public static boolean compare(Object object, Object object2, QueryCriteriaOperator operator) throws InvalidDataTypeForOperator
     {
+
+        if(operator == QueryCriteriaOperator.NOT_NULL)
+        {
+            return (object2 != null);
+        }
 
         // Equal - this should take a generic object value
         if(operator == QueryCriteriaOperator.EQUAL)
