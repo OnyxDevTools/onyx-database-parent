@@ -236,6 +236,17 @@ public interface PersistenceManager {
     void initialize(IManagedEntity entity, String attribute) throws EntityException;
 
     /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    List list(Class clazz) throws EntityException;
+
+    /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
      *
      * @since 1.0.0

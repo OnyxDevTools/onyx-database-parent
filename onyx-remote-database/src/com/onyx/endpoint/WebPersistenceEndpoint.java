@@ -59,11 +59,8 @@ final public class WebPersistenceEndpoint
     public IManagedEntity save(EntityRequestBody request) throws EntityException, ClassNotFoundException {
         final Class clazz = Class.forName(request.getType());
         IManagedEntity entity = (IManagedEntity)objectMapper.convertValue(request.getEntity(), clazz);
-        try {
-            persistenceManager.saveEntity(entity);
-        } catch (java.rmi.RemoteException e) {
-            e.printStackTrace();
-        }
+        persistenceManager.saveEntity(entity);
+
         return entity;
     }
 
