@@ -1079,8 +1079,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         return recordController.getMapWithReferenceId(reference);
     }
 
-
-
     /**
      * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
      *
@@ -1090,7 +1088,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      * @param query Query to execute and process by the aggregator
      */
-
     @Override
     public void aggregate(Aggregator aggregator, Query query) throws EntityException
     {
