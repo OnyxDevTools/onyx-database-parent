@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager;
 
+import com.onyx.aggregate.Aggregator;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -426,4 +427,26 @@ public interface PersistenceManager {
      * @throws EntityException error occurred while attempting to retrieve entity.
      */
     IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException;
+
+    /**
+     * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param aggregator Instance of the aggregator to implement the bulk operation
+     *
+     * @param query Query to execute and process by the aggregator
+     */
+    void aggregate(Aggregator aggregator, Query query) throws EntityException;
+
+    /**
+     * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param aggregatorClass Class instance of the aggregator
+     *
+     * @param query Query to execute and process by the aggregator
+     */
+    void aggregate(Class<Aggregator> aggregatorClass) throws EntityException;
 }

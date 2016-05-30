@@ -1,12 +1,11 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.aggregate.Aggregator;
+import com.onyx.aggregate.MapAggregator;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-import com.onyx.exception.NoResultsException;
-import com.onyx.exception.RelationshipNotFoundException;
+import com.onyx.exception.*;
 import com.onyx.fetch.PartitionQueryController;
 import com.onyx.helpers.*;
 import com.onyx.persistence.IManagedEntity;
@@ -29,6 +28,8 @@ import com.onyx.util.ObjectUtil;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an embedded database.
@@ -1055,4 +1056,63 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     {
         return new QueryResult(query, this.executeLazyQuery(query));
     }
+
+    /**
+     * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param aggregator Instance of the aggregator to implement the bulk operation
+     *
+     * @param query Query to execute and process by the aggregator
+     */
+
+    @Override
+    public void aggregate(Aggregator aggregator, Query query) throws EntityException
+    {
+
+        final LazyQueryCollection entityList = (LazyQueryCollection)executeLazyQuery(query);
+        final BiConsumer consumer = aggregator.getConsumer();
+        final PersistenceManager persistenceManagerInstance = this;
+
+        for(int i = 0; i < entityList.size(); i++)
+        {
+            Object objectToAggregate = null;
+
+            if(aggregator instanceof MapAggregator)
+            {
+                objectToAggregate = entityList.getDict(i);
+            }
+            else
+            {
+                objectToAggregate = entityList.get(i);
+            }
+
+            consumer.accept(objectToAggregate, persistenceManagerInstance);
+        }
+    }
+
+    /**
+     * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param aggregatorClass Class instance of the aggregator
+     *
+     * @param query Query to execute and process by the aggregator
+     */
+    @Override
+    public void aggregate(Class<Aggregator> aggregatorClass, Query query) throws EntityException
+    {
+        Aggregator aggregator = null;
+        try {
+            aggregator = aggregatorClass.newInstance();
+        } catch (InstantiationException e) {
+            throw new AggregatorException(AggregatorException.CANNOT_INSTANTIATE_AGGREGATOR);
+        } catch (IllegalAccessException e) {
+            throw new AggregatorException(AggregatorException.CANNOT_INSTANTIATE_AGGREGATOR);
+        }
+        this.aggregate(aggregator, query);
+    }
+
 }
