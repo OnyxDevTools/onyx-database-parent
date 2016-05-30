@@ -43,6 +43,7 @@ public class Main extends AbstractDemo
 
         FindExample.demo();
         FindByIdExample.demo();
+        ListExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException

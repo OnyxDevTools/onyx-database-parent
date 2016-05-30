@@ -4,25 +4,63 @@ import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
+
+import com.onyx.exception.AttributeMissingException;
+import com.onyx.exception.EntityClassNotFoundException;
+import com.onyx.exception.EntityException;
+import com.onyx.exception.EntityTypeMatchException;
+import com.onyx.exception.InvalidConstructorException;
+import com.onyx.exception.InvalidDataTypeForOperator;
+import com.onyx.exception.InvalidIdentifierException;
+import com.onyx.exception.InvalidIndexException;
+import com.onyx.exception.InvalidRelationshipTypeException;
+
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.annotations.Attribute;
+import com.onyx.persistence.annotations.Entity;
+import com.onyx.persistence.annotations.Identifier;
+import com.onyx.persistence.annotations.IdentifierGenerator;
+import com.onyx.persistence.annotations.Index;
+import com.onyx.persistence.annotations.Partition;
+import com.onyx.persistence.annotations.PostInsert;
+import com.onyx.persistence.annotations.PostPersist;
+import com.onyx.persistence.annotations.PostRemove;
+import com.onyx.persistence.annotations.PostUpdate;
+import com.onyx.persistence.annotations.PreInsert;
+import com.onyx.persistence.annotations.PrePersist;
+import com.onyx.persistence.annotations.PreRemove;
+import com.onyx.persistence.annotations.PreUpdate;
+import com.onyx.persistence.annotations.Relationship;
+import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.annotations.*;
-import com.onyx.exception.*;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+
 import com.onyx.util.AttributeField;
-import com.onyx.util.EntityClassLoader;
 import com.onyx.util.CompareUtil;
+import com.onyx.util.EntityClassLoader;
+
 import gnu.trove.THashMap;
 
 import java.io.Serializable;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import java.util.function.Consumer;
 
+
 /**
- * Created by timothy.osborn on 12/11/14.
+ Created by timothy.osborn on 12/11/14.
  */
 public class EntityDescriptor implements Serializable
 {
@@ -47,18 +85,20 @@ public class EntityDescriptor implements Serializable
     protected Map<String, RelationshipDescriptor> relationships = new TreeMap();
 
     /**
-     * Constructor - Initializes the entity descriptor with the target class
+     * Constructor - Initializes the entity descriptor with the target class.
      *
-     * @param clazz
-     * @throws EntityClassNotFoundException
-     * @throws AttributeMissingException
+     * @param   clazz
+     * @param   context
+     *
+     * @throws  EntityClassNotFoundException
+     * @throws  AttributeMissingException
+     * @throws  EntityException
      */
-    public EntityDescriptor(Class clazz, SchemaContext context) throws EntityException
+    public EntityDescriptor(final Class clazz, final SchemaContext context) throws EntityException
     {
+        final boolean interfaceFound = IManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
 
-        boolean interfaceFound = IManagedEntity.class.isAssignableFrom(clazz);//clazz.isAssignableFrom(IManagedEntity.class);
-
-        if(!interfaceFound)
+        if (!interfaceFound)
         {
             throw new EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND);
         }
@@ -85,12 +125,14 @@ public class EntityDescriptor implements Serializable
         initEntityCallbacks(clazz);
 
         // Iterate through fields and get annotations
-        for (Field field : fields)
+        for (final Field field : fields)
         {
+
             if (field.getAnnotation(Identifier.class) != null)
             {
+
                 // Build id descriptor
-                Identifier annotation = field.getAnnotation(Identifier.class);
+                final Identifier annotation = field.getAnnotation(Identifier.class);
                 this.identifier = new IdentifierDescriptor();
                 identifier.setName(field.getName());
                 identifier.setGenerator(annotation.generator());
@@ -99,6 +141,7 @@ public class EntityDescriptor implements Serializable
 
             if (field.getAnnotation(Attribute.class) != null)
             {
+
                 // Build Attribute descriptor
                 final Attribute annotation = field.getAnnotation(Attribute.class);
                 final AttributeDescriptor attribute = new AttributeDescriptor();
@@ -107,7 +150,7 @@ public class EntityDescriptor implements Serializable
                 attribute.setNullable(annotation.nullable());
                 attribute.setSize(annotation.size());
 
-                if(!field.isAccessible())
+                if (!field.isAccessible())
                 {
                     field.setAccessible(true);
                 }
@@ -119,6 +162,7 @@ public class EntityDescriptor implements Serializable
 
             if (field.getAnnotation(Relationship.class) != null)
             {
+
                 // Build relationship descriptor
                 final Relationship annotation = field.getAnnotation(Relationship.class);
                 final RelationshipDescriptor relationship = new RelationshipDescriptor();
@@ -136,6 +180,7 @@ public class EntityDescriptor implements Serializable
 
             if (field.getAnnotation(Index.class) != null)
             {
+
                 // Build Index descriptor
                 final IndexDescriptor index = new IndexDescriptor();
                 index.setName(field.getName());
@@ -145,7 +190,7 @@ public class EntityDescriptor implements Serializable
                 indexes.put(field.getName(), index);
             }
 
-            if(field.getAnnotation(Partition.class) != null)
+            if (field.getAnnotation(Partition.class) != null)
             {
                 this.partition = new PartitionDescriptor();
                 this.partition.setName(field.getName());
@@ -160,179 +205,229 @@ public class EntityDescriptor implements Serializable
         validateRelationships();
         validateIndexes();
 
-        if(context != null && context.getLocation() != null  && context.getClass() == DefaultSchemaContext.class)
+        if ((context != null) && (context.getLocation() != null) && (context.getClass() == DefaultSchemaContext.class))
+        {
             EntityClassLoader.writeClass(this, context.getLocation());
+        }
 
     }
 
     /**
-     * Get entity callbacks from the annotations on the entity
+     * Get entity callbacks from the annotations on the entity.
      *
-     * @param clazz
+     * @param  clazz
      */
-    protected void initEntityCallbacks(Class clazz)
+    protected void initEntityCallbacks(final Class clazz)
     {
         Class tmpClass = clazz;
+
         while (tmpClass != Object.class)
         {
-            Method[] methods = tmpClass.getDeclaredMethods();
-            for(Method method : methods){
-                //get @PreInsert
-                if(this.preInsertCallback == null && method.isAnnotationPresent(PreInsert.class)) {
+            final Method[] methods = tmpClass.getDeclaredMethods();
+
+            for (final Method method : methods)
+            {
+
+                // get @PreInsert
+                if ((this.preInsertCallback == null) && method.isAnnotationPresent(PreInsert.class))
+                {
                     this.preInsertCallback = method;
-                    if(!this.preInsertCallback.isAccessible())
+
+                    if (!this.preInsertCallback.isAccessible())
                     {
                         this.preInsertCallback.setAccessible(true);
                     }
                 }
-                //get @PreUpdate
-                if(this.preUpdateCallback == null && method.isAnnotationPresent(PreUpdate.class)) {
+
+                // get @PreUpdate
+                if ((this.preUpdateCallback == null) && method.isAnnotationPresent(PreUpdate.class))
+                {
                     this.preUpdateCallback = method;
-                    if(!this.preUpdateCallback.isAccessible())
+
+                    if (!this.preUpdateCallback.isAccessible())
                     {
                         this.preUpdateCallback.setAccessible(true);
                     }
                 }
-                //get @PreRemove
-                if(this.preRemoveCallback == null && method.isAnnotationPresent(PreRemove.class)) {
+
+                // get @PreRemove
+                if ((this.preRemoveCallback == null) && method.isAnnotationPresent(PreRemove.class))
+                {
                     this.preRemoveCallback = method;
-                    if(!this.preRemoveCallback.isAccessible())
+
+                    if (!this.preRemoveCallback.isAccessible())
                     {
                         this.preRemoveCallback.setAccessible(true);
                     }
                 }
-                //get @PrePersist
-                if(this.prePersistCallback == null && method.isAnnotationPresent(PrePersist.class)) {
+
+                // get @PrePersist
+                if ((this.prePersistCallback == null) && method.isAnnotationPresent(PrePersist.class))
+                {
                     this.prePersistCallback = method;
-                    if(!this.prePersistCallback.isAccessible())
+
+                    if (!this.prePersistCallback.isAccessible())
                     {
                         this.prePersistCallback.setAccessible(true);
                     }
                 }
-                //get @PostInsert
-                if(this.postInsertCallback == null && method.isAnnotationPresent(PostInsert.class)) {
+
+                // get @PostInsert
+                if ((this.postInsertCallback == null) && method.isAnnotationPresent(PostInsert.class))
+                {
                     this.postInsertCallback = method;
-                    if(!this.postInsertCallback.isAccessible())
+
+                    if (!this.postInsertCallback.isAccessible())
                     {
                         this.postInsertCallback.setAccessible(true);
                     }
                 }
-                //get @PostUpdate
-                if(this.postUpdateCallback == null && method.isAnnotationPresent(PostUpdate.class)) {
+
+                // get @PostUpdate
+                if ((this.postUpdateCallback == null) && method.isAnnotationPresent(PostUpdate.class))
+                {
                     this.postUpdateCallback = method;
-                    if(!this.postUpdateCallback.isAccessible())
+
+                    if (!this.postUpdateCallback.isAccessible())
                     {
                         this.postUpdateCallback.setAccessible(true);
                     }
                 }
-                //get @PostRemove
-                if(this.postRemoveCallback == null && method.isAnnotationPresent(PostRemove.class)) {
+
+                // get @PostRemove
+                if ((this.postRemoveCallback == null) && method.isAnnotationPresent(PostRemove.class))
+                {
                     this.postRemoveCallback = method;
-                    if(!this.postRemoveCallback.isAccessible())
+
+                    if (!this.postRemoveCallback.isAccessible())
                     {
                         this.postRemoveCallback.setAccessible(true);
                     }
                 }
-                //get @PostPersist
-                if(this.postPersistCallback == null && method.isAnnotationPresent(PostPersist.class)) {
+
+                // get @PostPersist
+                if ((this.postPersistCallback == null) && method.isAnnotationPresent(PostPersist.class))
+                {
                     this.postPersistCallback = method;
-                    if(!this.postPersistCallback.isAccessible())
+
+                    if (!this.postPersistCallback.isAccessible())
                     {
                         this.postPersistCallback.setAccessible(true);
                     }
                 }
 
             }
+
             tmpClass = tmpClass.getSuperclass();
         }
 
     }
 
     /**
-     * Validate Relationships
+     * Validate Relationships.
      *
-     * @throws EntityClassNotFoundException
-     * @throws InvalidRelationshipTypeException
+     * @throws  EntityClassNotFoundException
+     * @throws  InvalidRelationshipTypeException
      */
     protected void validateRelationships() throws EntityClassNotFoundException, InvalidRelationshipTypeException
     {
-
-        for(RelationshipDescriptor descriptor : this.relationships.values())
+        for (final RelationshipDescriptor descriptor : this.relationships.values())
         {
             boolean interfaceFound = false;
-            for(Class inter : descriptor.inverseClass.getInterfaces())
+
+            for (final Class inter : descriptor.inverseClass.getInterfaces())
             {
-                if(inter == IManagedEntity.class)
+
+                if (inter == IManagedEntity.class)
                 {
                     interfaceFound = true;
                 }
 
-                for(Class inner : inter.getInterfaces())
+                for (final Class inner : inter.getInterfaces())
                 {
-                    if(inner == IManagedEntity.class)
+
+                    if (inner == IManagedEntity.class)
                     {
                         interfaceFound = true;
+
                         break;
                     }
                 }
             }
+
             if(!interfaceFound)
             {
-                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND + ": " + descriptor.inverseClass.getCanonicalName());
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND + ": " +
+                        descriptor.inverseClass.getCanonicalName());
             }
 
-            if(descriptor.getType() != descriptor.getInverseClass() && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+            if(descriptor.getType() != descriptor.getInverseClass()
+                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
             {
                 throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
             }
 
-            if(descriptor.inverseClass.getAnnotation(Entity.class) == null && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+            if(descriptor.inverseClass.getAnnotation(Entity.class) == null
+                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " + descriptor.inverseClass.getCanonicalName());
 
 
-            if(descriptor.inverse != null && descriptor.inverse.length() > 0 && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+            if(descriptor.inverse != null && descriptor.inverse.length() > 0
+                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
             {
                 try
                 {
                     Field inverseField = descriptor.inverseClass.getDeclaredField(descriptor.inverse);
 
-                    if(descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE && inverseField.getType() != List.class)
+                    if(descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
+                            && inverseField.getType() != List.class)
                     {
                         throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
                     }
-                    else if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE && inverseField.getType() != descriptor.getParentClass())
+                    else if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE
+                            && inverseField.getType() != descriptor.getParentClass())
                     {
                         throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
                     }
                 } catch (NoSuchFieldException e)
                 {
-                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID, e);
+                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " on " +
+                            descriptor.getInverseClass(), e);
                 }
             }
 
-            if(descriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY || descriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY)
+            if ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) ||
+                    (descriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY))
             {
+
                 try
                 {
-                    Field attributeField = this.clazz.getDeclaredField(descriptor.getName());
+                    final Field attributeField = this.clazz.getDeclaredField(descriptor.getName());
                     boolean listFound = false;
-                    if(attributeField.getType() == List.class)
+
+                    if (attributeField.getType() == List.class)
                     {
                         listFound = true;
                     }
 
-                    for(Class inter : attributeField.getType().getInterfaces())
+                    for (final Class inter : attributeField.getType().getInterfaces())
                     {
-                        if(inter == List.class)
+
+                        if (inter == List.class)
                         {
                             listFound = true;
                         }
                     }
-                    if(!listFound)
+
+                    if (!listFound)
                     {
                         throw new InvalidRelationshipTypeException(EntityClassNotFoundException.TO_MANY_INVALID_TYPE);
                     }
-                } catch (NoSuchFieldException e)
+                }
+                catch (NoSuchFieldException e)
                 {
                     throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID, e);
                 }
@@ -341,24 +436,25 @@ public class EntityDescriptor implements Serializable
     }
 
     /**
-     * Validate Indexes
+     * Validate Indexes.
      *
-     * @throws InvalidIndexException
+     * @throws  InvalidIndexException
      */
     protected void validateIndexes() throws InvalidIndexException
     {
-
-        for(IndexDescriptor index : this.indexes.values())
+        for (final IndexDescriptor index : this.indexes.values())
         {
 
             try
             {
                 final Field field = this.clazz.getDeclaredField(index.getName());
-                if(field.getAnnotation(Attribute.class) == null)
+
+                if (field.getAnnotation(Attribute.class) == null)
                 {
                     throw new InvalidIndexException(InvalidIndexException.INDEX_MISSING_ATTRIBUTE + ": " + index.getName());
                 }
-            } catch (NoSuchFieldException e)
+            }
+            catch (NoSuchFieldException e)
             {
                 throw new InvalidIndexException(InvalidIndexException.INDEX_MISSING_FIELD);
             }
@@ -366,68 +462,70 @@ public class EntityDescriptor implements Serializable
     }
 
     /**
-     * Validate Attributes
+     * Validate Attributes.
      *
-     * @throws EntityTypeMatchException
+     * @throws  EntityTypeMatchException
      */
     protected void validateAttributes() throws EntityTypeMatchException
     {
-        for(AttributeDescriptor attribute : this.attributes.values())
+        for (final AttributeDescriptor attribute : this.attributes.values())
         {
-            if(!attribute.getType().getCanonicalName().equals(Date.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(Long.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(long.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(Integer.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(int.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(String.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(Double.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(double.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(boolean.class.getCanonicalName())
-                    && !attribute.getType().getCanonicalName().equals(Boolean.class.getCanonicalName()))
+
+            if (!attribute.getType().getCanonicalName().equals(Date.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(Long.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(long.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(Integer.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(int.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(String.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(Double.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(double.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(boolean.class.getCanonicalName()) &&
+                    !attribute.getType().getCanonicalName().equals(Boolean.class.getCanonicalName()))
             {
-                throw new EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " + attribute.getClass().getCanonicalName());
+                throw new EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " +
+                    attribute.getClass().getCanonicalName());
             }
         }
     }
 
     /**
-     * Validate Identifier
+     * Validate Identifier.
      *
-     * @throws InvalidIdentifierException
+     * @throws  InvalidIdentifierException
      */
     protected void validateIdentifier() throws InvalidIdentifierException
     {
-        if(this.identifier == null)
+        if (this.identifier == null)
         {
             throw new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_MISSING);
         }
 
         try
         {
-            Field idField = clazz.getDeclaredField(this.identifier.getName());
-            if(idField.getAnnotation(Attribute.class) == null)
+            final Field idField = clazz.getDeclaredField(this.identifier.getName());
+
+            if (idField.getAnnotation(Attribute.class) == null)
             {
                 throw new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_MISSING_ATTRIBUTE);
             }
-            if(!idField.getType().getCanonicalName().equals(Date.class.getCanonicalName())
-                    && !idField.getType().getCanonicalName().equals(Long.class.getCanonicalName())
-                    && !idField.getType().getCanonicalName().equals(long.class.getCanonicalName())
-                    && !idField.getType().getCanonicalName().equals(Integer.class.getCanonicalName())
-                    && !idField.getType().getCanonicalName().equals(int.class.getCanonicalName())
-                    && !idField.getType().getCanonicalName().equals(String.class.getCanonicalName()))
+
+            if (!idField.getType().getCanonicalName().equals(Date.class.getCanonicalName()) &&
+                    !idField.getType().getCanonicalName().equals(Long.class.getCanonicalName()) &&
+                    !idField.getType().getCanonicalName().equals(long.class.getCanonicalName()) &&
+                    !idField.getType().getCanonicalName().equals(Integer.class.getCanonicalName()) &&
+                    !idField.getType().getCanonicalName().equals(int.class.getCanonicalName()) &&
+                    !idField.getType().getCanonicalName().equals(String.class.getCanonicalName()))
             {
-                throw  new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_TYPE);
+                throw new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_TYPE);
             }
 
-            if((idField.getType() != Integer.class
-                    && idField.getType() != int.class
-                    && idField.getType() != Long.class
-                    && idField.getType() != long.class)
-                    && identifier.getGenerator() == IdentifierGenerator.SEQUENCE)
+            if (((idField.getType() != Integer.class) && (idField.getType() != int.class) && (idField.getType() != Long.class) &&
+                        (idField.getType() != long.class)) && (identifier.getGenerator() == IdentifierGenerator.SEQUENCE))
             {
                 throw new InvalidIdentifierException((InvalidIdentifierException.INVALID_GENERATOR));
             }
-        } catch (NoSuchFieldException e)
+        }
+        catch (NoSuchFieldException e)
         {
             throw new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_MISSING_ATTRIBUTE);
         }
@@ -435,87 +533,96 @@ public class EntityDescriptor implements Serializable
 
     ////////////////////////////////////////////////////////
     //
-    //  Hashing Object Overrides
+    // Hashing Object Overrides
     //
     ////////////////////////////////////////////////////////
     /**
-     * Used for calculating hash map
+     * Used for calculating hash map.
      *
-     * @return
+     * @return  used for calculating hash map.
      */
-    @Override
-    public int hashCode()
+    @Override public int hashCode()
     {
-
-        if(this.getPartition() == null)
+        if (this.getPartition() == null)
         {
             return clazz.getCanonicalName().hashCode();
         }
+
         return (clazz.getCanonicalName() + this.getPartition().getPartitionValue()).hashCode();
     }
 
     /**
-     * Check For Index Changes
+     * Check For Index Changes.
      *
-     * @param systemEntity System Entity serial version
-     * @param rebuildIndexConsumer consumer used to re-build index
-     * @return void nothing
+     * @param  systemEntity          System Entity serial version
+     * @param  rebuildIndexConsumer  consumer used to re-build index
      */
-    public void checkIndexChanges(SystemEntity systemEntity, Consumer<IndexDescriptor> rebuildIndexConsumer)
+    public void checkIndexChanges(final SystemEntity systemEntity, final Consumer<IndexDescriptor> rebuildIndexConsumer)
     {
         IndexDescriptor indexDescriptor = null;
         SystemIndex systemIndex = null;
 
-        Map<String, SystemIndex> indexMap = new THashMap();
-        for(int i = 0; i < systemEntity.getIndexes().size(); i++)
+        final Map<String, SystemIndex> indexMap = new THashMap();
+
+        for (int i = 0; i < systemEntity.getIndexes().size(); i++)
         {
             systemIndex = systemEntity.getIndexes().get(i);
             indexMap.put(systemIndex.getName(), systemIndex);
         }
 
-        Iterator<IndexDescriptor> indexIterator = this.getIndexes().values().iterator();
+        final Iterator<IndexDescriptor> indexIterator = this.getIndexes().values().iterator();
 
-        while(indexIterator.hasNext())
+        while (indexIterator.hasNext())
         {
             indexDescriptor = indexIterator.next();
             systemIndex = indexMap.get(indexDescriptor.getName());
-            if(systemIndex == null)
-                rebuildIndexConsumer.accept(indexDescriptor);
 
-            else if(systemIndex != null && !indexDescriptor.getType().getSimpleName().equals(systemIndex.getType()))
+            if (systemIndex == null)
+            {
                 rebuildIndexConsumer.accept(indexDescriptor);
+            }
+            else if ((systemIndex != null) && !indexDescriptor.getType().getSimpleName().equals(systemIndex.getType()))
+            {
+                rebuildIndexConsumer.accept(indexDescriptor);
+            }
         }
     }
 
     /**
-     * Check for valid relationships
+     * Check for valid relationships.
      *
-     * @param systemEntity
-     * @throws InvalidRelationshipTypeException
+     * @param   systemEntity
+     *
+     * @throws  InvalidRelationshipTypeException
      */
-    public void checkValidRelationships(SystemEntity systemEntity) throws InvalidRelationshipTypeException {
-
+    public void checkValidRelationships(final SystemEntity systemEntity) throws InvalidRelationshipTypeException
+    {
         // Build Relationship Map
-        Map<String, SystemRelationship> relationshipMap = new THashMap();
+        final Map<String, SystemRelationship> relationshipMap = new THashMap();
         SystemRelationship systemRelationship = null;
 
-        for (int i = 0; i < systemEntity.getRelationships().size(); i++) {
+        for (int i = 0; i < systemEntity.getRelationships().size(); i++)
+        {
             systemRelationship = systemEntity.getRelationships().get(i);
             relationshipMap.put(systemRelationship.getName(), systemRelationship);
         }
 
         // Iterate through and check for changes
-        Iterator<RelationshipDescriptor> relationshipDescriptorIterator = this.getRelationships().values().iterator();
+        final Iterator<RelationshipDescriptor> relationshipDescriptorIterator = this.getRelationships().values().iterator();
         RelationshipDescriptor relationshipDescriptor = null;
 
-        while (relationshipDescriptorIterator.hasNext()) {
+        while (relationshipDescriptorIterator.hasNext())
+        {
             relationshipDescriptor = relationshipDescriptorIterator.next();
             systemRelationship = relationshipMap.get(relationshipDescriptor.getName());
 
-            if (systemRelationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()
-                    || systemRelationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()) {
-                if (relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE ||
-                        relationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE) {
+            if ((systemRelationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()) ||
+                    (systemRelationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()))
+            {
+
+                if ((relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
+                        (relationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+                {
                     throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.CANNOT_UPDATE_RELATIONSHIP);
                 }
             }
@@ -524,118 +631,162 @@ public class EntityDescriptor implements Serializable
     }
 
     /**
-     * Used for usage within a hashmap
-     * @param val
-     * @return
+     * Used for usage within a hashmap.
+     *
+     * @param   val
+     *
+     * @return  used for usage within a hashmap.
      */
-    @Override
-    public boolean equals(Object val)
+    @Override public boolean equals(final Object val)
     {
-        if(val instanceof SystemEntity)
+        if (val instanceof SystemEntity)
         {
+
             // Compare Attributes
-            Iterator<Map.Entry<String, AttributeDescriptor>> it = this.attributes.entrySet().iterator();
+            final Iterator<Map.Entry<String, AttributeDescriptor>> it = this.attributes.entrySet().iterator();
             Map.Entry<String, AttributeDescriptor> attributeEntry = null;
 
-            SystemEntity systemEntity = (SystemEntity)val;
-            for(int i = 0; i < systemEntity.getAttributes().size(); i++)
+            final SystemEntity systemEntity = (SystemEntity) val;
+
+            for (int i = 0; i < systemEntity.getAttributes().size(); i++)
             {
-                SystemAttribute systemAttribute = systemEntity.getAttributes().get(i);
-                if(!this.attributes.containsKey(systemAttribute.getName()))
+                final SystemAttribute systemAttribute = systemEntity.getAttributes().get(i);
+
+                if (!this.attributes.containsKey(systemAttribute.getName()))
+                {
                     return false;
-                else if(!this.attributes.get(systemAttribute.getName()).getType().getSimpleName().equals(systemAttribute.getDataType()))
+                }
+                else if (!this.attributes.get(systemAttribute.getName()).getType().getSimpleName().equals(systemAttribute.getDataType()))
+                {
                     return false;
+                }
             }
 
-            while(it.hasNext())
+            while (it.hasNext())
             {
                 attributeEntry = it.next();
 
                 boolean found = false;
-                for(int i = 0; i < systemEntity.getAttributes().size(); i++)
-                {
-                    SystemAttribute systemAttribute = systemEntity.getAttributes().get(i);
 
-                    if(systemAttribute.getName().equals(attributeEntry.getKey()))
+                for (int i = 0; i < systemEntity.getAttributes().size(); i++)
+                {
+                    final SystemAttribute systemAttribute = systemEntity.getAttributes().get(i);
+
+                    if (systemAttribute.getName().equals(attributeEntry.getKey()))
                     {
-                        if(!attributeEntry.getValue().getType().getSimpleName().equals(systemAttribute.getDataType()))
+
+                        if (!attributeEntry.getValue().getType().getSimpleName().equals(systemAttribute.getDataType()))
+                        {
                             return false;
+                        }
 
                         found = true;
+
                         break;
                     }
                 }
 
-                if(!found)
+                if (!found)
+                {
                     return false;
+                }
 
             }
 
             // Compare Relationships
-            Iterator<Map.Entry<String, RelationshipDescriptor>> rltnIterator = this.relationships.entrySet().iterator();
+            final Iterator<Map.Entry<String, RelationshipDescriptor>> rltnIterator = this.relationships.entrySet().iterator();
             Map.Entry<String, RelationshipDescriptor> relationshipEntry = null;
 
-            for(int i = 0; i < systemEntity.getRelationships().size(); i++)
+            for (int i = 0; i < systemEntity.getRelationships().size(); i++)
             {
-                SystemRelationship systemRelationship = systemEntity.getRelationships().get(i);
-                if(!this.relationships.containsKey(systemRelationship.getName()))
+                final SystemRelationship systemRelationship = systemEntity.getRelationships().get(i);
+
+                if (!this.relationships.containsKey(systemRelationship.getName()))
+                {
                     return false;
-                else if(!this.relationships.get(systemRelationship.getName()).getInverseClass().getCanonicalName().equals(systemRelationship.getInverseClass()))
+                }
+                else if (
+                    !this.relationships.get(systemRelationship.getName()).getInverseClass().getCanonicalName().equals(
+                            systemRelationship.getInverseClass()))
+                {
                     return false;
-                else if(!this.relationships.get(systemRelationship.getName()).getParentClass().getCanonicalName().equals(systemRelationship.getParentClass()))
+                }
+                else if (
+                    !this.relationships.get(systemRelationship.getName()).getParentClass().getCanonicalName().equals(
+                            systemRelationship.getParentClass()))
+                {
                     return false;
+                }
             }
 
-            while(rltnIterator.hasNext())
+            while (rltnIterator.hasNext())
             {
                 relationshipEntry = rltnIterator.next();
 
                 boolean found = false;
-                for(int i = 0; i < systemEntity.getRelationships().size(); i++)
+
+                for (int i = 0; i < systemEntity.getRelationships().size(); i++)
                 {
-                    SystemRelationship systemRelationship = systemEntity.getRelationships().get(i);
-                    if(systemRelationship.getName().equals(relationshipEntry.getKey()))
+                    final SystemRelationship systemRelationship = systemEntity.getRelationships().get(i);
+
+                    if (systemRelationship.getName().equals(relationshipEntry.getKey()))
                     {
-                        if(!relationshipEntry.getValue().getInverseClass().getCanonicalName().equals(systemRelationship.getInverseClass()))
+
+                        if (!relationshipEntry.getValue().getInverseClass().getCanonicalName().equals(systemRelationship.getInverseClass()))
+                        {
                             return false;
-                        else if(!relationshipEntry.getValue().getParentClass().getCanonicalName().equals(systemRelationship.getParentClass()))
+                        }
+                        else if (
+                            !relationshipEntry.getValue().getParentClass().getCanonicalName().equals(systemRelationship.getParentClass()))
+                        {
                             return false;
+                        }
 
                         found = true;
+
                         break;
                     }
                 }
 
-                if(!found)
+                if (!found)
+                {
                     return false;
+                }
 
             }
 
             return true;
         }
-        if(val instanceof EntityDescriptor)
+
+        if (val instanceof EntityDescriptor)
         {
-            final EntityDescriptor compare = (EntityDescriptor)val;
-            if(compare.getPartition() == null && this.getPartition() == null)
+            final EntityDescriptor compare = (EntityDescriptor) val;
+
+            if ((compare.getPartition() == null) && (this.getPartition() == null))
             {
                 return (((EntityDescriptor) val).getClazz().getCanonicalName().equals(getClazz().getCanonicalName()));
             }
-            else if(compare.getPartition() == null)
+            else if (compare.getPartition() == null)
             {
                 return false;
             }
-            else if(this.getPartition() == null)
+            else if (this.getPartition() == null)
             {
                 return false;
             }
             else
             {
+
                 try
                 {
-                    return CompareUtil.compare(compare.getClazz().getCanonicalName(), this.getClazz().getCanonicalName(), QueryCriteriaOperator.EQUAL)
-                            && CompareUtil.compare(compare.getPartition().getPartitionValue(), this.getPartition().getPartitionValue(), QueryCriteriaOperator.EQUAL);
-                } catch (InvalidDataTypeForOperator invalidDataTypeForOperator)
-                { }
+                    return CompareUtil.compare(compare.getClazz().getCanonicalName(), this.getClazz().getCanonicalName(),
+                            QueryCriteriaOperator.EQUAL) &&
+                        CompareUtil.compare(compare.getPartition().getPartitionValue(), this.getPartition().getPartitionValue(),
+                            QueryCriteriaOperator.EQUAL);
+                }
+                catch (InvalidDataTypeForOperator invalidDataTypeForOperator)
+                {
+                }
             }
         }
 
@@ -644,7 +795,7 @@ public class EntityDescriptor implements Serializable
 
     ////////////////////////////////////////////////////////
     //
-    //  Getters and Setters
+    // Getters and Setters
     //
     ////////////////////////////////////////////////////////
     public Class getClazz()
@@ -657,7 +808,7 @@ public class EntityDescriptor implements Serializable
         return entity;
     }
 
-    public void setEntity(Entity entity)
+    public void setEntity(final Entity entity)
     {
         this.entity = entity;
     }
@@ -667,7 +818,7 @@ public class EntityDescriptor implements Serializable
         return identifier;
     }
 
-    public void setIdentifier(IdentifierDescriptor identifier)
+    public void setIdentifier(final IdentifierDescriptor identifier)
     {
         this.identifier = identifier;
     }
@@ -677,16 +828,18 @@ public class EntityDescriptor implements Serializable
         return partition;
     }
 
-    public void setPartition(PartitionDescriptor partition)
+    public void setPartition(final PartitionDescriptor partition)
     {
         this.partition = partition;
     }
 
-    public Method getPreUpdateCallback() {
+    public Method getPreUpdateCallback()
+    {
         return preUpdateCallback;
     }
 
-    public void setPreUpdateCallback(Method preUpdateCallback) {
+    public void setPreUpdateCallback(final Method preUpdateCallback)
+    {
         this.preUpdateCallback = preUpdateCallback;
     }
 
@@ -695,7 +848,7 @@ public class EntityDescriptor implements Serializable
         return preInsertCallback;
     }
 
-    public void setPreInsertCallback(Method preInsertCallback)
+    public void setPreInsertCallback(final Method preInsertCallback)
     {
         this.preInsertCallback = preInsertCallback;
     }
@@ -705,7 +858,7 @@ public class EntityDescriptor implements Serializable
         return preRemoveCallback;
     }
 
-    public void setPreRemoveCallback(Method preRemoveCallback)
+    public void setPreRemoveCallback(final Method preRemoveCallback)
     {
         this.preRemoveCallback = preRemoveCallback;
     }
@@ -715,7 +868,7 @@ public class EntityDescriptor implements Serializable
         return prePersistCallback;
     }
 
-    public void setPrePersistCallback(Method prePersistCallback)
+    public void setPrePersistCallback(final Method prePersistCallback)
     {
         this.prePersistCallback = prePersistCallback;
     }
@@ -725,7 +878,7 @@ public class EntityDescriptor implements Serializable
         return postUpdateCallback;
     }
 
-    public void setPostUpdateCallback(Method postUpdateCallback)
+    public void setPostUpdateCallback(final Method postUpdateCallback)
     {
         this.postUpdateCallback = postUpdateCallback;
     }
@@ -735,7 +888,7 @@ public class EntityDescriptor implements Serializable
         return postInsertCallback;
     }
 
-    public void setPostInsertCallback(Method postInsertCallback)
+    public void setPostInsertCallback(final Method postInsertCallback)
     {
         this.postInsertCallback = postInsertCallback;
     }
@@ -745,7 +898,7 @@ public class EntityDescriptor implements Serializable
         return postRemoveCallback;
     }
 
-    public void setPostRemoveCallback(Method postRemoveCallback)
+    public void setPostRemoveCallback(final Method postRemoveCallback)
     {
         this.postRemoveCallback = postRemoveCallback;
     }
@@ -755,7 +908,7 @@ public class EntityDescriptor implements Serializable
         return postPersistCallback;
     }
 
-    public void setPostPersistCallback(Method postPersistCallback)
+    public void setPostPersistCallback(final Method postPersistCallback)
     {
         this.postPersistCallback = postPersistCallback;
     }
@@ -765,7 +918,7 @@ public class EntityDescriptor implements Serializable
         return attributes;
     }
 
-    public void setAttributes(Map<String, AttributeDescriptor> attributes)
+    public void setAttributes(final Map<String, AttributeDescriptor> attributes)
     {
         this.attributes = attributes;
     }
@@ -775,7 +928,7 @@ public class EntityDescriptor implements Serializable
         return indexes;
     }
 
-    public void setIndexes(Map<String, IndexDescriptor> indexes)
+    public void setIndexes(final Map<String, IndexDescriptor> indexes)
     {
         this.indexes = indexes;
     }
@@ -785,48 +938,57 @@ public class EntityDescriptor implements Serializable
         return relationships;
     }
 
-    public void setRelationships(Map<String, RelationshipDescriptor> relationships) {
+    public void setRelationships(final Map<String, RelationshipDescriptor> relationships)
+    {
         this.relationships = relationships;
     }
 
     /**
-     * Get file name for data storage
-     * @return
+     * Get file name for data storage.
+     *
+     * @return  get file name for data storage.
      */
     public String getFileName()
     {
-        if(entity.fileName().equals(""))
+        if (entity.fileName().equals(""))
         {
             return "data.dat";
         }
+
         return entity.fileName();
     }
 
     /**
-     * Create new entity with the type specified in the descriptor
+     * Create new entity with the type specified in the descriptor.
      *
-     * @param clazz
-     * @return
-     * @throws InvalidConstructorException
+     * @param   clazz
+     *
+     * @return  create new entity with the type specified in the descriptor.
+     *
+     * @throws  InvalidConstructorException
      */
-    public static IManagedEntity createNewEntity(Class clazz) throws InvalidConstructorException
+    public static IManagedEntity createNewEntity(final Class clazz) throws InvalidConstructorException
     {
         final IManagedEntity e;
-        
-        if(clazz == null){
+
+        if (clazz == null)
+        {
             throw new InvalidConstructorException(InvalidConstructorException.MISSING_ENTITY_TYPE, null);
         }
-        
+
         try
         {
-            e = (IManagedEntity)clazz.newInstance();
-        } catch (InstantiationException e1)
-        {
-            throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e1);
-        } catch (IllegalAccessException e1)
+            e = (IManagedEntity) clazz.newInstance();
+        }
+        catch (InstantiationException e1)
         {
             throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e1);
         }
+        catch (IllegalAccessException e1)
+        {
+            throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e1);
+        }
+
         return e;
     }
 

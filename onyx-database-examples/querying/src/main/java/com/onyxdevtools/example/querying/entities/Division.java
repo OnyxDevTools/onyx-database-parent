@@ -3,6 +3,7 @@ package com.onyxdevtools.example.querying.entities;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
+import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.Relationship;
@@ -24,9 +25,17 @@ public class Division extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
             inverseClass = Team.class,
+            cascadePolicy = CascadePolicy.ALL,
             inverse = "division"
     )
     protected List<Team> teams;
+
+    @Relationship(
+            type = RelationshipType.MANY_TO_ONE,
+            inverse = "divisions",
+            inverseClass = Conference.class
+    )
+    protected Conference conference;
 
     public Division()
     {
@@ -50,6 +59,11 @@ public class Division extends ManagedEntity implements IManagedEntity
     public void setTeams(List<Team> teams)
     {
         this.teams = teams;
+    }
+
+    public void setConference(Conference conference)
+    {
+        this.conference = conference;
     }
 
 }

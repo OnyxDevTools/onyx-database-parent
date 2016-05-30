@@ -13,10 +13,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.collections.LazyQueryCollection;
 import com.onyx.persistence.manager.SocketPersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryOrder;
-import com.onyx.persistence.query.QueryResult;
+import com.onyx.persistence.query.*;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
@@ -688,6 +685,26 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         this.initialize(entity, attribute);
         return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
     }
+
+    /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    @Override
+    public List list(Class clazz) throws EntityException
+    {
+        final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
+
+        // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
+        QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
+        return list(clazz, criteria);
+    }
+
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
