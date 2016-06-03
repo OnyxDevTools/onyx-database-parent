@@ -1,10 +1,11 @@
 package embedded.stream;
 
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import com.onyx.stream.QueryStream;
 import embedded.base.BaseTest;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 import org.junit.After;
@@ -40,10 +41,29 @@ public class EntityStreamTest extends BaseTest
         Query query = new Query(ImmutableSequenceIdentifierEntityForDelete.class, new QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0));
 
         manager.stream(query, (entity, persistenceManager) -> {
+            ((ImmutableSequenceIdentifierEntityForDelete)entity).correlation = 2;
+        });
+    }
+
+    @Test
+    public void testBasicQueryStreamAndThen() throws EntityException
+    {
+        ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
+        testEntity.correlation = 1;
+        save(testEntity);
+
+        Query query = new Query(ImmutableSequenceIdentifierEntityForDelete.class, new QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0));
+
+        QueryStream modifyStream = (entity, persistenceManager) -> {
+            ((ImmutableSequenceIdentifierEntityForDelete)entity).correlation = 2;
+        };
+
+        modifyStream = modifyStream.andThen((entity, persistenceManager) -> {
             try {
-                // Modify entity
-                manager.saveEntity((ImmutableSequenceIdentifierEntityForDelete)entity);
+                persistenceManager.saveEntity((IManagedEntity)entity);
             } catch (EntityException e) {}
         });
+
+        manager.stream(query, modifyStream);
     }
 }
