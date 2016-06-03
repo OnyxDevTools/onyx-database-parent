@@ -1,7 +1,7 @@
 package com.onyx.persistence.manager.impl;
 
-import com.onyx.aggregate.Aggregator;
-import com.onyx.aggregate.MapAggregator;
+import com.onyx.stream.QueryStream;
+import com.onyx.stream.QueryMapStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
@@ -26,7 +26,6 @@ import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an embedded database.
@@ -1097,60 +1096,61 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     }
 
     /**
-     * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
      * @since 1.0.0
      *
-     * @param aggregator Instance of the aggregator to implement the bulk operation
+     * @param query Query to execute and stream
      *
-     * @param query Query to execute and process by the aggregator
+     * @param streamer Instance of the streamer to use to stream the data
+     *
      */
     @Override
-    public void aggregate(Aggregator aggregator, Query query) throws EntityException
+    public void stream(Query query, QueryStream streamer) throws EntityException
     {
 
         final LazyQueryCollection entityList = (LazyQueryCollection)executeLazyQuery(query);
-        final BiConsumer consumer = aggregator.getConsumer();
         final PersistenceManager persistenceManagerInstance = this;
 
         for(int i = 0; i < entityList.size(); i++)
         {
-            Object objectToAggregate = null;
+            Object objectToStream = null;
 
-            if(aggregator instanceof MapAggregator)
+            if(streamer instanceof QueryMapStream)
             {
-                objectToAggregate = entityList.getDict(i);
+                objectToStream = entityList.getDict(i);
             }
             else
             {
-                objectToAggregate = entityList.get(i);
+                objectToStream = entityList.get(i);
             }
 
-            consumer.accept(objectToAggregate, persistenceManagerInstance);
+            streamer.accept(objectToStream, persistenceManagerInstance);
         }
     }
 
     /**
-     * This method is used for bulk aggregation.  An example of bulk aggregation is for analytics or bulk updates included but not limited to model changes.
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
      * @since 1.0.0
      *
-     * @param aggregatorClass Class instance of the aggregator
+     * @param query Query to execute and stream
      *
-     * @param query Query to execute and process by the aggregator
+     * @param queryStreamClass Class instance of the database stream
+     *
      */
     @Override
-    public void aggregate(Class<Aggregator> aggregatorClass, Query query) throws EntityException
+    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
     {
-        Aggregator aggregator = null;
+        QueryStream streamer = null;
         try {
-            aggregator = aggregatorClass.newInstance();
+            streamer = queryStreamClass.newInstance();
         } catch (InstantiationException e) {
             throw new AggregatorException(AggregatorException.CANNOT_INSTANTIATE_AGGREGATOR);
         } catch (IllegalAccessException e) {
             throw new AggregatorException(AggregatorException.CANNOT_INSTANTIATE_AGGREGATOR);
         }
-        this.aggregate(aggregator, query);
+        this.stream(query, streamer);
     }
 
 }
