@@ -54,6 +54,17 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     }
 
     /**
+     * Return the Schema Context that was created by the Persistence Manager Factory.
+     *
+     * @since 1.0.0
+     * @return context Schema Context Implementation
+     */
+    public SchemaContext getContext()
+    {
+        return this.context;
+    }
+
+    /**
      * Save entity.  Persists a single entity for update or insert.  This method will cascade relationships and persist indexes.
      *
      * @since 1.0.0

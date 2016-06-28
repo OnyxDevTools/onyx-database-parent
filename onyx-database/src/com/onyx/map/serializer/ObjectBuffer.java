@@ -1326,6 +1326,11 @@ public class ObjectBuffer
     public Map toMap(int serializerId)
     {
         Map<String, Object> results = new HashMap();
+
+        // Read the type and serializer id to put the position in the right place to read attributes
+        buffer.get();
+        buffer.getShort();
+
         SystemEntity systemEntity = serializers.context.getSystemEntityById(serializerId);
 
         for (SystemAttribute attribute : systemEntity.getAttributes())

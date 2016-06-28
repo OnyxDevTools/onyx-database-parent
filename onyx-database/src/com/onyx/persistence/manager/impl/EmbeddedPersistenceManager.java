@@ -96,6 +96,17 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     }
 
     /**
+     * Return the Schema Context that was created by the Persistence Manager Factory.
+     *
+     * @since 1.0.0
+     * @return context Schema Context Implementation
+     */
+    public SchemaContext getContext()
+    {
+        return this.context;
+    }
+
+    /**
      * Set journaling Enabled.  If enabled, the persistence manager will keep a WAL transaction file for all persistence actions.
      *
      * @param journalingEnabled Enabled True or False
