@@ -6,8 +6,6 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryCriteriaOperator;
 
 import com.onyxdevtools.example.querying.entities.Player;
 
@@ -39,9 +37,7 @@ public class ListExample
 
         final PersistenceManager manager = factory.getPersistenceManager();
 
-        final QueryCriteria criteria = new QueryCriteria("playerId", QueryCriteriaOperator.GREATER_THAN, 0);
-
-        final List<Player> players = manager.list(Player.class, criteria);
+        final List<Player> players = manager.list(Player.class);
 
         for (final Player player : players)
         {
