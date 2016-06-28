@@ -43,16 +43,16 @@ public class QueryExample
 
         // Create a query and criteria
         final QueryCriteria criteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB");
-        criteria.and("firstName", QueryCriteriaOperator.STARTS_WITH, "D");
+        criteria.and("lastName", QueryCriteriaOperator.STARTS_WITH, "C");
 
-        final Query query = new Query(Player.class, criteria, new QueryOrder("lastName"));
+        final Query query = new Query(Player.class, criteria, new QueryOrder("firstName"));
         // query.setCriteria(criteria); or you can set the critiera after construction
 
         final List<Player> quarterbacks = manager.executeQuery(query);
 
         for (final Player qb : quarterbacks)
         {
-            System.out.println(qb.getLastName() + "," + qb.getFirstName());
+            System.out.println(qb.getFirstName() + " " + qb.getLastName());
         }
 
         factory.close(); // close the factory so that we can use it again

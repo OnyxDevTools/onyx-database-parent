@@ -41,16 +41,16 @@ public class Main extends AbstractDemo
 
         factory.close(); //close the factory so that we can use it again
 
-        System.out.print("\n Find Example \n");
+        System.out.print("\n Find Example: \n");
         FindExample.demo();
 
-        System.out.print("\nFindById Example \n");
+        System.out.print("\nFindById Example: \n");
         FindByIdExample.demo();
 
-        System.out.print("\nList Example \n");
+        System.out.print("\nList Example: \n");
         ListExample.demo();
 
-        System.out.print("\nQuery Example \n");
+        System.out.print("\nQuery Example: \n");
         QueryExample.demo();
     }
 
