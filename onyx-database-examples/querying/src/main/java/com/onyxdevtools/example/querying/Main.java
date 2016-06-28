@@ -41,9 +41,17 @@ public class Main extends AbstractDemo
 
         factory.close(); //close the factory so that we can use it again
 
+        System.out.print("\n Find Example \n");
         FindExample.demo();
+
+        System.out.print("\nFindById Example \n");
         FindByIdExample.demo();
+
+        System.out.print("\nList Example \n");
         ListExample.demo();
+
+        System.out.print("\nQuery Example \n");
+        QueryExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
@@ -1053,7 +1061,7 @@ public class Main extends AbstractDemo
         //Giants
         Player giantsQB = new Player();
         giantsQB.setFirstName("Eli");
-        giantsQB.setLastName("Mannings");
+        giantsQB.setLastName("Manning");
         giantsQB.setPosition("QB");
 
         Player giantsRB1 = new Player();
