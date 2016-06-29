@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.before.entities;
+package com.onyxdevtools.modelupdate.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
@@ -21,8 +21,13 @@ public class Invoice extends ManagedEntity implements IManagedEntity
     @Attribute
     protected Date invoiceDate;
 
+    // Note for Example 4: I have added an index the the invoice due date
+    @Index
     @Attribute
     protected Date dueDate;
+
+    @Attribute
+    protected double amount;
 
     @Attribute
     protected String notes;
@@ -34,7 +39,7 @@ public class Invoice extends ManagedEntity implements IManagedEntity
             fetchPolicy = FetchPolicy.EAGER)
     protected List<Payment> payments;
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE,
+    @Relationship(type = RelationshipType.MANY_TO_ONE,
             inverseClass = Account.class,
             inverse = "invoices")
     protected Account account;
@@ -85,5 +90,13 @@ public class Invoice extends ManagedEntity implements IManagedEntity
 
     public void setAccount(Account account) {
         this.account = account;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(double amount) {
+        this.amount = amount;
     }
 }

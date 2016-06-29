@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.before.entities;
+package com.onyxdevtools.modelupdate.entities;
 
 
 import com.onyx.persistence.IManagedEntity;
@@ -22,7 +22,7 @@ public class Account extends ManagedEntity implements IManagedEntity
     protected String accountName;
 
     @Attribute
-    protected float balanceDue;
+    protected double balanceDue;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "account",
@@ -47,11 +47,11 @@ public class Account extends ManagedEntity implements IManagedEntity
         this.accountName = accountName;
     }
 
-    public float getBalanceDue() {
+    public double getBalanceDue() {
         return balanceDue;
     }
 
-    public void setBalanceDue(float balanceDue) {
+    public void setBalanceDue(double balanceDue) {
         this.balanceDue = balanceDue;
     }
 

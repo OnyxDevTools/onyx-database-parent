@@ -4,9 +4,9 @@ import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.modelupdate.before.entities.Account;
-import com.onyxdevtools.modelupdate.before.entities.Invoice;
-import com.onyxdevtools.modelupdate.before.entities.Payment;
+import com.onyxdevtools.modelupdate.entities.Account;
+import com.onyxdevtools.modelupdate.entities.Invoice;
+import com.onyxdevtools.modelupdate.entities.Payment;
 
 import java.io.File;
 import java.text.ParseException;
@@ -36,6 +36,7 @@ public class Main
 
     public static void main(String[] args) throws EntityException
     {
+
         // Create a database and its connection
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(); //1
 
@@ -45,6 +46,10 @@ public class Main
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"model-update-db.oxd";
+
+        // Cleanup the database before we begin
+        deleteDatabase(pathToOnyxDB);
+
         factory.setDatabaseLocation(pathToOnyxDB); //3
 
         factory.initialize();
@@ -75,6 +80,7 @@ public class Main
         marchLawnInvoice.setInvoiceDate(parseDate("03-01-2016"));
         marchLawnInvoice.setNotes("Why did we need to mow your lawn.  Its basically a dirt field.");
         marchLawnInvoice.setInvoiceId(1l);
+        marchLawnInvoice.setAmount(44.32);
         marchLawnInvoice.setAccount(account);
 
         Invoice aprilLawnInvoice = new Invoice();
@@ -82,6 +88,7 @@ public class Main
         aprilLawnInvoice.setInvoiceDate(parseDate("03-01-2016"));
         aprilLawnInvoice.setNotes("Its April, your lawn should be growing by now.");
         aprilLawnInvoice.setInvoiceId(2l);
+        aprilLawnInvoice.setAmount(44.32);
         aprilLawnInvoice.setAccount(account);
 
         manager.saveEntity(account);
@@ -93,7 +100,10 @@ public class Main
         marchLawnCarePayment.setInvoice(marchLawnInvoice);
         marchLawnCarePayment.setAmount(44.32);
 
+
         manager.saveEntity(marchLawnCarePayment);
+
+        Account account1 = (Account)manager.findById(Account.class, 1);
     }
 
     /**
@@ -110,5 +120,31 @@ public class Main
             e.printStackTrace();
             return null;
         }
+    }
+
+    /**
+     * Delete a database so you have a clean slate prior to testing
+     *
+     * @param pathToDb Path to onyx database
+     */
+    public static void deleteDatabase(String pathToDb)
+    {
+        File database = new File(pathToDb);
+        if (database != null && database.exists()) {
+            delete(database);
+        }
+        database.delete();
+    }
+
+    /**
+     * Delete files within a directory
+     * @param f directory to delete
+     */
+    private static void delete(File f) {
+        if (f.isDirectory()) {
+            for (File c : f.listFiles())
+                delete(c);
+        }
+        f.delete();
     }
 }

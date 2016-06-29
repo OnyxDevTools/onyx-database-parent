@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.after.entities;
+package com.onyxdevtools.modelupdate.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
@@ -19,8 +19,12 @@ public class Payment extends ManagedEntity implements IManagedEntity
             inverseClass = Invoice.class)
     protected Invoice invoice;
 
+    @Index
     @Attribute
     protected double amount;
+
+    @Attribute
+    protected String notes;
 
     public long getPaymentId() {
         return paymentId;
@@ -44,5 +48,13 @@ public class Payment extends ManagedEntity implements IManagedEntity
 
     public void setAmount(double amount) {
         this.amount = amount;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

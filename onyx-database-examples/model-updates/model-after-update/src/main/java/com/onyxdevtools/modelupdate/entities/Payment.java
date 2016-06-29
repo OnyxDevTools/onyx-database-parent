@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.before.entities;
+package com.onyxdevtools.modelupdate.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
@@ -19,8 +19,15 @@ public class Payment extends ManagedEntity implements IManagedEntity
             inverseClass = Invoice.class)
     protected Invoice invoice;
 
+    // Note for 4 I have removed an index
+    // @Index
     @Attribute
     protected double amount;
+
+    // Note for example 4, I have added an index to notes
+    @Attribute
+    @Index
+    protected String notes;
 
     public long getPaymentId() {
         return paymentId;
@@ -44,5 +51,13 @@ public class Payment extends ManagedEntity implements IManagedEntity
 
     public void setAmount(double amount) {
         this.amount = amount;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

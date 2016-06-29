@@ -612,7 +612,6 @@ public class DefaultSchemaContext implements SchemaContext
     // Contains the initialized entity descriptors
     protected Map<String, EntityDescriptor> descriptors = new THashMap();
 
-    // protected ReentrantLock lockEntityDescriptor = new ReentrantLock();
     protected AtomicLong partitions = new AtomicLong(0);
 
     /**

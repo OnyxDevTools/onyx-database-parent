@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.after.entities;
+package com.onyxdevtools.modelupdate.entities;
 
 
 import com.onyx.persistence.IManagedEntity;
@@ -14,15 +14,22 @@ import java.util.List;
 public class Account extends ManagedEntity implements IManagedEntity
 {
 
+    // Note for Example 2: I have changed the type of the accountId from an int to a long.  Also the generator was removed.
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    protected int accountId;
+    @Identifier
+    protected long accountId;
+
+    // Note for Example 1: I have added the Account Holder's Name
+    @Attribute
+    protected String accountHolderName;
 
     @Attribute
     protected String accountName;
 
-    @Attribute
-    protected float balanceDue;
+    // Note for Example 1: I have removed the balance Due since it should not be reflected on the Account
+    // and should be reflected on the Invoice
+    //@Attribute
+    //protected double balanceDue;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "account",
@@ -31,11 +38,11 @@ public class Account extends ManagedEntity implements IManagedEntity
             fetchPolicy = FetchPolicy.LAZY)
     protected List<Invoice> invoices;
 
-    public int getAccountId() {
+    public long getAccountId() {
         return accountId;
     }
 
-    public void setAccountId(int accountId) {
+    public void setAccountId(long accountId) {
         this.accountId = accountId;
     }
 
@@ -45,14 +52,6 @@ public class Account extends ManagedEntity implements IManagedEntity
 
     public void setAccountName(String accountName) {
         this.accountName = accountName;
-    }
-
-    public float getBalanceDue() {
-        return balanceDue;
-    }
-
-    public void setBalanceDue(float balanceDue) {
-        this.balanceDue = balanceDue;
     }
 
     public List<Invoice> getInvoices() {

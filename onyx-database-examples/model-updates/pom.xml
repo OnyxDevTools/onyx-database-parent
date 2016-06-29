@@ -7,7 +7,7 @@
     <groupId>com.onyxdevtools</groupId>
     <artifactId>model-updates</artifactId>
     <version>1.0.0</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
     <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
 
     <properties>

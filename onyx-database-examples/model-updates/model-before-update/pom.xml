@@ -7,7 +7,6 @@
     <groupId>com.onyxdevtools</groupId>
     <artifactId>model-before-update</artifactId>
     <version>1.0.0</version>
-    <packaging>jar</packaging>
     <name>${project.groupId}:onyx-database-examples:model-updates:${project.artifactId}</name>
 
     <properties>
@@ -22,6 +21,11 @@
             <groupId>com.onyxdevtools</groupId>
             <artifactId>onyx-database</artifactId>
             <version>${onyx-database.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.onyxdevtools</groupId>
+            <artifactId>onyx-database</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 
