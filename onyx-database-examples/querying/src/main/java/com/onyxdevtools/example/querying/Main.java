@@ -52,6 +52,9 @@ public class Main extends AbstractDemo
 
         System.out.print("\nQuery Example: \n");
         QueryExample.demo();
+
+        System.out.print("\nCompound Query Example: \n");
+        CompoundQueryExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
