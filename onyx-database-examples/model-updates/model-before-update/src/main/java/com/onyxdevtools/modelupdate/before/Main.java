@@ -103,7 +103,7 @@ public class Main
 
         manager.saveEntity(marchLawnCarePayment);
 
-        Account account1 = (Account)manager.findById(Account.class, 1);
+        Account account1 = (Account) manager.findById(Account.class, 1);
     }
 
     /**

@@ -30,12 +30,12 @@ public class Invoice extends ManagedEntity implements IManagedEntity
     @Attribute
     protected String notes;
 
-    @Relationship(type = RelationshipType.ONE_TO_MANY,
+    @Relationship(type = RelationshipType.ONE_TO_ONE,
             inverse = "invoice",
             inverseClass = Payment.class,
             cascadePolicy = CascadePolicy.SAVE,
             fetchPolicy = FetchPolicy.EAGER)
-    protected List<Payment> payments;
+    protected Payment payments;
 
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             inverseClass = Account.class,
@@ -74,11 +74,11 @@ public class Invoice extends ManagedEntity implements IManagedEntity
         this.notes = notes;
     }
 
-    public List<Payment> getPayments() {
+    public Payment getPayments() {
         return payments;
     }
 
-    public void setPayments(List<Payment> payments) {
+    public void setPayments(Payment payments) {
         this.payments = payments;
     }
 

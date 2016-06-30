@@ -130,7 +130,7 @@ public class ScannerFactory
             }
         }
 
-        throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + attributeToScan);
+        throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + " " + attributeToScan);
     }
 
     /**

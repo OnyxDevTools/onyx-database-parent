@@ -1,14 +1,10 @@
 package com.onyxdevtools.modelupdate.after;
 
-import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
-import com.onyx.index.IndexController;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyxdevtools.modelupdate.entities.Account;
 import com.onyxdevtools.modelupdate.entities.Invoice;
 import com.onyxdevtools.modelupdate.entities.Payment;
 
@@ -20,6 +16,11 @@ import java.util.List;
 /**
  * Created by tosborn1 on 6/28/16.
  *
+ * The purpose of this Demo class is to outline how an index can be removed and added and the queries that
+ * would be impacted by the model changes.
+ *
+ * This will also display how new indexes also need to rebuild in order to become useful.  The rebuilding of an index
+ * is done automatically at startup and should not need to be triggered manually.
  */
 public class UpdateIndexDemo {
 
@@ -36,12 +37,16 @@ public class UpdateIndexDemo {
 
         try {
 
-
+            // This query predicates on a field that is no longer indexed.  This will trigger a full table scan which is sub-optimal.
+            // The old index no longer applies.
             final Query nonIndexedQuery = new Query(Invoice.class, new QueryCriteria("amount", QueryCriteriaOperator.EQUAL, 44.32));
             List<Payment> payments = persistenceManager.executeQuery(nonIndexedQuery);
 
+            // See that we still get results by doing the full table scan.
             assert payments.size() == 2;
 
+            // The Code snippet below outlines how to perform an index rebuild manually.  This will go through and index all of the records by the specified field.
+            // When doing a lightweight migration this should not be needed since the database will detect the change and automatically trigger the build asynchronously.
             /*
             final EntityDescriptor entityDescriptor = persistenceManager.getContext().getDescriptorForEntity(Account.class, "");
             final IndexDescriptor indexDescriptor = entityDescriptor.getIndexes().get("dueDate");
@@ -50,10 +55,14 @@ public class UpdateIndexDemo {
             indexController.rebuild();
             */
 
-            final Query indexedQuery = new Query(Payment.class, new QueryCriteria("dueDate", QueryCriteriaOperator.EQUAL, parseDate("03-01-2016")));
-            payments = persistenceManager.executeQuery(indexedQuery);
+            // This query uses the new index to execute the query.
+            // NOTE: It may take some time for the index to be rebuilt if you have large data sets.
+            // In the meantime you may not get the full expected results.
+            final Query indexedQuery = new Query(Invoice.class, new QueryCriteria("dueDate", QueryCriteriaOperator.EQUAL, parseDate("04-01-2016")));
+            final List<Invoice> invoices = persistenceManager.executeQuery(indexedQuery);
 
-            assert payments.size() == 2;
+            // First pass may not give you 2 results since the index could still be rebuilding.  After it is done re-indexing you should have 2 results.
+            assert invoices.size() == 2;
 
         } catch (EntityException e)
         {

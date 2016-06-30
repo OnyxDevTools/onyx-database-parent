@@ -4,13 +4,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 
-import com.onyx.entity.SystemAttribute;
-import com.onyx.entity.SystemEntity;
-import com.onyx.entity.SystemIdentifier;
-import com.onyx.entity.SystemIndex;
-import com.onyx.entity.SystemPartition;
-import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.entity.SystemRelationship;
+import com.onyx.entity.*;
 
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.EntityException;
@@ -29,6 +23,7 @@ import com.onyx.map.MapBuilder;
 import com.onyx.map.store.StoreType;
 
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
@@ -193,6 +188,25 @@ public class DefaultSchemaContext implements SchemaContext
      */
     public void start()
     {
+        // The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
+        // So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
+        try {
+            final EntityDescriptor descriptor = new EntityDescriptor(SystemEntity.class, this);
+            this.systemEntityByIDMap.put(1, new SystemEntity(descriptor));
+
+            systemPersistenceManager.list(SystemEntity.class).forEach(o -> {
+                SystemEntity systemEntity = (SystemEntity) o;
+                try {
+                    getDescriptorForEntity(Class.forName(systemEntity.getName()));
+                } catch (EntityException e) {
+                    // Ignore
+                } catch (ClassNotFoundException e) {
+                    // Ignore
+                }
+            });
+        } catch (EntityException e) {
+            // Ignore
+        }
     }
 
     protected PersistenceManager systemPersistenceManager = null;

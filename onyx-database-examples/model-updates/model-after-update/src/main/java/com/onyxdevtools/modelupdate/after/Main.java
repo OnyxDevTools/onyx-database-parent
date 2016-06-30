@@ -1,5 +1,6 @@
 package com.onyxdevtools.modelupdate.after;
 
+import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
@@ -12,7 +13,7 @@ import java.io.File;
  */
 public class Main
 {
-    public static void main(String[] args) throws InitializationException
+    public static void main(String[] args) throws InitializationException, EntityException
     {
         // Create a database and its connection
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(); //1
