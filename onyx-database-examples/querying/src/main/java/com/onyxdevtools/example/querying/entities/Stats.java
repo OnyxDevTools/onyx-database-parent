@@ -35,26 +35,37 @@ public class Stats extends ManagedEntity implements IManagedEntity
     )
     protected Season season;
 
+    @Attribute
     protected int rushingYards;
 
+    @Attribute
     protected int receivingYards;
 
+    @Attribute
     protected int passingYards;
 
+    @Attribute
     protected int rushingTouchdowns;
 
+    @Attribute
     protected int receivingTouchdowns;
 
+    @Attribute
     protected int passingTouchdowns;
 
+    @Attribute
     protected int receptions;
 
+    @Attribute
     protected int rushingAttempts;
 
+    @Attribute
     protected int passAttempts;
 
+    @Attribute
     protected int passCompletions;
 
+    @Attribute
     protected int fantasyPoints;
 
     public long getStatId()
