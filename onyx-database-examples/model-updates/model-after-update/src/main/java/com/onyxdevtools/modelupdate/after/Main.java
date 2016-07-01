@@ -30,11 +30,11 @@ public class Main
 
         PersistenceManager manager = factory.getPersistenceManager();  //5
 
+        ManualMigrationDemo.demo(manager); // For all things that are not possible with the lightweight migration, you can use a manual migration using the stream api
         UpdateFieldDemo.demo(manager); // Displays how the model has been changed by adding/removing fields.  This is done with the lightweight migration
         UpdateIdentifierDemo.demo(manager); // Displays how the identifier type has changed.  This has been done by the lightweight migration.
         UpdateIndexDemo.demo(manager); // Displays how indexes have been added/removed.  Again handled by lightweight migration.
         UpdateRelationshipDemo.demo(manager); // Displays how you can change simple things on a relationship that can be handled by the lightweight migration.
-        ManualMigrationDemo.demo(manager); // For all things that are not possible with the lightweight migration, you can use a manual migration using the stream api
 
         // Close the database cleanly
         factory.close();
