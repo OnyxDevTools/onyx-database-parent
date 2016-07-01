@@ -3,14 +3,14 @@ package com.onyx.exception;
 /**
  * Exception thrown when the persistence manager is unable to instantiate the aggregator
  */
-public class AggregatorException extends EntityException
+public class StreamException extends EntityException
 {
-    public static final String CANNOT_INSTANTIATE_AGGREGATOR = "Unable to instantiate aggregator.  Define a valid constructor.";
+    public static final String CANNOT_INSTANTIATE_STREAM = "Unable to instantiate stream.  Define a valid constructor.";
 
     /**
      * Default Constructor
      */
-    public AggregatorException()
+    public StreamException()
     {
 
     }
@@ -20,7 +20,7 @@ public class AggregatorException extends EntityException
      *
      * @param message Message associated with exception
      */
-    public AggregatorException(String message)
+    public StreamException(String message)
     {
         super(message);
     }

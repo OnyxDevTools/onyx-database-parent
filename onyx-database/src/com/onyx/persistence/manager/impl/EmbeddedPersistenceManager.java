@@ -25,7 +25,6 @@ import com.onyx.util.ObjectUtil;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
-import java.util.function.BiConsumer;
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an embedded database.
@@ -1157,9 +1156,9 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         try {
             streamer = queryStreamClass.newInstance();
         } catch (InstantiationException e) {
-            throw new AggregatorException(AggregatorException.CANNOT_INSTANTIATE_AGGREGATOR);
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_AGGREGATOR);
         } catch (IllegalAccessException e) {
-            throw new AggregatorException(AggregatorException.CANNOT_INSTANTIATE_AGGREGATOR);
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_AGGREGATOR);
         }
         this.stream(query, streamer);
     }
