@@ -54,7 +54,7 @@ public class DeleteQueryExample
             System.out.println(player.getFirstName() + " " + player.getLastName() + " is not active.");
         }
 
-        manager.deleteEntities(inactivePlayers);
+        manager.executeDelete(query);
 
         // re-execute the query get the updated list
         inactivePlayers = manager.executeQuery(query);
