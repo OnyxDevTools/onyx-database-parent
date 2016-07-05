@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * This is a 2 part example.  The first example is used simply to create an existing database.
+ * This is a 1 part example.  The first example is used simply to create an existing database.
  *
  * Part 1 - @see com.onyxdevtools.modelupdate.before.Main
  *
@@ -99,7 +99,6 @@ public class Main
         marchLawnCarePayment.setPaymentId(1l);
         marchLawnCarePayment.setInvoice(marchLawnInvoice);
         marchLawnCarePayment.setAmount(44.32);
-
 
         manager.saveEntity(marchLawnCarePayment);
 

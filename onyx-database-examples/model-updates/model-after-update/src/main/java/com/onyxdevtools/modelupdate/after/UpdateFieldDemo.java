@@ -26,7 +26,8 @@ public class UpdateFieldDemo
             Account account = (Account)persistenceManager.findById(Account.class, 1l);
             assert account.getAccountId() == 1l;
 
-            // The Account Name is a new field and is now persistanble.  This demonstrates that we can now take
+            // The Account Name is a new field and is now persistable.
+            // This demonstrates that we can now take
             // advantage of the new field.
             account.setAccountName("Utility Bill");
             persistenceManager.saveEntity(account);

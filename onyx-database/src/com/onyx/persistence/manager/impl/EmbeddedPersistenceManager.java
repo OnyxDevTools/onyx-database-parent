@@ -1156,9 +1156,9 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         try {
             streamer = queryStreamClass.newInstance();
         } catch (InstantiationException e) {
-            throw new StreamException(StreamException.CANNOT_INSTANTIATE_AGGREGATOR);
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
         } catch (IllegalAccessException e) {
-            throw new StreamException(StreamException.CANNOT_INSTANTIATE_AGGREGATOR);
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
         }
         this.stream(query, streamer);
     }

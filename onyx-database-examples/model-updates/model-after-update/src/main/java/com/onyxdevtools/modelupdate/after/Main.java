@@ -9,7 +9,19 @@ import com.onyx.persistence.manager.PersistenceManager;
 import java.io.File;
 
 /**
- * Created by tosborn1 on 5/6/16.
+ * This is a 2 part example.  The first example is used simply to create an existing database.
+ *
+ * Part 1 - @see com.onyxdevtools.modelupdate.before.Main
+ *
+ *   This class' purpose is to fill a test database with a flawed data model so that we can showcase
+ *   how we can make changes to the data model and handle migrations.
+ *
+ * Part 2 - @see com.onyxdevtools.modelupdate.after.Main
+ *
+ *   Part 2 will demonstrate how the changes are made to the data model.  Have a look at the entities and notice
+ *   the commented changes to those entities.
+ *
+ * Instruction - First run this main class for Part 1, and then run the main class in Part 2
  */
 public class Main
 {

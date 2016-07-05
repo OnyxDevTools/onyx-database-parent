@@ -36,7 +36,7 @@ public class ManualMigrationDemo {
 
         // This is a simple example of how to use the stream() api to iterate through payment records and dynamically update the payment record
         // with very specific data driven format.
-        final Query paymentQuery = new Query(Payment.class, new QueryCriteria("amount", QueryCriteriaOperator.LESS_THAN_EQUAL, 0.0));
+        final Query paymentQuery = new Query(Payment.class, new QueryCriteria("amount", QueryCriteriaOperator.LESS_THAN_EQUAL, 1.0));
 
         // Basically, this code will find all the payments under a specific amount and add a kind note to that payment.
         //
