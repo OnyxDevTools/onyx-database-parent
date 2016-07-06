@@ -420,6 +420,32 @@ public class AbstractBitMap
         return fileStore.read(reference.position + reference.keySize + RecordReference.RECORD_REFERENCE_LIST_SIZE, (reference.recordSize - reference.keySize), Object.class, reference.serializerId);
     }
 
+    /**
+     * This method is intended to get a record value as a dictionary.  Note: This is only intended for ManagedEntities
+     *
+     * @param reference Record reference to pull
+     *
+     * @return Map of key value pairs
+     */
+    public Map getRecordValueAsDictionary(RecordReference reference)
+    {
+        ObjectBuffer buffer = fileStore.read(reference.position + reference.keySize + RecordReference.RECORD_REFERENCE_LIST_SIZE, (reference.recordSize - reference.keySize));
+        return buffer.toMap(reference.serializerId);
+    }
+
+    /**
+     * Get Attribute with record id
+     *
+     * @param attribute attribute name to gather
+     * @param reference record reference where the record is stored
+     *
+     * @return Attribute value of record
+     */
+    public Object getAttributeWithRecID(String attribute, RecordReference reference)
+    {
+        ObjectBuffer buffer = fileStore.read(reference.position + reference.keySize + RecordReference.RECORD_REFERENCE_LIST_SIZE, (reference.recordSize - reference.keySize));
+        return buffer.getAttribute(attribute, reference.serializerId);
+    }
 
     /**
      * The purpose of this hash is to generate a fancier hash so that in instances for a long or int, it will not generate the value of those

@@ -89,8 +89,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
         final Map allResults = new THashMap();
 
         final Iterator<Long> iterator = existingValues.keySet().iterator();
-        IManagedEntity entity = null;
-        Object attributeValue = null;
+        Object entityAttribute = null;
         Object keyValue = null;
 
         while(iterator.hasNext())
@@ -103,24 +102,22 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
             if(keyValue instanceof PartitionReference)
             {
                 final RecordController recordController = this.getRecordControllerForPartition(((PartitionReference)keyValue).partition);
-                entity = recordController.getWithReferenceId(((PartitionReference) keyValue).reference);
+                entityAttribute = recordController.getAttributeWithReferenceId(fieldToGrab.field.getName(), ((PartitionReference) keyValue).reference);
             }
             else
             {
-                entity = records.getWithRecID((long)keyValue);
+                entityAttribute = records.getAttributeWithRecID(fieldToGrab.field.getName(), (long)keyValue);
             }
 
-            // Ensure entity still exists
+            /*
             if(entity == null)
             {
                 continue;
             }
-
-            // Get the attribute value
-            attributeValue = reflection.getAttribute(fieldToGrab, entity);
+            */
 
             // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
+            if (CompareUtil.compare(criteria.getValue(), entityAttribute, criteria.getOperator()))
             {
                 allResults.put(keyValue, keyValue);
             }

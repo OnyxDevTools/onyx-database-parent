@@ -236,6 +236,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
                 throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
             }
 
+            this.getPersistenceManager();
             context.start();
         }
         catch (OverlappingFileLockException e)

@@ -4,6 +4,8 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 
+import java.util.Map;
+
 /**
  * Created by timothy.osborn on 2/5/15.
  */
@@ -80,4 +82,23 @@ public interface RecordController
      * @return
      */
     IManagedEntity getWithReferenceId(long referenceId) throws EntityException;
+
+    /**
+     * Returns a map of the entity with a reference id
+     *
+     * @param referenceId
+     * @return
+     * @throws EntityException
+     */
+    Map getMapWithReferenceId(long referenceId) throws EntityException;
+
+    /**
+     * Returns a specific attribute of an entity
+     *
+     * @param attribute
+     * @param referenceId
+     * @return
+     * @throws EntityException
+     */
+    Object getAttributeWithReferenceId(String attribute, long referenceId) throws EntityException;
 }
