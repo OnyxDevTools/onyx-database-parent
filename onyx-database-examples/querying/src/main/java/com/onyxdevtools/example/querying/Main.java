@@ -58,6 +58,9 @@ public class Main extends AbstractDemo
 
         System.out.print("\nDelete Query Example: \n");
         DeleteQueryExample.demo();
+
+        System.out.print("\nUpdate Query Example: \n");
+        UpdateQueryExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
