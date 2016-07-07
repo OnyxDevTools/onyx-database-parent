@@ -32,6 +32,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
         entries = new EntryCollection(fileStore, this);
         values = new ValueCollection(fileStore, this);
         keys = new KeyCollection(fileStore, this);
+        dict = new DictionaryCollection(fileStore, this);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -53,6 +54,21 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     public Set<K> keySet()
     {
         return keys;
+    }
+
+
+    /**
+     * Getter for set of keys
+     *
+     * @return
+     * @see AbstractIterableDiskMap.DictionaryCollection
+     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     */
+    protected DictionaryCollection dict;
+
+    public Set<Map> dictionarySet()
+    {
+        return dict;
     }
 
 
@@ -151,6 +167,70 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
         public Iterator<V> iterator()
         {
             return new ValueIterator(header);
+
+        }
+
+        /**
+         * Get a new iterator
+         *
+         * @return
+         */
+        public Iterator<V> dictIterator()
+        {
+            return new DictionaryIterator(header);
+
+        }
+
+        /**
+         * Convert to an array
+         *
+         * @param a
+         * @return
+         */
+        @Override
+        public Object[] toArray(Object[] a)
+        {
+            Iterator it = iterator();
+            int i = 0;
+            while (it.hasNext())
+            {
+                V value = (V) it.next();
+                a[i] = value;
+                i++;
+            }
+            return a;
+        }
+    }
+
+    /**
+     * Class for sifting through values
+     *
+     * @param <V>
+     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     */
+    protected class DictionaryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+        /**
+         * Constructor
+         *
+         * @param fileStore
+         * @param diskMap
+         */
+        public DictionaryCollection(Store fileStore, AbstractIterableDiskMap diskMap)
+        {
+            super(fileStore, diskMap);
+            this.fileStore = fileStore;
+            this.diskMap = diskMap;
+        }
+
+        /**
+         * Get a new iterator
+         *
+         * @return
+         */
+        @Override
+        public Iterator<V> iterator()
+        {
+            return new DictionaryIterator(header);
 
         }
 
@@ -444,6 +524,40 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
             if (reference != null)
             {
                 return new DiskMapEntry(reference);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Dictionary Iterator.
+     * <p/>
+     * Iterates through and hydrates the values in an DiskMap
+     */
+    class DictionaryIterator extends AbstractNodeIterator implements Iterator {
+        /**
+         * Constructor
+         *
+         * @param header
+         */
+        public DictionaryIterator(Header header)
+        {
+            super(header);
+        }
+
+        /**
+         * Next
+         *
+         * @return
+         */
+
+        @Override
+        public Object next()
+        {
+            final RecordReference reference = (RecordReference) super.next();
+            if (reference != null)
+            {
+                return getRecordValueAsDictionary(reference);
             }
             return null;
         }

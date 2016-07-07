@@ -1,10 +1,14 @@
 package com.onyx.map.base;
 
+import com.onyx.exception.AttributeMissingException;
 import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Header;
 import com.onyx.map.node.Record;
 import com.onyx.map.node.RecordReference;
+import com.onyx.map.serializer.ObjectBuffer;
 import com.onyx.map.store.Store;
+import com.onyx.util.AttributeField;
+import com.onyx.util.ObjectUtil;
 
 import java.util.Collections;
 import java.util.Map;
@@ -72,6 +76,7 @@ public class AbstractCachedBitMap extends AbstractBitMap {
     public Record update(BitMapNode node, RecordReference parentRecordReference, RecordReference recordReference, Object key, Object value, int[] hashDigits)
     {
         recordCache.remove(recordReference.position);
+
         Record parentRecord = null;
 
         if (parentRecordReference != null)
@@ -89,6 +94,7 @@ public class AbstractCachedBitMap extends AbstractBitMap {
 
         recordCache.put(record.reference.position, record);
         keyCache.put(key, record.reference.position);
+
 
         return record;
     }
@@ -261,4 +267,41 @@ public class AbstractCachedBitMap extends AbstractBitMap {
 
         return record.value;
     }
+
+    private static ObjectUtil reflection = ObjectUtil.getInstance();
+
+    /**
+     * Get Map representation of value object
+     *
+     * @param attribute Attribute name to fetch
+     * @param recordId Record reference within storage structure
+     *
+     * @return Map of key values
+     */
+    public Object getAttributeWithRecID(String attribute, long recordId)
+    {
+        final RecordReference reference = this.getRecordReference(recordId);
+
+        // First see if it is cached and get it via reflection
+        Record record = recordCache.get(reference.position);
+        if(record != null && record.value != null)
+        {
+            Class clazz = record.value.getClass();
+            AttributeField attributeField = null;
+            try {
+                attributeField = ObjectUtil.getAttributeField(clazz, attribute);
+            } catch (AttributeMissingException e) {
+                return getAttributeWithRecID(attribute, reference);
+            }
+            return reflection.getAttribute(attributeField, record.value);
+        }
+
+        if(reference != null && reference.position == recordId)
+        {
+            return getAttributeWithRecID(attribute, reference);
+        }
+        return null;
+    }
+
 }
+

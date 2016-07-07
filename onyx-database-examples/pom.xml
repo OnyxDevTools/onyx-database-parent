@@ -23,6 +23,7 @@
     <module>partition</module>
     <module>lifecycle-events</module>
     <module>spring-example</module>
+    <module>model-updates</module>
   </modules>
 
 </project>

@@ -85,7 +85,22 @@ public class AbstractRelationshipController extends PartitionContext
             synchronized (relationshipMap)
             {
                 // Push it on the toManyRelationships
-                Set<Object> toManyRelationships = relationshipMap.get(childIdentifier);
+                Object toManyRelationshipsObj = relationshipMap.get(childIdentifier);
+                Set<Object> toManyRelationships = null;
+
+                // The purpose of this check is to ensure a relationship that has gone from a to one relationship
+                // and is now a to many can have a fallback and convert it from a to one to a to many.
+                if(toManyRelationshipsObj instanceof RelationshipReference)
+                {
+                    toManyRelationships = new HashSet();
+                    toManyRelationships.add(toManyRelationshipsObj);
+                }
+                else
+                {
+                    toManyRelationships = (Set<Object>) toManyRelationshipsObj;
+                }
+
+                // If it does not exist create the relationship reference set
                 if(toManyRelationships == null)
                 {
                     toManyRelationships = new HashSet();

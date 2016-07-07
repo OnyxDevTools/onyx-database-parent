@@ -1,16 +1,12 @@
 package com.onyx.map;
 
 import com.onyx.map.base.AbstractIterableDiskMap;
-import com.onyx.map.base.CacheMap;
 import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Header;
 import com.onyx.map.node.RecordReference;
 import com.onyx.map.store.Store;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -105,6 +101,23 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         if(reference != null && reference.position == recordId)
         {
             return (V) getRecordValue(reference);
+        }
+        return null;
+    }
+
+    /**
+     * Get Map representation of value object
+     *
+     * @param recordId Record reference within storage structure
+     *
+     * @return Map of key values
+     */
+    public Map getMapWithRecID(long recordId)
+    {
+        final RecordReference reference = this.getRecordReference(recordId);
+        if(reference != null && reference.position == recordId)
+        {
+            return getRecordValueAsDictionary(reference);
         }
         return null;
     }
