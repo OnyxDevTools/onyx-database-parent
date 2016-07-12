@@ -55,6 +55,9 @@ public class Main extends AbstractDemo
 
         System.out.print("\nCompound Query Example: \n");
         CompoundQueryExample.demo();
+
+        System.out.print("\nDelete Query Example: \n");
+        DeleteQueryExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
@@ -1180,6 +1183,7 @@ public class Main extends AbstractDemo
         lionsWR1.setFirstName("Calvin");
         lionsWR1.setLastName("Johnson");
         lionsWR1.setPosition("WR");
+        lionsWR1.setActive(false);
 
         Player lionsWR2 = new Player();
         lionsWR2.setFirstName("Golden");

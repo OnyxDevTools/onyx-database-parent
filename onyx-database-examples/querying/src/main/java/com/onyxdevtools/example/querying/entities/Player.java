@@ -34,6 +34,9 @@ public class Player extends ManagedEntity implements IManagedEntity
     @Attribute
     protected String position;
 
+    @Attribute
+    protected boolean active = true;
+
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "players",
@@ -112,6 +115,16 @@ public class Player extends ManagedEntity implements IManagedEntity
     public void setStats(List<Stats> stats)
     {
         this.stats = stats;
+    }
+
+    public boolean isActive()
+    {
+        return active;
+    }
+
+    public void setActive(boolean active)
+    {
+        this.active = active;
     }
 
 }
