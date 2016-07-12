@@ -1366,7 +1366,7 @@ public class ObjectBuffer
             try {
                 obj = this.readObject();
 
-                if(attribute.hashCode() == attributeName.hashCode()
+                if(attribute.getName().hashCode() == attributeName.hashCode()
                     && attribute.getName().equals(attributeName))
                     return obj;
             } catch (Exception e) {

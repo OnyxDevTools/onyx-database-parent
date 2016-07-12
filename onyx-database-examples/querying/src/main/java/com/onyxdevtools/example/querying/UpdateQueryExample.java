@@ -44,10 +44,10 @@ public class UpdateQueryExample
 
         // Create a query and criteria
         final QueryCriteria positionCriteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB");
-        final QueryCriteria passingCriteria = new QueryCriteria("stats.passingYards", QueryCriteriaOperator.LESS_THAN_EQUAL, 5000);
+        final QueryCriteria passingCriteria = new QueryCriteria("stats.passingYards", QueryCriteriaOperator.LESS_THAN_EQUAL, 1500);
         final QueryCriteria compoundCriteria = positionCriteria.and(passingCriteria);
 
-        final Query query = new Query(Player.class, compoundCriteria);
+        Query query = new Query(Player.class, compoundCriteria);
 
         //Execute the query and see that the active attribute's value is true
         final List<Player> players = manager.executeQuery(query);
@@ -56,12 +56,8 @@ public class UpdateQueryExample
             System.out.println(qb.getFirstName() + " " + qb.getLastName() + ": active=" + qb.getActive());
         }
 
-        final QueryCriteria positionCriteria2 = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB");
-        final QueryCriteria passingCriteria2 = new QueryCriteria("stats.passingYards", QueryCriteriaOperator.LESS_THAN_EQUAL, 5000);
-        final QueryCriteria compoundCriteria2 = positionCriteria2.and(passingCriteria2);
-
         //Execute an update query to set active to false
-        final Query updateQuery = new Query(Player.class, compoundCriteria2, new AttributeUpdate("active", false));
+        final Query updateQuery = new Query(Player.class, compoundCriteria, new AttributeUpdate("active", false));
         manager.executeUpdate(updateQuery);
 
         //re-execute the query and see that the active attribute was updated to false for each record
