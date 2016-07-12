@@ -42,22 +42,22 @@ public class Main extends AbstractDemo
         factory.close(); //close the factory so that we can use it again
 
         System.out.print("\n Find Example: \n");
-        FindExample.demo();
+        //FindExample.demo();
 
         System.out.print("\nFindById Example: \n");
-        FindByIdExample.demo();
+        //FindByIdExample.demo();
 
         System.out.print("\nList Example: \n");
-        ListExample.demo();
+        //ListExample.demo();
 
         System.out.print("\nQuery Example: \n");
-        QueryExample.demo();
+        //QueryExample.demo();
 
         System.out.print("\nCompound Query Example: \n");
-        CompoundQueryExample.demo();
+        //CompoundQueryExample.demo();
 
         System.out.print("\nDelete Query Example: \n");
-        DeleteQueryExample.demo();
+        //DeleteQueryExample.demo();
 
         System.out.print("\nUpdate Query Example: \n");
         UpdateQueryExample.demo();
