@@ -1,9 +1,14 @@
 package com.onyx.map.serializer;
 
+import com.onyx.entity.SystemAttribute;
+import com.onyx.entity.SystemEntity;
 import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Record;
 import com.onyx.map.node.RecordReference;
 import com.onyx.persistence.ManagedEntity;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
+import com.onyx.util.AttributeField;
+import com.onyx.util.ObjectUtil;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -1310,5 +1315,65 @@ public class ObjectBuffer
             }
         }
         return 0;
+    }
+
+    /**
+     * Converts the buffer to a key value map.  Note this is intended to use only with ManagedEntities
+     *
+     * @param serializerId serializer id to use
+     * @return Map representation of the object
+     */
+    public Map toMap(int serializerId)
+    {
+        Map<String, Object> results = new HashMap();
+
+        // Read the type and serializer id to put the position in the right place to read attributes
+        buffer.get();
+        buffer.getShort();
+
+        SystemEntity systemEntity = serializers.context.getSystemEntityById(serializerId);
+
+        for (SystemAttribute attribute : systemEntity.getAttributes())
+        {
+            Object obj = null;
+            try {
+                obj = this.readObject();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            results.put(attribute.getName(), obj);
+        }
+
+        return results;
+    }
+
+    /**
+     * Get A specific attribute from an object within the buffer.  Must have a SystemEntity serializer id
+     * @param attributeName Attribute name from entity
+     * @param serializerId serializer id that is a reference to a SystemEntity
+     *
+     * @return Attribute value from buffer
+     */
+    public Object getAttribute(String attributeName, int serializerId)
+    {
+        SystemEntity systemEntity = serializers.context.getSystemEntityById(serializerId);
+
+        this.buffer.position(3);
+
+        for (SystemAttribute attribute : systemEntity.getAttributes())
+        {
+            Object obj = null;
+            try {
+                obj = this.readObject();
+
+                if(attribute.hashCode() == attributeName.hashCode()
+                    && attribute.getName().equals(attributeName))
+                    return obj;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return null;
     }
 }

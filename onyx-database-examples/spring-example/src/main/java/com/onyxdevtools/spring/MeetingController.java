@@ -35,7 +35,7 @@ public class MeetingController
     }
 
     /**
-     * Method used to aggregate all meetings at work that are
+     * Method used to stream all meetings at work that are
      * snoozers and are really hard to stay awake but, you still have
      * to pay attention because someone is going to call on you and ask
      * you a dumb question.

@@ -210,6 +210,26 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     }
 
     /**
+     * Get object at index and initialize it if it does not exist
+     *
+     * @author Tim Osborn
+     * @since 1.0.0
+     *
+     * @param index Record Index
+     * @return ManagedEntity
+     */
+    public Map getDict(int index)
+    {
+        try
+        {
+            return persistenceManager.getMapWithReferenceId(entityDescriptor.getClazz(), (long)identifiers.get(index));
+        } catch (EntityException e)
+        {
+            return null;
+        }
+    }
+
+    /**
      * Set object at index
      *
      * @author Tim Osborn

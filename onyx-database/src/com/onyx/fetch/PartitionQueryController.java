@@ -259,7 +259,7 @@ public class PartitionQueryController extends PartitionContext
         Iterator<Map.Entry<Object, Object>> iterator = indexValues.entrySet().iterator();
 
         Map.Entry<Object, Object> entry = null;
-        IManagedEntity entity = null;
+        Object entityAttribute = null;
 
         Map<String, Object> record = null;
 
@@ -292,11 +292,11 @@ public class PartitionQueryController extends PartitionContext
                     if(entry.getKey() instanceof PartitionReference)
                     {
                         PartitionReference ref = (PartitionReference) entry.getKey();
-                        entity = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
+                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getName(), ref.reference);
                     }
                     else
                     {
-                        entity = properties.recordController.getWithReferenceId((long)entry.getKey());
+                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getName(), (long)entry.getKey());
                     }
                 }
                 else
@@ -304,17 +304,22 @@ public class PartitionQueryController extends PartitionContext
                     if(entry.getKey() instanceof PartitionReference)
                     {
                         PartitionReference ref = (PartitionReference) entry.getValue();
-                        entity = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
+                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getName(), ref.reference);
                     }
                     else
                     {
-                        entity = properties.recordController.getWithReferenceId((long)entry.getValue());
+                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getName(), (long)entry.getValue());
                     }
                 }
-                if(entity != null)
+
+                /*
+                if(entity == null)
                 {
-                    record.put(properties.attributeDescriptor.getName(), reflection.getAttribute(properties.attributeDescriptor.field, entity));
-                }
+                    continue;
+                }*/
+
+
+                record.put(properties.attributeDescriptor.getName(), entityAttribute);
 
                 results.put(entry.getKey(), record);
             }
@@ -453,7 +458,6 @@ public class PartitionQueryController extends PartitionContext
 
             boolean updatedPartition = false;
             Object oldPartitionValue = null;
-            Object newPartitionValue = null;
 
             final Object identifier = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier());
 

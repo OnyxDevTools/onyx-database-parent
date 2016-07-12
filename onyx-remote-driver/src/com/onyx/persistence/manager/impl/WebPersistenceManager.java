@@ -1,6 +1,7 @@
 package com.onyx.persistence.manager.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityClassNotFoundException;
@@ -714,6 +715,43 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         body.setId(referenceId);
         body.setType(entityType.getCanonicalName());
         return (IManagedEntity)this.performCall(getURL() + FIND_BY_REFERENCE_ID, null, entityType, body);
+    }
+
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    @Override
+    public void stream(Query query, QueryStream streamer) throws EntityException
+    {
+
+    }
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    @Override
+    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
+    {
+
+    }
+
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        return null;
     }
 
 }

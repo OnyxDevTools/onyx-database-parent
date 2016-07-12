@@ -1,12 +1,11 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.stream.QueryStream;
+import com.onyx.stream.QueryMapStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-import com.onyx.exception.NoResultsException;
-import com.onyx.exception.RelationshipNotFoundException;
+import com.onyx.exception.*;
 import com.onyx.fetch.PartitionQueryController;
 import com.onyx.helpers.*;
 import com.onyx.persistence.IManagedEntity;
@@ -93,6 +92,17 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     {
         this.context = context;
         this.context.setSystemPersistenceManager(this);
+    }
+
+    /**
+     * Return the Schema Context that was created by the Persistence Manager Factory.
+     *
+     * @since 1.0.0
+     * @return context Schema Context Implementation
+     */
+    public SchemaContext getContext()
+    {
+        return this.context;
     }
 
     /**
@@ -1072,4 +1082,85 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     {
         return new QueryResult(query, this.executeLazyQuery(query));
     }
+
+    /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException
+    {
+        if (context.getKillSwitch())
+            throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
+
+        IManagedEntity entity = EntityDescriptor.createNewEntity(entityType);
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
+        final RecordController recordController = context.getRecordController(descriptor);
+
+        // Find the object
+        return recordController.getMapWithReferenceId(reference);
+    }
+
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    @Override
+    public void stream(Query query, QueryStream streamer) throws EntityException
+    {
+
+        final LazyQueryCollection entityList = (LazyQueryCollection)executeLazyQuery(query);
+        final PersistenceManager persistenceManagerInstance = this;
+
+        for(int i = 0; i < entityList.size(); i++)
+        {
+            Object objectToStream = null;
+
+            if(streamer instanceof QueryMapStream)
+            {
+                objectToStream = entityList.getDict(i);
+            }
+            else
+            {
+                objectToStream = entityList.get(i);
+            }
+
+            streamer.accept(objectToStream, persistenceManagerInstance);
+        }
+    }
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    @Override
+    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
+    {
+        QueryStream streamer = null;
+        try {
+            streamer = queryStreamClass.newInstance();
+        } catch (InstantiationException e) {
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
+        } catch (IllegalAccessException e) {
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
+        }
+        this.stream(query, streamer);
+    }
+
 }

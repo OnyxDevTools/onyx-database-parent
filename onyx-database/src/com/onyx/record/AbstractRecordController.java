@@ -15,6 +15,7 @@ import com.onyx.util.ObjectUtil;
 
 import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -460,5 +461,30 @@ public abstract class AbstractRecordController
     {
         return records.getWithRecID(referenceId);
     }
+
+    /**
+     * Returns a map of the entity with a reference id
+     *
+     * @param referenceId
+     * @return
+     * @throws EntityException
+     */
+    public Map getMapWithReferenceId(long referenceId) throws EntityException
+    {
+        return records.getMapWithRecID(referenceId);
+    }
+
+    /**
+     * Get a specific attribute with reference Id
+     *
+     * @param attribute Name of attribute to get
+     * @param referenceId location of record within storage
+     * @return Attribute value
+     */
+    public Object getAttributeWithReferenceId(String attribute, long referenceId)
+    {
+        return records.getAttributeWithRecID(attribute, referenceId);
+    }
+
 
 }
