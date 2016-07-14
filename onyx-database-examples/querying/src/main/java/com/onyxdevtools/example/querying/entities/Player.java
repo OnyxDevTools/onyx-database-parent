@@ -117,7 +117,7 @@ public class Player extends ManagedEntity implements IManagedEntity
         this.stats = stats;
     }
 
-    public boolean isActive()
+    public boolean getActive()
     {
         return active;
     }

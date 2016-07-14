@@ -42,9 +42,7 @@ public class DeleteQueryExample
 
         // Create a query and criteria
         final QueryCriteria criteria = new QueryCriteria("active", QueryCriteriaOperator.EQUAL, false);
-
         final Query query = new Query(Player.class, criteria);
-        // query.setCriteria(criteria); or you can set the critiera after construction
 
         List<Player> inactivePlayers = manager.executeQuery(query);
 

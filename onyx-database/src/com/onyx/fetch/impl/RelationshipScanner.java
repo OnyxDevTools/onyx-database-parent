@@ -60,9 +60,12 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     @Override
     public Map scan(Map existingValues) throws EntityException
     {
+        // Retain the original attribute
+        final String originalAttribute = criteria.getAttribute();
+
         // Get the attribute name.  If it has multiple tokens, that means it is another relationship.
         // If that is the case, we gotta find that one
-        final String[] segments = criteria.getAttribute().split("\\.");
+        final String[] segments = originalAttribute.split("\\.");
 
         // Map <ChildIndex, ParentIndex> // Inverted list so we can use it to scan using an normal full table scanner or index scanner
         final Map relationshipIndexes = getRelationshipIndexes(segments[0], existingValues);
@@ -85,6 +88,8 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
             // Gets the parent
             returnValue.put(relationshipIndexes.get(childIndex), childIndex);
         }
+
+        criteria.setAttribute(originalAttribute);
 
         return returnValue;
     }
