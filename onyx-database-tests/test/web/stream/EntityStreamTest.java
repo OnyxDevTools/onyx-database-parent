@@ -1,22 +1,22 @@
-package embedded.stream;
+package web.stream;
 
-import category.EmbeddedDatabaseTests;
+import category.WebServerTests;
 import com.onyx.exception.EntityException;
+import com.onyx.exception.StreamException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.stream.QueryMapStream;
 import com.onyx.stream.QueryStream;
-import embedded.base.BaseTest;
 import entities.identifiers.ImmutableSequenceIdentifierEntity;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
+import streams.BasicQueryMapStream;
+import streams.BasicQueryStream;
+import web.base.BaseTest;
 
 import java.io.IOException;
 import java.util.Map;
@@ -26,9 +26,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created by tosborn1 on 6/2/16.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Category({ EmbeddedDatabaseTests.class })
+@Category({ WebServerTests.class })
 public class EntityStreamTest extends BaseTest
 {
+
     @Before
     public void before() throws EntityException
     {
@@ -45,7 +46,7 @@ public class EntityStreamTest extends BaseTest
      * Test a basic Query Stream implementation
      * @throws EntityException Should not happen
      */
-    @Test
+    @Test(expected = StreamException.class)
     public void testBasicQueryStream() throws EntityException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
@@ -67,7 +68,7 @@ public class EntityStreamTest extends BaseTest
      * Test a Query Stream implementation with an andThan syntax
      * @throws EntityException
      */
-    @Test
+    @Test(expected = StreamException.class)
     public void testBasicQueryStreamAndThen() throws EntityException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
@@ -101,13 +102,52 @@ public class EntityStreamTest extends BaseTest
     }
 
     /**
+     * Test a basic Query Stream implementation
+     * @throws EntityException Should not happen
+     */
+    @Test(expected = StreamException.class)
+    public void testBasicQueryStreamByClassLoading() throws EntityException
+    {
+        ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
+        testEntity.correlation = 1;
+        save(testEntity);
+
+        Query query = new Query(ImmutableSequenceIdentifierEntityForDelete.class, new QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0));
+        manager.stream(query, BasicQueryStream.class);
+
+        manager.find(testEntity);
+
+        assert testEntity.correlation == 99;
+    }
+
+
+    /**
+     * Test a basic Query Stream implementation
+     * @throws EntityException Should not happen
+     */
+    @Test(expected = StreamException.class)
+    public void testBasicQueryStreamDictionaryByClassLoading() throws EntityException
+    {
+        ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
+        testEntity.correlation = 1;
+        save(testEntity);
+
+        Query query = new Query(ImmutableSequenceIdentifierEntityForDelete.class, new QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0));
+        manager.stream(query, BasicQueryMapStream.class);
+
+        manager.find(testEntity);
+
+        assert testEntity.correlation == 55;
+    }
+
+    /**
      * This is a simple example of how to iterate through the entities as a map representation.
      * The purpose of this is to display that we can iterate through it without having the dependency
      * of what format the entity used to be in.  In this case, it would help with migrations.
      *
      * @throws EntityException Should Not happen
      */
-    @Test
+    @Test(expected = StreamException.class)
     public void testStreamAsDictionary() throws EntityException
     {
         // Save some test data

@@ -1,5 +1,8 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.exception.StreamException;
+import com.onyx.persistence.collections.LazyQueryCollection;
+import com.onyx.stream.QueryMapStream;
 import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
@@ -672,6 +675,9 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     * This is unsupported in a remote instance.  The purpose is to enforce efficiency and simplicity.
+     *
+     * It would be better to use the PersistenceManager#stream(Query query, Class queryStreamClass) method.
      *
      * @since 1.0.0
      *
@@ -683,7 +689,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     @Override
     public void stream(Query query, QueryStream streamer) throws EntityException
     {
-
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE);
     }
 
     /**
@@ -697,14 +703,32 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
      *
      */
     @Override
-    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
+    public void stream(Query query, Class queryStreamClass) throws EntityException
     {
-
+        try
+        {
+            proxyPersistenceManager.stream(query, queryStreamClass);
+        } catch (RemoteException e) {
+            throw (EntityException)e.getCause();
+        }
     }
 
-
+    /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
     @Override
     public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
-        return null;
+        try
+        {
+            return proxyPersistenceManager.getMapWithReferenceId(entityType, reference);
+        } catch (RemoteException e) {
+            throw (EntityException)e.getCause();
+        }
     }
 }

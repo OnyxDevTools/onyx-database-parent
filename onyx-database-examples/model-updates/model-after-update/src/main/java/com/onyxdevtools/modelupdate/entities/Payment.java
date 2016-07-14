@@ -14,6 +14,7 @@ public class Payment extends ManagedEntity implements IManagedEntity
     @Identifier
     protected long paymentId;
 
+    // Note this has been changed from a RelationshipType.ONE_TO_ONE to a RelationshipType.MANY_TO_ONE
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             inverse = "payments",
             inverseClass = Invoice.class)

@@ -129,6 +129,10 @@ public class PersistenceEndpoint implements ServerEndpoint {
                 final EntityRequestBody partitionReferenceBody = (EntityRequestBody)token.getPayload();
                 token.setPayload(persistenceManager.findByIdWithPartitionId(Class.forName(partitionReferenceBody.getType()), partitionReferenceBody.getId(), Long.valueOf(partitionReferenceBody.getPartitionId())));
                 break;
+            case STREAM_CLASS:
+                final StreamRequestBody streamRequestBody = (StreamRequestBody)token.getPayload();
+                persistenceManager.stream(streamRequestBody.getQuery(), streamRequestBody.getStreamClass());
+                token.setPayload(null);
         }
     }
 }

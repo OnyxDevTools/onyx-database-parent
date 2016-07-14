@@ -6,6 +6,8 @@ package com.onyx.exception;
 public class StreamException extends EntityException
 {
     public static final String CANNOT_INSTANTIATE_STREAM = "Unable to instantiate stream.  Define a valid constructor.";
+    public static final String UNSUPPORTED_FUNCTION = "Unable to instantiate stream.  This function is unsupported.  Use PersistenceManager#stream(Query, Class) instead.";
+    public static final String UNSUPPORTED_FUNCTION_ALTERNATIVE = "Unable to instantiate stream.  This function is unsupported.";
 
     /**
      * Default Constructor

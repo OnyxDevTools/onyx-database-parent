@@ -1,5 +1,8 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.exception.StreamException;
+import com.onyx.persistence.collections.LazyQueryCollection;
+import com.onyx.stream.QueryMapStream;
 import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
@@ -786,7 +789,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public void stream(Query query, QueryStream streamer) throws EntityException
     {
-
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE);
     }
 
     /**
@@ -800,13 +803,27 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      */
     @Override
-    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
+    public void stream(Query query, Class queryStreamClass) throws EntityException
     {
-
+        final StreamRequestBody body = new StreamRequestBody(query, queryStreamClass);
+        final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.STREAM_CLASS, body);
+        this.endpoint.execute(token);
     }
 
+    /**
+     * Get Map representation of an entity with reference id.
+     *
+     * This is unsupported in the RemotePersistenceManager.  The reason is because it should not apply since the stream API
+     * is not supported as a proxy QueryStream.
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
     @Override
     public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
-        return null;
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
     }
 }

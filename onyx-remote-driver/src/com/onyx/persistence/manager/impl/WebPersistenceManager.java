@@ -1,13 +1,10 @@
 package com.onyx.persistence.manager.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.onyx.exception.*;
 import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
-import com.onyx.exception.EntityClassNotFoundException;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-import com.onyx.exception.RelationshipNotFoundException;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -720,6 +717,8 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
+     * This is unsupported in the WebPersistenceManager.  Please use the native remote driver aka RemotePersistenceManager to take advantage of this feature
+     *
      * @since 1.0.0
      *
      * @param query Query to execute and stream
@@ -730,11 +729,13 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     @Override
     public void stream(Query query, QueryStream streamer) throws EntityException
     {
-
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
     }
 
     /**
      * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * This is unsupported in the WebPersistenceManager.  Please use the native remote driver aka RemotePersistenceManager to take advantage of this feature
      *
      * @since 1.0.0
      *
@@ -744,9 +745,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      */
     @Override
-    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
+    public void stream(Query query, Class queryStreamClass) throws EntityException
     {
-
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
     }
 
     @Override
