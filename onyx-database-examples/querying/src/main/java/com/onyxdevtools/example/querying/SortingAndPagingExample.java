@@ -46,13 +46,14 @@ public class SortingAndPagingExample
         // Create a query
         final Query query = new Query(Player.class, queryOrders);
 
-        // Set the firstRow and max results to implement paging
+        // Set the firstRow and maxResults to implement paging
         query.setFirstRow(0);
         query.setMaxResults(10);
 
-        // Query for the second page (rows 0-9, records 1-10)
+        // Query for the first page (rows 0-9, records 1-10)
         final List<Player> page1 = manager.executeQuery(query);
 
+        // Print the first page results
         System.out.println("\nPage 1:");
 
         for (final Player player : page1)
@@ -60,12 +61,13 @@ public class SortingAndPagingExample
             System.out.println(player.getLastName() + ", " + player.getFirstName());
         }
 
-        // Set the firstRow and max results to implement paging
+        // Set the firstRow and maxResults to retrieve the second page
         query.setFirstRow(query.getFirstRow() + query.getMaxResults());
 
         // Query for the second page (rows 10-19, records 11-20)
         final List<Player> page2 = manager.executeQuery(query);
 
+        // Print the second page results
         System.out.println("\nPage 2:");
 
         for (final Player player : page2)
