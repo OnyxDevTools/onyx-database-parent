@@ -7,9 +7,6 @@ import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.query.QueryOrder;
 
 import com.onyxdevtools.example.querying.entities.Player;
 
@@ -41,18 +38,17 @@ public class LazyQueryExample
 
         final PersistenceManager manager = factory.getPersistenceManager();
 
-        // Create a query and criteria
-        final QueryCriteria criteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB");
-        criteria.and("lastName", QueryCriteriaOperator.STARTS_WITH, "C");
+        // Create a simple query to include all records
+        final Query query = new Query(Player.class);
 
-        final Query query = new Query(Player.class, criteria, new QueryOrder("firstName"));
-        // query.setCriteria(criteria); or you can set the critiera after construction
+        // Invoke manager#executeLazyQuery
+        final List<Player> allPlayers = manager.executeLazyQuery(query); // returns LazyQueryCollection
 
-        final List<Player> quarterbacks = manager.executeQuery(query);
-
-        for (final Player qb : quarterbacks)
+        // Get and print out all of the entites in the LazyQueryCollection
+        for (int i = 0; i < allPlayers.size(); i++)
         {
-            System.out.println(qb.getFirstName() + " " + qb.getLastName());
+            final Player player = allPlayers.get(i); // retreives the Player when invoked
+            System.out.println(player.getFirstName() + " " + player.getLastName());
         }
 
         factory.close(); // close the factory so that we can use it again
