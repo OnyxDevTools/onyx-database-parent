@@ -128,6 +128,101 @@ public class Query implements ObjectSerializable, Serializable
     }
 
     /**
+     * Constructor creates a query object and initializes the queryOrders used for sorting results
+     *
+     * @since 1.0.0
+     *
+     * @param entityType Managed Entity Type
+     * @param queryOrder order by field and direction
+     *
+     * <pre>
+     * <code>
+     *
+     *   Query query = new Query(MyEntity.class, new QueryOrder("firstName"));
+     *   List results = manager.executeQuery(query);
+     *
+     * </code>
+     * </pre>
+     * */
+    public Query(Class entityType, QueryOrder queryOrder)
+    {
+        this.entityType = entityType;
+        this.queryOrders = Arrays.asList(queryOrder);
+    }
+
+    /**
+     * Constructor creates a query object and initializes the queryOrders used for sorting results
+     *
+     * @since 1.0.0
+     *
+     * @param entityType  Managed Entity Type
+     * @param queryOrders list of queryOrders to order by multiple fields and directions
+     *
+     * <pre>
+     * <code>
+     *
+     *   Query query = new Query(MyEntity.class, Arrays.asList(new QueryOrder("firstName")));
+     *   List results = manager.executeQuery(query);
+     *
+     * </code>
+     * </pre>
+     * */
+    public Query(Class entityType, List<QueryOrder> queryOrders)
+    {
+        this.entityType = entityType;
+        this.queryOrders = queryOrders;
+    }
+
+    /**
+     * Constructor creates a query object and initializes the queryOrders used for sorting results
+     *
+     * @since 1.0.0
+     *
+     * @param entityType  Managed Entity Type
+     * @param queryOrders list of queryOrders to order by multiple fields and directions
+     *
+     * <pre>
+     * <code>
+     *
+     *   Query query = new Query(MyEntity.class, Arrays.asList(new QueryOrder("firstName")));
+     *   List results = manager.executeQuery(query);
+     *
+     * </code>
+     * </pre>
+     * */
+    public Query(Class entityType, QueryOrder... queryOrders)
+    {
+        this.entityType = entityType;
+        this.queryOrders = Arrays.asList(queryOrders);
+    }
+
+    /**
+     * Constructor creates a query object and initializes the criteria used for filtering and the queryOrders used for sorting results
+     *
+     *
+     * @since 1.0.0
+     *
+     * @param entityType  Managed Entity Type
+     * @param criteria    criteria used to filter results
+     * @param queryOrders list of queryOrders to order by multiple fields and directions
+     *
+     * <pre>
+     * <code>
+     *
+     *   Query query = new Query(MyEntity.class, Arrays.asList(new QueryOrder("firstName")));
+     *   List results = manager.executeQuery(query);
+     *
+     * </code>
+     * </pre>
+     * */
+    public Query(Class entityType, QueryCriteria criteria, QueryOrder... queryOrders)
+    {
+        this.entityType = entityType;
+        this.criteria = criteria;
+        this.queryOrders = Arrays.asList(queryOrders);
+    }
+
+    /**
      * Constructor creates a query object and initializes the criteria object used for filtering results along with a list of selection fields
      * @since 1.0.0
      * @param entityType Managed Entity Type
