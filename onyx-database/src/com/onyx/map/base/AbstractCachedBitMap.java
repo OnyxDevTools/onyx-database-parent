@@ -1,12 +1,13 @@
 package com.onyx.map.base;
 
 import com.onyx.exception.AttributeMissingException;
+
 import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Header;
 import com.onyx.map.node.Record;
 import com.onyx.map.node.RecordReference;
-import com.onyx.map.serializer.ObjectBuffer;
 import com.onyx.map.store.Store;
+
 import com.onyx.util.AttributeField;
 import com.onyx.util.ObjectUtil;
 
@@ -14,22 +15,23 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/**
- * Created by timothy.osborn on 3/27/15.
- */
-public class AbstractCachedBitMap extends AbstractBitMap {
 
+/**
+ Created by timothy.osborn on 3/27/15.
+ */
+public class AbstractCachedBitMap extends AbstractBitMap
+{
     protected Map<Long, BitMapNode> nodeCache;
     protected Map<Long, Record> recordCache;
     protected Map<Object, Long> keyCache;
 
     /**
-     * Constructor
+     * Constructor.
      *
-     * @param fileStore
-     * @param header
+     * @param  fileStore
+     * @param  header
      */
-    public AbstractCachedBitMap(Store fileStore, Header header)
+    public AbstractCachedBitMap(final Store fileStore, final Header header)
     {
         super(fileStore, header);
         nodeCache = Collections.synchronizedMap(new WeakHashMap());
@@ -38,25 +40,33 @@ public class AbstractCachedBitMap extends AbstractBitMap {
     }
 
     /**
-     * Inserts a new record
+     * Inserts a new record.
      *
-     * @param node
-     * @param key
-     * @param value
+     * @param   parentRecordReference
+     * @param   node
+     * @param   key
+     * @param   value
+     * @param   hashDigits
+     *
+     * @return  inserts a new record.
      */
-    @Override
-    public Record insert(RecordReference parentRecordReference, BitMapNode node, Object key, Object value, int[] hashDigits)
+    @Override public Record insert(final RecordReference parentRecordReference, final BitMapNode node, final Object key, final Object value,
+        final int[] hashDigits)
     {
         final Record record = super.insert(parentRecordReference, node, key, value, hashDigits);
+
         if (parentRecordReference != null)
         {
-            Record parentRecord = recordCache.get(parentRecordReference.position);
+            final Record parentRecord = recordCache.get(parentRecordReference.position);
+
             if (parentRecord != null)
             {
                 parentRecord.reference = parentRecordReference;
             }
+
             recordCache.put(parentRecordReference.position, parentRecord);
         }
+
         recordCache.put(record.reference.position, record);
         keyCache.put(key, record.reference.position);
 
@@ -64,16 +74,19 @@ public class AbstractCachedBitMap extends AbstractBitMap {
     }
 
     /**
-     * Update a record
+     * Update a record.
      *
-     * @param node
-     * @param parentRecordReference
-     * @param recordReference
-     * @param key
-     * @param value
+     * @param   node
+     * @param   parentRecordReference
+     * @param   recordReference
+     * @param   key
+     * @param   value
+     * @param   hashDigits
+     *
+     * @return  update a record.
      */
-    @Override
-    public Record update(BitMapNode node, RecordReference parentRecordReference, RecordReference recordReference, Object key, Object value, int[] hashDigits)
+    @Override public Record update(final BitMapNode node, final RecordReference parentRecordReference,
+        final RecordReference recordReference, final Object key, final Object value, final int[] hashDigits)
     {
         recordCache.remove(recordReference.position);
 
@@ -95,94 +108,104 @@ public class AbstractCachedBitMap extends AbstractBitMap {
         recordCache.put(record.reference.position, record);
         keyCache.put(key, record.reference.position);
 
-
         return record;
     }
 
     /**
-     * Delete a record
+     * Delete a record.
      *
-     * @param node
-     * @param parentRecordReference
-     * @param recordReference
+     * @param  node
+     * @param  parentRecordReference
+     * @param  recordReference
+     * @param  hashDigits
+     * @param  key
      */
-    @Override
-    public void delete(BitMapNode node, RecordReference parentRecordReference, RecordReference recordReference, int[] hashDigits, Object key)
+    @Override public void delete(final BitMapNode node, final RecordReference parentRecordReference, final RecordReference recordReference,
+        final int[] hashDigits, final Object key)
     {
         super.delete(node, parentRecordReference, recordReference, hashDigits, key);
+
         if (parentRecordReference != null)
         {
-            Record parentRecord = recordCache.get(parentRecordReference.position);
+            final Record parentRecord = recordCache.get(parentRecordReference.position);
+
             if (parentRecord != null)
             {
                 parentRecord.reference = parentRecordReference;
             }
+
             recordCache.put(parentRecordReference.position, parentRecord);
         }
+
         nodeCache.remove(node.position);
         recordCache.remove(recordReference.position);
-        keyCache.remove((Object)key);
+        keyCache.remove((Object) key);
     }
 
     /**
-     * Get bitmap node
+     * Get bitmap node.
      *
-     * @param position
-     * @return
+     * @param   position
+     *
+     * @return  get bitmap node.
      */
-    @Override
-    protected BitMapNode getBitmapNode(long position)
+    @Override protected BitMapNode getBitmapNode(final long position)
     {
         BitMapNode node = nodeCache.get(position);
+
         if (node == null)
         {
             node = super.getBitmapNode(position);
             nodeCache.put(position, node);
         }
+
         return node;
     }
 
     /**
-     * Write bitmap node
+     * Write bitmap node.
      *
-     * @param position
-     * @param node
+     * @param  position
+     * @param  node
      */
-    @Override
-    protected void writeBitmapNode(long position, BitMapNode node)
+    @Override protected void writeBitmapNode(final long position, final BitMapNode node)
     {
         nodeCache.put(position, node);
         super.writeBitmapNode(position, node);
     }
 
     /**
-     * This method will only update a bitmap node reference
+     * This method will only update a bitmap node reference.
+     *
+     * @param  node
+     * @param  index
+     * @param  value
      */
-    @Override
-    public void updateBitmapNodeReference(BitMapNode node, int index, long value)
+    @Override public void updateBitmapNodeReference(final BitMapNode node, final int index, final long value)
     {
         super.updateBitmapNodeReference(node, index, value);
         nodeCache.put(node.position, node);
     }
 
     /**
-     * Get Key
+     * Get Key.
      *
-     * @param reference
-     * @return
+     * @param   reference
+     *
+     * @return  get Key.
      */
-    @Override
-    protected Object getRecordKey(RecordReference reference)
+    @Override protected Object getRecordKey(final RecordReference reference)
     {
-
         Record record = recordCache.get(reference.position);
-        if(record != null && record.key != null)
+
+        if ((record != null) && (record.key != null))
         {
             return record.key;
         }
         else
         {
-            if(record == null)
+
+            if (record == null)
             {
                 record = new Record();
             }
@@ -194,16 +217,17 @@ public class AbstractCachedBitMap extends AbstractBitMap {
     }
 
     /**
-     * Get Record Reference
+     * Get Record Reference.
      *
-     * @param position
-     * @return
+     * @param   position
+     *
+     * @return  get Record Reference.
      */
-    @Override
-    protected RecordReference getRecordReference(long position)
+    @Override protected RecordReference getRecordReference(final long position)
     {
         Record record = recordCache.get(position);
-        if (record != null && record.reference != null)
+
+        if ((record != null) && (record.reference != null))
         {
             return record.reference;
         }
@@ -219,21 +243,25 @@ public class AbstractCachedBitMap extends AbstractBitMap {
         {
             recordCache.put(record.reference.position, record);
         }
+
         return record.reference;
 
     }
 
     /**
-     * Get Record Reference
+     * Get Record Reference.
      *
-     * @param node
-     * @param key
-     * @return
+     * @param   node
+     * @param   key
+     * @param   hashDigits
+     *
+     * @return  get Record Reference.
      */
-    public RecordReference[] getRecordReference(BitMapNode node, Object key, int[] hashDigits)
+    @Override public RecordReference[] getRecordReference(final BitMapNode node, final Object key, final int[] hashDigits)
     {
         final RecordReference[] references = super.getRecordReference(node, key, hashDigits);
-        if(references[1] != null)
+
+        if (references[1] != null)
         {
             keyCache.put(key, references[1].position);
         }
@@ -242,22 +270,24 @@ public class AbstractCachedBitMap extends AbstractBitMap {
     }
 
     /**
-     * Get Value
+     * Get Value.
      *
-     * @param reference
-     * @return
+     * @param   reference
+     *
+     * @return  get Value.
      */
-    @Override
-    public Object getRecordValue(RecordReference reference)
+    @Override public Object getRecordValue(final RecordReference reference)
     {
         Record record = recordCache.get(reference.position);
-        if(record != null && record.value != null)
+
+        if ((record != null) && (record.value != null))
         {
             return record.value;
         }
         else
         {
-            if(record == null)
+
+            if (record == null)
             {
                 record = new Record();
             }
@@ -271,37 +301,43 @@ public class AbstractCachedBitMap extends AbstractBitMap {
     private static ObjectUtil reflection = ObjectUtil.getInstance();
 
     /**
-     * Get Map representation of value object
+     * Get Map representation of value object.
      *
-     * @param attribute Attribute name to fetch
-     * @param recordId Record reference within storage structure
+     * @param   attribute  Attribute name to fetch
+     * @param   recordId   Record reference within storage structure
      *
-     * @return Map of key values
+     * @return  Map of key values
      */
-    public Object getAttributeWithRecID(String attribute, long recordId)
+    public Object getAttributeWithRecID(final String attribute, final long recordId)
     {
         final RecordReference reference = this.getRecordReference(recordId);
 
         // First see if it is cached and get it via reflection
-        Record record = recordCache.get(reference.position);
-        if(record != null && record.value != null)
+        final Record record = recordCache.get(reference.position);
+
+        if ((record != null) && (record.value != null))
         {
-            Class clazz = record.value.getClass();
+            final Class clazz = record.value.getClass();
             AttributeField attributeField = null;
-            try {
+
+            try
+            {
                 attributeField = ObjectUtil.getAttributeField(clazz, attribute);
-            } catch (AttributeMissingException e) {
+            }
+            catch (AttributeMissingException e)
+            {
                 return getAttributeWithRecID(attribute, reference);
             }
+
             return reflection.getAttribute(attributeField, record.value);
         }
 
-        if(reference != null && reference.position == recordId)
+        if ((reference != null) && (reference.position == recordId))
         {
             return getAttributeWithRecID(attribute, reference);
         }
+
         return null;
     }
 
 }
-
