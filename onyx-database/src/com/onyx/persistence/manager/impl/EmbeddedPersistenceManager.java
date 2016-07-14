@@ -1150,11 +1150,11 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      */
     @Override
-    public void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException
+    public void stream(Query query, Class queryStreamClass) throws EntityException
     {
         QueryStream streamer = null;
         try {
-            streamer = queryStreamClass.newInstance();
+            streamer = (QueryStream)queryStreamClass.newInstance();
         } catch (InstantiationException e) {
             throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
         } catch (IllegalAccessException e) {

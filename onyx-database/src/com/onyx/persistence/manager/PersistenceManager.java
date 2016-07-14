@@ -469,7 +469,7 @@ public interface PersistenceManager {
      * @param queryStreamClass Class instance of the database stream
      *
      */
-    void stream(Query query, Class<QueryStream> queryStreamClass) throws EntityException;
+    void stream(Query query, Class queryStreamClass) throws EntityException;
 
     /**
      * Get Map representation of an entity with reference id
