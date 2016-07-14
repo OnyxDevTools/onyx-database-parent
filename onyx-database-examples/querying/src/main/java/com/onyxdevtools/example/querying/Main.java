@@ -64,6 +64,9 @@ public class Main extends AbstractDemo
 
         System.out.print("\nSorting and Paging Example: \n");
         SortingAndPagingExample.demo();
+
+        System.out.print("\nLazy Query Example: \n");
+        LazyQueryExample.demo();
     }
 
     public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
