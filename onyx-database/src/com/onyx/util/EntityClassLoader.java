@@ -1,5 +1,12 @@
 package com.onyx.util;
 
+import com.onyx.entity.SystemAttribute;
+import com.onyx.entity.SystemEntity;
+import com.onyx.entity.SystemIndex;
+import com.onyx.entity.SystemRelationship;
+import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.annotations.FetchPolicy;
+import com.onyx.persistence.annotations.IdentifierGenerator;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -177,6 +184,131 @@ public class EntityClassLoader
         }
     }
 
+    /**
+     * Generate Write a class to disk.  This is used for remote purposes.  Since we do not have a handle on the entity descriptors, we use the system entity to load
+     *
+     * @param  systemEntity
+     * @param  databaseLocation
+     */
+    public synchronized static final void writeClass(final SystemEntity systemEntity, final String databaseLocation)
+    {
+        final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
+
+        new File(outputDirectory).mkdirs();
+
+        final Map<String, Object> values = new HashMap();
+        values.put("className", systemEntity.getClassName());
+        values.put("packageName", systemEntity.getName().replace("."+systemEntity.getClassName(), ""));
+        values.put("generatorType", IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getCanonicalName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString());
+
+        for(SystemAttribute attribute : systemEntity.getAttributes())
+        {
+            if(attribute.getName().equals(systemEntity.getIdentifier().getName()))
+                values.put("idType", attribute.getDataType());
+        }
+        values.put("idName", systemEntity.getIdentifier().getName());
+
+        final List<Map<String, Object>> attributes = new ArrayList<>();
+        values.put("attributes", attributes);
+
+        Map<String, Object> attributeMap = null;
+
+        for (final SystemAttribute attribute : systemEntity.getAttributes())
+        {
+
+            if (attribute.getName().equals(systemEntity.getIdentifier().getName()))
+            {
+                continue;
+            }
+
+            attributeMap = new HashMap();
+            attributeMap.put("name", attribute.getName());
+            attributeMap.put("type", attribute.getDataType());
+
+            attributeMap.put("isPartition",
+                    ((systemEntity.getPartition() != null) && systemEntity.getPartition().getName().equals(attribute.getName())));
+
+            boolean isIndex = false;
+            for(SystemIndex indexDescriptor : systemEntity.getIndexes())
+            {
+                if(indexDescriptor.getName().equals(attribute.getName())) {
+                    isIndex = true;
+                    break;
+                }
+            }
+
+            attributeMap.put("isIndex", isIndex);
+
+            attributes.add(attributeMap);
+        }
+
+        final List<Map<String, Object>> relationships = new ArrayList();
+        values.put("relationships", relationships);
+
+        Map<String, Object> relationshipMap = null;
+
+        for (final SystemRelationship relationship : systemEntity.getRelationships())
+        {
+            relationshipMap = new HashMap();
+            relationshipMap.put("name", relationship.getName());
+
+            if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()) ||
+                    (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()))
+            {
+                final String genericType = relationship.getInverseClass();
+                final String collectionClass = List.class.getCanonicalName();
+                final String type = collectionClass + "<" + genericType + ">";
+                relationshipMap.put("type", type);
+            }
+            else
+            {
+                relationshipMap.put("type", relationship.getInverseClass());
+            }
+
+            relationshipMap.put("inverseClass", relationship.getInverseClass());
+            relationshipMap.put("inverse", relationship.getInverse());
+            relationshipMap.put("fetchPolicy",
+                    FetchPolicy.values()[relationship.getFetchPolicy()].getDeclaringClass().getName() + "." + FetchPolicy.values()[relationship.getFetchPolicy()].name());
+            relationshipMap.put("cascadePolicy",
+                    CascadePolicy.values()[relationship.getCascadePolicy()].getDeclaringClass().getName() + "." + CascadePolicy.values()[relationship.getCascadePolicy()].name());
+
+            relationshipMap.put("relationshipType",
+                    RelationshipType.values()[relationship.getRelationshipType()].getDeclaringClass().getName() + "." + RelationshipType.values()[relationship.getRelationshipType()].name());
+
+            relationshipMap.put("parentClass", relationship.getParentClass());
+
+            relationships.add(relationshipMap);
+        }
+
+        try
+        {
+
+            // Load template from source folder
+            final Template template = cfg.getTemplate(CLASS_TEMPLATE);
+
+            // File output
+            final File classFile = new File(outputDirectory + File.separator +
+                    systemEntity.getName().replaceAll("\\.", "/") + ".java");
+            classFile.getParentFile().mkdirs();
+            classFile.createNewFile();
+
+            final Writer file = new FileWriter(outputDirectory + File.separator +
+                    systemEntity.getName().replaceAll("\\.", "/") + ".java");
+            template.process(values, file);
+            file.flush();
+            file.close();
+
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        catch (TemplateException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     protected static SchemaContext schemaContext = null;
 
     public EntityClassLoader()
@@ -188,12 +320,12 @@ public class EntityClassLoader
      *
      * @param  context
      */
-    public static final void loadClasses(final SchemaContext context)
+    public static final void loadClasses(final SchemaContext context, String location)
     {
         schemaContext = context;
 
-        final File entitiesSourceDirectory = new File(context.getLocation() + File.separator + SOURCE_ENTITIES_DIRECTORY);
-        final File entitiesGeneratedDirectory = new File(context.getLocation() + File.separator + GENERATED_ENTITIES_DIRECTORY);
+        final File entitiesSourceDirectory = new File(location + File.separator + SOURCE_ENTITIES_DIRECTORY);
+        final File entitiesGeneratedDirectory = new File(location + File.separator + GENERATED_ENTITIES_DIRECTORY);
         entitiesGeneratedDirectory.mkdirs();
         entitiesSourceDirectory.mkdirs();
 
@@ -244,7 +376,16 @@ public class EntityClassLoader
         {
             e.printStackTrace();
         }
+    }
 
+    /**
+     * Load the class source from file and load it into class loader.
+     *
+     * @param  context
+     */
+    public static final void loadClasses(final SchemaContext context)
+    {
+       loadClasses(context, context.getLocation());
     }
 
     public static void addClassPaths()

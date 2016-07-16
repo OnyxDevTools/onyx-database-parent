@@ -581,7 +581,7 @@ public class EntityDescriptor implements Serializable
             {
                 rebuildIndexConsumer.accept(indexDescriptor);
             }
-            else if ((systemIndex != null) && !indexDescriptor.getType().getSimpleName().equals(systemIndex.getType()))
+            else if ((systemIndex != null) && !indexDescriptor.getType().getCanonicalName().equals(systemIndex.getType()))
             {
                 rebuildIndexConsumer.accept(indexDescriptor);
             }
@@ -656,7 +656,7 @@ public class EntityDescriptor implements Serializable
                 {
                     return false;
                 }
-                else if (!this.attributes.get(systemAttribute.getName()).getType().getSimpleName().equals(systemAttribute.getDataType()))
+                else if (!this.attributes.get(systemAttribute.getName()).getType().getCanonicalName().equals(systemAttribute.getDataType()))
                 {
                     return false;
                 }
@@ -675,7 +675,7 @@ public class EntityDescriptor implements Serializable
                     if (systemAttribute.getName().equals(attributeEntry.getKey()))
                     {
 
-                        if (!attributeEntry.getValue().getType().getSimpleName().equals(systemAttribute.getDataType()))
+                        if (!attributeEntry.getValue().getType().getCanonicalName().equals(systemAttribute.getDataType()))
                         {
                             return false;
                         }
