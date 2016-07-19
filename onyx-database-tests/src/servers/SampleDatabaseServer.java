@@ -24,6 +24,7 @@ public class SampleDatabaseServer extends DatabaseServer
     {
         DatabaseServer server1 = new DatabaseServer();
         server1.setPort(8080);
+        server1.setEnableSocketSupport(true);
         server1.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         server1.start();
         server1.join();

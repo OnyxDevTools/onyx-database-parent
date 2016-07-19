@@ -197,7 +197,7 @@ public class DefaultSchemaContext implements SchemaContext
             systemPersistenceManager.list(SystemEntity.class).forEach(o -> {
                 SystemEntity systemEntity = (SystemEntity) o;
                 try {
-                    getDescriptorForEntity(Class.forName(systemEntity.getName()));
+                    getBaseDescriptorForEntity(Class.forName(systemEntity.getName()));
                 } catch (EntityException e) {
                     // Ignore
                 } catch (ClassNotFoundException e) {

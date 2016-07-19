@@ -138,7 +138,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
                 e.printStackTrace();
             }
         }
-        super.start();
     }
 
     /**
