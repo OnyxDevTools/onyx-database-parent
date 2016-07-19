@@ -215,7 +215,7 @@ public class EntityDescriptor implements Serializable
     /**
      * Get entity callbacks from the annotations on the entity.
      *
-     * @param  clazz
+     * @param  clazz  class that has callbacks
      */
     protected void initEntityCallbacks(final Class clazz)
     {
@@ -326,8 +326,8 @@ public class EntityDescriptor implements Serializable
     /**
      * Validate Relationships.
      *
-     * @throws  EntityClassNotFoundException
-     * @throws  InvalidRelationshipTypeException
+     * @throws  EntityClassNotFoundException      when class is not found
+     * @throws  InvalidRelationshipTypeException  when relationship is not valid
      */
     protected void validateRelationships() throws EntityClassNotFoundException, InvalidRelationshipTypeException
     {
@@ -355,47 +355,50 @@ public class EntityDescriptor implements Serializable
                 }
             }
 
-            if(!interfaceFound)
+            if (!interfaceFound)
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND + ": " +
-                        descriptor.inverseClass.getCanonicalName());
+                    descriptor.inverseClass.getCanonicalName());
             }
 
-            if(descriptor.getType() != descriptor.getInverseClass()
-                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
-                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+            if ((descriptor.getType() != descriptor.getInverseClass()) &&
+                    ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
+                        (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
             {
                 throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
             }
 
-            if(descriptor.inverseClass.getAnnotation(Entity.class) == null
-                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
-                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
-                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " + descriptor.inverseClass.getCanonicalName());
-
-
-            if(descriptor.inverse != null && descriptor.inverse.length() > 0
-                    && (descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
-                        || descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE))
+            if ((descriptor.inverseClass.getAnnotation(Entity.class) == null) &&
+                    ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
+                        (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
             {
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " +
+                    descriptor.inverseClass.getCanonicalName());
+            }
+
+            if ((descriptor.inverse != null) && (descriptor.inverse.length() > 0) &&
+                    ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
+                        (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
+            {
+
                 try
                 {
-                    Field inverseField = descriptor.inverseClass.getDeclaredField(descriptor.inverse);
+                    final Field inverseField = descriptor.inverseClass.getDeclaredField(descriptor.inverse);
 
-                    if(descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE
-                            && inverseField.getType() != List.class)
+                    if ((descriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) && (inverseField.getType() != List.class))
                     {
                         throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
                     }
-                    else if(descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE
-                            && inverseField.getType() != descriptor.getParentClass())
+                    else if ((descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE) &&
+                            (inverseField.getType() != descriptor.getParentClass()))
                     {
                         throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH);
                     }
-                } catch (NoSuchFieldException e)
+                }
+                catch (NoSuchFieldException e)
                 {
                     throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " on " +
-                            descriptor.getInverseClass(), e);
+                        descriptor.getInverseClass(), e);
                 }
             }
 
@@ -593,7 +596,7 @@ public class EntityDescriptor implements Serializable
      *
      * @param   systemEntity
      *
-     * @throws  InvalidRelationshipTypeException
+     * @throws  InvalidRelationshipTypeException  when relationship is invalid
      */
     public void checkValidRelationships(final SystemEntity systemEntity) throws InvalidRelationshipTypeException
     {
