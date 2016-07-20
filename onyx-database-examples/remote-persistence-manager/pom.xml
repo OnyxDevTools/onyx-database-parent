@@ -20,7 +20,7 @@
         <dependency>
             <groupId>com.onyxdevtools</groupId>
             <artifactId>onyx-remote-database</artifactId>
-            <version>1.0.0</version>
+            <version>1.1.0</version>
             <type>jar</type>
         </dependency>
     </dependencies>
