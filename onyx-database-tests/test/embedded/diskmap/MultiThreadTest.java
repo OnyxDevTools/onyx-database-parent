@@ -1,4 +1,4 @@
-package diskmap;
+package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.map.DefaultMapBuilder;

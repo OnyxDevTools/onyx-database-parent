@@ -1,6 +1,7 @@
 package servers;
 
 import com.onyx.application.DatabaseServer;
+import entities.SimpleEntity;
 
 /**
  * Created by timothy.osborn on 4/1/15.
@@ -27,6 +28,12 @@ public class SampleDatabaseServer extends DatabaseServer
         server1.setEnableSocketSupport(true);
         server1.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         server1.start();
+
+        SimpleEntity simpleEntity = new SimpleEntity();
+        simpleEntity.setName("Test Name");
+        simpleEntity.setSimpleId("ASDF");
+        server1.getPersistenceManager().saveEntity(simpleEntity);
+
         server1.join();
         System.out.println("Started");
     }

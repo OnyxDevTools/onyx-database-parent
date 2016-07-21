@@ -8,6 +8,7 @@ import entities.schema.SchemaIndexChangedEntity;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 /**
  * Created by tosborn1 on 9/1/15.
  */
+@Ignore
 public class TestIndexSchemaChange extends BaseTest {
     @Before
     public void startup() throws Exception {
