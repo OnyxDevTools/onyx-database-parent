@@ -97,7 +97,7 @@ public class PersistenceEndpoint implements ServerEndpoint {
                 break;
             case QUERY_LAZY:
                 QueryResultResponseBody queryLazyPayload = new QueryResultResponseBody();
-                queryLazyPayload.setResultList(persistenceManager.executeQuery((Query) token.getPayload()));
+                queryLazyPayload.setResultList(persistenceManager.executeLazyQuery((Query) token.getPayload()));
                 queryLazyPayload.setMaxResults(((Query) token.getPayload()).getResultsCount());
                 token.setPayload(queryLazyPayload);
                 break;
