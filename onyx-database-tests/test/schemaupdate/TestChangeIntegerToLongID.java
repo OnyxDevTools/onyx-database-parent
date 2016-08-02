@@ -5,11 +5,13 @@ import entities.schema.SchemaIdentifierChangedEntity;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * Created by tosborn1 on 8/23/15.
  */
+@Ignore
 public class TestChangeIntegerToLongID extends BaseTest {
     @Before
     public void startup() throws Exception {

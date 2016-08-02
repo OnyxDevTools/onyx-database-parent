@@ -1,4 +1,4 @@
-package transaction;
+package embedded;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
@@ -28,25 +28,35 @@ import java.util.List;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ EmbeddedDatabaseTests.class })
-public class TestDatbaseRecovery extends BaseTest
+public class TestDatabaseRecovery extends BaseTest
 {
 
     protected static final String DATABASE_LOCATION_RECOVERED = "C:/Sandbox/Onyx/Tests/recovered.oxd";
     protected static final String DATABASE_LOCATION_AMMENDED = "C:/Sandbox/Onyx/Tests/ammended.oxd";
+    protected static final String DATABASE_LOCATION_BASE = "C:/Sandbox/Onyx/Tests/base.oxd";
 
     @BeforeClass
     public static void beforeClass()
     {
-        deleteDatabase();
+        delete(new File(DATABASE_LOCATION_RECOVERED));
+        delete(new File(DATABASE_LOCATION_AMMENDED));
+        delete(new File(DATABASE_LOCATION_BASE));
     }
 
+    @AfterClass
+    public static void afterClass()
+    {
+        delete(new File(DATABASE_LOCATION_RECOVERED));
+        delete(new File(DATABASE_LOCATION_AMMENDED));
+        delete(new File(DATABASE_LOCATION_BASE));
+    }
 
     @Before
     public void before() throws InitializationException, InterruptedException
     {
         if (context == null) {
             factory = new EmbeddedPersistenceManagerFactory();
-            factory.setDatabaseLocation(DATABASE_LOCATION);
+            factory.setDatabaseLocation(DATABASE_LOCATION_BASE);
             ((EmbeddedPersistenceManagerFactory) factory).setEnableJournaling(true);
             factory.initialize();
 
@@ -67,7 +77,7 @@ public class TestDatbaseRecovery extends BaseTest
         SchemaContext newContext = newFactory.getSchemaContext();
         PersistenceManager newManager = newFactory.getPersistenceManager();
 
-        newContext.getTransactionController().recoverDatabase(DATABASE_LOCATION + File.separator + "wal", transaction -> true);
+        newContext.getTransactionController().recoverDatabase(DATABASE_LOCATION_BASE + File.separator + "wal", transaction -> true);
 
         Assert.assertTrue(newManager.findById(AllAttributeEntity.class, "ASDFASDF100020") == null);
         Assert.assertTrue(newManager.findById(AllAttributeEntity.class, "ASDFASDF100") == null);
@@ -107,7 +117,7 @@ public class TestDatbaseRecovery extends BaseTest
         SchemaContext newContext = newFactory.getSchemaContext();
         PersistenceManager newManager = newFactory.getPersistenceManager();
 
-        newContext.getTransactionController().applyTransactionLog(DATABASE_LOCATION + File.separator + "wal" + File.separator + "0.wal", transaction -> {
+        newContext.getTransactionController().applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "0.wal", transaction -> {
             if(transaction instanceof SaveTransaction)
                 return true;
 
@@ -118,8 +128,9 @@ public class TestDatbaseRecovery extends BaseTest
         existsQuery.setEntityType(AllAttributeEntity.class);
         List results = newManager.executeQuery(existsQuery);
 
-        Assert.assertTrue(results.size() == 205314);
+        Assert.assertTrue(results.size() == 205246);
 
+        newFactory.close();
     }
 
     protected void populateTransactionData() throws EntityException

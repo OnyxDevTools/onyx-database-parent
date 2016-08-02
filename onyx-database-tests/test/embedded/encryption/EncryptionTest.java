@@ -1,4 +1,4 @@
-package encryption;
+package embedded.encryption;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.util.EncryptionUtil;

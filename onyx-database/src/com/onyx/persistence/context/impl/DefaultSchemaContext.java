@@ -23,7 +23,6 @@ import com.onyx.map.MapBuilder;
 import com.onyx.map.store.StoreType;
 
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
@@ -58,12 +57,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -172,7 +166,7 @@ public class DefaultSchemaContext implements SchemaContext
     /**
      * Get Database kill switch.
      *
-     * @return  volitile indicator database is in the process of shutting down
+     * @return  volatile indicator database is in the process of shutting down
      *
      * @since   1.0.0
      */
@@ -188,24 +182,119 @@ public class DefaultSchemaContext implements SchemaContext
      */
     public void start()
     {
-        // The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
-        // So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
-        try {
-            final EntityDescriptor descriptor = new EntityDescriptor(SystemEntity.class, this);
-            this.systemEntityByIDMap.put(1, new SystemEntity(descriptor));
+        initializeSystemEntities();
+        initializePartitionSequence();
+        initializeEntityDescriptors();
+    }
 
-            systemPersistenceManager.list(SystemEntity.class).forEach(o -> {
-                SystemEntity systemEntity = (SystemEntity) o;
-                try {
-                    getBaseDescriptorForEntity(Class.forName(systemEntity.getName()));
-                } catch (EntityException e) {
-                    // Ignore
-                } catch (ClassNotFoundException e) {
-                    // Ignore
+    /**
+     * The purpose of this is to auto number the partition ids
+     */
+    protected void initializePartitionSequence()
+    {
+
+        try {
+            // Get the max partition index
+            final IndexController indexController = this.getIndexController(descriptors.get(
+                    SystemPartitionEntry.class.getCanonicalName()).getIndexes().get("index"));
+            final Set values = indexController.findAllValues();
+
+            final Iterator it = values.iterator();
+            long max = 0;
+
+            while (it.hasNext()) {
+                final long val = (long) it.next();
+
+                if (val > max) {
+                    max = val;
                 }
-            });
+            }
+
+            partitions.set(max);
+        } catch (EntityException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
+     * So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
+     */
+    protected void initializeEntityDescriptors()
+    {
+
+        try {
+            // Added criteria for greater than 7 so that we do not disturb the system entities
+            QueryCriteria nonSystemEntities = new QueryCriteria("name", QueryCriteriaOperator.NOT_STARTS_WITH, "com.onyx.entity.System");
+
+            Query query = new Query(SystemEntity.class,nonSystemEntities);
+            query.setSelections(Arrays.asList("name"));
+            List<Map> results = systemPersistenceManager.executeQuery(query);
+
+            for (Map obj : results) {
+                String entityName = (String)obj.get("name");
+                getBaseDescriptorForEntity(Class.forName(entityName));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
+     */
+    protected void initializeSystemEntities()
+    {
+        try {
+
+            descriptors.put(SystemEntity.class.getCanonicalName(), new EntityDescriptor(SystemEntity.class, context));
+            descriptors.put(SystemAttribute.class.getCanonicalName(), new EntityDescriptor(SystemAttribute.class, context));
+            descriptors.put(SystemRelationship.class.getCanonicalName(), new EntityDescriptor(SystemRelationship.class, context));
+            descriptors.put(SystemIndex.class.getCanonicalName(), new EntityDescriptor(SystemIndex.class, context));
+            descriptors.put(SystemIdentifier.class.getCanonicalName(), new EntityDescriptor(SystemIdentifier.class, context));
+            descriptors.put(SystemPartition.class.getCanonicalName(), new EntityDescriptor(SystemPartition.class, context));
+            descriptors.put(SystemPartitionEntry.class.getCanonicalName(), new EntityDescriptor(SystemPartitionEntry.class, context));
+
+            SystemEntity systemEntity = new SystemEntity(descriptors.get(SystemEntity.class.getCanonicalName()));
+            SystemEntity systemAttributeEntity = new SystemEntity(descriptors.get(SystemAttribute.class.getCanonicalName()));
+            SystemEntity systemRelationshipEntity = new SystemEntity(descriptors.get(SystemRelationship.class.getCanonicalName()));
+            SystemEntity systemIndexEntity = new SystemEntity(descriptors.get(SystemIndex.class.getCanonicalName()));
+            SystemEntity systemIdentifierEntity = new SystemEntity(descriptors.get(SystemIdentifier.class.getCanonicalName()));
+            SystemEntity systemPartitionEntity = new SystemEntity(descriptors.get(SystemPartition.class.getCanonicalName()));
+            SystemEntity systemPartitionEntryEntity = new SystemEntity(descriptors.get(SystemPartitionEntry.class.getCanonicalName()));
+
+            systemEntity.setPrimaryKey(1);
+            systemAttributeEntity.setPrimaryKey(2);
+            systemRelationshipEntity.setPrimaryKey(3);
+            systemIndexEntity.setPrimaryKey(4);
+            systemIdentifierEntity.setPrimaryKey(5);
+            systemPartitionEntity.setPrimaryKey(6);
+            systemPartitionEntryEntity.setPrimaryKey(7);
+
+            defaultSystemEntities.put(SystemEntity.class.getCanonicalName(), systemEntity);
+            defaultSystemEntities.put(SystemAttribute.class.getCanonicalName(), systemAttributeEntity);
+            defaultSystemEntities.put(SystemRelationship.class.getCanonicalName(), systemRelationshipEntity);
+            defaultSystemEntities.put(SystemIndex.class.getCanonicalName(), systemIndexEntity);
+            defaultSystemEntities.put(SystemIdentifier.class.getCanonicalName(), systemIdentifierEntity);
+            defaultSystemEntities.put(SystemPartition.class.getCanonicalName(), systemPartitionEntity);
+            defaultSystemEntities.put(SystemPartitionEntry.class.getCanonicalName(), systemPartitionEntryEntity);
+
+            this.systemEntityByIDMap.put(1, systemEntity);
+            this.systemEntityByIDMap.put(2, systemAttributeEntity);
+            this.systemEntityByIDMap.put(3, systemRelationshipEntity);
+            this.systemEntityByIDMap.put(4, systemIndexEntity);
+            this.systemEntityByIDMap.put(5, systemIdentifierEntity);
+            this.systemEntityByIDMap.put(6, systemPartitionEntity);
+            this.systemEntityByIDMap.put(7, systemPartitionEntryEntity);
+
+            List<SystemEntity> systemEntities = Arrays.asList(systemEntity, systemAttributeEntity, systemRelationshipEntity, systemIndexEntity, systemIdentifierEntity, systemPartitionEntity, systemPartitionEntryEntity);
+
+            systemPersistenceManager.saveEntities(systemEntities);
+
         } catch (EntityException e) {
-            // Ignore
+            e.printStackTrace();
         }
     }
 
@@ -649,10 +738,8 @@ public class DefaultSchemaContext implements SchemaContext
             partitionId = "";
         }
 
-        EntityDescriptor descriptor = null;
-
         final String entityKey = entity.getClass().getCanonicalName() + String.valueOf(partitionId);
-        descriptor = descriptors.get(entityKey);
+        EntityDescriptor descriptor = descriptors.get(entityKey);
 
         if (descriptor != null)
         {
@@ -669,102 +756,87 @@ public class DefaultSchemaContext implements SchemaContext
 
             descriptors.put(entityKey, descriptor);
 
-            EntityDescriptor tmpDesc = descriptors.get(SystemEntity.class.getCanonicalName());
-
-            if ((tmpDesc == null) ||
-                    ((descriptor.getClazz() == SystemEntity.class) && (descriptors.get(SystemAttribute.class.getCanonicalName()) == null)))
-            {
-                tmpDesc = new EntityDescriptor(SystemEntity.class, context);
-                descriptors.put(SystemEntity.class.getCanonicalName(), tmpDesc);
-                descriptors.put(SystemAttribute.class.getCanonicalName(), new EntityDescriptor(SystemAttribute.class, context));
-                descriptors.put(SystemRelationship.class.getCanonicalName(), new EntityDescriptor(SystemRelationship.class, context));
-                descriptors.put(SystemIndex.class.getCanonicalName(), new EntityDescriptor(SystemIndex.class, context));
-                descriptors.put(SystemIdentifier.class.getCanonicalName(), new EntityDescriptor(SystemIdentifier.class, context));
-                descriptors.put(SystemPartition.class.getCanonicalName(), new EntityDescriptor(SystemPartition.class, context));
-                descriptors.put(SystemPartitionEntry.class.getCanonicalName(), new EntityDescriptor(SystemPartitionEntry.class, context));
-
-                // Get the max partition index
-                final IndexController indexController = this.getIndexController(descriptors.get(
-                            SystemPartitionEntry.class.getCanonicalName()).getIndexes().get("index"));
-                final Set values = indexController.findAllValues();
-
-                final Iterator it = values.iterator();
-                long max = 0;
-
-                while (it.hasNext())
-                {
-                    final long val = (long) it.next();
-
-                    if (val > max)
-                    {
-                        max = val;
-                    }
-                }
-
-                partitions.set(max);
-            }
-
-            SystemEntity systemEntity = null;
-
-            boolean isNewEntity = false;
-
             // Get the latest System Entity
-            systemEntity = this.getSystemEntityByName(descriptor.getClazz().getCanonicalName());
+            SystemEntity systemEntity = this.getSystemEntityByName(descriptor.getClazz().getCanonicalName());
 
+            // If it does not exist, lets create a new one
             if (systemEntity == null)
             {
-                isNewEntity = true;
                 systemEntity = new SystemEntity(descriptor);
             }
 
-            // Get Partition Index
-            long i = 0;
-            boolean found = false;
-
-            if ((systemEntity.getPartition() != null) && (descriptor.getPartition() != null))
-            {
-
-                for (i = 0; i < systemEntity.getPartition().getEntries().size(); i++)
-                {
-
-                    if (systemEntity.getPartition().getEntries().get((int) i).getValue().equals(
-                                descriptor.getPartition().getPartitionValue()))
-                    {
-                        i = systemEntity.getPartition().getEntries().get((int) i).getIndex();
-                        found = true;
-
-                        break;
-                    }
-                }
-            }
-
-            if (!found && (descriptor.getPartition() != null))
-            {
-
-                if (systemEntity.getPartition() == null)
-                {
-                    systemEntity.setPartition(new SystemPartition(descriptor.getPartition(), systemEntity));
-                }
-
-                systemEntity.getPartition().getEntries().add(new SystemPartitionEntry(descriptor, descriptor.getPartition(),
-                        systemEntity.getPartition(), partitions.incrementAndGet()));
-            }
-
-            // Re-Build indexes if necessary
-            descriptor.checkIndexChanges(systemEntity, rebuildIndexConsumer);
-
-            // Check to see if the relationships were not changed from a to many to a to one
-            descriptor.checkValidRelationships(systemEntity);
-
-            if (!descriptor.equals(systemEntity))
-            {
-                systemEntity = new SystemEntity(descriptor);
-            }
-
-            systemPersistenceManager.saveEntity(systemEntity);
-            defaultSystemEntities.put(systemEntity.getName(), systemEntity);
+            checkForValidDescriptorPartition(descriptor, systemEntity);
+            checkForEntityChanges(descriptor, systemEntity);
 
             return descriptor;
+        }
+    }
+
+    /**
+     * This method will detect to see if there are any entity changes.  If so, it will create a new SystemEntity record
+     * to reflect the new version and serializer
+     *
+     * @param descriptor Base Entity Descriptor
+     * @param systemEntity Current system entity value to base the comparison on the new entity descriptor
+     *
+     * @return Newly created system entity if it was created otherwise the existing one
+     * @since 1.0.1
+     * @throws EntityException default exception
+     */
+    protected SystemEntity checkForEntityChanges(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException
+    {
+        // Re-Build indexes if necessary
+        descriptor.checkIndexChanges(systemEntity, rebuildIndexConsumer);
+
+        // Check to see if the relationships were not changed from a to many to a to one
+        descriptor.checkValidRelationships(systemEntity);
+
+        if (!descriptor.equals(systemEntity))
+        {
+            systemEntity = new SystemEntity(descriptor);
+        }
+
+        systemPersistenceManager.saveEntity(systemEntity);
+        defaultSystemEntities.put(systemEntity.getName(), systemEntity);
+        systemEntityByIDMap.put(systemEntity.getPrimaryKey(), systemEntity);
+
+        return systemEntity;
+    }
+
+    /**
+     * Checks to see if a partition already exists for the corresponding entity descriptor.  If it does not, lets create it.
+     *
+     * @since 1.0.1
+     * @param descriptor Entity descriptor to base the new partition on or to cross reference the old one
+     * @param systemEntity System entity to get from the database and compare partition on
+     */
+    protected void checkForValidDescriptorPartition(EntityDescriptor descriptor, SystemEntity systemEntity)
+    {
+        // Check to see if the partition already exists
+        if ((systemEntity.getPartition() != null) && (descriptor.getPartition() != null))
+        {
+            for (int i = 0; i < systemEntity.getPartition().getEntries().size(); i++)
+            {
+
+                if (systemEntity.getPartition().getEntries().get((int) i).getValue().equals(
+                        descriptor.getPartition().getPartitionValue()))
+                {
+                    // It does yay, lets return
+                    return;
+                }
+            }
+        }
+
+        // Add a new partition entry if it does not exist
+        if (descriptor.getPartition() != null)
+        {
+            if (systemEntity.getPartition() == null)
+            {
+                systemEntity.setPartition(new SystemPartition(descriptor.getPartition(), systemEntity));
+            }
+
+            systemEntity.getPartition().getEntries().add(new SystemPartitionEntry(descriptor, descriptor.getPartition(),
+                    systemEntity.getPartition(), partitions.incrementAndGet()));
         }
     }
 
@@ -809,6 +881,8 @@ public class DefaultSchemaContext implements SchemaContext
                     if (results.size() > 0)
                     {
                         results.get(0).getAttributes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        results.get(0).getRelationships().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        results.get(0).getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
 
                         return results.get(0);
                     }
@@ -847,6 +921,8 @@ public class DefaultSchemaContext implements SchemaContext
                         if (entity != null)
                         {
                             entity.getAttributes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+                            entity.getRelationships().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+                            entity.getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
                         }
 
                         return entity;

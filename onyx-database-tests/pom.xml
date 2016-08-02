@@ -14,7 +14,7 @@
     <parent>
         <groupId>com.onyxdevtools</groupId>
         <artifactId>onyx-database-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </parent>
 
     <build>
@@ -42,14 +42,6 @@
                     <groups>category.EmbeddedDatabaseTests</groups>
                     <groups>category.RemoteServerTests</groups>
                     <groups>category.WebServerTests</groups>
-                    <groups>category.DistributedTests</groups>
-                    <groups>category.FileSystemTests</groups>
-
-
-                    <groups>category.test.TestReplicationMaster</groups>
-                    <groups>category.test.TestReplicationNode</groups>
-                    <groups>category.test.TestReplicationLoad</groups>
-
                 </configuration>
             </plugin>
 
@@ -124,36 +116,6 @@
         </profile>
 
         <profile>
-            <id>distributed</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <groups>category.DistributedTests</groups>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>filesystem</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <groups>category.FileSystemTests</groups>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
             <id>webserver</id>
             <build>
                 <plugins>
@@ -162,51 +124,6 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <groups>category.WebServerTests</groups>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>TestReplicationMaster</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <groups>category.test.TestReplicationMaster</groups>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>TestReplicationNode</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <groups>category.test.TestReplicationNode</groups>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>TestReplicationLoad</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <groups>category.test.TestReplicationLoad</groups>
                         </configuration>
                     </plugin>
                 </plugins>

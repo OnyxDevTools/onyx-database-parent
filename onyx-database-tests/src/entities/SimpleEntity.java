@@ -14,10 +14,10 @@ public class SimpleEntity extends AbstractEntity implements IManagedEntity {
 
     @Identifier(generator=IdentifierGenerator.NONE)
     @Attribute(size=255)
-    private String simpleId;
+    public String simpleId;
 
     @Attribute(size=255)
-    private String name;
+    public String name;
 
     public String getSimpleId() {
         return simpleId;

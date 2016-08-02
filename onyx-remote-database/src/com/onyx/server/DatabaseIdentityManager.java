@@ -46,6 +46,10 @@ public class DatabaseIdentityManager implements IdentityManager {
         {
             char[] password = ((PasswordCredential) credential).getPassword();
             final String sentPassword = new String(password);
+
+            if(account == null)
+                return false;
+
             return sentPassword.equals(((DatabaseUserAccount)account).getPassword())
                     || EncryptionUtil.encrypt(sentPassword).equals(((DatabaseUserAccount)account).getPassword());
         }
@@ -57,6 +61,10 @@ public class DatabaseIdentityManager implements IdentityManager {
         try
         {
             final SystemUser user = (SystemUser)persistenceManager.findById(SystemUser.class, id);
+
+            if(user == null)
+                return null;
+
             return new DatabaseUserAccount(user);
         }
         catch (EntityException e)

@@ -5,6 +5,7 @@ import entities.schema.SchemaAttributeEntity;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -13,6 +14,7 @@ import java.util.Date;
 /**
  * Created by tosborn1 on 8/23/15.
  */
+@Ignore
 public class TestAttributeUpdate extends BaseTest
 {
     @Before
