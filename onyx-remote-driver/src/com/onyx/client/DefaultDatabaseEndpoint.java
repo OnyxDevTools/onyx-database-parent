@@ -8,6 +8,7 @@ import com.onyx.request.pojo.RequestEndpoint;
 import com.onyx.request.pojo.RequestPriority;
 import com.onyx.request.pojo.RequestToken;
 import com.onyx.request.pojo.RequestTokenType;
+import com.onyx.buffer.BufferStream;
 
 import javax.websocket.*;
 import java.io.*;
@@ -130,8 +131,9 @@ public class DefaultDatabaseEndpoint {
 
                     if (localToken != null && localToken.getListener() != null)
                         localToken.getListener().getCountDownLatch().countDown();
-
                 }
+
+                BufferStream.recycle(buffer);
             }
         } catch (IOException e) {
             // TODO: Log exception

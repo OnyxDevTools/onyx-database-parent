@@ -20,10 +20,10 @@ import category.RemoteServerTests;
 @Category({ RemoteServerTests.class })
 public class TestCallbackExceptions extends RemoteBaseTest
 {
+
     /**
      * Created by timothy.osborn on 12/14/14.
      */
-
     @Before
     public void before() throws InitializationException
     {

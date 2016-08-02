@@ -9,14 +9,12 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.SingletonException;
 import com.onyx.exceptions.RemoteInstanceException;
-import com.onyx.map.serializer.SocketBuffer;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.manager.impl.DefaultSocketPersistenceManager;
 import com.onyx.persistence.manager.impl.RemotePersistenceManager;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -32,7 +30,6 @@ import org.glassfish.tyrus.container.jdk.client.JdkClientContainer;
 
 import javax.websocket.DeploymentException;
 import javax.websocket.Session;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.rmi.ConnectIOException;
@@ -41,7 +38,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RMIClientSocketFactory;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.*;
 
 /**
@@ -228,8 +224,6 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         } catch (URISyntaxException e) {
             throw new InitializationException(InitializationException.INVALID_URI);
         }
-
-        SocketBuffer.initialize(context);
 
         try
         {

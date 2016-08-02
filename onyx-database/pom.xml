@@ -24,6 +24,8 @@
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
+        <java.cryptographic.extension.classes>${java.home}/lib/jce.jar</java.cryptographic.extension.classes>
     </properties>
 
     <build>
@@ -91,7 +93,43 @@
                     </execution>
                 </executions>
             </plugin>
-
+            <plugin>
+                <groupId>com.github.wvengen</groupId>
+                <artifactId>proguard-maven-plugin</artifactId>
+                <version>2.0.11</version>
+                <configuration>
+                    <includeDependency>true</includeDependency>
+                    <injar>${project.build.finalName}.${project.packaging}</injar>
+                    <outjar>${project.build.finalName}.${project.packaging}</outjar>
+                    <libs>
+                        <lib>${java.bootstrap.classes}</lib>
+                        <lib>${java.cryptographic.extension.classes}</lib>
+                    </libs>
+                    <options>
+                        <option>-keepclasseswithmembers public class * { public static void main(java.lang.String[]); }</option>
+                        <option>-keepattributes Signature</option>
+                        <option>-keepattributes *Annotation*</option>
+                        <option>-keepattributes InnerClasses,EnclosingMethod</option>
+                    </options>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>net.sf.proguard</groupId>
+                        <artifactId>proguard-base</artifactId>
+                        <version>5.2.1</version>
+                        <scope>runtime</scope>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>proguard</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>proguard</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
 
     </build>
@@ -122,12 +160,6 @@
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
             <version>${commons-codec.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>de.ruedigermoeller</groupId>
-            <artifactId>fst</artifactId>
-            <version>${fst.version}</version>
         </dependency>
 
     </dependencies>

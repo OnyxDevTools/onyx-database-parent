@@ -3,8 +3,7 @@ package com.onyx.request.pojo;
 
 import com.onyx.client.DefaultDatabaseEndpoint;
 import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.SocketBuffer;
-import org.omg.PortableServer.RequestProcessingPolicy;
+import com.onyx.buffer.BufferStream;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -163,7 +162,7 @@ public class RequestToken implements Externalizable{
         token.setType(buffer.get());
         token.setEndpoint(buffer.get());
         token.setPriority(buffer.get());
-        token.setPayload(SocketBuffer.deserialize(buffer));
+        token.setPayload(BufferStream.fromBuffer(buffer));
         return token;
     }
 
@@ -176,7 +175,7 @@ public class RequestToken implements Externalizable{
      */
     public static ByteBuffer getPacket(RequestToken token) throws IOException
     {
-        ByteBuffer buffer = SocketBuffer.serialize(token.getPayload());
+        ByteBuffer buffer = BufferStream.toBuffer(token.getPayload());
         buffer.rewind();
 
         ByteBuffer totalBuffer = ObjectBuffer.allocate(buffer.limit() + (Byte.BYTES * 3) + Short.BYTES);

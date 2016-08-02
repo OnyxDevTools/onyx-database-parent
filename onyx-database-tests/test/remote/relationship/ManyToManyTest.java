@@ -21,6 +21,7 @@ import category.RemoteServerTests;
 @Category({ RemoteServerTests.class })
 public class ManyToManyTest extends RemoteBaseTest
 {
+
     @Before
     public void before() throws InitializationException, EntityException
     {

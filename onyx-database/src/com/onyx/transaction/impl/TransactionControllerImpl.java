@@ -2,13 +2,13 @@ package com.onyx.transaction.impl;
 
 import com.onyx.exception.TransactionException;
 import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.SocketBuffer;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.transaction.*;
+import com.onyx.buffer.BufferStream;
 import com.onyx.util.FileUtil;
 
 import java.io.File;
@@ -55,7 +55,7 @@ public class TransactionControllerImpl implements TransactionController
 
         transactionLock.lock();
         try {
-            final ByteBuffer buffer = SocketBuffer.serialize(entity);
+            final ByteBuffer buffer = BufferStream.toBuffer(entity);
             final ByteBuffer totalBuffer = ObjectBuffer.allocate(buffer.limit() + 5);
             totalBuffer.put(SAVE);
             totalBuffer.putInt(buffer.limit());
@@ -83,7 +83,7 @@ public class TransactionControllerImpl implements TransactionController
 
         transactionLock.lock();
         try {
-            final ByteBuffer buffer = SocketBuffer.serialize(query);
+            final ByteBuffer buffer = BufferStream.toBuffer(query);
             final ByteBuffer totalBuffer = ObjectBuffer.allocate(buffer.limit() + 5);
             totalBuffer.put(UPDATE_QUERY);
             totalBuffer.putInt(buffer.limit());
@@ -111,7 +111,7 @@ public class TransactionControllerImpl implements TransactionController
 
         transactionLock.lock();
         try {
-            final ByteBuffer buffer = SocketBuffer.serialize(entity);
+            final ByteBuffer buffer = BufferStream.toBuffer(entity);
             final ByteBuffer totalBuffer = ObjectBuffer.allocate(buffer.limit() + 5);
             totalBuffer.put(DELETE);
             totalBuffer.putInt(buffer.limit());
@@ -138,7 +138,7 @@ public class TransactionControllerImpl implements TransactionController
         transactionLock.lock();
 
         try {
-            final ByteBuffer buffer = SocketBuffer.serialize(query);
+            final ByteBuffer buffer = BufferStream.toBuffer(query);
             final ByteBuffer totalBuffer = ObjectBuffer.allocate(buffer.limit() + 5);
             totalBuffer.put(DELETE_QUERY);
             totalBuffer.putInt(buffer.limit());
@@ -226,12 +226,12 @@ public class TransactionControllerImpl implements TransactionController
                     byte transactionType = metadataBuffer.get();
                     int transactionDataLength = metadataBuffer.getInt();
 
-                    final ByteBuffer transactionBuffer = ObjectBuffer.allocate(transactionDataLength);
+                    final ByteBuffer transactionBuffer = BufferStream.allocate(transactionDataLength);
                     channel.read(transactionBuffer);
                     transactionBuffer.rewind();
 
                     if (transactionType == SAVE) {
-                        IManagedEntity entity = (IManagedEntity)SocketBuffer.deserialize(transactionBuffer);
+                        IManagedEntity entity = (IManagedEntity) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new SaveTransaction(entity);
                         if(executeTransaction.apply(transaction) == true)
                         {
@@ -240,7 +240,7 @@ public class TransactionControllerImpl implements TransactionController
                             ((ManagedEntity)entity).ignoreListeners = false;
                         }
                     } else if (transactionType == DELETE) {
-                        IManagedEntity entity = (IManagedEntity)SocketBuffer.deserialize(transactionBuffer);
+                        IManagedEntity entity = (IManagedEntity) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new DeleteTransaction(entity);
                         if(executeTransaction.apply(transaction) == true)
                         {
@@ -249,14 +249,14 @@ public class TransactionControllerImpl implements TransactionController
                             ((ManagedEntity)entity).ignoreListeners = false;
                         }
                     } else if (transactionType == UPDATE_QUERY) {
-                        Query query = (Query)SocketBuffer.deserialize(transactionBuffer);
+                        Query query = (Query) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new UpdateQueryTransaction(query);
                         if(executeTransaction.apply(transaction) == true)
                         {
                             this.persistenceManager.executeUpdate(query);
                         }
                     } else if (transactionType == DELETE_QUERY) {
-                        Query query = (Query)SocketBuffer.deserialize(transactionBuffer);
+                        Query query = (Query) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new DeleteQueryTransaction(query);
                         if(executeTransaction.apply(transaction) == true)
                         {
@@ -264,6 +264,7 @@ public class TransactionControllerImpl implements TransactionController
                         }
                     }
 
+                    BufferStream.recycle(transactionBuffer);
                     metadataBuffer.rewind();
                     transactionBuffer.clear();
                 }
