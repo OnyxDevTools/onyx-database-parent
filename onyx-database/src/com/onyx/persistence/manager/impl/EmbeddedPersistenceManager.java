@@ -462,7 +462,11 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
             Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
 
             query.setResultsCount(results.size());
-
+            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1)
+            {
+                results = queryController.sort(
+                        (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
+            }
             LazyQueryCollection<IManagedEntity> retVal = new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
             return retVal;
         } finally
