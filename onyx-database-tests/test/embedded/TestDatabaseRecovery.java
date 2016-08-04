@@ -128,7 +128,7 @@ public class TestDatabaseRecovery extends BaseTest
         existsQuery.setEntityType(AllAttributeEntity.class);
         List results = newManager.executeQuery(existsQuery);
 
-        Assert.assertTrue(results.size() == 205246);
+        Assert.assertTrue(results.size() == 191557);
 
         newFactory.close();
     }

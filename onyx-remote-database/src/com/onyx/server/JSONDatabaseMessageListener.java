@@ -159,7 +159,10 @@ public class JSONDatabaseMessageListener implements HttpHandler
                                 break;
                         }
 
-                        final Object requestBody = objectMapper.readValue(buffer.array(), bodyType);
+                        byte[] bytes = new byte[buffer.limit() - buffer.position()];
+                        buffer.get(bytes);
+
+                        final Object requestBody = objectMapper.readValue(bytes, bodyType);
                         final Object response = invokeHandler(path, requestBody);
 
                         sendResponse(exchange, response, 200);

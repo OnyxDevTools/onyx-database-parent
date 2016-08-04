@@ -125,7 +125,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     protected int write(ByteBuffer byteBuffer, long position) {
 
         final FileSlice slice = getBuffer(position);
-        final byte[] bytesToWrite = byteBuffer.array();
+        final byte[] bytesToWrite = new byte[byteBuffer.limit()];
+        byteBuffer.get(bytesToWrite);
 
         int bufLocation = getBufferLocation(position);
         int endBufLocation = bufLocation + bytesToWrite.length;
@@ -186,7 +187,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
 
         // This occurs when we bridge from one slice to another
         if (endBufLocation >= SLICE_SIZE) {
-            final FileSlice overflowSlice = getBuffer(position + buffer.array().length);
+            final FileSlice overflowSlice = getBuffer(position + buffer.limit());
 
             byte[] firstSlice = new byte[(int) (SLICE_SIZE - bufLocation)];
             byte[] secondSlice = new byte[endBufLocation - bufLocation - firstSlice.length];

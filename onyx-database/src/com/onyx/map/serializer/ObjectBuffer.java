@@ -6,9 +6,6 @@ import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Record;
 import com.onyx.map.node.RecordReference;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -55,7 +52,7 @@ public class ObjectBuffer
 
     public int getSize()
     {
-        return buffer.position();
+        return buffer.limit();
     }
 
     /**
@@ -65,18 +62,9 @@ public class ObjectBuffer
      */
     public ByteBuffer getByteBuffer()
     {
-        if(buffer.position() != buffer.capacity())
-        {
-            final ByteBuffer retVal = allocate(buffer.position());
-            retVal.put(buffer.array(), 0, buffer.position());
-            retVal.rewind();
-            return retVal;
-        }
-        else
-        {
-            buffer.rewind();
-            return buffer;
-        }
+        buffer.limit(buffer.position());
+        buffer.rewind();
+        return buffer;
     }
 
     /**
@@ -190,6 +178,18 @@ public class ObjectBuffer
         return buffer.getShort();
     }
 
+    protected void ensureCapacity(int more)
+    {
+        if(buffer.capacity() < more + buffer.position())
+        {
+            ByteBuffer tempBuffer = allocate(buffer.limit() + more + BUFFER_ALLOCATION);
+            buffer.limit(buffer.position());
+            buffer.rewind();
+            tempBuffer.put(buffer);
+
+            this.buffer = tempBuffer;
+        }
+    }
 
     /**
      * Helper for writing anything to a buffer which is dynamically growing
@@ -199,21 +199,9 @@ public class ObjectBuffer
      */
     public int writeObject(Object object) throws IOException
     {
-        final ByteBuffer newBuffer = wrap(object, serializers);
-
-        ByteBuffer tempBuffer = null;
-        if(buffer.capacity() < (newBuffer.limit() + buffer.position()))
-        {
-            tempBuffer = allocate(buffer.limit() + newBuffer.limit() + BUFFER_ALLOCATION);
-            tempBuffer.put(buffer.array(), 0, buffer.position());
-            tempBuffer.put(newBuffer);
-            buffer = tempBuffer;
-        }
-        else
-        {
-            buffer.put(newBuffer);
-        }
-        return newBuffer.position();
+        int currentPosition = buffer.position();
+        wrap(object, serializers);
+        return buffer.position() - currentPosition;
     }
 
     public void write(ObjectBuffer addBuffer)
@@ -224,8 +212,12 @@ public class ObjectBuffer
         if(buffer.capacity() < (bufferToAdd.limit() + buffer.position()))
         {
             tempBuffer = allocate(buffer.limit() + bufferToAdd.limit() + BUFFER_ALLOCATION);
-            tempBuffer.put(buffer.array(), 0, buffer.position());
+
+            buffer.limit(buffer.position());
+            buffer.rewind();
+            tempBuffer.put(buffer);
             tempBuffer.put(bufferToAdd);
+
             buffer = tempBuffer;
         }
         else
@@ -253,7 +245,7 @@ public class ObjectBuffer
      */
     public void writeShort(short val) throws IOException
     {
-        checkSize(Short.BYTES);
+        ensureCapacity(Short.BYTES);
         buffer.putShort(val);
     }
 
@@ -265,7 +257,7 @@ public class ObjectBuffer
      */
     public void writeInt(int val) throws IOException
     {
-        checkSize(Integer.BYTES);
+        ensureCapacity(Integer.BYTES);
         buffer.putInt(val);
     }
 
@@ -277,7 +269,7 @@ public class ObjectBuffer
      */
     public void writeByte(byte val) throws IOException
     {
-        checkSize(Byte.BYTES);
+        ensureCapacity(Byte.BYTES);
         buffer.put(val);
     }
 
@@ -289,7 +281,7 @@ public class ObjectBuffer
      */
     public void writeBytes(byte[] val) throws IOException
     {
-        checkSize((Byte.BYTES * val.length) + Integer.BYTES);
+        ensureCapacity((Byte.BYTES * val.length) + Integer.BYTES);
         buffer.putInt(val.length);
         buffer.put(val);
     }
@@ -302,7 +294,7 @@ public class ObjectBuffer
      */
     public void writeLong(long val) throws IOException
     {
-        checkSize(Long.BYTES);
+        ensureCapacity(Long.BYTES);
         buffer.putLong(val);
     }
 
@@ -314,7 +306,7 @@ public class ObjectBuffer
      */
     public void writeBoolean(boolean val) throws IOException
     {
-        checkSize(Byte.BYTES);
+        ensureCapacity(Byte.BYTES);
         buffer.put((val == true) ? (byte) 1 : (byte) 2);
     }
 
@@ -326,7 +318,7 @@ public class ObjectBuffer
      */
     public void writeDate(Date val) throws IOException
     {
-        checkSize(Long.BYTES);
+        ensureCapacity(Long.BYTES);
         buffer.putLong(val.getTime());
     }
 
@@ -338,7 +330,7 @@ public class ObjectBuffer
      */
     public void writeFloat(Float val) throws IOException
     {
-        checkSize(Float.BYTES);
+        ensureCapacity(Float.BYTES);
         buffer.putFloat(val);
     }
 
@@ -350,7 +342,7 @@ public class ObjectBuffer
      */
     public void writeDouble(Double val) throws IOException
     {
-        checkSize(Double.BYTES);
+        ensureCapacity(Double.BYTES);
         buffer.putDouble(val);
     }
 
@@ -362,24 +354,9 @@ public class ObjectBuffer
      */
     public void writeLongArray(long[] values) throws IOException
     {
-        checkSize(Long.BYTES * values.length);
+        ensureCapacity(Long.BYTES * values.length);
         for(long val : values)
             buffer.putLong(val);
-    }
-
-    /**
-     * Check size and ensure the buffer has enough space to accommodate
-     *
-     * @param needs
-     */
-    protected void checkSize(int needs)
-    {
-        if(buffer.capacity() < (needs + buffer.position()))
-        {
-            ByteBuffer tempBuffer = allocate(buffer.limit() + needs + BUFFER_ALLOCATION);
-            tempBuffer.put(buffer.array(), 0, buffer.position());
-            buffer = tempBuffer;
-        }
     }
 
     /**
@@ -389,7 +366,7 @@ public class ObjectBuffer
      */
     public static ByteBuffer allocate(int count)
     {
-        final ByteBuffer buffer = ByteBuffer.allocate((int)count);
+        ByteBuffer buffer = ByteBuffer.allocate((int) count);
         buffer.order(ByteOrder.BIG_ENDIAN);
         return buffer;
     }
@@ -474,7 +451,7 @@ public class ObjectBuffer
      * @return
      * @throws java.io.IOException
      */
-    public static ByteBuffer wrap(Object value, Serializers serializers) throws IOException
+    public int wrap(Object value, Serializers serializers) throws IOException
     {
         if(value == null)
             return wrapNull();
@@ -513,11 +490,11 @@ public class ObjectBuffer
         else if(value instanceof String)
             return wrapString((String) value);
         else if(value.getClass().isArray())
-            return wrapArray((Object[])value, serializers);
+            return wrapArray((Object[])value);
         else if(value instanceof Collection)
-            return wrapCollection((Collection) value, serializers);
+            return wrapCollection((Collection) value);
         else if(value instanceof Map)
-            return wrapMap((Map)value, serializers);
+            return wrapMap((Map)value);
         else
             return wrapOther(value);
     }
@@ -533,12 +510,11 @@ public class ObjectBuffer
      *
      * @return
      */
-    public static ByteBuffer wrapNull()
+    public int wrapNull()
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES); // Just type indicator
+        ensureCapacity(1);
         buffer.put(ObjectType.NULL.getType());
-        buffer.rewind();
-        return buffer;
+        return 1;
     }
 
     /**
@@ -547,13 +523,13 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapLong(long value)
+    public int wrapLong(long value)
     {
-        final ByteBuffer buffer = allocate(Long.BYTES + Byte.BYTES); // Long size + type indicator
+        ensureCapacity(Long.BYTES + Byte.BYTES);
+
         buffer.put(ObjectType.LONG.getType());
-        buffer.putLong((Long) value);
-        buffer.rewind();
-        return buffer;
+        buffer.putLong((long) value);
+        return  Long.BYTES + Byte.BYTES;
     }
 
     /**
@@ -562,15 +538,18 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapClass(Class value)
+    public int wrapClass(Class value)
     {
+
+        byte[] classNameBytes = value.getCanonicalName().getBytes(CHARSET);
         short classNameLength = (short)value.getCanonicalName().length();
-        final ByteBuffer buffer = allocate(Short.BYTES + Byte.BYTES + classNameLength); // Long size + type indicator
+
+        ensureCapacity(Short.BYTES + Byte.BYTES + classNameBytes.length);
+
         buffer.put(ObjectType.CLASS.getType());
         buffer.putShort(classNameLength);
-        buffer.put(value.getCanonicalName().getBytes(CHARSET));
-        buffer.rewind();
-        return buffer;
+        buffer.put(classNameBytes);
+        return Short.BYTES + Byte.BYTES + classNameBytes.length;
     }
 
     /**
@@ -579,13 +558,12 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapDate(Date value)
+    public int wrapDate(Date value)
     {
-        final ByteBuffer buffer = allocate(Long.BYTES + Byte.BYTES); // Long size + type indicator
+        ensureCapacity(Long.BYTES + Byte.BYTES);
         buffer.put(ObjectType.DATE.getType());
         buffer.putLong(((Date) value).getTime());
-        buffer.rewind();
-        return buffer;
+        return Long.BYTES + Byte.BYTES;
     }
 
     /**
@@ -594,13 +572,12 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapShort(short value)
+    public int wrapShort(short value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + Short.BYTES); // Short size + type indicator
+        ensureCapacity(Byte.BYTES + Short.BYTES);
         buffer.put(ObjectType.SHORT.getType());
-        buffer.putShort((Short) value);
-        buffer.rewind();
-        return buffer;
+        buffer.putShort(value);
+        return Byte.BYTES + Short.BYTES;
     }
 
     /**
@@ -609,13 +586,12 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapInt(int value)
+    public int wrapInt(int value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + Integer.BYTES); // Integer size + type indicator
+        ensureCapacity(Byte.BYTES + Integer.BYTES);
         buffer.put(ObjectType.INT.getType());
-        buffer.putInt((Integer) value);
-        buffer.rewind();
-        return buffer;
+        buffer.putInt(value);
+        return Byte.BYTES + Integer.BYTES;
     }
 
     /**
@@ -624,13 +600,13 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapChar(char value)
+    public int wrapChar(char value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + 2); // Integer size + type indicator
+        ensureCapacity(Byte.BYTES + 2);
+
         buffer.put(ObjectType.CHAR.getType());
-        buffer.putChar((char) value);
-        buffer.rewind();
-        return buffer;
+        buffer.putChar(value);
+        return Byte.BYTES + 2;
     }
 
     /**
@@ -639,13 +615,13 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapByte(byte value)
+    public int wrapByte(byte value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + Byte.BYTES); // Integer size + type indicator
+        ensureCapacity(Byte.BYTES + Byte.BYTES);
+
         buffer.put(ObjectType.BYTE.getType());
-        buffer.put((byte) value);
-        buffer.rewind();
-        return buffer;
+        buffer.put(value);
+        return Byte.BYTES + Byte.BYTES;
     }
 
     /**
@@ -654,13 +630,12 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapDouble(double value)
+    public int wrapDouble(double value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + Double.BYTES); // Double size + type indicator
+        ensureCapacity(Byte.BYTES + Double.BYTES);
         buffer.put(ObjectType.DOUBLE.getType());
-        buffer.putDouble((Double) value);
-        buffer.rewind();
-        return buffer;
+        buffer.putDouble(value);
+        return Byte.BYTES + Double.BYTES;
     }
 
     /**
@@ -669,13 +644,12 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapBoolean(boolean value)
+    public int wrapBoolean(boolean value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + 1); // byte size + type indicator
+        ensureCapacity(Byte.BYTES + 1);
         buffer.put(ObjectType.BOOLEAN.getType());
-        buffer.put(((Boolean)value == true) ? (byte)1 : (byte)2);
-        buffer.rewind();
-        return buffer;
+        buffer.put((value == true) ? (byte)1 : (byte)2);
+        return Byte.BYTES + 1;
     }
 
     /**
@@ -684,13 +658,12 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapFloat(float value)
+    public int wrapFloat(float value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + Float.BYTES); // Float size + type indicator
+        ensureCapacity(Byte.BYTES + Float.BYTES);
         buffer.put(ObjectType.FLOAT.getType());
-        buffer.putFloat((Float) value);
-        buffer.rewind();
-        return buffer;
+        buffer.putFloat(value);
+        return Byte.BYTES + Float.BYTES;
     }
 
     /**
@@ -699,14 +672,13 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapBytes(byte[] value)
+    public int wrapBytes(byte[] value)
     {
-        final ByteBuffer buffer = allocate(Byte.BYTES + value.length + Integer.BYTES); // byte[] length size + type indicator
+        ensureCapacity(Byte.BYTES + value.length + Integer.BYTES);
         buffer.put(ObjectType.BYTES.getType());
         buffer.putInt(value.length);
-        buffer.put((byte[]) value);
-        buffer.rewind();
-        return buffer;
+        buffer.put(value);
+        return Byte.BYTES + value.length + Integer.BYTES;
     }
 
     /**
@@ -715,17 +687,17 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapString(String value)
+    public int wrapString(String value)
     {
         final int length = value.length();
         final byte[] stringBytes = value.getBytes(CHARSET);
 
-        final ByteBuffer buffer = allocate(Byte.BYTES + stringBytes.length + Integer.BYTES); // type indicator + string bytes + string length
+        ensureCapacity(Byte.BYTES + stringBytes.length + Integer.BYTES);
+
         buffer.put(ObjectType.STRING.getType());
         buffer.putInt(length);
         buffer.put(stringBytes);
-        buffer.rewind();
-        return buffer;
+        return Byte.BYTES + stringBytes.length + Integer.BYTES;
     }
 
     /**
@@ -734,20 +706,20 @@ public class ObjectBuffer
      * @param enumValue
      * @return
      */
-    public static ByteBuffer wrapEnum(Enum<?> enumValue)
+    public int wrapEnum(Enum<?> enumValue)
     {
         final byte[] stringBytes = enumValue.getDeclaringClass().getCanonicalName().getBytes(CHARSET);
         final byte[] nameBytes = enumValue.name().getBytes(CHARSET);
 
-        final ByteBuffer buffer = allocate(Byte.BYTES + stringBytes.length + nameBytes.length + Short.BYTES + Short.BYTES); // Float size + type indicator
+        ensureCapacity(Byte.BYTES + stringBytes.length + nameBytes.length + Short.BYTES + Short.BYTES);
+
         buffer.put(ObjectType.ENUM.getType());
         buffer.putShort((short) stringBytes.length);
         buffer.put(stringBytes);
         buffer.putShort((short) nameBytes.length);
         buffer.put(nameBytes);
 
-        buffer.rewind();
-        return buffer;
+        return Byte.BYTES + stringBytes.length + nameBytes.length + Short.BYTES + Short.BYTES;
     }
 
     /**
@@ -758,12 +730,10 @@ public class ObjectBuffer
      * @return
      * @throws java.io.IOException
      */
-    public static ByteBuffer wrapNamed(Object value, Serializers serializers) throws IOException
+    private int wrapNamed(Object value, Serializers serializers) throws IOException
     {
-        ObjectBuffer objectBuffer = new ObjectBuffer(serializers);
-        objectBuffer.writeByte(ObjectType.BUFFER_OBJ.getType());
 
-
+        int bufferPosition = buffer.position();
         Short customType = serializers.getSerializerId(value.getClass().getCanonicalName());
 
         // Create a new custom serializer
@@ -772,11 +742,13 @@ public class ObjectBuffer
             customType = serializers.add(value.getClass().getCanonicalName());
         }
 
-        objectBuffer.writeShort(customType); // Put the class type
+        ensureCapacity(Byte.BYTES + Short.BYTES);
+        buffer.put(ObjectType.BUFFER_OBJ.getType());
+        buffer.putShort(customType);
 
-        ((ObjectSerializable)value).writeObject(objectBuffer);
+        ((ObjectSerializable)value).writeObject(this);
 
-        return objectBuffer.getByteBuffer();
+        return buffer.position() - bufferPosition;
     }
 
     /**
@@ -787,13 +759,15 @@ public class ObjectBuffer
      * @return
      * @throws java.io.IOException
      */
-    public static ByteBuffer wrapNamed(Object value, ObjectType type) throws IOException
+    private int wrapNamed(Object value, ObjectType type) throws IOException
     {
-        ObjectBuffer objectBuffer = new ObjectBuffer(null, null);
-        objectBuffer.writeByte(type.getType());
-        ((ObjectSerializable)value).writeObject(objectBuffer);
+        int bufferPosition = buffer.position();
 
-        return objectBuffer.getByteBuffer();
+        ensureCapacity(Byte.BYTES);
+        buffer.put(type.getType());
+        ((ObjectSerializable)value).writeObject(this);
+
+        return buffer.position() - bufferPosition;
     }
 
     /**
@@ -802,27 +776,14 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public static ByteBuffer wrapCollection(Collection value, Serializers serializers) throws IOException
+    public int wrapCollection(Collection value) throws IOException
     {
-        final Collection list = (Collection) value;
-        final Iterator iterator = list.iterator();
+        int bufferPosition = buffer.position();
+        final Iterator iterator = value.iterator();
 
-        final ByteBuffer[] buffers = new ByteBuffer[list.size()];
-
-        int i = 0;
         Object obj = null;
-        int totalSize = 0;
 
-        while(iterator.hasNext())
-        {
-            obj = iterator.next();
-            buffers[i] = wrap(obj, serializers);
-            buffers[i].rewind();
-            totalSize += buffers[i].limit();
-            i++;
-        }
-
-        final ByteBuffer buffer = allocate(totalSize + Byte.BYTES + Integer.BYTES);
+        ensureCapacity(Byte.BYTES + Integer.BYTES);
 
         if(value instanceof HashSet)
         {
@@ -833,95 +794,67 @@ public class ObjectBuffer
             buffer.put(ObjectType.COLLECTION.getType());
         }
 
-        buffer.putInt(i); // Put the size of the array
-
-        for(ByteBuffer buf : buffers)
-        {
-            buffer.put(buf);
-        }
-
-        buffer.rewind();
-        return buffer;
-    }
-
-    /**
-     * Wrap a collection of items
-     *
-     * @param value
-     * @return
-     */
-    public static ByteBuffer wrapArray(Object[] value, Serializers serializers) throws IOException
-    {
-        final Object[] list = (Object[]) value;
-
-        final ByteBuffer[] buffers = new ByteBuffer[list.length];
-
-        int i = 0;
-        int totalSize = 0;
-
-        for(Object obj : list)
-        {
-            buffers[i] = wrap(obj, serializers);
-            buffers[i].rewind();
-            totalSize += buffers[i].limit();
-            i++;
-        }
-
-        final ByteBuffer buffer = allocate(totalSize + Byte.BYTES + Integer.BYTES);
-
-        buffer.put(ObjectType.ARRAY.getType());
-        buffer.putInt(i); // Put the size of the array
-
-        for(ByteBuffer buf : buffers)
-        {
-            buffer.put(buf);
-        }
-
-        buffer.rewind();
-        return buffer;
-    }
-
-    /**
-     * Wrap a collection of items
-     *
-     * @param value
-     * @return
-     */
-    public static ByteBuffer wrapMap(Map value, Serializers serializers) throws IOException
-    {
-        final Map map = (Map) value;
-        final Iterator<Map.Entry> iterator = map.entrySet().iterator();
-
-        final ByteBuffer[] buffers = new ByteBuffer[map.size()*2];
-
-        int i = 0;
-        Map.Entry obj = null;
-        int totalSize = 0;
+        buffer.putInt(value.size()); // Put the size of the array
 
         while(iterator.hasNext())
         {
             obj = iterator.next();
-            buffers[i] = wrap(obj.getKey(), serializers);
-            buffers[i+1] = wrap(obj.getValue(), serializers);
-            buffers[i].rewind();
-            buffers[i+1].rewind();
-            totalSize += buffers[i].limit();
-            totalSize += buffers[i+1].limit();
-            i+=2;
+            writeObject(obj);
         }
 
-        final ByteBuffer buffer = allocate(totalSize + Byte.BYTES + Integer.BYTES);
-        buffer.put(ObjectType.MAP.getType());
-        buffer.putInt(i/2); // Put the size of the array
+        return buffer.position() - bufferPosition;
+    }
 
-        for(ByteBuffer buf : buffers)
+    /**
+     * Wrap a collection of items
+     *
+     * @param value
+     * @return
+     */
+    public int wrapArray(Object[] value) throws IOException
+    {
+        int bufferPosition = buffer.position();
+
+        ensureCapacity(Byte.BYTES + Integer.BYTES);
+
+        buffer.put(ObjectType.ARRAY.getType());
+        buffer.putInt(value.length); // Put the size of the array
+
+        for(Object obj : value)
         {
-            buffer.put(buf);
+            writeObject(obj);
         }
 
-        buffer.rewind();
+        return buffer.position() - bufferPosition;
+    }
 
-        return buffer;
+    /**
+     * Wrap a collection of items
+     *
+     * @param value
+     * @return
+     */
+    public int wrapMap(Map value) throws IOException
+    {
+        int bufferPosition = buffer.position();
+
+        final Iterator<Map.Entry> iterator = value.entrySet().iterator();
+
+        Map.Entry obj = null;
+
+        ensureCapacity(Byte.BYTES + Integer.BYTES);
+
+        buffer.put(ObjectType.MAP.getType());
+        buffer.putInt(value.size()); // Put the size of the array
+
+        while(iterator.hasNext())
+        {
+            obj = iterator.next();
+            writeObject(obj.getKey());
+            writeObject(obj.getValue());
+        }
+
+        return buffer.position() - bufferPosition;
     }
 
     /**
@@ -931,7 +864,7 @@ public class ObjectBuffer
      * @return
      * @throws java.io.IOException
      */
-    public static ByteBuffer wrapOther(Object value) throws IOException
+    public int wrapOther(Object value) throws IOException
     {
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         final ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
@@ -941,12 +874,12 @@ public class ObjectBuffer
         objectOutputStream.close();
 
         byte[] bytes = byteArrayOutputStream.toByteArray();
-        final ByteBuffer buffer = allocate(bytes.length + Byte.BYTES);
+
+        ensureCapacity(bytes.length + Byte.BYTES);
         buffer.put(ObjectType.OTHER.getType());
         buffer.put(bytes);
 
-        buffer.rewind();
-        return buffer;
+        return bytes.length + Byte.BYTES;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -955,19 +888,6 @@ public class ObjectBuffer
     //
     ///////////////////////////////////////////////////////////////////////////////////////////
 
-    /**
-     * Unwrap with bytes
-     *
-     * @param bytes
-     * @param serializers
-     * @return
-     * @throws IOException
-     */
-    public static Object unwrap(byte[] bytes, Serializers serializers) throws IOException
-    {
-        ByteBuffer buf = allocate(bytes.length);
-        return unwrap(buf, serializers);
-    }
 
     /**
      * Unwrap byte buffer into an object
@@ -1106,7 +1026,6 @@ public class ObjectBuffer
             final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, serializers);
 
             serializable.readObject(objectBuffer);
-
             return serializable;
         } catch (InstantiationException e)
         {
@@ -1214,9 +1133,12 @@ public class ObjectBuffer
      */
     public static Object unwrapOther(ByteBuffer buffer) throws IOException
     {
+        int originalPosition = buffer.position();
+
         // Write the node using an ObjectOutputStream
         byte[] subBytes = new byte[buffer.limit() - buffer.position()];
-        System.arraycopy(buffer.array(), buffer.position(), subBytes, 0, subBytes.length);
+        buffer.get(subBytes);
+
         final ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(subBytes);
         final ObjectInputStream ois = new ObjectInputStream(byteArrayInputStream);
 
@@ -1230,7 +1152,7 @@ public class ObjectBuffer
         }
         finally
         {
-            buffer.position(buffer.position() + (subBytes.length - byteArrayInputStream.available()));
+            buffer.position(originalPosition + (subBytes.length - byteArrayInputStream.available()));
 
             ois.close();
             byteArrayInputStream.close();
@@ -1367,7 +1289,7 @@ public class ObjectBuffer
                 obj = this.readObject();
 
                 if(attribute.getName().hashCode() == attributeName.hashCode()
-                    && attribute.getName().equals(attributeName))
+                        && attribute.getName().equals(attributeName))
                     return obj;
             } catch (Exception e) {
                 e.printStackTrace();

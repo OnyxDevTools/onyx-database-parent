@@ -3,7 +3,6 @@ package com.onyx.application;
 import com.onyx.client.auth.AuthRMIClientSocketFactory;
 import com.onyx.client.auth.Authorize;
 import com.onyx.entity.*;
-import com.onyx.map.serializer.SocketBuffer;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
@@ -289,8 +288,6 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
 
                 this.context = new DefaultSchemaContext(instance);
                 this.context.setLocation(location);
-
-                SocketBuffer.initialize(context);
 
                 final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager();
                 systemPersistenceManager.setContext(this.context);

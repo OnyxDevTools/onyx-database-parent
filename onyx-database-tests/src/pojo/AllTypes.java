@@ -31,6 +31,7 @@ public class AllTypes implements Serializable
     public String stringValue;
     public Object nullValue;
     public char charValue;
+    public Character charValueM;
 
     public int hashCode()
     {

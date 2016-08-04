@@ -15,5 +15,6 @@ public class BasicPartitionEntity extends ManagedEntity implements IManagedEntit
     public Long id;
 
     @Partition
+    @Attribute
     public Long partitionId;
 }

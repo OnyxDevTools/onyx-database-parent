@@ -24,6 +24,8 @@
     
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
+        <java.cryptographic.extension.classes>${java.home}/lib/jce.jar</java.cryptographic.extension.classes>
     </properties>
 
     <build>
@@ -91,7 +93,7 @@
                     </execution>
                 </executions>
             </plugin>
-
+            
         </plugins>
 
     </build>
@@ -122,12 +124,6 @@
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
             <version>${commons-codec.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>de.ruedigermoeller</groupId>
-            <artifactId>fst</artifactId>
-            <version>${fst.version}</version>
         </dependency>
 
     </dependencies>

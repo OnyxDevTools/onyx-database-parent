@@ -1,7 +1,7 @@
 package remote;
 
 import category.RemoteServerTests;
-import com.onyx.map.serializer.SocketBuffer;
+import com.onyx.buffer.BufferStream;
 import gnu.trove.THashMap;
 import org.junit.Assert;
 import org.junit.Test;
@@ -26,10 +26,10 @@ public class SocketSerializerTest
         Simple instance = new Simple();
         instance.hiya = 4;
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        Simple instance2 = (Simple)SocketBuffer.deserialize(buffer);
+        Simple instance2 = (Simple) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance.hiya == instance2.hiya);
     }
@@ -57,10 +57,10 @@ public class SocketSerializerTest
         instance.nullValue = null;
         instance.charValue = 'A';
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        AllTypes instance2 = (AllTypes)SocketBuffer.deserialize(buffer);
+        AllTypes instance2 = (AllTypes) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance.intValue == instance2.intValue);
         Assert.assertTrue(instance.intValueM.equals(instance2.intValueM));
@@ -90,10 +90,10 @@ public class SocketSerializerTest
         instance.simpleEnum = SimpleEnum.SECOND;
         instance.longValue = 234235245l;
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        EnumTypeObject instance2 = (EnumTypeObject)SocketBuffer.deserialize(buffer);
+        EnumTypeObject instance2 = (EnumTypeObject) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance.intValue == instance2.intValue);
         Assert.assertTrue(instance.longValue == instance2.longValue);
@@ -108,10 +108,10 @@ public class SocketSerializerTest
         instance.longValue = 234l;
         instance.zdateValue = new Date(23423);
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        TransientValue instance2 = (TransientValue)SocketBuffer.deserialize(buffer);
+        TransientValue instance2 = (TransientValue) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance.intValue == instance2.intValue);
         Assert.assertTrue(instance.longValue != instance2.longValue);
@@ -140,10 +140,10 @@ public class SocketSerializerTest
         instance.simpleArray[1].hiya = 99;
 
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        ArrayObject instance2 = (ArrayObject)SocketBuffer.deserialize(buffer);
+        ArrayObject instance2 = (ArrayObject) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance2.longArray[0] == 223l);
         Assert.assertTrue(instance2.longArray[1] == 293l);
@@ -181,10 +181,10 @@ public class SocketSerializerTest
         instance.simpleArray.get(0).hiya = 99;
 
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        ListObject instance2 = (ListObject)SocketBuffer.deserialize(buffer);
+        ListObject instance2 = (ListObject) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance2.longArray.get(0) == 223l);
         Assert.assertTrue(instance2.longArray.get(1) == 293l);
@@ -217,10 +217,10 @@ public class SocketSerializerTest
         instance.objectMap.put(new Integer(12), false);
         instance.objectMap.put(new Simple(), new AllTypes());
 
-        final ByteBuffer buffer = SocketBuffer.serialize(instance);
+        final ByteBuffer buffer = BufferStream.toBuffer(instance);
         buffer.rewind();
 
-        MapObject instance2 = (MapObject)SocketBuffer.deserialize(buffer);
+        MapObject instance2 = (MapObject) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance2.simpleMap.size() == 4);
         Assert.assertTrue(instance2.simpleMap.get("NEW").hiya == 2324);
@@ -245,13 +245,13 @@ public class SocketSerializerTest
         object.dateValue = new Date(23423);
         object.child.longValue = 33l;
 
-        final ByteBuffer buffer = SocketBuffer.serialize(object);
+        final ByteBuffer buffer = BufferStream.toBuffer(object);
         buffer.rewind();
 
-        ComplexObject instance2 = (ComplexObject)SocketBuffer.deserialize(buffer);
+        ComplexObject instance2 = (ComplexObject) BufferStream.fromBuffer(buffer);
 
         Assert.assertTrue(instance2.dateValue.getTime() == object.dateValue.getTime());
-        Assert.assertTrue(instance2.child.longValue == object.child.longValue);
+        Assert.assertTrue(instance2.child.longValue.equals(object.child.longValue));
         Assert.assertTrue(instance2.child.parent == instance2);
         Assert.assertTrue(instance2.mine == instance2);
     }

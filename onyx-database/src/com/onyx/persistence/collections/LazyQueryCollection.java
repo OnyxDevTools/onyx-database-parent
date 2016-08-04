@@ -3,6 +3,7 @@ package com.onyx.persistence.collections;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
+import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
@@ -10,6 +11,8 @@ import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -39,7 +42,7 @@ import java.util.*;
  * </pre>
  *
  */
-public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Externalizable {
+public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Externalizable, BufferStreamable {
 
     protected List<Object> identifiers = null;
 
@@ -371,5 +374,31 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
         this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
         this.partitionContext = new PartitionContext(context, entityDescriptor);
         this.persistenceManager = this.context.getSystemPersistenceManager();
+    }
+
+    @Override
+    public void read(BufferStream bufferStream) throws BufferingException {
+        this.values = new WeakHashMap<>();
+        this.identifiers = (List) bufferStream.getCollection();
+        String className = bufferStream.getString();
+        String contextId = bufferStream.getString();
+
+        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        try {
+            this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
+        } catch (EntityException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        this.partitionContext = new PartitionContext(context, entityDescriptor);
+        this.persistenceManager = this.context.getSystemPersistenceManager();
+    }
+
+    @Override
+    public void write(BufferStream bufferStream) throws BufferingException {
+        bufferStream.putCollection(this.getIdentifiers());
+        bufferStream.putString(this.getEntityDescriptor().getClazz().getCanonicalName());
+        bufferStream.putString(this.context.getContextId());
     }
 }
