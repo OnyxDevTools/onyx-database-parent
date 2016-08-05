@@ -331,10 +331,8 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
         {
             // Read the credentials and compare
             File credFile = new File(location + File.separator + CREDENTIALS_FILE);
-            List<String> lines = Files.readAllLines(Paths.get(credFile.getAbsolutePath()), StandardCharsets.UTF_8);
-            String credentials = lines.get(0);
-
-            return credentials.replaceAll("\\n","").replaceAll("\\r", "").equals(encryptCredentials());
+            String credentials = new String(Files.readAllBytes(Paths.get(credFile.getAbsolutePath())), StandardCharsets.UTF_16);
+            return credentials.equals(encryptCredentials());
 
         } catch (InitializationException e)
         {
@@ -379,7 +377,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
             credentialsFile.getParentFile().mkdirs();
             credentialsFile.createNewFile();
             fileStream = new FileOutputStream(credentialsFile);
-            fileStream.write(encryptCredentials().getBytes(StandardCharsets.UTF_8));
+            fileStream.write(encryptCredentials().getBytes(StandardCharsets.UTF_16));
         } catch (InitializationException e)
         {
             throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);

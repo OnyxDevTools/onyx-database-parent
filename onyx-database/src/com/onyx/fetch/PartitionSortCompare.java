@@ -10,7 +10,6 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
 import java.util.*;
 import java.util.function.BiFunction;
 
@@ -25,7 +24,6 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
 
     protected List<Map<Object, Object>> parentObjects = new ArrayList<>();
     protected List<Map<Object, Object>> childrenObjects = new ArrayList<>();
-    protected ObjectUtil reflection = ObjectUtil.getInstance();
     protected Query query;
     protected SchemaContext context;
     protected PartitionQueryController queryController;

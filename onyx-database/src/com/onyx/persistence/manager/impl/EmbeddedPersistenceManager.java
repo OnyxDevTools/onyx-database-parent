@@ -19,8 +19,7 @@ import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -55,8 +54,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
     protected SchemaContext context;
     protected boolean journalingEnabled;
-
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
 
     /**
      * Default constructor.  We do not want to export the object if in embedded mode.
@@ -401,11 +398,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
                 final List<Map<String, Object>> finalResults = new ArrayList<>(attributeValues.values());
 
-                if (query.getProjections() != null)
-                {
-                    // TODO: Implement Projections
-                }
-
                 return finalResults;
 
             } else
@@ -415,10 +407,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
                         (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0],
                         query.getFirstRow(),
                         query.getMaxResults());
-                if (query.getProjections() != null)
-                {
-                    // TODO: Implement Projections
-                }
 
                 return returnValue;
             }
@@ -508,7 +496,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(results, new EntityRelationshipManager(), context);
 
-        ObjectUtil.copy(results, entity, descriptor);
+        ReflectionUtil.copy(results, entity, descriptor);
 
         return entity;
     }
@@ -696,7 +684,8 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     @Override
     public Object findRelationship(IManagedEntity entity, String attribute) throws RemoteException {
         this.initialize(entity, attribute);
-        return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
+
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**

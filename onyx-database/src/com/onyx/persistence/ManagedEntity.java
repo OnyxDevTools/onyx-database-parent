@@ -10,12 +10,9 @@ import com.onyx.exception.EntityException;
 import com.onyx.map.serializer.ObjectBuffer;
 import com.onyx.map.serializer.ObjectSerializable;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.io.*;
-import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -45,7 +42,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             descriptor.getAttributes().values().stream().forEach(attribute ->
             {
                 try {
-                    final Object obj = DefaultSchemaContext.reflection.getAttribute(attribute.field, this);
+                    final Object obj = ReflectionUtil.getAny(this, attribute.field);
                     buffer.writeObject(obj);
                 } catch (Exception e) {
                 }
@@ -79,7 +76,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             descriptor.getAttributes().values().stream().forEach(attribute ->
             {
                 try {
-                    DefaultSchemaContext.reflection.setAttribute(this, buffer.readObject(), attribute.field);
+                    ReflectionUtil.setAny(this, buffer.readObject(), attribute.field);
                 } catch (Exception e) {
                 }
             });
@@ -93,9 +90,9 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 Object obj = buffer.readObject();
                 try {
                     if (attribute.field == null)
-                        attribute.field = new AttributeField(ObjectUtil.getField(this.getClass(), attribute.getName()));
+                        attribute.field = ReflectionUtil.getOffsetField(this.getClass(), attribute.getName());
 
-                    DefaultSchemaContext.reflection.setAttribute(this, obj, attribute.field);
+                    ReflectionUtil.setAny(this, obj, attribute.field);
                 } catch (Exception e) {
                 }
             }
@@ -121,7 +118,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 try {
                     if(mapObj.containsKey(attribute.field.field.getName())) {
                         Object attributeValueWithinMap = mapObj.get(attribute.field.field.getName());
-                        DefaultSchemaContext.reflection.setAttribute(this, attributeValueWithinMap, attribute.field);
+                        ReflectionUtil.setAny(this, attributeValueWithinMap, attribute.field);
                     }
                 } catch (Exception e) {
                 }

@@ -1,9 +1,6 @@
 package com.onyx.descriptor;
 
-import com.onyx.exception.EntityTypeMatchException;
-import com.onyx.util.AttributeField;
-
-import java.util.Date;
+import com.onyx.util.OffsetField;
 
 /**
  * Created by timothy.osborn on 12/12/14.
@@ -13,7 +10,7 @@ public abstract class AbstractBaseDescriptor
 
     protected String name;
     protected Class type;
-    protected AttributeField partitionField = null;
+    protected OffsetField partitionField = null;
 
     public String getName()
     {
@@ -35,12 +32,12 @@ public abstract class AbstractBaseDescriptor
         this.type = type;
     }
 
-    public AttributeField getPartitionField()
+    public OffsetField getPartitionField()
     {
         return partitionField;
     }
 
-    public void setPartitionField(AttributeField partitionField)
+    public void setPartitionField(OffsetField partitionField)
     {
         this.partitionField = partitionField;
     }

@@ -11,7 +11,7 @@ import com.onyx.map.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.util.Date;
@@ -130,7 +130,7 @@ public abstract class AbstractRecordController
         try
         {
             // Use reflection to get the value
-            final Field field = ObjectUtil.getField(entity.getClass(), indexDescriptor.getName());
+            final Field field = ReflectionUtil.getField(entity.getClass(), indexDescriptor.getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
                 field.setAccessible(true);
@@ -324,7 +324,7 @@ public abstract class AbstractRecordController
         try
         {
             // Use reflection to get the value
-            final Field field = ObjectUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
+            final Field field = ReflectionUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
                 field.setAccessible(true);
@@ -394,7 +394,7 @@ public abstract class AbstractRecordController
     {
 
         // Use reflection to get the value
-        final Field field = ObjectUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
+        final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
 
         try
         {

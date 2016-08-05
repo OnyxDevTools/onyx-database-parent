@@ -4,8 +4,8 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.record.AbstractRecordController;
-import gnu.trove.THashMap;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public class EntityRelationshipManager
 {
-    private Map<String, Map<Object, IManagedEntity>> entities = new THashMap();
+    private Map<String, Map<Object, IManagedEntity>> entities = new HashMap();
 
     /**
      *
@@ -36,7 +36,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new THashMap());
+            entities.put(className, new HashMap());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
@@ -62,7 +62,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new THashMap());
+            entities.put(className, new HashMap());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
@@ -82,7 +82,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new THashMap());
+            entities.put(className, new HashMap());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);

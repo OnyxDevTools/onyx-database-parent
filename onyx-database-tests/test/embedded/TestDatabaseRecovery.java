@@ -28,6 +28,7 @@ import java.util.List;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ EmbeddedDatabaseTests.class })
+@Ignore
 public class TestDatabaseRecovery extends BaseTest
 {
 
