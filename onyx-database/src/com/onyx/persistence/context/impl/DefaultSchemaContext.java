@@ -44,9 +44,6 @@ import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
 
 import com.onyx.util.FileUtil;
-import com.onyx.util.ObjectUtil;
-
-import gnu.trove.THashMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -98,8 +95,6 @@ import java.util.function.Function;
  */
 public class DefaultSchemaContext implements SchemaContext
 {
-    // Helper for reflection
-    public static ObjectUtil reflection = ObjectUtil.getInstance();
 
     // Reference to self
     protected SchemaContext context;
@@ -713,7 +708,7 @@ public class DefaultSchemaContext implements SchemaContext
     //
     //////////////////////////////////////////////////////////////////
     // Contains the initialized entity descriptors
-    protected Map<String, EntityDescriptor> descriptors = new THashMap();
+    protected Map<String, EntityDescriptor> descriptors = new HashMap();
 
     protected AtomicLong partitions = new AtomicLong(0);
 
@@ -841,7 +836,7 @@ public class DefaultSchemaContext implements SchemaContext
     }
 
     // System Entities
-    protected Map<String, SystemEntity> defaultSystemEntities = new THashMap();
+    protected Map<String, SystemEntity> defaultSystemEntities = new HashMap();
 
     /**
      * Get System Entity By Name.
@@ -892,7 +887,7 @@ public class DefaultSchemaContext implements SchemaContext
     }
 
     // System Entities
-    protected Map<Integer, SystemEntity> systemEntityByIDMap = new THashMap();
+    protected Map<Integer, SystemEntity> systemEntityByIDMap = new HashMap();
 
     /**
      * Get System Entity By ID.

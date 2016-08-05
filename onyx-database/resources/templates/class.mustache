@@ -1,0 +1,42 @@
+package {{packageName}};
+
+import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.*;
+
+@Entity
+public class {{className}} extends ManagedEntity implements IManagedEntity
+{
+    public {{className}}()
+    {
+
+    }
+
+    @Attribute
+    @Identifier(generator = {{generatorType}})
+    public {{idType}} {{idName}};
+
+{{#attributes}}
+
+    {{#isPartition}}
+    @Partition
+    {{/isPartition}}
+    {{#isIndex}}
+    @Index
+    {{/isIndex}}
+    @Attribute
+    public {{type}} {{name}};
+
+{{/attributes}}
+
+{{#$relationships}}
+
+    @Relationship(type = {{relationshipType}}
+                  ,inverseClass = {{inverseClass}}.class
+                  ,inverse = "{{inverse}}"
+                  ,fetchPolicy = {{fetchPolicy}}
+                  ,cascadePolicy = {{cascadePolicy}})
+    public {{type}} {{name}};
+
+{{/$relationships}}
+
+}

@@ -8,7 +8,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.text.DateFormat;
@@ -23,7 +23,6 @@ import java.util.Locale;
 public class PartitionHelper
 {
 
-    protected static ObjectUtil reflection = ObjectUtil.getInstance();
     public static final String NULL_PARTITION = "";
 
     /**
@@ -80,7 +79,7 @@ public class PartitionHelper
             return NULL_PARTITION;
         }
 
-        Object val = reflection.getAttribute(baseDescriptor.getPartition().getPartitionField(), entity);
+        Object val = ReflectionUtil.getAny(entity, baseDescriptor.getPartition().getPartitionField());
 
         if(val == null)
         {
@@ -165,7 +164,7 @@ public class PartitionHelper
                 return;
 
             // Use reflection to get the value
-            final Field field = ObjectUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getPartition().getName());
+            final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getPartition().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
                 field.setAccessible(true);

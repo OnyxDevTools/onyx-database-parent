@@ -1,4 +1,3 @@
-
 package com.onyx.relationship.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
@@ -12,8 +11,8 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -23,8 +22,6 @@ import java.util.*;
  */
 public class AbstractRelationshipController extends PartitionContext
 {
-
-    protected static ObjectUtil reflection = ObjectUtil.getInstance();
 
     protected RelationshipDescriptor relationshipDescriptor;
     protected EntityDescriptor entityDescriptor;
@@ -175,7 +172,7 @@ public class AbstractRelationshipController extends PartitionContext
     {
         try
         {
-            final Field relationshipField = reflection.getField(entity.getClass(), relationshipDescriptor.getName());
+            final Field relationshipField = ReflectionUtil.getField(entity.getClass(), relationshipDescriptor.getName());
             if (!relationshipField.isAccessible())
             {
                 relationshipField.setAccessible(true);
@@ -197,8 +194,8 @@ public class AbstractRelationshipController extends PartitionContext
      */
     public static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException
     {
-        final AttributeField relationshipField = ObjectUtil.getAttributeField(entity.getClass(), relationshipDescriptor.getName());
-        reflection.setAttribute(entity, child, relationshipField);
+        final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
+        ReflectionUtil.setAny(entity, child, relationshipField);
     }
 
     /**
@@ -213,7 +210,7 @@ public class AbstractRelationshipController extends PartitionContext
     {
         try
         {
-            final Field relationshipField = ObjectUtil.getField(entity.getClass(), relationshipDescriptor.getName());
+            final Field relationshipField = ReflectionUtil.getField(entity.getClass(), relationshipDescriptor.getName());
             if(!relationshipField.isAccessible())
             {
                 relationshipField.setAccessible(true);

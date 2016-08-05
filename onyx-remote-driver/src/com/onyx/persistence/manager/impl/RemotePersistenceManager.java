@@ -17,8 +17,7 @@ import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.query.*;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;
 import java.util.Arrays;
@@ -90,7 +89,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.SAVE, entity);
 
         IManagedEntity copyValue = (IManagedEntity)this.endpoint.execute(token);
-        ObjectUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
 
         return entity;
     }
@@ -252,7 +251,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     {
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND, entity);
         IManagedEntity results = (IManagedEntity)this.endpoint.execute(token);
-        ObjectUtil.copy(results, entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity));
         return entity;
     }
 
@@ -616,7 +615,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.INITIALIZE, body);
         List relationship = (List)this.endpoint.execute(token);
 
-        objectUtil.setAttribute(entity, relationship, new AttributeField(objectUtil.getField(entity.getClass(), attribute)));
+
+        ReflectionUtil.setAny(entity, relationship, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**
@@ -633,7 +633,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
         this.initialize(entity, attribute);
-        return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**

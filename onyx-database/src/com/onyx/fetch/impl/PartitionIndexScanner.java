@@ -15,7 +15,6 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import gnu.trove.THashMap;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -117,7 +116,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
     public Map scanPartition(IndexController partitionIndexController, long partitionId) throws EntityException
     {
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
         final List<Long> references = new ArrayList<>();
 
         if(criteria.getValue() instanceof List)
@@ -153,7 +152,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
     @Override
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
 
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
         Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap();

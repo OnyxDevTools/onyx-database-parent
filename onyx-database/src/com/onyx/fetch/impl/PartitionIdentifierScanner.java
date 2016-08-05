@@ -13,8 +13,8 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.record.RecordController;
-import gnu.trove.THashMap;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +50,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      */
     public Map<Long, Long> scanPartition(RecordController recordController, long partitionId) throws EntityException
     {
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
 
         // If it is an in clause
         if(criteria.getValue() instanceof List)
@@ -137,7 +137,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     @Override
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
 
         final RecordController recordController = context.getRecordController(descriptor);
 

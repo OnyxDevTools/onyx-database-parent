@@ -1,6 +1,7 @@
 package com.onyx.descriptor;
 
-import com.onyx.util.AttributeField;
+import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 
@@ -11,7 +12,7 @@ public class AttributeDescriptor extends AbstractBaseDescriptor
 {
     protected boolean nullable;
     protected int size;
-    public AttributeField field;
+    public OffsetField field;
 
     public boolean isNullable()
     {
@@ -35,6 +36,6 @@ public class AttributeDescriptor extends AbstractBaseDescriptor
 
     public void setField(Field field)
     {
-        this.field = new AttributeField(field);
+        this.field = ReflectionUtil.getOffsetField(field);
     }
 }

@@ -17,8 +17,7 @@ import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
-import gnu.trove.THashMap;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 
@@ -36,7 +35,6 @@ public class PartitionQueryController extends PartitionContext
     protected MapBuilder temporaryDataFile;
     protected PersistenceManager persistenceManager;
 
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
     /**
      * Constructor that gets the necessary entity information
      *
@@ -124,7 +122,7 @@ public class PartitionQueryController extends PartitionContext
 
         if(query.isTerminated())
         {
-            return new THashMap();
+            return new HashMap();
         }
 
         return results;
@@ -473,8 +471,7 @@ public class PartitionQueryController extends PartitionContext
                 }
 
 
-                reflection.setAttribute(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().field);
-
+                ReflectionUtil.setAny(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().field);
 
                 if(!updatedPartition && updateInstruction.getIndexController() != null)
                 {

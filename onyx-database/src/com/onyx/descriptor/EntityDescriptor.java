@@ -36,25 +36,17 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 
-import com.onyx.util.AttributeField;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.EntityClassLoader;
-
-import gnu.trove.THashMap;
+import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
 
 import java.io.Serializable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 import java.util.function.Consumer;
 
@@ -195,7 +187,8 @@ public class EntityDescriptor implements Serializable
                 this.partition = new PartitionDescriptor();
                 this.partition.setName(field.getName());
                 this.partition.setType(field.getType());
-                this.partition.setPartitionField(new AttributeField(field));
+
+                this.partition.setPartitionField(ReflectionUtil.getOffsetField(field));
             }
         }
 
@@ -565,7 +558,7 @@ public class EntityDescriptor implements Serializable
         IndexDescriptor indexDescriptor = null;
         SystemIndex systemIndex = null;
 
-        final Map<String, SystemIndex> indexMap = new THashMap();
+        final Map<String, SystemIndex> indexMap = new HashMap();
 
         for (int i = 0; i < systemEntity.getIndexes().size(); i++)
         {
@@ -601,7 +594,7 @@ public class EntityDescriptor implements Serializable
     public void checkValidRelationships(final SystemEntity systemEntity) throws InvalidRelationshipTypeException
     {
         // Build Relationship Map
-        final Map<String, SystemRelationship> relationshipMap = new THashMap();
+        final Map<String, SystemRelationship> relationshipMap = new HashMap();
         SystemRelationship systemRelationship = null;
 
         for (int i = 0; i < systemEntity.getRelationships().size(); i++)

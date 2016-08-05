@@ -12,8 +12,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
-import gnu.trove.THashMap;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 
@@ -24,8 +23,6 @@ import java.util.*;
  */
 public class FullTableScanner extends AbstractTableScanner implements TableScanner
 {
-
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
 
     /**
      * Constructor
@@ -48,7 +45,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
      */
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> allResults = new THashMap();
+        final Map<Long, Long> allResults = new HashMap();
 
         // We need to do a full scan
         final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
@@ -63,7 +60,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
 
             entry = iterator.next();
 
-            attributeValue = reflection.getAttribute(fieldToGrab, entry.getValue());
+            attributeValue = ReflectionUtil.getAny(entry.getValue(), fieldToGrab);
 
             // Compare and add
             if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
@@ -86,7 +83,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
      */
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map allResults = new THashMap();
+        final Map allResults = new HashMap();
 
         final Iterator<Long> iterator = existingValues.keySet().iterator();
         Object entityAttribute = null;
