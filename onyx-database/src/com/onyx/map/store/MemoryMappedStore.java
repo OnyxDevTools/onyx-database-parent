@@ -231,6 +231,26 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     }
 
     /**
+     * Write a serializable object
+     *
+     * @param position
+     * @param size
+     * @return
+     */
+    public ObjectBuffer read(long position, int size)
+    {
+        if(position >= fileSize.get())
+            return null;
+
+        final ByteBuffer buffer = ObjectBuffer.allocate(size);
+        this.read(buffer, position);
+        buffer.rewind();
+
+        return new ObjectBuffer(buffer, serializers);
+
+    }
+
+    /**
      * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
      * er "slice" of the file
      *

@@ -78,13 +78,14 @@ public class DefaultMapBuilder implements MapBuilder
         else
             path = fileSystemPath + File.separator + filePath;
 
-        if(type == StoreType.FILE || !isMemmapSupported())
-        {
-            this.storage = new FileChannelStore(path, this, context);
-        }
-        else if(type == StoreType.MEMORY_MAPPED_FILE)
+
+        if(type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported())
         {
             this.storage = new MemoryMappedStore(path, this, context);
+        }
+        if(type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported()))
+        {
+            this.storage = new FileChannelStore(path, this, context);
         }
         else if(type == StoreType.IN_MEMORY)
         {
