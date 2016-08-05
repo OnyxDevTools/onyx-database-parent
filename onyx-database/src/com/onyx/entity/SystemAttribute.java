@@ -3,7 +3,7 @@ package com.onyx.entity;
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
-import com.onyx.util.AttributeField;
+import com.onyx.util.OffsetField;
 
 /**
  * Created by timothy.osborn on 3/2/15.
@@ -57,7 +57,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class)
     protected SystemEntity entity;
 
-    public transient AttributeField field;
+    public transient OffsetField field;
 
     public String getId()
     {

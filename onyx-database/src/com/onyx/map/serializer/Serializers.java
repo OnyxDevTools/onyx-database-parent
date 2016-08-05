@@ -1,7 +1,6 @@
 package com.onyx.map.serializer;
 
 import com.onyx.persistence.context.SchemaContext;
-
 import java.util.Map;
 
 /**
@@ -12,17 +11,17 @@ import java.util.Map;
  */
 public class Serializers
 {
-    public static final short CUSTOM_SERIALIZER_ID_OFFSET = 100;
+    private static final short CUSTOM_SERIALIZER_ID_OFFSET = 100;
 
-    protected Map<Short, String> mapById;
-
-    protected Map<String, Short> mapByName;
+    private Map<Short, String> mapById;
+    private Map<String, Short> mapByName;
 
     public SchemaContext context;
 
     /**
      * Constructor with no parameters
      */
+    @SuppressWarnings("unused")
     public Serializers()
     {
 
@@ -31,10 +30,11 @@ public class Serializers
     /**
      * Constructor
      *
-     * @param mapById
-     * @param mapByName
+     * @param mapById Hash Map by serializer ID
+     * @param mapByName Hash Map By Serializer Name
+     * @param context Database Schema Context
      */
-    public Serializers(Map mapById, Map mapByName, SchemaContext context)
+    public Serializers(Map<Short, String> mapById, Map<String, Short> mapByName, SchemaContext context)
     {
         this.mapById = mapById;
         this.mapByName = mapByName;
@@ -44,10 +44,10 @@ public class Serializers
     /**
      * Get the serializer class with the short id
      *
-     * @param id
-     * @return
+     * @param id Serializer ID
+     * @return Class that corresponds to the serializer
      */
-    public Class getSerializerClass(short id)
+    Class getSerializerClass(short id)
     {
         try
         {
@@ -62,10 +62,10 @@ public class Serializers
     /**
      * Get the serializer id with the given name
      *
-     * @param name
-     * @return
+     * @param name Serializer Name
+     * @return Serializer ID
      */
-    public Short getSerializerId(String name)
+    Short getSerializerId(String name)
     {
         return mapByName.get(name);
     }
@@ -73,8 +73,8 @@ public class Serializers
     /**
      * Add a new serializer by name.  The id will be auto generated
      *
-     * @param name
-     * @return
+     * @param name Serializer Name
+     * @return Newly Generated serializer ID
      */
     public synchronized short add(String name)
     {
@@ -86,7 +86,7 @@ public class Serializers
 
     /**
      * Private getter for creating a new id
-     * @return
+     * @return Nex sequential serializer id
      */
     private synchronized short getNextId()
     {

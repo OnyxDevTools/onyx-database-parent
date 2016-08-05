@@ -8,8 +8,8 @@ import com.onyx.map.node.Record;
 import com.onyx.map.node.RecordReference;
 import com.onyx.map.store.Store;
 
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.Collections;
 import java.util.Map;
@@ -35,7 +35,16 @@ public class AbstractCachedBitMap extends AbstractBitMap
     {
         super(fileStore, header);
         nodeCache = Collections.synchronizedMap(new WeakHashMap());
-        recordCache = Collections.synchronizedMap(new CacheMap());
+
+        if(supportsJavaSystemNotifications())
+        {
+            recordCache = Collections.synchronizedMap(new CacheMap());
+        }
+        else
+        {
+            recordCache = Collections.synchronizedMap(new WeakHashMap<>());
+        }
+
         keyCache = Collections.synchronizedMap(new WeakHashMap());
     }
 
@@ -298,8 +307,6 @@ public class AbstractCachedBitMap extends AbstractBitMap
         return record.value;
     }
 
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
-
     /**
      * Get Map representation of value object.
      *
@@ -318,18 +325,18 @@ public class AbstractCachedBitMap extends AbstractBitMap
         if ((record != null) && (record.value != null))
         {
             final Class clazz = record.value.getClass();
-            AttributeField attributeField = null;
+            OffsetField attributeField = null;
 
             try
             {
-                attributeField = ObjectUtil.getAttributeField(clazz, attribute);
+                attributeField = ReflectionUtil.getOffsetField(clazz, attribute);
             }
             catch (AttributeMissingException e)
             {
                 return getAttributeWithRecID(attribute, reference);
             }
 
-            return reflection.getAttribute(attributeField, record.value);
+            return ReflectionUtil.getAny(record.value, attributeField);
         }
 
         if ((reference != null) && (reference.position == recordId))
@@ -340,4 +347,19 @@ public class AbstractCachedBitMap extends AbstractBitMap
         return null;
     }
 
+    /**
+     * The purpose of this method is to detect whether the javax management is available.  This will throw an exception if
+     * the client is on an android device.  If that is the case, we will use alternative caching mechanism
+     *
+     * @return whether javax.management is supported
+     */
+    protected static boolean supportsJavaSystemNotifications()
+    {
+        try {
+            Class.forName("javax.management.Notification");
+            return true;
+        } catch(ClassNotFoundException e) {
+            return false;
+        }
+    }
 }

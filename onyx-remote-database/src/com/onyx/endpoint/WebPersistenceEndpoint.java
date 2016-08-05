@@ -14,7 +14,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,8 +33,6 @@ final public class WebPersistenceEndpoint
     protected final ObjectMapper objectMapper; // Used for entity serialization
 
     protected final SchemaContext context;
-
-    protected ObjectUtil reflection = ObjectUtil.getInstance();
 
     /**
      * Constructor
@@ -203,7 +201,7 @@ final public class WebPersistenceEndpoint
 
 
         persistenceManager.initialize(entity, request.getAttribute());
-        return (List)reflection.getAttribute(reflection.getAttributeField(clazz, request.getAttribute()), entity);
+        return (List)ReflectionUtil.getObject(entity, ReflectionUtil.getOffsetField(clazz, request.getAttribute()));
     }
 
     /**

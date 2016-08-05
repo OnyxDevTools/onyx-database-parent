@@ -10,7 +10,6 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import gnu.trove.THashMap;
 
 import java.util.*;
 
@@ -47,7 +46,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     @Override
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> returnValue = new THashMap();
+        final Map<Long, Long> returnValue = new HashMap();
         final List<Long> references = new ArrayList<>();
 
         if(criteria.getValue() instanceof List)
@@ -83,7 +82,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     @Override
     public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
     {
-        final Map<Long, Long> returnValue = new THashMap();
+        final Map<Long, Long> returnValue = new HashMap();
 
         if(criteria.getValue() instanceof List)
         {

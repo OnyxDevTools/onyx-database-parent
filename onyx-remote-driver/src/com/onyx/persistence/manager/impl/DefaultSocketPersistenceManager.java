@@ -1,8 +1,6 @@
 package com.onyx.persistence.manager.impl;
 
 import com.onyx.exception.StreamException;
-import com.onyx.persistence.collections.LazyQueryCollection;
-import com.onyx.stream.QueryMapStream;
 import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
@@ -12,8 +10,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.query.*;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;
 import java.util.List;
@@ -31,7 +28,6 @@ import java.util.Set;
 public class DefaultSocketPersistenceManager implements PersistenceManager
 {
     protected SocketPersistenceManager proxyPersistenceManager;
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
     protected SchemaContext context = null;
 
     /**
@@ -82,7 +78,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     {
         try {
             IManagedEntity savedEntity = proxyPersistenceManager.saveEntity(entity);
-            objectUtil.copy(savedEntity, entity, context.getDescriptorForEntity(entity));
+            ReflectionUtil.copy(savedEntity, entity, context.getDescriptorForEntity(entity));
             return entity;
         } catch (RemoteException e) {
             throw (EntityException)e.getCause();
@@ -255,7 +251,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
             IManagedEntity foundEntity = proxyPersistenceManager.find(entity);
             if(foundEntity != null)
             {
-                ObjectUtil.copy(foundEntity, entity, context.getDescriptorForEntity(entity));
+                ReflectionUtil.copy(foundEntity, entity, context.getDescriptorForEntity(entity));
             }
             return entity;
         } catch (RemoteException e) {
@@ -276,7 +272,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
      */
     public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
         this.initialize(entity, attribute);
-        return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**
@@ -381,7 +377,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     {
         try {
             Object relationshipValue = proxyPersistenceManager.findRelationship(entity, attribute);
-            objectUtil.setAttribute(entity, relationshipValue, new AttributeField(objectUtil.getField(entity.getClass(), attribute)));
+            ReflectionUtil.setAny(entity, relationshipValue, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
         } catch (RemoteException e) {
             throw (EntityException)e.getCause();
         }

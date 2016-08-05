@@ -5,11 +5,11 @@ import com.onyx.map.serializer.ObjectBuffer;
 import com.onyx.map.serializer.Serializers;
 import com.onyx.map.store.*;
 import com.onyx.persistence.context.SchemaContext;
-import gnu.trove.THashMap;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -21,7 +21,7 @@ public class DefaultMapBuilder implements MapBuilder
     protected Store storage = null;
 
     // Contains all initialized maps
-    protected Map<String, Map> maps = new THashMap();
+    protected Map<String, Map> maps = new HashMap();
 
     /**
      * Constructor

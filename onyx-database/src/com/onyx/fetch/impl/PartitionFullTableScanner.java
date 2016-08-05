@@ -16,8 +16,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
-import gnu.trove.THashMap;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +30,6 @@ import java.util.concurrent.Future;
 public class PartitionFullTableScanner extends FullTableScanner implements TableScanner
 {
 
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
     private SystemEntity systemEntity = null;
 
     /**
@@ -57,7 +55,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
      */
     public Map scanPartition(DiskMap existingValues, long partitionId) throws EntityException
     {
-        final Map allResults = new THashMap();
+        final Map allResults = new HashMap();
 
         final Iterator<Long> iterator = existingValues.keySet().iterator();
         IManagedEntity entity = null;
@@ -80,7 +78,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
             }
 
             // Get the attribute value
-            attributeValue = reflection.getAttribute(fieldToGrab, entity);
+            attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
 
             // Compare and add
             if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))

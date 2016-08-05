@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,7 +31,7 @@ public class EncryptionTest {
         String encryptedText = EncryptionUtil.encrypt("adminadmin");      
         Assert.assertTrue(encryptedText != null);
     }
-    
+
     @Test
     public void shouldDycrypt() throws GeneralSecurityException, UnsupportedEncodingException, IOException {
         String str = "adminadmin";
@@ -64,9 +66,8 @@ public class EncryptionTest {
             fileStream.write(EncryptionUtil.encrypt(textToSave).getBytes(StandardCharsets.UTF_8));
             fileStream.close();
         }
-        
-        List<String> lines = Files.readAllLines(Paths.get(file.getAbsolutePath()), StandardCharsets.UTF_8);
-        String savedText = lines.get(0).replaceAll("\\n","").replaceAll("\\r", "");
+
+        String savedText = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
 
         //make assertions
         Assert.assertEquals(savedText,EncryptionUtil.encrypt(textToSave));

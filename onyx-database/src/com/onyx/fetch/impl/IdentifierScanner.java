@@ -9,8 +9,8 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
-import gnu.trove.THashMap;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     @Override
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> returnValue = new THashMap();
+        final Map<Long, Long> returnValue = new HashMap();
 
         final RecordController recordController = context.getRecordController(descriptor);
 
@@ -88,7 +88,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     @Override
     public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
     {
-        final Map<Long, Long> returnValue = new THashMap();
+        final Map<Long, Long> returnValue = new HashMap();
 
         final RecordController recordController = context.getRecordController(descriptor);
 

@@ -14,8 +14,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 
@@ -48,7 +47,6 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
 {
 
     public static final String WEB = "/onyx";
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
 
     /**
      * Get Database URL
@@ -82,7 +80,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         {
             body.setPartitionId(String.valueOf(partitionValue));
         }
-        ObjectUtil.copy((IManagedEntity)this.performCall(getURL() + SAVE, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy((IManagedEntity)this.performCall(getURL() + SAVE, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
         return entity;
     }
 
@@ -287,7 +285,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
             body.setPartitionId(String.valueOf(partitionValue));
         }
 
-        ObjectUtil.copy((IManagedEntity)this.performCall(getURL() + FIND, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy((IManagedEntity)this.performCall(getURL() + FIND, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
 
         return entity;
     }
@@ -441,7 +439,8 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
             body.setPartitionId(String.valueOf(partitionValue));
         }
         List relationship =  (List<IManagedEntity>)this.performCall(getURL() + INITIALIZE, attributeType, List.class, body);
-        objectUtil.setAttribute(entity, relationship, new AttributeField(objectUtil.getField(entity.getClass(), attribute)));
+
+        ReflectionUtil.setAny(entity, relationship, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**

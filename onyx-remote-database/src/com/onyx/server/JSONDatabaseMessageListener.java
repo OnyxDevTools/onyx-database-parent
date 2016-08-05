@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onyx.endpoint.WebPersistenceEndpoint;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.UnknownDatabaseException;
+import com.onyx.map.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;
@@ -146,7 +147,7 @@ public class JSONDatabaseMessageListener implements HttpHandler
                         final String stringPath = exchange.getRelativePath();
                         final RestServicePath path = RestServicePath.valueOfPath(stringPath);
                         final Class bodyType = getClassForEndpoint(path);
-                        final ByteBuffer buffer = ByteBuffer.allocate((int) exchange.getRequestContentLength());
+                        final ByteBuffer buffer = ObjectBuffer.allocate((int) exchange.getRequestContentLength());
 
                         long time = System.currentTimeMillis();
                         while(buffer.remaining() > 0) {
@@ -159,7 +160,8 @@ public class JSONDatabaseMessageListener implements HttpHandler
                                 break;
                         }
 
-                        byte[] bytes = new byte[buffer.limit() - buffer.position()];
+                        byte[] bytes = new byte[buffer.limit()];
+                        buffer.rewind();
                         buffer.get(bytes);
 
                         final Object requestBody = objectMapper.readValue(bytes, bodyType);

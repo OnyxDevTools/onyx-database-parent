@@ -7,10 +7,9 @@ import com.onyx.entity.SystemRelationship;
 import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.annotations.IdentifierGenerator;
-import freemarker.template.Configuration;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
-
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
@@ -19,10 +18,7 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.*;
 
 import java.lang.reflect.Method;
 
@@ -32,13 +28,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
@@ -51,8 +41,7 @@ import javax.tools.ToolProvider;
  */
 public class EntityClassLoader
 {
-    protected static final Configuration cfg;
-    protected static final String CLASS_TEMPLATE = "class.ftl";
+    protected static final String CLASS_TEMPLATE_PATH = "templates/class.mustache";
 
     public static Set<String> LOADED_CLASSES = new HashSet<>();
 
@@ -62,12 +51,13 @@ public class EntityClassLoader
 
     public static final String SOURCE_DIRECTORY = "source";
     public static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
-    public static final String SOURCE_QUERIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "queries";
+
+    protected static final Mustache CLASS_TEMPLATE;
 
     static
     {
-        cfg = new Configuration();
-        cfg.setClassForTemplateLoading(EntityClassLoader.class, "/templates");
+        MustacheFactory mf = new DefaultMustacheFactory();
+        CLASS_TEMPLATE = mf.compile(new InputStreamReader(EntityClassLoader.class.getClassLoader().getResourceAsStream(CLASS_TEMPLATE_PATH)), CLASS_TEMPLATE_PATH);
     }
 
     /**
@@ -158,9 +148,6 @@ public class EntityClassLoader
         try
         {
 
-            // Load template from source folder
-            final Template template = cfg.getTemplate(CLASS_TEMPLATE);
-
             // File output
             final File classFile = new File(outputDirectory + File.separator +
                     descriptor.getClazz().getCanonicalName().replaceAll("\\.", "/") + ".java");
@@ -169,16 +156,15 @@ public class EntityClassLoader
 
             final Writer file = new FileWriter(outputDirectory + File.separator +
                     descriptor.getClazz().getCanonicalName().replaceAll("\\.", "/") + ".java");
-            template.process(values, file);
+
+            CLASS_TEMPLATE.execute(file, values);
+            file.flush();
+
             file.flush();
             file.close();
 
         }
         catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        catch (TemplateException e)
         {
             e.printStackTrace();
         }
@@ -190,6 +176,7 @@ public class EntityClassLoader
      * @param  systemEntity
      * @param  databaseLocation
      */
+    @SuppressWarnings("unused")
     public synchronized static final void writeClass(final SystemEntity systemEntity, final String databaseLocation)
     {
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
@@ -283,27 +270,23 @@ public class EntityClassLoader
         try
         {
 
-            // Load template from source folder
-            final Template template = cfg.getTemplate(CLASS_TEMPLATE);
-
             // File output
             final File classFile = new File(outputDirectory + File.separator +
-                    systemEntity.getName().replaceAll("\\.", "/") + ".java");
+                    systemEntity.getClassName().replaceAll("\\.", "/") + ".java");
             classFile.getParentFile().mkdirs();
             classFile.createNewFile();
 
             final Writer file = new FileWriter(outputDirectory + File.separator +
-                    systemEntity.getName().replaceAll("\\.", "/") + ".java");
-            template.process(values, file);
+                    systemEntity.getClassName().replaceAll("\\.", "/") + ".java");
+
+            CLASS_TEMPLATE.execute(file, values);
+            file.flush();
+
             file.flush();
             file.close();
 
         }
         catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        catch (TemplateException e)
         {
             e.printStackTrace();
         }
@@ -399,25 +382,12 @@ public class EntityClassLoader
         {
             final Method method = systemClass.getDeclaredMethod("addURL", URL.class);
             method.setAccessible(true);
-            method.invoke(systemClassLoader, new File(schemaContext.getLocation() + File.separator + GENERATED_ENTITIES_DIRECTORY).toURL());
-            method.invoke(systemClassLoader, new File(schemaContext.getLocation() + File.separator + GENERATED_QUERIES_DIRECTORY).toURL());
+            method.invoke(systemClassLoader, new File(schemaContext.getLocation() + File.separator + GENERATED_ENTITIES_DIRECTORY).toURI().toURL());
+            method.invoke(systemClassLoader, new File(schemaContext.getLocation() + File.separator + GENERATED_QUERIES_DIRECTORY).toURI().toURL());
         }
         catch (Exception ignore)
         {
         }
     }
 
-    /**
-     * Wrapper for getting template.
-     *
-     * @param   name
-     *
-     * @return  wrapper for getting template.
-     *
-     * @throws  IOException
-     */
-    public static Template getTemplate(final String name) throws IOException
-    {
-        return cfg.getTemplate(name);
-    }
 }

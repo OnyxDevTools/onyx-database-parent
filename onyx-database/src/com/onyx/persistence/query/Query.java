@@ -53,7 +53,6 @@ public class Query implements ObjectSerializable, Serializable
 
     protected List<String> selections;
     protected List<AttributeUpdate> updates;
-    protected List<QueryProjection> projections;
     protected QueryCriteria criteria;
     protected List<QueryOrder> queryOrders;
 
@@ -428,30 +427,6 @@ public class Query implements ObjectSerializable, Serializable
     }
 
     /**
-     * Gets the projection objects that are used to populate named non-database contrived fields
-     * @see com.onyx.persistence.query.Sum
-     * @since 1.0.0
-     * @return List of Query Projections
-     * @deprecated
-     */
-    public List<QueryProjection> getProjections()
-    {
-        return projections;
-    }
-
-    /**
-     * Sets the projection objects that are used to populate named non-database contrived fields
-     * @param projections List of Query Projections
-     * @since 1.0.0
-     * @see com.onyx.persistence.query.Sum
-     * @deprecated
-     */
-    public void setProjections(List<QueryProjection> projections)
-    {
-        this.projections = projections;
-    }
-
-    /**
      * Gets the first row of records to return a subset of results
      * @since 1.0.0
      * @return First row
@@ -517,6 +492,7 @@ public class Query implements ObjectSerializable, Serializable
      * Terminate the query that is currently running
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public void terminate()
     {
         kill = true;
@@ -566,7 +542,6 @@ public class Query implements ObjectSerializable, Serializable
     {
         buffer.writeObject(selections);
         buffer.writeObject(updates);
-        buffer.writeObject(projections);
         buffer.writeObject(criteria);
         buffer.writeObject(queryOrders);
         buffer.writeObject(entityType.getCanonicalName());
@@ -587,7 +562,6 @@ public class Query implements ObjectSerializable, Serializable
     {
         selections = (List<String>) buffer.readObject();
         updates = (List<AttributeUpdate>) buffer.readObject();
-        projections = (List<QueryProjection>) buffer.readObject();
         criteria = (QueryCriteria) buffer.readObject();
         queryOrders = (List<QueryOrder>) buffer.readObject();
         try

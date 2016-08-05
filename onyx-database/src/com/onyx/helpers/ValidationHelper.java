@@ -10,8 +10,8 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.update.AttributeUpdate;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,8 +20,6 @@ import java.util.List;
  * Created by timothy.osborn on 1/20/15.
  */
 public class ValidationHelper {
-
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
 
     /**
      * Validate Entity
@@ -37,15 +35,15 @@ public class ValidationHelper {
 
         descriptor.getAttributes().values().stream().forEach(attribute ->
         {
-            AttributeField field = null;
+            OffsetField field = null;
             Object value = null;
             try
             {
 
                 if (!attribute.isNullable())
                 {
-                    field = new AttributeField(reflection.getField(entity.getClass(), attribute.getName()));
-                    value = reflection.getAttribute(field, entity);
+                    field = ReflectionUtil.getOffsetField(entity.getClass(), attribute.getName());
+                    value = ReflectionUtil.getAny(entity, field);
 
                     if (value == null)
                     {
@@ -57,8 +55,8 @@ public class ValidationHelper {
                 {
                     if (field == null)
                     {
-                        field = new AttributeField(reflection.getField(entity.getClass(), attribute.getName()));
-                        value = reflection.getAttribute(field, entity);
+                        field = ReflectionUtil.getOffsetField(entity.getClass(), attribute.getName());
+                        value = ReflectionUtil.getAny(entity, field);
                     }
 
 
@@ -79,11 +77,11 @@ public class ValidationHelper {
             final IdentifierDescriptor identifierDescriptor = descriptor.getIdentifier();
             if (identifierDescriptor.getGenerator() == IdentifierGenerator.NONE)
             {
-                AttributeField field = null;
+                OffsetField field = null;
 
-                field = new AttributeField(reflection.getField(entity.getClass(), identifierDescriptor.getName()));
+                field = ReflectionUtil.getOffsetField(entity.getClass(), identifierDescriptor.getName());
 
-                Object value = reflection.getAttribute(field, entity);
+                Object value = ReflectionUtil.getAny(entity, field);
                 if(value == null)
                 {
                     throw new IdentifierRequiredException(IdentifierRequiredException.IDENTIFIER_REQUIRED_EXCEPTION, identifierDescriptor.getName());

@@ -6,7 +6,6 @@ import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.util.ObjectUtil;
 
 
 /**
@@ -18,8 +17,6 @@ import com.onyx.util.ObjectUtil;
  *
  */
 public abstract class AbstractRemotePersistenceManager implements PersistenceManager {
-
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
 
     // Schema Context
     protected RemoteSchemaContext context = null;
