@@ -1132,12 +1132,20 @@ public class BufferStream {
             staleBufferMemory += buffer.capacity();
 
             // Remove the upper and lower bounds to clean up memory
-            while(staleBufferMemory > MAX_MEMORY_USE)
+            while(staleBufferMemory > MAX_MEMORY_USE
+                    && buffers.size() > 0)
             {
                 if(buffers.size() > 0)
-                    buffers.remove(buffers.pollLast());
-                if(buffers.size() > 0)
-                    buffers.remove(buffers.pollFirst());
+                {
+                    RecycledBuffer recycledBuffer = buffers.pollLast();
+                    buffers.remove(recycledBuffer);
+                    staleBufferMemory-=recycledBuffer.capacity();
+                }
+                if(buffers.size() > 0) {
+                    RecycledBuffer recycledBuffer = buffers.pollFirst();
+                    buffers.remove(recycledBuffer);
+                    staleBufferMemory -= recycledBuffer.capacity();
+                }
             }
         }
     }
