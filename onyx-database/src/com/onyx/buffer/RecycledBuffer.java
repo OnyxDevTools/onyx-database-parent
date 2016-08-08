@@ -27,6 +27,15 @@ public class RecycledBuffer implements Comparable<RecycledBuffer> {
     }
 
     /**
+     * Getter for buffer's capacity
+     * @return The buffer's original capacity.
+     */
+    public int capacity()
+    {
+        return capacity;
+    }
+
+    /**
      * Constructor with capacity.  This is used when just wanting to compare capacity and not the bytebuffer.
      * Used by the higher method.
      * @param capacity The size of the buffer required.
