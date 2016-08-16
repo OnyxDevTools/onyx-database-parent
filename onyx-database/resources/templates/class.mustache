@@ -30,11 +30,11 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
 
 {{#relationships}}
 
-    @Relationship(type = {{{relationshipType}}}
-                  ,inverseClass = {{{inverseClass}}}.class
-                  ,inverse = "{{{inverse}}}"
-                  ,fetchPolicy = {{{fetchPolicy}}}
-                  ,cascadePolicy = {{{cascadePolicy}}})
+    @Relationship(type = {{{relationshipType}}},
+                  inverseClass = {{{inverseClass}}}.class,
+                  inverse = "{{{inverse}}}",
+                  fetchPolicy = {{{fetchPolicy}}},
+                  cascadePolicy = {{{cascadePolicy}}})
     public {{{type}}} {{{name}}};
 
 {{/relationships}}
