@@ -12,8 +12,8 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
     }
 
     @Attribute
-    @Identifier(generator = {{generatorType}})
-    public {{idType}} {{idName}};
+    @Identifier(generator = {{{generatorType}}})
+    public {{{idType}}} {{idName}};
 
 {{#attributes}}
 
@@ -24,19 +24,19 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
     @Index
     {{/isIndex}}
     @Attribute
-    public {{type}} {{name}};
+    public {{{type}}} {{name}};
 
 {{/attributes}}
 
-{{#$relationships}}
+{{#relationships}}
 
-    @Relationship(type = {{relationshipType}}
-                  ,inverseClass = {{inverseClass}}.class
-                  ,inverse = "{{inverse}}"
-                  ,fetchPolicy = {{fetchPolicy}}
-                  ,cascadePolicy = {{cascadePolicy}})
-    public {{type}} {{name}};
+    @Relationship(type = {{{relationshipType}}},
+                  inverseClass = {{{inverseClass}}}.class,
+                  inverse = "{{{inverse}}}",
+                  fetchPolicy = {{{fetchPolicy}}},
+                  cascadePolicy = {{{cascadePolicy}}})
+    public {{{type}}} {{{name}}};
 
-{{/$relationships}}
+{{/relationships}}
 
 }
