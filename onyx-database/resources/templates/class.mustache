@@ -28,7 +28,7 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
 
 {{/attributes}}
 
-{{#$relationships}}
+{{#relationships}}
 
     @Relationship(type = {{relationshipType}}
                   ,inverseClass = {{inverseClass}}.class
@@ -37,6 +37,6 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
                   ,cascadePolicy = {{cascadePolicy}})
     public {{type}} {{name}};
 
-{{/$relationships}}
+{{/relationships}}
 
 }
