@@ -1,6 +1,7 @@
 package entities.exception;
 
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 import entities.AllAttributeEntity;
 import entities.InheritedAttributeEntity;
@@ -9,7 +10,7 @@ import entities.InheritedAttributeEntity;
  * Created by timothy.osborn on 12/14/14.
  */
 @Entity
-public class EntityToOneDoesntMatch implements IManagedEntity
+public class EntityToOneDoesntMatch extends ManagedEntity implements IManagedEntity
 {
     @Identifier
     @Attribute

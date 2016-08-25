@@ -1,19 +1,26 @@
 package entities.exception;
 
-import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 
 /**
- * Created by timothy.osborn on 12/14/14.
+ * Created by tosborn1 on 8/25/16.
  */
 @Entity
-public class InvalidIDGeneratorEntity extends ManagedEntity implements IManagedEntity
-{
+public class TestValidExtendAbstract extends ValidAbstract {
+
+    public TestValidExtendAbstract()
+    {
+
+    }
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
-    public String id;
+    protected int myID;
+
+    @Attribute
+    protected int myAttribute;
+
+
 }

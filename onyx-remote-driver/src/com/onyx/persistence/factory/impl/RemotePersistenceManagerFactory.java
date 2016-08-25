@@ -79,6 +79,11 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
 
     protected int socketPort = Registry.REGISTRY_PORT;
 
+    // The amount of re-try attempts
+    private volatile int retryConnectionCount = 0;
+
+    private static int MAX_RETRY_CONNECTION_ATTEMPTS = 3;
+
     /**
      * Default Constructor
      * @since 1.0.0
@@ -95,6 +100,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * @param instance Cluster Instance unique identifier
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public RemotePersistenceManagerFactory(String instance)
     {
         super(instance);
@@ -102,22 +108,54 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         this.instance = instance;
     }
 
+
     /**
-     * Getter for persistence manager
+     * Getter for persistence manager.  Modified in 1.0.1 to keep a connection open.  If the connection is somehow
+     * closed, this will automatically re-open it.
      *
      * @since 1.0.0
      * @return Instantiated Persistence Manager
      */
     public PersistenceManager getPersistenceManager() {
 
-        if (persistenceManager == null)
+        if(!session.isOpen()
+                && retryConnectionCount <= MAX_RETRY_CONNECTION_ATTEMPTS)
         {
+            final PersistenceManager previousPersistenceManager = persistenceManager;
+            this.remotePersistenceManager = null;
+            this.persistenceManager = null;
+            try {
+                initialize();
+                createPersistenceManager();
+                ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
+            } catch (InitializationException e) {
+                persistenceManager = previousPersistenceManager;
+                retryConnectionCount = 0;
+            }
+        }
 
-            this.persistenceManager = new RemotePersistenceManager();
+        else if (persistenceManager == null)
+        {
+            createPersistenceManager();
+        }
 
-            final RemotePersistenceManager tmpPersistenceManager = (RemotePersistenceManager) this.persistenceManager;
+        return persistenceManager;
+    }
 
-            final EmbeddedPersistenceManager systemPersistenceManager;
+    /**
+     * Helper method to instantiate and configure the persistence manager
+     */
+    private void createPersistenceManager()
+    {
+        this.persistenceManager = new RemotePersistenceManager();
+
+        final RemotePersistenceManager tmpPersistenceManager = (RemotePersistenceManager) this.persistenceManager;
+
+        final EmbeddedPersistenceManager systemPersistenceManager;
+
+        // Since the connection remains persistent and open, we do not want to reset the system persistence manager.  That should have
+        // remained open and valid through any network blip.
+        if(context.getSystemPersistenceManager() == null) {
             try {
                 systemPersistenceManager = new EmbeddedPersistenceManager();
             } catch (RemoteException e) {
@@ -126,16 +164,11 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
             systemPersistenceManager.setContext(context);
             context.setSystemPersistenceManager(systemPersistenceManager);
             ((RemoteSchemaContext) context).setRemoteEndpoint(this.location);
-
-
-            tmpPersistenceManager.setContext(context);
-            tmpPersistenceManager.setDatabaseEndpoint(endpoint);
-            tmpPersistenceManager.setFactory(this);
-
-            ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
-
         }
-        return persistenceManager;
+
+        tmpPersistenceManager.setContext(context);
+        tmpPersistenceManager.setDatabaseEndpoint(endpoint);
+        tmpPersistenceManager.setFactory(this);
     }
 
     // Socket Persistence Manager that utilizes RMI
@@ -173,7 +206,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
 
             try {
                 final Registry remoteRegistry = LocateRegistry.getRegistry(getHostName(), getSocketPort(), socketFactory);
-                SocketPersistenceManager socketPersistenceManager = (SocketPersistenceManager) remoteRegistry.lookup(this.instance);;
+                SocketPersistenceManager socketPersistenceManager = (SocketPersistenceManager) remoteRegistry.lookup(this.instance);
                 this.remotePersistenceManager = new DefaultSocketPersistenceManager(socketPersistenceManager, context);
             } catch (NotBoundException e) {
                 throw new RemoteInstanceException(instance);
@@ -197,6 +230,8 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     @Override
     public void initialize() throws InitializationException
     {
+        retryConnectionCount++;
+
         location = location.replaceFirst("onx://", "ws://");
 
         ClientManager client = ClientManager.createClient(JdkClientContainer.class.getName());
@@ -238,6 +273,8 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         {
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
         }
+
+        retryConnectionCount = 0;
     }
 
     /**

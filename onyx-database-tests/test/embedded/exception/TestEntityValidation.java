@@ -3,6 +3,7 @@ package embedded.exception;
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.*;
 import embedded.base.BaseTest;
+import entities.exception.TestValidExtendAbstract;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,6 +67,15 @@ public class TestEntityValidation extends BaseTest
         validationEntity.requiredString =  "ASFD";
         validationEntity.maxSizeString = "ASD1234569";
         manager.saveEntity(validationEntity);
+    }
+
+    @Test
+    public void testValidObjectAsExtendingAbstract() throws EntityException
+    {
+        TestValidExtendAbstract obj = new TestValidExtendAbstract();
+        manager.saveEntity(obj);
+
+        manager.find(obj);
     }
 
 }
