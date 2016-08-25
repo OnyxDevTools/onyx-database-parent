@@ -973,7 +973,7 @@ public class DefaultSchemaContext implements SchemaContext
     {
         if (!(entity instanceof IManagedEntity))
         {
-            throw new EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND);
+            throw new EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND, entity.getClass());
         }
 
         final Object partitionId = PartitionHelper.getPartitionFieldValue((IManagedEntity) entity, this);

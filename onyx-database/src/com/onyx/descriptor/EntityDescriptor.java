@@ -16,6 +16,7 @@ import com.onyx.exception.InvalidIndexException;
 import com.onyx.exception.InvalidRelationshipTypeException;
 
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
@@ -92,13 +93,20 @@ public class EntityDescriptor implements Serializable
 
         if (!interfaceFound)
         {
-            throw new EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND);
+            throw new EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND, clazz);
+        }
+
+        final boolean implementationFound = ManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
+
+        if (!implementationFound)
+        {
+            throw new EntityClassNotFoundException(EntityClassNotFoundException.EXTENSION_NOT_FOUND, clazz);
         }
 
         // This class does not have the entity annotation.  This is required
         if (clazz.getAnnotation(Entity.class) == null)
         {
-            throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND);
+            throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, clazz);
         }
 
         this.clazz = clazz;
@@ -326,32 +334,20 @@ public class EntityDescriptor implements Serializable
     {
         for (final RelationshipDescriptor descriptor : this.relationships.values())
         {
-            boolean interfaceFound = false;
-
-            for (final Class inter : descriptor.inverseClass.getInterfaces())
-            {
-
-                if (inter == IManagedEntity.class)
-                {
-                    interfaceFound = true;
-                }
-
-                for (final Class inner : inter.getInterfaces())
-                {
-
-                    if (inner == IManagedEntity.class)
-                    {
-                        interfaceFound = true;
-
-                        break;
-                    }
-                }
-            }
+            final boolean interfaceFound = IManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
 
             if (!interfaceFound)
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND + ": " +
-                    descriptor.inverseClass.getCanonicalName());
+                    descriptor.inverseClass.getCanonicalName(), clazz);
+            }
+
+            final boolean extensionFound = ManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
+
+            if (!extensionFound)
+            {
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_BASE_NOT_FOUND + ": " +
+                        descriptor.inverseClass.getCanonicalName(), clazz);
             }
 
             if ((descriptor.getType() != descriptor.getInverseClass()) &&
@@ -366,7 +362,7 @@ public class EntityDescriptor implements Serializable
                         (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " +
-                    descriptor.inverseClass.getCanonicalName());
+                    descriptor.inverseClass.getCanonicalName(), clazz);
             }
 
             if ((descriptor.inverse != null) && (descriptor.inverse.length() > 0) &&
