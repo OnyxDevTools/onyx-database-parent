@@ -127,7 +127,6 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
             try {
                 initialize();
                 createPersistenceManager();
-                ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
             } catch (InitializationException e) {
                 persistenceManager = previousPersistenceManager;
                 retryConnectionCount = 0;
@@ -169,6 +168,9 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         tmpPersistenceManager.setContext(context);
         tmpPersistenceManager.setDatabaseEndpoint(endpoint);
         tmpPersistenceManager.setFactory(this);
+
+        ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
+
     }
 
     // Socket Persistence Manager that utilizes RMI

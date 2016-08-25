@@ -38,7 +38,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     {
         DatabaseServer dbServer = new DatabaseServer();
         dbServer.setPort(8082);
-        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.setEnableSocketSupport(false);
         dbServer.start();
 
@@ -64,7 +64,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
 
         dbServer = new DatabaseServer();
         dbServer.setPort(8082);
-        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.setEnableSocketSupport(false);
         dbServer.start();
 
@@ -84,7 +84,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     public void testPersistantConnectionNotReOpened() throws Exception {
         DatabaseServer dbServer = new DatabaseServer();
         dbServer.setPort(8082);
-        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.setEnableSocketSupport(false);
         dbServer.start();
 
