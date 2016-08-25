@@ -70,8 +70,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
 
         Thread.sleep(2000);
 
-        mgr = fac.getPersistenceManager();
-
         SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
 
         assert foundAfterClose.getSimpleId().equals(simpleEntity.getSimpleId());
@@ -80,7 +78,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         dbServer.stop();
     }
 
-    @Test(expected = QueryException.class)
+    @Test(expected = InitializationException.class)
     public void testPersistantConnectionNotReOpened() throws Exception {
         DatabaseServer dbServer = new DatabaseServer();
         dbServer.setPort(8082);
@@ -107,8 +105,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         dbServer.stop();
 
         Thread.sleep(2000);
-
-        mgr = fac.getPersistenceManager();
 
         SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
 

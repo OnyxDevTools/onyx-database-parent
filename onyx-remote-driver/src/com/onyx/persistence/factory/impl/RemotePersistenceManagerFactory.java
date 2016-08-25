@@ -9,6 +9,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.SingletonException;
 import com.onyx.exceptions.RemoteInstanceException;
+import com.onyx.persistence.factory.ConnectionManager;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.manager.impl.DefaultSocketPersistenceManager;
@@ -65,7 +66,7 @@ import java.util.concurrent.*;
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerFactory implements PersistenceManagerFactory {
+public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerFactory implements PersistenceManagerFactory,ConnectionManager {
 
     public static final String PERSISTENCE = "/onyx";
     public static final int CONNECTION_TIMEOUT = 20;
@@ -118,22 +119,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      */
     public PersistenceManager getPersistenceManager() {
 
-        if(!session.isOpen()
-                && retryConnectionCount <= MAX_RETRY_CONNECTION_ATTEMPTS)
-        {
-            final PersistenceManager previousPersistenceManager = persistenceManager;
-            this.remotePersistenceManager = null;
-            this.persistenceManager = null;
-            try {
-                initialize();
-                createPersistenceManager();
-            } catch (InitializationException e) {
-                persistenceManager = previousPersistenceManager;
-                retryConnectionCount = 0;
-            }
-        }
-
-        else if (persistenceManager == null)
+        if (persistenceManager == null)
         {
             createPersistenceManager();
         }
@@ -146,7 +132,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      */
     private void createPersistenceManager()
     {
-        this.persistenceManager = new RemotePersistenceManager();
+        this.persistenceManager = new RemotePersistenceManager(this);
 
         final RemotePersistenceManager tmpPersistenceManager = (RemotePersistenceManager) this.persistenceManager;
 
@@ -224,16 +210,36 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     }
 
     /**
-     * Initialize the database connection
+     * The purpose of this is to verify a connection.  This method is to ensure the connection is always open
+     * ConnectionManager delegate method
      *
-     * @since 1.0.0
-     * @throws InitializationException Failure to start database due to either invalid credentials invalid network connection
+     * @since 1.0.1
+     * @throws EntityException Cannot re-connect if not connected
      */
-    @Override
-    public void initialize() throws InitializationException
+    public void verifyConnection() throws EntityException
     {
-        retryConnectionCount++;
+        if(!session.isOpen())
+        {
+            this.connect();
 
+            RemotePersistenceManager tmpPersistenceManager = (RemotePersistenceManager)this.persistenceManager;
+
+            tmpPersistenceManager.setContext(context);
+            tmpPersistenceManager.setDatabaseEndpoint(endpoint);
+            tmpPersistenceManager.setFactory(this);
+
+            ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
+        }
+    }
+
+    /**
+     * Connect to the remote database server
+     *
+     * @since 1.0.1
+     * @throws InitializationException Exception occurred while connecting
+     */
+    public void connect() throws InitializationException
+    {
         location = location.replaceFirst("onx://", "ws://");
 
         ClientManager client = ClientManager.createClient(JdkClientContainer.class.getName());
@@ -261,6 +267,18 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         } catch (URISyntaxException e) {
             throw new InitializationException(InitializationException.INVALID_URI);
         }
+    }
+    /**
+     * Initialize the database connection
+     *
+     * @since 1.0.0
+     * @throws InitializationException Failure to start database due to either invalid credentials invalid network connection
+     */
+    @Override
+    public void initialize() throws InitializationException
+    {
+
+        connect();
 
         try
         {
@@ -276,7 +294,6 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
         }
 
-        retryConnectionCount = 0;
     }
 
     /**
