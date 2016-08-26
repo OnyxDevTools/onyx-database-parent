@@ -220,7 +220,9 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     {
         if(session == null || !session.isOpen())
         {
-            context.shutdown();
+            if(context != null) {
+                context.shutdown();
+            }
             this.connect();
 
             RemotePersistenceManager tmpPersistenceManager = (RemotePersistenceManager)this.persistenceManager;
