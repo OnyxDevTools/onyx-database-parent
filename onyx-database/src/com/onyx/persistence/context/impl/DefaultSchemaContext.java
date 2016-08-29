@@ -177,6 +177,7 @@ public class DefaultSchemaContext implements SchemaContext
      */
     public void start()
     {
+        killSwitch = false;
         initializeSystemEntities();
         initializePartitionSequence();
         initializeEntityDescriptors();

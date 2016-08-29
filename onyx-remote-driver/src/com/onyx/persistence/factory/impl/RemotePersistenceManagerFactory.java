@@ -218,8 +218,11 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      */
     public void verifyConnection() throws EntityException
     {
-        if(!session.isOpen())
+        if(session == null || !session.isOpen())
         {
+            if(context != null) {
+                context.shutdown();
+            }
             this.connect();
 
             RemotePersistenceManager tmpPersistenceManager = (RemotePersistenceManager)this.persistenceManager;
@@ -229,6 +232,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
             tmpPersistenceManager.setFactory(this);
 
             ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
+            context.start();
         }
     }
 
