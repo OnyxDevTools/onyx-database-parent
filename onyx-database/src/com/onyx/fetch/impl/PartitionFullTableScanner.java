@@ -57,37 +57,34 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
     {
         final Map allResults = new HashMap();
 
-        final Iterator<Long> iterator = existingValues.keySet().iterator();
-        IManagedEntity entity = null;
-        Object attributeValue = null;
-        Object keyValue = null;
+            final Iterator<Long> iterator = existingValues.keySet().iterator();
+            IManagedEntity entity = null;
+            Object attributeValue = null;
+            Object keyValue = null;
 
-        while(iterator.hasNext())
-        {
-            if(query.isTerminated())
-                return allResults;
+            while (iterator.hasNext()) {
+                if (query.isTerminated())
+                    return allResults;
 
-            keyValue = iterator.next();
+                keyValue = iterator.next();
 
-            entity = (IManagedEntity)existingValues.get(keyValue);
+                entity = (IManagedEntity) existingValues.get(keyValue);
 
-            // Ensure entity still exists
-            if(entity == null)
-            {
-                continue;
+                // Ensure entity still exists
+                if (entity == null) {
+                    continue;
+                }
+
+                // Get the attribute value
+                attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
+
+                // Compare and add
+                if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
+                    long ref = existingValues.getRecID(keyValue);
+                    allResults.put(new PartitionReference(partitionId, ref), new PartitionReference(partitionId, ref));
+                }
+
             }
-
-            // Get the attribute value
-            attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
-
-            // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
-            {
-                long ref = existingValues.getRecID(keyValue);
-                allResults.put(new PartitionReference(partitionId, ref), new PartitionReference(partitionId, ref));
-            }
-
-        }
 
         return allResults;
     }

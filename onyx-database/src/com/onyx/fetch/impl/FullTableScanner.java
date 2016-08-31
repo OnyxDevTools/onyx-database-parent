@@ -48,28 +48,26 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
         final Map<Long, Long> allResults = new HashMap();
 
         // We need to do a full scan
-        final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
+            final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
 
-        Map.Entry<Object, IManagedEntity> entry = null;
-        Object attributeValue = null;
+            Map.Entry<Object, IManagedEntity> entry = null;
+            Object attributeValue = null;
 
-        while(iterator.hasNext())
-        {
-            if(query.isTerminated())
-                return allResults;
+            while (iterator.hasNext()) {
+                if (query.isTerminated())
+                    return allResults;
 
-            entry = iterator.next();
+                entry = iterator.next();
 
-            attributeValue = ReflectionUtil.getAny(entry.getValue(), fieldToGrab);
+                attributeValue = ReflectionUtil.getAny(entry.getValue(), fieldToGrab);
 
-            // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
-            {
-                long recId = records.getRecID(entry.getKey());
-                allResults.put(recId, recId);
+                // Compare and add
+                if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
+                    long recId = records.getRecID(entry.getKey());
+                    allResults.put(recId, recId);
+                }
+
             }
-
-        }
 
         return allResults;
     }

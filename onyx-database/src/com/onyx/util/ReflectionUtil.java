@@ -3,6 +3,7 @@ package com.onyx.util;
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
+import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
@@ -317,7 +318,7 @@ public class ReflectionUtil
      * @param offsetField field to get
      * @return field value
      */
-    public static Object getAny(Object object, OffsetField offsetField)
+    public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException
     {
         try
         {
@@ -337,8 +338,10 @@ public class ReflectionUtil
                 return ReflectionUtil.getShort(object, offsetField);
             else if (offsetField.type == char.class)
                 return ReflectionUtil.getChar(object, offsetField);
-
-            return ReflectionUtil.getObject(object, offsetField);
+            else if (!offsetField.type.isPrimitive())
+                return ReflectionUtil.getObject(object, offsetField);
+            else
+                throw new AttributeTypeMismatchException(AttributeTypeMismatchException.UNKNOWN_EXCEPTION, offsetField.type, object.getClass(), offsetField.name);
         }catch (IllegalAccessException e)
         {
             return null;
@@ -494,10 +497,13 @@ public class ReflectionUtil
      * @param offsetField The field to reflect on
      * @param value object value to set
      */
-    public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException
+    public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException,AttributeTypeMismatchException
     {
         if(theUnsafe != null) {
-            theUnsafe.putObject(parent, offsetField.offset, value);
+            if(value == null || offsetField.field.getType().isAssignableFrom(value.getClass()))
+                theUnsafe.putObject(parent, offsetField.offset, value);
+            else
+                throw new AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, value.getClass(), offsetField.field.getType(), offsetField.name);
             return;
         }
 
@@ -511,7 +517,7 @@ public class ReflectionUtil
      * @param child
      * @param field
      */
-    public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException
+    public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException,AttributeTypeMismatchException
     {
         final Class toType = field.type;
         Class fromType = null;

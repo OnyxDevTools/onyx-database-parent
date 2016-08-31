@@ -40,13 +40,25 @@ public class DefaultLevelReadWriteLock implements LevelReadWriteLock
         return masterLock.writeLock();
     }
 
-    public Lock readLock(int level)
+    public void lockReadLevel(int level)
     {
-        return locks[level].readLock();
+        locks[level].readLock().lock();
     }
 
-    public Lock writeLock(int level)
+    public void unlockReadLevel(int level)
     {
-        return locks[level].writeLock();
+        locks[level].readLock().unlock();
+    }
+
+    public void lockWriteLevel(int level)
+    {
+//        masterLock.readLock().lock();
+        locks[level].writeLock().lock();
+    }
+
+    public void unlockWriteLevel(int level)
+    {
+        locks[level].writeLock().unlock();
+//        masterLock.readLock().unlock();
     }
 }

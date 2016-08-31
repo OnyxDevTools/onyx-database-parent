@@ -481,8 +481,7 @@ public abstract class AbstractRecordController
      * @param referenceId location of record within storage
      * @return Attribute value
      */
-    public Object getAttributeWithReferenceId(String attribute, long referenceId)
-    {
+    public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
         return records.getAttributeWithRecID(attribute, referenceId);
     }
 

@@ -56,12 +56,20 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 if(query.isTerminated())
                     return returnValue;
 
-                references.addAll(indexController.findAll(idValue));
+                Set indexValues = indexController.findAll(idValue);
+                synchronized (indexValues)
+                {
+                    references.addAll(indexValues);
+                }
             }
         }
         else
         {
-            references.addAll(indexController.findAll(criteria.getValue()));
+            Set indexValues = indexController.findAll(criteria.getValue());
+            synchronized (indexValues)
+            {
+                references.addAll(indexValues);
+            }
         }
 
         references.stream().forEach(val->
@@ -92,25 +100,27 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                     return returnValue;
 
                 Set<Long> results = indexController.findAll(idValue);
-                results.stream().forEach(reference ->
-                {
-                    if (existingValues.containsKey(reference))
+                synchronized (results) {
+                    results.stream().forEach(reference ->
                     {
-                        returnValue.put(reference, reference);
-                    }
-                });
+                        if (existingValues.containsKey(reference)) {
+                            returnValue.put(reference, reference);
+                        }
+                    });
+                }
             }
         }
         else
         {
             Set<Long> results = indexController.findAll(criteria.getValue());
-            results.stream().forEach(reference ->
-            {
-                if (existingValues.containsKey(reference))
+            synchronized (results) {
+                results.stream().forEach(reference ->
                 {
-                    returnValue.put(reference, reference);
-                }
-            });
+                    if (existingValues.containsKey(reference)) {
+                        returnValue.put(reference, reference);
+                    }
+                });
+            }
         }
 
         return returnValue;

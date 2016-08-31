@@ -18,8 +18,10 @@ import com.onyx.helpers.PartitionHelper;
 import com.onyx.index.IndexController;
 import com.onyx.index.impl.IndexControllerImpl;
 
+import com.onyx.map.ObserverMapBuilder;
 import com.onyx.map.DefaultMapBuilder;
 import com.onyx.map.MapBuilder;
+import com.onyx.map.base.ObservableCountDownLock;
 import com.onyx.map.store.StoreType;
 
 import com.onyx.persistence.IManagedEntity;
@@ -537,6 +539,31 @@ public class DefaultSchemaContext implements SchemaContext
      */
     protected Map<String, MapBuilder> dataFiles = new HashMap<>();
 
+
+    protected ObservableCountDownLock queryInProgressLock = new ObservableCountDownLock();
+
+    /**
+     * Add a query lock in order to prevent storage de-allocation.  Storage that disappears makes
+     * concurrent queries hard.  So, we prevent cleanup of those queries.
+     *
+     * @since 1.0.2
+     */
+    public void addQueryLock()
+    {
+        queryInProgressLock.acquire();
+    }
+
+    /**
+     * Release query lock.  Actually this just decrements the lock count.  When the lock count hits 0, the
+     * observable count down fires and invokes a deallocation sweep.
+     *
+     * @since 1.0.2
+     */
+    public void releaseQueryLock()
+    {
+        queryInProgressLock.release();
+    }
+
     /**
      * @since  1.0.0 Method for creating a new data file
      */
@@ -544,7 +571,7 @@ public class DefaultSchemaContext implements SchemaContext
         {
             @Override public MapBuilder apply(final String path)
             {
-                return new DefaultMapBuilder(location + "/" + path, context);
+                return new ObserverMapBuilder(location + "/" + path, context, queryInProgressLock);
             }
         };
 
@@ -1116,8 +1143,11 @@ public class DefaultSchemaContext implements SchemaContext
     protected Consumer<IndexDescriptor> rebuildIndexConsumer = indexDescriptor ->
     {
 
+        context.addQueryLock();
+
         try
         {
+
             final SystemEntity systemEntity = getSystemEntityByName(indexDescriptor.getEntityDescriptor().getClazz().getCanonicalName());
 
             if (systemEntity.getPartition() != null)
@@ -1170,6 +1200,8 @@ public class DefaultSchemaContext implements SchemaContext
         {
 
         }
+        finally {
+            context.releaseQueryLock();
+        }
     };
-
 }

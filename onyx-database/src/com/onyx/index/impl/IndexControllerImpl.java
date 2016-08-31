@@ -71,8 +71,9 @@ public class IndexControllerImpl implements IndexController {
                 if (longs == null) {
                     longs = new HashSet<Long>();
                 }
-                longs.add(reference);
-
+                synchronized (longs) {
+                    longs.add(reference);
+                }
                 // Add previous index value
 
                 return longs;
@@ -99,7 +100,9 @@ public class IndexControllerImpl implements IndexController {
                     @Override
                     public Set<Long> apply(Object o, Set<Long> longs)
                     {
-                        longs.remove(reference);
+                        synchronized (longs) {
+                            longs.remove(reference);
+                        }
                         return longs;
                     }
                 });
@@ -141,22 +144,21 @@ public class IndexControllerImpl implements IndexController {
     public void rebuild() throws EntityException
     {
         final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getCanonicalName());
-        final Iterator<Map.Entry> iterator = records.entrySet().iterator();
+            final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
-        // Iterate Through all of the values and re-map the key value for the record id
-        Map.Entry entry = null;
-        while(iterator.hasNext())
-        {
-            try {
-                entry = iterator.next();
-                long recId = records.getRecID(entry.getKey());
-                if(recId > 0) {
-                    final Object indexValue = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) entry.getValue(), indexDescriptor);
-                    if(indexValue != null)
-                        save(indexValue, recId, recId);
+            // Iterate Through all of the values and re-map the key value for the record id
+            Map.Entry entry = null;
+            while (iterator.hasNext()) {
+                try {
+                    entry = iterator.next();
+                    long recId = records.getRecID(entry.getKey());
+                    if (recId > 0) {
+                        final Object indexValue = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) entry.getValue(), indexDescriptor);
+                        if (indexValue != null)
+                            save(indexValue, recId, recId);
+                    }
                 }
-            }
-            // Catch an exception so it may continue the routine
+                // Catch an exception so it may continue the routine
             catch (Exception ignore){}
         }
     }

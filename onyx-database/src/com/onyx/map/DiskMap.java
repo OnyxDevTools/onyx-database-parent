@@ -1,6 +1,7 @@
 package com.onyx.map;
 
-import com.onyx.map.node.RecordReference;
+import com.onyx.exception.AttributeTypeMismatchException;
+import com.onyx.map.base.LevelReadWriteLock;
 import com.onyx.map.store.Store;
 
 import java.util.Map;
@@ -42,12 +43,21 @@ public interface DiskMap<K,V> extends Map<K,V> {
      *
      * @return Attribute value of record
      */
-    Object getAttributeWithRecID(String attribute, long reference);
+    Object getAttributeWithRecID(String attribute, long reference) throws AttributeTypeMismatchException;
 
     /**
      * Get Storage mechanism for a dismap
      *
-     * @return
+     * @return The physical file store
      */
     Store getFileStore();
+
+    /**
+     * Public getter for Read Write Lock.  This is used for iterating.  Since
+     * the iterator may not be write thread safe, this can be used to ensure safety.
+     *
+     * @since 1.0.2
+     * @return Instance of Level Read Write Lock
+     */
+    LevelReadWriteLock getReadWriteLock();
 }

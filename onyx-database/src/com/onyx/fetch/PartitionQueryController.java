@@ -1,6 +1,7 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.PartitionContext;
@@ -184,8 +185,10 @@ public class PartitionQueryController extends PartitionContext
             {
                 value = recordController.getWithReferenceId((long)index);
             }
-            RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
-            returnValue.add(value);
+            if(value != null) {
+                RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
+                returnValue.add(value);
+            }
             i++;
         }
 
@@ -570,5 +573,6 @@ public class PartitionQueryController extends PartitionContext
     {
         temporaryDataFile.delete();
     }
+
 }
 

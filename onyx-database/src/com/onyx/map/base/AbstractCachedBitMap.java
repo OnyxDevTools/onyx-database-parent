@@ -2,6 +2,7 @@ package com.onyx.map.base;
 
 import com.onyx.exception.AttributeMissingException;
 
+import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Header;
 import com.onyx.map.node.Record;
@@ -315,8 +316,7 @@ public class AbstractCachedBitMap extends AbstractBitMap
      *
      * @return  Map of key values
      */
-    public Object getAttributeWithRecID(final String attribute, final long recordId)
-    {
+    public Object getAttributeWithRecID(final String attribute, final long recordId) throws AttributeTypeMismatchException {
         final RecordReference reference = this.getRecordReference(recordId);
 
         // First see if it is cached and get it via reflection

@@ -223,9 +223,14 @@ public class DefaultMapBuilder implements MapBuilder
 
     protected DiskMap newDiskMap(Store store, Header header)
     {
-        if(store instanceof InMemoryStore)
-            return new DefaultDiskMap(store, header, true);
-        else
-            return new DefaultDiskMap(store, header);
+        DefaultDiskMap newDiskMap = null;
+        if(store instanceof InMemoryStore) {
+            newDiskMap = new DefaultDiskMap(store, header, true);
+        }
+        else {
+            newDiskMap = new DefaultDiskMap(store, header);
+        }
+
+        return newDiskMap;
     }
 }

@@ -282,6 +282,8 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), query.getEntityType(), descriptor, query, context, this);
+
+        context.addQueryLock();
         try
         {
             final Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -297,6 +299,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
             return queryController.deleteRecordsWithIndexes(results, query);
         } finally
         {
+            context.releaseQueryLock();
             queryController.cleanup();
         }
     }
@@ -331,6 +334,8 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+
+        context.addQueryLock();
         try
         {
             final Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -346,6 +351,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
             return queryController.updateRecordsWithValues(results, query.getUpdates(), query.getFirstRow(), query.getMaxResults());
         } finally
         {
+            context.releaseQueryLock();
             queryController.cleanup();
         }
     }
@@ -381,6 +387,8 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         try
         {
+            context.addQueryLock();
+
             Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
 
             query.setResultsCount(results.size());
@@ -412,6 +420,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
             }
         } finally
         {
+            context.releaseQueryLock();
             queryController.cleanup();
         }
     }
@@ -445,6 +454,8 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
 
+        context.addQueryLock();
+
         try
         {
             Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -459,6 +470,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
             return retVal;
         } finally
         {
+            context.releaseQueryLock();
             queryController.cleanup();
         }
     }
@@ -1112,23 +1124,26 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     public void stream(Query query, QueryStream streamer) throws EntityException
     {
 
-        final LazyQueryCollection entityList = (LazyQueryCollection)executeLazyQuery(query);
-        final PersistenceManager persistenceManagerInstance = this;
+        context.addQueryLock();
 
-        for(int i = 0; i < entityList.size(); i++)
-        {
-            Object objectToStream = null;
+        try {
+            final LazyQueryCollection entityList = (LazyQueryCollection) executeLazyQuery(query);
+            final PersistenceManager persistenceManagerInstance = this;
 
-            if(streamer instanceof QueryMapStream)
-            {
-                objectToStream = entityList.getDict(i);
+            for (int i = 0; i < entityList.size(); i++) {
+                Object objectToStream = null;
+
+                if (streamer instanceof QueryMapStream) {
+                    objectToStream = entityList.getDict(i);
+                } else {
+                    objectToStream = entityList.get(i);
+                }
+
+                streamer.accept(objectToStream, persistenceManagerInstance);
             }
-            else
-            {
-                objectToStream = entityList.get(i);
-            }
-
-            streamer.accept(objectToStream, persistenceManagerInstance);
+        }
+        finally {
+            context.releaseQueryLock();
         }
     }
 

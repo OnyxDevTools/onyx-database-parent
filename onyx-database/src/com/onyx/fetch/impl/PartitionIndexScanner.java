@@ -126,12 +126,20 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 if(query.isTerminated())
                     return returnValue;
 
-                references.addAll(partitionIndexController.findAll(idValue));
+                Set indexValues = indexController.findAll(idValue);
+                synchronized (indexValues)
+                {
+                    references.addAll(indexValues);
+                }
             }
         }
         else
         {
-            references.addAll(partitionIndexController.findAll(criteria.getValue()));
+            Set indexValues = indexController.findAll(criteria.getValue());
+            synchronized (indexValues)
+            {
+                references.addAll(indexValues);
+            }
         }
 
         references.stream().forEach(val->

@@ -413,39 +413,4 @@ public class FileChannelStore implements Store
         if(dataFile.exists())
             dataFile.delete();
     }
-
-    class ReclaimedSpace implements Comparable<ReclaimedSpace>
-    {
-        long position;
-        int size;
-
-        public ReclaimedSpace(long position, int size)
-        {
-            this.position = position;
-            this.size = size;
-        }
-
-        @Override
-        public int hashCode()
-        {
-            return new Long(position).hashCode();
-        }
-
-        @Override
-        public boolean equals(Object obj)
-        {
-            if(obj != null && obj instanceof ReclaimedSpace)
-            {
-                return (((ReclaimedSpace) obj).position == position && ((ReclaimedSpace) obj).size == size);
-            }
-            return false;
-        }
-
-        @Override
-        public int compareTo(ReclaimedSpace o)
-        {
-            return new Integer(new Integer(size)).compareTo(o.size);
-        }
-    }
-
 }

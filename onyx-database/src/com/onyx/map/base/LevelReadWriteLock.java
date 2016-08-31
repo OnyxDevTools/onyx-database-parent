@@ -1,6 +1,5 @@
 package com.onyx.map.base;
 
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
 /**
@@ -9,17 +8,26 @@ import java.util.concurrent.locks.ReadWriteLock;
 public interface LevelReadWriteLock extends ReadWriteLock
 {
     /**
-     * Get Read lock for level
-     *
-     * @param level
-     * @return
+     * Read Lock for level
+     * @param level level in which you want to lock
      */
-    Lock readLock(int level);
+    void lockReadLevel(int level);
 
     /**
-     * Get Write Lock for Level
-     * @param level
-     * @return
+     * Read Un-Lock for level
+     * @param level level in which you want to un-lock
      */
-    Lock writeLock(int level);
+    void unlockReadLevel(int level);
+
+    /**
+     * Write Lock for level
+     * @param level level in which you want to lock
+     */
+    void lockWriteLevel(int level);
+
+    /**
+     * Write Un-Lock for level
+     * @param level level in which you want to un-lock
+     */
+    void unlockWriteLevel(int level);
 }
