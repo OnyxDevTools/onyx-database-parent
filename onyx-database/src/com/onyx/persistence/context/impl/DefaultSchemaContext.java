@@ -718,7 +718,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * @param systemEntity Current system entity value to base the comparison on the new entity descriptor
      * @return Newly created system entity if it was created otherwise the existing one
      * @throws EntityException default exception
-     * @since 1.0.1
+     * @since 1.1.0
      */
     protected SystemEntity checkForEntityChanges(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
         // Re-Build indexes if necessary
@@ -743,7 +743,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @param descriptor   Entity descriptor to base the new partition on or to cross reference the old one
      * @param systemEntity System entity to get from the database and compare partition on
-     * @since 1.0.1
+     * @since 1.1.0
      */
     protected void checkForValidDescriptorPartition(EntityDescriptor descriptor, SystemEntity systemEntity) {
         // Check to see if the partition already exists

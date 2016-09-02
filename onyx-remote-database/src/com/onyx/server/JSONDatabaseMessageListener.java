@@ -171,7 +171,7 @@ public class JSONDatabaseMessageListener implements HttpHandler
 
                     } catch (EntityException entityException)
                     {
-                        final ExceptionResponse response = new ExceptionResponse(entityException, entityException.getClass().getCanonicalName());
+                        final ExceptionResponse response = new ExceptionResponse(entityException, entityException.getClass().getName());
                         try {
                             sendResponse(exchange, response, 303);
                         } catch (JsonProcessingException e) {
@@ -179,7 +179,7 @@ public class JSONDatabaseMessageListener implements HttpHandler
                         }
                     } catch (Exception e)
                     {
-                        final ExceptionResponse response = new ExceptionResponse(new UnknownDatabaseException(e), UnknownDatabaseException.class.getCanonicalName());
+                        final ExceptionResponse response = new ExceptionResponse(new UnknownDatabaseException(e), UnknownDatabaseException.class.getName());
                         try {
                             sendResponse(exchange, response, 303);
                         } catch (JsonProcessingException jsonEx) {

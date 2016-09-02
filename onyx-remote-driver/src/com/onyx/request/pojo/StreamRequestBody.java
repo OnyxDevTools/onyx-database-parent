@@ -52,7 +52,7 @@ public class StreamRequestBody  implements ObjectSerializable {
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException {
         buffer.writeObject(query);
-        buffer.writeObject(streamClass.getCanonicalName());
+        buffer.writeObject(streamClass.getName());
     }
 
     /**

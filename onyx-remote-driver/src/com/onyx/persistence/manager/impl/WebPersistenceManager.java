@@ -73,7 +73,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
 
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
@@ -109,7 +109,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
 
             try
             {
-                body.setType(entities.get(0).getClass().getCanonicalName());
+                body.setType(entities.get(0).getClass().getName());
             }
             catch (ClassCastException e)
             {
@@ -134,7 +134,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         return (boolean)this.performCall(getURL() + DELETE, null, Boolean.class, body);
     }
 
@@ -162,7 +162,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.UNKNOWN_EXCEPTION);
             }
-            body.setType(entities.get(0).getClass().getCanonicalName());
+            body.setType(entities.get(0).getClass().getName());
             this.performCall(getURL() + BATCH_DELETE, null, null, body);
         }
     }
@@ -278,7 +278,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
@@ -306,7 +306,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND, null, clazz, body);
     }
 
@@ -328,7 +328,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
         body.setPartitionId(String.valueOf(partitionId));
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND, null, clazz, body);
     }
 
@@ -352,7 +352,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
         body.setPartitionId(String.valueOf(partitionId));
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND_WITH_PARTITION_ID, null, clazz, body);
     }
 
@@ -373,7 +373,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
@@ -401,7 +401,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         body.setPartitionId(String.valueOf(partitionId));
         return (boolean)this.performCall(getURL() + EXISTS, null, Boolean.class, body);
     }
@@ -425,14 +425,14 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
 
         if(relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
         Class attributeType = relationshipDescriptor.getInverseClass();
 
         EntityInitializeBody body = new EntityInitializeBody();
         body.setEntityId(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()));
         body.setAttribute(attribute);
-        body.setEntityType(entity.getClass().getCanonicalName());
+        body.setEntityType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
@@ -691,7 +691,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         body.setEntity(entity);
         body.setRelationship(relationship);
         body.setIdentifiers(relationshipIdentifiers);
-        body.setType(attributeType.getCanonicalName());
+        body.setType(attributeType.getName());
 
         this.performCall(getURL() + SAVE_RELATIONSHIPS, null, null, body);
     }
@@ -709,7 +709,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(referenceId);
-        body.setType(entityType.getCanonicalName());
+        body.setType(entityType.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND_BY_REFERENCE_ID, null, entityType, body);
     }
 

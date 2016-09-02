@@ -7,7 +7,7 @@
 
     <groupId>com.onyxdevtools</groupId>
     <artifactId>onyx-database-parent</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.0</version>
     
     <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-database-parent</description>
