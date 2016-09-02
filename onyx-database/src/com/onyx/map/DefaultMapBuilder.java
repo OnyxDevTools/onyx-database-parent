@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -88,7 +89,7 @@ public class DefaultMapBuilder implements MapBuilder
      */
     public DefaultMapBuilder(String fileSystemPath, String filePath, StoreType type, SchemaContext context)
     {
-        String path = null;
+        String path = "";
 
         if(fileSystemPath == null || fileSystemPath.equals(""))
             path = filePath;
@@ -107,12 +108,16 @@ public class DefaultMapBuilder implements MapBuilder
         }
         else if(type == StoreType.IN_MEMORY)
         {
-            this.storage = new InMemoryStore(this, context);
+            String storeId = String.valueOf(storeIdCounter.addAndGet(1));
+            this.storage = new InMemoryStore(this, context, storeId);
+            mapBuilderByPaths.put(storeId, this);
         }
 
         if(this.storage != null)
             this.storage.init();
     }
+
+    static AtomicInteger storeIdCounter = new AtomicInteger(0);
 
     /**
      * Method returns an instance of a hash set

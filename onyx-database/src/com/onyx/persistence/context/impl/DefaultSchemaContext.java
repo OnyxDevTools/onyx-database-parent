@@ -745,7 +745,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * @param systemEntity System entity to get from the database and compare partition on
      * @since 1.1.0
      */
-    protected void checkForValidDescriptorPartition(EntityDescriptor descriptor, SystemEntity systemEntity) {
+    protected void checkForValidDescriptorPartition(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
         // Check to see if the partition already exists
         if ((systemEntity.getPartition() != null) && (descriptor.getPartition() != null)) {
             for (int i = 0; i < systemEntity.getPartition().getEntries().size(); i++) {
@@ -764,8 +764,10 @@ public class DefaultSchemaContext implements SchemaContext {
                 systemEntity.setPartition(new SystemPartition(descriptor.getPartition(), systemEntity));
             }
 
-            systemEntity.getPartition().getEntries().add(new SystemPartitionEntry(descriptor, descriptor.getPartition(),
-                    systemEntity.getPartition(), partitions.incrementAndGet()));
+            SystemPartitionEntry entry = new SystemPartitionEntry(descriptor, descriptor.getPartition(),
+                    systemEntity.getPartition(), partitions.incrementAndGet());
+            systemEntity.getPartition().getEntries().add(entry);
+            systemPersistenceManager.saveEntity(entry);
         }
     }
 
@@ -1025,9 +1027,6 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     protected Consumer<IndexDescriptor> rebuildIndexConsumer = indexDescriptor ->
     {
-
-        context.addQueryLock();
-
         try {
 
             final SystemEntity systemEntity = getSystemEntityByName(indexDescriptor.getEntityDescriptor().getClazz().getName());
@@ -1068,9 +1067,6 @@ public class DefaultSchemaContext implements SchemaContext {
                 indexBuildThread.run();
             }
         } catch (EntityException ignore) {
-
-        } finally {
-            context.releaseQueryLock();
         }
     };
 }

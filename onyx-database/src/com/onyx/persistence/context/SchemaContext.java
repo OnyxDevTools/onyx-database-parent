@@ -318,25 +318,4 @@ public interface SchemaContext
      */
     TransactionController getTransactionController();
 
-    /**
-     * Add a query lock in order to prevent storage de-allocation.  Storage that disappears makes
-     * concurrent queries hard.  So, we prevent cleanup of those queries.
-     *
-     * @since 1.0.2
-     */
-    default void addQueryLock()
-    {
-
-    }
-
-    /**
-     * Release query lock.  Actually this just decrements the lock count.  When the lock count hits 0, the
-     * observable count down fires and invokes a de-allocation sweep.
-     *
-     * @since 1.0.2
-     */
-    default void releaseQueryLock()
-    {
-
-    }
 }

@@ -36,7 +36,7 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
         {
             (getType().getName() + getName() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
         }
-        return (getType().getName() + getName()).hashCode();
+        return (getType().getName() + getName() + entityDescriptor.getClazz().getName()).hashCode();
     }
 
     /**
@@ -50,6 +50,12 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
         if(val instanceof IndexDescriptor)
         {
             IndexDescriptor comparison = (IndexDescriptor) val;
+
+            if(!entityDescriptor.clazz.getName().equals(comparison.entityDescriptor.clazz.getName()))
+            {
+                return false;
+            }
+
             if(entityDescriptor.getPartition() != null && comparison.getEntityDescriptor().getPartition() != null)
             {
                 return (comparison.getType().getName().equals(getType().getName())

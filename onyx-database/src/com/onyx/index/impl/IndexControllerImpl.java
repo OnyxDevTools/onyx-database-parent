@@ -66,8 +66,12 @@ public class IndexControllerImpl implements IndexController {
         }
 
         if(indexValue != null) {
-            Set<Long> longs = references.computeIfAbsent(indexValue, o -> dataFile.newHashSet());
-            longs.add(reference);
+            references.compute(indexValue, (o, longs) -> {
+                if(longs == null)
+                    longs = dataFile.newHashSet();
+                longs.add(reference);
+                return longs;
+            });
             indexValues.compute(reference, (aLong, o) -> indexValue);
         }
     }

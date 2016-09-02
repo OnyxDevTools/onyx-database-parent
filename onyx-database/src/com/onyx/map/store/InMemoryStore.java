@@ -6,6 +6,7 @@ import com.onyx.persistence.context.SchemaContext;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -13,17 +14,16 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class InMemoryStore extends MemoryMappedStore implements Store {
 
-
     /**
      * Constructor open file
      *
      * @param builder
      */
-    public InMemoryStore(MapBuilder builder, SchemaContext context) {
+    public InMemoryStore(MapBuilder builder, SchemaContext context, String storeId) {
         super();
         this.builder = builder;
         this.context = context;
-        open(null);
+        open(storeId);
         this.setSize();
     }
 
@@ -35,6 +35,7 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
      */
     public synchronized boolean open(String filePath) {
 
+        this.filePath = filePath;
         slices = new ConcurrentHashMap();
 
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
