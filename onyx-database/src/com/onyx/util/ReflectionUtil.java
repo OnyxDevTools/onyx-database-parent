@@ -500,7 +500,8 @@ public class ReflectionUtil
     public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException,AttributeTypeMismatchException
     {
         if(theUnsafe != null) {
-            if(value == null || offsetField.field.getType().isAssignableFrom(value.getClass()))
+            if(value == null || offsetField.field.getType().isAssignableFrom(value.getClass())
+                    || value.getClass().isArray() && offsetField.field.getType().isArray())
                 theUnsafe.putObject(parent, offsetField.offset, value);
             else
                 throw new AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, value.getClass(), offsetField.field.getType(), offsetField.name);
