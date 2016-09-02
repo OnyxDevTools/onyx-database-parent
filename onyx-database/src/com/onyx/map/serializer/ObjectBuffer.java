@@ -541,8 +541,8 @@ public class ObjectBuffer
     public int wrapClass(Class value)
     {
 
-        byte[] classNameBytes = value.getCanonicalName().getBytes(CHARSET);
-        short classNameLength = (short)value.getCanonicalName().length();
+        byte[] classNameBytes = value.getName().getBytes(CHARSET);
+        short classNameLength = (short)value.getName().length();
 
         ensureCapacity(Short.BYTES + Byte.BYTES + classNameBytes.length);
 
@@ -708,7 +708,7 @@ public class ObjectBuffer
      */
     public int wrapEnum(Enum<?> enumValue)
     {
-        final byte[] stringBytes = enumValue.getDeclaringClass().getCanonicalName().getBytes(CHARSET);
+        final byte[] stringBytes = enumValue.getDeclaringClass().getName().getBytes(CHARSET);
         final byte[] nameBytes = enumValue.name().getBytes(CHARSET);
 
         ensureCapacity(Byte.BYTES + stringBytes.length + nameBytes.length + Short.BYTES + Short.BYTES);
@@ -734,12 +734,12 @@ public class ObjectBuffer
     {
 
         int bufferPosition = buffer.position();
-        Short customType = serializers.getSerializerId(value.getClass().getCanonicalName());
+        Short customType = serializers.getSerializerId(value.getClass().getName());
 
         // Create a new custom serializer
         if(customType == null)
         {
-            customType = serializers.add(value.getClass().getCanonicalName());
+            customType = serializers.add(value.getClass().getName());
         }
 
         ensureCapacity(Byte.BYTES + Short.BYTES);
@@ -1231,7 +1231,7 @@ public class ObjectBuffer
         if(value instanceof ManagedEntity && this.serializers != null && this.serializers.context != null)
         {
             try {
-                return this.serializers.context.getSystemEntityByName(value.getClass().getCanonicalName()).getPrimaryKey();
+                return this.serializers.context.getSystemEntityByName(value.getClass().getName()).getPrimaryKey();
             } catch (Exception e) {
                 return 0;
             }

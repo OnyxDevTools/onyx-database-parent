@@ -675,7 +675,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         if (relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
 
         RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
@@ -946,7 +946,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         if (relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getName());
         }
 
         Set<RelationshipReference> references = new HashSet<>();

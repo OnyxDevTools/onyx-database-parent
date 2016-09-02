@@ -32,7 +32,7 @@ public class EntityRelationshipManager
      */
     public boolean contains(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException
     {
-        final String className = entity.getClass().getCanonicalName();
+        final String className = entity.getClass().getName();
 
         if(!entities.containsKey(className))
         {
@@ -58,7 +58,7 @@ public class EntityRelationshipManager
      */
     public void add(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException
     {
-        final String className = entity.getClass().getCanonicalName();
+        final String className = entity.getClass().getName();
 
         if(!entities.containsKey(className))
         {
@@ -78,7 +78,7 @@ public class EntityRelationshipManager
      */
     public IManagedEntity get(IManagedEntity entity, IndexDescriptor descriptor) throws AttributeMissingException
     {
-        final String className = entity.getClass().getCanonicalName();
+        final String className = entity.getClass().getName();
 
         if(!entities.containsKey(className))
         {

@@ -77,7 +77,7 @@ public class AbstractRelationshipController extends PartitionContext
                 || defaultInverseRelationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY )
         {
             // Get the Data Map that corresponds to the inverse relationship
-            final Map<Object, Set<Object>> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Set<Object>> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
 
             // Synchronized since we are saving the entire set
             synchronized (relationshipMap)
@@ -112,7 +112,7 @@ public class AbstractRelationshipController extends PartitionContext
         // It is a to One Relationship
         else
         {
-            final Map<Object, Object> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Object> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
             relationshipMap.put(childIdentifier, parentIdentifier);
 
             setRelationshipValue(defaultInverseRelationshipDescriptor, childEntity, parentEntity);
@@ -136,7 +136,7 @@ public class AbstractRelationshipController extends PartitionContext
                 || defaultInverseRelationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY )
         {
             // Get the Data Map that corresponds to the inverse relationship
-            final Map<Object, Set<Object>> relationshipMap = getDataFileWithPartitionId(childIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Set<Object>> relationshipMap = getDataFileWithPartitionId(childIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
 
             // Synchronized since we are saving the entire set
             synchronized (relationshipMap)
@@ -157,7 +157,7 @@ public class AbstractRelationshipController extends PartitionContext
         // It is a to One Relationship
         else
         {
-            final Map<Object, Object> relationshipMap = getDataFileWithPartitionId(parentIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Object> relationshipMap = getDataFileWithPartitionId(parentIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
             relationshipMap.remove(childIdentifier);
         }
     }

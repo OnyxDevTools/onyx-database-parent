@@ -11,8 +11,9 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -22,7 +23,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
 
     public static final int SLICE_SIZE = ((1024 * 1024) * 3);
 
-    public List<FileSlice> slices;
+    public Map<Integer, FileSlice> slices;
 
     public MemoryMappedStore()
     {
@@ -50,21 +51,13 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             // Open the file Channel
             super.open(filePath);
 
-            slices = new ArrayList<>();
+            slices = new ConcurrentHashMap<>();
             long fileSize = this.fileSize.get();
 
-
-            // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
-            // using an int for position.  We are gonna bust that.
-            long offset = 0;
-            MappedByteBuffer buffer = null;
-
-            while (fileSize > 0) {
-                buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, SLICE_SIZE);
-                slices.add(new FileSlice(buffer, new ReentrantLock(true)));
-                offset += SLICE_SIZE;
-                fileSize -= SLICE_SIZE;
-            }
+            // Load the first chunk into memory
+            slices = new HashMap<>();
+            MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, SLICE_SIZE);
+            slices.put(0, new FileSlice(buffer, new ReentrantLock(true)));
 
         } catch (FileNotFoundException e) {
             return false;
@@ -83,7 +76,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     public synchronized boolean close() {
         try {
 
-            this.slices.forEach(file ->
+            this.slices.values().forEach(file ->
             {
                 file.flush();
             });
@@ -183,7 +176,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         final FileSlice slice = getBuffer(position);
 
         int bufLocation = getBufferLocation(position);
-        int endBufLocation = bufLocation + buffer.array().length;
+        int endBufLocation = bufLocation + buffer.limit();
 
         // This occurs when we bridge from one slice to another
         if (endBufLocation >= SLICE_SIZE) {
@@ -264,25 +257,23 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             index = (int) (position / SLICE_SIZE);
         }
 
-        synchronized (slices) {
-            if (index >= slices.size()) {
-                long offset = (SLICE_SIZE * (long) index);
-                ByteBuffer buffer = null;
-                try {
-                    buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, SLICE_SIZE);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                slices.add(new FileSlice(buffer, new ReentrantLock(true)));
-            }
-        }
+        final int finalIndex = index;
 
-        try {
-            return slices.get(index);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        return slices.compute(index, (integer, fileSlice) -> {
+            if(fileSlice != null)
+                return fileSlice;
+
+            long offset = ((long)SLICE_SIZE * (long) finalIndex);
+            ByteBuffer buffer = null;
+            try {
+                buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, SLICE_SIZE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            FileSlice newFileSize = new FileSlice(buffer, new ReentrantLock(true));
+            return newFileSize;
+        });
     }
 
     /**
@@ -441,11 +432,12 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      */
     @Override
     public void commit() {
-        for (int i = 0; i < slices.size(); i++) {
-            if (slices.get(i).buffer instanceof MappedByteBuffer) {
-                ((MappedByteBuffer)slices.get(i).buffer).force();
+        slices.values().forEach(fileSlice -> {
+            if(fileSlice.buffer instanceof MappedByteBuffer)
+            {
+                ((MappedByteBuffer)fileSlice.buffer).force();
             }
-        }
+        });
     }
 }
 

@@ -42,7 +42,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(entityDescriptor, relationshipDescriptor, context);
-        records = (DiskMap) dataFile.getHashMap(entityDescriptor.getClazz().getCanonicalName() + relationshipDescriptor.getName());
+        records = (DiskMap) dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
     /**
@@ -271,7 +271,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 if (relationshipObject == null)
                 {
-                    throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getCanonicalName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
+                    throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
                 }
 
                 if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))

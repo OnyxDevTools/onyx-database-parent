@@ -11,17 +11,29 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Created by timothy.osborn on 3/25/15.
  */
 public class DefaultMapBuilder implements MapBuilder
 {
+    protected static final Map<String, MapBuilder> mapBuilderByPaths = new HashMap();
 
     protected Store storage = null;
 
     // Contains all initialized maps
     protected Map<String, Map> maps = new HashMap();
+
+    // Contains all initialized maps
+    protected Map<String, Set> sets = new HashMap();
+
+    // Contains all initialized maps
+    protected Map<Header, Set> setsByHeader = new WeakHashMap();
+
+    // Contains all initialized maps
+    protected Map<Header, Map> mapsByHeader = new WeakHashMap();
 
     /**
      * Constructor
@@ -49,15 +61,19 @@ public class DefaultMapBuilder implements MapBuilder
      *
      * @param filePath
      */
+    @SuppressWarnings("unused")
     public DefaultMapBuilder(String filePath, StoreType type)
     {
         this(filePath, type, null);
     }
 
     /**
-     * Constructor
+     * Constructor for a database
      *
-     * @param filePath
+     * @param filePath File path to hold the disk map data
+     * @param type Storage type
+     * @param context Database Schema context
+     * @since 1.0.0
      */
     public DefaultMapBuilder(String filePath, StoreType type, SchemaContext context)
     {
@@ -67,7 +83,8 @@ public class DefaultMapBuilder implements MapBuilder
     /**
      * Constructor
      *
-     * @param filePath
+     * @param filePath File path to hold the disk map data
+     * @since 1.0.0
      */
     public DefaultMapBuilder(String fileSystemPath, String filePath, StoreType type, SchemaContext context)
     {
@@ -78,6 +95,7 @@ public class DefaultMapBuilder implements MapBuilder
         else
             path = fileSystemPath + File.separator + filePath;
 
+        mapBuilderByPaths.put(path, this);
 
         if(type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported())
         {
@@ -97,10 +115,70 @@ public class DefaultMapBuilder implements MapBuilder
     }
 
     /**
+     * Method returns an instance of a hash set
+     * @param name Name of the hash set
+     * @since 1.0.2
+     * @return HashSet instance
+     */
+    public synchronized Set getHashSet(String name) {
+
+        // If it is already initialized, return it
+        if (sets.containsKey(name)) {
+            return sets.get(name);
+        }
+
+        final DiskMap underlyingHashMap = (DiskMap)getHashMap(name + "$Map");
+        return newDiskSet(underlyingHashMap);
+    }
+
+    /**
+     * Method returns an instance of a hash set
+     * @param header Reference of the hash set
+     * @since 1.0.2
+     * @return HashSet instance
+     */
+    public Set getHashSet(Header header) {
+
+        return setsByHeader.compute(header, (header1, set) -> {
+            if(set != null)
+                return set;
+
+            final DiskMap underlyingDiskMap = (DiskMap)getDiskMap(header1);
+            return newDiskSet(underlyingDiskMap);
+        });
+    }
+
+    /**
+     * Get Disk Map with header reference
+     * @param header reference within storage
+     * @return Instantiated disk map
+     * @since 1.0.0
+     */
+    public Map getDiskMap(Header header)
+    {
+        return mapsByHeader.compute(header, (header1, map) -> {
+            if(map != null)
+                return map;
+
+            return newDiskMap(storage, header);
+        });
+    }
+    /**
+     * Instantiate the disk set with an underlying disk map
+     * @param underlyingDiskMap The thing that drives the hashing and the storge of the data
+     * @return Instantiated Disk Set instance
+     * @since 1.0.2
+     */
+    protected Set newDiskSet(DiskMap underlyingDiskMap)
+    {
+        return new DefaultDiskSet<>(underlyingDiskMap, underlyingDiskMap.getReference());
+    }
+
+    /**
      * Method get returns an instance of a hashmap
      *
-     * @param name
-     * @return
+     * @param name Instance Name
+     * @return An instantiated or existing hash map
      */
     public synchronized Map getHashMap(String name) {
         // If it is already initialized, return it
@@ -232,5 +310,30 @@ public class DefaultMapBuilder implements MapBuilder
         }
 
         return newDiskMap;
+    }
+
+    public synchronized Set newHashSet()
+    {
+        // Create a new header for the new map we are creating
+        Header newHeader = new Header();
+        newHeader.position = storage.allocate(Header.HEADER_SIZE);
+        newHeader.idSize = 0;
+        storage.write(newHeader, newHeader.position); //Write the new header
+
+        // Create a new disk map and return it
+        final DiskMap underlyingDiskMap = newDiskMap(storage, newHeader);
+        Set set = newDiskSet(underlyingDiskMap);
+        setsByHeader.put(newHeader, set);
+        return set;
+    }
+
+    /**
+     * Returns the map builder used for the specific file path.  There can only be a single map builder per file.
+     * @param path File path for the Map Builder's storage
+     * @return MapBuilder registered for that path.  Null if it does not exist.
+     */
+    public static final MapBuilder getMapBuilder(String path)
+    {
+        return mapBuilderByPaths.get(path);
     }
 }

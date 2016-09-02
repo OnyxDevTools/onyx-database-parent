@@ -19,7 +19,7 @@ public class AttributeTypeMismatchException extends EntityException
      */
     public AttributeTypeMismatchException(String message, Class expectedClass, Class actualClass, String attribute)
     {
-        super(message + expectedClass.getCanonicalName() + " actual " + actualClass.getCanonicalName() + " for attribute " + attribute);
+        super(message + expectedClass.getName() + " actual " + actualClass.getName() + " for attribute " + attribute);
         this.attribute = attribute;
         this.expectedClass = expectedClass;
         this.actualClass = actualClass;

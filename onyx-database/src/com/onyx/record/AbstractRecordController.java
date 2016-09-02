@@ -37,7 +37,7 @@ public abstract class AbstractRecordController
         this.context = context;
         this.entityDescriptor = descriptor;
         dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getCanonicalName());
+        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName());
     }
 
     /**
@@ -127,17 +127,9 @@ public abstract class AbstractRecordController
      */
     public static Object getIndexValueFromEntity(IManagedEntity entity, BaseDescriptor indexDescriptor) throws AttributeMissingException
     {
-        try
-        {
-            // Use reflection to get the value
-            final Field field = ReflectionUtil.getField(entity.getClass(), indexDescriptor.getName());
-            // If it is a private field, lets set it accessible
-            if (!field.isAccessible())
-                field.setAccessible(true);
-            return field.get(entity);
-        } catch (IllegalAccessException e)
-        {
-            // Hmmm, setting accessible didnt work, must not have permission
+        try {
+            return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), indexDescriptor.getName()));
+        } catch (AttributeTypeMismatchException e) {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e);
         }
     }

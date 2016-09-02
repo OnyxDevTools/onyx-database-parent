@@ -73,12 +73,12 @@ public class EntityClassLoader
         new File(outputDirectory).mkdirs();
 
         final Map<String, Object> values = new HashMap();
-        values.put("className", descriptor.getClazz().getCanonicalName().replace(descriptor.getClazz().getPackage().getName() + ".", ""));
+        values.put("className", descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", ""));
         values.put("packageName", descriptor.getClazz().getPackage().getName());
         values.put("generatorType",
             descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
             descriptor.getIdentifier().getGenerator().name());
-        values.put("idType", descriptor.getIdentifier().getType().getCanonicalName());
+        values.put("idType", descriptor.getIdentifier().getType().getName());
         values.put("idName", descriptor.getIdentifier().getName());
 
         final List<Map<String, Object>> attributes = new ArrayList<>();
@@ -96,7 +96,7 @@ public class EntityClassLoader
 
             attributeMap = new HashMap();
             attributeMap.put("name", attribute.getName());
-            attributeMap.put("type", attribute.getType().getCanonicalName());
+            attributeMap.put("type", attribute.getType().getName());
 
             attributeMap.put("isPartition",
                 ((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName())));
@@ -120,17 +120,17 @@ public class EntityClassLoader
             if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY) ||
                     (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY))
             {
-                final String genericType = relationship.getInverseClass().getCanonicalName();
-                final String collectionClass = relationship.getType().getCanonicalName();
+                final String genericType = relationship.getInverseClass().getName();
+                final String collectionClass = relationship.getType().getName();
                 final String type = collectionClass + "<" + genericType + ">";
                 relationshipMap.put("type", type);
             }
             else
             {
-                relationshipMap.put("type", relationship.getType().getCanonicalName());
+                relationshipMap.put("type", relationship.getType().getName());
             }
 
-            relationshipMap.put("inverseClass", relationship.getInverseClass().getCanonicalName());
+            relationshipMap.put("inverseClass", relationship.getInverseClass().getName());
             relationshipMap.put("inverse", relationship.getInverse());
             relationshipMap.put("fetchPolicy",
                 relationship.getFetchPolicy().getDeclaringClass().getName() + "." + relationship.getFetchPolicy().name());
@@ -140,7 +140,7 @@ public class EntityClassLoader
             relationshipMap.put("relationshipType",
                 relationship.getRelationshipType().getDeclaringClass().getName() + "." + relationship.getRelationshipType().name());
 
-            relationshipMap.put("parentClass", relationship.getParentClass().getCanonicalName());
+            relationshipMap.put("parentClass", relationship.getParentClass().getName());
 
             relationships.add(relationshipMap);
         }
@@ -150,12 +150,12 @@ public class EntityClassLoader
 
             // File output
             final File classFile = new File(outputDirectory + File.separator +
-                    descriptor.getClazz().getCanonicalName().replaceAll("\\.", "/") + ".java");
+                    descriptor.getClazz().getName().replaceAll("\\.", "/") + ".java");
             classFile.getParentFile().mkdirs();
             classFile.createNewFile();
 
             final Writer file = new FileWriter(outputDirectory + File.separator +
-                    descriptor.getClazz().getCanonicalName().replaceAll("\\.", "/") + ".java");
+                    descriptor.getClazz().getName().replaceAll("\\.", "/") + ".java");
 
             CLASS_TEMPLATE.execute(file, values);
             file.flush();
@@ -186,7 +186,7 @@ public class EntityClassLoader
         final Map<String, Object> values = new HashMap();
         values.put("className", systemEntity.getClassName());
         values.put("packageName", systemEntity.getName().replace("."+systemEntity.getClassName(), ""));
-        values.put("generatorType", IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getCanonicalName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString());
+        values.put("generatorType", IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString());
 
         for(SystemAttribute attribute : systemEntity.getAttributes())
         {
@@ -243,7 +243,7 @@ public class EntityClassLoader
                     (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()))
             {
                 final String genericType = relationship.getInverseClass();
-                final String collectionClass = List.class.getCanonicalName();
+                final String collectionClass = List.class.getName();
                 final String type = collectionClass + "<" + genericType + ">";
                 relationshipMap.put("type", type);
             }
@@ -347,7 +347,7 @@ public class EntityClassLoader
                     path = path.replaceAll("\\.java", "");
                     path = path.replaceAll("\\\\", ".");
                     path = path.replaceAll("/", ".");
-                    LOADED_CLASSES.add(systemClassLoader.loadClass(path).getCanonicalName());
+                    LOADED_CLASSES.add(systemClassLoader.loadClass(path).getName());
                 }
                 catch (ClassNotFoundException ex)
                 {

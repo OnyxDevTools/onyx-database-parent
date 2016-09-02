@@ -339,7 +339,7 @@ public class EntityDescriptor implements Serializable
             if (!interfaceFound)
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND + ": " +
-                    descriptor.inverseClass.getCanonicalName(), clazz);
+                    descriptor.inverseClass.getName(), clazz);
             }
 
             final boolean extensionFound = ManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
@@ -347,7 +347,7 @@ public class EntityDescriptor implements Serializable
             if (!extensionFound)
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_BASE_NOT_FOUND + ": " +
-                        descriptor.inverseClass.getCanonicalName(), clazz);
+                        descriptor.inverseClass.getName(), clazz);
             }
 
             if ((descriptor.getType() != descriptor.getInverseClass()) &&
@@ -362,7 +362,7 @@ public class EntityDescriptor implements Serializable
                         (descriptor.getRelationshipType() == RelationshipType.ONE_TO_ONE)))
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " +
-                    descriptor.inverseClass.getCanonicalName(), clazz);
+                    descriptor.inverseClass.getName(), clazz);
             }
 
             if ((descriptor.inverse != null) && (descriptor.inverse.length() > 0) &&
@@ -463,19 +463,19 @@ public class EntityDescriptor implements Serializable
         for (final AttributeDescriptor attribute : this.attributes.values())
         {
 
-            if (!attribute.getType().getCanonicalName().equals(Date.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(Long.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(long.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(Integer.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(int.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(String.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(Double.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(double.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(boolean.class.getCanonicalName()) &&
-                    !attribute.getType().getCanonicalName().equals(Boolean.class.getCanonicalName()))
+            if (!attribute.getType().getName().equals(Date.class.getName()) &&
+                    !attribute.getType().getName().equals(Long.class.getName()) &&
+                    !attribute.getType().getName().equals(long.class.getName()) &&
+                    !attribute.getType().getName().equals(Integer.class.getName()) &&
+                    !attribute.getType().getName().equals(int.class.getName()) &&
+                    !attribute.getType().getName().equals(String.class.getName()) &&
+                    !attribute.getType().getName().equals(Double.class.getName()) &&
+                    !attribute.getType().getName().equals(double.class.getName()) &&
+                    !attribute.getType().getName().equals(boolean.class.getName()) &&
+                    !attribute.getType().getName().equals(Boolean.class.getName()))
             {
                 throw new EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " +
-                    attribute.getClass().getCanonicalName());
+                    attribute.getClass().getName());
             }
         }
     }
@@ -501,12 +501,12 @@ public class EntityDescriptor implements Serializable
                 throw new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_MISSING_ATTRIBUTE);
             }
 
-            if (!idField.getType().getCanonicalName().equals(Date.class.getCanonicalName()) &&
-                    !idField.getType().getCanonicalName().equals(Long.class.getCanonicalName()) &&
-                    !idField.getType().getCanonicalName().equals(long.class.getCanonicalName()) &&
-                    !idField.getType().getCanonicalName().equals(Integer.class.getCanonicalName()) &&
-                    !idField.getType().getCanonicalName().equals(int.class.getCanonicalName()) &&
-                    !idField.getType().getCanonicalName().equals(String.class.getCanonicalName()))
+            if (!idField.getType().getName().equals(Date.class.getName()) &&
+                    !idField.getType().getName().equals(Long.class.getName()) &&
+                    !idField.getType().getName().equals(long.class.getName()) &&
+                    !idField.getType().getName().equals(Integer.class.getName()) &&
+                    !idField.getType().getName().equals(int.class.getName()) &&
+                    !idField.getType().getName().equals(String.class.getName()))
             {
                 throw new InvalidIdentifierException(InvalidIdentifierException.IDENTIFIER_TYPE);
             }
@@ -537,10 +537,10 @@ public class EntityDescriptor implements Serializable
     {
         if (this.getPartition() == null)
         {
-            return clazz.getCanonicalName().hashCode();
+            return clazz.getName().hashCode();
         }
 
-        return (clazz.getCanonicalName() + this.getPartition().getPartitionValue()).hashCode();
+        return (clazz.getName() + this.getPartition().getPartitionValue()).hashCode();
     }
 
     /**
@@ -573,7 +573,7 @@ public class EntityDescriptor implements Serializable
             {
                 rebuildIndexConsumer.accept(indexDescriptor);
             }
-            else if ((systemIndex != null) && !indexDescriptor.getType().getCanonicalName().equals(systemIndex.getType()))
+            else if ((systemIndex != null) && !indexDescriptor.getType().getName().equals(systemIndex.getType()))
             {
                 rebuildIndexConsumer.accept(indexDescriptor);
             }
@@ -608,8 +608,8 @@ public class EntityDescriptor implements Serializable
             relationshipDescriptor = relationshipDescriptorIterator.next();
             systemRelationship = relationshipMap.get(relationshipDescriptor.getName());
 
-            if ((systemRelationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()) ||
-                    (systemRelationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()))
+            if (systemRelationship != null && (systemRelationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()) ||
+                    (systemRelationship != null && systemRelationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()))
             {
 
                 if ((relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_ONE) ||
@@ -648,7 +648,7 @@ public class EntityDescriptor implements Serializable
                 {
                     return false;
                 }
-                else if (!this.attributes.get(systemAttribute.getName()).getType().getCanonicalName().equals(systemAttribute.getDataType()))
+                else if (!this.attributes.get(systemAttribute.getName()).getType().getName().equals(systemAttribute.getDataType()))
                 {
                     return false;
                 }
@@ -667,7 +667,7 @@ public class EntityDescriptor implements Serializable
                     if (systemAttribute.getName().equals(attributeEntry.getKey()))
                     {
 
-                        if (!attributeEntry.getValue().getType().getCanonicalName().equals(systemAttribute.getDataType()))
+                        if (!attributeEntry.getValue().getType().getName().equals(systemAttribute.getDataType()))
                         {
                             return false;
                         }
@@ -698,13 +698,13 @@ public class EntityDescriptor implements Serializable
                     return false;
                 }
                 else if (
-                    !this.relationships.get(systemRelationship.getName()).getInverseClass().getCanonicalName().equals(
+                    !this.relationships.get(systemRelationship.getName()).getInverseClass().getName().equals(
                             systemRelationship.getInverseClass()))
                 {
                     return false;
                 }
                 else if (
-                    !this.relationships.get(systemRelationship.getName()).getParentClass().getCanonicalName().equals(
+                    !this.relationships.get(systemRelationship.getName()).getParentClass().getName().equals(
                             systemRelationship.getParentClass()))
                 {
                     return false;
@@ -724,12 +724,12 @@ public class EntityDescriptor implements Serializable
                     if (systemRelationship.getName().equals(relationshipEntry.getKey()))
                     {
 
-                        if (!relationshipEntry.getValue().getInverseClass().getCanonicalName().equals(systemRelationship.getInverseClass()))
+                        if (!relationshipEntry.getValue().getInverseClass().getName().equals(systemRelationship.getInverseClass()))
                         {
                             return false;
                         }
                         else if (
-                            !relationshipEntry.getValue().getParentClass().getCanonicalName().equals(systemRelationship.getParentClass()))
+                            !relationshipEntry.getValue().getParentClass().getName().equals(systemRelationship.getParentClass()))
                         {
                             return false;
                         }
@@ -756,7 +756,7 @@ public class EntityDescriptor implements Serializable
 
             if ((compare.getPartition() == null) && (this.getPartition() == null))
             {
-                return (((EntityDescriptor) val).getClazz().getCanonicalName().equals(getClazz().getCanonicalName()));
+                return (((EntityDescriptor) val).getClazz().getName().equals(getClazz().getName()));
             }
             else if (compare.getPartition() == null)
             {
@@ -771,7 +771,7 @@ public class EntityDescriptor implements Serializable
 
                 try
                 {
-                    return CompareUtil.compare(compare.getClazz().getCanonicalName(), this.getClazz().getCanonicalName(),
+                    return CompareUtil.compare(compare.getClazz().getName(), this.getClazz().getName(),
                             QueryCriteriaOperator.EQUAL) &&
                         CompareUtil.compare(compare.getPartition().getPartitionValue(), this.getPartition().getPartitionValue(),
                             QueryCriteriaOperator.EQUAL);

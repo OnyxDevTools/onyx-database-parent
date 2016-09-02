@@ -12,8 +12,8 @@ public interface ObjectSerializable extends Serializable
 
     void readObject(ObjectBuffer buffer) throws IOException;
 
-    void readObject(ObjectBuffer buffer, long position) throws IOException;
+    default void readObject(ObjectBuffer buffer, long position) throws IOException{}
 
-    void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException;
+    default void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException{}
 
 }

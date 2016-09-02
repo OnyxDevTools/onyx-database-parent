@@ -106,9 +106,9 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
     {
         if(entityDescriptor.getPartition() != null)
         {
-            return (getParentClass().getCanonicalName() + getName() + getInverseClass().getCanonicalName() + getInverse() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
+            return (getParentClass().getName() + getName() + getInverseClass().getName() + getInverse() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
         }
-        return (getParentClass().getCanonicalName() + name + getInverseClass().getCanonicalName() + getInverse()).hashCode();
+        return (getParentClass().getName() + name + getInverseClass().getName() + getInverse()).hashCode();
     }
 
     /**
@@ -124,9 +124,9 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
             RelationshipDescriptor comparison = (RelationshipDescriptor) val;
             if(entityDescriptor.getPartition() != null && comparison.getEntityDescriptor().getPartition() != null)
             {
-                return (((RelationshipDescriptor) val).getParentClass().getCanonicalName().equals(getParentClass().getCanonicalName())
+                return (((RelationshipDescriptor) val).getParentClass().getName().equals(getParentClass().getName())
                         && ((RelationshipDescriptor) val).getName().equals(getName())
-                        && ((RelationshipDescriptor) val).getInverseClass().getCanonicalName().equals(getInverseClass().getCanonicalName())
+                        && ((RelationshipDescriptor) val).getInverseClass().getName().equals(getInverseClass().getName())
                         && ((RelationshipDescriptor) val).getInverse().equals(getInverse())
                         && entityDescriptor.getPartition().getPartitionValue().equals(comparison.getEntityDescriptor().getPartition().getPartitionValue()));
             }
@@ -139,9 +139,9 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
                 return false;
             }
 
-            return (((RelationshipDescriptor) val).getParentClass().getCanonicalName().equals(getParentClass().getCanonicalName())
+            return (((RelationshipDescriptor) val).getParentClass().getName().equals(getParentClass().getName())
             && ((RelationshipDescriptor) val).getName().equals(getName())
-            && ((RelationshipDescriptor) val).getInverseClass().getCanonicalName().equals(getInverseClass().getCanonicalName())
+            && ((RelationshipDescriptor) val).getInverseClass().getName().equals(getInverseClass().getName())
             && ((RelationshipDescriptor) val).getInverse().equals(getInverse()));
         }
 

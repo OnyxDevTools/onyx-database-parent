@@ -103,7 +103,7 @@ public class PartitionContext
         @Override
         public int hashCode()
         {
-            return this.entityType.getCanonicalName().hashCode() + this.partitionVal.hashCode();
+            return this.entityType.getName().hashCode() + this.partitionVal.hashCode();
         }
 
         public boolean equals(Object val)

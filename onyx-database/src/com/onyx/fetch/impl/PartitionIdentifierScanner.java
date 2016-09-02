@@ -39,7 +39,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     public PartitionIdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-        systemEntity = context.getSystemEntityByName(query.getEntityType().getCanonicalName());
+        systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
     }
 
     /**

@@ -5,7 +5,7 @@ import com.onyx.map.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -35,22 +35,14 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
      */
     public synchronized boolean open(String filePath) {
 
-        slices = new ArrayList<>();
-        long fileSize = this.fileSize.get();
-
+        slices = new ConcurrentHashMap();
 
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
         // using an int for position.  We are gonna bust that.
-        long offset = 0;
         ByteBuffer buffer = null;
 
-        while (fileSize > 0) {
-            buffer = ObjectBuffer.allocate(SLICE_SIZE);
-            slices.add(new FileSlice(buffer, new ReentrantLock(true)));
-            offset += SLICE_SIZE;
-            fileSize -= SLICE_SIZE;
-        }
-
+        buffer = ObjectBuffer.allocate(SLICE_SIZE);
+        slices.put(0, new FileSlice(buffer, new ReentrantLock(true)));
 
         return true;
     }
@@ -69,19 +61,14 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
             index = (int) (position / SLICE_SIZE);
         }
 
-        synchronized (slices) {
-            if (index >= slices.size()) {
-                ByteBuffer buffer = ObjectBuffer.allocate(SLICE_SIZE);
-                slices.add(new FileSlice(buffer, new ReentrantLock(true)));
-            }
-        }
+        return slices.compute(index, (integer, fileSlice) -> {
+            if(fileSlice != null)
+                return fileSlice;
 
-        try {
-            return slices.get(index);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+            ByteBuffer buffer = ObjectBuffer.allocate(SLICE_SIZE);
+            return new FileSlice(buffer, new ReentrantLock(true));
+        });
+
     }
 
     @Override

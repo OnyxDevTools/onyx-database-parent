@@ -23,7 +23,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
         this.name = descriptor.getName();
         this.id = entity.getName() + descriptor.getName();
         this.size = descriptor.getSize();
-        this.dataType = descriptor.getType().getCanonicalName();
+        this.dataType = descriptor.getType().getName();
         this.nullable = descriptor.isNullable();
         this.key = descriptor.getName().equals(entity.getIdentifier().getName());
     }

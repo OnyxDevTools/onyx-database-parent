@@ -293,7 +293,7 @@ public class BufferStream {
 
         addReference(type);
 
-        final String className = type.getCanonicalName();
+        final String className = type.getName();
         byte[] stringBytes = className.getBytes();
 
         putInt(stringBytes.length);
@@ -313,7 +313,7 @@ public class BufferStream {
     public void putCollection(Collection collection) throws BufferingException {
 
         try {
-            Class clazz = Class.forName(collection.getClass().getCanonicalName());
+            Class clazz = Class.forName(collection.getClass().getName());
             putObject(clazz);
         } catch (ClassNotFoundException e) {
             putObject(ArrayList.class);
@@ -339,7 +339,7 @@ public class BufferStream {
     public void putMap(Map map) throws BufferingException {
 
         try {
-            Class clazz = Class.forName(map.getClass().getCanonicalName());
+            Class clazz = Class.forName(map.getClass().getName());
             putObject(clazz);
         } catch (ClassNotFoundException e) {
             putObject(HashMap.class);

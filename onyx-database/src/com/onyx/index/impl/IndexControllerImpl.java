@@ -12,7 +12,6 @@ import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 
 import java.util.*;
-import java.util.function.BiFunction;
 
 /**
  * Created by timothy.osborn on 1/29/15.
@@ -47,8 +46,8 @@ public class IndexControllerImpl implements IndexController {
         this.indexDescriptor = indexDescriptor;
         this.recordController = context.getRecordController(descriptor);
 
-        references = dataFile.getHashMap(descriptor.getClazz().getCanonicalName() + indexDescriptor.getName());
-        indexValues = dataFile.getHashMap(descriptor.getClazz().getCanonicalName() + indexDescriptor.getName() + "indexValues");
+        references = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName());
+        indexValues = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues");
     }
 
     /**
@@ -67,18 +66,8 @@ public class IndexControllerImpl implements IndexController {
         }
 
         if(indexValue != null) {
-            references.compute(indexValue, (o, longs) -> {
-                if (longs == null) {
-                    longs = new HashSet<Long>();
-                }
-                synchronized (longs) {
-                    longs.add(reference);
-                }
-                // Add previous index value
-
-                return longs;
-            });
-
+            Set<Long> longs = references.computeIfAbsent(indexValue, o -> dataFile.newHashSet());
+            longs.add(reference);
             indexValues.compute(reference, (aLong, o) -> indexValue);
         }
     }
@@ -96,15 +85,9 @@ public class IndexControllerImpl implements IndexController {
             Object indexValue = indexValues.remove(reference);
             if (indexValue != null)
             {
-                references.computeIfPresent(indexValue, new BiFunction<Object, Set<Long>, Set<Long>>() {
-                    @Override
-                    public Set<Long> apply(Object o, Set<Long> longs)
-                    {
-                        synchronized (longs) {
-                            longs.remove(reference);
-                        }
-                        return longs;
-                    }
+                references.computeIfPresent(indexValue, (o, longs) -> {
+                    longs.remove(reference);
+                    return longs;
                 });
             }
         }
@@ -143,7 +126,7 @@ public class IndexControllerImpl implements IndexController {
      */
     public void rebuild() throws EntityException
     {
-        final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getCanonicalName());
+        final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getName());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
             // Iterate Through all of the values and re-map the key value for the record id

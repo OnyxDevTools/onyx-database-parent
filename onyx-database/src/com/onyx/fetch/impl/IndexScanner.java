@@ -12,6 +12,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Created by timothy.osborn on 2/10/15.
@@ -56,20 +57,12 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 if(query.isTerminated())
                     return returnValue;
 
-                Set indexValues = indexController.findAll(idValue);
-                synchronized (indexValues)
-                {
-                    references.addAll(indexValues);
-                }
+                indexController.findAll(idValue).forEach(o -> references.add(o));
             }
         }
         else
         {
-            Set indexValues = indexController.findAll(criteria.getValue());
-            synchronized (indexValues)
-            {
-                references.addAll(indexValues);
-            }
+            indexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
         }
 
         references.stream().forEach(val->
@@ -100,27 +93,23 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                     return returnValue;
 
                 Set<Long> results = indexController.findAll(idValue);
-                synchronized (results) {
-                    results.stream().forEach(reference ->
-                    {
-                        if (existingValues.containsKey(reference)) {
-                            returnValue.put(reference, reference);
-                        }
-                    });
-                }
-            }
-        }
-        else
-        {
-            Set<Long> results = indexController.findAll(criteria.getValue());
-            synchronized (results) {
-                results.stream().forEach(reference ->
+                results.forEach(reference ->
                 {
                     if (existingValues.containsKey(reference)) {
                         returnValue.put(reference, reference);
                     }
                 });
             }
+        }
+        else
+        {
+            Set<Long> results = indexController.findAll(criteria.getValue());
+            results.stream().forEach(reference ->
+            {
+                if (existingValues.containsKey(reference)) {
+                    returnValue.put(reference, reference);
+                }
+            });
         }
 
         return returnValue;

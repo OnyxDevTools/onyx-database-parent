@@ -544,7 +544,7 @@ public class Query implements ObjectSerializable, Serializable
         buffer.writeObject(updates);
         buffer.writeObject(criteria);
         buffer.writeObject(queryOrders);
-        buffer.writeObject(entityType.getCanonicalName());
+        buffer.writeObject(entityType.getName());
         buffer.writeObject(partition);
         buffer.writeInt(firstRow);
         buffer.writeInt(maxResults);

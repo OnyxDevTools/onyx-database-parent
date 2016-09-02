@@ -181,7 +181,7 @@ public class PartitionQueryController extends PartitionContext
                 PartitionReference ref = (PartitionReference) index;
                 value = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
             }
-            else
+            else if(index != null && index instanceof Long)
             {
                 value = recordController.getWithReferenceId((long)index);
             }

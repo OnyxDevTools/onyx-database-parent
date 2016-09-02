@@ -42,7 +42,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
     public PartitionFullTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-        systemEntity = context.getSystemEntityByName(query.getEntityType().getCanonicalName());
+        systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
     }
 
 
@@ -116,7 +116,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                     final MapBuilder dataFile = context.getDataFile(partitionDescriptor);
-                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getCanonicalName());
+                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getName());
 
                     Map partitionResults = scanPartition(recs, partition.getIndex());
                     results.putAll(partitionResults);

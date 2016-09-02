@@ -40,7 +40,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         super(entityDescriptor, relationshipDescriptor, context);
 
         // Get the correct data file
-        toOneMap = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getCanonicalName() + relationshipDescriptor.getName());
+        toOneMap = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
 
@@ -229,7 +229,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             if (relationshipObject == null)
             {
                 return;
-//                throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getCanonicalName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
+//                throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
             }
 
             EntityDescriptor inverseDescriptor = getDescriptorForEntity(relationshipObject);

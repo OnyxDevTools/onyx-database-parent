@@ -289,7 +289,7 @@ public class AbstractBitMap
             // The record has grown, we need to move it to a new spot that is big enough
             if (recordReference.recordSize < record.getSize())
             {
-                dealloc(recordReference.position, (recordReference.recordSize + RecordReference.RECORD_REFERENCE_LIST_SIZE));
+                //dealloc(recordReference.position, (recordReference.recordSize + RecordReference.RECORD_REFERENCE_LIST_SIZE));
                 recordPosition = fileStore.allocate((record.getSize() + RecordReference.RECORD_REFERENCE_LIST_SIZE));
             }
 
@@ -360,7 +360,7 @@ public class AbstractBitMap
         header.recordCount.decrementAndGet();
         updateHeaderRecordCount();
 
-        dealloc(recordReference.position, (recordReference.recordSize + RecordReference.RECORD_REFERENCE_LIST_SIZE));
+        //dealloc(recordReference.position, (recordReference.recordSize + RecordReference.RECORD_REFERENCE_LIST_SIZE));
     }
 
     /**
@@ -493,6 +493,17 @@ public class AbstractBitMap
      */
     protected void dealloc(long position, int size)
     {
-        fileStore.deallocate(position, size);
+//        fileStore.deallocate(position, size);
     }
+
+    /**
+     * Gets the reference of where the disk map is located within the storage
+     * @since 1.0.2
+     * @return Header reference item
+     */
+    public Header getReference()
+    {
+        return header;
+    }
+
 }

@@ -32,7 +32,7 @@ public class BufferingException extends EntityException {
     @SuppressWarnings("unused")
     public BufferingException(String message, Class clazz)
     {
-        super(message + ((clazz != null) ? clazz.getCanonicalName() : "null"));
+        super(message + ((clazz != null) ? clazz.getName() : "null"));
     }
 }
 

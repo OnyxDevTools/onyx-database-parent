@@ -24,8 +24,8 @@ public class EntityClassNotFoundException extends EntityException {
      */
     public EntityClassNotFoundException(String message, Class entityType)
     {
-        super(message + " for class " + entityType.getCanonicalName());
-        entityClassName = entityType.getCanonicalName();
+        super(message + " for class " + entityType.getName());
+        entityClassName = entityType.getName();
     }
 
     /**

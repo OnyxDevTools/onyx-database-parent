@@ -2,6 +2,7 @@ package com.onyx.map;
 
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.map.base.LevelReadWriteLock;
+import com.onyx.map.node.Header;
 import com.onyx.map.store.Store;
 
 import java.util.Map;
@@ -60,4 +61,11 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @return Instance of Level Read Write Lock
      */
     LevelReadWriteLock getReadWriteLock();
+
+    /**
+     * Gets the reference of where the disk map is located within the storage
+     * @since 1.0.2
+     * @return Header reference item
+     */
+    Header getReference();
 }

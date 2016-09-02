@@ -1,7 +1,6 @@
 package com.onyx.map;
 
 import com.onyx.map.base.AbstractIterableDiskMap;
-import com.onyx.map.base.ObservableCountDownLock;
 import com.onyx.map.node.BitMapNode;
 import com.onyx.map.node.Header;
 import com.onyx.map.node.RecordReference;
@@ -477,11 +476,11 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
                 value =  mappingFunction.apply(key);
                 insert(null, node, key, value, hashDigits);
             }
+            return value;
         } finally
         {
             readWriteLock.unlockWriteLevel(hashDigits[1]);
         }
-        return null;
     }
 
     /**

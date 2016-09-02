@@ -54,7 +54,7 @@ public abstract class AbstractTableScanner extends PartitionContext
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);
-        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getCanonicalName());
+        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getName());
 
         this.temporaryDataFile = temporaryDataFile;
 
