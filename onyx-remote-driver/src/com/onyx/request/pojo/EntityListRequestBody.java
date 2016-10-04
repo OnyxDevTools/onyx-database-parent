@@ -1,10 +1,9 @@
 package com.onyx.request.pojo;
 
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Created by timothy.osborn on 4/8/15.

@@ -2,7 +2,7 @@ package com.onyx.client;
 
 import com.onyx.exception.EntityException;
 import com.onyx.exception.QueryException;
-import com.onyx.map.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.request.pojo.RequestEndpoint;
 import com.onyx.request.pojo.RequestPriority;

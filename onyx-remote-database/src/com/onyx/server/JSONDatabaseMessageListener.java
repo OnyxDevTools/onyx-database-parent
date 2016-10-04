@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onyx.endpoint.WebPersistenceEndpoint;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.UnknownDatabaseException;
-import com.onyx.map.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;

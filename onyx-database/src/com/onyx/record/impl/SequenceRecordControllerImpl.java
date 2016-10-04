@@ -5,7 +5,7 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.ValidationHelper;
-import com.onyx.map.DiskMap;
+import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;

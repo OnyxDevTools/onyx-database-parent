@@ -15,7 +15,7 @@ import com.onyxdevtools.modelupdate.entities.Account;
  * 1) Adding a generator to an identifier that does not already contain one.  This will require a manual migration
  *    to determine the largest sequence.
  *
- * 2) Changing the data type of the identifier that may not map.  So for instance, if you attempt to convert a String to
+ * 2) Changing the data type of the identifier that may not structure.  So for instance, if you attempt to convert a String to
  *    an integer.  This may not be possible since Onyx cannot assume the identifier is a valid integer.  You will need
  *    a manual migration for this as well.
  */

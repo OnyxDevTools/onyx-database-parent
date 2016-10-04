@@ -18,9 +18,9 @@ import com.onyx.helpers.PartitionHelper;
 import com.onyx.index.IndexController;
 import com.onyx.index.impl.IndexControllerImpl;
 
-import com.onyx.map.DefaultMapBuilder;
-import com.onyx.map.MapBuilder;
-import com.onyx.map.store.StoreType;
+import com.onyx.structure.DefaultMapBuilder;
+import com.onyx.structure.MapBuilder;
+import com.onyx.structure.store.StoreType;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.IdentifierGenerator;
@@ -103,7 +103,7 @@ public class DefaultSchemaContext implements SchemaContext {
     // Context id that maps back to the database instance name
     protected String contextId;
 
-    // The purpose of this is to gather the registed instances of SchemaContexts so that we may map a context to a database instance in
+    // The purpose of this is to gather the registed instances of SchemaContexts so that we may structure a context to a database instance in
     // event of multiple instances
     public static final ConcurrentMap<String, SchemaContext> registeredSchemaContexts = new ConcurrentHashMap<String, SchemaContext>();
 

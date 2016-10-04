@@ -24,7 +24,7 @@ public class EntityRelationshipManager
 
     /**
      *
-     * Checks to see whether it exists in the entities map
+     * Checks to see whether it exists in the entities structure
      * @param entity
      * @param indexDescriptor
      * @return
@@ -50,7 +50,7 @@ public class EntityRelationshipManager
     }
 
     /**
-     * Adds a new value to the 2 dimensional map
+     * Adds a new value to the 2 dimensional structure
      *
      * @param entity
      * @param indexDescriptor
@@ -71,7 +71,7 @@ public class EntityRelationshipManager
     }
 
     /**
-     * Gets the element, from the 2 dimensional map
+     * Gets the element, from the 2 dimensional structure
      *
      * @param entity
      * @return

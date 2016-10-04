@@ -1,7 +1,7 @@
 package com.onyx.transaction.impl;
 
 import com.onyx.exception.TransactionException;
-import com.onyx.map.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;

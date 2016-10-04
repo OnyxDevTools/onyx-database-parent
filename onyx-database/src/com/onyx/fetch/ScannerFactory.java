@@ -8,7 +8,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.SingletonException;
 import com.onyx.fetch.impl.*;
 import com.onyx.helpers.PartitionHelper;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;

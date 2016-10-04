@@ -41,7 +41,7 @@ public class ManualMigrationDemo {
         // Basically, this code will find all the payments under a specific amount and add a kind note to that payment.
         //
         // Notice the stream interface we are using is QueryStream.  This is specifically for iterating through the data in its entity format as opposed to
-        // a generic map.
+        // a generic structure.
         persistenceManager.stream(paymentQuery, (QueryStream<Payment>) (payment, internalPersistenceManager) -> {
             payment.setNotes("The Deadbeat with account number: " + payment.getInvoice().getAccount().getAccountId() + " didn't pay anything cause he/she is broke!!!");
             try {

@@ -1,14 +1,13 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.index.IndexController;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;

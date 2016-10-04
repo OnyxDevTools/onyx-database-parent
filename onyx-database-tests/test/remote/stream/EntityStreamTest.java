@@ -143,7 +143,7 @@ public class EntityStreamTest extends RemoteBaseTest
     }
 
     /**
-     * This is a simple example of how to iterate through the entities as a map representation.
+     * This is a simple example of how to iterate through the entities as a structure representation.
      * The purpose of this is to display that we can iterate through it without having the dependency
      * of what format the entity used to be in.  In this case, it would help with migrations.
      *
@@ -165,7 +165,7 @@ public class EntityStreamTest extends RemoteBaseTest
         // Create a QueryMapStream as opposed to a QueryStream
         QueryMapStream modifyStream = (obj, persistenceManager) -> {
 
-            // Modify the entity map
+            // Modify the entity structure
             final Map entityMap = (Map)obj;
             entityMap.put("correlation", 5);
 

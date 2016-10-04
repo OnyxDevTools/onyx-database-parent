@@ -25,7 +25,7 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
     //
     ////////////////////////////////////////////////////////
     /**
-     * Used for calculating hash map
+     * Used for calculating hash structure
      *
      * @return
      */

@@ -529,9 +529,9 @@ public class EntityDescriptor implements Serializable
     //
     ////////////////////////////////////////////////////////
     /**
-     * Used for calculating hash map.
+     * Used for calculating hash structure.
      *
-     * @return  used for calculating hash map.
+     * @return  used for calculating hash structure.
      */
     @Override public int hashCode()
     {

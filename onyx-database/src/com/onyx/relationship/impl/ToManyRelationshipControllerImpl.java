@@ -8,8 +8,7 @@ import com.onyx.exception.RelationshipHydrationException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.PartitionHelper;
-import com.onyx.map.DiskMap;
-import com.onyx.map.node.RecordReference;
+import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.CascadePolicy;
@@ -64,7 +63,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
         Set<RelationshipReference> existingRelationshipObjects = null;
 
-        // If the map does not exist, lets create one and persist it
+        // If the structure does not exist, lets create one and persist it
         synchronized (records)
         {
             Object retVal = records.get(entityIdentifier);

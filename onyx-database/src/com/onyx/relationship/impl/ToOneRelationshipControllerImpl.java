@@ -5,7 +5,7 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
-import com.onyx.map.DiskMap;
+import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.CascadePolicy;

@@ -6,8 +6,8 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
-import com.onyx.map.DiskMap;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -455,7 +455,7 @@ public abstract class AbstractRecordController
     }
 
     /**
-     * Returns a map of the entity with a reference id
+     * Returns a structure of the entity with a reference id
      *
      * @param referenceId
      * @return

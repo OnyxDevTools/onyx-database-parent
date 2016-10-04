@@ -97,7 +97,7 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
     //
     ////////////////////////////////////////////////////////
     /**
-     * Used for calculating hash map
+     * Used for calculating hash structure
      *
      * @return
      */

@@ -16,7 +16,7 @@ public class BasicQueryMapStream implements QueryMapStream{
     @Override
     public void accept(Object obj, PersistenceManager persistenceManager) {
 
-        // Modify the entity map
+        // Modify the entity structure
         final Map entityMap = (Map)obj;
         entityMap.put("correlation", 55);
 

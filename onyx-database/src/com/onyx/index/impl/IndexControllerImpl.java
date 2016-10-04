@@ -4,8 +4,9 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.index.IndexController;
-import com.onyx.map.DiskMap;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DefaultDiskSet;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
@@ -69,6 +70,8 @@ public class IndexControllerImpl implements IndexController {
             references.compute(indexValue, (o, longs) -> {
                 if(longs == null)
                     longs = dataFile.newHashSet();
+                else
+                    ((DefaultDiskSet)longs).attachStorage(dataFile);
                 longs.add(reference);
                 return longs;
             });
@@ -90,6 +93,7 @@ public class IndexControllerImpl implements IndexController {
             if (indexValue != null)
             {
                 references.computeIfPresent(indexValue, (o, longs) -> {
+                    ((DefaultDiskSet)longs).attachStorage(dataFile);
                     longs.remove(reference);
                     return longs;
                 });
@@ -109,6 +113,9 @@ public class IndexControllerImpl implements IndexController {
         final Set<Long> refs = references.get(indexValue);
         if(refs == null)
             return new HashSet();
+        else
+            ((DefaultDiskSet)refs).attachStorage(dataFile);
+
         return refs;
     }
 
@@ -133,7 +140,7 @@ public class IndexControllerImpl implements IndexController {
         final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getName());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
-            // Iterate Through all of the values and re-map the key value for the record id
+            // Iterate Through all of the values and re-structure the key value for the record id
             Map.Entry entry = null;
             while (iterator.hasNext()) {
                 try {
