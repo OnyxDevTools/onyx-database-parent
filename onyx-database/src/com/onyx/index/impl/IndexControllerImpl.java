@@ -4,8 +4,8 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.index.IndexController;
-import com.onyx.structure.DefaultDiskSet;
 import com.onyx.structure.DiskMap;
+import com.onyx.structure.LongDiskSet;
 import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -69,9 +69,9 @@ public class IndexControllerImpl implements IndexController {
         if(indexValue != null) {
             references.compute(indexValue, (o, longs) -> {
                 if(longs == null)
-                    longs = dataFile.newHashSet();
+                    longs = dataFile.newLongHashSet();
                 else
-                    ((DefaultDiskSet)longs).attachStorage(dataFile);
+                    ((LongDiskSet)longs).attachStorage(dataFile);
                 longs.add(reference);
                 return longs;
             });
@@ -93,7 +93,7 @@ public class IndexControllerImpl implements IndexController {
             if (indexValue != null)
             {
                 references.computeIfPresent(indexValue, (o, longs) -> {
-                    ((DefaultDiskSet)longs).attachStorage(dataFile);
+                    ((LongDiskSet)longs).attachStorage(dataFile);
                     longs.remove(reference);
                     return longs;
                 });
@@ -114,7 +114,7 @@ public class IndexControllerImpl implements IndexController {
         if(refs == null)
             return new HashSet();
         else
-            ((DefaultDiskSet)refs).attachStorage(dataFile);
+            ((LongDiskSet)refs).attachStorage(dataFile);
 
         return refs;
     }

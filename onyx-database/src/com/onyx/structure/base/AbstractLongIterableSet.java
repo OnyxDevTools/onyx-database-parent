@@ -34,7 +34,7 @@ public abstract class AbstractLongIterableSet<E> extends AbstractLongCachedBitMa
     @Override
     public void forEach(Consumer<? super E> action) {
         Iterator iterator = iterator();
-        if(iterator.hasNext())
+        while(iterator.hasNext())
         {
             action.accept((E)iterator.next());
         }
@@ -120,11 +120,11 @@ public abstract class AbstractLongIterableSet<E> extends AbstractLongCachedBitMa
                 node = getBitmapNode(nodeEntry.reference);
 
                 // Add all the other related nodes in the bitmap
-                for (int i = 0; i < BitMapNode.RECORD_REFERENCE_INDEX; i++) {
+                for (int i = 0; i < getLoadFactor(); i++) {
 
                     reference = node.next[i];
                     if (reference > 0) {
-                        if (nodeEntry.level < (BitMapNode.RECORD_REFERENCE_INDEX - 1)) {
+                        if (nodeEntry.level < (getLoadFactor() - 1)) {
                             newEntry = new AbstractLongIterableSet.AbstractNodeIterator.NodeEntry(reference, (short) (nodeEntry.level + 1));
                             nodeStack.add(newEntry);
                         } else {

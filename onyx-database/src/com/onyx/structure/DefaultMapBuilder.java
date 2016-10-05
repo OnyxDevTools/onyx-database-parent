@@ -357,6 +357,19 @@ public class DefaultMapBuilder implements MapBuilder
         return set;
     }
 
+    public synchronized Set newLongHashSet()
+    {
+        // Create a new header for the new structure we are creating
+        Header newHeader = new Header();
+        newHeader.position = storage.allocate(Header.HEADER_SIZE);
+        newHeader.idSize = 0;
+        storage.write(newHeader, newHeader.position); //Write the new header
+
+        final LongDiskSet diskSet = new LongDiskSet(storage, newHeader);
+        return diskSet;
+    }
+
+
     /**
      * Returns the structure builder used for the specific file path.  There can only be a single structure builder per file.
      * @param path File path for the Map Builder's storage

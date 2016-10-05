@@ -50,6 +50,12 @@ public interface MapBuilder
     Set newLongSet();
 
     /**
+     * Creates a long disk set only for long values
+     * @return Disk Set
+     */
+    Set newLongHashSet();
+
+    /**
      * Instantiates and creates a new HashSet
      * @return Instantiated hash set
      * @since 1.0.2

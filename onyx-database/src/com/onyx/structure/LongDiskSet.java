@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements ObjectSerializable {
 
+    @SuppressWarnings("unused")
     public LongDiskSet()
     {
         this(null, null);
@@ -47,9 +48,9 @@ public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements Object
         int hash = hash(o);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try {
 
@@ -62,7 +63,7 @@ public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements Object
             }
 
         } finally {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
 
         return false;
@@ -103,9 +104,9 @@ public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements Object
         int hash = hash(e);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         long value = (Long)e;
         try
@@ -128,7 +129,7 @@ public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements Object
             }
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
 
         return false;
@@ -139,9 +140,9 @@ public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements Object
         int hash = hash(o);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try {
 
@@ -155,7 +156,7 @@ public class LongDiskSet<E> extends AbstractLongIterableSet<E> implements Object
             }
 
         } finally {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
 
         return false;

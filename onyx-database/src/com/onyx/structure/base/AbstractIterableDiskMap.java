@@ -611,11 +611,11 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
                 node = getBitmapNode(nodeEntry.reference);
 
                 // Add all the other related nodes in the bitmap
-                for (int i = 0; i < BITMAP_ITERATIONS; i++) {
+                for (int i = 0; i < getLoadFactor(); i++) {
 
                     reference = node.next[i];
                     if (reference > 0) {
-                        if (nodeEntry.level < (BITMAP_ITERATIONS - 1)) {
+                        if (nodeEntry.level < (getRecordReferenceIndex())) {
                             newEntry = new NodeEntry(reference, (short) (nodeEntry.level + 1));
                             nodeStack.add(newEntry);
                         } else {

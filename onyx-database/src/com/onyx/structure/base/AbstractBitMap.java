@@ -23,6 +23,8 @@ public class AbstractBitMap
     // Storage mechanism for the hashmap
     public Store fileStore;
 
+    protected int loadFactor = BitMapNode.DEFAULT_BITMAP_ITERATIONS;
+
     /**
      * Constructor
      *
@@ -34,7 +36,6 @@ public class AbstractBitMap
         this.header = header;
     }
 
-    protected static final int BITMAP_ITERATIONS = 10;
     /**
      * Iterates through the bitmap graph
      * <p/>
@@ -56,7 +57,7 @@ public class AbstractBitMap
         {
             // No default node, lets create one // It must mean we are inserting
             node = new BitMapNode();
-            node.position = fileStore.allocate(BitMapNode.BITMAP_NODE_SIZE);
+            node.position = fileStore.allocate(getBitmapNodeSize());
             header.firstNode = node.position;
 
             writeBitmapNode(node.position, node);
@@ -72,7 +73,7 @@ public class AbstractBitMap
         int hashDigit = 0;
 
         // Break down the nodes and iterate through them.  We should be left with the remaining node which should point us to the record
-        for (int level = 0; level < BITMAP_ITERATIONS; level++)
+        for (int level = 0; level < getLoadFactor(); level++)
         {
 
             hashDigit = hashDigits[level];
@@ -81,7 +82,7 @@ public class AbstractBitMap
             if (nodePosition == 0 && forInsert == true)
             {
                 node = new BitMapNode();
-                node.position = fileStore.allocate(BitMapNode.BITMAP_NODE_SIZE);
+                node.position = fileStore.allocate(getBitmapNodeSize());
 
                 writeBitmapNode(node.position, node);
                 updateBitmapNodeReference(previousNode, hashDigit, node.position);
@@ -146,7 +147,7 @@ public class AbstractBitMap
             } else
             {
                 // Update the record position as well as the BitMapNode to show the location
-                updateBitmapNodeReference(node, hashDigits[BITMAP_ITERATIONS], recordPosition);
+                updateBitmapNodeReference(node, hashDigits[getRecordReferenceIndex()], recordPosition);
             }
 
             header.recordCount.incrementAndGet();
@@ -222,7 +223,7 @@ public class AbstractBitMap
     public RecordReference[] getRecordReference(BitMapNode node, Object key, int[] hashDigits)
     {
         // Convert the hash number to digits with leading 0s
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
         long position = node.next[hashDigit];
 
@@ -271,7 +272,7 @@ public class AbstractBitMap
     public Record update(BitMapNode node, RecordReference parentRecordReference, RecordReference recordReference, Object key, Object value, int[] hashDigits)
     {
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
         try
         {
@@ -343,7 +344,7 @@ public class AbstractBitMap
     {
         // Convert the hash number to digits with leading 0s
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
         if (node.next[hashDigit] == recordReference.position)
         {
@@ -369,7 +370,7 @@ public class AbstractBitMap
      */
     protected BitMapNode getBitmapNode(long position)
     {
-        return (BitMapNode)fileStore.read(position, BitMapNode.BITMAP_NODE_SIZE, BitMapNode.class);
+        return (BitMapNode)fileStore.read(position, getBitmapNodeSize(), BitMapNode.class);
     }
 
     /**
@@ -465,26 +466,23 @@ public class AbstractBitMap
      */
     protected int[] getHashDigits(int hash)
     {
-        int[] digits = new int[BITMAP_ITERATIONS+1];
+        hash = Math.abs(hash);
+        int[] digits = new int[getLoadFactor()];
 
-        if (hash < 0)
-        {
-            digits[0] = 0;
-            hash = hash * -1;
-        }
-        else
-            digits[0] = 1;
-
-        for (int i = BITMAP_ITERATIONS; i >= 1; i--)
+        for (int i = getLoadFactor() -1; i >= 0; i--)
         {
             digits[i] = hash % 10;
             hash /= 10;
+
+            if(digits[i] >= getLoadFactor()) {
+                digits[i] =  digits[i] % getLoadFactor();
+            }
         }
         return digits;
     }
 
     /**
-     * Deallocates the storage at position
+     * De-allocates the storage at position
      * @since 1.0.2
      * @param position The position where the deallocated disk space starts
      * @param size amount of bytes to deallocate and recycle
@@ -504,4 +502,38 @@ public class AbstractBitMap
         return header;
     }
 
+    /**
+     * This indicates how many iterations of hash tables
+     * we need to iterate through.  The higher the number the more scalable the
+     * index value is.  The lower, means we have less BitMapNode(s) we have to create
+     * thus saving disk space.  This is going to be for future use.  Still to come is a backup
+     * index such as a BST if the load factor is set too small.  Currently the logic relies on a
+     * linked list if there are hashCode collisions.  This should be anything other than that.
+     *
+     *
+     * @since 1.1.1
+     * @return Load Factor. A value from 5-10.  5 is for minimum data sets and 10 is for fully scalable data sets.
+     */
+    public int getLoadFactor()
+    {
+        return loadFactor;
+    }
+
+    /**
+     * The value within the hash digits to look for the record reference.
+     * @return The amount of iterations minus 1.
+     */
+    protected int getRecordReferenceIndex()
+    {
+        return loadFactor -1;
+    }
+
+    /**
+     * The size of the bitmap on disk based on the load factor
+     * @return The amount of bytes
+     */
+    protected int getBitmapNodeSize()
+    {
+        return Long.BYTES * (getLoadFactor() + 1);
+    }
 }

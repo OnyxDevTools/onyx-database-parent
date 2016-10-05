@@ -64,9 +64,9 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     {
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
-        final int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        final int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
-        readWriteLock.lockReadLevel(hashDigits[1]);
+        readWriteLock.lockReadLevel(hashDigits[0]);
 
         try
         {
@@ -86,7 +86,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return -1;
         } finally
         {
-            readWriteLock.unlockReadLevel(hashDigits[1]);
+            readWriteLock.unlockReadLevel(hashDigits[0]);
         }
     }
 
@@ -136,11 +136,11 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
-        final int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        final int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
         try
         {
-            readWriteLock.lockReadLevel(hashDigits[1]);
+            readWriteLock.lockReadLevel(hashDigits[0]);
 
             final BitMapNode node = this.seek(hash(key), false, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
@@ -154,7 +154,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return false;
         } finally
         {
-            readWriteLock.unlockReadLevel(hashDigits[1]);
+            readWriteLock.unlockReadLevel(hashDigits[0]);
         }
     }
 
@@ -182,10 +182,10 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
 
-            readWriteLock.lockReadLevel(hashDigits[1]);
+            readWriteLock.lockReadLevel(hashDigits[0]);
 
             final BitMapNode node = this.seek(hash, false, hashDigits);
-            if (node != null && node.next[hashDigits[BITMAP_ITERATIONS]] > 0)
+            if (node != null && node.next[hashDigits[getRecordReferenceIndex()] ] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
                 if (references != null && references[1] != null)
@@ -196,7 +196,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return null;
         } finally
         {
-            readWriteLock.unlockReadLevel(hashDigits[1]);
+            readWriteLock.unlockReadLevel(hashDigits[0]);
         }
     }
 
@@ -208,9 +208,9 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -233,7 +233,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             }
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
         return value;
     }
@@ -245,9 +245,9 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -267,7 +267,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return null;
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
     }
 
@@ -345,7 +345,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -356,7 +356,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return null;
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
     }
 
@@ -374,7 +374,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -387,7 +387,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return false;
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
     }
 
@@ -405,7 +405,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -418,7 +418,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return false;
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
     }
 
@@ -450,9 +450,9 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -479,7 +479,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             return value;
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
     }
 
@@ -497,9 +497,9 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -522,7 +522,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             }
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
         return null;
     }
@@ -541,11 +541,11 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
         V value = null;
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -573,7 +573,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             }
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
         return value;
     }
@@ -593,9 +593,9 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         int hash = hash(key);
         final int[] hashDigits = getHashDigits(hash);
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()] ;
 
-        readWriteLock.lockWriteLevel(hashDigits[1]);
+        readWriteLock.lockWriteLevel(hashDigits[0]);
 
         try
         {
@@ -621,7 +621,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             }
         } finally
         {
-            readWriteLock.unlockWriteLevel(hashDigits[1]);
+            readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
         return value;
     }

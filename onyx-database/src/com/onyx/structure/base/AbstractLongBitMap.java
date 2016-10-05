@@ -39,7 +39,7 @@ public abstract class AbstractLongBitMap extends AbstractBitMap {
         } else
         {
             // Update the record position as well as the BitMapNode to show the location
-            updateBitmapNodeReference(node, hashDigits[BITMAP_ITERATIONS], recordReference.position);
+            updateBitmapNodeReference(node, hashDigits[getRecordReferenceIndex()], recordReference.position);
         }
 
         header.recordCount.incrementAndGet();
@@ -58,7 +58,7 @@ public abstract class AbstractLongBitMap extends AbstractBitMap {
     {
         // Convert the hash number to digits with leading 0s
 
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
         if (node.next[hashDigit] == recordReference.position)
         {
@@ -96,7 +96,7 @@ public abstract class AbstractLongBitMap extends AbstractBitMap {
     public LongRecordReference[] getLongRecordReferences(BitMapNode node, long value, int[] hashDigits)
     {
         // Convert the hash number to digits with leading 0s
-        int hashDigit = hashDigits[BITMAP_ITERATIONS];
+        int hashDigit = hashDigits[getRecordReferenceIndex()];
 
         long position = node.next[hashDigit];
 

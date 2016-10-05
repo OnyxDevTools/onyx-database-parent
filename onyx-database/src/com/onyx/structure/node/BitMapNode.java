@@ -12,10 +12,9 @@ import java.io.Serializable;
  */
 public class BitMapNode implements ObjectSerializable, Serializable
 {
-    public static int BITMAP_NODE_SIZE = 11*Long.BYTES;
-    public static final int RECORD_REFERENCE_INDEX = 10;
+    public static final int DEFAULT_BITMAP_ITERATIONS = 10;
 
-    public long[] next = new long[RECORD_REFERENCE_INDEX];
+    public long[] next = new long[DEFAULT_BITMAP_ITERATIONS];
     public long position;
 
     public BitMapNode()
@@ -44,7 +43,7 @@ public class BitMapNode implements ObjectSerializable, Serializable
     public void readObject(ObjectBuffer buffer) throws IOException
     {
         position = buffer.readLong();
-        next = buffer.readLongArray(RECORD_REFERENCE_INDEX);
+        next = buffer.readLongArray(DEFAULT_BITMAP_ITERATIONS);
     }
 
     @Override
