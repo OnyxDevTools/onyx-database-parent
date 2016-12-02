@@ -3,8 +3,8 @@ package com.onyx.persistence.query;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.update.AttributeUpdate;
 
@@ -544,7 +544,7 @@ public class Query implements ObjectSerializable, Serializable
         buffer.writeObject(updates);
         buffer.writeObject(criteria);
         buffer.writeObject(queryOrders);
-        buffer.writeObject(entityType.getCanonicalName());
+        buffer.writeObject(entityType.getName());
         buffer.writeObject(partition);
         buffer.writeInt(firstRow);
         buffer.writeInt(maxResults);

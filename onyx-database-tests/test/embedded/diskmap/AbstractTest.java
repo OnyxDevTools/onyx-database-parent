@@ -1,8 +1,8 @@
 package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.map.DefaultMapBuilder;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DefaultMapBuilder;
+import com.onyx.structure.MapBuilder;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

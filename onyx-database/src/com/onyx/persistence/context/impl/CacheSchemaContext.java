@@ -1,9 +1,9 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.map.DefaultMapBuilder;
-import com.onyx.map.MapBuilder;
-import com.onyx.map.store.StoreType;
+import com.onyx.structure.DefaultMapBuilder;
+import com.onyx.structure.MapBuilder;
+import com.onyx.structure.store.StoreType;
 
 import java.util.function.Function;
 

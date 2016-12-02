@@ -24,7 +24,7 @@ public class EntityRelationshipManager
 
     /**
      *
-     * Checks to see whether it exists in the entities map
+     * Checks to see whether it exists in the entities structure
      * @param entity
      * @param indexDescriptor
      * @return
@@ -32,7 +32,7 @@ public class EntityRelationshipManager
      */
     public boolean contains(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException
     {
-        final String className = entity.getClass().getCanonicalName();
+        final String className = entity.getClass().getName();
 
         if(!entities.containsKey(className))
         {
@@ -50,7 +50,7 @@ public class EntityRelationshipManager
     }
 
     /**
-     * Adds a new value to the 2 dimensional map
+     * Adds a new value to the 2 dimensional structure
      *
      * @param entity
      * @param indexDescriptor
@@ -58,7 +58,7 @@ public class EntityRelationshipManager
      */
     public void add(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException
     {
-        final String className = entity.getClass().getCanonicalName();
+        final String className = entity.getClass().getName();
 
         if(!entities.containsKey(className))
         {
@@ -71,14 +71,14 @@ public class EntityRelationshipManager
     }
 
     /**
-     * Gets the element, from the 2 dimensional map
+     * Gets the element, from the 2 dimensional structure
      *
      * @param entity
      * @return
      */
     public IManagedEntity get(IManagedEntity entity, IndexDescriptor descriptor) throws AttributeMissingException
     {
-        final String className = entity.getClass().getCanonicalName();
+        final String className = entity.getClass().getName();
 
         if(!entities.containsKey(className))
         {

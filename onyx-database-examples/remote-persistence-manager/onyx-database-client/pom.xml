@@ -6,7 +6,7 @@
     
     <groupId>com.onyxdevtools</groupId>
     <artifactId>onyx-database-client</artifactId>
-    <version>1.0.1</version>
+    <version>1.1.1</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:onyx-database-examples:remote-persistence-manager:${project.artifactId}</name>
@@ -15,16 +15,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <onyx-database.version>1.0.1</onyx-database.version>
+        <onyx-database.version>1.1.1</onyx-database.version>
     </properties>
-    
-    <repositories>
-        <repository>
-            <id>onyx-mvn-repo</id>
-            <name>Onyx Dev Tools Maven Repository</name>
-            <url>http://onyxdevtools.github.io/maven2</url>
-        </repository>
-    </repositories>
     
     <dependencies>
         

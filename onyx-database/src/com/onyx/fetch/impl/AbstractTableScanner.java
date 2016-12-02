@@ -3,8 +3,8 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
-import com.onyx.map.DiskMap;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
@@ -54,7 +54,7 @@ public abstract class AbstractTableScanner extends PartitionContext
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);
-        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getCanonicalName());
+        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getName());
 
         this.temporaryDataFile = temporaryDataFile;
 

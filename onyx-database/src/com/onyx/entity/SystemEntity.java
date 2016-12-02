@@ -23,7 +23,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
 
     public SystemEntity(EntityDescriptor descriptor)
     {
-        this.name = descriptor.getClazz().getCanonicalName();
+        this.name = descriptor.getClazz().getName();
         this.className = descriptor.getClazz().getSimpleName();
         this.indexes = new ArrayList<>();
         this.relationships = new ArrayList<>();

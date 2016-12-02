@@ -405,7 +405,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     public void writeExternal(ObjectOutput out) throws IOException
     {
         out.writeObject(this.getIdentifiers());
-        out.writeUTF(this.getEntityDescriptor().getClazz().getCanonicalName());
+        out.writeUTF(this.getEntityDescriptor().getClazz().getName());
         out.writeUTF(this.context.getContextId());
     }
 
@@ -450,7 +450,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public void write(BufferStream bufferStream) throws BufferingException {
         bufferStream.putCollection(this.getIdentifiers());
-        bufferStream.putString(this.getEntityDescriptor().getClazz().getCanonicalName());
+        bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
         bufferStream.putString(this.context.getContextId());
     }
 }

@@ -353,7 +353,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
         out.writeObject(this.getIdentifiers());
-        out.writeUTF(this.getEntityDescriptor().getClazz().getCanonicalName());
+        out.writeUTF(this.getEntityDescriptor().getClazz().getName());
         out.writeUTF(this.context.getContextId());
     }
 
@@ -398,7 +398,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     @Override
     public void write(BufferStream bufferStream) throws BufferingException {
         bufferStream.putCollection(this.getIdentifiers());
-        bufferStream.putString(this.getEntityDescriptor().getClazz().getCanonicalName());
+        bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
         bufferStream.putString(this.context.getContextId());
     }
 }

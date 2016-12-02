@@ -6,7 +6,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
@@ -39,7 +39,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     public PartitionIdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-        systemEntity = context.getSystemEntityByName(query.getEntityType().getCanonicalName());
+        systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
     }
 
     /**

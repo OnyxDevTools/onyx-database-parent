@@ -5,7 +5,7 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
@@ -56,12 +56,12 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 if(query.isTerminated())
                     return returnValue;
 
-                references.addAll(indexController.findAll(idValue));
+                indexController.findAll(idValue).forEach(o -> references.add(o));
             }
         }
         else
         {
-            references.addAll(indexController.findAll(criteria.getValue()));
+            indexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
         }
 
         references.stream().forEach(val->
@@ -92,10 +92,9 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                     return returnValue;
 
                 Set<Long> results = indexController.findAll(idValue);
-                results.stream().forEach(reference ->
+                results.forEach(reference ->
                 {
-                    if (existingValues.containsKey(reference))
-                    {
+                    if (existingValues.containsKey(reference)) {
                         returnValue.put(reference, reference);
                     }
                 });
@@ -106,8 +105,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
             Set<Long> results = indexController.findAll(criteria.getValue());
             results.stream().forEach(reference ->
             {
-                if (existingValues.containsKey(reference))
-                {
+                if (existingValues.containsKey(reference)) {
                     returnValue.put(reference, reference);
                 }
             });

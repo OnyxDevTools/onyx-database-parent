@@ -84,7 +84,7 @@ public interface RecordController
     IManagedEntity getWithReferenceId(long referenceId) throws EntityException;
 
     /**
-     * Returns a map of the entity with a reference id
+     * Returns a structure of the entity with a reference id
      *
      * @param referenceId
      * @return

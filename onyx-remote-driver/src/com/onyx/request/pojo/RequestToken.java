@@ -2,7 +2,7 @@ package com.onyx.request.pojo;
 
 
 import com.onyx.client.DefaultDatabaseEndpoint;
-import com.onyx.map.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.buffer.BufferStream;
 
 import java.io.*;

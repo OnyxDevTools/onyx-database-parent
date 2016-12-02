@@ -111,7 +111,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
 
 
     /**
-     * Getter for persistence manager.  Modified in 1.0.1 to keep a connection open.  If the connection is somehow
+     * Getter for persistence manager.  Modified in 1.1.0 to keep a connection open.  If the connection is somehow
      * closed, this will automatically re-open it.
      *
      * @since 1.0.0
@@ -213,7 +213,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * The purpose of this is to verify a connection.  This method is to ensure the connection is always open
      * ConnectionManager delegate method
      *
-     * @since 1.0.1
+     * @since 1.1.0
      * @throws EntityException Cannot re-connect if not connected
      */
     public void verifyConnection() throws EntityException
@@ -239,7 +239,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     /**
      * Connect to the remote database server
      *
-     * @since 1.0.1
+     * @since 1.1.0
      * @throws InitializationException Exception occurred while connecting
      */
     public void connect() throws InitializationException

@@ -7,8 +7,8 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
 
@@ -100,7 +100,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
     }
 
     /**
-     * This method maps the keys from a map to the attributes of the entity
+     * This method maps the keys from a structure to the attributes of the entity
      * @param mapObj Map to convert from
      */
     public void fromMap(Map<String, Object> mapObj, SchemaContext context)
@@ -126,4 +126,5 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
         }
         catch (Exception e){}
     }
+
 }

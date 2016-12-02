@@ -1,9 +1,8 @@
 package com.onyx.request.pojo;
 
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.query.Query;
-import com.onyx.stream.QueryStream;
 
 import java.io.IOException;
 
@@ -52,7 +51,7 @@ public class StreamRequestBody  implements ObjectSerializable {
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException {
         buffer.writeObject(query);
-        buffer.writeObject(streamClass.getCanonicalName());
+        buffer.writeObject(streamClass.getName());
     }
 
     /**

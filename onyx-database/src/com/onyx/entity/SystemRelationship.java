@@ -24,10 +24,10 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         this.cascadePolicy = relationshipDescriptor.getCascadePolicy().ordinal();
         this.fetchPolicy = relationshipDescriptor.getFetchPolicy().ordinal();
         this.inverse = relationshipDescriptor.getInverse();
-        this.inverseClass = relationshipDescriptor.getInverseClass().getCanonicalName();
+        this.inverseClass = relationshipDescriptor.getInverseClass().getName();
         this.relationshipType = relationshipDescriptor.getRelationshipType().ordinal();
         this.name = relationshipDescriptor.getName();
-        this.parentClass = relationshipDescriptor.getParentClass().getCanonicalName();
+        this.parentClass = relationshipDescriptor.getParentClass().getName();
     }
 
     @Attribute

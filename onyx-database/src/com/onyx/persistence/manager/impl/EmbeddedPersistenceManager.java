@@ -282,6 +282,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), query.getEntityType(), descriptor, query, context, this);
+
         try
         {
             final Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -331,6 +332,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+
         try
         {
             final Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -663,7 +665,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         if (relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
 
         RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
@@ -934,7 +936,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         if (relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getName());
         }
 
         Set<RelationshipReference> references = new HashSet<>();
@@ -1111,20 +1113,15 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     @Override
     public void stream(Query query, QueryStream streamer) throws EntityException
     {
-
-        final LazyQueryCollection entityList = (LazyQueryCollection)executeLazyQuery(query);
+        final LazyQueryCollection entityList = (LazyQueryCollection) executeLazyQuery(query);
         final PersistenceManager persistenceManagerInstance = this;
 
-        for(int i = 0; i < entityList.size(); i++)
-        {
+        for (int i = 0; i < entityList.size(); i++) {
             Object objectToStream = null;
 
-            if(streamer instanceof QueryMapStream)
-            {
+            if (streamer instanceof QueryMapStream) {
                 objectToStream = entityList.getDict(i);
-            }
-            else
-            {
+            } else {
                 objectToStream = entityList.get(i);
             }
 

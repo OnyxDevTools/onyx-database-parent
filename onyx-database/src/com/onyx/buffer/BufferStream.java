@@ -17,6 +17,22 @@ import java.util.*;
  */
 public class BufferStream {
 
+    /**
+     * Default constructor with no buffer
+     */
+    public BufferStream()
+    {
+        this(allocate(ExpandableByteBuffer.BUFFER_ALLOCATION));
+    }
+
+    /**
+     * Constructor with underlying byte buffer
+     * @param buffer Byte buffer with contents of the goods
+     */
+    public BufferStream(ByteBuffer buffer)
+    {
+        this.expandableByteBuffer = new ExpandableByteBuffer(buffer);
+    }
 
     // Number of references to retain the index number of the said reference
     private int referenceCount = 0;
@@ -45,7 +61,7 @@ public class BufferStream {
      * @param reference Object reference
      */
     protected void addReference(Object reference) {
-        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash map of the object references
+        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the object references
         // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
             referenceCount++;
@@ -293,7 +309,7 @@ public class BufferStream {
 
         addReference(type);
 
-        final String className = type.getCanonicalName();
+        final String className = type.getName();
         byte[] stringBytes = className.getBytes();
 
         putInt(stringBytes.length);
@@ -313,7 +329,7 @@ public class BufferStream {
     public void putCollection(Collection collection) throws BufferingException {
 
         try {
-            Class clazz = Class.forName(collection.getClass().getCanonicalName());
+            Class clazz = Class.forName(collection.getClass().getName());
             putObject(clazz);
         } catch (ClassNotFoundException e) {
             putObject(ArrayList.class);
@@ -329,7 +345,7 @@ public class BufferStream {
     }
 
     /**
-     * Put a Map to the buffer.  If the map instance class is un-accessible it will chose to use a HashMap
+     * Put a Map to the buffer.  If the structure instance class is un-accessible it will chose to use a HashMap
      *
      * @since 1.1.0
      * @param value Map to write
@@ -339,7 +355,7 @@ public class BufferStream {
     public void putMap(Map map) throws BufferingException {
 
         try {
-            Class clazz = Class.forName(map.getClass().getCanonicalName());
+            Class clazz = Class.forName(map.getClass().getName());
             putObject(clazz);
         } catch (ClassNotFoundException e) {
             putObject(HashMap.class);
@@ -1122,6 +1138,7 @@ public class BufferStream {
     }
 
     private static volatile int staleBufferMemory = 0;
+
     /**
      * Recycle a byte buffer to be reused
      * @param buffer byte buffer to recycle and reuse
@@ -1150,4 +1167,27 @@ public class BufferStream {
         }
     }
 
+    /**
+     * Recycle a byte buffer to be reused
+     */
+    public void recycle() {
+        recycle(expandableByteBuffer.buffer);
+    }
+
+    /**
+     * Getter for underlying byte buffer
+     * @return The underlying byte buffer with the goods
+     */
+    public ByteBuffer getByteBuffer()
+    {
+        return expandableByteBuffer.buffer;
+    }
+
+    /**
+     * Flip the underlying byte buffer
+     */
+    public void flip()
+    {
+        this.expandableByteBuffer.buffer.flip();
+    }
 }

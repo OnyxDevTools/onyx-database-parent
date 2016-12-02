@@ -3,9 +3,10 @@ package com.onyx.relationship.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
+import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.RelationshipType;
@@ -76,7 +77,7 @@ public class AbstractRelationshipController extends PartitionContext
                 || defaultInverseRelationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY )
         {
             // Get the Data Map that corresponds to the inverse relationship
-            final Map<Object, Set<Object>> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Set<Object>> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
 
             // Synchronized since we are saving the entire set
             synchronized (relationshipMap)
@@ -111,7 +112,7 @@ public class AbstractRelationshipController extends PartitionContext
         // It is a to One Relationship
         else
         {
-            final Map<Object, Object> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Object> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
             relationshipMap.put(childIdentifier, parentIdentifier);
 
             setRelationshipValue(defaultInverseRelationshipDescriptor, childEntity, parentEntity);
@@ -135,7 +136,7 @@ public class AbstractRelationshipController extends PartitionContext
                 || defaultInverseRelationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY )
         {
             // Get the Data Map that corresponds to the inverse relationship
-            final Map<Object, Set<Object>> relationshipMap = getDataFileWithPartitionId(childIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Set<Object>> relationshipMap = getDataFileWithPartitionId(childIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
 
             // Synchronized since we are saving the entire set
             synchronized (relationshipMap)
@@ -156,7 +157,7 @@ public class AbstractRelationshipController extends PartitionContext
         // It is a to One Relationship
         else
         {
-            final Map<Object, Object> relationshipMap = getDataFileWithPartitionId(parentIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getCanonicalName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Object> relationshipMap = getDataFileWithPartitionId(parentIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
             relationshipMap.remove(childIdentifier);
         }
     }
@@ -192,7 +193,7 @@ public class AbstractRelationshipController extends PartitionContext
      * @return
      * @throws com.onyx.exception.AttributeMissingException
      */
-    public static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException
+    public static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException, AttributeTypeMismatchException
     {
         final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
         ReflectionUtil.setAny(entity, child, relationshipField);

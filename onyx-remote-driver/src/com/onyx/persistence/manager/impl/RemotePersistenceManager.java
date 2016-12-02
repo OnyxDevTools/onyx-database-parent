@@ -60,7 +60,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     /**
      * Default Constructor.  This should be invoked by the persistence manager factory
      *
-     * @since 1.0.1
+     * @since 1.1.0
      * @param connectionManager Responsible for verifying the connection and re-connecting
      */
     public RemotePersistenceManager(ConnectionManager connectionManager)
@@ -290,7 +290,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
 
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_BY_ID, body);
         return (IManagedEntity)this.endpoint.execute(token);
@@ -317,7 +317,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
 
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         body.setPartitionId(String.valueOf(partitionId));
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_BY_ID_IN_PARTITION, body);
@@ -368,7 +368,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
 
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         body.setPartitionId(String.valueOf(partitionId));
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.EXISTS_IN_PARTITION, body);
@@ -627,13 +627,13 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
 
         if(relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
 
         EntityInitializeBody body = new EntityInitializeBody();
         body.setEntityId(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()));
         body.setAttribute(attribute);
-        body.setEntityType(entity.getClass().getCanonicalName());
+        body.setEntityType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
@@ -688,7 +688,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         body.setEntity(entity);
         body.setRelationship(relationship);
         body.setIdentifiers(relationshipIdentifiers);
-        body.setType(attributeType.getCanonicalName());
+        body.setType(attributeType.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.SAVE_RELATIONSHIPS, body);
         this.endpoint.execute(token);
@@ -709,7 +709,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
 
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(referenceId);
-        body.setType(entityType.getCanonicalName());
+        body.setType(entityType.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_BY_REFERENCE_ID, body);
         return (IManagedEntity)this.endpoint.execute(token);
@@ -737,7 +737,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
         body.setPartitionId(String.valueOf(partitionId));
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_WITH_PARTITION_ID, body);
         return (IManagedEntity)this.endpoint.execute(token);

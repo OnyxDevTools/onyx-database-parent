@@ -7,7 +7,7 @@ import com.onyx.helpers.PartitionContext;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.index.IndexController;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
@@ -180,12 +180,14 @@ public class PartitionQueryController extends PartitionContext
                 PartitionReference ref = (PartitionReference) index;
                 value = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
             }
-            else
+            else if(index != null && index instanceof Long)
             {
                 value = recordController.getWithReferenceId((long)index);
             }
-            RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
-            returnValue.add(value);
+            if(value != null) {
+                RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
+                returnValue.add(value);
+            }
             i++;
         }
 
@@ -570,5 +572,6 @@ public class PartitionQueryController extends PartitionContext
     {
         temporaryDataFile.delete();
     }
+
 }
 

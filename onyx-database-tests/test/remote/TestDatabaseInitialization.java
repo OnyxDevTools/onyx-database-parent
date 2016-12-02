@@ -2,22 +2,18 @@ package remote;
 
 import category.RemoteServerTests;
 import com.onyx.application.DatabaseServer;
-import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
-import com.onyx.exception.QueryException;
+
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
-import com.onyx.persistence.context.impl.RemoteSchemaContext;
-import com.sun.org.apache.xml.internal.security.Init;
 import entities.SimpleEntity;
 import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
 
-import java.io.IOException;
 import java.rmi.registry.Registry;
 
 /**

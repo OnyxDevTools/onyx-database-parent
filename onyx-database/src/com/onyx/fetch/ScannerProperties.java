@@ -85,7 +85,7 @@ public class ScannerProperties
                 final AttributeDescriptor attributeDescriptor = descriptor.getAttributes().get(attribute);
                 if (attributeDescriptor == null)
                 {
-                    throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.getClazz().getCanonicalName());
+                    throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.getClazz().getName());
                 }
                 scanObjects.add(new ScannerProperties(descriptor, attributeDescriptor, true, context));
             }
