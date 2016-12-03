@@ -56,7 +56,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             long fileSize = this.fileSize.get();
 
             // Load the first chunk into memory
-            slices = new HashMap<>();
+            slices = new ConcurrentHashMap<>();
             MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, SLICE_SIZE);
             slices.put(0, new FileSlice(buffer, new ReentrantLock(true)));
 
@@ -86,7 +86,6 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             try {
                 channel.truncate(fileSize.get());
             } catch (IOException e) {
-                e.printStackTrace();
             }
 
             this.channel.close();
@@ -422,6 +421,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
                             }
                         }
                     }
+
                 } catch (Exception ignore) {
                 }
             }
