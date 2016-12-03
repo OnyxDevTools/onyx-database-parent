@@ -64,6 +64,7 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
     @Override
     public void initialize() throws InitializationException
     {
+        this.getPersistenceManager();
         context.start();
     }
 }

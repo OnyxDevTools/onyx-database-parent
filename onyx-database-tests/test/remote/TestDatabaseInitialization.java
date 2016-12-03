@@ -1,12 +1,14 @@
 package remote;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.InitializationException;
+
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
-import com.onyx.persistence.context.impl.RemoteSchemaContext;
+import entities.SimpleEntity;
 import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -25,6 +27,135 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     public static final String INVALID_DATABASE_LOCATION = "onx://localhost:8081";
     public static final String DATABASE_LOCATION = "onx://localhost:8080";
 
+    public static final String PERSIST_CONN_DATABASE_LOCATION = "onx://localhost:8082";
+
+
+    @Test
+    public void testPersistantConnection() throws Exception
+    {
+        DatabaseServer dbServer = new DatabaseServer();
+        dbServer.setPort(8082);
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
+        dbServer.setEnableSocketSupport(false);
+        dbServer.start();
+
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
+        fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
+        fac.setCredentials("admin", "admin");
+
+        long time = System.currentTimeMillis();
+        fac.initialize();
+        System.out.println("Done in " + (System.currentTimeMillis() - time));
+
+        PersistenceManager mgr = fac.getPersistenceManager();
+
+        SimpleEntity simpleEntity = new SimpleEntity();
+        simpleEntity.setSimpleId("MYIDYO");
+
+
+        mgr.saveEntity(simpleEntity);
+
+        dbServer.stop();
+
+        Thread.sleep(2000);
+
+        dbServer = new DatabaseServer();
+        dbServer.setPort(8082);
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
+        dbServer.setEnableSocketSupport(false);
+        dbServer.start();
+
+        Thread.sleep(2000);
+
+        SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
+
+        assert foundAfterClose.getSimpleId().equals(simpleEntity.getSimpleId());
+
+        fac.close();
+        dbServer.stop();
+    }
+
+    @Test
+    public void testTryConnectBeforeStart() throws Exception
+    {
+        DatabaseServer dbServer = new DatabaseServer();
+        dbServer.setPort(8082);
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
+        dbServer.setEnableSocketSupport(false);
+
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
+        fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
+        fac.setCredentials("admin", "admin");
+
+        long time = System.currentTimeMillis();
+
+        try {
+            fac.initialize();
+        } catch (InitializationException in){}
+
+        System.out.println("Done in " + (System.currentTimeMillis() - time));
+
+        PersistenceManager mgr = fac.getPersistenceManager();
+
+        SimpleEntity simpleEntity = new SimpleEntity();
+        simpleEntity.setSimpleId("MYIDYO");
+
+
+        try {
+            mgr.saveEntity(simpleEntity);
+        }
+        catch (InitializationException queryException)
+        {
+        }
+
+        Thread.sleep(2000);
+        dbServer.start();
+
+        Thread.sleep(2000);
+
+        mgr.saveEntity(simpleEntity);
+        SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
+
+        assert foundAfterClose.getSimpleId().equals(simpleEntity.getSimpleId());
+
+        fac.close();
+        dbServer.stop();
+    }
+
+    @Test(expected = InitializationException.class)
+    public void testPersistantConnectionNotReOpened() throws Exception {
+        DatabaseServer dbServer = new DatabaseServer();
+        dbServer.setPort(8082);
+        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
+        dbServer.setEnableSocketSupport(false);
+        dbServer.start();
+
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
+        fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
+        fac.setCredentials("admin", "admin");
+
+        long time = System.currentTimeMillis();
+        fac.initialize();
+        System.out.println("Done in " + (System.currentTimeMillis() - time));
+
+        PersistenceManager mgr = fac.getPersistenceManager();
+
+        SimpleEntity simpleEntity = new SimpleEntity();
+        simpleEntity.setSimpleId("MYIDYO");
+
+
+        mgr.saveEntity(simpleEntity);
+
+        dbServer.stop();
+
+        Thread.sleep(2000);
+
+        SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
+
+        assert foundAfterClose.getSimpleId().equals(simpleEntity.getSimpleId());
+
+        fac.close();
+    }
 
     /**
      * Positive test

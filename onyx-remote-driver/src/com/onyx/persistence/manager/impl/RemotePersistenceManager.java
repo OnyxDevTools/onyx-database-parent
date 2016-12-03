@@ -1,5 +1,12 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.exception.StreamException;
+import com.onyx.persistence.collections.LazyQueryCollection;
+import com.onyx.persistence.factory.ConnectionManager;
+import com.onyx.persistence.factory.PersistenceManagerFactory;
+import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
+import com.onyx.stream.QueryMapStream;
+import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
@@ -10,18 +17,15 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.SocketPersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryOrder;
-import com.onyx.persistence.query.QueryResult;
+import com.onyx.persistence.query.*;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,23 +55,18 @@ import java.util.Set;
  */
 public class RemotePersistenceManager extends AbstractRemotePersistenceManager implements PersistenceManager, SocketPersistenceManager {
 
+    private ConnectionManager connectionManager;
+
     /**
      * Default Constructor.  This should be invoked by the persistence manager factory
+     *
+     * @since 1.1.0
+     * @param connectionManager Responsible for verifying the connection and re-connecting
      */
-    public RemotePersistenceManager()
+    public RemotePersistenceManager(ConnectionManager connectionManager)
     {
         super(null);
-
-    }
-
-    /**
-     * Constructor With Schema Context.  This should be invoked by the persistence manager factory
-     *
-     * @param context Schema Context
-     */
-    public RemotePersistenceManager(SchemaContext context)
-    {
-        super(context);
+        this.connectionManager = connectionManager;
     }
 
 
@@ -85,10 +84,12 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public IManagedEntity saveEntity(IManagedEntity entity) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.SAVE, entity);
 
         IManagedEntity copyValue = (IManagedEntity)this.endpoint.execute(token);
-        ObjectUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
 
         return entity;
     }
@@ -105,6 +106,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public void saveEntities(List<? extends IManagedEntity> entities) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         if(entities.size() > 0)
         {
             final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.BATCH_SAVE, entities);
@@ -125,6 +128,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public boolean deleteEntity(IManagedEntity entity) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.DELETE, entity);
         return (boolean)this.endpoint.execute(token);
     }
@@ -143,6 +148,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         if(entities.size() > 0)
         {
             final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.BATCH_DELETE, entities);
@@ -164,6 +171,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public List executeQuery(Query query) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.QUERY, query);
         QueryResultResponseBody results = (QueryResultResponseBody)this.endpoint.execute(token);
         query.setResultsCount(results.getMaxResults());
@@ -184,6 +193,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public List executeLazyQuery(Query query) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.QUERY_LAZY, query);
         QueryResultResponseBody results = (QueryResultResponseBody)this.endpoint.execute(token);
         query.setResultsCount(results.getMaxResults());
@@ -206,6 +217,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public int executeUpdate(Query query) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.QUERY_UPDATE, query);
         QueryResultResponseBody results = (QueryResultResponseBody)this.endpoint.execute(token);
         query.setResultsCount(results.getMaxResults());
@@ -226,6 +239,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public int executeDelete(Query query) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.QUERY_DELETE, query);
         QueryResultResponseBody results = (QueryResultResponseBody)this.endpoint.execute(token);
         query.setResultsCount(results.getMaxResults());
@@ -248,9 +263,11 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public IManagedEntity find(IManagedEntity entity) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND, entity);
         IManagedEntity results = (IManagedEntity)this.endpoint.execute(token);
-        ObjectUtil.copy(results, entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity));
         return entity;
     }
 
@@ -269,9 +286,11 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public IManagedEntity findById(Class clazz, Object id) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_BY_ID, body);
         return (IManagedEntity)this.endpoint.execute(token);
@@ -294,9 +313,11 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException
     {
 
+        connectionManager.verifyConnection();
+
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         body.setPartitionId(String.valueOf(partitionId));
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_BY_ID_IN_PARTITION, body);
@@ -319,6 +340,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public boolean exists(IManagedEntity entity) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.EXISTS, entity);
         return (boolean)this.endpoint.execute(token);
     }
@@ -341,13 +364,36 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public boolean exists(IManagedEntity entity, Object partitionId) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         body.setPartitionId(String.valueOf(partitionId));
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.EXISTS_IN_PARTITION, body);
         return (boolean)this.endpoint.execute(token);
+    }
+
+    /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    @Override
+    public List list(Class clazz) throws EntityException
+    {
+        connectionManager.verifyConnection();
+
+        final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
+
+        // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
+        QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
+        return list(clazz, criteria);
     }
 
     /**
@@ -573,19 +619,21 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public void initialize(IManagedEntity entity, String attribute) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
 
         final RelationshipDescriptor relationshipDescriptor = descriptor.getRelationships().get(attribute);
 
         if(relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
 
         EntityInitializeBody body = new EntityInitializeBody();
         body.setEntityId(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()));
         body.setAttribute(attribute);
-        body.setEntityType(entity.getClass().getCanonicalName());
+        body.setEntityType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
@@ -595,7 +643,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.INITIALIZE, body);
         List relationship = (List)this.endpoint.execute(token);
 
-        objectUtil.setAttribute(entity, relationship, new AttributeField(objectUtil.getField(entity.getClass(), attribute)));
+
+        ReflectionUtil.setAny(entity, relationship, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**
@@ -612,7 +661,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
         this.initialize(entity, attribute);
-        return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**
@@ -629,6 +678,8 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
 
         Class attributeType = descriptor.getRelationships().get(relationship).getType();
@@ -637,7 +688,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         body.setEntity(entity);
         body.setRelationship(relationship);
         body.setIdentifiers(relationshipIdentifiers);
-        body.setType(attributeType.getCanonicalName());
+        body.setType(attributeType.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.SAVE_RELATIONSHIPS, body);
         this.endpoint.execute(token);
@@ -654,9 +705,11 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(referenceId);
-        body.setType(entityType.getCanonicalName());
+        body.setType(entityType.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_BY_REFERENCE_ID, body);
         return (IManagedEntity)this.endpoint.execute(token);
@@ -679,10 +732,12 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     @Override
     public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException
     {
+        connectionManager.verifyConnection();
+
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
         body.setPartitionId(String.valueOf(partitionId));
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
 
         final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.FIND_WITH_PARTITION_ID, body);
         return (IManagedEntity)this.endpoint.execute(token);
@@ -755,4 +810,56 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
         return new QueryResult(query, this.executeLazyQuery(query));
     }
 
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    @Override
+    public void stream(Query query, QueryStream streamer) throws EntityException
+    {
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE);
+    }
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    @Override
+    public void stream(Query query, Class queryStreamClass) throws EntityException
+    {
+        connectionManager.verifyConnection();
+
+        final StreamRequestBody body = new StreamRequestBody(query, queryStreamClass);
+        final RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.STREAM_CLASS, body);
+        this.endpoint.execute(token);
+    }
+
+    /**
+     * Get Map representation of an entity with reference id.
+     *
+     * This is unsupported in the RemotePersistenceManager.  The reason is because it should not apply since the stream API
+     * is not supported as a proxy QueryStream.
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
+    }
 }

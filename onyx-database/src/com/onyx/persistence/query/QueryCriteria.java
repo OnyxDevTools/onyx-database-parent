@@ -1,8 +1,8 @@
 package com.onyx.persistence.query;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -768,7 +768,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         buffer.writeObject(attribute);
         buffer.writeInt(operator.ordinal());
         buffer.writeInt(type.ordinal());
-        buffer.writeDate(dateValue);
+        buffer.writeObject(dateValue);
         buffer.writeObject(longValue);
         buffer.writeObject(integerValue);
         buffer.writeObject(booleanValue);
@@ -789,7 +789,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         attribute = (String)buffer.readObject();
         operator = QueryCriteriaOperator.values()[buffer.readInt()];
         type = QueryCriteriaType.values()[buffer.readInt()];
-        dateValue = buffer.readDate();
+        dateValue = (Date)buffer.readObject();
         longValue = (Long)buffer.readObject();
         integerValue = (Integer)buffer.readObject();
         booleanValue = (Boolean)buffer.readObject();

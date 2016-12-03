@@ -52,7 +52,7 @@ public class BaseTest {
             factory.close();
     }
 
-    private static void delete(File f) {
+    public static void delete(File f) {
         if (f.isDirectory()) {
             for (File c : f.listFiles())
                 delete(c);

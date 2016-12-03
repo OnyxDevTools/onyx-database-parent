@@ -4,8 +4,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.request.pojo.*;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 
@@ -17,9 +16,6 @@ import java.util.List;
 public class PersistenceEndpoint implements ServerEndpoint {
 
     private final PersistenceManager persistenceManager;
-
-    // Object Utility for reflection
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
 
     /**
      * Constructor
@@ -97,7 +93,7 @@ public class PersistenceEndpoint implements ServerEndpoint {
                 break;
             case QUERY_LAZY:
                 QueryResultResponseBody queryLazyPayload = new QueryResultResponseBody();
-                queryLazyPayload.setResultList(persistenceManager.executeQuery((Query) token.getPayload()));
+                queryLazyPayload.setResultList(persistenceManager.executeLazyQuery((Query) token.getPayload()));
                 queryLazyPayload.setMaxResults(((Query) token.getPayload()).getResultsCount());
                 token.setPayload(queryLazyPayload);
                 break;
@@ -114,7 +110,7 @@ public class PersistenceEndpoint implements ServerEndpoint {
                     parentEntity = persistenceManager.findByIdInPartition(parentClass, initPayload.getEntityId(), initPayload.getPartitionId());
                 }
                 persistenceManager.initialize(parentEntity, initPayload.getAttribute());
-                token.setPayload(objectUtil.getAttribute(new AttributeField(objectUtil.getField(parentEntity.getClass(), initPayload.getAttribute())), parentEntity));
+                token.setPayload(ReflectionUtil.getAny(parentEntity, ReflectionUtil.getOffsetField(parentEntity.getClass(), initPayload.getAttribute())));
                 break;
             case SAVE_RELATIONSHIPS:
                 SaveRelationshipRequestBody saveRelationshipRequestBody = (SaveRelationshipRequestBody) token.getPayload();
@@ -129,6 +125,10 @@ public class PersistenceEndpoint implements ServerEndpoint {
                 final EntityRequestBody partitionReferenceBody = (EntityRequestBody)token.getPayload();
                 token.setPayload(persistenceManager.findByIdWithPartitionId(Class.forName(partitionReferenceBody.getType()), partitionReferenceBody.getId(), Long.valueOf(partitionReferenceBody.getPartitionId())));
                 break;
+            case STREAM_CLASS:
+                final StreamRequestBody streamRequestBody = (StreamRequestBody)token.getPayload();
+                persistenceManager.stream(streamRequestBody.getQuery(), streamRequestBody.getStreamClass());
+                token.setPayload(null);
         }
     }
 }

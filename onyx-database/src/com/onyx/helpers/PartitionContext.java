@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.RecordController;
@@ -103,7 +103,7 @@ public class PartitionContext
         @Override
         public int hashCode()
         {
-            return this.entityType.getCanonicalName().hashCode() + this.partitionVal.hashCode();
+            return this.entityType.getName().hashCode() + this.partitionVal.hashCode();
         }
 
         public boolean equals(Object val)

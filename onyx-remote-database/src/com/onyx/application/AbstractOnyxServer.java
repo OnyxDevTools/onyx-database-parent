@@ -2,7 +2,6 @@ package com.onyx.application;
 
 import com.onyx.config.ContextFactory;
 import com.onyx.exception.InitializationException;
-import com.onyx.map.serializer.SocketBuffer;
 import com.onyx.server.DatabaseConnectionListener;
 import com.onyx.server.DatabaseHandshakeHandler;
 import com.onyx.util.EncryptionUtil;
@@ -112,8 +111,6 @@ abstract class AbstractOnyxServer implements OnyxServer {
      */
     protected Undertow.Builder configure() throws InitializationException
     {
-
-        SocketBuffer.initialize(null);
 
         // Session Manager
         final SessionManager sessionManager = new InMemorySessionManager("SESSION_MANAGER");

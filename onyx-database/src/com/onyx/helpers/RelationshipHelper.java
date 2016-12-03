@@ -43,7 +43,7 @@ public class RelationshipHelper
                 final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
                 if(relationshipController == null)
                 {
-                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " Class:" + relationshipDescriptor.getParentClass().getCanonicalName() + " Inverse:" + relationshipDescriptor.getInverse());
+                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " Class:" + relationshipDescriptor.getParentClass().getName() + " Inverse:" + relationshipDescriptor.getInverse());
                 }
                 relationshipController.saveRelationshipForEntity(entity, manager);
             }

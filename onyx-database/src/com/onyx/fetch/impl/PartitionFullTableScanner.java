@@ -7,8 +7,8 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.map.DiskMap;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
@@ -16,8 +16,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
-import gnu.trove.THashMap;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +30,6 @@ import java.util.concurrent.Future;
 public class PartitionFullTableScanner extends FullTableScanner implements TableScanner
 {
 
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
     private SystemEntity systemEntity = null;
 
     /**
@@ -44,7 +42,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
     public PartitionFullTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-        systemEntity = context.getSystemEntityByName(query.getEntityType().getCanonicalName());
+        systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
     }
 
 
@@ -57,39 +55,36 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
      */
     public Map scanPartition(DiskMap existingValues, long partitionId) throws EntityException
     {
-        final Map allResults = new THashMap();
+        final Map allResults = new HashMap();
 
-        final Iterator<Long> iterator = existingValues.keySet().iterator();
-        IManagedEntity entity = null;
-        Object attributeValue = null;
-        Object keyValue = null;
+            final Iterator<Long> iterator = existingValues.keySet().iterator();
+            IManagedEntity entity = null;
+            Object attributeValue = null;
+            Object keyValue = null;
 
-        while(iterator.hasNext())
-        {
-            if(query.isTerminated())
-                return allResults;
+            while (iterator.hasNext()) {
+                if (query.isTerminated())
+                    return allResults;
 
-            keyValue = iterator.next();
+                keyValue = iterator.next();
 
-            entity = (IManagedEntity)existingValues.get(keyValue);
+                entity = (IManagedEntity) existingValues.get(keyValue);
 
-            // Ensure entity still exists
-            if(entity == null)
-            {
-                continue;
+                // Ensure entity still exists
+                if (entity == null) {
+                    continue;
+                }
+
+                // Get the attribute value
+                attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
+
+                // Compare and add
+                if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
+                    long ref = existingValues.getRecID(keyValue);
+                    allResults.put(new PartitionReference(partitionId, ref), new PartitionReference(partitionId, ref));
+                }
+
             }
-
-            // Get the attribute value
-            attributeValue = reflection.getAttribute(fieldToGrab, entity);
-
-            // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
-            {
-                long ref = existingValues.getRecID(keyValue);
-                allResults.put(new PartitionReference(partitionId, ref), new PartitionReference(partitionId, ref));
-            }
-
-        }
 
         return allResults;
     }
@@ -121,7 +116,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                     final MapBuilder dataFile = context.getDataFile(partitionDescriptor);
-                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getCanonicalName());
+                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getName());
 
                     Map partitionResults = scanPartition(recs, partition.getIndex());
                     results.putAll(partitionResults);

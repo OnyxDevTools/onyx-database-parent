@@ -1,7 +1,7 @@
 package com.onyx.server;
 
 import com.onyx.endpoint.*;
-import com.onyx.map.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.request.pojo.*;

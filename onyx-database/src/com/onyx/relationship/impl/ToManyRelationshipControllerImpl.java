@@ -2,11 +2,13 @@ package com.onyx.relationship.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.RelationshipHydrationException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
-import com.onyx.map.DiskMap;
+import com.onyx.helpers.PartitionHelper;
+import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.CascadePolicy;
@@ -39,7 +41,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(entityDescriptor, relationshipDescriptor, context);
-        records = (DiskMap) dataFile.getHashMap(entityDescriptor.getClazz().getCanonicalName() + relationshipDescriptor.getName());
+        records = (DiskMap) dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
     /**
@@ -61,7 +63,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
         Set<RelationshipReference> existingRelationshipObjects = null;
 
-        // If the map does not exist, lets create one and persist it
+        // If the structure does not exist, lets create one and persist it
         synchronized (records)
         {
             Object retVal = records.get(entityIdentifier);
@@ -268,7 +270,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 if (relationshipObject == null)
                 {
-                    throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getCanonicalName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
+                    throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
                 }
 
                 if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
@@ -355,8 +357,17 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
     {
+        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.context);
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
-        records.put(indexValue, relationshipIdentifiers);
+
+        RelationshipReference entityId = null;
+        if(partitionValue != "" && partitionValue != null) {
+            SystemPartitionEntry relationshipDescriptor = this.context.getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.context));
+            entityId = new RelationshipReference(indexValue, relationshipDescriptor.getIndex());
+        } else {
+            entityId = new RelationshipReference(indexValue, 0L);
+        }
+        records.put(entityId, relationshipIdentifiers);
     }
 
 }

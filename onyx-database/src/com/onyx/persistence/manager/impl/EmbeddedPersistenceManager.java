@@ -1,31 +1,25 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.stream.QueryStream;
+import com.onyx.stream.QueryMapStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-import com.onyx.exception.NoResultsException;
-import com.onyx.exception.RelationshipNotFoundException;
+import com.onyx.exception.*;
 import com.onyx.fetch.PartitionQueryController;
 import com.onyx.helpers.*;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.collections.LazyQueryCollection;
 import com.onyx.persistence.manager.SocketPersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryOrder;
-import com.onyx.persistence.query.QueryResult;
+import com.onyx.persistence.query.*;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -61,10 +55,27 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     protected SchemaContext context;
     protected boolean journalingEnabled;
 
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
-
+    /**
+     * Default constructor.  We do not want to export the object if in embedded mode.
+     * @throws RemoteException
+     */
     public EmbeddedPersistenceManager() throws RemoteException {
+        super();
+        UnicastRemoteObject.unexportObject(this, true);
+    }
 
+    /**
+     * Constructor with option to export RMI service
+     * @param export Should export RMI Service
+     * @throws RemoteException RMI Exception
+     */
+    public EmbeddedPersistenceManager(boolean export) throws RemoteException
+    {
+        super();
+        if(!export)
+        {
+            UnicastRemoteObject.unexportObject(this, true);
+        }
     }
 
     /**
@@ -78,6 +89,17 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     {
         this.context = context;
         this.context.setSystemPersistenceManager(this);
+    }
+
+    /**
+     * Return the Schema Context that was created by the Persistence Manager Factory.
+     *
+     * @since 1.0.0
+     * @return context Schema Context Implementation
+     */
+    public SchemaContext getContext()
+    {
+        return this.context;
     }
 
     /**
@@ -260,6 +282,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), query.getEntityType(), descriptor, query, context, this);
+
         try
         {
             final Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -309,6 +332,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+
         try
         {
             final Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
@@ -376,11 +400,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
                 final List<Map<String, Object>> finalResults = new ArrayList<>(attributeValues.values());
 
-                if (query.getProjections() != null)
-                {
-                    // TODO: Implement Projections
-                }
-
                 return finalResults;
 
             } else
@@ -390,10 +409,6 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
                         (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0],
                         query.getFirstRow(),
                         query.getMaxResults());
-                if (query.getProjections() != null)
-                {
-                    // TODO: Implement Projections
-                }
 
                 return returnValue;
             }
@@ -437,7 +452,11 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
             Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
 
             query.setResultsCount(results.size());
-
+            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1)
+            {
+                results = queryController.sort(
+                        (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
+            }
             LazyQueryCollection<IManagedEntity> retVal = new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
             return retVal;
         } finally
@@ -479,7 +498,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(results, new EntityRelationshipManager(), context);
 
-        ObjectUtil.copy(results, entity, descriptor);
+        ReflectionUtil.copy(results, entity, descriptor);
 
         return entity;
     }
@@ -646,7 +665,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         if (relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
 
         RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
@@ -667,8 +686,29 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     @Override
     public Object findRelationship(IManagedEntity entity, String attribute) throws RemoteException {
         this.initialize(entity, attribute);
-        return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
+
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
+
+    /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    @Override
+    public List list(Class clazz) throws EntityException
+    {
+        final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
+
+        // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
+        QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
+        return list(clazz, criteria);
+    }
+
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -896,7 +936,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
         if (relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getName());
         }
 
         Set<RelationshipReference> references = new HashSet<>();
@@ -1037,4 +1077,80 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     {
         return new QueryResult(query, this.executeLazyQuery(query));
     }
+
+    /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException
+    {
+        if (context.getKillSwitch())
+            throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
+
+        IManagedEntity entity = EntityDescriptor.createNewEntity(entityType);
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
+        final RecordController recordController = context.getRecordController(descriptor);
+
+        // Find the object
+        return recordController.getMapWithReferenceId(reference);
+    }
+
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    @Override
+    public void stream(Query query, QueryStream streamer) throws EntityException
+    {
+        final LazyQueryCollection entityList = (LazyQueryCollection) executeLazyQuery(query);
+        final PersistenceManager persistenceManagerInstance = this;
+
+        for (int i = 0; i < entityList.size(); i++) {
+            Object objectToStream = null;
+
+            if (streamer instanceof QueryMapStream) {
+                objectToStream = entityList.getDict(i);
+            } else {
+                objectToStream = entityList.get(i);
+            }
+
+            streamer.accept(objectToStream, persistenceManagerInstance);
+        }
+    }
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    @Override
+    public void stream(Query query, Class queryStreamClass) throws EntityException
+    {
+        QueryStream streamer = null;
+        try {
+            streamer = (QueryStream)queryStreamClass.newInstance();
+        } catch (InstantiationException e) {
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
+        } catch (IllegalAccessException e) {
+            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
+        }
+        this.stream(query, streamer);
+    }
+
 }

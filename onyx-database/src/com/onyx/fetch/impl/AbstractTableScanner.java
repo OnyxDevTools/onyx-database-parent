@@ -3,15 +3,15 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
-import com.onyx.map.DiskMap;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,7 +28,7 @@ public abstract class AbstractTableScanner extends PartitionContext
     protected SchemaContext context;
     protected Class classToScan;
     protected EntityDescriptor descriptor;
-    protected AttributeField fieldToGrab = null;
+    protected OffsetField fieldToGrab = null;
 
     protected DiskMap<Object, IManagedEntity> records = null;
     protected MapBuilder temporaryDataFile = null;
@@ -54,7 +54,7 @@ public abstract class AbstractTableScanner extends PartitionContext
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);
-        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getCanonicalName());
+        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getName());
 
         this.temporaryDataFile = temporaryDataFile;
 
@@ -62,7 +62,7 @@ public abstract class AbstractTableScanner extends PartitionContext
         if(!criteria.getAttribute().contains("."))
         {
             // Get the reflection field to grab the value to compare
-            fieldToGrab = ObjectUtil.getAttributeField(classToScan, criteria.getAttribute());
+            fieldToGrab = ReflectionUtil.getOffsetField(classToScan, criteria.getAttribute());
         }
 
         this.persistenceManager = persistenceManager;

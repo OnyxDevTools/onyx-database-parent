@@ -1,10 +1,9 @@
 package com.onyx.server;
 
-import com.onyx.client.DefaultDatabaseEndpoint;
 import com.onyx.request.pojo.RequestToken;
+import com.onyx.buffer.BufferStream;
 import io.undertow.websockets.core.*;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -38,8 +37,9 @@ public abstract class AbstractMessageListener extends AbstractReceiveListener {
 
                     // Handle the request
                     handleToken(token, channel, callCompletion);
-
                 }
+
+                BufferStream.recycle(buffer);
             }
 
         } catch (Exception e) {

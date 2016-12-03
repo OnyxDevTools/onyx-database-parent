@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
@@ -12,8 +12,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
-import gnu.trove.THashMap;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 
@@ -24,8 +23,6 @@ import java.util.*;
  */
 public class FullTableScanner extends AbstractTableScanner implements TableScanner
 {
-
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
 
     /**
      * Constructor
@@ -48,31 +45,29 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
      */
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> allResults = new THashMap();
+        final Map<Long, Long> allResults = new HashMap();
 
         // We need to do a full scan
-        final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
+            final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
 
-        Map.Entry<Object, IManagedEntity> entry = null;
-        Object attributeValue = null;
+            Map.Entry<Object, IManagedEntity> entry = null;
+            Object attributeValue = null;
 
-        while(iterator.hasNext())
-        {
-            if(query.isTerminated())
-                return allResults;
+            while (iterator.hasNext()) {
+                if (query.isTerminated())
+                    return allResults;
 
-            entry = iterator.next();
+                entry = iterator.next();
 
-            attributeValue = reflection.getAttribute(fieldToGrab, entry.getValue());
+                attributeValue = ReflectionUtil.getAny(entry.getValue(), fieldToGrab);
 
-            // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
-            {
-                long recId = records.getRecID(entry.getKey());
-                allResults.put(recId, recId);
+                // Compare and add
+                if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
+                    long recId = records.getRecID(entry.getKey());
+                    allResults.put(recId, recId);
+                }
+
             }
-
-        }
 
         return allResults;
     }
@@ -86,11 +81,10 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
      */
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map allResults = new THashMap();
+        final Map allResults = new HashMap();
 
         final Iterator<Long> iterator = existingValues.keySet().iterator();
-        IManagedEntity entity = null;
-        Object attributeValue = null;
+        Object entityAttribute = null;
         Object keyValue = null;
 
         while(iterator.hasNext())
@@ -103,24 +97,22 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
             if(keyValue instanceof PartitionReference)
             {
                 final RecordController recordController = this.getRecordControllerForPartition(((PartitionReference)keyValue).partition);
-                entity = recordController.getWithReferenceId(((PartitionReference) keyValue).reference);
+                entityAttribute = recordController.getAttributeWithReferenceId(fieldToGrab.field.getName(), ((PartitionReference) keyValue).reference);
             }
             else
             {
-                entity = records.getWithRecID((long)keyValue);
+                entityAttribute = records.getAttributeWithRecID(fieldToGrab.field.getName(), (long)keyValue);
             }
 
-            // Ensure entity still exists
+            /*
             if(entity == null)
             {
                 continue;
             }
-
-            // Get the attribute value
-            attributeValue = reflection.getAttribute(fieldToGrab, entity);
+            */
 
             // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator()))
+            if (CompareUtil.compare(criteria.getValue(), entityAttribute, criteria.getOperator()))
             {
                 allResults.put(keyValue, keyValue);
             }

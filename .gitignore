@@ -9,4 +9,12 @@
 onyx-database-tests/C:/
 **/dependency-reduced-pom.xml
 *.oxd
-/onyx-database-tests/nbproject/
+
+/*/target
+/*/*/target
+/*/*/*/target
+
+.DS_Store
+*/.DS_Store
+/onyx-database/nbproject/
+/target/

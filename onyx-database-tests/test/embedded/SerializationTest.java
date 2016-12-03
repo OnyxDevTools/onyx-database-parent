@@ -1,9 +1,9 @@
 package embedded;
 
-import com.onyx.map.serializer.SocketBuffer;
 import com.onyx.request.pojo.RequestEndpoint;
 import com.onyx.request.pojo.RequestToken;
 import com.onyx.request.pojo.RequestTokenType;
+import com.onyx.buffer.BufferStream;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -43,13 +43,29 @@ public class SerializationTest extends RemoteBaseTest {
 
         RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.DELETE, entity);
 
-        final ByteBuffer buf =  SocketBuffer.serialize(token);
-        RequestToken token2 = (RequestToken)SocketBuffer.deserialize(buf);
+
+        final ByteBuffer buf =  BufferStream.toBuffer(token);
+        RequestToken token2 = (RequestToken) BufferStream.fromBuffer(buf);
 
         Assert.assertTrue(token2.getMessageId() == token.getMessageId());
 
 
 
+    }
+
+    @Test
+    public void testList() throws Exception
+    {
+        ArrayList arrayList = new ArrayList();
+        arrayList.add(new AllAttributeEntity());
+
+        ByteBuffer buffer = BufferStream.toBuffer(arrayList);
+        buffer.rewind();
+
+        ArrayList other = (ArrayList) BufferStream.fromBuffer(buffer);
+
+        assert other.size() == 1;
+        assert other.get(0) instanceof AllAttributeEntity;
     }
 
     @Test
@@ -61,7 +77,7 @@ public class SerializationTest extends RemoteBaseTest {
 
         List<AllAttributeEntity> entities = null;
 
-        for(int i = 0; i < 20; i++)
+        for(int i = 0; i < 40; i++)
         {
 
             entities = new ArrayList<>();
@@ -84,7 +100,10 @@ public class SerializationTest extends RemoteBaseTest {
 
             RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.DELETE, entities);
 
-            SocketBuffer.serialize(token);
+            ByteBuffer buffer = BufferStream.toBuffer(token);
+            buffer.rewind();
+
+            BufferStream.fromBuffer(buffer);
 
         }
 

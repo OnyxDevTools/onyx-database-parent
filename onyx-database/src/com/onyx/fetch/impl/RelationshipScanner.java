@@ -6,7 +6,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.ScannerFactory;
 import com.onyx.fetch.TableScanner;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
@@ -14,8 +14,8 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import gnu.trove.THashMap;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -60,13 +60,16 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     @Override
     public Map scan(Map existingValues) throws EntityException
     {
+        // Retain the original attribute
+        final String originalAttribute = criteria.getAttribute();
+
         // Get the attribute name.  If it has multiple tokens, that means it is another relationship.
         // If that is the case, we gotta find that one
-        final String[] segments = criteria.getAttribute().split("\\.");
+        final String[] segments = originalAttribute.split("\\.");
 
         // Map <ChildIndex, ParentIndex> // Inverted list so we can use it to scan using an normal full table scanner or index scanner
         final Map relationshipIndexes = getRelationshipIndexes(segments[0], existingValues);
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
 
         // We are going to set the attribute name so we can continue going down the chain.  We are going to remove the
         // processed token through
@@ -86,6 +89,8 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
             returnValue.put(relationshipIndexes.get(childIndex), childIndex);
         }
 
+        criteria.setAttribute(originalAttribute);
+
         return returnValue;
     }
 
@@ -99,7 +104,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      */
     protected Map getRelationshipIndexes(String attribute, Map existingValues) throws EntityException
     {
-        final Map allResults = new THashMap();
+        final Map allResults = new HashMap();
 
         final Iterator iterator = existingValues.keySet().iterator();
 

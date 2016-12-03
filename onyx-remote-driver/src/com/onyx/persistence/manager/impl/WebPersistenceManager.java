@@ -1,22 +1,20 @@
 package com.onyx.persistence.manager.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.onyx.exception.*;
+import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
-import com.onyx.exception.EntityClassNotFoundException;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-import com.onyx.exception.RelationshipNotFoundException;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 
@@ -49,7 +47,6 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
 {
 
     public static final String WEB = "/onyx";
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
 
     /**
      * Get Database URL
@@ -76,14 +73,14 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
 
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
             body.setPartitionId(String.valueOf(partitionValue));
         }
-        ObjectUtil.copy((IManagedEntity)this.performCall(getURL() + SAVE, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy((IManagedEntity)this.performCall(getURL() + SAVE, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
         return entity;
     }
 
@@ -112,7 +109,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
 
             try
             {
-                body.setType(entities.get(0).getClass().getCanonicalName());
+                body.setType(entities.get(0).getClass().getName());
             }
             catch (ClassCastException e)
             {
@@ -137,7 +134,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         return (boolean)this.performCall(getURL() + DELETE, null, Boolean.class, body);
     }
 
@@ -165,7 +162,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
             {
                 throw new EntityClassNotFoundException(EntityClassNotFoundException.UNKNOWN_EXCEPTION);
             }
-            body.setType(entities.get(0).getClass().getCanonicalName());
+            body.setType(entities.get(0).getClass().getName());
             this.performCall(getURL() + BATCH_DELETE, null, null, body);
         }
     }
@@ -281,14 +278,14 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
             body.setPartitionId(String.valueOf(partitionValue));
         }
 
-        ObjectUtil.copy((IManagedEntity)this.performCall(getURL() + FIND, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
+        ReflectionUtil.copy((IManagedEntity)this.performCall(getURL() + FIND, null, entity.getClass(), body), entity, context.getDescriptorForEntity(entity));
 
         return entity;
     }
@@ -309,7 +306,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND, null, clazz, body);
     }
 
@@ -331,7 +328,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
         body.setPartitionId(String.valueOf(partitionId));
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND, null, clazz, body);
     }
 
@@ -355,7 +352,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
         body.setPartitionId(String.valueOf(partitionId));
-        body.setType(clazz.getCanonicalName());
+        body.setType(clazz.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND_WITH_PARTITION_ID, null, clazz, body);
     }
 
@@ -376,7 +373,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
@@ -404,7 +401,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
-        body.setType(entity.getClass().getCanonicalName());
+        body.setType(entity.getClass().getName());
         body.setPartitionId(String.valueOf(partitionId));
         return (boolean)this.performCall(getURL() + EXISTS, null, Boolean.class, body);
     }
@@ -428,21 +425,41 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
 
         if(relationshipDescriptor == null)
         {
-            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getCanonicalName());
+            throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
         Class attributeType = relationshipDescriptor.getInverseClass();
 
         EntityInitializeBody body = new EntityInitializeBody();
         body.setEntityId(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()));
         body.setAttribute(attribute);
-        body.setEntityType(entity.getClass().getCanonicalName());
+        body.setEntityType(entity.getClass().getName());
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
         if(partitionValue != null)
         {
             body.setPartitionId(String.valueOf(partitionValue));
         }
         List relationship =  (List<IManagedEntity>)this.performCall(getURL() + INITIALIZE, attributeType, List.class, body);
-        objectUtil.setAttribute(entity, relationship, new AttributeField(objectUtil.getField(entity.getClass(), attribute)));
+
+        ReflectionUtil.setAny(entity, relationship, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
+    }
+
+    /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    @Override
+    public List list(Class clazz) throws EntityException
+    {
+        final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
+
+        // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
+        QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
+        return list(clazz, criteria);
     }
 
     /**
@@ -674,7 +691,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         body.setEntity(entity);
         body.setRelationship(relationship);
         body.setIdentifiers(relationshipIdentifiers);
-        body.setType(attributeType.getCanonicalName());
+        body.setType(attributeType.getName());
 
         this.performCall(getURL() + SAVE_RELATIONSHIPS, null, null, body);
     }
@@ -692,8 +709,49 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(referenceId);
-        body.setType(entityType.getCanonicalName());
+        body.setType(entityType.getName());
         return (IManagedEntity)this.performCall(getURL() + FIND_BY_REFERENCE_ID, null, entityType, body);
+    }
+
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * This is unsupported in the WebPersistenceManager.  Please use the native remote driver aka RemotePersistenceManager to take advantage of this feature
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    @Override
+    public void stream(Query query, QueryStream streamer) throws EntityException
+    {
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
+    }
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * This is unsupported in the WebPersistenceManager.  Please use the native remote driver aka RemotePersistenceManager to take advantage of this feature
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    @Override
+    public void stream(Query query, Class queryStreamClass) throws EntityException
+    {
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
+    }
+
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        return null;
     }
 
 }

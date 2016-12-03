@@ -3,17 +3,17 @@ package com.onyx.persistence.collections;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
+import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
-import com.onyx.map.serializer.SocketBuffer;
-import com.onyx.map.serializer.SocketCoder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.relationship.RelationshipReference;
-import org.nustaq.serialization.FSTConfiguration;
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
 
 import java.io.*;
 import java.util.*;
@@ -53,7 +53,7 @@ import java.util.*;
  * </pre>
  *
  */
-public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<E>, Externalizable {
+public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<E>, Externalizable, BufferStreamable {
 
     protected List<RelationshipReference> identifiers = null;
     transient protected EntityDescriptor entityDescriptor = null;
@@ -405,7 +405,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     public void writeExternal(ObjectOutput out) throws IOException
     {
         out.writeObject(this.getIdentifiers());
-        out.writeUTF(this.getEntityDescriptor().getClazz().getCanonicalName());
+        out.writeUTF(this.getEntityDescriptor().getClazz().getName());
         out.writeUTF(this.context.getContextId());
     }
 
@@ -426,5 +426,31 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
         this.partitionContext = new PartitionContext(context, entityDescriptor);
         this.persistenceManager = this.context.getSystemPersistenceManager();
+    }
+
+    @Override
+    public void read(BufferStream bufferStream) throws BufferingException {
+        this.values = new WeakHashMap<>();
+        this.identifiers = (List) bufferStream.getCollection();
+        String className = bufferStream.getString();
+        String contextId = bufferStream.getString();
+
+        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        try {
+            this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
+        } catch (EntityException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        this.partitionContext = new PartitionContext(context, entityDescriptor);
+        this.persistenceManager = this.context.getSystemPersistenceManager();
+    }
+
+    @Override
+    public void write(BufferStream bufferStream) throws BufferingException {
+        bufferStream.putCollection(this.getIdentifiers());
+        bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
+        bufferStream.putString(this.context.getContextId());
     }
 }

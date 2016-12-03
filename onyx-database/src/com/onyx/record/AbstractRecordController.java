@@ -6,15 +6,16 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
-import com.onyx.map.DiskMap;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.util.ObjectUtil;
+import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -36,7 +37,7 @@ public abstract class AbstractRecordController
         this.context = context;
         this.entityDescriptor = descriptor;
         dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getCanonicalName());
+        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName());
     }
 
     /**
@@ -126,17 +127,9 @@ public abstract class AbstractRecordController
      */
     public static Object getIndexValueFromEntity(IManagedEntity entity, BaseDescriptor indexDescriptor) throws AttributeMissingException
     {
-        try
-        {
-            // Use reflection to get the value
-            final Field field = ObjectUtil.getField(entity.getClass(), indexDescriptor.getName());
-            // If it is a private field, lets set it accessible
-            if (!field.isAccessible())
-                field.setAccessible(true);
-            return field.get(entity);
-        } catch (IllegalAccessException e)
-        {
-            // Hmmm, setting accessible didnt work, must not have permission
+        try {
+            return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), indexDescriptor.getName()));
+        } catch (AttributeTypeMismatchException e) {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e);
         }
     }
@@ -323,7 +316,7 @@ public abstract class AbstractRecordController
         try
         {
             // Use reflection to get the value
-            final Field field = ObjectUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
+            final Field field = ReflectionUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
                 field.setAccessible(true);
@@ -393,7 +386,7 @@ public abstract class AbstractRecordController
     {
 
         // Use reflection to get the value
-        final Field field = ObjectUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
+        final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
 
         try
         {
@@ -460,5 +453,29 @@ public abstract class AbstractRecordController
     {
         return records.getWithRecID(referenceId);
     }
+
+    /**
+     * Returns a structure of the entity with a reference id
+     *
+     * @param referenceId
+     * @return
+     * @throws EntityException
+     */
+    public Map getMapWithReferenceId(long referenceId) throws EntityException
+    {
+        return records.getMapWithRecID(referenceId);
+    }
+
+    /**
+     * Get a specific attribute with reference Id
+     *
+     * @param attribute Name of attribute to get
+     * @param referenceId location of record within storage
+     * @return Attribute value
+     */
+    public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
+        return records.getAttributeWithRecID(attribute, referenceId);
+    }
+
 
 }

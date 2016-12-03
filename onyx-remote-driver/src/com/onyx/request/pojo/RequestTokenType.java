@@ -78,6 +78,10 @@ public enum RequestTokenType
     // Invalidate cluster entry
     INVALIDATE,
     SYNCHRONIZE,
-    REPLICATE
+    REPLICATE,
+
+    // Stream
+    STREAM_CLASS,
+
     ;
 }

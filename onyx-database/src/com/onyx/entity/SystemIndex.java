@@ -21,7 +21,7 @@ public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
         this.entity = entity;
         this.name = descriptor.getName();
         id = entity.getName() + descriptor.getName();
-        type = descriptor.getType().getSimpleName();
+        type = descriptor.getType().getName();
     }
 
     @Attribute

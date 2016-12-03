@@ -5,12 +5,11 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import gnu.trove.THashMap;
 
 import java.util.*;
 
@@ -47,7 +46,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     @Override
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> returnValue = new THashMap();
+        final Map<Long, Long> returnValue = new HashMap();
         final List<Long> references = new ArrayList<>();
 
         if(criteria.getValue() instanceof List)
@@ -57,12 +56,12 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 if(query.isTerminated())
                     return returnValue;
 
-                references.addAll(indexController.findAll(idValue));
+                indexController.findAll(idValue).forEach(o -> references.add(o));
             }
         }
         else
         {
-            references.addAll(indexController.findAll(criteria.getValue()));
+            indexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
         }
 
         references.stream().forEach(val->
@@ -83,7 +82,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     @Override
     public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
     {
-        final Map<Long, Long> returnValue = new THashMap();
+        final Map<Long, Long> returnValue = new HashMap();
 
         if(criteria.getValue() instanceof List)
         {
@@ -93,10 +92,9 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                     return returnValue;
 
                 Set<Long> results = indexController.findAll(idValue);
-                results.stream().forEach(reference ->
+                results.forEach(reference ->
                 {
-                    if (existingValues.containsKey(reference))
-                    {
+                    if (existingValues.containsKey(reference)) {
                         returnValue.put(reference, reference);
                     }
                 });
@@ -107,8 +105,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
             Set<Long> results = indexController.findAll(criteria.getValue());
             results.stream().forEach(reference ->
             {
-                if (existingValues.containsKey(reference))
-                {
+                if (existingValues.containsKey(reference)) {
                     returnValue.put(reference, reference);
                 }
             });

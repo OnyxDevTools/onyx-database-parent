@@ -184,7 +184,7 @@ public abstract class AbstractWebPersistenceManager
 
         // TODO: Check to see if logging is avaialble
         EntityRequestBody body = new EntityRequestBody();
-        body.setType(e.getException().getClass().getCanonicalName());
+        body.setType(e.getException().getClass().getName());
         body.setEntity(e);
 
         try

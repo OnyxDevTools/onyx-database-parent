@@ -5,18 +5,15 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.ValidationHelper;
-import com.onyx.map.DiskMap;
+import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.util.ObjectUtil;
 
-import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.BiFunction;
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -38,7 +35,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     {
         super(entityDescriptor, context);
 
-        metadata = (DiskMap)dataFile.getHashMap("metadata" + entityDescriptor.getClazz().getCanonicalName());
+        metadata = (DiskMap)dataFile.getHashMap("metadata" + entityDescriptor.getClazz().getName());
 
         // Initialize the sequence value
         Long val = metadata.get(LAST_SEQUENCE_VALUE);

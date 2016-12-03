@@ -9,13 +9,12 @@ import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import gnu.trove.THashMap;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -43,7 +42,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
         final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(criteria.getAttribute());
         indexController = context.getIndexController(indexDescriptor);
-        systemEntity = context.getSystemEntityByName(query.getEntityType().getCanonicalName());
+        systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
     }
 
     /**
@@ -61,39 +60,33 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
         if(query.getPartition() == QueryPartitionMode.ALL)
         {
             Iterator<SystemPartitionEntry> it = systemEntity.getPartition().getEntries().iterator();
-            List<Future> futures = new ArrayList<>();
+            final CountDownLatch countDownLatch = new CountDownLatch(systemEntity.getPartition().getEntries().size());
+
             while(it.hasNext())
             {
                 final SystemPartitionEntry partition = it.next();
 
-                futures.add(executorService.submit(new Runnable() {
-                    @Override
-                    public void run()
+                executorService.execute(() -> {
+                    try
                     {
-                        try
-                        {
-                            final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                            final IndexController partitionIndexController = context.getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-                            Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
-                            results.putAll(partitionResults);
-                        } catch (EntityException e)
-                        {
-                            wrapper.exception = e;
-                        }
-
+                        final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                        final IndexController partitionIndexController = context.getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                        Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
+                        results.putAll(partitionResults);
+                        countDownLatch.countDown();
+                    } catch (EntityException e)
+                    {
+                        countDownLatch.countDown();
+                        wrapper.exception = e;
                     }
-                }));
+
+                });
 
             }
 
-            try
-            {
-                for(Future future : futures)
-                {
-                    future.get();
-                }
-            }
-            catch (Exception e){}
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {}
 
             if (wrapper.exception != null)
             {
@@ -117,7 +110,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
     public Map scanPartition(IndexController partitionIndexController, long partitionId) throws EntityException
     {
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
         final List<Long> references = new ArrayList<>();
 
         if(criteria.getValue() instanceof List)
@@ -127,12 +120,12 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 if(query.isTerminated())
                     return returnValue;
 
-                references.addAll(partitionIndexController.findAll(idValue));
+                partitionIndexController.findAll(idValue).forEach(o -> references.add(o));
             }
         }
         else
         {
-            references.addAll(partitionIndexController.findAll(criteria.getValue()));
+            partitionIndexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
         }
 
         references.stream().forEach(val->
@@ -153,7 +146,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
     @Override
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map returnValue = new THashMap();
+        final Map returnValue = new HashMap();
 
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
         Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap();

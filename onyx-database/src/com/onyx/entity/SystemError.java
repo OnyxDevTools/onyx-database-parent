@@ -36,7 +36,7 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
         exception.printStackTrace(pw);
 
         setMessage(sw.toString());
-        setType(exception.getClass().getCanonicalName());
+        setType(exception.getClass().getName());
     }
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)

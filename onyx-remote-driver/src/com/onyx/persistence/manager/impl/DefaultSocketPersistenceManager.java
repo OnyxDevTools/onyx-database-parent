@@ -1,20 +1,20 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.exception.StreamException;
+import com.onyx.stream.QueryStream;
+import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryOrder;
-import com.onyx.persistence.query.QueryResult;
-import com.onyx.util.AttributeField;
-import com.onyx.util.ObjectUtil;
+import com.onyx.persistence.query.*;
+import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,7 +28,6 @@ import java.util.Set;
 public class DefaultSocketPersistenceManager implements PersistenceManager
 {
     protected SocketPersistenceManager proxyPersistenceManager;
-    public static final ObjectUtil objectUtil = ObjectUtil.getInstance();
     protected SchemaContext context = null;
 
     /**
@@ -54,6 +53,17 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     }
 
     /**
+     * Return the Schema Context that was created by the Persistence Manager Factory.
+     *
+     * @since 1.0.0
+     * @return context Schema Context Implementation
+     */
+    public SchemaContext getContext()
+    {
+        return this.context;
+    }
+
+    /**
      * Save entity.  Persists a single entity for update or insert.  This method will cascade relationships and persist indexes.
      *
      * @since 1.0.0
@@ -68,10 +78,10 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     {
         try {
             IManagedEntity savedEntity = proxyPersistenceManager.saveEntity(entity);
-            objectUtil.copy(savedEntity, entity, context.getDescriptorForEntity(entity));
+            ReflectionUtil.copy(savedEntity, entity, context.getDescriptorForEntity(entity));
             return entity;
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -89,7 +99,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             proxyPersistenceManager.saveEntities(entities);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -108,7 +118,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.deleteEntity(entity);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -128,7 +138,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             proxyPersistenceManager.deleteEntities(entities);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -150,7 +160,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
             query.setResultsCount(result.getQuery().getResultsCount());
             return (int)result.getResults();
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -174,7 +184,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
             query.setResultsCount(result.getQuery().getResultsCount());
             return (int)result.getResults();
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -196,7 +206,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
             query.setResultsCount(result.getQuery().getResultsCount());
             return (List)result.getResults();
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -218,7 +228,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
             query.setResultsCount(result.getQuery().getResultsCount());
             return (List)result.getResults();
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -241,7 +251,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
             IManagedEntity foundEntity = proxyPersistenceManager.find(entity);
             if(foundEntity != null)
             {
-                ObjectUtil.copy(foundEntity, entity, context.getDescriptorForEntity(entity));
+                ReflectionUtil.copy(foundEntity, entity, context.getDescriptorForEntity(entity));
             }
             return entity;
         } catch (RemoteException e) {
@@ -262,7 +272,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
      */
     public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
         this.initialize(entity, attribute);
-        return objectUtil.getAttribute(new AttributeField(objectUtil.getField(entity.getClass(), attribute)), entity);
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
     /**
@@ -282,7 +292,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.findById(clazz, id);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -304,7 +314,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.findByIdInPartition(clazz, id, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
     /**
@@ -325,7 +335,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.exists(entity);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
     /**
@@ -348,7 +358,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.exists(entity, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -367,10 +377,29 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
     {
         try {
             Object relationshipValue = proxyPersistenceManager.findRelationship(entity, attribute);
-            objectUtil.setAttribute(entity, relationshipValue, new AttributeField(objectUtil.getField(entity.getClass(), attribute)));
+            ReflectionUtil.setAny(entity, relationshipValue, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
+    }
+
+    /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    @Override
+    public List list(Class clazz) throws EntityException
+    {
+        final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
+
+        // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
+        QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
+        return list(clazz, criteria);
     }
 
     /**
@@ -391,7 +420,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -415,7 +444,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, orderBy);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -439,7 +468,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, orderBy);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -463,7 +492,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -489,7 +518,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, orderBy, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -515,7 +544,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, orderBy, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
     /**
@@ -544,7 +573,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, start, maxResults, orderBy);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -576,7 +605,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.list(clazz, criteria, start, maxResults, orderBy, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
     /**
@@ -595,7 +624,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             proxyPersistenceManager.saveRelationshipsForEntity(entity, relationship, relationshipIdentifiers);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -613,7 +642,7 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.getWithReferenceId(entityType, referenceId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
         }
     }
 
@@ -636,7 +665,66 @@ public class DefaultSocketPersistenceManager implements PersistenceManager
         try {
             return proxyPersistenceManager.findByIdWithPartitionId(clazz, id, partitionId);
         } catch (RemoteException e) {
-            throw new EntityException(e);
+            throw (EntityException)e.getCause();
+        }
+    }
+
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     * This is unsupported in a remote instance.  The purpose is to enforce efficiency and simplicity.
+     *
+     * It would be better to use the PersistenceManager#stream(Query query, Class queryStreamClass) method.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    @Override
+    public void stream(Query query, QueryStream streamer) throws EntityException
+    {
+        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE);
+    }
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    @Override
+    public void stream(Query query, Class queryStreamClass) throws EntityException
+    {
+        try
+        {
+            proxyPersistenceManager.stream(query, queryStreamClass);
+        } catch (RemoteException e) {
+            throw (EntityException)e.getCause();
+        }
+    }
+
+    /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    @Override
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+        try
+        {
+            return proxyPersistenceManager.getMapWithReferenceId(entityType, reference);
+        } catch (RemoteException e) {
+            throw (EntityException)e.getCause();
         }
     }
 }

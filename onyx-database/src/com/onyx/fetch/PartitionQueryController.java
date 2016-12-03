@@ -7,7 +7,7 @@ import com.onyx.helpers.PartitionContext;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.index.IndexController;
-import com.onyx.map.MapBuilder;
+import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
@@ -17,8 +17,7 @@ import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
-import gnu.trove.THashMap;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
 
@@ -36,7 +35,6 @@ public class PartitionQueryController extends PartitionContext
     protected MapBuilder temporaryDataFile;
     protected PersistenceManager persistenceManager;
 
-    private static ObjectUtil reflection = ObjectUtil.getInstance();
     /**
      * Constructor that gets the necessary entity information
      *
@@ -124,7 +122,7 @@ public class PartitionQueryController extends PartitionContext
 
         if(query.isTerminated())
         {
-            return new THashMap();
+            return new HashMap();
         }
 
         return results;
@@ -182,12 +180,14 @@ public class PartitionQueryController extends PartitionContext
                 PartitionReference ref = (PartitionReference) index;
                 value = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
             }
-            else
+            else if(index != null && index instanceof Long)
             {
                 value = recordController.getWithReferenceId((long)index);
             }
-            RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
-            returnValue.add(value);
+            if(value != null) {
+                RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
+                returnValue.add(value);
+            }
             i++;
         }
 
@@ -259,7 +259,7 @@ public class PartitionQueryController extends PartitionContext
         Iterator<Map.Entry<Object, Object>> iterator = indexValues.entrySet().iterator();
 
         Map.Entry<Object, Object> entry = null;
-        IManagedEntity entity = null;
+        Object entityAttribute = null;
 
         Map<String, Object> record = null;
 
@@ -292,11 +292,11 @@ public class PartitionQueryController extends PartitionContext
                     if(entry.getKey() instanceof PartitionReference)
                     {
                         PartitionReference ref = (PartitionReference) entry.getKey();
-                        entity = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
+                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getName(), ref.reference);
                     }
                     else
                     {
-                        entity = properties.recordController.getWithReferenceId((long)entry.getKey());
+                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getName(), (long)entry.getKey());
                     }
                 }
                 else
@@ -304,17 +304,22 @@ public class PartitionQueryController extends PartitionContext
                     if(entry.getKey() instanceof PartitionReference)
                     {
                         PartitionReference ref = (PartitionReference) entry.getValue();
-                        entity = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
+                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getName(), ref.reference);
                     }
                     else
                     {
-                        entity = properties.recordController.getWithReferenceId((long)entry.getValue());
+                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getName(), (long)entry.getValue());
                     }
                 }
-                if(entity != null)
+
+                /*
+                if(entity == null)
                 {
-                    record.put(properties.attributeDescriptor.getName(), reflection.getAttribute(properties.attributeDescriptor.field, entity));
-                }
+                    continue;
+                }*/
+
+
+                record.put(properties.attributeDescriptor.getName(), entityAttribute);
 
                 results.put(entry.getKey(), record);
             }
@@ -453,7 +458,6 @@ public class PartitionQueryController extends PartitionContext
 
             boolean updatedPartition = false;
             Object oldPartitionValue = null;
-            Object newPartitionValue = null;
 
             final Object identifier = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier());
 
@@ -469,8 +473,7 @@ public class PartitionQueryController extends PartitionContext
                 }
 
 
-                reflection.setAttribute(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().field);
-
+                ReflectionUtil.setAny(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().field);
 
                 if(!updatedPartition && updateInstruction.getIndexController() != null)
                 {
@@ -569,5 +572,6 @@ public class PartitionQueryController extends PartitionContext
     {
         temporaryDataFile.delete();
     }
+
 }
 

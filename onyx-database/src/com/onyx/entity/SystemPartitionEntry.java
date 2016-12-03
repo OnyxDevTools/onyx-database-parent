@@ -20,7 +20,7 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     public SystemPartitionEntry(EntityDescriptor entityDescriptor, PartitionDescriptor descriptor, SystemPartition partition, long index)
     {
         this.partition = partition;
-        this.id = entityDescriptor.getClazz().getCanonicalName() + descriptor.getPartitionValue();
+        this.id = entityDescriptor.getClazz().getName() + descriptor.getPartitionValue();
         this.value = descriptor.getPartitionValue();
         this.fileName = entityDescriptor.getFileName() + descriptor.getPartitionValue();
         this.index = index;

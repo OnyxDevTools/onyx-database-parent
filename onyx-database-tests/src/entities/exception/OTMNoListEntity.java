@@ -1,6 +1,7 @@
 package entities.exception;
 
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 import entities.AllAttributeEntity;
 
@@ -8,7 +9,7 @@ import entities.AllAttributeEntity;
  * Created by timothy.osborn on 12/14/14.
  */
 @Entity
-public class OTMNoListEntity implements IManagedEntity
+public class OTMNoListEntity extends ManagedEntity implements IManagedEntity
 {
     @Identifier
     @Attribute

@@ -10,7 +10,6 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ObjectUtil;
 import java.util.*;
 import java.util.function.BiFunction;
 
@@ -25,7 +24,6 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
 
     protected List<Map<Object, Object>> parentObjects = new ArrayList<>();
     protected List<Map<Object, Object>> childrenObjects = new ArrayList<>();
-    protected ObjectUtil reflection = ObjectUtil.getInstance();
     protected Query query;
     protected SchemaContext context;
     protected PartitionQueryController queryController;
@@ -105,11 +103,11 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
                                 if(aLong instanceof PartitionReference)
                                 {
                                     PartitionReference ref = (PartitionReference) aLong;
-                                    return reflection.getAttribute(scannerProperties.attributeDescriptor.field, getRecordControllerForPartition(ref.partition).getWithReferenceId(((PartitionReference)aLong).reference));
+                                    return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
                                 }
                                 else
                                 {
-                                    return reflection.getAttribute(scannerProperties.attributeDescriptor.field, scannerProperties.recordController.getWithReferenceId((long) aLong));
+                                    return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
                                 }
                             } catch (Exception e)
                             {
@@ -132,11 +130,11 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
                                 if(aLong instanceof PartitionReference)
                                 {
                                     PartitionReference ref = (PartitionReference) aLong;
-                                    return reflection.getAttribute(scannerProperties.attributeDescriptor.field, getRecordControllerForPartition(ref.partition).getWithReferenceId(((PartitionReference)aLong).reference));
+                                    return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
                                 }
                                 else
                                 {
-                                    return reflection.getAttribute(scannerProperties.attributeDescriptor.field, scannerProperties.recordController.getWithReferenceId((long) aLong));
+                                    return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
                                 }
                             } catch (Exception e)
                             {
@@ -164,11 +162,10 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
                                 if(aLong instanceof PartitionReference)
                                 {
                                     PartitionReference ref = (PartitionReference) aLong;
-                                    return reflection.getAttribute(scannerProperties.attributeDescriptor.field, getRecordControllerForPartition(ref.partition).getWithReferenceId(((PartitionReference)aLong).reference));
+                                    return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
                                 }
 
-
-                                return reflection.getAttribute(scannerProperties.attributeDescriptor.field, scannerProperties.recordController.getWithReferenceId((long) aLong));
+                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
                             } catch (Exception e)
                             {
                                 return null;
@@ -189,10 +186,10 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
                                 if(aLong instanceof PartitionReference)
                                 {
                                     PartitionReference ref = (PartitionReference) aLong;
-                                    return reflection.getAttribute(scannerProperties.attributeDescriptor.field, getRecordControllerForPartition(ref.partition).getWithReferenceId(((PartitionReference)aLong).reference));
+                                    return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
                                 }
 
-                                return reflection.getAttribute(scannerProperties.attributeDescriptor.field, scannerProperties.recordController.getWithReferenceId((long) aLong));
+                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
                             } catch (Exception e)
                             {
                                 return null;

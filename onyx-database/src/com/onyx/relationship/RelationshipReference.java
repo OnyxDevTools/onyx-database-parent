@@ -1,8 +1,8 @@
 package com.onyx.relationship;
 
 import com.onyx.exception.InvalidDataTypeForOperator;
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.util.CompareUtil;
 

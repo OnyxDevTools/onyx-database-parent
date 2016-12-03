@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onyx.endpoint.WebPersistenceEndpoint;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.UnknownDatabaseException;
+import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;
@@ -146,7 +147,7 @@ public class JSONDatabaseMessageListener implements HttpHandler
                         final String stringPath = exchange.getRelativePath();
                         final RestServicePath path = RestServicePath.valueOfPath(stringPath);
                         final Class bodyType = getClassForEndpoint(path);
-                        final ByteBuffer buffer = ByteBuffer.allocate((int) exchange.getRequestContentLength());
+                        final ByteBuffer buffer = ObjectBuffer.allocate((int) exchange.getRequestContentLength());
 
                         long time = System.currentTimeMillis();
                         while(buffer.remaining() > 0) {
@@ -159,14 +160,18 @@ public class JSONDatabaseMessageListener implements HttpHandler
                                 break;
                         }
 
-                        final Object requestBody = objectMapper.readValue(buffer.array(), bodyType);
+                        byte[] bytes = new byte[buffer.limit()];
+                        buffer.rewind();
+                        buffer.get(bytes);
+
+                        final Object requestBody = objectMapper.readValue(bytes, bodyType);
                         final Object response = invokeHandler(path, requestBody);
 
                         sendResponse(exchange, response, 200);
 
                     } catch (EntityException entityException)
                     {
-                        final ExceptionResponse response = new ExceptionResponse(entityException, entityException.getClass().getCanonicalName());
+                        final ExceptionResponse response = new ExceptionResponse(entityException, entityException.getClass().getName());
                         try {
                             sendResponse(exchange, response, 303);
                         } catch (JsonProcessingException e) {
@@ -174,7 +179,7 @@ public class JSONDatabaseMessageListener implements HttpHandler
                         }
                     } catch (Exception e)
                     {
-                        final ExceptionResponse response = new ExceptionResponse(new UnknownDatabaseException(e), UnknownDatabaseException.class.getCanonicalName());
+                        final ExceptionResponse response = new ExceptionResponse(new UnknownDatabaseException(e), UnknownDatabaseException.class.getName());
                         try {
                             sendResponse(exchange, response, 303);
                         } catch (JsonProcessingException jsonEx) {

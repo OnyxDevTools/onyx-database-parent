@@ -1,7 +1,7 @@
 package com.onyx.transaction;
 
-import com.onyx.map.serializer.ObjectBuffer;
-import com.onyx.map.serializer.ObjectSerializable;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.query.Query;
 
 import java.io.IOException;

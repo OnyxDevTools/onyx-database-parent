@@ -9,6 +9,7 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import embedded.base.BaseTest;
@@ -25,6 +26,15 @@ public class TestDatabaseInitialization extends BaseTest
 {
     public static final String INVALID_DATABASE_LOCATION = "/Users/ashley.hampshire";
     public static final String TMP_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/tmpdatbase";
+
+    @BeforeClass
+    public static void deleteDatabase() {
+        File database = new File(TMP_DATABASE_LOCATION);
+        if (database != null && database.exists()) {
+            delete(database);
+        }
+        database.delete();
+    }
 
     /**
      * Positive test
@@ -91,8 +101,6 @@ public class TestDatabaseInitialization extends BaseTest
     @AfterClass
     public static void after()
     {
-        new File(TMP_DATABASE_LOCATION + "/tmp").delete();
-        new File(TMP_DATABASE_LOCATION + "/lock").delete();
-        new File(TMP_DATABASE_LOCATION).delete();
+        deleteDatabase();
     }
 }

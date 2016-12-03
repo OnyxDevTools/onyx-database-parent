@@ -1,13 +1,14 @@
 package com.onyx.descriptor;
 
 /**
- * Created by timothy.osborn on 2/10/15.
+ Created by timothy.osborn on 2/10/15.
  */
 public interface BaseDescriptor
 {
     /**
-     * Gets the attribute name
-     * @return
+     * Gets the attribute name.
+     *
+     * @return  the name of the descriptor
      */
     String getName();
 }

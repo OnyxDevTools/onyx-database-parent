@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager;
 
+import com.onyx.stream.QueryStream;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -42,6 +43,14 @@ public interface PersistenceManager {
      * @param context Schema Context implementation
      */
     void setContext(SchemaContext context);
+
+    /**
+     * Return the Schema Context that was created by the Persistence Manager Factory.
+     *
+     * @since 1.0.0
+     * @return context Schema Context Implementation
+     */
+    SchemaContext getContext();
 
     /**
      * Save entity.  Persists a single entity for update or insert.  This method will cascade relationships and persist indexes.
@@ -236,6 +245,17 @@ public interface PersistenceManager {
     void initialize(IManagedEntity entity, String attribute) throws EntityException;
 
     /**
+     * Provides a list of all entities with a given type
+     *
+     * @param clazz  Type of managed entity to retrieve
+     *
+     * @return Unsorted List of all entities with type
+     *
+     * @throws EntityException Exception occurred while fetching results
+     */
+    List list(Class clazz) throws EntityException;
+
+    /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
      *
      * @since 1.0.0
@@ -426,4 +446,39 @@ public interface PersistenceManager {
      * @throws EntityException error occurred while attempting to retrieve entity.
      */
     IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException;
+
+    /**
+     * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param streamer Instance of the streamer to use to stream the data
+     *
+     */
+    void stream(Query query, QueryStream streamer) throws EntityException;
+
+    /**
+     * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
+     *
+     * @since 1.0.0
+     *
+     * @param query Query to execute and stream
+     *
+     * @param queryStreamClass Class instance of the database stream
+     *
+     */
+    void stream(Query query, Class queryStreamClass) throws EntityException;
+
+    /**
+     * Get Map representation of an entity with reference id
+     *
+     * @param entityType Original type of entity
+     *
+     * @param reference Reference location within a data structure
+     *
+     * @return Map of key value pair of the entity.  Key being the attribute name.
+     */
+    Map getMapWithReferenceId(Class entityType, long reference) throws EntityException;
 }

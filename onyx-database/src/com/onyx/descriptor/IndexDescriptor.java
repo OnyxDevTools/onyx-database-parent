@@ -25,7 +25,7 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
     //
     ////////////////////////////////////////////////////////
     /**
-     * Used for calculating hash map
+     * Used for calculating hash structure
      *
      * @return
      */
@@ -34,9 +34,9 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
     {
         if(entityDescriptor.getPartition() != null)
         {
-            (getType().getCanonicalName() + getName() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
+            (getType().getName() + getName() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
         }
-        return (getType().getCanonicalName() + getName()).hashCode();
+        return (getType().getName() + getName() + entityDescriptor.getClazz().getName()).hashCode();
     }
 
     /**
@@ -50,9 +50,15 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
         if(val instanceof IndexDescriptor)
         {
             IndexDescriptor comparison = (IndexDescriptor) val;
+
+            if(!entityDescriptor.clazz.getName().equals(comparison.entityDescriptor.clazz.getName()))
+            {
+                return false;
+            }
+
             if(entityDescriptor.getPartition() != null && comparison.getEntityDescriptor().getPartition() != null)
             {
-                return (comparison.getType().getCanonicalName().equals(getType().getCanonicalName())
+                return (comparison.getType().getName().equals(getType().getName())
                         && comparison.getName().equals(getName())
                         && comparison.getEntityDescriptor().getPartition().getPartitionValue().equals(entityDescriptor.getPartition().getPartitionValue()));
             }
@@ -65,7 +71,7 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
                 return false;
             }
 
-            return (((IndexDescriptor) val).getType().getCanonicalName().equals(getType().getCanonicalName())
+            return (((IndexDescriptor) val).getType().getName().equals(getType().getName())
             && ((IndexDescriptor) val).getName().equals(getName()));
         }
 

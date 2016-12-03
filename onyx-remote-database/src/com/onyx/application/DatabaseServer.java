@@ -3,7 +3,6 @@ package com.onyx.application;
 import com.onyx.client.auth.AuthRMIClientSocketFactory;
 import com.onyx.client.auth.Authorize;
 import com.onyx.entity.*;
-import com.onyx.map.serializer.SocketBuffer;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
@@ -290,8 +289,6 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
                 this.context = new DefaultSchemaContext(instance);
                 this.context.setLocation(location);
 
-                SocketBuffer.initialize(context);
-
                 final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager();
                 systemPersistenceManager.setContext(this.context);
                 this.context.setSystemPersistenceManager(systemPersistenceManager);
@@ -411,7 +408,7 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
      *
      * This will determine the socket methodology and authorization methodology
      *
-     * @param Authorize socketDatabaseAuthrorize instance of socket authorization
+     * @param socketDatabaseAuthrorize socketDatabaseAuthrorize instance of socket authorization
      */
     protected void setupSocketSupportWithAuthorization(Authorize socketDatabaseAuthrorize)
     {
@@ -575,11 +572,17 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
      * @return PersistenceManager
      */
     @Override
-    public synchronized PersistenceManager getPersistenceManager()
+    public PersistenceManager getPersistenceManager()
     {
         if(persistenceManager == null)
         {
-            this.persistenceManager = super.getPersistenceManager();
+            try {
+                this.persistenceManager = new EmbeddedPersistenceManager(true);
+                ((EmbeddedPersistenceManager)this.persistenceManager).setJournalingEnabled(this.enableJournaling);
+            } catch (RemoteException e) {
+                throw new RuntimeException(e);
+            }
+            this.persistenceManager.setContext(context);
         }
         return persistenceManager;
     }
