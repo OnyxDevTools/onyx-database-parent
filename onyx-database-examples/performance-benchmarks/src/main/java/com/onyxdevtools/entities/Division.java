@@ -1,0 +1,83 @@
+package com.onyxdevtools.entities;
+
+import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
+import com.onyx.persistence.annotations.Attribute;
+import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.annotations.Entity;
+import com.onyx.persistence.annotations.Identifier;
+import com.onyx.persistence.annotations.Relationship;
+import com.onyx.persistence.annotations.RelationshipType;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Id;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import java.util.List;
+
+/**
+ * @author cosborn
+ */
+//J-
+@Entity
+@javax.persistence.Entity
+public class Division extends ManagedEntity implements IManagedEntity
+{
+
+    @Attribute
+    @Id
+    @Identifier
+    protected String divisionName;
+
+    @Relationship(
+            type = RelationshipType.ONE_TO_MANY,
+            inverseClass = Team.class,
+            cascadePolicy = CascadePolicy.ALL,
+            inverse = "division"
+    )
+    @OneToMany(cascade = CascadeType.ALL, targetEntity = Team.class, mappedBy = "division")
+    protected List<Team> teams;
+
+    @Relationship(
+            type = RelationshipType.MANY_TO_ONE,
+            inverse = "divisions",
+            inverseClass = Conference.class
+    )
+    @ManyToOne(targetEntity = Conference.class)
+    protected Conference conference;
+
+    public Division()
+    {
+    }
+
+    @SuppressWarnings("unused")
+    public String getDivisionName()
+    {
+        return divisionName;
+    }
+
+    @SuppressWarnings("unused")
+    public void setDivisionName(String divisionName)
+    {
+        this.divisionName = divisionName;
+    }
+
+    @SuppressWarnings("unused")
+    public List<Team> getTeams()
+    {
+        return teams;
+    }
+
+    @SuppressWarnings("unused")
+    public void setTeams(List<Team> teams)
+    {
+        this.teams = teams;
+    }
+
+    @SuppressWarnings("unused")
+    public void setConference(Conference conference)
+    {
+        this.conference = conference;
+    }
+
+}
