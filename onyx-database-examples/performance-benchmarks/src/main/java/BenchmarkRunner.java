@@ -42,12 +42,17 @@ public class BenchmarkRunner {
      */
     public static void main(String args[]) throws Exception {
 
+        /* Default values to run via the IDE
+        args = new String[2];
+        args[0] = "1";
+        args[1] = "InsertionSingleThreadBenchmarkTest";
+        */
         // Delete the existing database so we start with a clean slate
         deleteDirectory(new File(DatabaseProvider.DATABASE_LOCATION));
 
         // Default Provider properties
         DatabaseProvider databaseProvider = DatabaseProvider.ONYX;
-        BenchmarkTest benchmarkBenchmarkTest = new RandomTransactionBenchmarkTest(PersistenceProviderFactory.getPersistenceManager(databaseProvider));
+        BenchmarkTest benchmarkBenchmarkTest = null;
 
         // If the arguments exist through command line use them
         if (args.length > 1) {
