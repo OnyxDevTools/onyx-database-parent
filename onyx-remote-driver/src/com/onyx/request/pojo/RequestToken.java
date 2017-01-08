@@ -65,10 +65,10 @@ public class RequestToken implements Externalizable{
     }
 
     /**
-     * Generates a token id value.  The token ID value is represented by an integer.  The integer starts out as the
-     * minimum value of an int and increments until it reaches the max value;
+     * Generates a token id key.  The token ID key is represented by an integer.  The integer starts out as the
+     * minimum key of an int and increments until it reaches the max key;
      *
-     * After the max value of an integer is reached.  It is then reset.
+     * After the max key of an integer is reached.  It is then reset.
      *
      * This is unique to the client.  NOT, the server
      * @return

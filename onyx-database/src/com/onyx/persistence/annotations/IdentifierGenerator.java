@@ -5,7 +5,7 @@ package com.onyx.persistence.annotations;
  *
  * NONE - No auto generated primary key
  *
- * SEQUENCE - Sequential primary key generated value
+ * SEQUENCE - Sequential primary key generated key
  *
  * @author Tim Osborn
  *

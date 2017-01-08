@@ -35,7 +35,7 @@ public enum RestServicePath {
         }
 
         throw new IllegalArgumentException(String.format(
-                "There is no value with name '%s' in Enum RestServicePath",
+                "There is no key with name '%s' in Enum RestServicePath",
                 name));
     }
 }

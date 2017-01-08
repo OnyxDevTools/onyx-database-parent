@@ -57,7 +57,7 @@ public class AttributeTest extends BaseTest {
         entity.id = "A";
         entity.longValue = 4l;
         entity.longPrimitive = 3l;
-        entity.stringValue = "STring value";
+        entity.stringValue = "STring key";
         entity.dateValue = new Date(1483736263743l);
         entity.doublePrimitive = 342.23;
         entity.doubleValue = 232.2;
@@ -79,7 +79,7 @@ public class AttributeTest extends BaseTest {
         Assert.assertEquals("A", entity2.id);
         Assert.assertEquals(Long.valueOf(4l), entity2.longValue);
         Assert.assertEquals(3l, entity2.longPrimitive);
-        Assert.assertEquals("STring value", entity2.stringValue);
+        Assert.assertEquals("STring key", entity2.stringValue);
         Assert.assertEquals(entity.dateValue, entity2.dateValue);
         Assert.assertEquals(new Double(342.23), new Double(entity2.doublePrimitive));
         Assert.assertEquals(Double.valueOf(232.2), entity2.doubleValue);
@@ -142,7 +142,7 @@ public class AttributeTest extends BaseTest {
         entity.id = "C";
         entity.longValue = 4l;
         entity.longPrimitive = 3l;
-        entity.stringValue = "STring value";
+        entity.stringValue = "STring key";
         entity.dateValue = new Date(343535);
         entity.doublePrimitive = 342.23;
         entity.doubleValue = 232.2;
@@ -173,7 +173,7 @@ public class AttributeTest extends BaseTest {
         Assert.assertEquals("C", entity2.id);
         Assert.assertEquals(Long.valueOf(4l), entity2.longValue);
         Assert.assertEquals(3l, entity2.longPrimitive);
-        Assert.assertEquals("STring value", entity2.stringValue);
+        Assert.assertEquals("STring key", entity2.stringValue);
         Assert.assertEquals(entity.dateValue, entity2.dateValue);
         Assert.assertEquals(new Double(342.23), new Double(entity2.doublePrimitive));
         Assert.assertEquals(Double.valueOf(232.2), entity2.doubleValue);

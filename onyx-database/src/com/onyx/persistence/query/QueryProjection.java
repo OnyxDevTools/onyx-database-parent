@@ -14,12 +14,12 @@ import java.io.Serializable;
 public interface QueryProjection<T> extends Serializable {
 
     /**
-     * @return the value of the mapped field
+     * @return the key of the mapped field
      */
     T getValue();
 
     /**
-     * @return field name that the value will be mapped to in the result set
+     * @return field name that the key will be mapped to in the result set
      */
     String getFieldName();
 

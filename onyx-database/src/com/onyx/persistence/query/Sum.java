@@ -22,7 +22,7 @@ public class Sum implements QueryProjection<String>, ObjectSerializable {
     protected String fieldName;
 
     /**
-     * Constructor sets the value to the sum of all of the parameters
+     * Constructor sets the key to the sum of all of the parameters
      * @param fieldName Attribute Name
      * @param numbers Attribute values
      */
@@ -36,7 +36,7 @@ public class Sum implements QueryProjection<String>, ObjectSerializable {
     }
 
     /**
-     * @return Sum value
+     * @return Sum key
      */
     @Override
     public String getValue() {

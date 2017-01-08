@@ -163,7 +163,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
      * @author Tim Osborn
      * @since 1.0.0
      *
-     * @return Flag for indicating Collection is empty ( size == 0 )
+     * @return Flag for indicating Collection is empty ( longSize == 0 )
      */
     @Override
     public boolean isEmpty()

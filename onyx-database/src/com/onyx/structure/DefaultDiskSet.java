@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  */
 public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
 
-    // Disk Map the HashSet is based on.  The value just defaults to null
+    // Disk Map the HashSet is based on.  The key just defaults to null
     // The only overhead is 1 byte per record.
     protected DiskMap underlyingDiskMap = null;
 
@@ -62,7 +62,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
 
     /**
      * Whether the disk set is empty or not
-     * @return size == 0
+     * @return longSize == 0
      * @since 1.0.2
      */
     @Override
@@ -162,7 +162,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * runtime type of the returned array is that of the specified array.
      * If the set fits in the specified array, it is returned therein.
      * Otherwise, a new array is allocated with the runtime type of the
-     * specified array and the size of this set.
+     * specified array and the longSize of this set.
      *
      * <p>If this set fits in the specified array with room to spare
      * (i.e., the array has more elements than this set), the element in
@@ -302,7 +302,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * Adds all of the elements in the specified collection to this set if
      * they're not already present (optional operation).  If the specified
      * collection is also a set, the <tt>addAll</tt> operation effectively
-     * modifies this set so that its value is the <i>union</i> of the two
+     * modifies this set so that its key is the <i>union</i> of the two
      * sets.  The behavior of this operation is undefined if the specified
      * collection is modified while the operation is in progress.
      *
@@ -335,7 +335,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * specified collection (optional operation).  In other words, removes
      * from this set all of its elements that are not contained in the
      * specified collection.  If the specified collection is also a set, this
-     * operation effectively modifies this set so that its value is the
+     * operation effectively modifies this set so that its key is the
      * <i>intersection</i> of the two sets.
      *
      * @param  c collection containing elements to be retained in this set
@@ -357,7 +357,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * Removes from this set all of its elements that are contained in the
      * specified collection (optional operation).  If the specified
      * collection is also a set, this operation effectively modifies this
-     * set so that its value is the <i>asymmetric set difference</i> of
+     * set so that its key is the <i>asymmetric set difference</i> of
      * the two sets.
      *
      * @param  c collection containing elements to be removed from this set

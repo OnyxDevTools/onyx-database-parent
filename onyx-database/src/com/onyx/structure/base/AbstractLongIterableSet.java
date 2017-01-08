@@ -72,7 +72,7 @@ public abstract class AbstractLongIterableSet<E> extends AbstractLongCachedBitMa
     }
 
     /**
-     * Abstract Node iterator
+     * Abstract SkipListNode iterator
      * <p/>
      * Iterates through nodes and gets the left, right, next values
      */

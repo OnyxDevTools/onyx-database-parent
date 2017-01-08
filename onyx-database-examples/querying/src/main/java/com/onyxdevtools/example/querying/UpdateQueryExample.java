@@ -49,7 +49,7 @@ public class UpdateQueryExample
 
         Query query = new Query(Player.class, compoundCriteria);
 
-        //Execute the query and see that the active attribute's value is true
+        //Execute the query and see that the active attribute's key is true
         final List<Player> players = manager.executeQuery(query);
         for (final Player qb : players)
         {

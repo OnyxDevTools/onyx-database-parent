@@ -309,7 +309,7 @@ public class AbstractCachedBitMap extends AbstractBitMap
     }
 
     /**
-     * Get Map representation of value object.
+     * Get Map representation of key object.
      *
      * @param   attribute  Attribute name to fetch
      * @param   recordId   Record reference within storage structure

@@ -37,7 +37,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
     @Override
     public Object save(IManagedEntity entity) throws EntityException
     {
-        final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()); // Get the Identifier value
+        final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()); // Get the Identifier key
 
         ValidationHelper.validateEntity(entityDescriptor, entity); // Validate the entity, this wil throw an exception if not valid so no need to continue
 

@@ -173,19 +173,19 @@ public class CompareUtil
             return (object2 != null);
         }
 
-        // Equal - this should take a generic object value
+        // Equal - this should take a generic object key
         if(operator == QueryCriteriaOperator.EQUAL)
         {
             return compare(object, object2);
         }
 
-        // Not equal - this should take a generic object value
+        // Not equal - this should take a generic object key
         else if(operator == QueryCriteriaOperator.NOT_EQUAL)
         {
             return !compare(object, object2);
         }
 
-        // In, the first parameter must be a list of items if using the list value
+        // In, the first parameter must be a list of items if using the list key
         else if(operator == QueryCriteriaOperator.IN && object instanceof List)
         {
             List values = (List)object;
@@ -199,7 +199,7 @@ public class CompareUtil
             return false;
         }
 
-        // Not in, the first parameter must be a list of items if using the list value
+        // Not in, the first parameter must be a list of items if using the list key
         else if(operator == QueryCriteriaOperator.NOT_IN && object instanceof List)
         {
             List values = (List)object;
@@ -277,7 +277,7 @@ public class CompareUtil
             return !((String) object2).startsWith((String) object);
         }
 
-        // Not in, the first parameter must be a list of items if using the list value
+        // Not in, the first parameter must be a list of items if using the list key
         else if(operator == QueryCriteriaOperator.STARTS_WITH && object instanceof List)
         {
             List values = (List)object;

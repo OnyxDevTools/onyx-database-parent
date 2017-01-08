@@ -1,5 +1,6 @@
 package com.onyx.structure;
 
+import com.onyx.structure.base.DiskSkipList;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.node.SetHeader;
 import com.onyx.structure.serializer.ObjectBuffer;
@@ -24,10 +25,10 @@ public class DefaultMapBuilder implements MapBuilder
     protected Store storage = null;
 
     // Contains all initialized maps
-    protected Map<String, Map> maps = new HashMap();
+    protected Map<String, Map> maps = new WeakHashMap<>();
 
     // Contains all initialized maps
-    protected Map<String, Set> sets = new HashMap();
+    protected Map<String, Set> sets = new WeakHashMap();
 
     // Contains all initialized maps
     protected Map<Header, Set> setsByHeader = new WeakHashMap();
@@ -204,6 +205,70 @@ public class DefaultMapBuilder implements MapBuilder
         return new DefaultDiskSet<>(underlyingDiskMap, underlyingDiskMap.getReference());
     }
 
+    public synchronized Map getSkipListMap(String name)
+    {
+        // If it is already initialized, return it
+        if (maps.containsKey(name)) {
+            return maps.get(name);
+        }
+
+        // Get the first header.  All header records are stored in a linked list.  They cannot be deleted.
+        // Starts at eight becuase the first 8 bytes contains the file size
+        Header header = (Header) storage.read(8, Header.HEADER_SIZE, Header.class);
+
+        // If there is no record, lets instantiate one
+        if (header != null) {
+            while (true) {
+                // IF there is an id, continue
+                if (header.idPosition > 0) {
+                    // Get the id, which is a string
+                    String targetName = (String) storage.read(header.idPosition, header.idSize, String.class);
+                    if (targetName != null && targetName.equals(name)) {
+                        // We found a match, store it in the structure cache and return it
+                        final DiskSkipList retVal = newSkipListMap(storage, header);
+                        maps.put(name, retVal);
+                        return retVal;
+                    }
+
+                    // If there is a next header, read it and continue
+                    if (header.next > 0) {
+                        header = (Header) storage.read(header.next, Header.HEADER_SIZE, Header.class);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+        // Buffer for the id
+        final ObjectBuffer buffer = new ObjectBuffer(storage.getSerializers());
+        try {
+            buffer.writeObject(name);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Create a new header for the new structure we are creating
+        Header newHeader = new Header();
+        newHeader.position = storage.allocate(Header.HEADER_SIZE);
+        newHeader.idSize = buffer.getSize();
+        newHeader.idPosition = storage.allocate(newHeader.idSize);
+
+        // There is a parent record
+        if (header != null) {
+            // Set the next record
+            updateHeaderNext(header, newHeader.position);
+        }
+
+        // Write the id
+        storage.write(buffer, newHeader.idPosition);
+        storage.write(newHeader, newHeader.position); //Write the new header
+
+        // Create a new disk structure and return it
+        final Map retVal = newSkipListMap(storage, newHeader);
+        maps.put(name, retVal);
+        return retVal;
+    }
+
     /**
      * Method get returns an instance of a hashmap
      *
@@ -211,6 +276,8 @@ public class DefaultMapBuilder implements MapBuilder
      * @return An instantiated or existing hash structure
      */
     public synchronized Map getHashMap(String name) {
+//zzz        return getSkipListMap(name);
+//        /*
         // If it is already initialized, return it
         if (maps.containsKey(name)) {
             return maps.get(name);
@@ -271,6 +338,7 @@ public class DefaultMapBuilder implements MapBuilder
         final DiskMap retVal = newDiskMap(storage, newHeader);
         maps.put(name, retVal);
         return retVal;
+        //*/
     }
 
     /**
@@ -331,6 +399,8 @@ public class DefaultMapBuilder implements MapBuilder
 
     protected DiskMap newDiskMap(Store store, Header header)
     {
+//zzz        return new DiskSkipList<>(store, header);
+///*
         DefaultDiskMap newDiskMap = null;
         if(store instanceof InMemoryStore) {
             newDiskMap = new DefaultDiskMap(store, header, true);
@@ -340,6 +410,12 @@ public class DefaultMapBuilder implements MapBuilder
         }
 
         return newDiskMap;
+        //*/
+    }
+
+    protected DiskSkipList newSkipListMap(Store store, Header header)
+    {
+        return new DiskSkipList(store, header);
     }
 
     public synchronized Set newHashSet()

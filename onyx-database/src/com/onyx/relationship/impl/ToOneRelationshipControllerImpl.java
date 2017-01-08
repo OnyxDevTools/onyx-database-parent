@@ -219,7 +219,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         // Get the Identifier
         final RelationshipReference inverseIdentifier = toOneMap.get(entityIdentifier);
 
-        // If there are results, lets assign the value and recursively hydrate entities
+        // If there are results, lets assign the key and recursively hydrate entities
         if (inverseIdentifier != null
                && ((isSequenceIdentifier(inverseIdentifier) && Long.valueOf(String.valueOf(inverseIdentifier.identifier)) > 0)
                 || !isSequenceIdentifier(inverseIdentifier)))

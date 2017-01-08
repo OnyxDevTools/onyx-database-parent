@@ -61,7 +61,7 @@ public abstract class AbstractTableScanner extends PartitionContext
         // Ensure it is not a relationship
         if(!criteria.getAttribute().contains("."))
         {
-            // Get the reflection field to grab the value to compare
+            // Get the reflection field to grab the key to compare
             fieldToGrab = ReflectionUtil.getOffsetField(classToScan, criteria.getAttribute());
         }
 

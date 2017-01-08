@@ -336,7 +336,7 @@ public class DefaultSchemaContext implements SchemaContext {
     // Journaling Logic
     //
     //////////////////////////////////////////////////////////////////////////////////////////
-    // Maximum WAL File size
+    // Maximum WAL File longSize
     protected static final int MAX_JOURNAL_SIZE = 1024 * 1024 * 20;
 
     // Journal File index in directory
@@ -393,7 +393,7 @@ public class DefaultSchemaContext implements SchemaContext {
                 lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
             }
 
-            // If the last wal file exceeds size limit threshold, create a new one
+            // If the last wal file exceeds longSize limit threshold, create a new one
             if (lastWalFileChannel.size() > MAX_JOURNAL_SIZE) {
 
                 // Close the previous
@@ -558,7 +558,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @param classToGet     Entity type for record
      * @param partitionValue Partition Value
-     * @return System Partition Entry for class with partition value
+     * @return System Partition Entry for class with partition key
      * @throws EntityException Generic Exception
      * @since 1.0.0
      */
@@ -715,7 +715,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * to reflect the new version and serializer
      *
      * @param descriptor   Base Entity Descriptor
-     * @param systemEntity Current system entity value to base the comparison on the new entity descriptor
+     * @param systemEntity Current system entity key to base the comparison on the new entity descriptor
      * @return Newly created system entity if it was created otherwise the existing one
      * @throws EntityException default exception
      * @since 1.1.0

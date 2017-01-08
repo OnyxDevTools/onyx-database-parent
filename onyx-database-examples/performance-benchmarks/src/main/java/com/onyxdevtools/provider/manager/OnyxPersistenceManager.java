@@ -94,11 +94,11 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     }
 
     /**
-     * Execute query with criteria of key = value
+     * Execute query with criteria of key = key
      *
      * @param clazz Entity to query
      * @param key Attribute to predicate upon
-     * @param value Attribute value to predicate upon
+     * @param value Attribute key to predicate upon
      * @return List of entities that match the criteria
      */
     public List list(Class clazz, String key, Object value)

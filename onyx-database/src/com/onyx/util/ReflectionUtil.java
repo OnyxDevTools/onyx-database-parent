@@ -310,13 +310,13 @@ public class ReflectionUtil
     }
 
     /**
-     * This method is to return any value from a field using reflection.  It
+     * This method is to return any key from a field using reflection.  It
      * can either return a primitive or an object.  Note: If inteneded to get a
      * primitive, I recommend using the other api methods to avoid autoboxing.
      *
      * @param object Parent object
      * @param offsetField field to get
-     * @return field value
+     * @return field key
      */
     public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException
     {
@@ -359,7 +359,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the int on
      * @param offsetField The field to reflect on
-     * @param value int value to set
+     * @param value int key to set
      */
     public static void setInt(Object parent, OffsetField offsetField, int value) throws IllegalAccessException
     {
@@ -376,7 +376,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the long on
      * @param offsetField The field to reflect on
-     * @param value long value to set
+     * @param value long key to set
      */
     public static void setLong(Object parent, OffsetField offsetField, long value) throws IllegalAccessException
     {
@@ -393,7 +393,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the byte on
      * @param offsetField The field to reflect on
-     * @param value byte value to set
+     * @param value byte key to set
      */
     public static void setByte(Object parent, OffsetField offsetField, byte value) throws IllegalAccessException
     {
@@ -410,7 +410,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the float on
      * @param offsetField The field to reflect on
-     * @param value float value to set
+     * @param value float key to set
      */
     public static void setFloat(Object parent, OffsetField offsetField, float value) throws IllegalAccessException
     {
@@ -427,7 +427,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the double on
      * @param offsetField The field to reflect on
-     * @param value double value to set
+     * @param value double key to set
      */
     public static void setDouble(Object parent, OffsetField offsetField, double value) throws IllegalAccessException
     {
@@ -444,7 +444,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the short on
      * @param offsetField The field to reflect on
-     * @param value short value to set
+     * @param value short key to set
      */
     public static void setShort(Object parent, OffsetField offsetField, short value) throws IllegalAccessException
     {
@@ -461,7 +461,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the boolean on
      * @param offsetField The field to reflect on
-     * @param value boolean value to set
+     * @param value boolean key to set
      */
     public static void setBoolean(Object parent, OffsetField offsetField, boolean value) throws IllegalAccessException
     {
@@ -478,7 +478,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the char on
      * @param offsetField The field to reflect on
-     * @param value char value to set
+     * @param value char key to set
      */
     public static void setChar(Object parent, OffsetField offsetField, char value) throws IllegalAccessException
     {
@@ -495,7 +495,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the object on
      * @param offsetField The field to reflect on
-     * @param value object value to set
+     * @param value object key to set
      */
     public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException,AttributeTypeMismatchException
     {

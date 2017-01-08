@@ -21,7 +21,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
     long getRecID(Object key);
 
     /**
-     * Get value with record id
+     * Get key with record id
      *
      * @param recordId
      * @return
@@ -29,7 +29,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
     V getWithRecID(long recordId);
 
     /**
-     * Get structure value with record id
+     * Get structure key with record id
      *
      * @param recordId
      * @return
@@ -42,7 +42,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @param attribute attribute name to gather
      * @param reference record reference where the record is stored
      *
-     * @return Attribute value of record
+     * @return Attribute key of record
      */
     Object getAttributeWithRecID(String attribute, long reference) throws AttributeTypeMismatchException;
 

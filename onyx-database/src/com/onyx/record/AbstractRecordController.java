@@ -59,7 +59,7 @@ public abstract class AbstractRecordController
      */
     public boolean exists(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         return records.containsKey(identifierValue);
@@ -84,7 +84,7 @@ public abstract class AbstractRecordController
      */
     public void delete(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         invokePreRemoveCallback(entity);
@@ -112,14 +112,14 @@ public abstract class AbstractRecordController
      */
     public IManagedEntity get(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         return getWithId(identifierValue);
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -305,7 +305,7 @@ public abstract class AbstractRecordController
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -315,7 +315,7 @@ public abstract class AbstractRecordController
     {
         try
         {
-            // Use reflection to get the value
+            // Use reflection to get the key
             final Field field = ReflectionUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
@@ -353,7 +353,7 @@ public abstract class AbstractRecordController
 
 
     /**
-     * Converts a value from a String to a type casted object
+     * Converts a key from a String to a type casted object
      *
      * @param type
      * @param value
@@ -376,7 +376,7 @@ public abstract class AbstractRecordController
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -385,7 +385,7 @@ public abstract class AbstractRecordController
     public static void setIndexValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
     {
 
-        // Use reflection to get the value
+        // Use reflection to get the key
         final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
 
         try
@@ -471,7 +471,7 @@ public abstract class AbstractRecordController
      *
      * @param attribute Name of attribute to get
      * @param referenceId location of record within storage
-     * @return Attribute value
+     * @return Attribute key
      */
     public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
         return records.getAttributeWithRecID(attribute, referenceId);

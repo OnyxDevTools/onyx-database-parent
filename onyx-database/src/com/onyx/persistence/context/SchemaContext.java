@@ -94,7 +94,7 @@ public interface SchemaContext
      *
      * @since 1.0.0
      * @param entity Entity Type
-     * @param partitionId Partition value
+     * @param partitionId Partition key
      * @return Records Entity Descriptor for a partition
      *
      * @throws EntityException Generic Exception
@@ -201,7 +201,7 @@ public interface SchemaContext
      * @since 1.0.0
      * @param classToGet Type of record
      * @param partitionValue Partition Value
-     * @return System Partition Entry by class and partition value
+     * @return System Partition Entry by class and partition key
      *
      * @throws EntityException Generic Exception
      */

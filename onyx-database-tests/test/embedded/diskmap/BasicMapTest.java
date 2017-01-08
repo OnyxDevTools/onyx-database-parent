@@ -297,7 +297,7 @@ public class BasicMapTest extends AbstractTest
             entityYo.id = "OOO, this is an id" + i;
             entityYo.longValue = 23l;
             entityYo.dateValue = new Date(1433233222);
-            entityYo.longStringValue = "This is a really long string value wooo, long string textThis is a really long string value wooo, long striring value wooo, long string textThis is a really long string value wooo, long striring value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string text";
+            entityYo.longStringValue = "This is a really long string key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string text";
             entityYo.otherStringValue = "Normal text but still has some kind of content";
             entityYo.mutableInteger = 23;
             entityYo.mutableLong = 42l;

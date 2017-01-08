@@ -6,7 +6,7 @@ import java.util.Map;
 /**
  * Created by timothy.osborn on 3/25/15.
  *
- * This is a contrived list of 2 maps.  To structure the serializers by both id and value
+ * This is a contrived list of 2 maps.  To structure the serializers by both id and key
  *
  */
 public class Serializers

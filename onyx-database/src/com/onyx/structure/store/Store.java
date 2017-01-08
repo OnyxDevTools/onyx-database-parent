@@ -29,7 +29,7 @@ public interface Store {
     int write(ObjectBuffer serializable, long position);
 
     /**
-     * Read a buffer at position for a size
+     * Read a buffer at position for a longSize
      *
      * @param position
      * @param size
@@ -80,7 +80,7 @@ public interface Store {
     Serializers getSerializers();
 
     /**
-     * Getter for file size
+     * Getter for file longSize
      *
      * @return
      */

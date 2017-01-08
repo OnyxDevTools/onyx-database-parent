@@ -80,7 +80,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -149,7 +149,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -174,7 +174,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -250,7 +250,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -275,7 +275,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -348,7 +348,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -373,7 +373,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -440,7 +440,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -540,7 +540,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -568,7 +568,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -633,7 +633,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -763,7 +763,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -846,7 +846,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;

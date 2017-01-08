@@ -1251,7 +1251,7 @@ public class ObjectBuffer
     }
 
     /**
-     * Converts the buffer to a key value structure.  Note this is intended to use only with ManagedEntities
+     * Converts the buffer to a key key structure.  Note this is intended to use only with ManagedEntities
      *
      * @param serializerId serializer id to use
      * @return Map representation of the object
@@ -1285,7 +1285,7 @@ public class ObjectBuffer
      * @param attributeName Attribute name from entity
      * @param serializerId serializer id that is a reference to a SystemEntity
      *
-     * @return Attribute value from buffer
+     * @return Attribute key from buffer
      */
     public Object getAttribute(String attributeName, int serializerId)
     {

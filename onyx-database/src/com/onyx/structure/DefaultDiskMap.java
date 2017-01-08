@@ -91,7 +91,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Get value with record id
+     * Get key with record id
      *
      * @param recordId
      * @return
@@ -107,7 +107,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Get Map representation of value object
+     * Get Map representation of key object
      *
      * @param recordId Record reference within storage structure
      *
@@ -314,7 +314,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Get or default, gets the value of the.  If it is null return default value
+     * Get or default, gets the key of the.  If it is null return default key
      *
      * @param key
      * @param defaultValue
@@ -361,7 +361,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Remove object only if the value is equal to the one sent in
+     * Remove object only if the key is equal to the one sent in
      *
      * @param key
      * @param value
@@ -392,7 +392,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Replace only if the oldvalue != new value
+     * Replace only if the oldvalue != new key
      *
      * @param key
      * @param oldValue
@@ -528,7 +528,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Call handler to compute what value yous a gonna put
+     * Call handler to compute what key yous a gonna put
      *
      * @param key
      * @param remappingFunction
@@ -579,7 +579,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Merge the value.  Not sure, but calls a different fancy callback
+     * Merge the key.  Not sure, but calls a different fancy callback
      *
      * @param key
      * @param value

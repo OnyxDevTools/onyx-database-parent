@@ -168,12 +168,12 @@ public class AbstractBitMap
     /**
      * This method will only update the record count rather than the entire header
      */
-    public void updateHeaderRecordCount()
+    protected void updateHeaderRecordCount()
     {
         final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
         buffer.putLong(header.recordCount.get());
         final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Integer.BYTES + (4 * Long.BYTES));
+        fileStore.write(objectBuffer, header.position + Header.HEADER_SIZE - Long.BYTES);
     }
 
     /**
@@ -420,11 +420,11 @@ public class AbstractBitMap
     }
 
     /**
-     * This method is intended to get a record value as a dictionary.  Note: This is only intended for ManagedEntities
+     * This method is intended to get a record key as a dictionary.  Note: This is only intended for ManagedEntities
      *
      * @param reference Record reference to pull
      *
-     * @return Map of key value pairs
+     * @return Map of key key pairs
      */
     public Map getRecordValueAsDictionary(RecordReference reference)
     {
@@ -438,7 +438,7 @@ public class AbstractBitMap
      * @param attribute attribute name to gather
      * @param reference record reference where the record is stored
      *
-     * @return Attribute value of record
+     * @return Attribute key of record
      */
     public Object getAttributeWithRecID(String attribute, RecordReference reference)
     {
@@ -447,8 +447,8 @@ public class AbstractBitMap
     }
 
     /**
-     * The purpose of this hash is to generate a fancier hash so that in instances for a long or int, it will not generate the value of those
-     * rather it will get a searchable value within a BST without being lop sided.
+     * The purpose of this hash is to generate a fancier hash so that in instances for a long or int, it will not generate the key of those
+     * rather it will get a searchable key within a BST without being lop sided.
      *
      * @param key
      * @return
@@ -489,7 +489,7 @@ public class AbstractBitMap
      */
     protected void dealloc(long position, int size)
     {
-//        fileStore.deallocate(position, size);
+//        fileStore.deallocate(position, longSize);
     }
 
     /**
@@ -505,14 +505,14 @@ public class AbstractBitMap
     /**
      * This indicates how many iterations of hash tables
      * we need to iterate through.  The higher the number the more scalable the
-     * index value is.  The lower, means we have less BitMapNode(s) we have to create
+     * index key is.  The lower, means we have less BitMapNode(s) we have to create
      * thus saving disk space.  This is going to be for future use.  Still to come is a backup
      * index such as a BST if the load factor is set too small.  Currently the logic relies on a
      * linked list if there are hashCode collisions.  This should be anything other than that.
      *
      *
      * @since 1.1.1
-     * @return Load Factor. A value from 5-10.  5 is for minimum data sets and 10 is for fully scalable data sets.
+     * @return Load Factor. A key from 5-10.  5 is for minimum data sets and 10 is for fully scalable data sets.
      */
     public int getLoadFactor()
     {
@@ -520,7 +520,7 @@ public class AbstractBitMap
     }
 
     /**
-     * The value within the hash digits to look for the record reference.
+     * The key within the hash digits to look for the record reference.
      * @return The amount of iterations minus 1.
      */
     protected int getRecordReferenceIndex()
@@ -529,7 +529,7 @@ public class AbstractBitMap
     }
 
     /**
-     * The size of the bitmap on disk based on the load factor
+     * The longSize of the bitmap on disk based on the load factor
      * @return The amount of bytes
      */
     protected int getBitmapNodeSize()

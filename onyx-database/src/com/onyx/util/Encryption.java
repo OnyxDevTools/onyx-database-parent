@@ -461,14 +461,14 @@ public class Encryption {
         }
 
         /**
-         * @return the value used for salting
+         * @return the key used for salting
          */
         private String getSalt() {
             return mSalt;
         }
 
         /**
-         * @param salt the value used for salting
+         * @param salt the key used for salting
          *
          * @return this instance to follow the Builder patter
          */

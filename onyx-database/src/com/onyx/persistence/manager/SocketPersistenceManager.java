@@ -129,7 +129,7 @@ public interface SocketPersistenceManager extends Remote {
     QueryResult executeLazyQueryForResults(Query query) throws RemoteException;
 
     /**
-     * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition value if the data is partitioned.
+     * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition key if the data is partitioned.
      * All relationships are hydrated based on their fetch policy.
      * The entity must also not be null.
      *
@@ -160,7 +160,7 @@ public interface SocketPersistenceManager extends Remote {
      *
      * @param clazz       Managed Entity Type.  This must be a cast of IManagedEntity
      * @param id          Primary Key of entity
-     * @param partitionId Partition value for entity
+     * @param partitionId Partition key for entity
      * @return Managed Entity
      * @throws RemoteException Error when finding entity within partition specified
      * @since 1.0.0
@@ -170,7 +170,7 @@ public interface SocketPersistenceManager extends Remote {
     /**
      * Determines if the entity exists within the database.
      * <p>
-     * It is determined by the primary id and partition value
+     * It is determined by the primary id and partition key
      *
      * @param entity Managed Entity to check
      * @return Returns true if the entity primary key exists. Otherwise it returns false
@@ -182,7 +182,7 @@ public interface SocketPersistenceManager extends Remote {
     /**
      * Determines if the entity exists within the database.
      * <p>
-     * It is determined by the primary id and partition value
+     * It is determined by the primary id and partition key
      *
      * @param entity      Managed Entity to check
      * @param partitionId Partition Value for entity
@@ -203,7 +203,7 @@ public interface SocketPersistenceManager extends Remote {
     void initialize(IManagedEntity entity, String attribute) throws RemoteException;
 
     /**
-     * Hydrate a relationship and return the value
+     * Hydrate a relationship and return the key
      *
      * @param entity    Managed Entity to attach relationship values
      * @param attribute String representation of relationship attribute
@@ -252,7 +252,7 @@ public interface SocketPersistenceManager extends Remote {
      *
      * @param clazz       Managed Entity type
      * @param criteria    Query Criteria to filter results
-     * @param partitionId Partition value for entities
+     * @param partitionId Partition key for entities
      * @return Unsorted List of results matching criteria within a partition
      * @throws RemoteException Exception occurred while filtering results
      * @since 1.0.0
@@ -265,7 +265,7 @@ public interface SocketPersistenceManager extends Remote {
      * @param clazz       Managed Entity type
      * @param criteria    Query Criteria to filter results
      * @param orderBy     Array of sort order specifications
-     * @param partitionId Partition value for entities
+     * @param partitionId Partition key for entities
      * @return Sorted List of results matching criteria within a partition
      * @throws RemoteException Exception occurred while filtering results
      * @since 1.0.0
@@ -278,7 +278,7 @@ public interface SocketPersistenceManager extends Remote {
      * @param clazz       Managed Entity type
      * @param criteria    Query Criteria to filter results
      * @param orderBy     A single order specification
-     * @param partitionId Partition value for entities
+     * @param partitionId Partition key for entities
      * @return Sorted List of results matching criteria within a partition
      * @throws RemoteException Exception occurred while filtering results
      * @since 1.0.0
@@ -311,7 +311,7 @@ public interface SocketPersistenceManager extends Remote {
      * @param start       Start of record results.
      * @param maxResults  Max number of results returned
      * @param orderBy     An array of sort order specification
-     * @param partitionId Partition value to filter results
+     * @param partitionId Partition key to filter results
      * @return Sorted List of results matching criteria within range and partition
      * @throws RemoteException Exception occurred while filtering results
      * @since 1.0.0
@@ -346,7 +346,7 @@ public interface SocketPersistenceManager extends Remote {
      *
      * @param clazz       Entity Type
      * @param id          Entity Primary Key
-     * @param partitionId - Partition Identifier.  Not to be confused with partition value.  This is a unique id within the partition System table
+     * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
      * @throws RemoteException error occurred while attempting to retrieve entity.
      * @since 1.0.0
@@ -369,7 +369,7 @@ public interface SocketPersistenceManager extends Remote {
      *
      * @param reference Reference location within a data structure
      *
-     * @return Map of key value pair of the entity.  Key being the attribute name.
+     * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     Map getMapWithReferenceId(Class entityType, long reference) throws RemoteException;
 }

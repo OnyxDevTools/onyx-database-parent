@@ -25,7 +25,7 @@ import java.io.ObjectOutput;
  *
  *   PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
  *
- *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+ *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
  *   query.setUpdates(new AttributeUpdate("name", "Bob");
  *   query.setQueryOrders(new QueryOrder("name", true)
  *

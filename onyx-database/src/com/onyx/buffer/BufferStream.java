@@ -191,7 +191,7 @@ public class BufferStream {
     ///////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Put an enum value to the buffer
+     * Put an enum key to the buffer
      *
      * @since 1.1.0
      * @param enumVal enum to write

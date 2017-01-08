@@ -50,7 +50,7 @@ public class EntityRelationshipManager
     }
 
     /**
-     * Adds a new value to the 2 dimensional structure
+     * Adds a new key to the 2 dimensional structure
      *
      * @param entity
      * @param indexDescriptor

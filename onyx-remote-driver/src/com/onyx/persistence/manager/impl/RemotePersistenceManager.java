@@ -248,7 +248,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     }
 
     /**
-     * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition value if the data is partitioned.
+     * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition key if the data is partitioned.
      * All relationships are hydrated based on their fetch policy.
      * The entity must also not be null.
      *
@@ -305,7 +305,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
      * @param id Primary Key of entity
-     * @param partitionId Partition value for entity
+     * @param partitionId Partition key for entity
      * @return Managed Entity
      * @throws EntityException Error when finding entity within partition specified
      */
@@ -327,7 +327,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     /**
      * Determines if the entity exists within the database.
      *
-     * It is determined by the primary id and partition value
+     * It is determined by the primary id and partition key
      *
      * @since 1.0.0
      *
@@ -349,7 +349,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     /**
      * Determines if the entity exists within the database.
      *
-     * It is determined by the primary id and partition value
+     * It is determined by the primary id and partition key
      *
      * @since 1.0.0
      *
@@ -467,7 +467,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param criteria Query Criteria to filter results
      *
-     * @param partitionId Partition value for entities
+     * @param partitionId Partition key for entities
      *
      * @return Unsorted List of results matching criteria within a partition
      *
@@ -490,7 +490,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param orderBy Array of sort order specifications
      *
-     * @param partitionId Partition value for entities
+     * @param partitionId Partition key for entities
      *
      * @return Sorted List of results matching criteria within a partition
      *
@@ -513,7 +513,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param orderBy A single order specification
      *
-     * @param partitionId Partition value for entities
+     * @param partitionId Partition key for entities
      *
      * @return Sorted List of results matching criteria within a partition
      *
@@ -580,7 +580,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param orderBy An array of sort order specification
      *
-     * @param partitionId Partition value to filter results
+     * @param partitionId Partition key to filter results
      *
      * @return Sorted List of results matching criteria within range and partition
      *
@@ -648,7 +648,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
     }
 
     /**
-     * Find Relationship value(s)
+     * Find Relationship key(s)
      *
      * @param entity Managed Entity to attach relationship values
      *
@@ -724,7 +724,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param id Entity Primary Key
      *
-     * @param partitionId - Partition Identifier.  Not to be confused with partition value.  This is a unique id within the partition System table
+     * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
      *
      * @throws EntityException error occurred while attempting to retrieve entity.
@@ -856,7 +856,7 @@ public class RemotePersistenceManager extends AbstractRemotePersistenceManager i
      *
      * @param reference Reference location within a data structure
      *
-     * @return Map of key value pair of the entity.  Key being the attribute name.
+     * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     @Override
     public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {

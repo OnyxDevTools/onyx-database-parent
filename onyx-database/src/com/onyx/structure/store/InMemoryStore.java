@@ -4,6 +4,7 @@ import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -75,6 +76,22 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
     public void delete()
     {
 
+    }
+
+    /**
+     * Close the data file
+     *
+     * @return
+     */
+    public synchronized boolean close() {
+        this.slices.values().forEach(file ->
+        {
+            file.buffer.clear();
+            file.buffer = null;
+        });
+
+        this.slices.clear();
+        return true;
     }
 }
 

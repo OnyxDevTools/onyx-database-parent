@@ -76,7 +76,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;

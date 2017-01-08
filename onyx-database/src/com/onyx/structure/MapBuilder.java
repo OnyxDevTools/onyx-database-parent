@@ -15,10 +15,18 @@ public interface MapBuilder
     /**
      * Method get returns an instance of a hashmap
      *
-     * @param name
-     * @return
+     * @param name Name of the hashmap
+     * @return Instantiated hashmap.  This defaults to a the Bitmap implementation
      */
     Map getHashMap(String name);
+
+    /**
+     * Get the instance of a map which uses a skip list index
+     * @param name Name of the map to uniquely identify it
+     * @return Instantiated map with storage
+     */
+    @SuppressWarnings("unused")
+    Map getSkipListMap(String name);
 
     /**
      * Method returns an instance of a hash set
@@ -26,6 +34,7 @@ public interface MapBuilder
      * @since 1.0.2
      * @return DiskSet instance
      */
+    @SuppressWarnings("unused")
     Set getHashSet(String name);
 
     /**
@@ -34,6 +43,7 @@ public interface MapBuilder
      * @since 1.0.2
      * @return HashSet instance
      */
+    @SuppressWarnings("unused")
     Set getHashSet(Header header);
 
     /**
@@ -60,6 +70,7 @@ public interface MapBuilder
      * @return Instantiated hash set
      * @since 1.0.2
      */
+    @SuppressWarnings("unused")
     Set newHashSet();
 
     /**
@@ -72,8 +83,8 @@ public interface MapBuilder
     /**
      * Only update the first position for a header
      *
-     * @param header
-     * @param next
+     * @param header Header reference of the map
+     * @param next Next data structure in the linked list
      */
     void updateHeaderNext(Header header, long next);
 
@@ -95,9 +106,13 @@ public interface MapBuilder
     /**
      * Getter for serializers
      *
-     * @return
+     * @return Custom serializes shared within the data structures
      */
      Serializers getSerializers();
 
-    Store getStore();
+    /**
+     * Get the underlying storage mechanism
+     * @return The Store used for all data structures
+     */
+     Store getStore();
 }

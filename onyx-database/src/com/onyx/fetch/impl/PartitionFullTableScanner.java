@@ -75,7 +75,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     continue;
                 }
 
-                // Get the attribute value
+                // Get the attribute key
                 attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
 
                 // Compare and add

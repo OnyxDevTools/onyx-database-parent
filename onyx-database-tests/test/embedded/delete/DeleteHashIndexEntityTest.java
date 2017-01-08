@@ -70,7 +70,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         delete(entity);
         boolean pass = false;
         try {
-            manager.find(entity);
+            entity = (IntegerIdentifierEntity)manager.find(entity);
         }
         catch (EntityException e)
         {

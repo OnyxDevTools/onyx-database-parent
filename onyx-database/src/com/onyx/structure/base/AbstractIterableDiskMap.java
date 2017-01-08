@@ -101,7 +101,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      */
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
-        Iterator it = this.values().iterator();
+        Iterator it = this.entrySet().iterator();
         Entry<K, V> val = null;
         while (it.hasNext()) {
             val = (Entry<K, V>) it.next();
@@ -282,7 +282,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
 
 
     /**
-     * Abstract Node Collection.  Holds onto references to all the nodes and fills the node values
+     * Abstract SkipListNode Collection.  Holds onto references to all the nodes and fills the node values
      * based on the Bitmap nodes
      *
      * @param <E>
@@ -471,6 +471,9 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public Object next() {
+
+
+
             final RecordReference reference = (RecordReference) super.next();
             if (reference != null) {
                 return new DiskMapEntry(reference);
@@ -563,7 +566,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     }
 
     /**
-     * Abstract Node iterator
+     * Abstract SkipListNode iterator
      * <p/>
      * Iterates through nodes and gets the left, right, next values
      */

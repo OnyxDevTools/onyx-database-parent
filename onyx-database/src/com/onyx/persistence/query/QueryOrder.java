@@ -21,7 +21,7 @@ import java.io.Serializable;
  *
  *   PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
  *
- *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+ *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
  *   query.setQueryOrders(new QueryOrder("name", true)
  *
  *   List results = manager.executeQuery(query);

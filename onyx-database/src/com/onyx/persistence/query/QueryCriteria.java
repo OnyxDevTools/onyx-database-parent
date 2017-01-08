@@ -118,11 +118,11 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Constructor with long value
+     * Constructor with long key
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Long value
+     * @param value Long key
      */
     public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Long value)
     {
@@ -133,11 +133,11 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Constructor with boolean value
+     * Constructor with boolean key
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Boolean value
+     * @param value Boolean key
      */
     public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Boolean value)
     {
@@ -148,7 +148,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Constructor for int value
+     * Constructor for int key
      *
      * @since 1.0.0
      * @param attribute Attribute
@@ -171,11 +171,11 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Constructor with double value
+     * Constructor with double key
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Double value
+     * @param value Double key
      */
     public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Double value)
     {
@@ -186,12 +186,12 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Constructor for string value
+     * Constructor for string key
      *
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value String value
+     * @param value String key
      */
     public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, String value)
     {
@@ -202,7 +202,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Constructor for date value
+     * Constructor for date key
      *
      * @since 1.0.0
      * @param attribute Attribute
@@ -263,12 +263,12 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * And sub criteria with long value
+     * And sub criteria with long key
      *
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Long value
+     * @param value Long key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Long value)
@@ -297,7 +297,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Int value
+     * @param value Int key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Integer value)
@@ -313,7 +313,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Double value
+     * @param value Double key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Double value)
@@ -328,7 +328,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Boolean value
+     * @param value Boolean key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Boolean value)
@@ -345,7 +345,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Mutable boolean value
+     * @param value Mutable boolean key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, boolean value)
@@ -363,7 +363,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value String value
+     * @param value String key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, String value)
@@ -378,7 +378,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Date value
+     * @param value Date key
      * @return New Query Criteria with added and sub query
      */
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Date value)
@@ -389,7 +389,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * And value with list of objects for in clause
+     * And key with list of objects for in clause
      *
      * @since 1.0.0
      * @param attribute Attribute
@@ -410,7 +410,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value long value
+     * @param value long key
      * @return New Query Criteria with added or sub query
      */
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, Long value)
@@ -470,7 +470,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value Or value
+     * @param value Or key
      * @return New Query Criteria with added or sub query
      */
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, Boolean value)
@@ -487,7 +487,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Attribute
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
-     * @param value String value
+     * @param value String key
      * @return New Query Criteria with added or sub query
      */
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, String value)
@@ -514,7 +514,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Or value with list of objects for in clause
+     * Or key with list of objects for in clause
      *
      * @since 1.0.0
      * @param attribute Attribute
@@ -576,9 +576,9 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
-     * Get Query attribute value
+     * Get Query attribute key
      * @since 1.0.0
-     * @return attribute value
+     * @return attribute key
      */
     @JsonIgnore
     public Object getValue()

@@ -105,7 +105,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     }
 
     /**
-     * Boolean value indicating whether the list is empty
+     * Boolean key indicating whether the list is empty
      *
      * @author Tim Osborn
      * @since 1.0.0

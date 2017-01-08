@@ -497,7 +497,7 @@ public class PartitionQueryController extends PartitionContext
                     EntityDescriptor oldDescriptor = context.getDescriptorForEntity(entity, oldPartitionValue);
                     IndexController previousIndexController = context.getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
-                    // Delete old index value and insert new one in new partition
+                    // Delete old index key and insert new one in new partition
                     previousIndexController.delete(((PartitionReference) referenceId).reference);
                 }
             }
@@ -552,7 +552,7 @@ public class PartitionQueryController extends PartitionContext
 
                     final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
-                    // Delete old index value and insert new one in new partition
+                    // Delete old index key and insert new one in new partition
                     newIndexController.save(indexValue, 0, newReferenceId);
                 }
 

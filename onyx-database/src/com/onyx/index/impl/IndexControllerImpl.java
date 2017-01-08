@@ -22,7 +22,7 @@ public class IndexControllerImpl implements IndexController {
 
     protected SchemaContext context;
 
-    protected Map<Object, Set<Long>> references = null; // Stores the references for an index value
+    protected Map<Object, Set<Long>> references = null; // Stores the references for an index key
     protected Map<Long, Object> indexValues = null;
     protected RecordController recordController = null;
     protected MapBuilder dataFile = null;
@@ -52,7 +52,7 @@ public class IndexControllerImpl implements IndexController {
     }
 
     /**
-     * Save an index value with the record reference
+     * Save an index key with the record reference
      *
      * @param indexValue
      * @param identifier
@@ -60,7 +60,7 @@ public class IndexControllerImpl implements IndexController {
      */
     public void save(Object indexValue, long oldReference, long reference) throws EntityException
     {
-        // Delete the old index value
+        // Delete the old index key
         if(oldReference > 0)
         {
             delete(oldReference);
@@ -80,7 +80,7 @@ public class IndexControllerImpl implements IndexController {
     }
 
     /**
-     * Delete an index value with a record reference
+     * Delete an index key with a record reference
      *
      * @param reference
      * @throws EntityException
@@ -140,7 +140,7 @@ public class IndexControllerImpl implements IndexController {
         final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getName());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
-            // Iterate Through all of the values and re-structure the key value for the record id
+            // Iterate Through all of the values and re-structure the key key for the record id
             Map.Entry entry = null;
             while (iterator.hasNext()) {
                 try {

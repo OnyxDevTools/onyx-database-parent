@@ -44,6 +44,8 @@ public class RelationshipReference implements ObjectSerializable
         if(obj instanceof RelationshipReference)
         {
             final RelationshipReference comp = (RelationshipReference) obj;
+            if(comp.identifier.getClass() != identifier.getClass())
+                return false;
             try
             {
                 return (comp.partitionId == partitionId && CompareUtil.compare(comp.identifier, identifier, QueryCriteriaOperator.EQUAL));

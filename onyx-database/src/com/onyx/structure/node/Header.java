@@ -26,7 +26,7 @@ public class Header implements ObjectSerializable
     public AtomicLong recordCount = new AtomicLong(0);
 
     /**
-     * Override equals value to compare all values
+     * Override equals key to compare all values
      *
      * @param val
      * @return

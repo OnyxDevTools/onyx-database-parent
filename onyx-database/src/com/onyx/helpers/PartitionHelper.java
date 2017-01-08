@@ -64,7 +64,7 @@ public class PartitionHelper
     }
 
     /**
-     * Helper for getting the partition value from an entity
+     * Helper for getting the partition key from an entity
      *
      * @param entity
      * @param context
@@ -108,7 +108,7 @@ public class PartitionHelper
     }
 
     /**
-     * Recursive call to get and set the partition value from the query criteria
+     * Recursive call to get and set the partition key from the query criteria
      *
      * @param criteria
      * @param query
@@ -149,7 +149,7 @@ public class PartitionHelper
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -163,7 +163,7 @@ public class PartitionHelper
             if(descriptor.getPartition() == null || value == null)
                 return;
 
-            // Use reflection to get the value
+            // Use reflection to get the key
             final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getPartition().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
