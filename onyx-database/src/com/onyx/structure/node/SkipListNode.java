@@ -11,11 +11,11 @@ import java.io.IOException;
 public class SkipListNode<K> implements ObjectSerializable {
 
     public static final int BASE_SKIP_LIST_NODE_SIZE = Long.BYTES * 3 + Byte.BYTES + Integer.BYTES * 2;
-    public byte level;
-    public long next;
-    public long down;
-    public long recordPosition;
-    public int recordSize;
+    public volatile byte level;
+    public volatile long next;
+    public volatile long down;
+    public volatile long recordPosition;
+    public volatile int recordSize;
     public int serializerId;
     public K key;
 

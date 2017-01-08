@@ -41,7 +41,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(entityDescriptor, relationshipDescriptor, context);
-        records = (DiskMap) dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        records = (DiskMap) dataFile.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
     /**

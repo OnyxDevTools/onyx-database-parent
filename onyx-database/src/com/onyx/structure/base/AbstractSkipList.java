@@ -8,7 +8,6 @@ import com.onyx.structure.store.Store;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Created by tosborn1 on 1/7/17.
@@ -25,13 +24,12 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
 
     private Random random; // Random number generator from 0.0 to 1.0
     protected Store fileStore; // Underlying storage mechanism
-    protected SkipListNode<K> head; // Default head of the SkipList
-    protected Header header;
+    protected volatile SkipListNode<K> head; // Default head of the SkipList
+    protected volatile Header header;
 
     protected Map<Long, SkipListNode<K>> nodeCache = Collections.synchronizedMap(new WeakHashMap<Long, SkipListNode<K>>());
     protected Map<Long, V> valueCache = Collections.synchronizedMap(new WeakHashMap<Long, V>());
     protected Map<K, SkipListNode<K>> keyCache = Collections.synchronizedMap(new WeakHashMap<K, SkipListNode<K>>());
-    protected Map<K, V> keyValueCache = Collections.synchronizedMap(new WeakHashMap<K, V>());
 
     /**
      * Constructor with file store
@@ -62,63 +60,55 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
      */
     public V put(K key, V value) {
 
-//        readWriteLock.writeLock().lock();
-
         // First see if the key already exists.  If it does update it, otherwise, lets continue on trying to insert it.
         // The reason for this is because the rest of the put logic will not start from the root level
         if (updateValue(key, value))
             return value;
 
-        try {
+        final int hash = hash(key);
 
-            final int hash = hash(key);
-
-            final byte level = selectHeadLevel();
-            if (level > head.level) {
-                head = createNewNode(null, null, level, 0L, head.position);
-                this.header.firstNode = this.head.position;
-                updateHeaderFirstNode(header, head.position);
-            }
-
-            SkipListNode<K> current = head;
-            SkipListNode<K> last = null;
-            SkipListNode<K> next;
-
-            while (current != null) {
-
-                next = findNodeAtPosition(current.next);
-
-                if (current.next == 0L || shouldMoveDown(hash, hash(next.key), key, next.key)) {
-                    if (next != null && next.key.equals(key)) {
-                        updateNodeValue(next, value);
-                    }
-                    if (level >= current.level) {
-                        SkipListNode<K> newNode = createNewNode(key, value, current.level, next == null ? 0L : next.position, 0L);
-                        if (last != null) {
-                            last.down = newNode.position;
-                            updateNodeDown(last);
-                        }
-
-                        current.next = newNode.position;
-                        updateNodeNext(current);
-
-                        last = newNode;
-                    }
-                    current = findNodeAtPosition(current.down);
-                    continue;
-                }
-
-                current = next;
-            }
-
-            // Increment the size.  Since there were no failures we assume it was successfully added.
-            header.recordCount.incrementAndGet();
-            updateHeaderRecordCount();
-
-            return value;
-        } finally {
-//            readWriteLock.writeLock().unlock();
+        final byte level = selectHeadLevel();
+        if (level > head.level) {
+            head = createNewNode(null, null, level, 0L, head.position);
+            this.header.firstNode = this.head.position;
+            updateHeaderFirstNode(header, head.position);
         }
+
+        SkipListNode<K> current = head;
+        SkipListNode<K> last = null;
+        SkipListNode<K> next;
+
+        while (current != null) {
+
+            next = findNodeAtPosition(current.next);
+
+            if (current.next == 0L || shouldMoveDown(hash, hash(next.key), key, next.key)) {
+                if (level >= current.level) {
+                    SkipListNode<K> newNode = createNewNode(key, value, current.level, next == null ? 0L : next.position, 0L);
+
+                    if (newNode.next == 0L && newNode.recordPosition == 0) {
+                        System.out.println("Shouldnt happen");
+                    }
+                    if (last != null) {
+                        updateNodeDown(last, newNode.position);
+                    }
+
+                    updateNodeNext(current, newNode.position);
+
+                    last = newNode;
+                }
+                current = findNodeAtPosition(current.down);
+                continue;
+            }
+
+            current = next;
+        }
+
+        // Increment the size.  Since there were no failures we assume it was successfully added.
+        header.recordCount.incrementAndGet();
+        updateHeaderRecordCount();
+
+        return value;
 
     }
 
@@ -133,51 +123,44 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
     @Override
     public V remove(Object key) {
 
-//        readWriteLock.writeLock().lock();
+        V value = null;
 
-        try {
-            V value = null;
+        // Whether we found the corresponding reference or not.
+        boolean victory = false;
 
-            // Whether we found the corresponding reference or not.
-            boolean victory = false;
+        int hash = hash(key);
+        SkipListNode<K> current = head;
+        while (current != null) {
 
-            int hash = hash(key);
-            SkipListNode<K> current = head;
-            while (current != null) {
+            SkipListNode<K> next = findNodeAtPosition(current.next);
 
-                SkipListNode<K> next = findNodeAtPosition(current.next);
+            if (current.next == 0L
+                    || shouldMoveDown(hash, hash(next.key), (K) key, next.key)) {
 
-                if (current.next == 0L
-                        || shouldMoveDown(hash, hash(next.key), (K) key, next.key)) {
-
-                    // We found the record we want
-                    if (next != null && key.equals(next.key)) {
-                        // Get the return value
-                        value = findValueAtPosition(next.recordPosition, next.recordSize);
-                        current.next = next.next;
-                        updateNodeNext(current);
-                        victory = true;
-                    }
-
-                    // We must continue on.  There could be multiple references within the SkipList
-                    current = findNodeAtPosition(current.down);
-                    continue;
+                // We found the record we want
+                if (next != null && key.equals(next.key)) {
+                    // Get the return value
+                    value = findValueAtPosition(next.recordPosition, next.recordSize);
+                    updateNodeNext(current, next.next);
+                    victory = true;
                 }
 
-                current = next;
+                // We must continue on.  There could be multiple references within the SkipList
+                current = findNodeAtPosition(current.down);
+                continue;
             }
 
-            // Victory is ours.  We found you and destroyed the record.  Lets decrement the size
-            if (victory) {
-                header.recordCount.decrementAndGet();
-                updateHeaderRecordCount();
-
-            }
-
-            return value;
-        } finally {
-//            readWriteLock.writeLock().unlock();
+            current = next;
         }
+
+        // Victory is ours.  We found you and destroyed the record.  Lets decrement the size
+        if (victory) {
+            header.recordCount.decrementAndGet();
+            updateHeaderRecordCount();
+
+        }
+
+        return value;
     }
 
     /**
@@ -191,15 +174,8 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
     @Override
     public V get(Object key) {
 
-//        readWriteLock.readLock().lock();
-        try {
-            final SkipListNode<K> node = find((K) key);
-            return (node != null) ? findValueAtPosition(node.recordPosition, node.recordSize) : null;
-        } finally
-
-        {
-//            readWriteLock.readLock().unlock();
-        }
+        final SkipListNode<K> node = find((K) key);
+        return (node != null) ? findValueAtPosition(node.recordPosition, node.recordSize) : null;
 
     }
 
@@ -222,7 +198,7 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
      * Update the object if it already exists.  The purpose of this method is because the Skip List must start
      * is search from the root head.  That is why the put is insufficient.
      *
-     * @param key Key identifier
+     * @param key   Key identifier
      * @param value Value to update to
      * @return Whether the value was updated.  In this case, it must already exist.
      * @since 1.2.0
@@ -248,37 +224,30 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         if (key == null)
             return null;
 
-//        readWriteLock.readLock().lock();
-        try {
+        int hash = hash(key);
 
-            int hash = hash(key);
+        SkipListNode<K> current = head;
 
-            SkipListNode<K> current = head;
+        while (current != null) {
 
-            while (current != null) {
-
-                // Get the next node in order to compare keys
-                SkipListNode<K> next = findNodeAtPosition(current.next);
-                if (next != null && key.equals(next.key)) {
-                    return next;
-                }
-
-                // Next node does not have values so we must move on down and continue the loop.
-                else if (current.next == 0L
-                        || (next != null && shouldMoveDown(hash, hash(next.key), key, next.key))) {
-                    current = findNodeAtPosition(current.down);
-                    continue;
-                }
-
-                current = next;
+            // Get the next node in order to compare keys
+            SkipListNode<K> next = findNodeAtPosition(current.next);
+            if (next != null && key.equals(next.key)) {
+                return next;
             }
 
-            // Boo it wasn't found.
-            return null;
+            // Next node does not have values so we must move on down and continue the loop.
+            else if (current.next == 0L
+                    || (next != null && shouldMoveDown(hash, hash(next.key), key, next.key))) {
+                current = findNodeAtPosition(current.down);
+                continue;
+            }
+
+            current = next;
         }
-        finally {
-//            readWriteLock.readLock().unlock();
-        }
+
+        // Boo it wasn't found.
+        return null;
     }
 
     /**
@@ -425,10 +394,11 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         }
     }
 
-    protected void updateNodeDown(SkipListNode<K> node) {
+    protected void updateNodeDown(SkipListNode<K> node, long position) {
         final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
         try {
 
+            node.down = position;
             buffer.writeLong(node.down);
 
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
@@ -440,10 +410,11 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         }
     }
 
-    protected void updateNodeNext(SkipListNode<K> node) {
+    protected void updateNodeNext(SkipListNode<K> node, long position) {
         final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
         try {
 
+            node.next = position;
             buffer.writeLong(node.next);
 
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the

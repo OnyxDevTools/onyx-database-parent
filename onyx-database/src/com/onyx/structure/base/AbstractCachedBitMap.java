@@ -36,16 +36,7 @@ public class AbstractCachedBitMap extends AbstractBitMap
     {
         super(fileStore, header);
         nodeCache = Collections.synchronizedMap(new WeakHashMap());
-
-        if(supportsJavaSystemNotifications())
-        {
-            recordCache = Collections.synchronizedMap(new CacheMap());
-        }
-        else
-        {
-            recordCache = Collections.synchronizedMap(new WeakHashMap<>());
-        }
-
+        recordCache = Collections.synchronizedMap(new WeakHashMap<>());
         keyCache = Collections.synchronizedMap(new WeakHashMap());
     }
 
@@ -347,19 +338,4 @@ public class AbstractCachedBitMap extends AbstractBitMap
         return null;
     }
 
-    /**
-     * The purpose of this method is to detect whether the javax management is available.  This will throw an exception if
-     * the client is on an android device.  If that is the case, we will use alternative caching mechanism
-     *
-     * @return whether javax.management is supported
-     */
-    protected static boolean supportsJavaSystemNotifications()
-    {
-        try {
-            Class.forName("javax.management.Notification");
-            return true;
-        } catch(ClassNotFoundException e) {
-            return false;
-        }
-    }
 }

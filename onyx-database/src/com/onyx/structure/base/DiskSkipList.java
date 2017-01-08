@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 
@@ -33,7 +34,7 @@ import java.util.function.BiConsumer;
 @SuppressWarnings({"unused", "unchecked"})
 public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implements DiskMap<K, V> {
 
-    private ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
+    private ReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
 
     /**
      * Constructor with store.  Initialize the collection types

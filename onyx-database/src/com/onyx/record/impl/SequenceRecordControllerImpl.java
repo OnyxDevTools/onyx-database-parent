@@ -35,7 +35,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     {
         super(entityDescriptor, context);
 
-        metadata = (DiskMap)dataFile.getHashMap("metadata" + entityDescriptor.getClazz().getName());
+        metadata = (DiskMap)dataFile.getSkipListMap("metadata" + entityDescriptor.getClazz().getName());
 
         // Initialize the sequence key
         Long val = metadata.get(LAST_SEQUENCE_VALUE);

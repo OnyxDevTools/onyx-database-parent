@@ -67,8 +67,8 @@ public class FileChannelStore implements Store
      */
     public void init()
     {
-        final Map<Short, String> mapById = (Map<Short, String>) builder.getHashMap(SERIALIZERS_MAP_NAME);
-        final Map<String, Short> mapByName = (Map<String, Short>) builder.getHashMap(SERIALIZERS_MAP_ID);
+        final Map<Short, String> mapById = (Map<Short, String>) builder.getSkipListMap(SERIALIZERS_MAP_NAME);
+        final Map<String, Short> mapByName = (Map<String, Short>) builder.getSkipListMap(SERIALIZERS_MAP_ID);
         serializers = new Serializers(mapById, mapByName, context);
     }
 

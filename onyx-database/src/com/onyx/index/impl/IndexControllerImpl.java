@@ -19,7 +19,6 @@ import java.util.*;
  */
 public class IndexControllerImpl implements IndexController {
 
-
     protected SchemaContext context;
 
     protected Map<Object, Set<Long>> references = null; // Stores the references for an index key

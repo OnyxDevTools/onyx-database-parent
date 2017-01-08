@@ -40,7 +40,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         super(entityDescriptor, relationshipDescriptor, context);
 
         // Get the correct data file
-        toOneMap = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        toOneMap = (DiskMap)dataFile.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
 

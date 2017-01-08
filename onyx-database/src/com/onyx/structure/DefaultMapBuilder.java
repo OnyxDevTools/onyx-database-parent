@@ -135,7 +135,7 @@ public class DefaultMapBuilder implements MapBuilder
             return sets.get(name);
         }
 
-        final DiskMap underlyingHashMap = (DiskMap)getHashMap(name + "$Map");
+        final DiskMap underlyingHashMap = (DiskMap)getSkipListMap(name + "$Map");
         return newDiskSet(underlyingHashMap);
     }
 
@@ -151,7 +151,7 @@ public class DefaultMapBuilder implements MapBuilder
             if(set != null)
                 return set;
 
-            final DiskMap underlyingDiskMap = (DiskMap)getDiskMap(header1);
+            final DiskMap underlyingDiskMap = (DiskMap)getSkipListMap(header1);
             return newDiskSet(underlyingDiskMap);
         });
     }
@@ -194,6 +194,23 @@ public class DefaultMapBuilder implements MapBuilder
             return newDiskMap(storage, header);
         });
     }
+
+
+    /**
+     * Get Disk Map with header reference
+     * @param header reference within storage
+     * @return Instantiated disk structure
+     * @since 1.0.0
+     */
+    public Map getSkipListMap(Header header)
+    {
+        return mapsByHeader.compute(header, (header1, map) -> {
+            if(map != null)
+                return map;
+
+            return newSkipListMap(storage, header);
+        });
+    }
     /**
      * Instantiate the disk set with an underlying disk structure
      * @param underlyingDiskMap The thing that drives the hashing and the storge of the data
@@ -225,7 +242,7 @@ public class DefaultMapBuilder implements MapBuilder
                     String targetName = (String) storage.read(header.idPosition, header.idSize, String.class);
                     if (targetName != null && targetName.equals(name)) {
                         // We found a match, store it in the structure cache and return it
-                        final DiskSkipList retVal = newSkipListMap(storage, header);
+                        final DiskMap retVal = newSkipListMap(storage, header);
                         maps.put(name, retVal);
                         return retVal;
                     }
@@ -413,7 +430,7 @@ public class DefaultMapBuilder implements MapBuilder
         //*/
     }
 
-    protected DiskSkipList newSkipListMap(Store store, Header header)
+    protected DiskMap newSkipListMap(Store store, Header header)
     {
         return new DiskSkipList(store, header);
     }

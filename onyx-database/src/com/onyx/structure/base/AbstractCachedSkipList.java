@@ -46,11 +46,13 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
      */
     @Override
     protected V findValueAtPosition(long position, int recordSize) {
-        return valueCache.compute(position, (aLong, v) -> {
-            if(v != null)
-                return v;
-            return AbstractCachedSkipList.super.findValueAtPosition(position, recordSize);
-        });
+        V value = valueCache.get(position);
+        if(value != null)
+            return value;
+
+        value = super.findValueAtPosition(position, recordSize);
+        valueCache.put(position, value);
+        return value;
     }
 
     /**
@@ -99,45 +101,22 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
      * @since 1.2.0
      */
     protected SkipListNode<K> findNodeAtPosition(final long position) {
-        return nodeCache.compute(position, (aLong, kSkipListNode) -> {
-            if(kSkipListNode != null)
-                return kSkipListNode;
-            return AbstractCachedSkipList.super.findNodeAtPosition(position);
-        });
+        SkipListNode node = nodeCache.get(position);
+        if(node != null)
+            return node;
+
+        node = super.findNodeAtPosition(position);
+        nodeCache.put(position, node);
+        return node;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public V remove(Object key) {
         keyCache.remove(key);
-//        keyValueCache.remove(key);
-        return super.remove(key);
-    }
-    /*
-    @Override
-    public V put(K key, V value) {
-        keyValueCache.put(key, value);
-        return super.put(key, value);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public V remove(Object key) {
-        keyCache.remove(key);
-        keyValueCache.remove(key);
         return super.remove(key);
     }
 
-    @Override
-    public V get(Object key)
-    {
-        return keyValueCache.compute((K)key, (k, v) -> {
-            if(v != null)
-                return v;
-            return AbstractCachedSkipList.super.get(key);
-        });
-    }
-*/
     /**
      * Clear the cache
      */
@@ -147,7 +126,6 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
         nodeCache = Collections.synchronizedMap(new WeakHashMap<Long, SkipListNode<K>>());
         valueCache = Collections.synchronizedMap(new WeakHashMap<Long, V>());
         keyCache = Collections.synchronizedMap(new WeakHashMap<K, SkipListNode<K>>());
-        keyValueCache = Collections.synchronizedMap(new WeakHashMap<K, V>());
     }
 
     /**
@@ -157,11 +135,12 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
      * @since 1.2.0
      */
     protected SkipListNode<K> find(K key) {
-        return keyCache.compute(key, (k, node) -> {
-            if(node != null)
-                return node;
+        SkipListNode node = keyCache.get(key);
+        if(node != null)
+            return node;
 
-            return AbstractCachedSkipList.super.find(key);
-        });
+        node = super.find(key);
+        keyCache.put(key, node);
+        return node;
     }
 }
