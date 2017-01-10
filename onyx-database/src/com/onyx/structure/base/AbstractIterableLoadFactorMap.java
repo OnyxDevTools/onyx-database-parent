@@ -1,8 +1,7 @@
 package com.onyx.structure.base;
 
-import com.onyx.structure.node.BitMapNode;
-import com.onyx.structure.node.Header;
-import com.onyx.structure.node.RecordReference;
+import com.onyx.structure.DefaultDiskMap;
+import com.onyx.structure.node.*;
 import com.onyx.structure.store.Store;
 
 import java.util.*;
@@ -10,41 +9,24 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 /**
- * Created by timothy.osborn on 3/26/15.
+ * Created by tosborn1 on 1/9/17.
  */
-public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap implements Map<K, V> {
+public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
 
-    protected LevelReadWriteLock readWriteLock = new DefaultLevelReadWriteLock();
+    protected DefaultDiskMap<K, DiskSkipList<K, V>> defaultDiskMap = null;
 
     /**
      * Constructor
      *
      * @param store
      */
-    public AbstractIterableDiskMap(Store store, Header header) {
-        super(store, header);
-        entries = new EntryCollection(fileStore, this);
-        values = new ValueCollection(fileStore, this);
-        keys = new KeyCollection(fileStore, this);
-        dict = new DictionaryCollection(fileStore, this);
+    public AbstractIterableLoadFactorMap(Store store, Header header, boolean isHeadless) {
+        super(store, header, isHeadless);
+        entries = new EntryCollectionMulti(fileStore, this);
+        values = new ValueCollectionMulti(fileStore, this);
+        keys = new KeyCollectionMulti(fileStore, this);
+        dict = new DictionaryCollectionMulti(fileStore, this);
     }
-
-    /**
-     * Constructor
-     *
-     * @param fileStore
-     * @param header
-     * @param headless
-     */
-    public AbstractIterableDiskMap(Store fileStore, Header header, boolean headless)
-    {
-        super(fileStore, header, headless);
-        entries = new EntryCollection(fileStore, this);
-        values = new ValueCollection(fileStore, this);
-        keys = new KeyCollection(fileStore, this);
-        dict = new DictionaryCollection(fileStore, this);
-    }
-
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -56,10 +38,10 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Getter for set of keys
      *
      * @return
-     * @see AbstractIterableDiskMap.KeyCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see KeyCollectionMulti
+     * @see AbstractMultiNodeCollection
      */
-    protected KeyCollection keys;
+    protected KeyCollectionMulti keys;
 
     @Override
     public Set<K> keySet() {
@@ -71,25 +53,34 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Getter for set of keys
      *
      * @return
-     * @see AbstractIterableDiskMap.DictionaryCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see DictionaryCollectionMulti
+     * @see AbstractMultiNodeCollection
      */
-    protected DictionaryCollection dict;
+    protected DictionaryCollectionMulti dict;
 
     public Set<Map> dictionarySet() {
         return dict;
     }
 
+    // Getter for super entry set for the load factor map
+    public Set<Entry<K, V>> superEntrySet() {
+        return super.entrySet();
+    }
+
+    // Getter for super dictionary set for the load factor map
+    public Set<Map> superDictionarySet() {
+        return super.dictionarySet();
+    }
 
     /**
      * Getter for values
      *
      * @return
-     * @see AbstractIterableDiskMap.KeyCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see KeyCollectionMulti
+     * @see AbstractMultiNodeCollection
      */
 
-    protected ValueCollection values;
+    protected ValueCollectionMulti values;
 
     @Override
     public Collection<V> values() {
@@ -100,11 +91,10 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Getter for values.  This contains lazy loaded disk structure entries
      *
      * @return
-     * @see AbstractIterableDiskMap.KeyCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
-     * @see AbstractIterableDiskMap.DiskMapEntry
+     * @see KeyCollectionMulti
+     * @see AbstractMultiNodeCollection
      */
-    protected EntryCollection entries;
+    protected EntryCollectionMulti entries;
 
     @Override
     public Set<Entry<K, V>> entrySet() {
@@ -145,16 +135,16 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Class for sifting through values
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractMultiNodeCollection
      */
-    protected class ValueCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    protected class ValueCollectionMulti<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
         /**
          * Constructor
          *
          * @param fileStore
          * @param diskMap
          */
-        public ValueCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
+        public ValueCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
             super(fileStore, diskMap);
             this.fileStore = fileStore;
             this.diskMap = diskMap;
@@ -167,7 +157,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public Iterator<V> iterator() {
-            return new ValueIterator(header);
+            return new AbstractIterableLoadFactorMap.ValueIterator(header);
 
         }
 
@@ -177,7 +167,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          * @return
          */
         public Iterator<V> dictIterator() {
-            return new DictionaryIterator(header);
+            return new AbstractIterableLoadFactorMap.DictionaryIterator(header);
 
         }
 
@@ -204,16 +194,16 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Class for sifting through values
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractMultiNodeCollection
      */
-    protected class DictionaryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    protected class DictionaryCollectionMulti<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
         /**
          * Constructor
          *
          * @param fileStore
          * @param diskMap
          */
-        public DictionaryCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
+        public DictionaryCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
             super(fileStore, diskMap);
             this.fileStore = fileStore;
             this.diskMap = diskMap;
@@ -226,7 +216,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public Iterator<V> iterator() {
-            return new DictionaryIterator(header);
+            return new AbstractIterableLoadFactorMap.DictionaryIterator(header);
 
         }
 
@@ -253,16 +243,16 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Key Collection
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractMultiNodeCollection
      */
-    protected class KeyCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    protected class KeyCollectionMulti<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
         /**
          * Constructor
          *
          * @param fileStore
          * @param diskMap
          */
-        public KeyCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
+        public KeyCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
             super(fileStore, diskMap);
             this.fileStore = fileStore;
             this.diskMap = diskMap;
@@ -275,7 +265,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public Iterator<V> iterator() {
-            return new KeyIterator(header);
+            return new AbstractIterableLoadFactorMap.KeyIterator(header);
         }
     }
 
@@ -284,8 +274,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      *
      * @param <V>
      */
-    protected class EntryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
-        public EntryCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
+    protected class EntryCollectionMulti<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
+        public EntryCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
             super(fileStore, diskMap);
             this.fileStore = fileStore;
             this.diskMap = diskMap;
@@ -293,7 +283,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
 
         @Override
         public Iterator<V> iterator() {
-            return new EntryIterator(header);
+            return new AbstractIterableLoadFactorMap.EntryIterator(header);
         }
     }
 
@@ -304,12 +294,12 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      *
      * @param <E>
      */
-    abstract class AbstractNodeCollection<E> implements Set<E> {
+    abstract class AbstractMultiNodeCollection<E> implements Set<E> {
         protected Store fileStore; // Reference to outer document fileStore
 
-        protected AbstractIterableDiskMap diskMap; // Just a handle on the outer class
+        protected AbstractIterableLoadFactorMap diskMap; // Just a handle on the outer class
 
-        public AbstractNodeCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
+        public AbstractMultiNodeCollection(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
             this.fileStore = fileStore;
             this.diskMap = diskMap;
         }
@@ -424,7 +414,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * <p/>
      * Iterates through and hydrates the values in an DiskMap
      */
-    class ValueIterator extends AbstractNodeIterator implements Iterator {
+    class ValueIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
         /**
          * Constructor
          *
@@ -442,9 +432,9 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
 
         @Override
         public Object next() {
-            final RecordReference reference = (RecordReference) super.next();
-            if (reference != null) {
-                return getRecordValue(reference);
+            final Entry<K,V> entry = (Entry<K,V> )super.next();
+            if (entry != null) {
+                return entry.getValue();
             }
             return null;
         }
@@ -453,16 +443,16 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     /**
      * Key Iterator.  Same as Value iterator except returns just the keys
      */
-    class KeyIterator extends AbstractNodeIterator implements Iterator {
+    class KeyIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
         public KeyIterator(Header header) {
             super(header);
         }
 
         @Override
         public Object next() {
-            final RecordReference reference = (RecordReference) super.next();
-            if (reference != null) {
-                return getRecordKey(reference);
+            final Entry<K,V> entry = (Entry<K,V> )super.next();
+            if (entry != null) {
+                return entry.getKey();
             }
             return null;
         }
@@ -471,7 +461,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     /**
      * Entry.  Similar to the Key and Value iterator except it returns a custom entry that will lazy load the keys and values
      */
-    class EntryIterator extends AbstractNodeIterator implements Iterator {
+    class EntryIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
         /**
          * Constructor
          *
@@ -488,14 +478,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public Object next() {
-
-
-
-            final RecordReference reference = (RecordReference) super.next();
-            if (reference != null) {
-                return new DiskMapEntry(reference);
-            }
-            return null;
+            return super.next();
         }
     }
 
@@ -504,14 +487,14 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * <p/>
      * Iterates through and hydrates the values in an DiskMap
      */
-    class DictionaryIterator extends AbstractNodeIterator implements Iterator {
+    class DictionaryIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
         /**
          * Constructor
          *
          * @param header
          */
         public DictionaryIterator(Header header) {
-            super(header);
+            super(header, true);
         }
 
         /**
@@ -522,63 +505,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
 
         @Override
         public Object next() {
-            final RecordReference reference = (RecordReference) super.next();
-            if (reference != null) {
-                return getRecordValueAsDictionary(reference);
-            }
-            return null;
-        }
-    }
-
-    /**
-     * Disk Map Entry
-     *
-     * @param <K>
-     * @param <V>
-     */
-    public class DiskMapEntry<K, V> implements Entry<K, V> {
-        protected RecordReference node = null;
-        protected K key;
-        protected V value;
-
-        /**
-         * Constructor
-         *
-         * @param node
-         */
-        public DiskMapEntry(RecordReference node) {
-            this.node = node;
-        }
-
-        /**
-         * Get Key
-         *
-         * @return
-         */
-        @Override
-        public K getKey() {
-            if (key == null) // Lazy load the key
-                key = (K) getRecordKey(node);
-
-            return key;
-        }
-
-        /**
-         * Get Value
-         *
-         * @return
-         */
-        @Override
-        public V getValue() {
-            if (value == null) // Lazy load the key
-                value = (V) getRecordValue(node);
-            return value;
-        }
-
-        @Override
-        public V setValue(V value) {
-            this.value = value;
-            return value;
+            return super.next();
         }
     }
 
@@ -589,8 +516,10 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      */
     abstract class AbstractNodeIterator implements Iterator {
 
-        protected Stack<NodeEntry> nodeStack = new Stack<NodeEntry>(); // Simple stack that hold onto the nodes
+        protected Stack<AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry> nodeStack = new Stack<AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry>(); // Simple stack that hold onto the nodes
         protected Stack<Long> referenceStack = new Stack<Long>(); // Simple stack that hold onto the nodes
+        protected Iterator currentIterator = null;
+        protected boolean isDictionary = false;
 
         /**
          * Constructor
@@ -599,12 +528,23 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         public AbstractNodeIterator(Header header) {
             if (header.firstNode > 0) {
-                nodeStack.push(new NodeEntry(header.firstNode, (short) -1));
+                nodeStack.push(new AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry(header.firstNode, (short) -1));
             }
             queueUpNext();
-
         }
 
+        /**
+         * Constructor
+         *
+         * @param header
+         */
+        public AbstractNodeIterator(Header header, boolean isDictionary) {
+            this.isDictionary = isDictionary;
+            if (header.firstNode > 0) {
+                nodeStack.push(new AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry(header.firstNode, (short) -1));
+            }
+            queueUpNext();
+        }
         /**
          * Hash next,  only if the stack is not empty
          *
@@ -612,35 +552,62 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public boolean hasNext() {
-            return (referenceStack.size() > 0);
+            prepareNext();
+            return (currentIterator != null && currentIterator.hasNext());
         }
 
         /**
          * This gets the next
          */
         public void queueUpNext() {
-            NodeEntry nodeEntry = null;
+            AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry nodeEntry = null;
             BitMapNode node = null;
 
-            NodeEntry newEntry = null;
             long reference = 0;
 
             while (nodeStack.size() > 0) {
 
                 nodeEntry = nodeStack.pop();
-                node = getBitmapNode(nodeEntry.reference);
+                node = defaultDiskMap.getBitmapNode(nodeEntry.reference);
+                AbstractNodeIterator.NodeEntry newEntry;
 
                 // Add all the other related nodes in the bitmap
-                for (int i = 0; i < getLoadFactor(); i++) {
+                for (int i = 0; i < defaultDiskMap.getLoadFactor(); i++) {
 
                     reference = node.next[i];
+
                     if (reference > 0) {
-                        if (nodeEntry.level < (getRecordReferenceIndex())) {
-                            newEntry = new NodeEntry(reference, (short) (nodeEntry.level + 1));
+                        if (nodeEntry.level < (defaultDiskMap.getRecordReferenceIndex())) {
+                            newEntry = new AbstractNodeIterator.NodeEntry(reference, (short) (nodeEntry.level + 1));
                             nodeStack.add(newEntry);
                         } else {
                             referenceStack.push(reference);
                         }
+                    }
+                }
+            }
+        }
+
+        private void prepareNext()
+        {
+            if(currentIterator != null && currentIterator.hasNext())
+                return;
+
+            boolean continueLooking = true;
+            while (continueLooking && referenceStack.size() > 0) {
+                queueUpNext();
+
+                while (referenceStack.size() > 0) {
+                    SkipListHeadNode node = findNodeAtPosition(referenceStack.pop());
+                    setHead(node);
+                    if (isDictionary)
+                        currentIterator = superDictionarySet().iterator();
+                    else
+                        currentIterator = superEntrySet().iterator();
+                    if (currentIterator.hasNext())
+                    {
+                        continueLooking = false;
+                        break;
                     }
                 }
             }
@@ -654,20 +621,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
         @Override
         public Object next()
         {
-                if (referenceStack.size() < 1) {
-                    queueUpNext();
-                }
-
-                if (referenceStack.size() > 0) {
-                    RecordReference reference = getRecordReference(referenceStack.pop());
-                    while (reference.next > 0) {
-                        referenceStack.push(reference.next);
-                        reference = getRecordReference(reference.next);
-                    }
-                    return reference;
-                }
-
-            return null;
+            prepareNext();
+            return currentIterator.next();
         }
 
         /**
@@ -692,22 +647,12 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
                 if (val == null)
                     return false;
 
-                if (val.getClass() == NodeEntry.class) {
-                    return ((NodeEntry) val).reference == reference;
+                if (val.getClass() == AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry.class) {
+                    return ((AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry) val).reference == reference;
                 }
                 return false;
             }
         }
     }
 
-    /**
-     * Public getter for Read Write Lock.  This is used for iterating.  Since
-     * the iterator may not be write thread safe, this can be used to ensure safety.
-     *
-     * @since 1.0.2
-     * @return Instance of Level Read Write Lock
-     */
-    public LevelReadWriteLock getReadWriteLock() {
-        return readWriteLock;
-    }
 }

@@ -14,13 +14,22 @@ public class BitMapNode implements ObjectSerializable, Serializable
 {
     public static final int DEFAULT_BITMAP_ITERATIONS = 10;
 
-    public long[] next = new long[DEFAULT_BITMAP_ITERATIONS];
+    public int iterations = DEFAULT_BITMAP_ITERATIONS;
+
+    public long[] next;
     public long position;
 
     public BitMapNode()
     {
 
     }
+
+    public BitMapNode(int iterations)
+    {
+        this.iterations = iterations;
+        next = new long[iterations];
+    }
+
     /**
      * Write Object
      *
@@ -43,7 +52,7 @@ public class BitMapNode implements ObjectSerializable, Serializable
     public void readObject(ObjectBuffer buffer) throws IOException
     {
         position = buffer.readLong();
-        next = buffer.readLongArray(DEFAULT_BITMAP_ITERATIONS);
+        next = buffer.readLongArray(iterations);
     }
 
     @Override

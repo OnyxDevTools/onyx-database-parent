@@ -31,10 +31,10 @@ import java.util.function.BiConsumer;
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-@SuppressWarnings({"unused", "unchecked"})
+@SuppressWarnings("unchecked")
 public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implements DiskMap<K, V> {
 
-    private ReadWriteLock readWriteLock = new ReentrantReadWriteLock(true);
+    protected ReadWriteLock readWriteLock;
 
     /**
      * Constructor with store.  Initialize the collection types
@@ -45,6 +45,21 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
      */
     public DiskSkipList(Store store, Header header) {
         super(store, header);
+        readWriteLock = new ReentrantReadWriteLock(true);
+    }
+
+    /**
+     * Constructor with store.  Initialize the collection types
+     *
+     * @param store  Underlying storage mechanism
+     * @param header Header location of the skip list
+     * @param detached Whether the map is headless and should ignore updating the header
+     * @since 1.2.0
+     */
+    public DiskSkipList(Store store, Header header, boolean detached) {
+        super(store, header, detached);
+        if(detached)
+            readWriteLock = new EmptyReadWriteLock();
     }
 
     /**
@@ -92,11 +107,15 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         try {
 
             super.clear();
-            head = createNewNode(null, null, Byte.MIN_VALUE, 0L, 0L);
-            this.header.firstNode = this.head.position;
-            updateHeaderFirstNode(header, this.header.firstNode);
-            header.recordCount.set(0L);
-            updateHeaderRecordCount();
+            setHead(createHeadNode(Byte.MIN_VALUE, 0L, 0L));
+
+            if(this.header != null) {
+                this.header.firstNode = getHead().position;
+                updateHeaderFirstNode(header, this.header.firstNode);
+                header.recordCount.set(0L);
+                updateHeaderRecordCount();
+            }
+
         } finally {
             readWriteLock.writeLock().unlock();
         }
@@ -122,7 +141,7 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         readWriteLock.readLock().lock();
 
         try {
-            SkipListNode<K> node = findNodeAtPosition(recordId);
+            SkipListNode<K> node = (SkipListNode<K>)findNodeAtPosition(recordId);
             return findValueAtPosition(node.recordPosition, node.recordSize);
         } finally {
             readWriteLock.readLock().unlock();
@@ -139,7 +158,7 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         readWriteLock.readLock().lock();
 
         try {
-            SkipListNode<K> node = findNodeAtPosition(recordId);
+            SkipListNode<K> node = (SkipListNode<K>)findNodeAtPosition(recordId);
             if (node != null && node.position == recordId) {
                 return getRecordValueAsDictionary(node);
             }
@@ -148,7 +167,6 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
             readWriteLock.readLock().unlock();
         }
     }
-
 
     /**
      * Get Map representation of key object.
@@ -161,7 +179,7 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         readWriteLock.readLock().lock();
 
         try {
-            SkipListNode<K> node = findNodeAtPosition(recordId);
+            SkipListNode<K> node = (SkipListNode<K>)findNodeAtPosition(recordId);
             Object value = findValueAtPosition(node.recordPosition, node.recordSize);
 
             if (value != null) {
@@ -203,7 +221,7 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         readWriteLock.readLock().lock();
 
         try {
-            SkipListNode node = findNodeAtPosition(reference.position);
+            SkipListNode node = (SkipListNode<K>)findNodeAtPosition(reference.position);
             ObjectBuffer buffer = fileStore.read(node.recordPosition, node.recordSize);
             return buffer.getAttribute(attribute, node.serializerId);
         } finally {
@@ -350,4 +368,5 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
     public Header getReference() {
         return header;
     }
+
 }

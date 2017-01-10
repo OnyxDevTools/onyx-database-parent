@@ -9,9 +9,11 @@ import java.util.Set;
 
 /**
  * Created by tosborn1 on 7/30/15.
+ * <p>
+ * This is the contract a map builder must obey.
+ * This class is responsible for building all maps.  There is one map builder per file and or storage
  */
-public interface MapBuilder
-{
+public interface MapBuilder {
     /**
      * Method get returns an instance of a hashmap
      *
@@ -22,6 +24,7 @@ public interface MapBuilder
 
     /**
      * Get the instance of a map which uses a skip list index
+     *
      * @param name Name of the map to uniquely identify it
      * @return Instantiated map with storage
      */
@@ -29,25 +32,37 @@ public interface MapBuilder
     Map getSkipListMap(String name);
 
     /**
+     * Get the instance of a map which uses a skip list index
+     *
+     * @param name Name of the map to uniquely identify it
+     * @return Instantiated map with storage
+     */
+    @SuppressWarnings("unused")
+    Map getLoadFactorMap(String name);
+
+    /**
      * Method returns an instance of a hash set
+     *
      * @param name Name of the hash set
-     * @since 1.0.2
      * @return DiskSet instance
+     * @since 1.0.2
      */
     @SuppressWarnings("unused")
     Set getHashSet(String name);
 
     /**
      * Method returns an instance of a hash set
+     *
      * @param header Reference of the hash set
-     * @since 1.0.2
      * @return HashSet instance
+     * @since 1.0.2
      */
     @SuppressWarnings("unused")
     Set getHashSet(Header header);
 
     /**
      * Get Long Set.  This gets a disk set that can only support persisting long values
+     *
      * @param setId The id of the set
      * @return Instantiated DiskSet
      */
@@ -55,38 +70,34 @@ public interface MapBuilder
 
     /**
      * Creates a long disk set
+     *
      * @return Instantiated disk set
      */
     Set newLongSet();
 
     /**
      * Creates a long disk set only for long values
+     *
      * @return Disk Set
      */
     Set newLongHashSet();
 
     /**
-     * Instantiates and creates a new HashSet
-     * @return Instantiated hash set
-     * @since 1.0.2
-     */
-    @SuppressWarnings("unused")
-    Set newHashSet();
-
-    /**
      * Get Disk Map with header reference
+     *
      * @param header reference within storage
      * @return Instantiated disk structure
      */
     Map getDiskMap(Header header);
 
     /**
-     * Only update the first position for a header
+     * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
-     * @param header Header reference of the map
-     * @param next Next data structure in the linked list
+     * @param header reference within storage
+     * @return Instantiated disk structure
      */
-    void updateHeaderNext(Header header, long next);
+    @SuppressWarnings("unused")
+    Map getLoadFactorMap(Header header);
 
     /**
      * Close Map Builder.  Flush the file writes
@@ -108,11 +119,21 @@ public interface MapBuilder
      *
      * @return Custom serializes shared within the data structures
      */
-     Serializers getSerializers();
+    Serializers getSerializers();
 
     /**
      * Get the underlying storage mechanism
+     *
      * @return The Store used for all data structures
      */
-     Store getStore();
+    Store getStore();
+
+    /**
+     * Used by internal maps within database classes in order to setup metadata.  These must be pre-defined maps.
+     * @param name Name of the map
+     * @return The default map
+     *
+     * @since 1.2.0
+     */
+    Map getDefaultMapByName(String name);
 }

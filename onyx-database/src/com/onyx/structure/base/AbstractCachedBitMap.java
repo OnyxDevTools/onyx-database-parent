@@ -41,6 +41,21 @@ public class AbstractCachedBitMap extends AbstractBitMap
     }
 
     /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param headless
+     */
+    public AbstractCachedBitMap(Store fileStore, Header header, boolean headless)
+    {
+        super(fileStore, header, headless);
+        nodeCache = Collections.synchronizedMap(new WeakHashMap());
+        recordCache = Collections.synchronizedMap(new WeakHashMap<>());
+        keyCache = Collections.synchronizedMap(new WeakHashMap());
+    }
+
+    /**
      * Inserts a new record.
      *
      * @param   parentRecordReference

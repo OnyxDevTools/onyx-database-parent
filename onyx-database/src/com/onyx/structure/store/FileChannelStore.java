@@ -1,6 +1,7 @@
 package com.onyx.structure.store;
 
 import com.onyx.structure.MapBuilder;
+import com.onyx.structure.MapType;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.structure.serializer.Serializers;
@@ -33,8 +34,8 @@ public class FileChannelStore implements Store
     public AtomicLong fileSize = new AtomicLong(0);
 
     // Reserved structure namespaces
-    protected static final String SERIALIZERS_MAP_NAME = "__serializers__name__";
-    protected static final String SERIALIZERS_MAP_ID = "__serializers__id__";
+    public static final String SERIALIZERS_MAP_NAME = "__serializers__name__";
+    public static final String SERIALIZERS_MAP_ID = "__serializers__id__";
 
     // This is an internal structure only used to store serializers
     public Serializers serializers = null;
@@ -67,8 +68,8 @@ public class FileChannelStore implements Store
      */
     public void init()
     {
-        final Map<Short, String> mapById = (Map<Short, String>) builder.getSkipListMap(SERIALIZERS_MAP_NAME);
-        final Map<String, Short> mapByName = (Map<String, Short>) builder.getSkipListMap(SERIALIZERS_MAP_ID);
+        final Map<Short, String> mapById = (Map<Short, String>) builder.getDefaultMapByName(SERIALIZERS_MAP_NAME);
+        final Map<String, Short> mapByName = (Map<String, Short>) builder.getDefaultMapByName(SERIALIZERS_MAP_ID);
         serializers = new Serializers(mapById, mapByName, context);
     }
 
@@ -252,6 +253,35 @@ public class FileChannelStore implements Store
         }
 
         return null;
+    }
+
+    /**
+     * Read a serializable object
+     *
+     * @param position
+     * @param size
+     * @param object
+     * @return
+     */
+    public Object read(long position, int size, ObjectSerializable object)
+    {
+        if(position >= fileSize.get())
+            return null;
+
+        final ByteBuffer buffer = ObjectBuffer.allocate(size);
+
+        try
+        {
+            channel.read(buffer, position);
+            buffer.rewind();
+            object.readObject(new ObjectBuffer(buffer, serializers), position);
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
+
+        return object;
     }
 
     /**

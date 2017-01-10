@@ -1,6 +1,7 @@
 package com.onyx.structure.base;
 
 import com.onyx.structure.node.Header;
+import com.onyx.structure.node.SkipListHeadNode;
 import com.onyx.structure.node.SkipListNode;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.store.Store;
@@ -20,16 +21,31 @@ import java.util.*;
  * @param <V> Value Object Type
  * @since 1.2.0
  */
+@SuppressWarnings("unchecked")
 abstract class AbstractSkipList<K, V> implements Map<K, V> {
 
-    private Random random; // Random number generator from 0.0 to 1.0
+    private static Random random = new Random(60); //To choose the threadLocalHead level node randomly; // Random number generator from 0.0 to 1.0
     protected Store fileStore; // Underlying storage mechanism
-    protected volatile SkipListNode<K> head; // Default head of the SkipList
-    protected volatile Header header;
+    private ThreadLocal<SkipListHeadNode> threadLocalHead = new ThreadLocal(); // Default threadLocalHead of the SkipList
+    private SkipListHeadNode headNode;
+    protected Header header = null;
+    private boolean detached = false;
 
-    protected Map<Long, SkipListNode<K>> nodeCache = Collections.synchronizedMap(new WeakHashMap<Long, SkipListNode<K>>());
-    protected Map<Long, V> valueCache = Collections.synchronizedMap(new WeakHashMap<Long, V>());
-    protected Map<K, SkipListNode<K>> keyCache = Collections.synchronizedMap(new WeakHashMap<K, SkipListNode<K>>());
+    protected Map<Long, SkipListHeadNode> nodeCache = Collections.synchronizedMap(new WeakHashMap<Long, SkipListHeadNode>());
+    protected Map<K, V> valueCache = Collections.synchronizedMap(new CacheMap());
+
+    /**
+     * Constructor with file store
+     *
+     * @param fileStore File storage mechanism
+     * @param header    Header location of the skip list
+     * @param headless Whether the header should be ignored or not
+     */
+    AbstractSkipList(Store fileStore, Header header, boolean headless) {
+        this.fileStore = fileStore;
+        this.header = header;
+        this.detached = headless;
+    }
 
     /**
      * Constructor with file store
@@ -40,15 +56,50 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
     AbstractSkipList(Store fileStore, Header header) {
         this.fileStore = fileStore;
         this.header = header;
+        this.detached = false;
 
         if (header.firstNode > 0L) {
-            this.head = findNodeAtPosition(header.firstNode);
+            setHead(findNodeAtPosition(header.firstNode));
         } else {
-            this.head = createNewNode(null, null, Byte.MIN_VALUE, 0L, 0L);
-            this.header.firstNode = this.head.position;
+            SkipListHeadNode newHead = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
+            setHead(newHead);
+            this.header.firstNode = newHead.position;
             updateHeaderFirstNode(this.header, this.header.firstNode);
         }
-        this.random = new Random(40); //To choose the head level node randomly
+
+    }
+
+    /**
+     * If the map is detached it means there could be any number of threads using it as a different map.  For that
+     * reason there was a thread-local pool of heads.
+     * @return The head node.
+     */
+    protected SkipListHeadNode getHead()
+    {
+        if(detached)
+        {
+            return threadLocalHead.get();
+        }
+        return headNode;
+    }
+
+    /**
+     * Set the head node.  If the map is detached, it will set the node as a thread local parameter since it is throw away.
+     *
+     * @param head Head of the skip list
+     */
+    protected void setHead(SkipListHeadNode head)
+    {
+        if(detached)
+        {
+            if(head == null)
+                threadLocalHead.remove();
+            threadLocalHead.set(head);
+        }
+        else
+        {
+            headNode = head;
+        }
     }
 
     /**
@@ -67,34 +118,33 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
 
         final int hash = hash(key);
 
+        SkipListHeadNode head = getHead();
+
         final byte level = selectHeadLevel();
         if (level > head.level) {
-            head = createNewNode(null, null, level, 0L, head.position);
-            this.header.firstNode = this.head.position;
+            head = createHeadNode(level, 0L, head.position);
+            setHead(head);
             updateHeaderFirstNode(header, head.position);
         }
 
-        SkipListNode<K> current = head;
-        SkipListNode<K> last = null;
-        SkipListNode<K> next;
+        SkipListHeadNode current = head;
+        SkipListHeadNode last = null;
+        SkipListHeadNode next;
 
         while (current != null) {
 
             next = findNodeAtPosition(current.next);
 
-            if (current.next == 0L || shouldMoveDown(hash, hash(next.key), key, next.key)) {
+            if (current.next == 0L ||
+                    shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), key, ((SkipListNode<K>)next).key)) {
                 if (level >= current.level) {
                     SkipListNode<K> newNode = createNewNode(key, value, current.level, next == null ? 0L : next.position, 0L);
 
-                    if (newNode.next == 0L && newNode.recordPosition == 0) {
-                        System.out.println("Shouldnt happen");
-                    }
                     if (last != null) {
                         updateNodeDown(last, newNode.position);
                     }
 
                     updateNodeNext(current, newNode.position);
-
                     last = newNode;
                 }
                 current = findNodeAtPosition(current.down);
@@ -105,8 +155,7 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         }
 
         // Increment the size.  Since there were no failures we assume it was successfully added.
-        header.recordCount.incrementAndGet();
-        updateHeaderRecordCount();
+        incrementSize();
 
         return value;
 
@@ -129,18 +178,18 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         boolean victory = false;
 
         int hash = hash(key);
-        SkipListNode<K> current = head;
+        SkipListHeadNode current = getHead();
         while (current != null) {
 
-            SkipListNode<K> next = findNodeAtPosition(current.next);
+            SkipListHeadNode next = findNodeAtPosition(current.next);
 
-            if (current.next == 0L
-                    || shouldMoveDown(hash, hash(next.key), (K) key, next.key)) {
+            if (current.next == 0L ||
+                    (shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), (K)key, ((SkipListNode<K>)next).key))) {
 
                 // We found the record we want
-                if (next != null && key.equals(next.key)) {
+                if (next != null && key.equals(((SkipListNode<K>)next).key)) {
                     // Get the return value
-                    value = findValueAtPosition(next.recordPosition, next.recordSize);
+                    value = findValueAtPosition(((SkipListNode<K>)next).recordPosition, ((SkipListNode<K>)next).recordSize);
                     updateNodeNext(current, next.next);
                     victory = true;
                 }
@@ -155,9 +204,11 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
 
         // Victory is ours.  We found you and destroyed the record.  Lets decrement the size
         if (victory) {
-            header.recordCount.decrementAndGet();
-            updateHeaderRecordCount();
-
+            decrementSize();
+        }
+        else
+        {
+            return null;
         }
 
         return value;
@@ -226,19 +277,17 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
 
         int hash = hash(key);
 
-        SkipListNode<K> current = head;
+        SkipListHeadNode current = getHead();
 
         while (current != null) {
-
-            // Get the next node in order to compare keys
-            SkipListNode<K> next = findNodeAtPosition(current.next);
-            if (next != null && key.equals(next.key)) {
-                return next;
+            SkipListHeadNode next = findNodeAtPosition(current.next);
+            if (next != null && key.equals(((SkipListNode<K>)next).key)) {
+                return (SkipListNode<K>)next;
             }
 
             // Next node does not have values so we must move on down and continue the loop.
             else if (current.next == 0L
-                    || (next != null && shouldMoveDown(hash, hash(next.key), key, next.key))) {
+                    || (next != null && shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), key, ((SkipListNode<K>)next).key))) {
                 current = findNodeAtPosition(current.down);
                 continue;
             }
@@ -282,7 +331,7 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
     private byte selectHeadLevel() {
         byte level = Byte.MIN_VALUE;
         double COIN_TOSS_MEDIUM = 0.5;
-        while (level <= header.recordCount.get() - Byte.MIN_VALUE && random.nextDouble() < COIN_TOSS_MEDIUM) {
+        while (random.nextDouble() < COIN_TOSS_MEDIUM) {
             level++;
             // This has such a small chance of happening but if it ever does, we should return the max so we don't bust our max skip list height
             if (level == Byte.MAX_VALUE)
@@ -322,6 +371,24 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
      */
     public long longSize() {
         return header.recordCount.get();
+    }
+
+    /**
+     * Increment the size of the map
+     */
+    private void incrementSize()
+    {
+        header.recordCount.addAndGet(1L);
+        updateHeaderRecordCount();
+    }
+
+    /**
+     * Decrement the size of the map
+     */
+    private void decrementSize()
+    {
+        header.recordCount.decrementAndGet();
+        updateHeaderRecordCount();
     }
 
     /**
@@ -394,32 +461,40 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         }
     }
 
-    protected void updateNodeDown(SkipListNode<K> node, long position) {
-        final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
+    protected void updateNodeDown(SkipListHeadNode node, long position) {
+        final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(Long.BYTES), fileStore.getSerializers());
         try {
 
             node.down = position;
             buffer.writeLong(node.down);
 
+            int offset = Integer.BYTES + Long.BYTES;
+            if(node instanceof SkipListNode)
+                offset = Integer.BYTES + Long.BYTES + Integer.BYTES + Long.BYTES;
+
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // node so we want to skip over that
-            fileStore.write(buffer, node.position + Integer.BYTES + Long.BYTES + Integer.BYTES + Long.BYTES);
+            fileStore.write(buffer, node.position + offset);
 
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    protected void updateNodeNext(SkipListNode<K> node, long position) {
-        final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
+    protected void updateNodeNext(SkipListHeadNode node, long position) {
+        final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(Long.BYTES), fileStore.getSerializers());
         try {
 
             node.next = position;
             buffer.writeLong(node.next);
 
+            int offset = Integer.BYTES;
+            if(node instanceof SkipListNode)
+                offset = Integer.BYTES + Long.BYTES + Integer.BYTES;
+
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // node so we want to skip over that
-            fileStore.write(buffer, node.position + Integer.BYTES + Long.BYTES + Integer.BYTES);
+            fileStore.write(buffer, node.position + offset);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -484,6 +559,52 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
     }
 
     /**
+     * Instantiate and create a new node.  This will insert it into the file store.  This will also configure the
+     * node and set all of the necessary information it needs to refer other parts of this class
+     * to the data elements it needs.
+     *
+     * @param key   Key Identifier
+     * @param value Record value
+     * @param level What level it exists within the skip list
+     * @param next  The next value in the skip list
+     * @param down  Reference to the next level
+     * @return The newly created Skip List Node
+     * @since 1.2.0
+     */
+    @SuppressWarnings("unchecked")
+    protected SkipListHeadNode createHeadNode(byte level, long next, long down) {
+        SkipListHeadNode newNode = null;
+
+        try {
+
+            int sizeOfNode = SkipListNode.HEAD_SKIP_LIST_NODE_SIZE;
+
+            // Allocate the space on the file.  Size of the node, record size, and size indicator as Integer.BYTES
+            long position = fileStore.allocate(sizeOfNode + Integer.BYTES);
+
+            final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(sizeOfNode + Integer.BYTES),fileStore.getSerializers());
+
+            // Instantiate the new node and write it to the buffer
+            newNode = new SkipListHeadNode(level, next, down);
+            newNode.position = position;
+
+            // Jot down the size of the node so that we know how much data to pull
+            buffer.writeInt(sizeOfNode);
+            newNode.writeObject(buffer);
+
+            // Write the node and record if it exists to the store
+            fileStore.write(buffer, position);
+
+
+        } catch (IOException e) {
+            // TODO: Handle exceptions
+            e.printStackTrace();
+        }
+
+        return newNode;
+    }
+
+    /**
      * Pull a node from the store.  Since we do not know the size of the node, we must first look that up.
      * This will also return null if the node position is 0L.
      *
@@ -492,7 +613,7 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
      * @since 1.2.0
      */
     @SuppressWarnings("unchecked")
-    protected SkipListNode<K> findNodeAtPosition(long position) {
+    protected SkipListHeadNode findNodeAtPosition(long position) {
         if (position == 0L)
             return null;
 
@@ -500,8 +621,13 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         final ObjectBuffer buffer = fileStore.read(position, Integer.SIZE);
         int sizeOfNode = buffer.readInt();
 
+        SkipListHeadNode node;
+
         // Read the node
-        final SkipListNode<K> node = (SkipListNode<K>) fileStore.read(position + Integer.BYTES, sizeOfNode, SkipListNode.class);
+        if(sizeOfNode == SkipListNode.HEAD_SKIP_LIST_NODE_SIZE)
+            node = (SkipListHeadNode)fileStore.read(position + Integer.BYTES, sizeOfNode, new SkipListHeadNode());
+        else
+            node = (SkipListHeadNode)fileStore.read(position + Integer.BYTES, sizeOfNode, new SkipListNode());
         node.position = position;
         return node;
     }
@@ -526,7 +652,7 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
         final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
         buffer.putLong(header.recordCount.get());
         final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Header.HEADER_SIZE - Long.BYTES);
+        fileStore.write(objectBuffer, header.position + Long.BYTES);
     }
 
     /**
@@ -536,10 +662,14 @@ abstract class AbstractSkipList<K, V> implements Map<K, V> {
      * @param firstNode First Node location
      */
     public void updateHeaderFirstNode(Header header, long firstNode) {
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(firstNode);
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position);
+
+        if(!detached) {
+            this.header.firstNode = this.getHead().position;
+            final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
+            buffer.putLong(firstNode);
+            final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
+            fileStore.write(objectBuffer, header.position);
+        }
     }
 
 }

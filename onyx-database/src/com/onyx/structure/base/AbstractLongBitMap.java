@@ -141,6 +141,6 @@ public abstract class AbstractLongBitMap extends AbstractBitMap {
         final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
         buffer.putLong(header.recordCount.get());
         final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Long.BYTES * 2);
+        fileStore.write(objectBuffer, header.position + Long.BYTES);
     }
 }

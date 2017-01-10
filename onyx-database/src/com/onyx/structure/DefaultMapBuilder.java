@@ -1,73 +1,76 @@
 package com.onyx.structure;
 
 import com.onyx.structure.base.DiskSkipList;
+import com.onyx.structure.base.LoadFactorMap;
 import com.onyx.structure.node.Header;
-import com.onyx.structure.node.SetHeader;
-import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.Serializers;
 import com.onyx.structure.store.*;
 import com.onyx.persistence.context.SchemaContext;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 /**
  * Created by timothy.osborn on 3/25/15.
+ *
+ * This class is responsible for building all maps.  There is one map builder per file and or storage
  */
-public class DefaultMapBuilder implements MapBuilder
-{
-    protected static final Map<String, MapBuilder> mapBuilderByPaths = new HashMap();
+@SuppressWarnings("unchecked")
+public class DefaultMapBuilder implements MapBuilder {
 
-    protected Store storage = null;
+    private Store storage = null;
 
-    // Contains all initialized maps
-    protected Map<String, Map> maps = new WeakHashMap<>();
+    private static AtomicInteger storeIdCounter = new AtomicInteger(0);
 
     // Contains all initialized maps
-    protected Map<String, Set> sets = new WeakHashMap();
+    private Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
-    protected Map<Header, Set> setsByHeader = new WeakHashMap();
+    private Map<String, Set> sets = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
-    protected Map<Long, Set> setsById = Collections.synchronizedMap(new WeakHashMap());
+    private Map<Header, Set> setsByHeader = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
-    protected Map<Header, Map> mapsByHeader = new WeakHashMap();
+    private Map<Long, Set> setsById = Collections.synchronizedMap(new WeakHashMap());
+
+    // Contains all initialized maps
+    private Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
+
+    // Internal map that runs on storage
+    private Map<String, Long> internalMaps = null;
+
+    // Internal serializer maps.  Created by default
+    private Map mapByName;
+    private Map mapById;
 
     /**
      * Constructor
      *
-     * @param filePath
+     * @param filePath Where the file is located to store the maps
      */
-    public DefaultMapBuilder(String filePath)
-    {
+    public DefaultMapBuilder(String filePath) {
         this(filePath, StoreType.MEMORY_MAPPED_FILE, null);
     }
 
     /**
      * Constructor
      *
-     * @param filePath
+     * @param filePath Where the location of the builder feeds off of
+     * @param context  If this is attached to an OnyxDB this will be populated
      */
-    public DefaultMapBuilder(String filePath, SchemaContext context)
-    {
+    public DefaultMapBuilder(String filePath, SchemaContext context) {
         this(filePath, StoreType.MEMORY_MAPPED_FILE, context);
     }
-
 
     /**
      * Constructor
      *
-     * @param filePath
+     * @param filePath Where the location of the builder feeds off of
+     * @param type     Type of storage mechanism
      */
-    @SuppressWarnings("unused")
-    public DefaultMapBuilder(String filePath, StoreType type)
-    {
+    public DefaultMapBuilder(String filePath, StoreType type) {
         this(filePath, type, null);
     }
 
@@ -75,12 +78,11 @@ public class DefaultMapBuilder implements MapBuilder
      * Constructor for a database
      *
      * @param filePath File path to hold the disk structure data
-     * @param type Storage type
-     * @param context Database Schema context
+     * @param type     Storage type
+     * @param context  Database Schema context
      * @since 1.0.0
      */
-    public DefaultMapBuilder(String filePath, StoreType type, SchemaContext context)
-    {
+    public DefaultMapBuilder(String filePath, StoreType type, SchemaContext context) {
         this("", filePath, type, context);
     }
 
@@ -90,87 +92,102 @@ public class DefaultMapBuilder implements MapBuilder
      * @param filePath File path to hold the disk structure data
      * @since 1.0.0
      */
-    public DefaultMapBuilder(String fileSystemPath, String filePath, StoreType type, SchemaContext context)
-    {
-        String path = "";
+    public DefaultMapBuilder(String fileSystemPath, String filePath, StoreType type, SchemaContext context) {
+        String path;
 
-        if(fileSystemPath == null || fileSystemPath.equals(""))
+        if (fileSystemPath == null || fileSystemPath.equals(""))
             path = filePath;
         else
             path = fileSystemPath + File.separator + filePath;
 
-        mapBuilderByPaths.put(path, this);
-
-        if(type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported())
-        {
+        if (type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported()) {
             this.storage = new MemoryMappedStore(path, this, context);
         }
-        if(type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported()))
-        {
+        if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
             this.storage = new FileChannelStore(path, this, context);
-        }
-        else if(type == StoreType.IN_MEMORY)
-        {
+        } else if (type == StoreType.IN_MEMORY) {
             String storeId = String.valueOf(storeIdCounter.addAndGet(1));
             this.storage = new InMemoryStore(this, context, storeId);
-            mapBuilderByPaths.put(storeId, this);
         }
 
-        if(this.storage != null)
+        // Create default maps
+        int initialSize = 8;
+        int mapByIdLocation = 53;
+        int internalMapLocation = 98;
+
+        if (storage.getFileSize() == initialSize) {
+            mapByName = newSkipListMap();
+            mapById = newSkipListMap();
+            internalMaps = newSkipListMap();
+        } else {
+            mapByName = getSkipListMap((Header) storage.read(initialSize, Header.HEADER_SIZE, Header.class));
+            mapById = getSkipListMap((Header) storage.read(mapByIdLocation, Header.HEADER_SIZE, Header.class));
+            internalMaps = getSkipListMap((Header) storage.read(internalMapLocation, Header.HEADER_SIZE, Header.class));
+        }
+
+        if (this.storage != null)
             this.storage.init();
-    }
 
-    static AtomicInteger storeIdCounter = new AtomicInteger(0);
+    }
 
     /**
      * Method returns an instance of a hash set
+     *
      * @param name Name of the hash set
-     * @since 1.0.2
      * @return HashSet instance
+     * @since 1.0.2
      */
-    public synchronized Set getHashSet(String name) {
-
-        // If it is already initialized, return it
-        if (sets.containsKey(name)) {
-            return sets.get(name);
-        }
-
-        final DiskMap underlyingHashMap = (DiskMap)getSkipListMap(name + "$Map");
-        return newDiskSet(underlyingHashMap);
+    public Set getHashSet(String name) {
+        return sets.compute(name, (s, set) -> {
+            if (set != null)
+                return set;
+            final DiskMap underlyingHashMap = (DiskMap) getSkipListMap(name + "$Map");
+            return newDiskSet(underlyingHashMap);
+        });
     }
 
     /**
      * Method returns an instance of a hash set
+     *
      * @param header Reference of the hash set
-     * @since 1.0.2
      * @return HashSet instance
+     * @since 1.0.2
      */
     public Set getHashSet(Header header) {
-
         return setsByHeader.compute(header, (header1, set) -> {
-            if(set != null)
+            if (set != null)
                 return set;
 
-            final DiskMap underlyingDiskMap = (DiskMap)getSkipListMap(header1);
+            final DiskMap underlyingDiskMap = (DiskMap) getSkipListMap(header1);
             return newDiskSet(underlyingDiskMap);
         });
     }
 
-    @Override
+    /**
+     * Method returns an instance of a long set
+     *
+     * @param setId Reference of the hash set
+     * @return HashSet instance
+     * @since 1.0.2
+     */
     public Set getLongSet(long setId) {
         return setsById.computeIfAbsent(setId, aLong -> {
-            SetHeader setHeader = (SetHeader)storage.read(setId, SetHeader.SET_HEADER_SIZE, SetHeader.class);
-            final LongDiskSet diskSet = new LongDiskSet(storage, setHeader);
-            return diskSet;
+            final Header setHeader = (Header) storage.read(setId, Header.HEADER_SIZE, Header.class);
+            return new LongDiskSet(storage, setHeader);
         });
     }
 
+    /**
+     * Creates a new long set
+     *
+     * @return New long set
+     */
     @Override
     public Set newLongSet() {
 
         // Create a new header for the new structure we are creating
-        SetHeader newHeader = new SetHeader();
-        newHeader.position = storage.allocate(SetHeader.SET_HEADER_SIZE);
+        final Header newHeader = new Header();
+        newHeader.position = storage.allocate(Header.HEADER_SIZE);
         newHeader.firstNode = 0;
         storage.write(newHeader, newHeader.position); //Write the new header
 
@@ -181,205 +198,170 @@ public class DefaultMapBuilder implements MapBuilder
 
     /**
      * Get Disk Map with header reference
+     *
      * @param header reference within storage
      * @return Instantiated disk structure
      * @since 1.0.0
      */
-    public Map getDiskMap(Header header)
-    {
+    public Map getDiskMap(Header header) {
         return mapsByHeader.compute(header, (header1, map) -> {
-            if(map != null)
+            if (map != null)
                 return map;
 
             return newDiskMap(storage, header);
         });
     }
 
+    /**
+     * Get a load factor map with header
+     *
+     * @param header reference within storage
+     * @return Instantiated Load factor map
+     */
+    @Override
+    public Map getLoadFactorMap(Header header) {
+        return mapsByHeader.compute(header, (header1, map) -> {
+            if (map != null)
+                return map;
+
+            return newLoadFactorMap(storage, header);
+        });
+    }
 
     /**
      * Get Disk Map with header reference
+     *
      * @param header reference within storage
      * @return Instantiated disk structure
      * @since 1.0.0
      */
-    public Map getSkipListMap(Header header)
-    {
+    public Map getSkipListMap(Header header) {
         return mapsByHeader.compute(header, (header1, map) -> {
-            if(map != null)
+            if (map != null)
                 return map;
 
             return newSkipListMap(storage, header);
         });
     }
+
     /**
      * Instantiate the disk set with an underlying disk structure
+     *
      * @param underlyingDiskMap The thing that drives the hashing and the storge of the data
      * @return Instantiated Disk Set instance
      * @since 1.0.2
      */
-    protected Set newDiskSet(DiskMap underlyingDiskMap)
-    {
+    private Set newDiskSet(DiskMap underlyingDiskMap) {
         return new DefaultDiskSet<>(underlyingDiskMap, underlyingDiskMap.getReference());
     }
 
-    public synchronized Map getSkipListMap(String name)
-    {
-        // If it is already initialized, return it
-        if (maps.containsKey(name)) {
-            return maps.get(name);
+    /**
+     * Get a default map.  This is only good for pre defined maps
+     *
+     * This was added in order to get around the initialization that the previous linked list performed
+     * @param name Name of the map
+     * @return The previously defined map
+     * @since 1.2.0
+     */
+    public Map getDefaultMapByName(String name) {
+        switch (name) {
+            case FileChannelStore.SERIALIZERS_MAP_ID:
+                return mapById;
+            case FileChannelStore.SERIALIZERS_MAP_NAME:
+                return mapByName;
+            default:
+                return internalMaps;
         }
-
-        // Get the first header.  All header records are stored in a linked list.  They cannot be deleted.
-        // Starts at eight becuase the first 8 bytes contains the file size
-        Header header = (Header) storage.read(8, Header.HEADER_SIZE, Header.class);
-
-        // If there is no record, lets instantiate one
-        if (header != null) {
-            while (true) {
-                // IF there is an id, continue
-                if (header.idPosition > 0) {
-                    // Get the id, which is a string
-                    String targetName = (String) storage.read(header.idPosition, header.idSize, String.class);
-                    if (targetName != null && targetName.equals(name)) {
-                        // We found a match, store it in the structure cache and return it
-                        final DiskMap retVal = newSkipListMap(storage, header);
-                        maps.put(name, retVal);
-                        return retVal;
-                    }
-
-                    // If there is a next header, read it and continue
-                    if (header.next > 0) {
-                        header = (Header) storage.read(header.next, Header.HEADER_SIZE, Header.class);
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-        // Buffer for the id
-        final ObjectBuffer buffer = new ObjectBuffer(storage.getSerializers());
-        try {
-            buffer.writeObject(name);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Create a new header for the new structure we are creating
-        Header newHeader = new Header();
-        newHeader.position = storage.allocate(Header.HEADER_SIZE);
-        newHeader.idSize = buffer.getSize();
-        newHeader.idPosition = storage.allocate(newHeader.idSize);
-
-        // There is a parent record
-        if (header != null) {
-            // Set the next record
-            updateHeaderNext(header, newHeader.position);
-        }
-
-        // Write the id
-        storage.write(buffer, newHeader.idPosition);
-        storage.write(newHeader, newHeader.position); //Write the new header
-
-        // Create a new disk structure and return it
-        final Map retVal = newSkipListMap(storage, newHeader);
-        maps.put(name, retVal);
-        return retVal;
     }
 
     /**
-     * Method get returns an instance of a hashmap
+     * Default Map factory.  This creates or gets a map based on the name and puts it into a map
+     *
+     * @param name identifier of a map
+     * @param type Type of map
+     * @return Created map
+     */
+    private Map getMapWithType(String name, MapType type) {
+
+        return maps.compute(name, (s, map) -> {
+            if (map != null)
+                return map;
+
+            Header header = null;
+            Long headerReference = internalMaps.get(name);
+            if (headerReference != null)
+                header = (Header) storage.read(headerReference, Header.HEADER_SIZE, Header.class);
+
+            // Create a new header for the new structure we are creating
+            if (header == null) {
+                header = new Header();
+                header.position = storage.allocate(Header.HEADER_SIZE);
+                storage.write(header, header.position);
+                internalMaps.put(name, header.position);
+            }
+
+            Map retVal = null;
+//            Map retVal = newLoadFactorMap(storage, header);
+//            /* zzz
+            switch (type) {
+                case BITMAP:
+                    retVal = newDiskMap(storage, header);
+                    break;
+                case SKIPLIST:
+                    retVal = newSkipListMap(storage, header);
+                    break;
+                case LOAD:
+                    retVal = newLoadFactorMap(storage, header);
+                    break;
+            }
+//            */
+            return retVal;
+        });
+    }
+
+    /**
+     * Method get returns an instance of a Load Factor map.  This is a map you can tune to optimized for either speed
+     * or storage
      *
      * @param name Instance Name
      * @return An instantiated or existing hash structure
      */
-    public synchronized Map getHashMap(String name) {
-//zzz        return getSkipListMap(name);
-//        /*
-        // If it is already initialized, return it
-        if (maps.containsKey(name)) {
-            return maps.get(name);
-        }
-
-        // Get the first header.  All header records are stored in a linked list.  They cannot be deleted.
-        // Starts at eight becuase the first 8 bytes contains the file size
-        Header header = (Header) storage.read(8, Header.HEADER_SIZE, Header.class);
-
-        // If there is no record, lets instantiate one
-        if (header != null) {
-            while (true) {
-                // IF there is an id, continue
-                if (header.idPosition > 0) {
-                    // Get the id, which is a string
-                    String targetName = (String) storage.read(header.idPosition, header.idSize, String.class);
-                    if (targetName != null && targetName.equals(name)) {
-                        // We found a match, store it in the structure cache and return it
-                        final DiskMap retVal = newDiskMap(storage, header);
-                        maps.put(name, retVal);
-                        return retVal;
-                    }
-
-                    // If there is a next header, read it and continue
-                    if (header.next > 0) {
-                        header = (Header) storage.read(header.next, Header.HEADER_SIZE, Header.class);
-                    } else {
-                        break;
-                    }
-                }
-            }
-        }
-        // Buffer for the id
-        final ObjectBuffer buffer = new ObjectBuffer(storage.getSerializers());
-        try {
-            buffer.writeObject(name);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Create a new header for the new structure we are creating
-        Header newHeader = new Header();
-        newHeader.position = storage.allocate(Header.HEADER_SIZE);
-        newHeader.idSize = buffer.getSize();
-        newHeader.idPosition = storage.allocate(newHeader.idSize);
-
-        // There is a parent record
-        if (header != null) {
-            // Set the next record
-            updateHeaderNext(header, newHeader.position);
-        }
-
-        // Write the id
-        storage.write(buffer, newHeader.idPosition);
-        storage.write(newHeader, newHeader.position); //Write the new header
-
-        // Create a new disk structure and return it
-        final DiskMap retVal = newDiskMap(storage, newHeader);
-        maps.put(name, retVal);
-        return retVal;
-        //*/
+    @Override
+    public Map getLoadFactorMap(String name) {
+        return getMapWithType(name, MapType.LOAD);
     }
 
     /**
-     * Only update the first position for a header
+     * Method get returns an instance of a hashmap.  This is the fastest storage but, it is the heaviest on disk storage
      *
-     * @param header
-     * @param next
+     * @param name Instance Name
+     * @return An instantiated or existing hash structure
      */
-    public void updateHeaderNext(Header header, long next)
-    {
-        header.next = next;
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(next);
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, storage.getSerializers());
-        storage.write(objectBuffer, header.position + Long.BYTES + Long.BYTES);
+    public Map getHashMap(String name) {
+        return getMapWithType(name, MapType.BITMAP);
     }
 
-    public void close()
-    {
+    /**
+     * Get a map with a skip list index
+     *
+     * @param name Name of the map to uniquely identify it
+     * @return Instantiated map with skip list
+     */
+    public Map getSkipListMap(String name) {
+        return getMapWithType(name, MapType.SKIPLIST);
+    }
+
+    /**
+     * Close the file stores
+     */
+    public void close() {
         storage.close();
     }
 
-    public void commit()
-    {
+    /**
+     * Force the storage to persist
+     */
+    public void commit() {
         storage.commit();
     }
 
@@ -387,19 +369,16 @@ public class DefaultMapBuilder implements MapBuilder
      * Check if large files can be mapped into memory.
      * For example 32bit JVM can only address 2GB and large files can not be mapped,
      * so for 32bit JVM this function returns false.
-     *
      */
-    protected static boolean isMemmapSupported() {
+    private static boolean isMemmapSupported() {
         String prop = System.getProperty("os.arch");
-        if(prop!=null && prop.contains("64")) return true;
-        return false;
+        return prop != null && prop.contains("64");
     }
 
     /**
      * Delete file
      */
-    public void delete()
-    {
+    public void delete() {
         this.close();
         this.storage.delete();
     }
@@ -407,75 +386,83 @@ public class DefaultMapBuilder implements MapBuilder
     /**
      * Getter for serializers
      *
-     * @return
+     * @return Serializers the storage file uses to serialize
      */
-    public Serializers getSerializers()
-    {
+    public Serializers getSerializers() {
         return this.storage.getSerializers();
     }
 
-    protected DiskMap newDiskMap(Store store, Header header)
-    {
-//zzz        return new DiskSkipList<>(store, header);
-///*
-        DefaultDiskMap newDiskMap = null;
-        if(store instanceof InMemoryStore) {
-            newDiskMap = new DefaultDiskMap(store, header, true);
-        }
-        else {
-            newDiskMap = new DefaultDiskMap(store, header);
-        }
-
-        return newDiskMap;
-        //*/
+    /**
+     * Get the file store in order to re-attach a data structure
+     *
+     * @return The store the map builder uses
+     */
+    public Store getStore() {
+        return storage;
     }
 
-    protected DiskMap newSkipListMap(Store store, Header header)
-    {
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    // Map instantiation
+    //
+    /////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Create a new Disk Map.  This uses the default Bitmap index
+     *
+     * @param store  File Storage
+     * @param header Reference Node
+     * @return Instantiated disk map
+     */
+    private DiskMap newDiskMap(Store store, Header header) {
+        return new DefaultDiskMap(store, header);
+    }
+
+    /**
+     * Create a new Disk Map.  This uses both a skip list and a Bitmap index
+     *
+     * @param store  File Storage
+     * @param header Reference Node
+     * @return Instantiated disk map
+     */
+    private DiskMap newLoadFactorMap(Store store, Header header) {
+        return new LoadFactorMap(store, header);
+    }
+
+    /**
+     * Create a new Disk Map.  This uses both a skip list
+     *
+     * @param store  File Storage
+     * @param header Reference Node
+     * @return Instantiated disk map
+     */
+    private DiskMap newSkipListMap(Store store, Header header) {
         return new DiskSkipList(store, header);
     }
 
-    public synchronized Set newHashSet()
-    {
-        // Create a new header for the new structure we are creating
-        Header newHeader = new Header();
-        newHeader.position = storage.allocate(Header.HEADER_SIZE);
-        newHeader.idSize = 0;
-        storage.write(newHeader, newHeader.position); //Write the new header
-
-        // Create a new disk structure and return it
-        final DiskMap underlyingDiskMap = newDiskMap(storage, newHeader);
-        Set set = newDiskSet(underlyingDiskMap);
-        setsByHeader.put(newHeader, set);
-        return set;
+    /**
+     * Create a skip list map with header and
+     *
+     * @return New Map
+     */
+    private DiskMap newSkipListMap() {
+        Header header = new Header();
+        header.position = storage.allocate(Header.HEADER_SIZE);
+        storage.write(header, header.position);
+        return newSkipListMap(storage, header);
     }
-
-    public synchronized Set newLongHashSet()
-    {
-        // Create a new header for the new structure we are creating
-        Header newHeader = new Header();
-        newHeader.position = storage.allocate(Header.HEADER_SIZE);
-        newHeader.idSize = 0;
-        storage.write(newHeader, newHeader.position); //Write the new header
-
-        final LongDiskSet diskSet = new LongDiskSet(storage, newHeader);
-        return diskSet;
-    }
-
 
     /**
-     * Returns the structure builder used for the specific file path.  There can only be a single structure builder per file.
-     * @param path File path for the Map Builder's storage
-     * @return MapBuilder registered for that path.  Null if it does not exist.
+     * Create a new Hash Set of longs
+     *
+     * @return Instantiated hash set
      */
-    public static final MapBuilder getMapBuilder(String path)
-    {
-        return mapBuilderByPaths.get(path);
+    public Set newLongHashSet() {
+        // Create a new header for the new structure we are creating
+        final Header newHeader = new Header();
+        newHeader.position = storage.allocate(Header.HEADER_SIZE);
+        storage.write(newHeader, newHeader.position); //Write the new header
+        return new LongDiskSet(storage, newHeader);
     }
 
-
-    public Store getStore()
-    {
-        return storage;
-    }
 }

@@ -2,9 +2,10 @@ package embedded;
 
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
+import com.onyx.structure.base.DiskSkipList;
+import com.onyx.structure.base.LoadFactorMap;
 import com.onyx.structure.store.StoreType;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
@@ -13,25 +14,24 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 
 /**
  * Created by tosborn1 on 1/6/17.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class SkipListTest
+public class LoadFactorMapTest
 {
 
-    public static final String TEST_DATABASE = "C:/Sandbox/Onyx/Tests/skip.db";
+    public static final String TEST_DATABASE = "C:/Sandbox/Onyx/Tests/load.db";
 
     @Test
     public void testInsert()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE, StoreType.MEMORY_MAPPED_FILE);
-        Map<Integer, Integer> skipList = builder.getSkipListMap("first");
+        Map<Integer, Integer> skipList = builder.getLoadFactorMap("first");
 
         Map keyValues = new HashMap();
-        for(int i = 0; i < 1000000; i++)
+        for(int i = 0; i < 50000; i++)
         {
             int randomNum = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE);
             int randomValue = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE);
@@ -40,14 +40,10 @@ public class SkipListTest
             keyValues.put(randomNum, randomValue);
         }
 
-        AtomicInteger integer = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
-            Integer val = skipList.get((Integer)o);
-            if(val == null) {
-                assert skipList.get((Integer) o).equals(o2);
-            }
-            integer.addAndGet(1);
+            assert skipList.get((Integer)o).equals(o2);
         });
+
     }
 
     @Test
@@ -56,7 +52,7 @@ public class SkipListTest
 
 
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getSkipListMap("second");
+        Map<Integer, Integer> skipList = builder.getLoadFactorMap("second");
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -101,7 +97,7 @@ public class SkipListTest
     public void testUpdate()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getSkipListMap("third");
+        Map<Integer, Integer> skipList = builder.getLoadFactorMap("third");
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 10000; i++)
@@ -120,7 +116,7 @@ public class SkipListTest
     public void testForEach()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getSkipListMap("third");
+        Map<Integer, Integer> skipList = builder.getLoadFactorMap("third");
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -160,7 +156,7 @@ public class SkipListTest
     public void testKeyIterator()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getSkipListMap("fourth");
+        Map<Integer, Integer> skipList = builder.getLoadFactorMap("fourth");
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -201,7 +197,7 @@ public class SkipListTest
     public void testValueIterator()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getSkipListMap("fifth");
+        Map<Integer, Integer> skipList = builder.getLoadFactorMap("fifth");
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)

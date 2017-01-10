@@ -51,6 +51,16 @@ public interface Store {
      *
      * @param position
      * @param size
+     * @param object
+     * @return
+     */
+    Object read(long position, int size, ObjectSerializable object);
+
+    /**
+     * Write a serializable object
+     *
+     * @param position
+     * @param size
      * @param serializerId
      * @return
      */

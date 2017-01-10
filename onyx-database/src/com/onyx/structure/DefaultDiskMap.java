@@ -20,16 +20,16 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         super(fileStore, header);
     }
 
-    public DefaultDiskMap(Store fileStore, Header header, boolean inMemory)
+    /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param headless
+     */
+    public DefaultDiskMap(Store fileStore, Header header, boolean headless)
     {
-        super(fileStore, header);
-        if(inMemory)
-        {
-            nodeCache = Collections.synchronizedMap(new WeakHashMap());
-            recordCache = Collections.synchronizedMap(new WeakHashMap());
-            keyCache = Collections.synchronizedMap(new WeakHashMap());
-        }
-
+        super(fileStore, header, headless);
     }
 
     @Override
@@ -625,5 +625,4 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         }
         return value;
     }
-
 }

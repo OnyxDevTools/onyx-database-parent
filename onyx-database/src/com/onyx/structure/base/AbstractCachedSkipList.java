@@ -1,6 +1,7 @@
 package com.onyx.structure.base;
 
 import com.onyx.structure.node.Header;
+import com.onyx.structure.node.SkipListHeadNode;
 import com.onyx.structure.node.SkipListNode;
 import com.onyx.structure.store.Store;
 
@@ -36,38 +37,15 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
     }
 
     /**
-     * Finds a value.  First, checks the cache.  If it does not exist in the cache, it calls the super.
-     *
-     * @param position The position within the file structure to pull it from
-     * @param recordSize How many bytes we must read to get the object
-     * @return The corresponding value at the position.
-     *
-     * @since 1.2.0
-     */
-    @Override
-    protected V findValueAtPosition(long position, int recordSize) {
-        V value = valueCache.get(position);
-        if(value != null)
-            return value;
-
-        value = super.findValueAtPosition(position, recordSize);
-        valueCache.put(position, value);
-        return value;
-    }
-
-    /**
-     * Update the node value.  This must also maintain the cache by removing the old value and updating it to the new one.
-     *
-     * @param node Record reference
-     * @param value The value of the reference
+     * Constructor defines the caching medium for the nodes and values.
+     * @param fileStore Underlying storage mechanism
+     * @param header Header location of the skip list
+     * @param headless Whether the header should be ignored or not
      *
      * @since 1.2.0
      */
-    @Override
-    protected void updateNodeValue(SkipListNode<K> node, V value) {
-        valueCache.remove(node.recordPosition);
-        super.updateNodeValue(node, value);
-        valueCache.put(node.recordPosition, value);
+    AbstractCachedSkipList(Store fileStore, Header header, boolean headless) {
+        super(fileStore, header, headless);
     }
 
     /**
@@ -87,7 +65,26 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
     protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down) {
         final SkipListNode<K> newNode = super.createNewNode(key, value, level, next, down);
         nodeCache.put(newNode.position, newNode);
-        valueCache.put(newNode.recordPosition, value);
+        return newNode;
+    }
+
+    /**
+     * Creates and caches the new node as well as its value.
+     *
+     * @param key Key Identifier
+     * @param value Record value
+     * @param level What level it exists within the skip list
+     * @param next The next value in the skip list
+     * @param down Reference to the next level
+     *
+     * @return The instantiated and configured node.
+     *
+     * @since 1.2.0
+     */
+    @Override
+    protected SkipListHeadNode createHeadNode(byte level, long next, long down) {
+        final SkipListHeadNode newNode = super.createHeadNode(level, next, down);
+        nodeCache.put(newNode.position, newNode);
         return newNode;
     }
 
@@ -100,8 +97,11 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
      *
      * @since 1.2.0
      */
-    protected SkipListNode<K> findNodeAtPosition(final long position) {
-        SkipListNode node = nodeCache.get(position);
+    protected SkipListHeadNode findNodeAtPosition(final long position) {
+        if(position == 0L)
+            return null;
+
+        SkipListHeadNode node = nodeCache.get(position);
         if(node != null)
             return node;
 
@@ -110,12 +110,27 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
         return node;
     }
 
+    @Override
+    public V put(K key, V value) {
+        valueCache.put(key, value);
+        return super.put(key, value);
+    }
+
+
     @SuppressWarnings("unchecked")
     @Override
     public V remove(Object key) {
-        keyCache.remove(key);
+        valueCache.remove(key);
         return super.remove(key);
     }
+    @Override
+    public V get(Object key) {
+        V value = valueCache.get(key);
+        if(value == null)
+            value = super.get(key);
+        return value;
+    }
+
 
     /**
      * Clear the cache
@@ -123,24 +138,6 @@ abstract class AbstractCachedSkipList<K,V> extends AbstractSkipList<K,V>
     @Override
     public void clear()
     {
-        nodeCache = Collections.synchronizedMap(new WeakHashMap<Long, SkipListNode<K>>());
-        valueCache = Collections.synchronizedMap(new WeakHashMap<Long, V>());
-        keyCache = Collections.synchronizedMap(new WeakHashMap<K, SkipListNode<K>>());
-    }
-
-    /**
-     * Find the node associated to the key.  This must have an exact match.
-     * @param key The Key identifier
-     * @return Its corresponding node
-     * @since 1.2.0
-     */
-    protected SkipListNode<K> find(K key) {
-        SkipListNode node = keyCache.get(key);
-        if(node != null)
-            return node;
-
-        node = super.find(key);
-        keyCache.put(key, node);
-        return node;
+        nodeCache = Collections.synchronizedMap(new WeakHashMap<Long, SkipListHeadNode>());
     }
 }

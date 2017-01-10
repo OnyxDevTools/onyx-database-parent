@@ -1,9 +1,7 @@
 package com.onyx.structure.base;
 
 
-import javax.management.Notification;
 import javax.management.NotificationEmitter;
-import javax.management.NotificationListener;
 import java.lang.management.*;
 import java.util.*;
 
@@ -35,13 +33,9 @@ public class CacheMap implements Map {
     {
 
         // Get the HEAP memory pool
-        for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans())
-        {
-            if (pool.getType() == MemoryType.HEAP && pool.isUsageThresholdSupported())
-            {
-                memoryPool = pool;
-            }
-        }
+        ManagementFactory.getMemoryPoolMXBeans().stream().filter(pool -> pool.getType() == MemoryType.HEAP && pool.isUsageThresholdSupported()).forEach(pool -> {
+            memoryPool = pool;
+        });
 
         // setting for threshold
         memoryPool.setCollectionUsageThreshold((int) Math.floor(memoryPool.getUsage().getMax() * MAX_THRESHOLD));
@@ -49,17 +43,14 @@ public class CacheMap implements Map {
 
         final MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();
         final NotificationEmitter emitter = (NotificationEmitter) mbean;
-        emitter.addNotificationListener(new NotificationListener() {
-            public void handleNotification(Notification n, Object hb)
+        emitter.addNotificationListener((n, hb) -> {
+            if (n.getType().equals( MemoryNotificationInfo.MEMORY_COLLECTION_THRESHOLD_EXCEEDED))
             {
-                if (n.getType().equals( MemoryNotificationInfo.MEMORY_COLLECTION_THRESHOLD_EXCEEDED))
-                {
-                    hash.clear(); // Clear the cache
-                }
-                else if (n.getType().equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED))
-                {
-                    flushLast(RELEASE_COUNT); // Release items
-                }
+                hash.clear(); // Clear the cache
+            }
+            else if (n.getType().equals(MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED))
+            {
+                flushLast(RELEASE_COUNT); // Release items
             }
         }, null, null);
     }
@@ -98,7 +89,8 @@ public class CacheMap implements Map {
     {
         if(hasEnoughMemory()) // If we have enough memory do this
             return hash.put(key, value);
-        flushLast(1);// Otherwise, we result to a FIFO
+        else
+            flushLast(1);// Otherwise, we result to a FIFO
         return hash.put(key, value);
     }
 

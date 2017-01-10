@@ -19,11 +19,12 @@ public class AbstractBitMap
 {
 
     protected Header header = null;
+    protected boolean headless = false;
 
     // Storage mechanism for the hashmap
     public Store fileStore;
 
-    protected int loadFactor = BitMapNode.DEFAULT_BITMAP_ITERATIONS;
+    protected byte loadFactor = BitMapNode.DEFAULT_BITMAP_ITERATIONS;
 
     /**
      * Constructor
@@ -34,6 +35,20 @@ public class AbstractBitMap
     {
         this.fileStore = fileStore;
         this.header = header;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param headless
+     */
+    public AbstractBitMap(Store fileStore, Header header, boolean headless)
+    {
+        this.fileStore = fileStore;
+        this.header = header;
+        this.headless = headless;
     }
 
     /**
@@ -52,11 +67,11 @@ public class AbstractBitMap
 
         if (this.header.firstNode > 0)
         {
-            node = (BitMapNode) getBitmapNode(this.header.firstNode); // Get Root node
+            node = getBitmapNode(this.header.firstNode); // Get Root node
         } else
         {
             // No default node, lets create one // It must mean we are inserting
-            node = new BitMapNode();
+            node = new BitMapNode(loadFactor);
             node.position = fileStore.allocate(getBitmapNodeSize());
             header.firstNode = node.position;
 
@@ -81,14 +96,14 @@ public class AbstractBitMap
 
             if (nodePosition == 0 && forInsert == true)
             {
-                node = new BitMapNode();
+                node = new BitMapNode(loadFactor);
                 node.position = fileStore.allocate(getBitmapNodeSize());
 
                 writeBitmapNode(node.position, node);
                 updateBitmapNodeReference(previousNode, hashDigit, node.position);
 
                 previousNode = node;
-                node = new BitMapNode();
+                node = new BitMapNode(loadFactor);
             }
 
             // Not found because it is not in the
@@ -168,12 +183,13 @@ public class AbstractBitMap
     /**
      * This method will only update the record count rather than the entire header
      */
-    protected void updateHeaderRecordCount()
-    {
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(header.recordCount.get());
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Header.HEADER_SIZE - Long.BYTES);
+    protected void updateHeaderRecordCount() {
+        if (!headless) {
+            final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
+            buffer.putLong(header.recordCount.get());
+            final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
+            fileStore.write(objectBuffer, header.position + Long.BYTES);
+        }
     }
 
     /**
@@ -370,7 +386,7 @@ public class AbstractBitMap
      */
     protected BitMapNode getBitmapNode(long position)
     {
-        return (BitMapNode)fileStore.read(position, getBitmapNodeSize(), BitMapNode.class);
+        return (BitMapNode)fileStore.read(position, getBitmapNodeSize(), new BitMapNode(loadFactor));
     }
 
     /**
@@ -517,6 +533,17 @@ public class AbstractBitMap
     public int getLoadFactor()
     {
         return loadFactor;
+    }
+
+    /**
+     * Set the load factor
+     * @param loadFactor The overridden load factor
+     *
+     * @since 1.2.0
+     */
+    public void setLoadFactor(int loadFactor)
+    {
+        this.loadFactor = (byte)loadFactor;
     }
 
     /**
