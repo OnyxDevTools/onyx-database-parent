@@ -5,11 +5,11 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.ValidationHelper;
-import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
+import com.onyx.structure.DiskMap;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;

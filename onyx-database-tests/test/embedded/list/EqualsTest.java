@@ -6,11 +6,11 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import embedded.base.BaseTest;
+import entities.AllAttributeForFetch;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import entities.AllAttributeForFetch;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -117,7 +117,7 @@ public class EqualsTest extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

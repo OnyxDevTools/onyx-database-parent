@@ -1,9 +1,9 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
 
 import java.io.FileNotFoundException;
@@ -12,7 +12,6 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;

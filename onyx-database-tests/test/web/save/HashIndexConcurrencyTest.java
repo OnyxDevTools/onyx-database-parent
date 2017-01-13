@@ -4,11 +4,11 @@ import category.WebServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
+import entities.AllAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import web.base.BaseTest;
-import entities.AllAttributeEntity;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,7 +35,7 @@ public class HashIndexConcurrencyTest extends BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

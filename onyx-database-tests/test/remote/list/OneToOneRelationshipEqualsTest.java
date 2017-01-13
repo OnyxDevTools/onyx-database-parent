@@ -1,24 +1,24 @@
 package remote.list;
 
+import category.RemoteServerTests;
 import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import org.junit.*;
-import org.junit.experimental.categories.Category;
-import remote.base.RemoteBaseTest;
 import entities.OneToOneChildFetchEntity;
 import entities.OneToOneFetchEntity;
 import entities.relationship.OneToManyChild;
 import entities.relationship.OneToManyParent;
+import org.junit.*;
+import org.junit.experimental.categories.Category;
+import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/8/14.
@@ -41,7 +41,7 @@ public class OneToOneRelationshipEqualsTest extends RemoteBaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

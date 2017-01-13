@@ -1,10 +1,8 @@
 package com.onyx.server;
 
 import com.onyx.config.ContextFactory;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
+import com.onyx.persistence.manager.PersistenceManager;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.spi.WebSocketHttpExchange;

@@ -2,10 +2,10 @@ package com.onyx.structure.serializer;
 
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.structure.node.BitMapNode;
 import com.onyx.structure.node.Record;
 import com.onyx.structure.node.RecordReference;
-import com.onyx.persistence.ManagedEntity;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -160,7 +160,7 @@ public class ObjectBuffer
     public boolean readBoolean() throws IOException
     {
         byte b = buffer.get();
-        return (b == 1) ? true : false;
+        return (b == 1);
     }
 
     /**
@@ -377,7 +377,7 @@ public class ObjectBuffer
      */
     public static ByteBuffer allocate(int count)
     {
-        ByteBuffer buffer = ByteBuffer.allocate((int) count);
+        ByteBuffer buffer = ByteBuffer.allocate(count);
         buffer.order(ByteOrder.BIG_ENDIAN);
         return buffer;
     }
@@ -467,11 +467,11 @@ public class ObjectBuffer
         if(value == null)
             return wrapNull();
         else if(value instanceof BitMapNode)
-            return wrapNamed((ObjectSerializable)value, ObjectType.NODE);
+            return wrapNamed(value, ObjectType.NODE);
         else if(value instanceof RecordReference)
-            return wrapNamed((ObjectSerializable)value, ObjectType.RECORD_REFERENCE);
+            return wrapNamed(value, ObjectType.RECORD_REFERENCE);
         else if(value instanceof Record)
-            return wrapNamed((ObjectSerializable)value, ObjectType.RECORD);
+            return wrapNamed(value, ObjectType.RECORD);
         else if(value instanceof ObjectSerializable)
             return wrapNamed(value, serializers);
         else if(value instanceof Long || value.getClass() == long.class)
@@ -539,7 +539,7 @@ public class ObjectBuffer
         ensureCapacity(Long.BYTES + Byte.BYTES);
 
         buffer.put(ObjectType.LONG.getType());
-        buffer.putLong((long) value);
+        buffer.putLong(value);
         return  Long.BYTES + Byte.BYTES;
     }
 
@@ -573,7 +573,7 @@ public class ObjectBuffer
     {
         ensureCapacity(Long.BYTES + Byte.BYTES);
         buffer.put(ObjectType.DATE.getType());
-        buffer.putLong(((Date) value).getTime());
+        buffer.putLong(value.getTime());
         return Long.BYTES + Byte.BYTES;
     }
 
@@ -935,7 +935,7 @@ public class ObjectBuffer
     public static boolean unwrapBoolean(ByteBuffer buffer)
     {
         byte b = buffer.get();
-        return (b == 2) ? false : true;
+        return b != 2;
     }
 
     /**

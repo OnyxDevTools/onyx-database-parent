@@ -14,6 +14,6 @@ public interface ServerEndpoint
      *
      * @param token
      */
-    public void handleToken(RequestToken token, io.undertow.websockets.core.WebSocketChannel channel, WebSocketCallback<Void> callback) throws Exception;
+    void handleToken(RequestToken token, io.undertow.websockets.core.WebSocketChannel channel, WebSocketCallback<Void> callback) throws Exception;
 
 }

@@ -1,14 +1,13 @@
 package memory.exception;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.*;
+import entities.SimpleEntity;
 import entities.exception.*;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import entities.SimpleEntity;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -28,7 +27,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

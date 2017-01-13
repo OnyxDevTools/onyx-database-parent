@@ -6,10 +6,10 @@ import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
 import embedded.base.BaseTest;
+import entities.InheritedLongAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.InheritedLongAttributeEntity;
 
 import java.io.IOException;
 import java.security.SecureRandom;

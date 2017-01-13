@@ -1,10 +1,9 @@
 package com.onyx.persistence.manager.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.onyx.exception.*;
-import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.exception.*;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -14,6 +13,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
+import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
 import java.util.*;

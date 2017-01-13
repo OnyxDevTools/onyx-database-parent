@@ -2,13 +2,7 @@ package com.onyxdevtools.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.Attribute;
-import com.onyx.persistence.annotations.CascadePolicy;
-import com.onyx.persistence.annotations.Entity;
-import com.onyx.persistence.annotations.FetchPolicy;
-import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.Relationship;
-import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.annotations.*;
 
 import javax.persistence.CascadeType;
 import javax.persistence.FetchType;

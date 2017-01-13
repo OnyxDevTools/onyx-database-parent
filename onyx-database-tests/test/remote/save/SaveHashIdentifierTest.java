@@ -1,7 +1,12 @@
 package remote.save;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.identifiers.DateIdentifierEntity;
+import entities.identifiers.IntegerIdentifierEntity;
+import entities.identifiers.MutableIntegerIdentifierEntity;
+import entities.identifiers.StringIdentifierEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -9,17 +14,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
-import entities.identifiers.DateIdentifierEntity;
-import entities.identifiers.IntegerIdentifierEntity;
-import entities.identifiers.MutableIntegerIdentifierEntity;
-import entities.identifiers.StringIdentifierEntity;
 
 import java.io.IOException;
 import java.util.Date;
 
 import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -36,7 +36,7 @@ public class SaveHashIdentifierTest extends RemoteBaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

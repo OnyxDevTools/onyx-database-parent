@@ -1,24 +1,24 @@
 package remote.index;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
+import entities.identifiers.StringIdentifierEntity;
+import entities.index.StringIdentifierEntityIndex;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.identifiers.StringIdentifierEntity;
-import entities.index.StringIdentifierEntityIndex;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 1/23/15.
@@ -28,7 +28,7 @@ public class SaveIndexTest extends RemoteBaseTest
 {
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

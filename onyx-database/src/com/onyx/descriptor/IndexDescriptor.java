@@ -1,7 +1,5 @@
 package com.onyx.descriptor;
 
-import com.onyx.persistence.annotations.Identifier;
-
 /**
  * Created by timothy.osborn on 12/11/14.
  */

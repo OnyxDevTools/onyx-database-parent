@@ -1,7 +1,6 @@
 package com.onyx.persistence.query;
 
 import java.io.*;
-import java.util.List;
 
 /**
  * Created by tosborn1 on 3/13/16.

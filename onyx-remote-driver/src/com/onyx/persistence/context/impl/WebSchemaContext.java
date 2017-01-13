@@ -1,12 +1,12 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.exception.SingletonException;
+import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.Serializers;
 import com.onyx.structure.store.StoreType;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.context.SchemaContext;
 
 import java.io.IOException;
 import java.nio.file.Files;

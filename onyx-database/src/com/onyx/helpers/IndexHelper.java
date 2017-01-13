@@ -2,7 +2,7 @@ package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
-import com.onyx.exception.*;
+import com.onyx.exception.EntityException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;

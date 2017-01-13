@@ -7,14 +7,14 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 

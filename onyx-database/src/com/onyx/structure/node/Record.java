@@ -19,14 +19,14 @@ public class Record implements ObjectSerializable
 
     public int getSize()
     {
-        return (int)(keySize + valueSize);
+        return keySize + valueSize;
     }
 
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException
     {
-        keySize = (int)buffer.writeObject(key);
-        valueSize = (int)buffer.writeObject(value);
+        keySize = buffer.writeObject(key);
+        valueSize = buffer.writeObject(value);
     }
 
     @Override

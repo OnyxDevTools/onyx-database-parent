@@ -1,8 +1,8 @@
 package com.onyx.request.pojo;
 
+import com.onyx.persistence.query.Query;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.query.Query;
 
 import java.io.IOException;
 

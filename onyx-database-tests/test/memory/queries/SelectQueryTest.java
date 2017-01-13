@@ -1,15 +1,14 @@
 package memory.queries;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import entities.AllAttributeForFetch;
 import org.junit.Assert;
 import org.junit.Test;
-import entities.AllAttributeForFetch;
 import org.junit.experimental.categories.Category;
 
 import java.util.Arrays;

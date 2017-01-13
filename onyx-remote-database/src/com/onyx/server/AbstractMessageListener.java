@@ -1,8 +1,11 @@
 package com.onyx.server;
 
-import com.onyx.request.pojo.RequestToken;
 import com.onyx.buffer.BufferStream;
-import io.undertow.websockets.core.*;
+import com.onyx.request.pojo.RequestToken;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
 
 import java.nio.ByteBuffer;
 

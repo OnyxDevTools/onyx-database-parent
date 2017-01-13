@@ -5,11 +5,11 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
-import com.onyx.structure.MapBuilder;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.structure.MapBuilder;
 
 import java.util.*;
 

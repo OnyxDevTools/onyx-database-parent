@@ -1,18 +1,17 @@
 package embedded;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.exception.InitializationException;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
-import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
+import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
+import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
+import embedded.base.BaseTest;
 import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import embedded.base.BaseTest;
 
 import java.io.File;
 

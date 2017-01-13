@@ -1,11 +1,10 @@
 package remote.base;
 
-import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
-import org.junit.After;
-import org.junit.Before;
 import entities.AllAttributeForFetch;
 import entities.AllAttributeForFetchChild;
+import org.junit.After;
+import org.junit.Before;
 
 import java.io.IOException;
 import java.util.Date;
@@ -16,7 +15,7 @@ import java.util.Date;
 public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

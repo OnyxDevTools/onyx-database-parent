@@ -1,20 +1,20 @@
 package remote.exception;
 
 
+import category.RemoteServerTests;
 import com.onyx.exception.*;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
+import entities.ValidationEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.ValidationEntity;
 
 import java.io.IOException;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 1/21/15.
@@ -30,7 +30,7 @@ public class TestQueryValidation extends RemoteBaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

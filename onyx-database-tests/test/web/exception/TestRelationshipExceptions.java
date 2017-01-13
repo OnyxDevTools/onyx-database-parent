@@ -3,16 +3,16 @@ package web.exception;
 import category.WebServerTests;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.*;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import web.base.BaseTest;
 import entities.AllAttributeEntity;
 import entities.exception.EntityToOneDoesntMatch;
 import entities.exception.NoInverseEntity;
 import entities.exception.OTMNoListEntity;
 import entities.exception.RelationshipNoEntityType;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import web.base.BaseTest;
 
 import java.io.IOException;
 
@@ -30,7 +30,7 @@ public class TestRelationshipExceptions extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

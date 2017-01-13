@@ -186,7 +186,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getInt(parent, offsetField.offset);
 
-        return (int)offsetField.field.getInt(parent);
+        return offsetField.field.getInt(parent);
     }
 
     /**
@@ -201,7 +201,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getByte(parent, offsetField.offset);
 
-        return (byte)offsetField.field.getByte(parent);
+        return offsetField.field.getByte(parent);
     }
 
     /**
@@ -216,7 +216,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getLong(parent, offsetField.offset);
 
-        return (long)offsetField.field.getLong(parent);
+        return offsetField.field.getLong(parent);
     }
 
     /**
@@ -231,7 +231,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getFloat(parent, offsetField.offset);
 
-        return (float)offsetField.field.getFloat(parent);
+        return offsetField.field.getFloat(parent);
     }
 
     /**
@@ -246,7 +246,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getDouble(parent, offsetField.offset);
 
-        return (double)offsetField.field.getDouble(parent);
+        return offsetField.field.getDouble(parent);
     }
 
     /**
@@ -261,7 +261,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getBoolean(parent, offsetField.offset);
 
-        return (boolean)offsetField.field.getBoolean(parent);
+        return offsetField.field.getBoolean(parent);
     }
 
     /**
@@ -276,7 +276,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getShort(parent, offsetField.offset);
 
-        return (short)offsetField.field.getShort(parent);
+        return offsetField.field.getShort(parent);
     }
 
     /**
@@ -291,7 +291,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getChar(parent, offsetField.offset);
 
-        return (char)offsetField.field.getChar(parent);
+        return offsetField.field.getChar(parent);
     }
 
     /**
@@ -586,7 +586,7 @@ public class ReflectionUtil
                     setObject(parent, field, toType.cast(child));
             } else if (toType == Float.class) {
                 if (fromType == Float.class)
-                    setObject(parent, field, ((Float) child));
+                    setObject(parent, field, child);
                 else if (fromType == float.class)
                     setObject(parent, field, new Float((float) child));
                 else if (fromType == Double.class)
@@ -611,13 +611,13 @@ public class ReflectionUtil
                 else if (fromType == Boolean.class)
                     setObject(parent, field, child);
                 else if (fromType == Integer.class)
-                    setObject(parent, field, new Boolean((((Integer) child).intValue() == 1) ? true : false));
+                    setObject(parent, field, new Boolean((((Integer) child).intValue() == 1)));
                 else if (fromType == int.class)
-                    setObject(parent, field, new Boolean(((int) child == 1) ? true : false));
+                    setObject(parent, field, new Boolean(((int) child == 1)));
                 else if (fromType == Long.class)
-                    setObject(parent, field, new Boolean(((Long) child == 1) ? true : false));
+                    setObject(parent, field, new Boolean(((Long) child == 1)));
                 else if (fromType == long.class)
-                    setObject(parent, field, new Boolean(((long) child == 1) ? true : false));
+                    setObject(parent, field, new Boolean(((long) child == 1)));
                 else if (child == null)
                     setObject(parent, field, child);
                 else
@@ -660,13 +660,13 @@ public class ReflectionUtil
                 else if (fromType == Boolean.class)
                     setBoolean(parent, field, ((Boolean) child).booleanValue());
                 else if (fromType == Integer.class)
-                    setBoolean(parent, field, (((Integer) child).intValue() == 1) ? true : false);
+                    setBoolean(parent, field, (((Integer) child).intValue() == 1));
                 else if (fromType == int.class)
-                    setBoolean(parent, field, ((int) child == 1) ? true : false);
+                    setBoolean(parent, field, ((int) child == 1));
                 else if (fromType == Long.class)
-                    setBoolean(parent, field, ((Long) child == 1) ? true : false);
+                    setBoolean(parent, field, ((Long) child == 1));
                 else if (fromType == long.class)
-                    setBoolean(parent, field, ((long) child == 1) ? true : false);
+                    setBoolean(parent, field, ((long) child == 1));
                 else if (child == null)
                     setBoolean(parent, field, false);
                 else

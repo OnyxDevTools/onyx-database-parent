@@ -68,11 +68,11 @@ public class EntityYo implements ObjectSerializable
         mutableFloat = (Float)buffer.readObject();
         mutableDouble = (Double)buffer.readObject();
 
-        immutableInteger = (int)buffer.readInt();
-        immutableLong = (long)buffer.readLong();
-        immutableBoolean = (boolean)buffer.readBoolean();
-        immutableFloat = (float)buffer.readFloat();
-        immutableDouble = (double)buffer.readDouble();
+        immutableInteger = buffer.readInt();
+        immutableLong = buffer.readLong();
+        immutableBoolean = buffer.readBoolean();
+        immutableFloat = buffer.readFloat();
+        immutableDouble = buffer.readDouble();
 
     }
 

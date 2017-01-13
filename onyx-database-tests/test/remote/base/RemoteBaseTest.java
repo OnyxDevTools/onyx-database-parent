@@ -4,9 +4,9 @@ import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
+import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
+import com.onyx.persistence.manager.PersistenceManager;
 import org.junit.AfterClass;
 
 import java.io.File;
@@ -63,7 +63,7 @@ public class RemoteBaseTest {
         }
     }
 
-    protected void shutdown() throws EntityException, IOException {
+    protected void shutdown() throws IOException {
         if (factory != null)
             factory.close();
         context = null;

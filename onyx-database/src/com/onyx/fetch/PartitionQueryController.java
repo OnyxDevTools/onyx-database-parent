@@ -7,15 +7,15 @@ import com.onyx.helpers.PartitionContext;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.index.IndexController;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.*;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 

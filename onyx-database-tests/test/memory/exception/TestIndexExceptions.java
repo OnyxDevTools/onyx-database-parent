@@ -1,6 +1,5 @@
 package memory.exception;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
@@ -28,7 +27,7 @@ public class TestIndexExceptions extends memory.base.BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

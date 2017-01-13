@@ -1,11 +1,8 @@
 package com.onyx.persistence.factory;
 
 import com.onyx.exception.InitializationException;
-import com.onyx.exception.SingletonException;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
-
-import java.io.IOException;
+import com.onyx.persistence.manager.PersistenceManager;
 
 /**
  * Persistence manager factory configures the database and encapsulates the instantiation of the Persistence Manager

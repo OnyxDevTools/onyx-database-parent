@@ -4,15 +4,18 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.index.IndexController;
-import com.onyx.structure.DefaultDiskSet;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
+import com.onyx.structure.DefaultDiskSet;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 1/29/15.

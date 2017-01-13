@@ -1,20 +1,19 @@
 package memory.list;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import entities.OneToOneChildFetchEntity;
+import entities.OneToOneFetchEntity;
+import entities.relationship.OneToManyChild;
+import entities.relationship.OneToManyParent;
 import memory.base.BaseTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import entities.OneToOneChildFetchEntity;
-import entities.OneToOneFetchEntity;
-import entities.relationship.OneToManyChild;
-import entities.relationship.OneToManyParent;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -29,7 +28,7 @@ import java.util.List;
 public class OneToOneRelationshipEqualsTest extends BaseTest
 {
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

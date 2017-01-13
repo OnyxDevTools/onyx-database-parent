@@ -3,6 +3,10 @@ package web.save;
 import category.WebServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.identifiers.DateIdentifierEntity;
+import entities.identifiers.IntegerIdentifierEntity;
+import entities.identifiers.MutableIntegerIdentifierEntity;
+import entities.identifiers.StringIdentifierEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -10,10 +14,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import web.base.BaseTest;
-import entities.identifiers.DateIdentifierEntity;
-import entities.identifiers.IntegerIdentifierEntity;
-import entities.identifiers.MutableIntegerIdentifierEntity;
-import entities.identifiers.StringIdentifierEntity;
 
 import java.io.IOException;
 import java.util.Date;
@@ -36,7 +36,7 @@ public class SaveHashIdentifierTest extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

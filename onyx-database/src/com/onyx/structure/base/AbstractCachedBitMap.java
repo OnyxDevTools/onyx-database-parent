@@ -1,14 +1,12 @@
 package com.onyx.structure.base;
 
 import com.onyx.exception.AttributeMissingException;
-
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.structure.node.BitMapNode;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.node.Record;
 import com.onyx.structure.node.RecordReference;
 import com.onyx.structure.store.Store;
-
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 

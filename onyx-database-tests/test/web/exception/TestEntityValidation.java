@@ -2,13 +2,13 @@ package web.exception;
 
 import category.WebServerTests;
 import com.onyx.exception.*;
+import entities.ValidateRequiredIDEntity;
+import entities.ValidationEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
-import entities.ValidateRequiredIDEntity;
-import entities.ValidationEntity;
 
 import java.io.IOException;
 
@@ -26,7 +26,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

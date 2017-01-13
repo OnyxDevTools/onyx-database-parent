@@ -38,53 +38,29 @@ public class CompareUtil
         // Null checkers
         else if(object instanceof String && object == QueryCriteria.NULL_STRING_VALUE)
         {
-            if(object2 == null)
-            {
-                return true;
-            }
-            return false;
+            return object2 == null;
         }
         else if(object instanceof Double && (Double)object == QueryCriteria.NULL_DOUBLE_VALUE)
         {
-            if(object2 == null)
-            {
-                return true;
-            }
-            return false;
+            return object2 == null;
         }
         else if(object instanceof Long && (Long)object == QueryCriteria.NULL_LONG_VALUE)
         {
-            if(object2 == null)
-            {
-                return true;
-            }
-            return false;
+            return object2 == null;
         }
         else if(object instanceof Integer && (Integer)object == QueryCriteria.NULL_INTEGER_VALUE)
         {
-            if(object2 == null)
-            {
-                return true;
-            }
-            return false;
+            return object2 == null;
         }
         else if(object instanceof Boolean && object == QueryCriteria.NULL_BOOLEAN_VALUE && (object2 instanceof Boolean || object2 == null))
         {
-            if(object2 == null)
-            {
-                return true;
-            }
-            return false;
+            return object2 == null;
         }
 
 
-        else if(object instanceof Date && (Date)object == QueryCriteria.NULL_DATE_VALUE)
+        else if(object instanceof Date && object == QueryCriteria.NULL_DATE_VALUE)
         {
-            if(object2 == null)
-            {
-                return true;
-            }
-            return false;
+            return object2 == null;
         }
         else if(object2 == null &&  object instanceof Date && ((Date)object).getTime() == QueryCriteria.NULL_DATE_VALUE.getTime())
             return true;
@@ -407,7 +383,7 @@ public class CompareUtil
 
             else if(object.getClass() == Boolean.class || object.getClass() == boolean.class)
             {
-                if(object2 == null && (Boolean)object == QueryCriteria.NULL_BOOLEAN_VALUE)
+                if(object2 == null && object == QueryCriteria.NULL_BOOLEAN_VALUE)
                 {
                     return false;
                 }
@@ -483,11 +459,11 @@ public class CompareUtil
             }
             else if(object.getClass() == Boolean.class || object.getClass() == boolean.class)
             {
-                if(object2 == null && (Boolean)object == QueryCriteria.NULL_BOOLEAN_VALUE)
+                if(object2 == null && object == QueryCriteria.NULL_BOOLEAN_VALUE)
                 {
                     return false;
                 }
-                if(object2 == null && (Boolean)object == null)
+                if(object2 == null && object == null)
                 {
                     return false;
                 }
@@ -513,7 +489,7 @@ public class CompareUtil
         {
             if(object instanceof String)
             {
-                if(object2 == null && (String)object == QueryCriteria.NULL_STRING_VALUE)
+                if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
                 {
                     return true;
                 }
@@ -585,7 +561,7 @@ public class CompareUtil
             }
             else if(object.getClass() == Boolean.class)
             {
-                if(object2 == null && (Boolean)object == QueryCriteria.NULL_BOOLEAN_VALUE)
+                if(object2 == null && object == QueryCriteria.NULL_BOOLEAN_VALUE)
                 {
                     return true;
                 }
@@ -597,7 +573,7 @@ public class CompareUtil
                 {
                     return true;
                 }
-                else if((Boolean) object == (Boolean) object2)
+                else if(object == object2)
                 {
                     return true;
                 }
@@ -684,7 +660,7 @@ public class CompareUtil
             }
             else if(object.getClass() == Boolean.class)
             {
-                if(object2 == null && (Boolean)object == QueryCriteria.NULL_BOOLEAN_VALUE)
+                if(object2 == null && object == QueryCriteria.NULL_BOOLEAN_VALUE)
                 {
                     return true;
                 }
@@ -696,7 +672,7 @@ public class CompareUtil
                 {
                     return false;
                 }
-                else if((Boolean) object ==  (Boolean) object2)
+                else if(object == object2)
                 {
                     return true;
                 }

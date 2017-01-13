@@ -4,13 +4,13 @@ import category.WebServerTests;
 import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.AllAttributeEntity;
+import entities.InheritedAttributeEntity;
+import entities.SimpleEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import web.base.BaseTest;
-import entities.AllAttributeEntity;
-import entities.InheritedAttributeEntity;
-import entities.SimpleEntity;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -43,7 +43,7 @@ public class AttributeTest extends BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }
@@ -55,8 +55,7 @@ public class AttributeTest extends BaseTest {
      * @throws InitializationException
      */
     @Test
-    public void testPopulatedEntity() throws EntityException, InitializationException
-    {
+    public void testPopulatedEntity() throws EntityException {
         AllAttributeEntity entity = new AllAttributeEntity();
 
         entity.id = "A";
@@ -139,8 +138,7 @@ public class AttributeTest extends BaseTest {
      * @throws EntityException
      */
     @Test
-    public void testInheritedPopulatedEntity() throws EntityException, InitializationException
-    {
+    public void testInheritedPopulatedEntity() throws EntityException {
 
         InheritedAttributeEntity entity = new InheritedAttributeEntity();
 

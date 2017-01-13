@@ -1,12 +1,10 @@
-import com.onyx.request.pojo.RequestToken;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.core.*;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
 import org.glassfish.tyrus.client.ClientManager;
 import org.glassfish.tyrus.client.ClientProperties;
 import org.glassfish.tyrus.client.ThreadPoolConfig;
@@ -15,16 +13,14 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.xnio.Options;
 
-import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.file.Path;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static io.undertow.Handlers.websocket;
 

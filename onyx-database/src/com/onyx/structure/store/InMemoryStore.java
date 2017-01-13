@@ -1,10 +1,9 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.persistence.context.SchemaContext;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;

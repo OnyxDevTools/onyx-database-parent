@@ -1,14 +1,16 @@
 package com.onyx.persistence.manager;
 
-import com.onyx.stream.QueryStream;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryOrder;
+import com.onyx.stream.QueryStream;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.

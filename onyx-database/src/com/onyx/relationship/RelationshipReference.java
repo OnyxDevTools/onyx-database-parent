@@ -1,12 +1,12 @@
 package com.onyx.relationship;
 
 import com.onyx.exception.InvalidDataTypeForOperator;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.util.CompareUtil;
 
-import java.io.*;
+import java.io.IOException;
 
 /**
  * Created by timothy.osborn on 3/19/15.

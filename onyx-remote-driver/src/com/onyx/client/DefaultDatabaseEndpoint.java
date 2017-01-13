@@ -1,14 +1,14 @@
 package com.onyx.client;
 
+import com.onyx.buffer.BufferStream;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.QueryException;
-import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.request.pojo.RequestEndpoint;
 import com.onyx.request.pojo.RequestPriority;
 import com.onyx.request.pojo.RequestToken;
 import com.onyx.request.pojo.RequestTokenType;
-import com.onyx.buffer.BufferStream;
+import com.onyx.structure.serializer.ObjectBuffer;
 
 import javax.websocket.*;
 import java.io.*;
@@ -16,7 +16,9 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.*;
 
 

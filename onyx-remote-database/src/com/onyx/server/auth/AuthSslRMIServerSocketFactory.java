@@ -1,10 +1,11 @@
 package com.onyx.server.auth;
 
-import java.io.IOException;
-import java.net.ServerSocket;
+import com.onyx.client.auth.Authorize;
+
 import javax.net.ssl.SSLContext;
 import javax.rmi.ssl.SslRMIServerSocketFactory;
-import com.onyx.client.auth.Authorize;
+import java.io.IOException;
+import java.net.ServerSocket;
 /**
  * T
  */

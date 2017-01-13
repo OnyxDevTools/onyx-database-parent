@@ -1,6 +1,5 @@
 package memory.partition;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.NoResultsException;

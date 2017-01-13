@@ -1,25 +1,20 @@
 package com.onyx.persistence.manager.impl;
 
-import com.onyx.exception.StreamException;
-import com.onyx.persistence.collections.LazyQueryCollection;
-import com.onyx.persistence.factory.ConnectionManager;
-import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
-import com.onyx.stream.QueryMapStream;
-import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.RelationshipNotFoundException;
+import com.onyx.exception.StreamException;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.factory.ConnectionManager;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.query.*;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
+import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;

@@ -1,7 +1,6 @@
 package com.onyx.structure;
 
 import com.onyx.exception.AttributeTypeMismatchException;
-import com.onyx.structure.base.LevelReadWriteLock;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.store.Store;
 

@@ -1,16 +1,16 @@
 package remote.delete;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
+import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,7 +18,6 @@ import java.util.List;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -27,13 +26,13 @@ import category.RemoteServerTests;
 public class DeleteSequenceIndexEntityTest extends RemoteBaseTest
 {
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

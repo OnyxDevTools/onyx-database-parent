@@ -1,16 +1,14 @@
 package memory.relationship;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import entities.relationship.ManyToManyChild;
+import entities.relationship.ManyToManyParent;
 import memory.base.BaseTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import entities.relationship.ManyToManyChild;
-import entities.relationship.ManyToManyParent;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -23,13 +21,13 @@ import java.util.ArrayList;
 public class ManyToManyTest extends BaseTest
 {
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

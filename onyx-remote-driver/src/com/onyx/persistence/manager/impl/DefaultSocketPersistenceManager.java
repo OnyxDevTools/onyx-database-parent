@@ -1,15 +1,15 @@
 package com.onyx.persistence.manager.impl;
 
-import com.onyx.exception.StreamException;
-import com.onyx.stream.QueryStream;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.NoResultsException;
+import com.onyx.exception.StreamException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.query.*;
+import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
 import java.rmi.RemoteException;

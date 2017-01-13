@@ -1,9 +1,9 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.structure.serializer.Serializers;
-import com.onyx.persistence.context.SchemaContext;
 
 /**
  * Created by tosborn on 3/27/15.

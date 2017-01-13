@@ -1,12 +1,12 @@
 package com.onyxdevtools.index;
 
 import com.onyx.exception.EntityException;
-import com.onyxdevtools.index.entities.Book;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import com.onyxdevtools.index.entities.Book;
 
 import java.io.IOException;
 import java.util.List;

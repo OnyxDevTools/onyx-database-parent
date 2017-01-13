@@ -1,7 +1,6 @@
 package embedded.partition;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import embedded.base.BaseTest;
 import org.junit.After;
@@ -30,7 +29,7 @@ public class BasePartitionTest extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

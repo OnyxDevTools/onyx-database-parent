@@ -1,19 +1,19 @@
 package remote.exception;
 
+import category.RemoteServerTests;
 import com.onyx.exception.*;
+import entities.SimpleEntity;
+import entities.exception.*;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.SimpleEntity;
-import entities.exception.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 12/14/14.
@@ -28,7 +28,7 @@ public class TestEntitySaveExceptions extends RemoteBaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

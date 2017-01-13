@@ -1,7 +1,5 @@
 package com.onyxdevtools.persist;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -9,6 +7,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyxdevtools.persist.entities.Person;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.List;
 public class Main
 {
 
-    public static void main(String[] args) throws InitializationException, EntityException, IOException
+    public static void main(String[] args) throws IOException
     {
 
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(); //1

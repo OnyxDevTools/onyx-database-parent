@@ -1,6 +1,5 @@
 package memory.index;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
@@ -8,12 +7,12 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
+import entities.identifiers.StringIdentifierEntity;
+import entities.index.StringIdentifierEntityIndex;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import entities.identifiers.StringIdentifierEntity;
-import entities.index.StringIdentifierEntityIndex;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -28,7 +27,7 @@ public class SaveIndexTest extends memory.base.BaseTest
 {
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

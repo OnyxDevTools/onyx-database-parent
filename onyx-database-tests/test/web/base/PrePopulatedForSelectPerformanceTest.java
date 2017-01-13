@@ -3,10 +3,10 @@ package web.base;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
-import org.junit.After;
-import org.junit.Before;
 import entities.PerformanceEntity;
 import entities.PerformanceEntityChild;
+import org.junit.After;
+import org.junit.Before;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import java.util.List;
 public class PrePopulatedForSelectPerformanceTest extends BaseTest
 {
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

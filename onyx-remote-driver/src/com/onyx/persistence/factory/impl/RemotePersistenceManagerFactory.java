@@ -4,19 +4,19 @@ import com.onyx.client.DefaultDatabaseEndpoint;
 import com.onyx.client.auth.AuthData;
 import com.onyx.client.auth.AuthRMIClientSocketFactory;
 import com.onyx.client.auth.AuthSslRMIClientSocketFactory;
-import com.onyx.entity.*;
+import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.SingletonException;
 import com.onyx.exceptions.RemoteInstanceException;
+import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.factory.ConnectionManager;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.manager.impl.DefaultSocketPersistenceManager;
-import com.onyx.persistence.manager.impl.RemotePersistenceManager;
-import com.onyx.persistence.context.impl.RemoteSchemaContext;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
+import com.onyx.persistence.manager.impl.RemotePersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -39,7 +39,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RMIClientSocketFactory;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Persistence manager factory for an remote Onyx Database

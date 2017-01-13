@@ -1,19 +1,10 @@
 package com.onyxdevtools.example.querying;
 
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-
-import com.onyxdevtools.example.querying.entities.Conference;
-import com.onyxdevtools.example.querying.entities.Division;
-import com.onyxdevtools.example.querying.entities.League;
-import com.onyxdevtools.example.querying.entities.Player;
-import com.onyxdevtools.example.querying.entities.Season;
-import com.onyxdevtools.example.querying.entities.Stats;
-import com.onyxdevtools.example.querying.entities.Team;
+import com.onyxdevtools.example.querying.entities.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +60,7 @@ public class Main extends AbstractDemo
         LazyQueryExample.demo();
     }
 
-    public static void seedData(PersistenceManager manager) throws InitializationException, EntityException
+    public static void seedData(PersistenceManager manager) throws EntityException
     {
 
         //Create league
@@ -230,45 +221,21 @@ public class Main extends AbstractDemo
         vikings.setTeamName("Vikings");
 
         //Add teams to divisions
-        afcWest.setTeams(Arrays.asList(new Team[]
-        {
-            raiders, broncos, cheifs, chargers
-        }));
+        afcWest.setTeams(Arrays.asList(raiders, broncos, cheifs, chargers));
 
-        afcSouth.setTeams(Arrays.asList(new Team[]
-        {
-            colts, texans, jaguars, titans
-        }));
+        afcSouth.setTeams(Arrays.asList(colts, texans, jaguars, titans));
 
-        afcEast.setTeams(Arrays.asList(new Team[]
-        {
-            patriots, bills, jets, dolphins
-        }));
+        afcEast.setTeams(Arrays.asList(patriots, bills, jets, dolphins));
 
-        afcNorth.setTeams(Arrays.asList(new Team[]
-        {
-            steelers, bengals, browns, ravens
-        }));
+        afcNorth.setTeams(Arrays.asList(steelers, bengals, browns, ravens));
 
-        nfcWest.setTeams(Arrays.asList(new Team[]
-        {
-            seahawks, niners, rams, cardinals
-        }));
+        nfcWest.setTeams(Arrays.asList(seahawks, niners, rams, cardinals));
 
-        nfcSouth.setTeams(Arrays.asList(new Team[]
-        {
-            panthers, falcons, saints, buccaneers
-        }));
+        nfcSouth.setTeams(Arrays.asList(panthers, falcons, saints, buccaneers));
 
-        nfcEast.setTeams(Arrays.asList(new Team[]
-        {
-            cowboys, eagles, giants, redskins
-        }));
+        nfcEast.setTeams(Arrays.asList(cowboys, eagles, giants, redskins));
 
-        nfcNorth.setTeams(Arrays.asList(new Team[]
-        {
-            bears, lions, vikings, packers
-        }));
+        nfcNorth.setTeams(Arrays.asList(bears, lions, vikings, packers));
 
         //Add players to each team
         //AFC WEST
@@ -376,25 +343,13 @@ public class Main extends AbstractDemo
         chargersWR2.setLastName("Floyd");
         chargersWR2.setPosition("WR");
 
-        raiders.setPlayers(Arrays.asList(new Player[]
-        {
-            raidersQB, raidersRB1, raidersRB2, raidersWR1, raidersWR2
-        }));
+        raiders.setPlayers(Arrays.asList(raidersQB, raidersRB1, raidersRB2, raidersWR1, raidersWR2));
 
-        broncos.setPlayers(Arrays.asList(new Player[]
-        {
-            broncosQB, broncosRB1, broncosRB2, broncosWR1, broncosWR2
-        }));
+        broncos.setPlayers(Arrays.asList(broncosQB, broncosRB1, broncosRB2, broncosWR1, broncosWR2));
 
-        cheifs.setPlayers(Arrays.asList(new Player[]
-        {
-            cheifsQB, cheifsRB1, cheifsRB2, cheifsWR1, cheifsWR2
-        }));
+        cheifs.setPlayers(Arrays.asList(cheifsQB, cheifsRB1, cheifsRB2, cheifsWR1, cheifsWR2));
 
-        chargers.setPlayers(Arrays.asList(new Player[]
-        {
-            chargersQB, chargersRB1, chargersRB2, chargersWR1, chargersWR2
-        }));
+        chargers.setPlayers(Arrays.asList(chargersQB, chargersRB1, chargersRB2, chargersWR1, chargersWR2));
 
         //AFC EAST
         //Patriots
@@ -500,25 +455,13 @@ public class Main extends AbstractDemo
         dolphinsWR2.setLastName("Matthews");
         dolphinsWR2.setPosition("WR");
 
-        patriots.setPlayers(Arrays.asList(new Player[]
-        {
-            patriotsQB, patriotsRB1, patriotsRB2, patriotsWR1, patriotsWR2
-        }));
+        patriots.setPlayers(Arrays.asList(patriotsQB, patriotsRB1, patriotsRB2, patriotsWR1, patriotsWR2));
 
-        bills.setPlayers(Arrays.asList(new Player[]
-        {
-            billsQB, billsRB1, billsRB2, billsWR1, billsWR2
-        }));
+        bills.setPlayers(Arrays.asList(billsQB, billsRB1, billsRB2, billsWR1, billsWR2));
 
-        jets.setPlayers(Arrays.asList(new Player[]
-        {
-            jetsQB, jetsRB1, jetsRB2, jetsWR1, jetsWR2
-        }));
+        jets.setPlayers(Arrays.asList(jetsQB, jetsRB1, jetsRB2, jetsWR1, jetsWR2));
 
-        dolphins.setPlayers(Arrays.asList(new Player[]
-        {
-            dolphinsQB, dolphinsRB1, dolphinsRB2, dolphinsWR1, dolphinsWR2
-        }));
+        dolphins.setPlayers(Arrays.asList(dolphinsQB, dolphinsRB1, dolphinsRB2, dolphinsWR1, dolphinsWR2));
 
         //AFC SOUTH
         //Texans
@@ -625,25 +568,13 @@ public class Main extends AbstractDemo
         jaguarsWR2.setLastName("Hurns");
         jaguarsWR2.setPosition("WR");
 
-        texans.setPlayers(Arrays.asList(new Player[]
-        {
-            texansQB, texansRB1, texansRB2, texansWR1, texansWR2
-        }));
+        texans.setPlayers(Arrays.asList(texansQB, texansRB1, texansRB2, texansWR1, texansWR2));
 
-        colts.setPlayers(Arrays.asList(new Player[]
-        {
-            coltsQB, coltsRB1, coltsRB2, coltsWR1, coltsWR2
-        }));
+        colts.setPlayers(Arrays.asList(coltsQB, coltsRB1, coltsRB2, coltsWR1, coltsWR2));
 
-        titans.setPlayers(Arrays.asList(new Player[]
-        {
-            titansQB, titansRB1, titansRB2, titansWR1, titansWR2
-        }));
+        titans.setPlayers(Arrays.asList(titansQB, titansRB1, titansRB2, titansWR1, titansWR2));
 
-        jaguars.setPlayers(Arrays.asList(new Player[]
-        {
-            jaguarsQB, jaguarsRB1, jaguarsRB2, jaguarsWR1, jaguarsWR2
-        }));
+        jaguars.setPlayers(Arrays.asList(jaguarsQB, jaguarsRB1, jaguarsRB2, jaguarsWR1, jaguarsWR2));
 
         //AFC NORTH
         //Steelers
@@ -750,25 +681,13 @@ public class Main extends AbstractDemo
         ravensWR2.setLastName("Smith Sr.");
         ravensWR2.setPosition("WR");
 
-        steelers.setPlayers(Arrays.asList(new Player[]
-        {
-            steelersQB, steelersRB1, steelersRB2, steelersWR1, steelersWR2
-        }));
+        steelers.setPlayers(Arrays.asList(steelersQB, steelersRB1, steelersRB2, steelersWR1, steelersWR2));
 
-        bengals.setPlayers(Arrays.asList(new Player[]
-        {
-            bengalsQB, bengalsRB1, bengalsRB2, bengalsWR1, bengalsWR2
-        }));
+        bengals.setPlayers(Arrays.asList(bengalsQB, bengalsRB1, bengalsRB2, bengalsWR1, bengalsWR2));
 
-        browns.setPlayers(Arrays.asList(new Player[]
-        {
-            brownsQB, brownsRB1, brownsRB2, brownsWR1, brownsWR2
-        }));
+        browns.setPlayers(Arrays.asList(brownsQB, brownsRB1, brownsRB2, brownsWR1, brownsWR2));
 
-        ravens.setPlayers(Arrays.asList(new Player[]
-        {
-            ravensQB, ravensRB1, ravensRB2, ravensWR1, ravensWR2
-        }));
+        ravens.setPlayers(Arrays.asList(ravensQB, ravensRB1, ravensRB2, ravensWR1, ravensWR2));
 
         //NFC WEST
         //Seahawks
@@ -875,25 +794,13 @@ public class Main extends AbstractDemo
         ninersWR2.setLastName("Smith");
         ninersWR2.setPosition("WR");
 
-        seahawks.setPlayers(Arrays.asList(new Player[]
-        {
-            seahawksQB, seahawksRB1, seahawksRB2, seahawksWR1, seahawksWR2
-        }));
+        seahawks.setPlayers(Arrays.asList(seahawksQB, seahawksRB1, seahawksRB2, seahawksWR1, seahawksWR2));
 
-        cardinals.setPlayers(Arrays.asList(new Player[]
-        {
-            cardinalsQB, cardinalsRB1, cardinalsRB2, cardinalsWR1, cardinalsWR2
-        }));
+        cardinals.setPlayers(Arrays.asList(cardinalsQB, cardinalsRB1, cardinalsRB2, cardinalsWR1, cardinalsWR2));
 
-        rams.setPlayers(Arrays.asList(new Player[]
-        {
-            ramsQB, ramsRB1, ramsRB2, ramsWR1, ramsWR2
-        }));
+        rams.setPlayers(Arrays.asList(ramsQB, ramsRB1, ramsRB2, ramsWR1, ramsWR2));
 
-        niners.setPlayers(Arrays.asList(new Player[]
-        {
-            ninersQB, ninersRB1, ninersRB2, ninersWR1, ninersWR2
-        }));
+        niners.setPlayers(Arrays.asList(ninersQB, ninersRB1, ninersRB2, ninersWR1, ninersWR2));
 
         //NFC SOUTH
         //Panthers
@@ -1000,25 +907,13 @@ public class Main extends AbstractDemo
         buccaneersWR2.setLastName("Jackson");
         buccaneersWR2.setPosition("WR");
 
-        panthers.setPlayers(Arrays.asList(new Player[]
-        {
-            panthersQB, panthersRB1, panthersRB2, panthersWR1, panthersWR2
-        }));
+        panthers.setPlayers(Arrays.asList(panthersQB, panthersRB1, panthersRB2, panthersWR1, panthersWR2));
 
-        falcons.setPlayers(Arrays.asList(new Player[]
-        {
-            falconsQB, falconsRB1, falconsRB2, falconsWR1, falconsWR2
-        }));
+        falcons.setPlayers(Arrays.asList(falconsQB, falconsRB1, falconsRB2, falconsWR1, falconsWR2));
 
-        saints.setPlayers(Arrays.asList(new Player[]
-        {
-            saintsQB, saintsRB1, saintsRB2, saintsWR1, saintsWR2
-        }));
+        saints.setPlayers(Arrays.asList(saintsQB, saintsRB1, saintsRB2, saintsWR1, saintsWR2));
 
-        buccaneers.setPlayers(Arrays.asList(new Player[]
-        {
-            buccaneersQB, buccaneersRB1, buccaneersRB2, buccaneersWR1, buccaneersWR2
-        }));
+        buccaneers.setPlayers(Arrays.asList(buccaneersQB, buccaneersRB1, buccaneersRB2, buccaneersWR1, buccaneersWR2));
 
         //NFC EAST
         //Cowboys
@@ -1125,25 +1020,13 @@ public class Main extends AbstractDemo
         redskinsWR2.setLastName("Crowder");
         redskinsWR2.setPosition("WR");
 
-        cowboys.setPlayers(Arrays.asList(new Player[]
-        {
-            cowboysQB, cowboysRB1, cowboysRB2, cowboysWR1, cowboysWR2
-        }));
+        cowboys.setPlayers(Arrays.asList(cowboysQB, cowboysRB1, cowboysRB2, cowboysWR1, cowboysWR2));
 
-        eagles.setPlayers(Arrays.asList(new Player[]
-        {
-            eaglesQB, eaglesRB1, eaglesRB2, eaglesWR1, eaglesWR2
-        }));
+        eagles.setPlayers(Arrays.asList(eaglesQB, eaglesRB1, eaglesRB2, eaglesWR1, eaglesWR2));
 
-        giants.setPlayers(Arrays.asList(new Player[]
-        {
-            giantsQB, giantsRB1, giantsRB2, giantsWR1, giantsWR2
-        }));
+        giants.setPlayers(Arrays.asList(giantsQB, giantsRB1, giantsRB2, giantsWR1, giantsWR2));
 
-        redskins.setPlayers(Arrays.asList(new Player[]
-        {
-            redskinsQB, redskinsRB1, redskinsRB2, redskinsWR1, redskinsWR2
-        }));
+        redskins.setPlayers(Arrays.asList(redskinsQB, redskinsRB1, redskinsRB2, redskinsWR1, redskinsWR2));
 
         //NFC NORT
         //Bears
@@ -1251,25 +1134,13 @@ public class Main extends AbstractDemo
         vikingsWR2.setLastName("Rudolph");
         vikingsWR2.setPosition("WR");
 
-        bears.setPlayers(Arrays.asList(new Player[]
-        {
-            bearsQB, bearsRB1, bearsRB2, bearsWR1, bearsWR2
-        }));
+        bears.setPlayers(Arrays.asList(bearsQB, bearsRB1, bearsRB2, bearsWR1, bearsWR2));
 
-        lions.setPlayers(Arrays.asList(new Player[]
-        {
-            lionsQB, lionsRB1, lionsRB2, lionsWR1, lionsWR2
-        }));
+        lions.setPlayers(Arrays.asList(lionsQB, lionsRB1, lionsRB2, lionsWR1, lionsWR2));
 
-        packers.setPlayers(Arrays.asList(new Player[]
-        {
-            packersQB, packersRB1, packersRB2, packersWR1, packersWR2
-        }));
+        packers.setPlayers(Arrays.asList(packersQB, packersRB1, packersRB2, packersWR1, packersWR2));
 
-        vikings.setPlayers(Arrays.asList(new Player[]
-        {
-            vikingsQB, vikingsRB1, vikingsRB2, vikingsWR1, vikingsWR2
-        }));
+        vikings.setPlayers(Arrays.asList(vikingsQB, vikingsRB1, vikingsRB2, vikingsWR1, vikingsWR2));
 
         //add stats
         //Raiders

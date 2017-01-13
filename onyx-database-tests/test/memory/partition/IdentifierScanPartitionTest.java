@@ -4,19 +4,18 @@ package memory.partition;
  * Created by timothy.osborn on 3/19/15.
  */
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
+import entities.partition.FullTablePartitionEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.partition.FullTablePartitionEntity;
 
 import java.util.Arrays;
 import java.util.List;

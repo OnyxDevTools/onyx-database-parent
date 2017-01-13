@@ -2,7 +2,9 @@
 package com.onyxdevtools.persist.entities;
 
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.Attribute;
+import com.onyx.persistence.annotations.Entity;
+import com.onyx.persistence.annotations.Identifier;
 
 import java.util.Date;
 

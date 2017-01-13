@@ -1,11 +1,10 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.MapBuilder;
-import com.onyx.structure.MapType;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.structure.serializer.Serializers;
-import com.onyx.persistence.context.SchemaContext;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -13,7 +12,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.*;
+import java.util.Map;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

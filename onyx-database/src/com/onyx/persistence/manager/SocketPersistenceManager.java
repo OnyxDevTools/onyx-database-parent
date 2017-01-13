@@ -1,12 +1,10 @@
 package com.onyx.persistence.manager;
 
-import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.persistence.query.QueryResult;
-import com.onyx.stream.QueryStream;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;

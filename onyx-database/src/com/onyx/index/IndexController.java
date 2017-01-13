@@ -3,8 +3,6 @@ package com.onyx.index;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 /**

@@ -4,8 +4,6 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
 import entities.AbstractEntity;
 
-import java.util.List;
-
 /**
  * Created by timothy.osborn on 11/4/14.
  */

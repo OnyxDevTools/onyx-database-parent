@@ -5,10 +5,10 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
+import entities.InheritedLongAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.InheritedLongAttributeEntity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -32,7 +32,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

@@ -5,5 +5,5 @@ package entities.recreate;
  */
 public enum TypeTmp {
     TYPE1,
-    TYPE2;
+    TYPE2
 }

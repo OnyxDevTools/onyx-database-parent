@@ -1,12 +1,11 @@
 package com.onyxdevtools.persist;
 
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.persist.entities.Person;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;
@@ -19,7 +18,7 @@ import java.util.Date;
 public class DeletingAnEntityExample
 {
 
-    public static void main(String[] args) throws InitializationException, EntityException, IOException
+    public static void main(String[] args) throws IOException
     {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

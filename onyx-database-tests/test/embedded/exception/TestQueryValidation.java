@@ -8,10 +8,10 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
 import embedded.base.BaseTest;
+import entities.ValidationEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import entities.ValidationEntity;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -31,7 +31,7 @@ public class TestQueryValidation extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

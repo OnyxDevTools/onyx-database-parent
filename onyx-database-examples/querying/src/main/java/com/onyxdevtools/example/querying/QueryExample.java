@@ -1,8 +1,5 @@
 package com.onyxdevtools.example.querying;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -10,12 +7,10 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
-
 import com.onyxdevtools.example.querying.entities.Player;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.List;
 
 
@@ -28,7 +23,7 @@ public class QueryExample
     {
     }
 
-    public static void demo() throws InitializationException, EntityException, IOException
+    public static void demo() throws IOException
     {
         // get an instance of the persistenceManager
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();

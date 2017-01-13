@@ -3,15 +3,14 @@ package embedded.diskset;
 import category.EmbeddedDatabaseTests;
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
-import entities.EntityYo;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by tosborn on 3/21/15.

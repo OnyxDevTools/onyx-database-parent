@@ -1,6 +1,7 @@
 package com.onyx.structure.serializer;
 
 import com.onyx.persistence.context.SchemaContext;
+
 import java.util.Map;
 
 /**

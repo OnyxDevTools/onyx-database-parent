@@ -2,16 +2,15 @@ package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import embedded.base.BaseTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
 import entities.relationship.OneToOneChild;
 import entities.relationship.OneToOneParent;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -32,13 +31,13 @@ public class RelationshipConcurrencyTest extends BaseTest
 {
 
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

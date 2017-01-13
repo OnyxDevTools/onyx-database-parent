@@ -3,25 +3,15 @@ package com.onyx.persistence.context.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
-
 import com.onyx.entity.*;
-
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.SingletonException;
 import com.onyx.exception.TransactionException;
-
 import com.onyx.fetch.ScannerFactory;
-
 import com.onyx.helpers.PartitionHelper;
-
 import com.onyx.index.IndexController;
 import com.onyx.index.impl.IndexControllerImpl;
-
-import com.onyx.structure.DefaultMapBuilder;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.store.StoreType;
-
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
@@ -31,40 +21,30 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
-
 import com.onyx.record.RecordController;
 import com.onyx.record.impl.RecordControllerImpl;
 import com.onyx.record.impl.SequenceRecordControllerImpl;
-
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
-
+import com.onyx.structure.DefaultMapBuilder;
+import com.onyx.structure.MapBuilder;
+import com.onyx.structure.store.StoreType;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
-
 import com.onyx.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.nio.channels.FileChannel;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import java.util.*;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -454,7 +434,6 @@ public class DefaultSchemaContext implements SchemaContext {
             } catch (Exception e) {
             }
 
-            ;
         }
 
         // Close transaction file
@@ -750,7 +729,7 @@ public class DefaultSchemaContext implements SchemaContext {
         if ((systemEntity.getPartition() != null) && (descriptor.getPartition() != null)) {
             for (int i = 0; i < systemEntity.getPartition().getEntries().size(); i++) {
 
-                if (systemEntity.getPartition().getEntries().get((int) i).getValue().equals(
+                if (systemEntity.getPartition().getEntries().get(i).getValue().equals(
                         descriptor.getPartition().getPartitionValue())) {
                     // It does yay, lets return
                     return;

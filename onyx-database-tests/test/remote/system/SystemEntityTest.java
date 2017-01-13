@@ -31,7 +31,7 @@ public class SystemEntityTest extends RemoteBaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
         databaseServer.stop();

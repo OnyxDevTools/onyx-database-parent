@@ -7,14 +7,14 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
+import entities.identifiers.StringIdentifierEntity;
+import entities.index.StringIdentifierEntityIndex;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
-import entities.identifiers.StringIdentifierEntity;
-import entities.index.StringIdentifierEntityIndex;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -28,7 +28,7 @@ public class SaveIndexTest extends BaseTest
 {
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

@@ -1,13 +1,14 @@
 package remote.save;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
+import entities.AllAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
-import entities.AllAttributeEntity;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -19,7 +20,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -35,7 +35,7 @@ public class HashIndexConcurrencyTest extends RemoteBaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

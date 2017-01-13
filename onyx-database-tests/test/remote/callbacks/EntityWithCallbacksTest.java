@@ -11,7 +11,6 @@ import org.junit.Test;
 import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
-import category.RemoteServerTests;
 
 /**
  * Created by cosborn on 12/29/2014.
@@ -26,7 +25,7 @@ public class EntityWithCallbacksTest extends RemoteBaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

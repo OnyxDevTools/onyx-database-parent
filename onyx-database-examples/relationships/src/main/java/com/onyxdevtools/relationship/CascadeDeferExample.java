@@ -1,18 +1,13 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-
 import com.onyxdevtools.relationship.entities.Actor;
 import com.onyxdevtools.relationship.entities.Movie;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,7 +22,7 @@ public class CascadeDeferExample extends AbstractDemo
     {
     }
 
-    public static void demo() throws InitializationException, EntityException, IOException
+    public static void demo() throws IOException
     {
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

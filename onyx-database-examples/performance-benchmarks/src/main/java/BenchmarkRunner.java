@@ -1,7 +1,6 @@
+import com.onyxdevtools.benchmark.base.BenchmarkTest;
 import com.onyxdevtools.provider.DatabaseProvider;
 import com.onyxdevtools.provider.PersistenceProviderFactory;
-import com.onyxdevtools.benchmark.*;
-import com.onyxdevtools.benchmark.base.BenchmarkTest;
 import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
 
 import java.io.File;

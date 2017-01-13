@@ -1,9 +1,8 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.exception.SingletonException;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 
 import java.io.IOException;
 import java.nio.file.Files;

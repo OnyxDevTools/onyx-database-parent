@@ -6,13 +6,13 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import entities.PerformanceEntity;
 import junit.framework.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import web.base.PrePopulatedForSelectPerformanceTest;
-import entities.PerformanceEntity;
 
 import java.util.ArrayList;
 import java.util.Arrays;

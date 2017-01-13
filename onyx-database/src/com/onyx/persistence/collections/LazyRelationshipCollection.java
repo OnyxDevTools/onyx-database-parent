@@ -1,21 +1,24 @@
 package com.onyx.persistence.collections;
 
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.buffer.BufferStream;
-import com.onyx.buffer.BufferStreamable;
 
-import java.io.*;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.*;
 
 /**

@@ -1,17 +1,16 @@
 package memory.exception;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.*;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import entities.AllAttributeEntity;
 import entities.exception.EntityToOneDoesntMatch;
 import entities.exception.NoInverseEntity;
 import entities.exception.OTMNoListEntity;
 import entities.exception.RelationshipNoEntityType;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -30,7 +29,7 @@ public class TestRelationshipExceptions extends memory.base.BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }
