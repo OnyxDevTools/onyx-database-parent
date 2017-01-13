@@ -556,28 +556,25 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
             return (currentIterator != null && currentIterator.hasNext());
         }
 
-        /**
-         * This gets the next
-         */
+
         public void queueUpNext() {
-            AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry nodeEntry = null;
+            AbstractNodeIterator.NodeEntry nodeEntry = null;
             BitMapNode node = null;
 
+            AbstractNodeIterator.NodeEntry newEntry = null;
             long reference = 0;
 
             while (nodeStack.size() > 0) {
 
                 nodeEntry = nodeStack.pop();
                 node = defaultDiskMap.getBitmapNode(nodeEntry.reference);
-                AbstractNodeIterator.NodeEntry newEntry;
 
                 // Add all the other related nodes in the bitmap
                 for (int i = 0; i < defaultDiskMap.getLoadFactor(); i++) {
 
                     reference = node.next[i];
-
                     if (reference > 0) {
-                        if (nodeEntry.level < (defaultDiskMap.getRecordReferenceIndex())) {
+                        if (nodeEntry.level < (loadFactor - 2)) {
                             newEntry = new AbstractNodeIterator.NodeEntry(reference, (short) (nodeEntry.level + 1));
                             nodeStack.add(newEntry);
                         } else {

@@ -28,20 +28,21 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         this.relationshipType = relationshipDescriptor.getRelationshipType().ordinal();
         this.name = relationshipDescriptor.getName();
         this.parentClass = relationshipDescriptor.getParentClass().getName();
+        this.loadFactor = relationshipDescriptor.getLoadFactor();
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
     protected int primaryKey;
 
     @Attribute
-    @Index
+    @Index(loadFactor = 1)
     protected String id;
 
     @Attribute
     protected String name;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "relationships", inverseClass = SystemEntity.class)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "relationships", inverseClass = SystemEntity.class, loadFactor = 1)
     protected SystemEntity entity;
 
     @Attribute
@@ -61,6 +62,17 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
 
     @Attribute
     protected int relationshipType;
+
+    @Attribute
+    protected int loadFactor;
+
+    public int getLoadFactor() {
+        return loadFactor;
+    }
+
+    public void setLoadFactor(int loadFactor) {
+        this.loadFactor = loadFactor;
+    }
 
     public String getId()
     {

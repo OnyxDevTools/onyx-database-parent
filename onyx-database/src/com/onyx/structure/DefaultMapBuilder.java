@@ -1,7 +1,7 @@
 package com.onyx.structure;
 
 import com.onyx.structure.base.DiskSkipList;
-import com.onyx.structure.base.LoadFactorMap;
+import com.onyx.structure.base.ScaledDiskMap;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.serializer.Serializers;
 import com.onyx.structure.store.*;
@@ -25,15 +25,6 @@ public class DefaultMapBuilder implements MapBuilder {
 
     // Contains all initialized maps
     private Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
-
-    // Contains all initialized maps
-    private Map<String, Set> sets = Collections.synchronizedMap(new WeakHashMap());
-
-    // Contains all initialized maps
-    private Map<Header, Set> setsByHeader = Collections.synchronizedMap(new WeakHashMap());
-
-    // Contains all initialized maps
-    private Map<Long, Set> setsById = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
     private Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
@@ -131,69 +122,30 @@ public class DefaultMapBuilder implements MapBuilder {
     }
 
     /**
-     * Method returns an instance of a hash set
-     *
-     * @param name Name of the hash set
-     * @return HashSet instance
-     * @since 1.0.2
-     */
-    public Set getHashSet(String name) {
-        return sets.compute(name, (s, set) -> {
-            if (set != null)
-                return set;
-            final DiskMap underlyingHashMap = (DiskMap) getSkipListMap(name + "$Map");
-            return newDiskSet(underlyingHashMap);
-        });
-    }
-
-    /**
-     * Method returns an instance of a hash set
-     *
-     * @param header Reference of the hash set
-     * @return HashSet instance
-     * @since 1.0.2
-     */
-    public Set getHashSet(Header header) {
-        return setsByHeader.compute(header, (header1, set) -> {
-            if (set != null)
-                return set;
-
-            final DiskMap underlyingDiskMap = (DiskMap) getSkipListMap(header1);
-            return newDiskSet(underlyingDiskMap);
-        });
-    }
-
-    /**
-     * Method returns an instance of a long set
-     *
-     * @param setId Reference of the hash set
-     * @return HashSet instance
-     * @since 1.0.2
-     */
-    public Set getLongSet(long setId) {
-        return setsById.computeIfAbsent(setId, aLong -> {
-            final Header setHeader = (Header) storage.read(setId, Header.HEADER_SIZE, Header.class);
-            return new LongDiskSet(storage, setHeader);
-        });
-    }
-
-    /**
-     * Creates a new long set
-     *
-     * @return New long set
+     * Create a new Hash Set.  The underlying map is a Scalable Disk Map.  It sets the default load factor to 5
+     * @return The map
      */
     @Override
-    public Set newLongSet() {
+    public Set newHashSet() {
+        int defaultLoadFactor = 5;
+        return newHashSet(defaultLoadFactor);
+    }
 
+    /**
+     * Create a new Hash Set.  The underlying map is a Scalable Disk Map
+     * @param loadFactor Load factor for set
+     * @return The map
+     */
+    @Override
+    public Set newHashSet(int loadFactor) {
         // Create a new header for the new structure we are creating
         final Header newHeader = new Header();
         newHeader.position = storage.allocate(Header.HEADER_SIZE);
         newHeader.firstNode = 0;
         storage.write(newHeader, newHeader.position); //Write the new header
 
-        final LongDiskSet diskSet = new LongDiskSet(storage, newHeader);
-        setsById.put(newHeader.position, diskSet);
-        return diskSet;
+        final DiskMap underlyingDiskMap = newScalableMap(storage, newHeader, loadFactor);
+        return newDiskSet(underlyingDiskMap, loadFactor);
     }
 
     /**
@@ -216,25 +168,33 @@ public class DefaultMapBuilder implements MapBuilder {
      * Get a load factor map with header
      *
      * @param header reference within storage
+     *
+     * @param loadFactor Value from 1-10.
+     *
+     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     * to change.  Always plan for scale when designing your data model.
+     *
      * @return Instantiated Load factor map
      */
     @Override
-    public Map getLoadFactorMap(Header header) {
+    public Map getScalableMap(Header header, int loadFactor) {
         return mapsByHeader.compute(header, (header1, map) -> {
             if (map != null)
                 return map;
 
-            return newLoadFactorMap(storage, header);
+            return newScalableMap(storage, header, loadFactor);
         });
     }
 
     /**
-     * Get Disk Map with header reference
+     * Get a skip list  map with header
      *
      * @param header reference within storage
-     * @return Instantiated disk structure
-     * @since 1.0.0
+     * @return Instantiated Skip List map
      */
+    @Override
     public Map getSkipListMap(Header header) {
         return mapsByHeader.compute(header, (header1, map) -> {
             if (map != null)
@@ -248,11 +208,15 @@ public class DefaultMapBuilder implements MapBuilder {
      * Instantiate the disk set with an underlying disk structure
      *
      * @param underlyingDiskMap The thing that drives the hashing and the storge of the data
+     * @param loadFactor 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     *                   to change.  Always plan for scale when designing your data model.
+     *
      * @return Instantiated Disk Set instance
      * @since 1.0.2
      */
-    private Set newDiskSet(DiskMap underlyingDiskMap) {
-        return new DefaultDiskSet<>(underlyingDiskMap, underlyingDiskMap.getReference());
+    private Set newDiskSet(DiskMap underlyingDiskMap, int loadFactor) {
+        return new DefaultDiskSet<>(underlyingDiskMap, underlyingDiskMap.getReference(), loadFactor);
     }
 
     /**
@@ -281,7 +245,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @param type Type of map
      * @return Created map
      */
-    private Map getMapWithType(String name, MapType type) {
+    private Map getMapWithType(String name, MapType type, int loadFactor) {
 
         return maps.compute(name, (s, map) -> {
             if (map != null)
@@ -301,8 +265,6 @@ public class DefaultMapBuilder implements MapBuilder {
             }
 
             Map retVal = null;
-//            Map retVal = newLoadFactorMap(storage, header);
-//            /* zzz
             switch (type) {
                 case BITMAP:
                     retVal = newDiskMap(storage, header);
@@ -311,10 +273,9 @@ public class DefaultMapBuilder implements MapBuilder {
                     retVal = newSkipListMap(storage, header);
                     break;
                 case LOAD:
-                    retVal = newLoadFactorMap(storage, header);
+                    retVal = newScalableMap(storage, header, loadFactor);
                     break;
             }
-//            */
             return retVal;
         });
     }
@@ -327,8 +288,8 @@ public class DefaultMapBuilder implements MapBuilder {
      * @return An instantiated or existing hash structure
      */
     @Override
-    public Map getLoadFactorMap(String name) {
-        return getMapWithType(name, MapType.LOAD);
+    public Map getScalableMap(String name, int loadFactor) {
+        return getMapWithType(name, MapType.LOAD, loadFactor);
     }
 
     /**
@@ -338,7 +299,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @return An instantiated or existing hash structure
      */
     public Map getHashMap(String name) {
-        return getMapWithType(name, MapType.BITMAP);
+        return getMapWithType(name, MapType.BITMAP, 10);
     }
 
     /**
@@ -348,7 +309,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @return Instantiated map with skip list
      */
     public Map getSkipListMap(String name) {
-        return getMapWithType(name, MapType.SKIPLIST);
+        return getMapWithType(name, MapType.SKIPLIST, 10);
     }
 
     /**
@@ -423,10 +384,18 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @param store  File Storage
      * @param header Reference Node
+     *
+     * @param loadFactor Value from 1-10.
+     *
+     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     * to change.  Always plan for scale when designing your data model.
+     *
      * @return Instantiated disk map
      */
-    private DiskMap newLoadFactorMap(Store store, Header header) {
-        return new LoadFactorMap(store, header);
+    private DiskMap newScalableMap(Store store, Header header, int loadFactor) {
+        return new ScaledDiskMap(store, header, loadFactor);
     }
 
     /**
@@ -450,19 +419,6 @@ public class DefaultMapBuilder implements MapBuilder {
         header.position = storage.allocate(Header.HEADER_SIZE);
         storage.write(header, header.position);
         return newSkipListMap(storage, header);
-    }
-
-    /**
-     * Create a new Hash Set of longs
-     *
-     * @return Instantiated hash set
-     */
-    public Set newLongHashSet() {
-        // Create a new header for the new structure we are creating
-        final Header newHeader = new Header();
-        newHeader.position = storage.allocate(Header.HEADER_SIZE);
-        storage.write(newHeader, newHeader.position); //Write the new header
-        return new LongDiskSet(storage, newHeader);
     }
 
 }

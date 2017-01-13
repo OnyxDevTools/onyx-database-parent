@@ -11,7 +11,7 @@ import java.io.*;
 /**
  * Created by timothy.osborn on 3/19/15.
  */
-public class RelationshipReference implements ObjectSerializable
+public class RelationshipReference implements ObjectSerializable, Comparable
 {
 
     public RelationshipReference()
@@ -86,5 +86,30 @@ public class RelationshipReference implements ObjectSerializable
     public String toString()
     {
         return "Identifier " + identifier.toString() + " Partition ID " + partitionId;
+    }
+
+    @Override
+    public int compareTo(Object o) {
+
+        if(o instanceof RelationshipReference)
+        {
+            if(this.partitionId < ((RelationshipReference) o).partitionId)
+                return -1;
+            else if(this.partitionId > ((RelationshipReference) o).partitionId)
+                return 1;
+
+            if(((RelationshipReference) o).identifier.getClass() == this.identifier.getClass()
+                && this.identifier instanceof Comparable)
+                return ((Comparable) this.identifier).compareTo(((RelationshipReference) o).identifier);
+
+            if(this.hashCode() < o.hashCode())
+                return -1;
+            else if(this.hashCode() > o.hashCode())
+                return 1;
+            else
+                return 0;
+        }
+        
+        return new Integer(this.hashCode()).compareTo(o.hashCode());
     }
 }

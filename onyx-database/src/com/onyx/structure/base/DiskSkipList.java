@@ -4,7 +4,6 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.structure.DiskMap;
 import com.onyx.structure.node.Header;
-import com.onyx.structure.node.RecordReference;
 import com.onyx.structure.node.SkipListNode;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.store.Store;
@@ -13,9 +12,6 @@ import com.onyx.util.ReflectionUtil;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
@@ -34,7 +30,7 @@ import java.util.function.BiConsumer;
 @SuppressWarnings("unchecked")
 public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implements DiskMap<K, V> {
 
-    protected ReadWriteLock readWriteLock;
+    private ReadWriteLock readWriteLock;
 
     /**
      * Constructor with store.  Initialize the collection types
@@ -58,8 +54,61 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
      */
     public DiskSkipList(Store store, Header header, boolean detached) {
         super(store, header, detached);
+
+        // If it is detached.  The concurrency will be handled by this class' parent
         if(detached)
             readWriteLock = new EmptyReadWriteLock();
+    }
+
+
+    /**
+     * Remove an item within the map
+     * @param key Key Identifier
+     * @return The value that was removed
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public V remove(Object key) {
+        readWriteLock.writeLock().lock();
+
+        try {
+            return super.remove(key);
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Put a value into a map based on its key.
+     * @param key   Key identifier of the value
+     * @param value Underlying value
+     * @return The value of the object that was just put into the map
+     */
+    @Override
+    public V put(K key, V value) {
+        readWriteLock.writeLock().lock();
+
+        try {
+            return super.put(key, value);
+        } finally {
+            readWriteLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Get an item based on its key
+     * @param key Identifier
+     * @return The corresponding value
+     */
+    @Override
+    public V get(Object key) {
+        readWriteLock.readLock().lock();
+
+        try {
+            return super.get(key);
+        } finally {
+            readWriteLock.readLock().unlock();
+        }
     }
 
     /**
@@ -98,7 +147,10 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
     }
 
     /**
-     * Clear all the elements of the array.
+     * Clear all the elements of the array.  If it is not detached we must handle
+     * the head of teh data structure
+     *
+     * @since 1.2.0
      */
     @Override
     public void clear() {
@@ -107,9 +159,9 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         try {
 
             super.clear();
-            setHead(createHeadNode(Byte.MIN_VALUE, 0L, 0L));
 
-            if(this.header != null) {
+            if(!this.detached) {
+                setHead(createHeadNode(Byte.MIN_VALUE, 0L, 0L));
                 this.header.firstNode = getHead().position;
                 updateHeaderFirstNode(header, this.header.firstNode);
                 header.recordCount.set(0L);
@@ -121,10 +173,18 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         }
     }
 
+    /**
+     * Get the record id of a corresponding node.  Note, this points to the SkipListNode position.  Not the actual
+     * record position.
+     *
+     * @param key Identifier
+     * @return The position of the record reference if it exists.  Otherwise -1
+     *
+     * @since 1.2.0
+     */
     @Override
     public long getRecID(Object key) {
         readWriteLock.readLock().lock();
-
         try {
 
             SkipListNode<K> node = find((K) key);
@@ -136,6 +196,13 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         }
     }
 
+    /**
+     * Hydrate a record with its record ID.  If the record value exists it will be returned
+     * @param recordId Position to find the record reference
+     * @return The value within the map
+     *
+     * @since 1.2.0
+     */
     @Override
     public V getWithRecID(long recordId) {
         readWriteLock.readLock().lock();
@@ -153,6 +220,7 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
      *
      * @param recordId Record reference within storage structure
      * @return Map of key values
+     * @since 1.2.0
      */
     public Map getMapWithRecID(long recordId) {
         readWriteLock.readLock().lock();
@@ -169,204 +237,44 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
     }
 
     /**
-     * Get Map representation of key object.
+     * Get Map representation of key object.  If it is in the cache, use reflection to get it from the cache.  Otherwise,
+     * just hydrate the value within the store
      *
      * @param attribute Attribute name to fetch
      * @param recordId  Record reference within storage structure
      * @return Map of key values
+     *
+     * @since 1.2.0
      */
     public Object getAttributeWithRecID(final String attribute, final long recordId) throws AttributeTypeMismatchException {
         readWriteLock.readLock().lock();
 
         try {
-            SkipListNode<K> node = (SkipListNode<K>)findNodeAtPosition(recordId);
-            Object value = findValueAtPosition(node.recordPosition, node.recordSize);
+            final SkipListNode node = (SkipListNode<K>)findNodeAtPosition(recordId);
 
-            if (value != null) {
+            V value = valueByPositionCache.get(node.recordPosition);
+            if(value != null)
+            {
                 final Class clazz = value.getClass();
-                OffsetField attributeField = null;
+                OffsetField attributeField;
 
-                try {
+                try
+                {
                     attributeField = ReflectionUtil.getOffsetField(clazz, attribute);
-                } catch (AttributeMissingException e) {
-                    RecordReference reference = new RecordReference();
-                    reference.position = recordId;
-                    return getAttributeWithRecID(attribute, reference);
+                }
+                catch (AttributeMissingException e)
+                {
+                    return null;
                 }
 
                 return ReflectionUtil.getAny(value, attributeField);
             }
 
-            if ((node != null) && (node.position == recordId)) {
-                RecordReference reference = new RecordReference();
-                reference.position = recordId;
-
-                return getAttributeWithRecID(attribute, reference);
-            }
-
-            return null;
-        } finally {
-            readWriteLock.readLock().unlock();
-        }
-    }
-
-    /**
-     * Get Attribute with record id
-     *
-     * @param attribute attribute name to gather
-     * @param reference record reference where the record is stored
-     * @return Attribute key of record
-     */
-    public Object getAttributeWithRecID(String attribute, RecordReference reference) {
-        readWriteLock.readLock().lock();
-
-        try {
-            SkipListNode node = (SkipListNode<K>)findNodeAtPosition(reference.position);
+            // We did not find it, lets return just the attribute
             ObjectBuffer buffer = fileStore.read(node.recordPosition, node.recordSize);
             return buffer.getAttribute(attribute, node.serializerId);
         } finally {
             readWriteLock.readLock().unlock();
         }
     }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public V remove(Object key) {
-        readWriteLock.writeLock().lock();
-
-        try {
-            return super.remove(key);
-        } finally {
-            readWriteLock.writeLock().unlock();
-        }
-    }
-
-    @Override
-    public V put(K key, V value) {
-        readWriteLock.writeLock().lock();
-
-        try {
-            return super.put(key, value);
-        } finally {
-            readWriteLock.writeLock().unlock();
-        }
-    }
-
-
-    @Override
-    public V get(Object key) {
-        readWriteLock.readLock().lock();
-
-        try {
-            return super.get(key);
-        } finally {
-            readWriteLock.readLock().unlock();
-        }
-    }
-
-    @Override
-    public Store getFileStore() {
-        return fileStore;
-    }
-
-    @Override
-    public LevelReadWriteLock getReadWriteLock() {
-        return new LevelReadWriteLock() {
-            @Override
-            public void lockReadLevel(int level) {
-
-            }
-
-            @Override
-            public void unlockReadLevel(int level) {
-
-            }
-
-            @Override
-            public void lockWriteLevel(int level) {
-
-            }
-
-            @Override
-            public void unlockWriteLevel(int level) {
-
-            }
-
-            @Override
-            public Lock readLock() {
-                return new Lock() {
-                    @Override
-                    public void lock() {
-
-                    }
-
-                    @Override
-                    public void lockInterruptibly() throws InterruptedException {
-
-                    }
-
-                    @Override
-                    public boolean tryLock() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-                        return false;
-                    }
-
-                    @Override
-                    public void unlock() {
-
-                    }
-
-                    @Override
-                    public Condition newCondition() {
-                        return null;
-                    }
-                };
-            }
-
-            @Override
-            public Lock writeLock() {
-                return new Lock() {
-                    @Override
-                    public void lock() {
-
-                    }
-
-                    @Override
-                    public void lockInterruptibly() throws InterruptedException {
-
-                    }
-
-                    @Override
-                    public boolean tryLock() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-                        return false;
-                    }
-
-                    @Override
-                    public void unlock() {
-
-                    }
-
-                    @Override
-                    public Condition newCondition() {
-                        return null;
-                    }
-                };
-            }
-        };
-    }
-
-    @Override
-    public Header getReference() {
-        return header;
-    }
-
 }

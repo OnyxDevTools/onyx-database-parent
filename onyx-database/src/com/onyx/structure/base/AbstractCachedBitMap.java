@@ -12,15 +12,13 @@ import com.onyx.structure.store.Store;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 
 /**
  Created by timothy.osborn on 3/27/15.
  */
-public class AbstractCachedBitMap extends AbstractBitMap
+abstract class AbstractCachedBitMap<K,V> extends AbstractBitMap<K,V>
 {
     protected Map<Long, BitMapNode> nodeCache;
     protected Map<Long, Record> recordCache;
@@ -35,9 +33,9 @@ public class AbstractCachedBitMap extends AbstractBitMap
     public AbstractCachedBitMap(final Store fileStore, final Header header)
     {
         super(fileStore, header);
-        nodeCache = Collections.synchronizedMap(new WeakHashMap());
-        recordCache = Collections.synchronizedMap(new WeakHashMap<>());
-        keyCache = Collections.synchronizedMap(new WeakHashMap());
+        nodeCache = new ConcurrentWeakHashMap<>();
+        recordCache = new ConcurrentWeakHashMap<>();
+        keyCache = new ConcurrentWeakHashMap<>();
     }
 
     /**
@@ -50,9 +48,9 @@ public class AbstractCachedBitMap extends AbstractBitMap
     public AbstractCachedBitMap(Store fileStore, Header header, boolean headless)
     {
         super(fileStore, header, headless);
-        nodeCache = Collections.synchronizedMap(new WeakHashMap());
-        recordCache = Collections.synchronizedMap(new WeakHashMap<>());
-        keyCache = Collections.synchronizedMap(new WeakHashMap());
+        nodeCache = new ConcurrentWeakHashMap<>();
+        recordCache = new ConcurrentWeakHashMap<>();
+        keyCache = new ConcurrentWeakHashMap<>();
     }
 
     /**
@@ -155,7 +153,7 @@ public class AbstractCachedBitMap extends AbstractBitMap
 
         nodeCache.remove(node.position);
         recordCache.remove(recordReference.position);
-        keyCache.remove((Object) key);
+        keyCache.remove(key);
     }
 
     /**
@@ -199,8 +197,8 @@ public class AbstractCachedBitMap extends AbstractBitMap
      */
     @Override public void updateBitmapNodeReference(final BitMapNode node, final int index, final long value)
     {
-        super.updateBitmapNodeReference(node, index, value);
         nodeCache.put(node.position, node);
+        super.updateBitmapNodeReference(node, index, value);
     }
 
     /**

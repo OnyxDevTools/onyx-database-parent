@@ -278,13 +278,13 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
                     RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, context);
                 }
                 relationshipObjects.add(relationshipObject);
-                
+
                 //sort related children if the child entity implements Comparable
                 if (relationshipObjects.size() > 0 && Comparable.class.isAssignableFrom(relationshipObjects.get(0).getClass()))
                 {
                     relationshipObjects.sort(null);
                 }
-                
+
             }
         }
 

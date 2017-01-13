@@ -26,7 +26,7 @@ public class Player extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
     @Id
     protected int playerId;
 
@@ -49,7 +49,8 @@ public class Player extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "players",
-            inverseClass = Team.class
+            inverseClass = Team.class,
+            loadFactor = 1
     )
     @ManyToOne(targetEntity = Team.class)
     protected Team team;
@@ -59,7 +60,8 @@ public class Player extends ManagedEntity implements IManagedEntity
             inverse = "player",
             inverseClass = Stats.class,
             cascadePolicy = CascadePolicy.ALL,
-            fetchPolicy = FetchPolicy.LAZY
+            fetchPolicy = FetchPolicy.LAZY,
+            loadFactor = 1
     )
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, targetEntity = Stats.class, mappedBy = "player")
     protected List<Stats> stats = new ArrayList();

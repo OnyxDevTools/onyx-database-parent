@@ -25,7 +25,7 @@ public class BasicLongSetTest extends AbstractTest
     {
         MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
 
-        Set mySet = store.newLongSet();
+        Set mySet = store.newHashSet();
         mySet.add(222l);
         mySet.add(827323l);
         mySet.add(3234l);
@@ -42,7 +42,7 @@ public class BasicLongSetTest extends AbstractTest
     {
         MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
 
-        Set mySet = store.newLongSet();
+        Set mySet = store.newHashSet();
         mySet.add(222l);
         mySet.add(827323l);
         mySet.add(3234l);
@@ -70,7 +70,7 @@ public class BasicLongSetTest extends AbstractTest
     {
         MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
 
-        Set mySet = store.newLongSet();
+        Set mySet = store.newHashSet();
         mySet.add(827323l);
         mySet.add(222l);
         mySet.add(3234l);
@@ -88,7 +88,7 @@ public class BasicLongSetTest extends AbstractTest
     public void jumboTest()
     {
         MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
-        Set mySet = store.newLongSet();
+        Set mySet = store.newHashSet();
 
         System.out.println("Starting Jumbo");
         long time = System.currentTimeMillis();

@@ -38,22 +38,6 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         return (int) header.recordCount.get();
     }
 
-    public long longSize()
-    {
-        return header.recordCount.get();
-    }
-
-    @Override
-    public Store getFileStore() {
-        return this.fileStore;
-    }
-
-    @Override
-    public boolean isEmpty()
-    {
-        return (fileStore.getFileSize() == 0);
-    }
-
     /**
      * Return the record id of the record.  The record id is represented by the record reference position in the data storage
      *
@@ -74,7 +58,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             if(ref != null)
                 return ref;
 
-            final BitMapNode node = this.seek(hash(key), false, hashDigits);
+            final BitMapNode node = this.seek(false, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -142,7 +126,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         {
             readWriteLock.lockReadLevel(hashDigits[0]);
 
-            final BitMapNode node = this.seek(hash(key), false, hashDigits);
+            final BitMapNode node = this.seek(false, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -184,7 +168,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
             readWriteLock.lockReadLevel(hashDigits[0]);
 
-            final BitMapNode node = this.seek(hash, false, hashDigits);
+            final BitMapNode node = this.seek(false, hashDigits);
             if (node != null && node.next[hashDigits[getRecordReferenceIndex()] ] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -214,7 +198,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
         try
         {
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -252,7 +236,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
 
-            final BitMapNode node = this.seek(hash(key), true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -457,7 +441,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
             V value = null;
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -504,7 +488,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
             V value = null;
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -551,7 +535,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         {
 
 
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -599,7 +583,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
         try
         {
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {

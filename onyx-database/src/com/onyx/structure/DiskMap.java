@@ -54,15 +54,6 @@ public interface DiskMap<K,V> extends Map<K,V> {
     Store getFileStore();
 
     /**
-     * Public getter for Read Write Lock.  This is used for iterating.  Since
-     * the iterator may not be write thread safe, this can be used to ensure safety.
-     *
-     * @since 1.0.2
-     * @return Instance of Level Read Write Lock
-     */
-    LevelReadWriteLock getReadWriteLock();
-
-    /**
      * Gets the reference of where the disk structure is located within the storage
      * @since 1.0.2
      * @return Header reference item

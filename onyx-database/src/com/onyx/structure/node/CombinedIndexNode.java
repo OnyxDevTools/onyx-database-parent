@@ -13,10 +13,22 @@ public class CombinedIndexNode {
     public int hashDigit;
     public SkipListHeadNode head;
 
-    public CombinedIndexNode(SkipListHeadNode base, BitMapNode node, int hashDigit) {
+    public CombinedIndexNode(final SkipListHeadNode base, final BitMapNode node, int hashDigit) {
         this.head = base;
         this.bitMapNode = node;
         this.hashDigit = hashDigit;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Long.hashCode(this.bitMapNode.position);
+    }
+
+    @Override
+    public boolean equals(Object object)
+    {
+        return (object instanceof CombinedIndexNode && ((CombinedIndexNode) object).bitMapNode.position == bitMapNode.position);
     }
 
 }

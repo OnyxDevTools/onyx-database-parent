@@ -20,7 +20,7 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
 
     }
 
-    @Identifier
+    @Identifier(loadFactor = 1)
     @Attribute
     protected String username;
 
@@ -87,9 +87,8 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
         SystemUser that = (SystemUser) o;
 
         if (username != null ? !username.equals(that.username) : that.username != null) return false;
-        if (password != null ? !password.equals(that.password) : that.password != null) return false;
+        return password != null ? password.equals(that.password) : that.password == null;
 
-        return true;
     }
 
     @Override

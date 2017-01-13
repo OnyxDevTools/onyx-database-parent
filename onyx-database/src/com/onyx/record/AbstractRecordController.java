@@ -37,7 +37,7 @@ public abstract class AbstractRecordController
         this.context = context;
         this.entityDescriptor = descriptor;
         dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName());
+        records = (DiskMap)dataFile.getScalableMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
     }
 
     /**
@@ -322,25 +322,25 @@ public abstract class AbstractRecordController
                 field.setAccessible(true);
 
             if(field.getType() == long.class)
-                field.set(entity, (long)value);
+                field.set(entity, value);
             else if(field.getType() == int.class && value != null && value.getClass() == Long.class)
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == int.class)
-                field.set(entity, (int)value);
+                field.set(entity, value);
             else if(field.getType() == Long.class && value instanceof Integer)
                 field.set(entity, ((Integer)value).longValue());
             else if(field.getType() == Long.class)
-                field.set(entity, (Long)value);
+                field.set(entity, value);
             else if(field.getType() == Integer.class && value != null && value.getClass() == Long.class )
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == Integer.class)
-                field.set(entity, (Integer)value);
+                field.set(entity, value);
             else if(field.getType() == Double.class)
-                field.set(entity, (Double)value);
+                field.set(entity, value);
             else if(field.getType() == double.class)
-                field.set(entity, (double)value);
+                field.set(entity, value);
             else if(field.getType() == Date.class)
-                field.set(entity, (Date)value);
+                field.set(entity, value);
             else
                 field.set(entity, field.getType().cast(value));
 
@@ -398,25 +398,25 @@ public abstract class AbstractRecordController
                 field.setAccessible(true);
 
             if(field.getType() == long.class)
-                field.set(entity, (long) value);
+                field.set(entity, value);
             else if(field.getType() == int.class && value != null && value.getClass() == Long.class)
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == int.class)
-                field.set(entity, (int)value);
+                field.set(entity, value);
             else if(field.getType() == Long.class && value instanceof Integer)
                 field.set(entity, ((Integer)value).longValue());
             else if(field.getType() == Long.class)
-                field.set(entity, (Long)value);
+                field.set(entity, value);
             else if(field.getType() == Integer.class && value != null && value.getClass() == Long.class )
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == Integer.class)
-                field.set(entity, (Integer)value);
+                field.set(entity, value);
             else if(field.getType() == Double.class)
-                field.set(entity, (Double)value);
+                field.set(entity, value);
             else if(field.getType() == double.class)
-                field.set(entity, (double)value);
+                field.set(entity, value);
             else if(field.getType() == Date.class)
-                field.set(entity, (Date)value);
+                field.set(entity, value);
             else
                 field.set(entity, field.getType().cast(value));
 

@@ -116,7 +116,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                     final MapBuilder dataFile = context.getDataFile(partitionDescriptor);
-                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getName());
+                    DiskMap recs = (DiskMap)dataFile.getScalableMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
                     Map partitionResults = scanPartition(recs, partition.getIndex());
                     results.putAll(partitionResults);

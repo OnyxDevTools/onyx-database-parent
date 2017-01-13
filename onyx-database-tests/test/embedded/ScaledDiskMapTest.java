@@ -2,8 +2,6 @@ package embedded;
 
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.DiskSkipList;
-import com.onyx.structure.base.LoadFactorMap;
 import com.onyx.structure.store.StoreType;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -19,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by tosborn1 on 1/6/17.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class LoadFactorMapTest
+public class ScaledDiskMapTest
 {
 
     public static final String TEST_DATABASE = "C:/Sandbox/Onyx/Tests/load.db";
@@ -28,7 +26,7 @@ public class LoadFactorMapTest
     public void testInsert()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE, StoreType.MEMORY_MAPPED_FILE);
-        Map<Integer, Integer> skipList = builder.getLoadFactorMap("first");
+        Map<Integer, Integer> skipList = builder.getScalableMap("first", 2);
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -40,8 +38,12 @@ public class LoadFactorMapTest
             keyValues.put(randomNum, randomValue);
         }
 
+        final AtomicInteger i = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
-            assert skipList.get((Integer)o).equals(o2);
+            Integer inte = skipList.get(o);
+            i.addAndGet(1);
+            if(inte == null)
+                assert skipList.get(o).equals(o2);
         });
 
     }
@@ -50,9 +52,8 @@ public class LoadFactorMapTest
     public void testDelete()
     {
 
-
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getLoadFactorMap("second");
+        Map<Integer, Integer> skipList = builder.getScalableMap("second", 2);
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -70,11 +71,11 @@ public class LoadFactorMapTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
                 deletedKeyValues.put(o, o2);
             }
             else
@@ -84,11 +85,11 @@ public class LoadFactorMapTest
         });
 
         newKeyValues.forEach((o, o2) -> {
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
         });
 
         deletedKeyValues.forEach((o, o2) -> {
-            assert skipList.get((Integer)o) == null;
+            assert skipList.get(o) == null;
         });
 
     }
@@ -97,7 +98,7 @@ public class LoadFactorMapTest
     public void testUpdate()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getLoadFactorMap("third");
+        Map<Integer, Integer> skipList = builder.getScalableMap("third", 2);
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 10000; i++)
@@ -116,7 +117,7 @@ public class LoadFactorMapTest
     public void testForEach()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getLoadFactorMap("third");
+        Map<Integer, Integer> skipList = builder.getScalableMap("third", 2);
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -132,11 +133,11 @@ public class LoadFactorMapTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
             }
         });
 
@@ -156,7 +157,7 @@ public class LoadFactorMapTest
     public void testKeyIterator()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getLoadFactorMap("fourth");
+        Map<Integer, Integer> skipList = builder.getScalableMap("fourth", 2);
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -171,11 +172,11 @@ public class LoadFactorMapTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
             }
         });
 
@@ -197,7 +198,7 @@ public class LoadFactorMapTest
     public void testValueIterator()
     {
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
-        Map<Integer, Integer> skipList = builder.getLoadFactorMap("fifth");
+        Map<Integer, Integer> skipList = builder.getScalableMap("fifth", 2);
 
         Map keyValues = new HashMap();
         for(int i = 0; i < 50000; i++)
@@ -213,11 +214,11 @@ public class LoadFactorMapTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
             }
         });
 

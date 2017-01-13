@@ -27,10 +27,10 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
-    @Index
+    @Index(loadFactor = 3)
     @Attribute
     protected String id;
 
@@ -41,10 +41,10 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     protected String fileName;
 
     @Attribute
-    @Index
+    @Index(loadFactor = 3)
     protected long index;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition.class, inverse = "entries")
+    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition.class, inverse = "entries", loadFactor = 1)
     protected SystemPartition partition;
 
     public String getId()

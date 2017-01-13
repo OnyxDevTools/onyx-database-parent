@@ -22,7 +22,7 @@ public class League extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier
+    @Identifier(loadFactor = 1)
     @Id
     protected String name;
 
@@ -34,7 +34,8 @@ public class League extends ManagedEntity implements IManagedEntity
             type = RelationshipType.ONE_TO_MANY,
             inverseClass = Season.class,
             cascadePolicy = CascadePolicy.ALL,
-            fetchPolicy = FetchPolicy.LAZY
+            fetchPolicy = FetchPolicy.LAZY,
+            loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     protected List<Season> seasons = new ArrayList();

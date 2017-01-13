@@ -1,19 +1,15 @@
 package embedded;
 
+import com.onyx.exception.InitializationException;
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
-import com.onyx.structure.store.StoreType;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 
 /**
  * Created by tosborn1 on 1/6/17.
@@ -25,13 +21,14 @@ public class SkipListTest
     public static final String TEST_DATABASE = "C:/Sandbox/Onyx/Tests/skip.db";
 
     @Test
-    public void testInsert()
+    public void testInsert() throws InitializationException
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE, StoreType.MEMORY_MAPPED_FILE);
+
+        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("first");
 
         Map keyValues = new HashMap();
-        for(int i = 0; i < 1000000; i++)
+        for(int i = 0; i < 50000; i++)
         {
             int randomNum = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE);
             int randomValue = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE);
@@ -40,13 +37,10 @@ public class SkipListTest
             keyValues.put(randomNum, randomValue);
         }
 
-        AtomicInteger integer = new AtomicInteger(0);
+
+        long time = System.currentTimeMillis();
         keyValues.forEach((o, o2) -> {
-            Integer val = skipList.get((Integer)o);
-            if(val == null) {
-                assert skipList.get((Integer) o).equals(o2);
-            }
-            integer.addAndGet(1);
+            assert skipList.get(o).equals(o2);
         });
     }
 
@@ -74,11 +68,11 @@ public class SkipListTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
                 deletedKeyValues.put(o, o2);
             }
             else
@@ -88,11 +82,11 @@ public class SkipListTest
         });
 
         newKeyValues.forEach((o, o2) -> {
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
         });
 
         deletedKeyValues.forEach((o, o2) -> {
-            assert skipList.get((Integer)o) == null;
+            assert skipList.get(o) == null;
         });
 
     }
@@ -136,11 +130,11 @@ public class SkipListTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
             }
         });
 
@@ -175,11 +169,11 @@ public class SkipListTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
             }
         });
 
@@ -217,11 +211,11 @@ public class SkipListTest
         final AtomicInteger val = new AtomicInteger(0);
         keyValues.forEach((o, o2) -> {
 
-            assert skipList.get((Integer)o).equals(o2);
+            assert skipList.get(o).equals(o2);
 
             if((val.addAndGet(1) % 1000) == 0)
             {
-                skipList.remove((Integer)o);
+                skipList.remove(o);
             }
         });
 

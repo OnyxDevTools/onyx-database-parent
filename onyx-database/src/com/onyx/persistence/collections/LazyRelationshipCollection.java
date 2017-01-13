@@ -97,13 +97,12 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     public LazyRelationshipCollection(EntityDescriptor entityDescriptor, Set<Object> identifiers, SchemaContext context)
     {
         this.persistenceManager = context.getSystemPersistenceManager();
-        if(identifiers == null)
+        this.identifiers = new ArrayList<>();
+        if(identifiers != null)
         {
-            this.identifiers = new ArrayList<>();
-        }
-        else
-        {
-            this.identifiers = new ArrayList(identifiers);
+            Iterator it = identifiers.iterator();
+            while (it.hasNext())
+                this.identifiers.add((RelationshipReference)it.next());
         }
         this.entityDescriptor = entityDescriptor;
         this.context = context;

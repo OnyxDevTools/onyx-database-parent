@@ -137,6 +137,7 @@ public class EntityDescriptor implements Serializable
                 identifier.setName(field.getName());
                 identifier.setGenerator(annotation.generator());
                 identifier.setType(field.getType());
+                identifier.setLoadFactor((byte)annotation.loadFactor());
             }
 
             if (field.getAnnotation(Attribute.class) != null)
@@ -175,15 +176,19 @@ public class EntityDescriptor implements Serializable
                 relationship.setFetchPolicy(annotation.fetchPolicy());
                 relationship.setRelationshipType(annotation.type());
                 relationship.setEntityDescriptor(this);
+                relationship.setLoadFactor((byte)annotation.loadFactor());
                 relationships.put(field.getName(), relationship);
             }
 
             if (field.getAnnotation(Index.class) != null)
             {
 
+                final Index annotation = field.getAnnotation(Index.class);
+
                 // Build Index descriptor
                 final IndexDescriptor index = new IndexDescriptor();
                 index.setName(field.getName());
+                index.setLoadFactor(annotation.loadFactor());
                 index.setType(field.getType());
                 index.setEntityDescriptor(this);
 

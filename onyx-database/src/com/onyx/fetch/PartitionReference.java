@@ -8,7 +8,7 @@ import java.io.ObjectOutput;
 /**
  * Created by timothy.osborn on 3/5/15.
  */
-public class PartitionReference implements Externalizable
+public class PartitionReference implements Externalizable, Comparable
 {
     public PartitionReference()
     {
@@ -52,5 +52,30 @@ public class PartitionReference implements Externalizable
     {
         partition = in.readLong();
         reference = in.readLong();
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        if(o instanceof PartitionReference)
+        {
+            PartitionReference other = (PartitionReference)o;
+            if(this.partition < other.partition)
+                return -1;
+            else if(this.partition > other.partition)
+                return 1;
+            else if(this.reference < other.reference)
+                return -1;
+            else if(this.reference > other.reference)
+                return 1;
+            return 0;
+        }
+        else
+        {
+            if(this.hashCode() < o.hashCode())
+                return -1;
+            else if(this.hashCode() > o.hashCode())
+                return 1;
+            return 0;
+        }
     }
 }

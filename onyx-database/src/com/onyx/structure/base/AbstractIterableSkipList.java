@@ -75,7 +75,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         return keys;
     }
 
-    protected DictionaryCollection dict;
+    private DictionaryCollection dict;
 
     /**
      * Getter for set of keys.  This is meant to iterate through the values as maps rather than
@@ -105,7 +105,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         return values;
     }
 
-    protected EntryCollection entries;
+    private EntryCollection entries;
 
     /**
      * Getter for values.  This contains lazy loaded disk structure entries
@@ -157,7 +157,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      * @param <V> Value type
      * @see AbstractNodeCollection
      */
-    class ValueCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    private class ValueCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
          * Constructor
          *
@@ -215,7 +215,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      * @param <V> Values as Dictionary
      * @see AbstractNodeCollection
      */
-    class DictionaryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    private class DictionaryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
          * Constructor
          *
@@ -262,7 +262,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      * @param <V> Key Types
      * @see AbstractNodeCollection
      */
-    class KeyCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    private class KeyCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
          * Constructor
          *
@@ -289,7 +289,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      *
      * @param <V> Entry Types
      */
-    class EntryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+    private class EntryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         EntryCollection(AbstractIterableSkipList skipList) {
             super(skipList);
             this.skipList = skipList;
@@ -473,7 +473,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
          * Constructor
          *
          */
-        public AbstractNodeIterator() {
+        AbstractNodeIterator() {
             current = getHead();
             while (current.down != 0L)
                 current = findNodeAtPosition(current.down);
@@ -495,7 +495,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
          */
         @Override
         public boolean hasNext() {
-            return !(current == null || ((SkipListNode)current).recordPosition == 0L);
+            return current instanceof SkipListNode;
         }
 
         /**
@@ -595,6 +595,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
             return new Object[0];
         }
 
+        @SuppressWarnings("SuspiciousMethodCalls")
         @Override
         @Deprecated
         public boolean contains(Object o) {

@@ -28,7 +28,7 @@ public class Conference extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier
+    @Identifier(loadFactor = 1)
     @Id
     public String conferenceName;
 
@@ -37,7 +37,8 @@ public class Conference extends ManagedEntity implements IManagedEntity
             inverseClass = Division.class,
             inverse = "conference",
             cascadePolicy = CascadePolicy.ALL,
-            fetchPolicy = FetchPolicy.EAGER
+            fetchPolicy = FetchPolicy.EAGER,
+            loadFactor = 1
     )
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, targetEntity = Division.class)
     protected List<Division> divisions = new ArrayList();

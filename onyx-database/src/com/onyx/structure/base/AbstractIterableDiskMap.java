@@ -12,7 +12,7 @@ import java.util.function.BiFunction;
 /**
  * Created by timothy.osborn on 3/26/15.
  */
-public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap implements Map<K, V> {
+public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap<K,V> implements Map<K, V> {
 
     protected LevelReadWriteLock readWriteLock = new DefaultLevelReadWriteLock();
 
@@ -698,16 +698,5 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
                 return false;
             }
         }
-    }
-
-    /**
-     * Public getter for Read Write Lock.  This is used for iterating.  Since
-     * the iterator may not be write thread safe, this can be used to ensure safety.
-     *
-     * @since 1.0.2
-     * @return Instance of Level Read Write Lock
-     */
-    public LevelReadWriteLock getReadWriteLock() {
-        return readWriteLock;
     }
 }

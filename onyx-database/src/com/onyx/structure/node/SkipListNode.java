@@ -22,7 +22,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
 
     }
 
-    public SkipListNode(K key, long position, long recordPosition, byte level, long next, long down, int recordSize) {
+    public SkipListNode(K key, long position, long recordPosition, byte level, long next, long down, int recordSize, int serializerId) {
         this.position = position;
         this.recordPosition = recordPosition;
         this.level = level;
@@ -30,6 +30,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
         this.down = down;
         this.key = key;
         this.recordSize = recordSize;
+        this.serializerId = serializerId;
     }
 
     @Override

@@ -12,7 +12,7 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 @Entity(cachable = false, cacheSize = 0)
 public class InheritedLongAttributeEntity extends AbstractInheritedAttributes implements IManagedEntity
 {
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
     @Attribute
     public long id;
 

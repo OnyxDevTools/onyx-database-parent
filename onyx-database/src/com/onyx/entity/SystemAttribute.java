@@ -29,7 +29,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
     protected int primaryKey;
 
 //    @Index
@@ -54,7 +54,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     @Attribute
     protected boolean indexed;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 1)
     protected SystemEntity entity;
 
     public transient OffsetField field;

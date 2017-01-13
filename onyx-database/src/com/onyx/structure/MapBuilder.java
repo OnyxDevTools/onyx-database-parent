@@ -35,69 +35,59 @@ public interface MapBuilder {
      * Get the instance of a map which uses a skip list index
      *
      * @param name Name of the map to uniquely identify it
+     *
+     * @param loadFactor Value from 1-10.
+     *
+     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     * to change.  Always plan for scale when designing your data model.
+     *
      * @return Instantiated map with storage
      */
     @SuppressWarnings("unused")
-    Map getLoadFactorMap(String name);
-
-    /**
-     * Method returns an instance of a hash set
-     *
-     * @param name Name of the hash set
-     * @return DiskSet instance
-     * @since 1.0.2
-     */
-    @SuppressWarnings("unused")
-    Set getHashSet(String name);
-
-    /**
-     * Method returns an instance of a hash set
-     *
-     * @param header Reference of the hash set
-     * @return HashSet instance
-     * @since 1.0.2
-     */
-    @SuppressWarnings("unused")
-    Set getHashSet(Header header);
-
-    /**
-     * Get Long Set.  This gets a disk set that can only support persisting long values
-     *
-     * @param setId The id of the set
-     * @return Instantiated DiskSet
-     */
-    Set getLongSet(long setId);
-
-    /**
-     * Creates a long disk set
-     *
-     * @return Instantiated disk set
-     */
-    Set newLongSet();
+    Map getScalableMap(String name, int loadFactor);
 
     /**
      * Creates a long disk set only for long values
      *
      * @return Disk Set
      */
-    Set newLongHashSet();
+    Set newHashSet();
 
     /**
-     * Get Disk Map with header reference
-     *
-     * @param header reference within storage
-     * @return Instantiated disk structure
+     * Create a new Hash Set.  The underlying map is a Scalable Disk Map
+     * @param loadFactor Load factor for set
+     * @return Disk Set
      */
-    Map getDiskMap(Header header);
+    Set newHashSet(int loadFactor);
+
+    /**
+     * Get the instance of a map which uses a skip list index
+     *
+     * @param name Name of the map to uniquely identify it
+     * @return Instantiated map with storage
+     */
+    @SuppressWarnings("unused")
+    Map getSkipListMap(Header name);
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
      * @param header reference within storage
+     *
+     *
+     * @param loadFactor Value from 1-10.
+     *
+     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     * to change.  Always plan for scale when designing your data model.
+     *
      * @return Instantiated disk structure
      */
     @SuppressWarnings("unused")
-    Map getLoadFactorMap(Header header);
+    Map getScalableMap(Header header, int loadFactor);
 
     /**
      * Close Map Builder.  Flush the file writes

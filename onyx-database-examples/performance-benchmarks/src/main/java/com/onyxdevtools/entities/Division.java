@@ -26,14 +26,15 @@ public class Division extends ManagedEntity implements IManagedEntity
 
     @Attribute
     @Id
-    @Identifier
+    @Identifier(loadFactor = 1)
     protected String divisionName;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
             inverseClass = Team.class,
             cascadePolicy = CascadePolicy.ALL,
-            inverse = "division"
+            inverse = "division",
+            loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, targetEntity = Team.class, mappedBy = "division")
     protected List<Team> teams;
@@ -41,7 +42,8 @@ public class Division extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "divisions",
-            inverseClass = Conference.class
+            inverseClass = Conference.class,
+            loadFactor = 1
     )
     @ManyToOne(targetEntity = Conference.class)
     protected Conference conference;
