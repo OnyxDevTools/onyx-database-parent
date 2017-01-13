@@ -98,6 +98,7 @@ public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> imp
                 if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != head.position) {
                     combinedNode.head = head;
                     defaultDiskMap.updateBitmapNodeReference(combinedNode.bitMapNode, combinedNode.hashDigit, head.position);
+                    defaultDiskMap.nodeCache.remove(combinedNode.bitMapNode.position);
                 }
 
             } finally {
@@ -137,6 +138,7 @@ public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> imp
                 if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != head.position) {
                     defaultDiskMap.updateBitmapNodeReference(combinedNode.bitMapNode, combinedNode.hashDigit, head.position);
                     combinedNode.head = head;
+                    defaultDiskMap.nodeCache.remove(combinedNode.bitMapNode.position);
                 }
 
                 return value;

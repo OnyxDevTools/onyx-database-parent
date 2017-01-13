@@ -26,7 +26,7 @@ public class Player extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 2)
     @Id
     protected int playerId;
 

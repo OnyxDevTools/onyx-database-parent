@@ -127,7 +127,7 @@ public class DefaultMapBuilder implements MapBuilder {
      */
     @Override
     public Set newHashSet() {
-        int defaultLoadFactor = 5;
+        int defaultLoadFactor = 1;
         return newHashSet(defaultLoadFactor);
     }
 

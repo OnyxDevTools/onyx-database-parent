@@ -27,7 +27,7 @@ public class Stats extends ManagedEntity implements IManagedEntity
         this.statId = id;
     }
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 2)
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     protected long statId;
@@ -51,7 +51,7 @@ public class Stats extends ManagedEntity implements IManagedEntity
 
     @Attribute
     @Column
-    @com.onyx.persistence.annotations.Index
+    @com.onyx.persistence.annotations.Index(loadFactor = 2)
     protected int rushingYards;
 
     @Attribute
