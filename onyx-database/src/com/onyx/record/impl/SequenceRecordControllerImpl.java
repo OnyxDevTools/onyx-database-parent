@@ -5,11 +5,11 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.ValidationHelper;
-import com.onyx.structure.DiskMap;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
+import com.onyx.structure.DiskMap;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,9 +35,9 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     {
         super(entityDescriptor, context);
 
-        metadata = (DiskMap)dataFile.getHashMap("metadata" + entityDescriptor.getClazz().getName());
+        metadata = (DiskMap)dataFile.getSkipListMap("metadata" + entityDescriptor.getClazz().getName());
 
-        // Initialize the sequence value
+        // Initialize the sequence key
         Long val = metadata.get(LAST_SEQUENCE_VALUE);
         if (val != null)
             sequenceValue.set(metadata.get(LAST_SEQUENCE_VALUE));
@@ -71,7 +71,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
 
         final AtomicBoolean isNew = new AtomicBoolean(false); // Keeps track of whether the record is new or not
 
-        // Assign a new index value, synchronize so that the index size gets persisted in order and aren't fighting over threads
+        // Assign a new index key, synchronize so that the index size gets persisted in order and aren't fighting over threads
         synchronized (sequenceValue)
         {
             if (val == null || val == 0)
@@ -147,7 +147,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      */
     public boolean exists(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity);
 
         return records.containsKey(identifierValue);
@@ -161,7 +161,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      */
     public void delete(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity);
 
         invokePreRemoveCallback(entity);
@@ -179,7 +179,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      */
     public IManagedEntity get(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         Object identifierValue = getIndexValueFromEntity(entity);
         return getWithId(identifierValue);
     }

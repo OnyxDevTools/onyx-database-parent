@@ -1,6 +1,5 @@
 package memory.system;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
@@ -37,7 +36,7 @@ public class SystemEntityTest extends memory.base.BaseTest
      * @throws IOException
      */
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
         deleteDatabase();

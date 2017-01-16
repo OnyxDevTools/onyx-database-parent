@@ -1,7 +1,12 @@
 package remote.save;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.identifiers.ImmutableIntSequenceIdentifierEntity;
+import entities.identifiers.ImmutableSequenceIdentifierEntity;
+import entities.identifiers.MutableIntSequenceIdentifierEntity;
+import entities.identifiers.MutableSequenceIdentifierEntity;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -10,17 +15,12 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
-import entities.identifiers.ImmutableIntSequenceIdentifierEntity;
-import entities.identifiers.ImmutableSequenceIdentifierEntity;
-import entities.identifiers.MutableIntSequenceIdentifierEntity;
-import entities.identifiers.MutableSequenceIdentifierEntity;
 
 import java.io.IOException;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -36,7 +36,7 @@ public class SaveSequenceIdentifierTest extends RemoteBaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

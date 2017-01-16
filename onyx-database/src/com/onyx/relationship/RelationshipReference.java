@@ -1,17 +1,17 @@
 package com.onyx.relationship;
 
 import com.onyx.exception.InvalidDataTypeForOperator;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.util.CompareUtil;
 
-import java.io.*;
+import java.io.IOException;
 
 /**
  * Created by timothy.osborn on 3/19/15.
  */
-public class RelationshipReference implements ObjectSerializable
+public class RelationshipReference implements ObjectSerializable, Comparable
 {
 
     public RelationshipReference()
@@ -44,6 +44,8 @@ public class RelationshipReference implements ObjectSerializable
         if(obj instanceof RelationshipReference)
         {
             final RelationshipReference comp = (RelationshipReference) obj;
+            if(comp.identifier.getClass() != identifier.getClass())
+                return false;
             try
             {
                 return (comp.partitionId == partitionId && CompareUtil.compare(comp.identifier, identifier, QueryCriteriaOperator.EQUAL));
@@ -84,5 +86,30 @@ public class RelationshipReference implements ObjectSerializable
     public String toString()
     {
         return "Identifier " + identifier.toString() + " Partition ID " + partitionId;
+    }
+
+    @Override
+    public int compareTo(Object o) {
+
+        if(o instanceof RelationshipReference)
+        {
+            if(this.partitionId < ((RelationshipReference) o).partitionId)
+                return -1;
+            else if(this.partitionId > ((RelationshipReference) o).partitionId)
+                return 1;
+
+            if(((RelationshipReference) o).identifier.getClass() == this.identifier.getClass()
+                && this.identifier instanceof Comparable)
+                return ((Comparable) this.identifier).compareTo(((RelationshipReference) o).identifier);
+
+            if(this.hashCode() < o.hashCode())
+                return -1;
+            else if(this.hashCode() > o.hashCode())
+                return 1;
+            else
+                return 0;
+        }
+        
+        return new Integer(this.hashCode()).compareTo(o.hashCode());
     }
 }

@@ -15,18 +15,15 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class Header implements ObjectSerializable
 {
-    public static final int HEADER_SIZE = ((Long.BYTES * 5) + Integer.BYTES);
+    public static final int HEADER_SIZE = (Long.BYTES * 3);
 
     public long firstNode;
     public long position;
-    public long next;
-    public long idPosition;
-    public int idSize;
 
     public AtomicLong recordCount = new AtomicLong(0);
 
     /**
-     * Override equals value to compare all values
+     * Override equals key to compare all values
      *
      * @param val
      * @return
@@ -56,11 +53,8 @@ public class Header implements ObjectSerializable
     public void writeObject(ObjectBuffer buffer) throws IOException
     {
         buffer.writeLong(firstNode);
-        buffer.writeLong(position);
-        buffer.writeLong(next);
-        buffer.writeLong(idPosition);
-        buffer.writeInt(idSize);
         buffer.writeLong(recordCount.get());
+        buffer.writeLong(position);
     }
 
     /**
@@ -73,15 +67,13 @@ public class Header implements ObjectSerializable
     public void readObject(ObjectBuffer buffer) throws IOException
     {
         firstNode = buffer.readLong();
-        position = buffer.readLong();
-        next = buffer.readLong();
-        idPosition = buffer.readLong();
-        idSize = buffer.readInt();
 
         if(recordCount == null)
             recordCount = new AtomicLong(buffer.readLong());
         else
             recordCount.set(buffer.readLong());
+
+        position = buffer.readLong();
     }
 
     @Override

@@ -1,8 +1,8 @@
 package com.onyx.persistence.query;
 
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.manager.PersistenceManager;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -21,7 +21,7 @@ import java.io.Serializable;
  *
  *   PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
  *
- *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+ *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
  *   query.setQueryOrders(new QueryOrder("name", true)
  *
  *   List results = manager.executeQuery(query);

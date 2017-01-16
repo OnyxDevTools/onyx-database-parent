@@ -2,10 +2,10 @@ package com.onyx.persistence.update;
 
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.index.IndexController;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -25,7 +25,7 @@ import java.io.ObjectOutput;
  *
  *   PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
  *
- *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+ *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
  *   query.setUpdates(new AttributeUpdate("name", "Bob");
  *   query.setQueryOrders(new QueryOrder("name", true)
  *

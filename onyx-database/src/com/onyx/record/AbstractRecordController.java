@@ -6,11 +6,11 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
@@ -37,7 +37,7 @@ public abstract class AbstractRecordController
         this.context = context;
         this.entityDescriptor = descriptor;
         dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName());
+        records = (DiskMap)dataFile.getScalableMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
     }
 
     /**
@@ -59,7 +59,7 @@ public abstract class AbstractRecordController
      */
     public boolean exists(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         return records.containsKey(identifierValue);
@@ -84,7 +84,7 @@ public abstract class AbstractRecordController
      */
     public void delete(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         invokePreRemoveCallback(entity);
@@ -112,14 +112,14 @@ public abstract class AbstractRecordController
      */
     public IManagedEntity get(IManagedEntity entity) throws EntityException
     {
-        // Get the Identifier value
+        // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         return getWithId(identifierValue);
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -305,7 +305,7 @@ public abstract class AbstractRecordController
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -315,32 +315,32 @@ public abstract class AbstractRecordController
     {
         try
         {
-            // Use reflection to get the value
+            // Use reflection to get the key
             final Field field = ReflectionUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
                 field.setAccessible(true);
 
             if(field.getType() == long.class)
-                field.set(entity, (long)value);
+                field.set(entity, value);
             else if(field.getType() == int.class && value != null && value.getClass() == Long.class)
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == int.class)
-                field.set(entity, (int)value);
+                field.set(entity, value);
             else if(field.getType() == Long.class && value instanceof Integer)
                 field.set(entity, ((Integer)value).longValue());
             else if(field.getType() == Long.class)
-                field.set(entity, (Long)value);
+                field.set(entity, value);
             else if(field.getType() == Integer.class && value != null && value.getClass() == Long.class )
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == Integer.class)
-                field.set(entity, (Integer)value);
+                field.set(entity, value);
             else if(field.getType() == Double.class)
-                field.set(entity, (Double)value);
+                field.set(entity, value);
             else if(field.getType() == double.class)
-                field.set(entity, (double)value);
+                field.set(entity, value);
             else if(field.getType() == Date.class)
-                field.set(entity, (Date)value);
+                field.set(entity, value);
             else
                 field.set(entity, field.getType().cast(value));
 
@@ -353,7 +353,7 @@ public abstract class AbstractRecordController
 
 
     /**
-     * Converts a value from a String to a type casted object
+     * Converts a key from a String to a type casted object
      *
      * @param type
      * @param value
@@ -376,7 +376,7 @@ public abstract class AbstractRecordController
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -385,7 +385,7 @@ public abstract class AbstractRecordController
     public static void setIndexValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
     {
 
-        // Use reflection to get the value
+        // Use reflection to get the key
         final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
 
         try
@@ -398,25 +398,25 @@ public abstract class AbstractRecordController
                 field.setAccessible(true);
 
             if(field.getType() == long.class)
-                field.set(entity, (long) value);
+                field.set(entity, value);
             else if(field.getType() == int.class && value != null && value.getClass() == Long.class)
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == int.class)
-                field.set(entity, (int)value);
+                field.set(entity, value);
             else if(field.getType() == Long.class && value instanceof Integer)
                 field.set(entity, ((Integer)value).longValue());
             else if(field.getType() == Long.class)
-                field.set(entity, (Long)value);
+                field.set(entity, value);
             else if(field.getType() == Integer.class && value != null && value.getClass() == Long.class )
                 field.set(entity, ((Long)value).intValue());
             else if(field.getType() == Integer.class)
-                field.set(entity, (Integer)value);
+                field.set(entity, value);
             else if(field.getType() == Double.class)
-                field.set(entity, (Double)value);
+                field.set(entity, value);
             else if(field.getType() == double.class)
-                field.set(entity, (double)value);
+                field.set(entity, value);
             else if(field.getType() == Date.class)
-                field.set(entity, (Date)value);
+                field.set(entity, value);
             else
                 field.set(entity, field.getType().cast(value));
 
@@ -471,7 +471,7 @@ public abstract class AbstractRecordController
      *
      * @param attribute Name of attribute to get
      * @param referenceId location of record within storage
-     * @return Attribute value
+     * @return Attribute key
      */
     public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
         return records.getAttributeWithRecID(attribute, referenceId);

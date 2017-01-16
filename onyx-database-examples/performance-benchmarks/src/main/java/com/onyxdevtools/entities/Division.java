@@ -2,12 +2,7 @@ package com.onyxdevtools.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.Attribute;
-import com.onyx.persistence.annotations.CascadePolicy;
-import com.onyx.persistence.annotations.Entity;
-import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.Relationship;
-import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.annotations.*;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Id;
@@ -26,14 +21,15 @@ public class Division extends ManagedEntity implements IManagedEntity
 
     @Attribute
     @Id
-    @Identifier
+    @Identifier(loadFactor = 1)
     protected String divisionName;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
             inverseClass = Team.class,
             cascadePolicy = CascadePolicy.ALL,
-            inverse = "division"
+            inverse = "division",
+            loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, targetEntity = Team.class, mappedBy = "division")
     protected List<Team> teams;
@@ -41,7 +37,8 @@ public class Division extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "divisions",
-            inverseClass = Conference.class
+            inverseClass = Conference.class,
+            loadFactor = 1
     )
     @ManyToOne(targetEntity = Conference.class)
     protected Conference conference;

@@ -191,7 +191,7 @@ public class BufferStream {
     ///////////////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Put an enum value to the buffer
+     * Put an enum key to the buffer
      *
      * @since 1.1.0
      * @param enumVal enum to write
@@ -1065,7 +1065,7 @@ public class BufferStream {
             final boolean[] arr = new boolean[expandableByteBuffer.buffer.getInt()];
             expandableByteBuffer.ensureRequiredSize(Byte.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.get() == 1 ? true : false;
+                arr[i] = expandableByteBuffer.buffer.get() == 1;
             return arr;
         } else if (type == BufferObjectType.DOUBLE_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
@@ -1131,7 +1131,7 @@ public class BufferStream {
                     return reclaimedBuffer.getBuffer();
                 }
             }
-            final ByteBuffer buffer = ByteBuffer.allocateDirect((int) count);
+            final ByteBuffer buffer = ByteBuffer.allocateDirect(count);
             buffer.order(ByteOrder.BIG_ENDIAN);
             return buffer;
         }

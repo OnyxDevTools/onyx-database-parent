@@ -1,8 +1,8 @@
 package com.onyx.persistence.factory.impl;
 
 import com.onyx.exception.InitializationException;
-import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.context.impl.CacheSchemaContext;
+import com.onyx.persistence.factory.PersistenceManagerFactory;
 
 import java.io.File;
 import java.io.IOException;

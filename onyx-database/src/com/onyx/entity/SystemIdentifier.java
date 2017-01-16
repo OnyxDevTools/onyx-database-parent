@@ -22,14 +22,15 @@ public class SystemIdentifier extends AbstractSystemEntity implements IManagedEn
         this.entity = entity;
         this.name = descriptor.getName();
         id = entity.getName() + descriptor.getName();
+        this.loadFactor = descriptor.getLoadFactor();
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
     protected int primaryKey;
 
     @Attribute
-    @Index
+    @Index(loadFactor = 1)
     protected String id;
 
     @Attribute
@@ -38,7 +39,7 @@ public class SystemIdentifier extends AbstractSystemEntity implements IManagedEn
     @Attribute
     protected int generator;
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "identifier", inverseClass = SystemEntity.class)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "identifier", inverseClass = SystemEntity.class, loadFactor = 1)
     protected SystemEntity entity;
 
     public String getId()
@@ -79,5 +80,17 @@ public class SystemIdentifier extends AbstractSystemEntity implements IManagedEn
     public void setGenerator(int generator)
     {
         this.generator = generator;
+    }
+
+
+    @Attribute
+    protected int loadFactor;
+
+    public int getLoadFactor() {
+        return loadFactor;
+    }
+
+    public void setLoadFactor(int loadFactor) {
+        this.loadFactor = loadFactor;
     }
 }

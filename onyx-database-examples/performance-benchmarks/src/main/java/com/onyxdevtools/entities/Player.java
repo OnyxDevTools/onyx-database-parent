@@ -2,15 +2,8 @@ package com.onyxdevtools.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.Attribute;
-import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.annotations.*;
 import com.onyx.persistence.annotations.Entity;
-import com.onyx.persistence.annotations.FetchPolicy;
-import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.IdentifierGenerator;
-import com.onyx.persistence.annotations.Relationship;
-import com.onyx.persistence.annotations.RelationshipType;
-import javafx.application.Platform;
 
 import javax.persistence.*;
 import java.util.ArrayList;
@@ -26,7 +19,7 @@ public class Player extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 2)
     @Id
     protected int playerId;
 
@@ -49,7 +42,8 @@ public class Player extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "players",
-            inverseClass = Team.class
+            inverseClass = Team.class,
+            loadFactor = 1
     )
     @ManyToOne(targetEntity = Team.class)
     protected Team team;
@@ -59,7 +53,8 @@ public class Player extends ManagedEntity implements IManagedEntity
             inverse = "player",
             inverseClass = Stats.class,
             cascadePolicy = CascadePolicy.ALL,
-            fetchPolicy = FetchPolicy.LAZY
+            fetchPolicy = FetchPolicy.LAZY,
+            loadFactor = 1
     )
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, targetEntity = Stats.class, mappedBy = "player")
     protected List<Stats> stats = new ArrayList();

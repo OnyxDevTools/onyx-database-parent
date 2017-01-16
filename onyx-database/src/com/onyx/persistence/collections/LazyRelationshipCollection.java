@@ -1,21 +1,24 @@
 package com.onyx.persistence.collections;
 
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.buffer.BufferStream;
-import com.onyx.buffer.BufferStreamable;
 
-import java.io.*;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.*;
 
 /**
@@ -97,13 +100,12 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     public LazyRelationshipCollection(EntityDescriptor entityDescriptor, Set<Object> identifiers, SchemaContext context)
     {
         this.persistenceManager = context.getSystemPersistenceManager();
-        if(identifiers == null)
+        this.identifiers = new ArrayList<>();
+        if(identifiers != null)
         {
-            this.identifiers = new ArrayList<>();
-        }
-        else
-        {
-            this.identifiers = new ArrayList(identifiers);
+            Iterator it = identifiers.iterator();
+            while (it.hasNext())
+                this.identifiers.add((RelationshipReference)it.next());
         }
         this.entityDescriptor = entityDescriptor;
         this.context = context;
@@ -163,7 +165,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
      * @author Tim Osborn
      * @since 1.0.0
      *
-     * @return Flag for indicating Collection is empty ( size == 0 )
+     * @return Flag for indicating Collection is empty ( longSize == 0 )
      */
     @Override
     public boolean isEmpty()

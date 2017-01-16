@@ -31,7 +31,7 @@ public class SystemEntityTest extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException, InterruptedException {
+    public void after() throws IOException, InterruptedException {
         shutdown();
         testApplication.stop();
         Thread.sleep(4000);

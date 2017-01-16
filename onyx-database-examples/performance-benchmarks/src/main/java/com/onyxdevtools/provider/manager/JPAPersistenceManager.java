@@ -139,11 +139,11 @@ public class JPAPersistenceManager implements ProviderPersistenceManager {
     }
 
     /**
-     * Execute query with criteria of key = value.  This will auto generate a sql statement.
+     * Execute query with criteria of key = key.  This will auto generate a sql statement.
      *
      * @param clazz Entity to query
      * @param key Attribute to predicate upon
-     * @param value Attribute value to predicate upon
+     * @param value Attribute key to predicate upon
      * @return List of entities that match the criteria
      */
     public List list(Class clazz, String key, Object value)

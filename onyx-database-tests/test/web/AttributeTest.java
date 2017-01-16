@@ -4,13 +4,13 @@ import category.WebServerTests;
 import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.AllAttributeEntity;
+import entities.InheritedAttributeEntity;
+import entities.SimpleEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import web.base.BaseTest;
-import entities.AllAttributeEntity;
-import entities.InheritedAttributeEntity;
-import entities.SimpleEntity;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -43,7 +43,7 @@ public class AttributeTest extends BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }
@@ -55,14 +55,13 @@ public class AttributeTest extends BaseTest {
      * @throws InitializationException
      */
     @Test
-    public void testPopulatedEntity() throws EntityException, InitializationException
-    {
+    public void testPopulatedEntity() throws EntityException {
         AllAttributeEntity entity = new AllAttributeEntity();
 
         entity.id = "A";
         entity.longValue = 4l;
         entity.longPrimitive = 3l;
-        entity.stringValue = "STring value";
+        entity.stringValue = "STring key";
         entity.dateValue = new Date(1483736263743l);
         entity.doublePrimitive = 342.23;
         entity.doubleValue = 232.2;
@@ -84,7 +83,7 @@ public class AttributeTest extends BaseTest {
         Assert.assertEquals("A", entity2.id);
         Assert.assertEquals(Long.valueOf(4l), entity2.longValue);
         Assert.assertEquals(3l, entity2.longPrimitive);
-        Assert.assertEquals("STring value", entity2.stringValue);
+        Assert.assertEquals("STring key", entity2.stringValue);
         Assert.assertEquals(entity.dateValue, entity2.dateValue);
         Assert.assertEquals(new Double(342.23), new Double(entity2.doublePrimitive));
         Assert.assertEquals(Double.valueOf(232.2), entity2.doubleValue);
@@ -139,15 +138,14 @@ public class AttributeTest extends BaseTest {
      * @throws EntityException
      */
     @Test
-    public void testInheritedPopulatedEntity() throws EntityException, InitializationException
-    {
+    public void testInheritedPopulatedEntity() throws EntityException {
 
         InheritedAttributeEntity entity = new InheritedAttributeEntity();
 
         entity.id = "C";
         entity.longValue = 4l;
         entity.longPrimitive = 3l;
-        entity.stringValue = "STring value";
+        entity.stringValue = "STring key";
         entity.dateValue = new Date(343535);
         entity.doublePrimitive = 342.23;
         entity.doubleValue = 232.2;
@@ -178,7 +176,7 @@ public class AttributeTest extends BaseTest {
         Assert.assertEquals("C", entity2.id);
         Assert.assertEquals(Long.valueOf(4l), entity2.longValue);
         Assert.assertEquals(3l, entity2.longPrimitive);
-        Assert.assertEquals("STring value", entity2.stringValue);
+        Assert.assertEquals("STring key", entity2.stringValue);
         Assert.assertEquals(entity.dateValue, entity2.dateValue);
         Assert.assertEquals(new Double(342.23), new Double(entity2.doublePrimitive));
         Assert.assertEquals(Double.valueOf(232.2), entity2.doubleValue);

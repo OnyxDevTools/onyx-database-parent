@@ -4,10 +4,10 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.RecordController;
+import com.onyx.structure.MapBuilder;
 
 import java.util.Collections;
 import java.util.Map;

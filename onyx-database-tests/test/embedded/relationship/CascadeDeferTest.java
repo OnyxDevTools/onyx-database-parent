@@ -2,7 +2,6 @@ package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyxdevtools.embedded.entities.Actor;
 import com.onyxdevtools.embedded.entities.Movie;
 import embedded.base.BaseTest;
@@ -25,13 +24,13 @@ public class CascadeDeferTest extends BaseTest
 {
 
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

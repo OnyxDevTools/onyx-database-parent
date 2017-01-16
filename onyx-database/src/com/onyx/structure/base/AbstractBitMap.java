@@ -15,15 +15,8 @@ import java.util.Map;
 /**
  * Created by timothy.osborn on 3/25/15.
  */
-public class AbstractBitMap
+abstract class AbstractBitMap<K,V> extends AbstractDiskMap<K,V>
 {
-
-    protected Header header = null;
-
-    // Storage mechanism for the hashmap
-    public Store fileStore;
-
-    protected int loadFactor = BitMapNode.DEFAULT_BITMAP_ITERATIONS;
 
     /**
      * Constructor
@@ -32,8 +25,19 @@ public class AbstractBitMap
      */
     public AbstractBitMap(Store fileStore, Header header)
     {
-        this.fileStore = fileStore;
-        this.header = header;
+        super(fileStore, header, false);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param detached
+     */
+    public AbstractBitMap(Store fileStore, Header header, boolean detached)
+    {
+        super(fileStore, header, detached);
     }
 
     /**
@@ -41,18 +45,17 @@ public class AbstractBitMap
      * <p/>
      * It will create the bitmap graph if specified for insert
      *
-     * @param hash
      * @param forInsert
      * @return
      */
-    public BitMapNode seek(int hash, boolean forInsert, final int[] hashDigits)
+    public BitMapNode seek(boolean forInsert, final int[] hashDigits)
     {
 
         BitMapNode node = null;
 
         if (this.header.firstNode > 0)
         {
-            node = (BitMapNode) getBitmapNode(this.header.firstNode); // Get Root node
+            node = getBitmapNode(this.header.firstNode); // Get Root node
         } else
         {
             // No default node, lets create one // It must mean we are inserting
@@ -110,10 +113,8 @@ public class AbstractBitMap
      */
     public Record insert(RecordReference parentRecordReference, BitMapNode node, Object key, Object value, int[] hashDigits)
     {
-
         try
         {
-
             // Create the record
             final Record record = new Record();
             record.key = key;
@@ -167,13 +168,13 @@ public class AbstractBitMap
 
     /**
      * This method will only update the record count rather than the entire header
+     *
+     * Do not update the header if we are detached.  That will be done by this' parent data structure
      */
-    public void updateHeaderRecordCount()
-    {
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(header.recordCount.get());
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Integer.BYTES + (4 * Long.BYTES));
+    protected void updateHeaderRecordCount() {
+        if (!detached) {
+            super.updateHeaderRecordCount();
+        }
     }
 
     /**
@@ -185,20 +186,6 @@ public class AbstractBitMap
         buffer.putLong(reference.next);
         final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
         fileStore.write(objectBuffer, reference.position + (Integer.BYTES * 2));
-    }
-
-    /**
-     * Only update the first position for a header
-     *
-     * @param header
-     * @param firstNode
-     */
-    public void updateHeaderFirstNode(Header header, long firstNode)
-    {
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(firstNode);
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position);
     }
 
     /**
@@ -238,7 +225,7 @@ public class AbstractBitMap
 
             if(reference.keySize != 0) {
 
-                compareKey = (Object) getRecordKey(reference);
+                compareKey = getRecordKey(reference);
 
                 if(CompareUtil.compare(key, compareKey, false))
                 {
@@ -420,11 +407,11 @@ public class AbstractBitMap
     }
 
     /**
-     * This method is intended to get a record value as a dictionary.  Note: This is only intended for ManagedEntities
+     * This method is intended to get a record key as a dictionary.  Note: This is only intended for ManagedEntities
      *
      * @param reference Record reference to pull
      *
-     * @return Map of key value pairs
+     * @return Map of key key pairs
      */
     public Map getRecordValueAsDictionary(RecordReference reference)
     {
@@ -438,24 +425,12 @@ public class AbstractBitMap
      * @param attribute attribute name to gather
      * @param reference record reference where the record is stored
      *
-     * @return Attribute value of record
+     * @return Attribute key of record
      */
     public Object getAttributeWithRecID(String attribute, RecordReference reference)
     {
         ObjectBuffer buffer = fileStore.read(reference.position + reference.keySize + RecordReference.RECORD_REFERENCE_LIST_SIZE, (reference.recordSize - reference.keySize));
         return buffer.getAttribute(attribute, reference.serializerId);
-    }
-
-    /**
-     * The purpose of this hash is to generate a fancier hash so that in instances for a long or int, it will not generate the value of those
-     * rather it will get a searchable value within a BST without being lop sided.
-     *
-     * @param key
-     * @return
-     */
-    protected int hash(final Object key)
-    {
-        return key.hashCode();
     }
 
     /**
@@ -482,17 +457,6 @@ public class AbstractBitMap
     }
 
     /**
-     * De-allocates the storage at position
-     * @since 1.0.2
-     * @param position The position where the deallocated disk space starts
-     * @param size amount of bytes to deallocate and recycle
-     */
-    protected void dealloc(long position, int size)
-    {
-//        fileStore.deallocate(position, size);
-    }
-
-    /**
      * Gets the reference of where the disk structure is located within the storage
      * @since 1.0.2
      * @return Header reference item
@@ -503,24 +467,7 @@ public class AbstractBitMap
     }
 
     /**
-     * This indicates how many iterations of hash tables
-     * we need to iterate through.  The higher the number the more scalable the
-     * index value is.  The lower, means we have less BitMapNode(s) we have to create
-     * thus saving disk space.  This is going to be for future use.  Still to come is a backup
-     * index such as a BST if the load factor is set too small.  Currently the logic relies on a
-     * linked list if there are hashCode collisions.  This should be anything other than that.
-     *
-     *
-     * @since 1.1.1
-     * @return Load Factor. A value from 5-10.  5 is for minimum data sets and 10 is for fully scalable data sets.
-     */
-    public int getLoadFactor()
-    {
-        return loadFactor;
-    }
-
-    /**
-     * The value within the hash digits to look for the record reference.
+     * The key within the hash digits to look for the record reference.
      * @return The amount of iterations minus 1.
      */
     protected int getRecordReferenceIndex()
@@ -529,7 +476,7 @@ public class AbstractBitMap
     }
 
     /**
-     * The size of the bitmap on disk based on the load factor
+     * The longSize of the bitmap on disk based on the load factor
      * @return The amount of bytes
      */
     protected int getBitmapNodeSize()

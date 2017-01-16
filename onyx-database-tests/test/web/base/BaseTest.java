@@ -4,9 +4,9 @@ import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory;
 import com.onyx.persistence.context.impl.WebSchemaContext;
+import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory;
+import com.onyx.persistence.manager.PersistenceManager;
 import org.junit.AfterClass;
 
 import java.io.File;
@@ -47,7 +47,7 @@ public class BaseTest {
         }
     }
 
-    protected void shutdown() throws EntityException, IOException {
+    protected void shutdown() throws IOException {
         if (factory != null)
             factory.close();
     }

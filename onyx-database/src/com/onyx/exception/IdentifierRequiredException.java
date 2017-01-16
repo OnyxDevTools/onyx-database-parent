@@ -5,7 +5,7 @@ package com.onyx.exception;
  */
 public class IdentifierRequiredException extends EntityException
 {
-    public static final String IDENTIFIER_REQUIRED_EXCEPTION = "Identifier value is required";
+    public static final String IDENTIFIER_REQUIRED_EXCEPTION = "Identifier key is required";
 
     protected String attribute;
 

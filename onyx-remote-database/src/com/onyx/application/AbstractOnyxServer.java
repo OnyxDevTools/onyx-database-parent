@@ -129,7 +129,7 @@ abstract class AbstractOnyxServer implements OnyxServer {
             persistenceHandler = getBasePathHandlers();
             HttpHandler securityHandler = new AuthenticationCallHandler(persistenceHandler);
             securityHandler = new AuthenticationConstraintHandler(securityHandler);
-            final List<AuthenticationMechanism> mechanisms = Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism("DATABASE REALM"));
+            final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new BasicAuthenticationMechanism("DATABASE REALM"));
             securityHandler = new AuthenticationMechanismsHandler(securityHandler, mechanisms);
             securityHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, identityManager, securityHandler);
             baseHandler = new SessionAttachmentHandler(sessionManager, sessionConfig);

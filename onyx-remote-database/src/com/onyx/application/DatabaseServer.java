@@ -1,18 +1,22 @@
 package com.onyx.application;
 
 import com.onyx.client.auth.AuthRMIClientSocketFactory;
+import com.onyx.client.auth.AuthSslRMIClientSocketFactory;
 import com.onyx.client.auth.Authorize;
-import com.onyx.entity.*;
+import com.onyx.entity.SystemUser;
+import com.onyx.entity.SystemUserRole;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
-import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.server.DatabaseConnectionListener;
 import com.onyx.server.DatabaseHandshakeHandler;
 import com.onyx.server.DatabaseIdentityManager;
 import com.onyx.server.JSONDatabaseMessageListener;
-import com.onyx.server.auth.*;
+import com.onyx.server.auth.AuthRMIServerSocketFactory;
+import com.onyx.server.auth.AuthSslRMIServerSocketFactory;
+import com.onyx.server.auth.SocketDatabaseAuthrorizeImpl;
 import com.onyx.util.EncryptionUtil;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
@@ -32,7 +36,9 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
+import org.apache.commons.cli.*;
 
+import javax.net.ssl.*;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -46,10 +52,6 @@ import java.security.KeyStore;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import com.onyx.client.auth.AuthSslRMIClientSocketFactory;
-import org.apache.commons.cli.*;
-
-import javax.net.ssl.*;
 
 import static io.undertow.Handlers.resource;
 
@@ -327,7 +329,7 @@ public class DatabaseServer extends EmbeddedPersistenceManagerFactory implements
                 // Security Handler
                 HttpHandler securityHandler = new AuthenticationCallHandler(persistenceHandler);
                 securityHandler = new AuthenticationConstraintHandler(securityHandler);
-                final List<AuthenticationMechanism> mechanisms = Collections.<AuthenticationMechanism>singletonList(new BasicAuthenticationMechanism("DATABASE REALM"));
+                final List<AuthenticationMechanism> mechanisms = Collections.singletonList(new BasicAuthenticationMechanism("DATABASE REALM"));
                 securityHandler = new AuthenticationMechanismsHandler(securityHandler, mechanisms);
                 securityHandler = new SecurityInitialHandler(AuthenticationMode.PRO_ACTIVE, databaseAuthenticationManager, securityHandler);
 

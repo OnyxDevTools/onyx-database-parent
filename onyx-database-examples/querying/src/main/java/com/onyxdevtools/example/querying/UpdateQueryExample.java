@@ -1,8 +1,5 @@
 package com.onyxdevtools.example.querying;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -10,12 +7,10 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
-
 import com.onyxdevtools.example.querying.entities.Player;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.List;
 
 /**
@@ -29,7 +24,7 @@ public class UpdateQueryExample
     {
     }
 
-    public static void demo() throws InitializationException, EntityException, IOException
+    public static void demo() throws IOException
     {
         // get an instance of the persistenceManager
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
@@ -49,7 +44,7 @@ public class UpdateQueryExample
 
         Query query = new Query(Player.class, compoundCriteria);
 
-        //Execute the query and see that the active attribute's value is true
+        //Execute the query and see that the active attribute's key is true
         final List<Player> players = manager.executeQuery(query);
         for (final Player qb : players)
         {

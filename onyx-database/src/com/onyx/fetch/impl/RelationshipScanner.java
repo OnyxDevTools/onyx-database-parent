@@ -6,14 +6,14 @@ import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.ScannerFactory;
 import com.onyx.fetch.TableScanner;
-import com.onyx.structure.MapBuilder;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
+import com.onyx.structure.MapBuilder;
 
 import java.util.HashMap;
 import java.util.Iterator;

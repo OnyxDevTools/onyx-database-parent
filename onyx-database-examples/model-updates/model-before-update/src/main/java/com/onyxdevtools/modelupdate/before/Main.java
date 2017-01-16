@@ -109,7 +109,7 @@ public class Main
      * Helper method used to parse a date in string format.  Meant to encapsulate the error handling.
      *
      * @param stringDate  String in format of MM-dd-yyyy
-     * @return Date value
+     * @return Date key
      */
     protected static Date parseDate(String stringDate)
     {

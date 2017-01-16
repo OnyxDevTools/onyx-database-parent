@@ -1,7 +1,6 @@
 package web.partition;
 
 import category.WebServerTests;
-import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import org.junit.After;
 import org.junit.Before;
@@ -30,7 +29,7 @@ public class BasePartitionTest extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

@@ -5,12 +5,12 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.InvalidIndexException;
+import entities.exception.InvalidIndexTypeEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
-import entities.exception.InvalidIndexTypeEntity;
 
 import java.io.IOException;
 
@@ -28,7 +28,7 @@ public class TestIndexExceptions extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

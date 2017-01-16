@@ -7,12 +7,12 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.Map;
 
 /**

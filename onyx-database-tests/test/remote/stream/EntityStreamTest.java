@@ -1,7 +1,6 @@
 package remote.stream;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.StreamException;
 import com.onyx.persistence.IManagedEntity;
@@ -12,7 +11,10 @@ import com.onyx.stream.QueryMapStream;
 import com.onyx.stream.QueryStream;
 import entities.identifiers.ImmutableSequenceIdentifierEntity;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
@@ -20,7 +22,6 @@ import streams.BasicQueryMapStream;
 import streams.BasicQueryStream;
 
 import java.io.IOException;
-import java.rmi.registry.Registry;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 

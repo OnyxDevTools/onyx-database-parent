@@ -7,6 +7,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyxdevtools.remote.Person;
+
 import java.io.IOException;
 import java.util.List;
 

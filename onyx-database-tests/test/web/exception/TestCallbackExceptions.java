@@ -4,12 +4,12 @@ import category.WebServerTests;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.exception.EntityCallbackExceptionEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
-import entities.exception.EntityCallbackExceptionEntity;
 
 import java.io.IOException;
 
@@ -31,7 +31,7 @@ public class TestCallbackExceptions extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

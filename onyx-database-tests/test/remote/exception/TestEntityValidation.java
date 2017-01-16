@@ -1,16 +1,16 @@
 package remote.exception;
 
+import category.RemoteServerTests;
 import com.onyx.exception.*;
+import entities.ValidateRequiredIDEntity;
+import entities.ValidationEntity;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.ValidateRequiredIDEntity;
-import entities.ValidationEntity;
 
 import java.io.IOException;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 1/21/15.
@@ -26,7 +26,7 @@ public class TestEntityValidation extends RemoteBaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

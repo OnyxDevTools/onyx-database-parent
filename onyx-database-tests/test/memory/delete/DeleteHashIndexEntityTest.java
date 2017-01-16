@@ -1,16 +1,14 @@
 package memory.delete;
 
-import category.EmbeddedDatabaseTests;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
+import entities.AllAttributeEntity;
+import entities.identifiers.IntegerIdentifierEntity;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import entities.AllAttributeEntity;
-import entities.identifiers.IntegerIdentifierEntity;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -23,13 +21,13 @@ import java.util.Date;
 public class DeleteHashIndexEntityTest extends memory.base.BaseTest
 {
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class AuthRMIClientSocketFactory implements RMIClientSocketFactory, Serializable {
 
-    // Map containing all host authorization information  key = host and value is auth data
+    // Map containing all host authorization information  key = host and key is auth data
     private static final Map<String, AuthData> hostAuthData = new ConcurrentHashMap<String, AuthData> ();
 
     /**

@@ -1,13 +1,14 @@
 package remote.save;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
+import entities.InheritedLongAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
-import entities.InheritedLongAttributeEntity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -18,7 +19,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -34,7 +34,7 @@ public class SequenceIndexConcurrencyTest extends RemoteBaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }
@@ -64,7 +64,7 @@ public class SequenceIndexConcurrencyTest extends RemoteBaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;

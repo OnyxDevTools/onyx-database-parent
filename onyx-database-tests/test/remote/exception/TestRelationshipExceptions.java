@@ -1,20 +1,20 @@
 package remote.exception;
 
+import category.RemoteServerTests;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.*;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import remote.base.RemoteBaseTest;
 import entities.AllAttributeEntity;
 import entities.exception.EntityToOneDoesntMatch;
 import entities.exception.NoInverseEntity;
 import entities.exception.OTMNoListEntity;
 import entities.exception.RelationshipNoEntityType;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 12/14/14.
@@ -30,7 +30,7 @@ public class TestRelationshipExceptions extends RemoteBaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

@@ -1,7 +1,7 @@
 package entities.exception;
 
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;

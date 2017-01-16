@@ -1,10 +1,10 @@
 package embedded;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.context.impl.ViewerSchemaContext;
+import com.onyx.persistence.factory.PersistenceManagerFactory;
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

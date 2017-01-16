@@ -5,17 +5,17 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
-import com.onyx.structure.DiskMap;
+import com.onyx.helpers.RelationshipHelper;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.record.impl.SequenceRecordControllerImpl;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
-import com.onyx.helpers.RelationshipHelper;
 import com.onyx.relationship.RelationshipReference;
+import com.onyx.structure.DiskMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +40,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         super(entityDescriptor, relationshipDescriptor, context);
 
         // Get the correct data file
-        toOneMap = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        toOneMap = (DiskMap)dataFile.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
 
@@ -219,10 +219,9 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         // Get the Identifier
         final RelationshipReference inverseIdentifier = toOneMap.get(entityIdentifier);
 
-        // If there are results, lets assign the value and recursively hydrate entities
+        // If there are results, lets assign the key and recursively hydrate entities
         if (inverseIdentifier != null
-               && ((isSequenceIdentifier(inverseIdentifier) && Long.valueOf(String.valueOf(inverseIdentifier.identifier)) > 0)
-                || !isSequenceIdentifier(inverseIdentifier)))
+               && (!isSequenceIdentifier(inverseIdentifier) || Long.valueOf(String.valueOf(inverseIdentifier.identifier)) > 0))
         {
             IManagedEntity relationshipObject = getRecordControllerForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
 
@@ -234,14 +233,14 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
             EntityDescriptor inverseDescriptor = getDescriptorForEntity(relationshipObject);
             // If the manager contains, lets move on and dont hydrate recursively
-            if (manager.contains((IManagedEntity) relationshipObject, inverseDescriptor.getIdentifier()))
+            if (manager.contains(relationshipObject, inverseDescriptor.getIdentifier()))
             {
-                setRelationshipValue(relationshipDescriptor, entity, manager.get((IManagedEntity) relationshipObject, inverseDescriptor.getIdentifier()));
+                setRelationshipValue(relationshipDescriptor, entity, manager.get(relationshipObject, inverseDescriptor.getIdentifier()));
                 return;
             }
             else
             {
-                setRelationshipValue(relationshipDescriptor, entity, (IManagedEntity) relationshipObject);
+                setRelationshipValue(relationshipDescriptor, entity, relationshipObject);
             }
 
             RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, context);

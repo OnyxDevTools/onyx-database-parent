@@ -1,12 +1,5 @@
 package com.onyx.util;
 
-import com.onyx.entity.SystemAttribute;
-import com.onyx.entity.SystemEntity;
-import com.onyx.entity.SystemIndex;
-import com.onyx.entity.SystemRelationship;
-import com.onyx.persistence.annotations.CascadePolicy;
-import com.onyx.persistence.annotations.FetchPolicy;
-import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
@@ -14,26 +7,27 @@ import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
-
+import com.onyx.entity.SystemAttribute;
+import com.onyx.entity.SystemEntity;
+import com.onyx.entity.SystemIndex;
+import com.onyx.entity.SystemRelationship;
+import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.annotations.FetchPolicy;
+import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
-
-import java.io.*;
-
-import java.lang.reflect.Method;
-
-import java.net.URL;
-import java.net.URLClassLoader;
-
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import java.util.*;
 
 import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
+import java.io.*;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 
 /**

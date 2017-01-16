@@ -26,7 +26,7 @@ public class ObjectSerializationTest extends AbstractTest
         entityYo.id = "OOO, this is an id";
         entityYo.longValue = 23l;
         entityYo.dateValue = new Date(1433233222);
-        entityYo.longStringValue = "This is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string textThis is a really long string value wooo, long string text";
+        entityYo.longStringValue = "This is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string text";
         entityYo.otherStringValue = "Normal text";
         entityYo.mutableInteger = 23;
         entityYo.mutableLong = 42l;

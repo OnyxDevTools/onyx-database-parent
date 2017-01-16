@@ -186,7 +186,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getInt(parent, offsetField.offset);
 
-        return (int)offsetField.field.getInt(parent);
+        return offsetField.field.getInt(parent);
     }
 
     /**
@@ -201,7 +201,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getByte(parent, offsetField.offset);
 
-        return (byte)offsetField.field.getByte(parent);
+        return offsetField.field.getByte(parent);
     }
 
     /**
@@ -216,7 +216,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getLong(parent, offsetField.offset);
 
-        return (long)offsetField.field.getLong(parent);
+        return offsetField.field.getLong(parent);
     }
 
     /**
@@ -231,7 +231,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getFloat(parent, offsetField.offset);
 
-        return (float)offsetField.field.getFloat(parent);
+        return offsetField.field.getFloat(parent);
     }
 
     /**
@@ -246,7 +246,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getDouble(parent, offsetField.offset);
 
-        return (double)offsetField.field.getDouble(parent);
+        return offsetField.field.getDouble(parent);
     }
 
     /**
@@ -261,7 +261,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getBoolean(parent, offsetField.offset);
 
-        return (boolean)offsetField.field.getBoolean(parent);
+        return offsetField.field.getBoolean(parent);
     }
 
     /**
@@ -276,7 +276,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getShort(parent, offsetField.offset);
 
-        return (short)offsetField.field.getShort(parent);
+        return offsetField.field.getShort(parent);
     }
 
     /**
@@ -291,7 +291,7 @@ public class ReflectionUtil
         if(theUnsafe != null)
             return theUnsafe.getChar(parent, offsetField.offset);
 
-        return (char)offsetField.field.getChar(parent);
+        return offsetField.field.getChar(parent);
     }
 
     /**
@@ -310,13 +310,13 @@ public class ReflectionUtil
     }
 
     /**
-     * This method is to return any value from a field using reflection.  It
+     * This method is to return any key from a field using reflection.  It
      * can either return a primitive or an object.  Note: If inteneded to get a
      * primitive, I recommend using the other api methods to avoid autoboxing.
      *
      * @param object Parent object
      * @param offsetField field to get
-     * @return field value
+     * @return field key
      */
     public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException
     {
@@ -359,7 +359,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the int on
      * @param offsetField The field to reflect on
-     * @param value int value to set
+     * @param value int key to set
      */
     public static void setInt(Object parent, OffsetField offsetField, int value) throws IllegalAccessException
     {
@@ -376,7 +376,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the long on
      * @param offsetField The field to reflect on
-     * @param value long value to set
+     * @param value long key to set
      */
     public static void setLong(Object parent, OffsetField offsetField, long value) throws IllegalAccessException
     {
@@ -393,7 +393,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the byte on
      * @param offsetField The field to reflect on
-     * @param value byte value to set
+     * @param value byte key to set
      */
     public static void setByte(Object parent, OffsetField offsetField, byte value) throws IllegalAccessException
     {
@@ -410,7 +410,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the float on
      * @param offsetField The field to reflect on
-     * @param value float value to set
+     * @param value float key to set
      */
     public static void setFloat(Object parent, OffsetField offsetField, float value) throws IllegalAccessException
     {
@@ -427,7 +427,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the double on
      * @param offsetField The field to reflect on
-     * @param value double value to set
+     * @param value double key to set
      */
     public static void setDouble(Object parent, OffsetField offsetField, double value) throws IllegalAccessException
     {
@@ -444,7 +444,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the short on
      * @param offsetField The field to reflect on
-     * @param value short value to set
+     * @param value short key to set
      */
     public static void setShort(Object parent, OffsetField offsetField, short value) throws IllegalAccessException
     {
@@ -461,7 +461,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the boolean on
      * @param offsetField The field to reflect on
-     * @param value boolean value to set
+     * @param value boolean key to set
      */
     public static void setBoolean(Object parent, OffsetField offsetField, boolean value) throws IllegalAccessException
     {
@@ -478,7 +478,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the char on
      * @param offsetField The field to reflect on
-     * @param value char value to set
+     * @param value char key to set
      */
     public static void setChar(Object parent, OffsetField offsetField, char value) throws IllegalAccessException
     {
@@ -495,7 +495,7 @@ public class ReflectionUtil
      *
      * @param parent The object to put the object on
      * @param offsetField The field to reflect on
-     * @param value object value to set
+     * @param value object key to set
      */
     public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException,AttributeTypeMismatchException
     {
@@ -586,7 +586,7 @@ public class ReflectionUtil
                     setObject(parent, field, toType.cast(child));
             } else if (toType == Float.class) {
                 if (fromType == Float.class)
-                    setObject(parent, field, ((Float) child));
+                    setObject(parent, field, child);
                 else if (fromType == float.class)
                     setObject(parent, field, new Float((float) child));
                 else if (fromType == Double.class)
@@ -611,13 +611,13 @@ public class ReflectionUtil
                 else if (fromType == Boolean.class)
                     setObject(parent, field, child);
                 else if (fromType == Integer.class)
-                    setObject(parent, field, new Boolean((((Integer) child).intValue() == 1) ? true : false));
+                    setObject(parent, field, new Boolean((((Integer) child).intValue() == 1)));
                 else if (fromType == int.class)
-                    setObject(parent, field, new Boolean(((int) child == 1) ? true : false));
+                    setObject(parent, field, new Boolean(((int) child == 1)));
                 else if (fromType == Long.class)
-                    setObject(parent, field, new Boolean(((Long) child == 1) ? true : false));
+                    setObject(parent, field, new Boolean(((Long) child == 1)));
                 else if (fromType == long.class)
-                    setObject(parent, field, new Boolean(((long) child == 1) ? true : false));
+                    setObject(parent, field, new Boolean(((long) child == 1)));
                 else if (child == null)
                     setObject(parent, field, child);
                 else
@@ -660,13 +660,13 @@ public class ReflectionUtil
                 else if (fromType == Boolean.class)
                     setBoolean(parent, field, ((Boolean) child).booleanValue());
                 else if (fromType == Integer.class)
-                    setBoolean(parent, field, (((Integer) child).intValue() == 1) ? true : false);
+                    setBoolean(parent, field, (((Integer) child).intValue() == 1));
                 else if (fromType == int.class)
-                    setBoolean(parent, field, ((int) child == 1) ? true : false);
+                    setBoolean(parent, field, ((int) child == 1));
                 else if (fromType == Long.class)
-                    setBoolean(parent, field, ((Long) child == 1) ? true : false);
+                    setBoolean(parent, field, ((Long) child == 1));
                 else if (fromType == long.class)
-                    setBoolean(parent, field, ((long) child == 1) ? true : false);
+                    setBoolean(parent, field, ((long) child == 1));
                 else if (child == null)
                     setBoolean(parent, field, false);
                 else

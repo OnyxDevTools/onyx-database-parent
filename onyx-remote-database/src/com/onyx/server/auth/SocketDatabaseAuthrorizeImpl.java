@@ -1,10 +1,10 @@
 package com.onyx.server.auth;
 
+import com.onyx.client.auth.AuthData;
+import com.onyx.client.auth.Authorize;
 import com.onyx.entity.SystemUser;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.client.auth.Authorize;
-import com.onyx.client.auth.AuthData;
 import com.onyx.util.EncryptionUtil;
 
 /**

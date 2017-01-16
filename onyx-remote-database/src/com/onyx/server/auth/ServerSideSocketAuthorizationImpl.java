@@ -1,13 +1,14 @@
 package com.onyx.server.auth;
 
+import com.onyx.client.auth.AuthData;
+import com.onyx.client.auth.Authorize;
+import com.onyx.client.auth.SocketAuthorizationFailedException;
+import com.onyx.client.auth.SocketAuthorizationImpl;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import com.onyx.client.auth.AuthData;
-import com.onyx.client.auth.Authorize;
-import com.onyx.client.auth.SocketAuthorizationImpl;
-import com.onyx.client.auth.SocketAuthorizationFailedException;
 
 /**
  * Server Socket Authorization

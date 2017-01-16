@@ -6,13 +6,13 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import entities.AllAttributeForFetch;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
-import entities.AllAttributeForFetch;
 
 import java.io.IOException;
 import java.util.Date;
@@ -25,7 +25,7 @@ import java.util.List;
 public class OrderByTest extends BaseTest
 {
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

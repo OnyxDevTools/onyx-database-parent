@@ -7,15 +7,15 @@ import com.onyx.helpers.PartitionContext;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.index.IndexController;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.*;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -248,7 +248,7 @@ public class PartitionQueryController extends PartitionContext
         }
         else
         {
-            results = temporaryDataFile.getHashMap("sortingValues");
+            results = temporaryDataFile.getScalableMap("sortingValues", this.descriptor.getIdentifier().getLoadFactor());
         }
 
         if(indexValues.size() == 0)
@@ -497,7 +497,7 @@ public class PartitionQueryController extends PartitionContext
                     EntityDescriptor oldDescriptor = context.getDescriptorForEntity(entity, oldPartitionValue);
                     IndexController previousIndexController = context.getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
-                    // Delete old index value and insert new one in new partition
+                    // Delete old index key and insert new one in new partition
                     previousIndexController.delete(((PartitionReference) referenceId).reference);
                 }
             }
@@ -552,7 +552,7 @@ public class PartitionQueryController extends PartitionContext
 
                     final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
-                    // Delete old index value and insert new one in new partition
+                    // Delete old index key and insert new one in new partition
                     newIndexController.save(indexValue, 0, newReferenceId);
                 }
 

@@ -28,7 +28,7 @@ public class TestIndexExceptions extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

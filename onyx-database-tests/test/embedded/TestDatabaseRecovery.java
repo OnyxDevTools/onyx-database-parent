@@ -67,7 +67,7 @@ public class TestDatabaseRecovery extends BaseTest
     }
 
     @Test
-    public void atestDatabaseRecovery() throws EntityException, IOException
+    public void atestDatabaseRecovery() throws IOException
     {
         this.populateTransactionData();
 
@@ -108,7 +108,7 @@ public class TestDatabaseRecovery extends BaseTest
     }
 
     @Test
-    public void btestDatabaseApplyTransactions() throws EntityException, IOException
+    public void btestDatabaseApplyTransactions() throws IOException
     {
 
         EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory();
@@ -119,10 +119,8 @@ public class TestDatabaseRecovery extends BaseTest
         PersistenceManager newManager = newFactory.getPersistenceManager();
 
         newContext.getTransactionController().applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "0.wal", transaction -> {
-            if(transaction instanceof SaveTransaction)
-                return true;
+            return transaction instanceof SaveTransaction;
 
-            return false;
         });
 
         Query existsQuery = new Query();

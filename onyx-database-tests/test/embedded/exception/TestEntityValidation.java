@@ -3,12 +3,12 @@ package embedded.exception;
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.*;
 import embedded.base.BaseTest;
+import entities.ValidateRequiredIDEntity;
+import entities.ValidationEntity;
 import entities.exception.TestValidExtendAbstract;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import entities.ValidateRequiredIDEntity;
-import entities.ValidationEntity;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -27,7 +27,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

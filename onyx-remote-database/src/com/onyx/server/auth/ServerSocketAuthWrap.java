@@ -1,13 +1,10 @@
 package com.onyx.server.auth;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.nio.channels.ServerSocketChannel;
 import com.onyx.client.auth.Authorize;
+
+import java.io.IOException;
+import java.net.*;
+import java.nio.channels.ServerSocketChannel;
 
 /**
  * Wrapper for a server socket so we may extend the functionality to include security such as authorization and SSL

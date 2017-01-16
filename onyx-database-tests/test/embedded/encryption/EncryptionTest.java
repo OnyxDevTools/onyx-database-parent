@@ -2,20 +2,18 @@ package embedded.encryption;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.util.EncryptionUtil;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
-import java.util.List;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
 
 /**
  *
@@ -33,7 +31,7 @@ public class EncryptionTest {
     }
 
     @Test
-    public void shouldDycrypt() throws GeneralSecurityException, UnsupportedEncodingException, IOException {
+    public void shouldDycrypt() throws GeneralSecurityException, IOException {
         String str = "adminadmin";
         String encryptedText = EncryptionUtil.encrypt(str); 
         String decryptedText = EncryptionUtil.decrypt(encryptedText);
@@ -43,7 +41,7 @@ public class EncryptionTest {
     }
     
     @Test
-    public void shouldFail() throws GeneralSecurityException, UnsupportedEncodingException, IOException {
+    public void shouldFail() throws GeneralSecurityException, IOException {
         String str = "adminadmin";
         String str2 = "adminpassword"; 
         String decryptedText = EncryptionUtil.decrypt(EncryptionUtil.encrypt(str2));
@@ -53,7 +51,7 @@ public class EncryptionTest {
     
     
     @Test
-    public void shouldWriteToFile() throws GeneralSecurityException, UnsupportedEncodingException, IOException {
+    public void shouldWriteToFile() throws GeneralSecurityException, IOException {
        String textToSave = "asdfasdf";
        
        //Create a temporary file

@@ -1,8 +1,8 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.persistence.context.SchemaContext;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
@@ -75,6 +75,22 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
     public void delete()
     {
 
+    }
+
+    /**
+     * Close the data file
+     *
+     * @return
+     */
+    public synchronized boolean close() {
+        this.slices.values().forEach(file ->
+        {
+            file.buffer.clear();
+            file.buffer = null;
+        });
+
+        this.slices.clear();
+        return true;
     }
 }
 

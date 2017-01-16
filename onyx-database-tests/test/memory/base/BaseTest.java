@@ -3,10 +3,10 @@ package memory.base;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
+import com.onyx.persistence.manager.PersistenceManager;
 import org.junit.AfterClass;
 
 import java.io.File;
@@ -43,7 +43,7 @@ public class BaseTest {
         }
     }
 
-    protected void shutdown() throws EntityException, IOException {
+    protected void shutdown() throws IOException {
         if (factory != null)
             factory.close();
     }

@@ -1,22 +1,22 @@
 package remote.queries;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import entities.PerformanceEntity;
 import junit.framework.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import remote.base.RemotePrePopulatedForSelectPerformanceTest;
-import entities.PerformanceEntity;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 1/14/15.

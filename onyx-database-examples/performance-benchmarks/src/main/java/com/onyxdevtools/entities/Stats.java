@@ -27,7 +27,7 @@ public class Stats extends ManagedEntity implements IManagedEntity
         this.statId = id;
     }
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 2)
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     protected long statId;
@@ -35,21 +35,23 @@ public class Stats extends ManagedEntity implements IManagedEntity
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "stats",
-            inverseClass = Player.class
+            inverseClass = Player.class,
+            loadFactor = 1
     )
     @ManyToOne(targetEntity = Player.class)
     protected Player player;
 
     @Relationship(
             type = RelationshipType.ONE_TO_ONE,
-            inverseClass = Season.class
+            inverseClass = Season.class,
+            loadFactor = 1
     )
     @OneToOne
     protected Season season;
 
     @Attribute
     @Column
-    @com.onyx.persistence.annotations.Index
+    @com.onyx.persistence.annotations.Index(loadFactor = 2)
     protected int rushingYards;
 
     @Attribute

@@ -1,24 +1,27 @@
 package com.onyx.persistence.collections;
 
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
-import com.onyx.buffer.BufferStream;
-import com.onyx.buffer.BufferStreamable;
 
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * LazyQueryCollection is used to return query results that are lazily instantiated.
@@ -105,7 +108,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     }
 
     /**
-     * Boolean value indicating whether the list is empty
+     * Boolean key indicating whether the list is empty
      *
      * @author Tim Osborn
      * @since 1.0.0

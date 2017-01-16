@@ -1,20 +1,20 @@
 package remote.queries;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import entities.AllAttributeForFetch;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemotePrePopulatedBaseTest;
-import entities.AllAttributeForFetch;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 1/10/15.

@@ -35,7 +35,7 @@ public abstract class AbstractDemo {
     }
 
     /**
-     * Helper method to verify 2 objects have the same value
+     * Helper method to verify 2 objects have the same key
      *
      * @param message Message to display if the assert fails
      * @param comparison1 First object to compare

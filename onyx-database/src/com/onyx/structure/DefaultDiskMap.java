@@ -6,7 +6,8 @@ import com.onyx.structure.node.Header;
 import com.onyx.structure.node.RecordReference;
 import com.onyx.structure.store.Store;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -20,38 +21,22 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         super(fileStore, header);
     }
 
-    public DefaultDiskMap(Store fileStore, Header header, boolean inMemory)
+    /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param headless
+     */
+    public DefaultDiskMap(Store fileStore, Header header, boolean headless)
     {
-        super(fileStore, header);
-        if(inMemory)
-        {
-            nodeCache = Collections.synchronizedMap(new WeakHashMap());
-            recordCache = Collections.synchronizedMap(new WeakHashMap());
-            keyCache = Collections.synchronizedMap(new WeakHashMap());
-        }
-
+        super(fileStore, header, headless);
     }
 
     @Override
     public int size()
     {
         return (int) header.recordCount.get();
-    }
-
-    public long longSize()
-    {
-        return header.recordCount.get();
-    }
-
-    @Override
-    public Store getFileStore() {
-        return this.fileStore;
-    }
-
-    @Override
-    public boolean isEmpty()
-    {
-        return (fileStore.getFileSize() == 0);
     }
 
     /**
@@ -74,7 +59,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             if(ref != null)
                 return ref;
 
-            final BitMapNode node = this.seek(hash(key), false, hashDigits);
+            final BitMapNode node = this.seek(false, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -91,7 +76,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Get value with record id
+     * Get key with record id
      *
      * @param recordId
      * @return
@@ -107,7 +92,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Get Map representation of value object
+     * Get Map representation of key object
      *
      * @param recordId Record reference within storage structure
      *
@@ -142,7 +127,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         {
             readWriteLock.lockReadLevel(hashDigits[0]);
 
-            final BitMapNode node = this.seek(hash(key), false, hashDigits);
+            final BitMapNode node = this.seek(false, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -184,7 +169,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
             readWriteLock.lockReadLevel(hashDigits[0]);
 
-            final BitMapNode node = this.seek(hash, false, hashDigits);
+            final BitMapNode node = this.seek(false, hashDigits);
             if (node != null && node.next[hashDigits[getRecordReferenceIndex()] ] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -214,7 +199,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
         try
         {
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -252,7 +237,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
 
-            final BitMapNode node = this.seek(hash(key), true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
             if (node != null && node.next[hashDigit] > 0)
             {
                 final RecordReference[] references = this.getRecordReference(node, key, hashDigits);
@@ -314,7 +299,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Get or default, gets the value of the.  If it is null return default value
+     * Get or default, gets the key of the.  If it is null return default key
      *
      * @param key
      * @param defaultValue
@@ -361,7 +346,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Remove object only if the value is equal to the one sent in
+     * Remove object only if the key is equal to the one sent in
      *
      * @param key
      * @param value
@@ -392,7 +377,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Replace only if the oldvalue != new value
+     * Replace only if the oldvalue != new key
      *
      * @param key
      * @param oldValue
@@ -457,7 +442,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
             V value = null;
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -504,7 +489,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         try
         {
             V value = null;
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -528,7 +513,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Call handler to compute what value yous a gonna put
+     * Call handler to compute what key yous a gonna put
      *
      * @param key
      * @param remappingFunction
@@ -551,7 +536,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         {
 
 
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -579,7 +564,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     }
 
     /**
-     * Merge the value.  Not sure, but calls a different fancy callback
+     * Merge the key.  Not sure, but calls a different fancy callback
      *
      * @param key
      * @param value
@@ -599,7 +584,7 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
 
         try
         {
-            final BitMapNode node = this.seek(hash, true, hashDigits);
+            final BitMapNode node = this.seek(true, hashDigits);
 
             if (node != null && node.next[hashDigit] > 0)
             {
@@ -625,5 +610,4 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
         }
         return value;
     }
-
 }

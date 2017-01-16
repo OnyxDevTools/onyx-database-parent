@@ -1,9 +1,9 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.structure.serializer.Serializers;
-import com.onyx.persistence.context.SchemaContext;
 
 /**
  * Created by tosborn on 3/27/15.
@@ -29,7 +29,7 @@ public interface Store {
     int write(ObjectBuffer serializable, long position);
 
     /**
-     * Read a buffer at position for a size
+     * Read a buffer at position for a longSize
      *
      * @param position
      * @param size
@@ -45,6 +45,16 @@ public interface Store {
      * @return
      */
     Object read(long position, int size, Class type);
+
+    /**
+     * Write a serializable object
+     *
+     * @param position
+     * @param size
+     * @param object
+     * @return
+     */
+    Object read(long position, int size, ObjectSerializable object);
 
     /**
      * Write a serializable object
@@ -80,7 +90,7 @@ public interface Store {
     Serializers getSerializers();
 
     /**
-     * Getter for file size
+     * Getter for file longSize
      *
      * @return
      */

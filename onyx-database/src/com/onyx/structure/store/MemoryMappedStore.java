@@ -1,9 +1,9 @@
 package com.onyx.structure.store;
 
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
 
 import java.io.FileNotFoundException;
@@ -12,7 +12,6 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -128,7 +127,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         if (endBufLocation > SLICE_SIZE) {
             final FileSlice overflowSlice = getBuffer(position + bytesToWrite.length);
 
-            byte[] firstSlice = new byte[(int) (SLICE_SIZE - bufLocation)];
+            byte[] firstSlice = new byte[SLICE_SIZE - bufLocation];
             System.arraycopy(bytesToWrite, 0, firstSlice, 0, firstSlice.length);
 
             byte[] secondSlice = new byte[endBufLocation - bufLocation - firstSlice.length];
@@ -151,13 +150,13 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             } finally {
                 overflowSlice.lock.unlock();
             }
-            return (int) byteBuffer.position();
+            return byteBuffer.position();
         } else {
             slice.lock.lock();
             try {
                 slice.buffer.position(getBufferLocation(position));
                 slice.buffer.put(bytesToWrite);
-                return (int) byteBuffer.position();
+                return byteBuffer.position();
             } finally {
                 slice.lock.unlock();
             }
@@ -182,7 +181,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         if (endBufLocation >= SLICE_SIZE) {
             final FileSlice overflowSlice = getBuffer(position + buffer.limit());
 
-            byte[] firstSlice = new byte[(int) (SLICE_SIZE - bufLocation)];
+            byte[] firstSlice = new byte[SLICE_SIZE - bufLocation];
             byte[] secondSlice = new byte[endBufLocation - bufLocation - firstSlice.length];
 
             slice.lock.lock();
@@ -241,6 +240,32 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
 
         return new ObjectBuffer(buffer, serializers);
 
+    }
+
+    /**
+     * Read a from the store and put it into the serializable object that is already instantiated
+     *
+     * @param position position to read from the store
+     * @param size how many bytes to read
+     * @param object object to map the results to
+     * @return the object you sent in
+     */
+    public Object read(long position, int size, ObjectSerializable object)
+    {
+        if(position >= fileSize.get())
+            return null;
+
+        final ObjectBuffer buffer = read(position, size);
+
+        try
+        {
+            object.readObject(buffer);
+            return object;
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**
@@ -410,12 +435,12 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             if (buffer instanceof MappedByteBuffer) {
                 ((MappedByteBuffer) buffer).force(); // Flush the contents of the buffer
                 try {
-                    Method cleanerMethod = buffer.getClass().getMethod("cleaner", new Class[0]);
+                    Method cleanerMethod = buffer.getClass().getMethod("cleaner");
                     if (cleanerMethod != null) {
                         cleanerMethod.setAccessible(true);
                         Object cleaner = cleanerMethod.invoke(buffer);
                         if (cleaner != null) {
-                            Method clearMethod = cleaner.getClass().getMethod("clean", new Class[0]);
+                            Method clearMethod = cleaner.getClass().getMethod("clean");
                             if (clearMethod != null) {
                                 clearMethod.invoke(cleaner);
                             }

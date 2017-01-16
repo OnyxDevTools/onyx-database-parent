@@ -22,24 +22,36 @@ public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
         this.name = descriptor.getName();
         id = entity.getName() + descriptor.getName();
         type = descriptor.getType().getName();
+        this.loadFactor = descriptor.getLoadFactor();
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
     protected int primaryKey;
 
     @Attribute
-    @Index
+    @Index(loadFactor = 1)
     protected String id;
 
     @Attribute
     protected String name;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "indexes", inverseClass = SystemEntity.class)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "indexes", inverseClass = SystemEntity.class, loadFactor = 1)
     protected SystemEntity entity;
 
     @Attribute
     protected String type;
+
+    @Attribute
+    protected int loadFactor;
+
+    public int getLoadFactor() {
+        return loadFactor;
+    }
+
+    public void setLoadFactor(int loadFactor) {
+        this.loadFactor = loadFactor;
+    }
 
     public String getId()
     {

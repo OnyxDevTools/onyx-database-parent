@@ -250,10 +250,10 @@ public class Base64 {
                 // the data.
                 //
                 // If any of the next four bytes of input are non-data
-                // (whitespace, etc.), value will end up negative.  (All
+                // (whitespace, etc.), key will end up negative.  (All
                 // the non-data values in decode are small negative
                 // numbers, so shifting any of them up and or'ing them
-                // together will result in a value with its top bit set.)
+                // together will result in a key with its top bit set.)
                 //
                 // You can remove this whole block and the output should
                 // be the same, just slower.

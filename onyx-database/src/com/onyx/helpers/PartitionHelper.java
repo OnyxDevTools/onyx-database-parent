@@ -64,7 +64,7 @@ public class PartitionHelper
     }
 
     /**
-     * Helper for getting the partition value from an entity
+     * Helper for getting the partition key from an entity
      *
      * @param entity
      * @param context
@@ -108,7 +108,7 @@ public class PartitionHelper
     }
 
     /**
-     * Recursive call to get and set the partition value from the query criteria
+     * Recursive call to get and set the partition key from the query criteria
      *
      * @param criteria
      * @param query
@@ -149,7 +149,7 @@ public class PartitionHelper
     }
 
     /**
-     * Retrieves the index value from the entity using reflection
+     * Retrieves the index key from the entity using reflection
      *
      * @param entity
      * @return
@@ -163,7 +163,7 @@ public class PartitionHelper
             if(descriptor.getPartition() == null || value == null)
                 return;
 
-            // Use reflection to get the value
+            // Use reflection to get the key
             final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getPartition().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
@@ -172,9 +172,9 @@ public class PartitionHelper
             if(value instanceof String)
             {
                 if (field.getType() == long.class)
-                    field.set(entity, (long)Long.valueOf((String)value));
+                    field.set(entity, Long.valueOf((String)value));
                 else if (field.getType() == int.class)
-                    field.set(entity, (int)Integer.valueOf((String)value));
+                    field.set(entity, Integer.valueOf((String)value));
                 else if (field.getType() == Long.class)
                     field.set(entity, Long.valueOf((String)value));
                 else if (field.getType() == Integer.class)
@@ -182,7 +182,7 @@ public class PartitionHelper
                 else if (field.getType() == Double.class)
                     field.set(entity, Double.valueOf((String)value));
                 else if (field.getType() == double.class)
-                    field.set(entity, (double)Double.valueOf((String)value));
+                    field.set(entity, Double.valueOf((String)value));
                 else if (field.getType() == Date.class)
                 {
                     DateFormat format = new SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH);
@@ -198,25 +198,25 @@ public class PartitionHelper
             else
             {
                 if (field.getType() == long.class)
-                    field.set(entity, (long) value);
+                    field.set(entity, value);
                 else if (field.getType() == int.class && value != null && value.getClass() == Long.class)
                     field.set(entity, ((Long) value).intValue());
                 else if (field.getType() == int.class)
-                    field.set(entity, (int) value);
+                    field.set(entity, value);
                 else if (field.getType() == Long.class && value instanceof Integer)
                     field.set(entity, ((Integer) value).longValue());
                 else if (field.getType() == Long.class)
-                    field.set(entity, (Long) value);
+                    field.set(entity, value);
                 else if (field.getType() == Integer.class && value != null && value.getClass() == Long.class)
                     field.set(entity, ((Long) value).intValue());
                 else if (field.getType() == Integer.class)
-                    field.set(entity, (Integer) value);
+                    field.set(entity, value);
                 else if (field.getType() == Double.class)
-                    field.set(entity, (Double) value);
+                    field.set(entity, value);
                 else if (field.getType() == double.class)
-                    field.set(entity, (double) value);
+                    field.set(entity, value);
                 else if (field.getType() == Date.class)
-                    field.set(entity, (Date) value);
+                    field.set(entity, value);
                 else
                     field.set(entity, field.getType().cast(value));
             }

@@ -4,6 +4,7 @@ import category.EmbeddedDatabaseTests;
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -32,6 +33,7 @@ public class AbstractTest
     }
 
     @Test
+    @Ignore
     public void testInit()
     {
         MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
@@ -40,6 +42,7 @@ public class AbstractTest
     }
 
     @Test
+    @Ignore
     public void testInitMultiple()
     {
         MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);

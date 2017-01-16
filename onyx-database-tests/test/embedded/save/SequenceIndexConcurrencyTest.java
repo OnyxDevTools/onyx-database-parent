@@ -6,18 +6,15 @@ import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
 import embedded.base.BaseTest;
+import entities.InheritedLongAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.InheritedLongAttributeEntity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -33,7 +30,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }
@@ -60,22 +57,21 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
     @Test
     public void aConcurrencySequencePerformanceTest() throws EntityException, InterruptedException
     {
-        SecureRandom random = new SecureRandom();
-        long time = System.currentTimeMillis();
-
-        List<Future> threads = new ArrayList<>();
-
         ExecutorService pool = Executors.newFixedThreadPool(10);
-
         List<InheritedLongAttributeEntity> entities = new ArrayList<>();
 
-        for (int i = 0; i <= 100000; i++)
+        long time = System.currentTimeMillis();
+
+        int recordsToInsert = 100000;
+        int batch = 5000;
+        CountDownLatch recordsToGet = new CountDownLatch((recordsToInsert / batch) + 1);
+        for (int i = 0; i <= recordsToInsert; i++)
         {
             final InheritedLongAttributeEntity entity = new InheritedLongAttributeEntity();
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -84,46 +80,29 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
 
             entities.add(entity);
 
-            if ((i % 5000) == 0)
+            if ((i % batch) == 0)
             {
                 List<IManagedEntity> tmpList = new ArrayList<>(entities);
                 entities.removeAll(entities);
-                Runnable runnable = new Runnable() {
-                    @Override
-                    public void run()
+                Runnable runnable = () -> {
+                    try
                     {
-                        try
-                        {
-                            manager.saveEntities(tmpList);
-                        } catch (EntityException e)
-                        {
-                            e.printStackTrace();
-                        }
+                        manager.saveEntities(tmpList);
+                    } catch (EntityException e)
+                    {
+                        e.printStackTrace();
                     }
+                    recordsToGet.countDown();
                 };
-                threads.add(pool.submit(runnable));
+                pool.execute(runnable);
             }
 
         }
 
-        for (Future future : threads)
-        {
-            try
-            {
-                future.get();
-            } catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            } catch (ExecutionException e)
-            {
-                e.printStackTrace();
-            }
-        }
+        recordsToGet.await();
 
         long after = System.currentTimeMillis();
-
         System.out.println("Took " + (after - time) + " milliseconds");
-
         Assert.assertTrue((after - time) < 3500);
 
         pool.shutdownNow();
@@ -137,7 +116,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -162,7 +141,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -238,7 +217,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -263,7 +242,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -335,7 +314,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -361,7 +340,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -428,7 +407,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -528,7 +507,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -556,7 +535,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -621,7 +600,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -752,7 +731,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -832,7 +811,7 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;

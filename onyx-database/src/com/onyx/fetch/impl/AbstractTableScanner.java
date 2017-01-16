@@ -3,13 +3,13 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -54,14 +54,14 @@ public abstract class AbstractTableScanner extends PartitionContext
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);
-        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getName());
+        records = (DiskMap)dataFile.getScalableMap(descriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
 
         this.temporaryDataFile = temporaryDataFile;
 
         // Ensure it is not a relationship
         if(!criteria.getAttribute().contains("."))
         {
-            // Get the reflection field to grab the value to compare
+            // Get the reflection field to grab the key to compare
             fieldToGrab = ReflectionUtil.getOffsetField(classToScan, criteria.getAttribute());
         }
 

@@ -1,10 +1,10 @@
 package com.onyxdevtools.benchmark;
 
+import com.onyxdevtools.benchmark.base.BenchmarkTest;
 import com.onyxdevtools.entities.League;
 import com.onyxdevtools.entities.Player;
 import com.onyxdevtools.entities.Stats;
 import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
-import com.onyxdevtools.benchmark.base.BenchmarkTest;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;

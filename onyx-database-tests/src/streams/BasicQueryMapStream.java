@@ -3,7 +3,6 @@ package streams;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.stream.QueryMapStream;
-import entities.identifiers.ImmutableSequenceIdentifierEntity;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 
 import java.util.Map;

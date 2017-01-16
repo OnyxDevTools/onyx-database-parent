@@ -107,7 +107,7 @@ final public class WebPersistenceEndpoint
             PartitionHelper.setPartitionValueForEntity(entity, request.getPartitionId(), context);
         }
 
-        entity = (IManagedEntity)persistenceManager.find(entity);
+        entity = persistenceManager.find(entity);
         return entity;
     }
 
@@ -125,7 +125,7 @@ final public class WebPersistenceEndpoint
         Class clazz = Class.forName(request.getType());
         long partitionId = Long.valueOf(request.getPartitionId());
 
-        return (IManagedEntity)persistenceManager.findByIdWithPartitionId(clazz, request.getId(), partitionId);
+        return persistenceManager.findByIdWithPartitionId(clazz, request.getId(), partitionId);
     }
 
 
@@ -220,7 +220,7 @@ final public class WebPersistenceEndpoint
 
         try
         {
-            entities = objectMapper.readValue((String)request.getEntities(), javaType);
+            entities = objectMapper.readValue(request.getEntities(), javaType);
         } catch (IOException e)
         {
             throw new EntityClassNotFoundException(EntityClassNotFoundException.UNKNOWN_EXCEPTION);
@@ -245,7 +245,7 @@ final public class WebPersistenceEndpoint
 
         try
         {
-            entities = objectMapper.readValue((String)request.getEntities(), javaType);
+            entities = objectMapper.readValue(request.getEntities(), javaType);
         } catch (IOException e)
         {
             throw new EntityClassNotFoundException(EntityClassNotFoundException.UNKNOWN_EXCEPTION);

@@ -1,26 +1,22 @@
 package com.onyx.structure.base;
 
 import com.onyx.exception.AttributeMissingException;
-
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.structure.node.BitMapNode;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.node.Record;
 import com.onyx.structure.node.RecordReference;
 import com.onyx.structure.store.Store;
-
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
-import java.util.Collections;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 
 /**
  Created by timothy.osborn on 3/27/15.
  */
-public class AbstractCachedBitMap extends AbstractBitMap
+abstract class AbstractCachedBitMap<K,V> extends AbstractBitMap<K,V>
 {
     protected Map<Long, BitMapNode> nodeCache;
     protected Map<Long, Record> recordCache;
@@ -35,18 +31,24 @@ public class AbstractCachedBitMap extends AbstractBitMap
     public AbstractCachedBitMap(final Store fileStore, final Header header)
     {
         super(fileStore, header);
-        nodeCache = Collections.synchronizedMap(new WeakHashMap());
+        nodeCache = new ConcurrentWeakHashMap<>();
+        recordCache = new ConcurrentWeakHashMap<>();
+        keyCache = new ConcurrentWeakHashMap<>();
+    }
 
-        if(supportsJavaSystemNotifications())
-        {
-            recordCache = Collections.synchronizedMap(new CacheMap());
-        }
-        else
-        {
-            recordCache = Collections.synchronizedMap(new WeakHashMap<>());
-        }
-
-        keyCache = Collections.synchronizedMap(new WeakHashMap());
+    /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param headless
+     */
+    public AbstractCachedBitMap(Store fileStore, Header header, boolean headless)
+    {
+        super(fileStore, header, headless);
+        nodeCache = new ConcurrentWeakHashMap<>();
+        recordCache = new ConcurrentWeakHashMap<>();
+        keyCache = new ConcurrentWeakHashMap<>();
     }
 
     /**
@@ -149,7 +151,7 @@ public class AbstractCachedBitMap extends AbstractBitMap
 
         nodeCache.remove(node.position);
         recordCache.remove(recordReference.position);
-        keyCache.remove((Object) key);
+        keyCache.remove(key);
     }
 
     /**
@@ -193,8 +195,8 @@ public class AbstractCachedBitMap extends AbstractBitMap
      */
     @Override public void updateBitmapNodeReference(final BitMapNode node, final int index, final long value)
     {
-        super.updateBitmapNodeReference(node, index, value);
         nodeCache.put(node.position, node);
+        super.updateBitmapNodeReference(node, index, value);
     }
 
     /**
@@ -309,7 +311,7 @@ public class AbstractCachedBitMap extends AbstractBitMap
     }
 
     /**
-     * Get Map representation of value object.
+     * Get Map representation of key object.
      *
      * @param   attribute  Attribute name to fetch
      * @param   recordId   Record reference within storage structure
@@ -347,19 +349,4 @@ public class AbstractCachedBitMap extends AbstractBitMap
         return null;
     }
 
-    /**
-     * The purpose of this method is to detect whether the javax management is available.  This will throw an exception if
-     * the client is on an android device.  If that is the case, we will use alternative caching mechanism
-     *
-     * @return whether javax.management is supported
-     */
-    protected static boolean supportsJavaSystemNotifications()
-    {
-        try {
-            Class.forName("javax.management.Notification");
-            return true;
-        } catch(ClassNotFoundException e) {
-            return false;
-        }
-    }
 }

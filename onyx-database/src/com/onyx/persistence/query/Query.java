@@ -3,10 +3,10 @@ package com.onyx.persistence.query;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.structure.serializer.ObjectSerializable;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -30,7 +30,7 @@ import java.util.List;
  *
  *   PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
  *
- *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+ *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
  *   query.setFirstRow(100);
  *   query.setMaxResults(1000);
  *
@@ -89,7 +89,7 @@ public class Query implements ObjectSerializable, Serializable
      * <pre>
      * <code>
      *
-     *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+     *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
      *   List results = manager.executeQuery(query);
      *
      * </code>
@@ -113,7 +113,7 @@ public class Query implements ObjectSerializable, Serializable
      * <pre>
      * <code>
      *
-     *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value", new QueryOrder("firstName"));
+     *   Query query = new Query(MyEntity.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key", new QueryOrder("firstName"));
      *   List results = manager.executeQuery(query);
      *
      * </code>
@@ -229,7 +229,7 @@ public class Query implements ObjectSerializable, Serializable
      * @param criteria   Query filter criteria
      *
      * <code>
-     *   Query query = new Query(MyEntity.class, Arrays.asList("name", "description"), new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"));
+     *   Query query = new Query(MyEntity.class, Arrays.asList("name", "description"), new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"));
      *   List results = manager.executeQuery(query);
      * </code>
      */
@@ -248,7 +248,7 @@ public class Query implements ObjectSerializable, Serializable
      * @param updates    Array of attribute update instructions
      *
      * <code>
-     *   Query query = new Query(Person.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"), new AttributeUpdate("name", "Jim");
+     *   Query query = new Query(Person.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"), new AttributeUpdate("name", "Jim");
      *   List results = manager.executeUpdate(query);
      * </code>
      */
@@ -264,7 +264,7 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      *
      * <code>
-     *   Query query = new Query(Person.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "value"), Arrays.asList(new AttributeUpdate("name", "Jim"));
+     *   Query query = new Query(Person.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"), Arrays.asList(new AttributeUpdate("name", "Jim"));
      *   List results = manager.executeUpdate(query);
      * </code>
      *
@@ -291,7 +291,7 @@ public class Query implements ObjectSerializable, Serializable
      *   Query query = new Query(Person.class,
      *                           Arrays.asList("name"),
      *                           new QueryCriteria("attributeName"),
-     *                           QueryCriteriaOperator.EQUAL, "value"),
+     *                           QueryCriteriaOperator.EQUAL, "key"),
      *                           Arrays.asList(new QueryOrder("name", true));
      *   List results = manager.executeQuery(query);
      * </code>
@@ -315,7 +315,7 @@ public class Query implements ObjectSerializable, Serializable
      *   Query query = new Query(Person.class,
      *                           Arrays.asList("name"),
      *                           new QueryCriteria("attributeName"),
-     *                           QueryCriteriaOperator.EQUAL, "value"),
+     *                           QueryCriteriaOperator.EQUAL, "key"),
      *                           Arrays.asList(new QueryOrder("name", true));
      *   List results = manager.executeQuery(query);
      * </code>
@@ -510,7 +510,7 @@ public class Query implements ObjectSerializable, Serializable
     }
 
     /**
-     * Get the partition value specified in the query
+     * Get the partition key specified in the query
      *
      * @since 1.0.0
      * @return Partition Value

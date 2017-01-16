@@ -6,17 +6,20 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipReference;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -77,7 +80,7 @@ public class AbstractRelationshipController extends PartitionContext
                 || defaultInverseRelationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY )
         {
             // Get the Data Map that corresponds to the inverse relationship
-            final Map<Object, Set<Object>> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Set<Object>> relationshipMap = getDataFileForEntity(childEntity).getSkipListMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
 
             // Synchronized since we are saving the entire set
             synchronized (relationshipMap)
@@ -112,7 +115,7 @@ public class AbstractRelationshipController extends PartitionContext
         // It is a to One Relationship
         else
         {
-            final Map<Object, Object> relationshipMap = getDataFileForEntity(childEntity).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Object> relationshipMap = getDataFileForEntity(childEntity).getSkipListMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
             relationshipMap.put(childIdentifier, parentIdentifier);
 
             setRelationshipValue(defaultInverseRelationshipDescriptor, childEntity, parentEntity);
@@ -136,7 +139,7 @@ public class AbstractRelationshipController extends PartitionContext
                 || defaultInverseRelationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY )
         {
             // Get the Data Map that corresponds to the inverse relationship
-            final Map<Object, Set<Object>> relationshipMap = getDataFileWithPartitionId(childIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Set<Object>> relationshipMap = getDataFileWithPartitionId(childIdentifier.partitionId).getSkipListMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
 
             // Synchronized since we are saving the entire set
             synchronized (relationshipMap)
@@ -157,7 +160,7 @@ public class AbstractRelationshipController extends PartitionContext
         // It is a to One Relationship
         else
         {
-            final Map<Object, Object> relationshipMap = getDataFileWithPartitionId(parentIdentifier.partitionId).getHashMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
+            final Map<Object, Object> relationshipMap = getDataFileWithPartitionId(parentIdentifier.partitionId).getSkipListMap(defaultDescriptor.getClazz().getName() + defaultInverseRelationshipDescriptor.getName());
             relationshipMap.remove(childIdentifier);
         }
     }

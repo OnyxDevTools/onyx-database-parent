@@ -1,23 +1,23 @@
 package remote.list;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import entities.AllAttributeEntity;
+import entities.AllAttributeForFetch;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.AllAttributeEntity;
-import entities.AllAttributeForFetch;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/8/14.
@@ -26,7 +26,7 @@ import category.RemoteServerTests;
 public class NotInTest extends RemoteBaseTest
 {
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

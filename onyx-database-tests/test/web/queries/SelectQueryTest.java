@@ -6,11 +6,11 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import entities.AllAttributeForFetch;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.PrePopulatedDatabaseTest;
-import entities.AllAttributeForFetch;
 
 import java.util.Arrays;
 import java.util.List;

@@ -1,10 +1,10 @@
 package embedded;
 
+import com.onyx.buffer.BufferStream;
 import com.onyx.exception.BufferingException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.buffer.BufferStream;
 import entities.AllAttributeEntity;
 import entities.SimpleEntity;
 import entities.index.StringIdentifierEntityIndex;
@@ -26,17 +26,17 @@ public class BufferStreamTest {
     @Test
     public void testSerializePrimitive() throws BufferingException {
         // int
-        ByteBuffer buffer = serialize((int) 1);
+        ByteBuffer buffer = serialize(1);
         int value = (int) deserialize(buffer);
         assert value == 1;
 
         // long
-        buffer = serialize((long) 2l);
+        buffer = serialize(2l);
         assert (long) deserialize(buffer) == 2l;
 
         // boolean
-        buffer = serialize((boolean) true);
-        assert (boolean) deserialize(buffer) == (boolean) true;
+        buffer = serialize(true);
+        assert (boolean) deserialize(buffer) == true;
 
         // short
         buffer = serialize((short) 34);
@@ -47,16 +47,16 @@ public class BufferStreamTest {
         assert (byte) deserialize(buffer) == (byte) 3;
 
         // float
-        buffer = serialize((float) 3.3f);
-        assert (float) deserialize(buffer) == (float) 3.3f;
+        buffer = serialize(3.3f);
+        assert (float) deserialize(buffer) == 3.3f;
 
         // double
-        buffer = serialize((double) 3.33d);
-        assert (double) deserialize(buffer) == (double) 3.33d;
+        buffer = serialize(3.33d);
+        assert (double) deserialize(buffer) == 3.33d;
 
         // char
-        buffer = serialize((char) 'C');
-        assert (char) deserialize(buffer) == (char) 'C';
+        buffer = serialize('C');
+        assert (char) deserialize(buffer) == 'C';
 
     }
 
@@ -216,7 +216,7 @@ public class BufferStreamTest {
         assert (long) other.get(4) == 6l;
         assert (double) other.get(6) == 22.2;
         assert (float) other.get(3) == 23.3f;
-        assert (boolean) other.get(5) == (boolean) true;
+        assert (boolean) other.get(5) == true;
         assert (short) other.get(9) == (short) 23;
         assert (byte) other.get(99) == (byte) 32;
         assert (char) other.get(87) == 'C';

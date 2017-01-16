@@ -21,6 +21,35 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
     protected CascadePolicy cascadePolicy;
     protected EntityDescriptor entityDescriptor;
 
+    protected byte loadFactor = 1;
+
+    /**
+     * This method is to determine what scale the underlying structure should be.  The values are from 1-10.
+     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     * to change.  Always plan for scale when designing your data model.
+     *
+     * @param loadFactor Value from 1-10.
+     * @since 1.2.0
+     */
+    public void setLoadFactor(byte loadFactor) {
+        this.loadFactor = loadFactor;
+    }
+
+    /**
+     * Getter for the load factor
+     *
+     * @return The values are from 1-10.
+     * <p>
+     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     * to change.  Always plan for scale when designing your data model.
+     * @since 1.2.0
+     */
+    public byte getLoadFactor() {
+        return this.loadFactor;
+    }
+
     public RelationshipType getRelationshipType()
     {
         return relationshipType;
@@ -128,7 +157,8 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
                         && ((RelationshipDescriptor) val).getName().equals(getName())
                         && ((RelationshipDescriptor) val).getInverseClass().getName().equals(getInverseClass().getName())
                         && ((RelationshipDescriptor) val).getInverse().equals(getInverse())
-                        && entityDescriptor.getPartition().getPartitionValue().equals(comparison.getEntityDescriptor().getPartition().getPartitionValue()));
+                        && entityDescriptor.getPartition().getPartitionValue().equals(comparison.getEntityDescriptor().getPartition().getPartitionValue())
+                        && comparison.loadFactor == this.loadFactor);
             }
             else if(entityDescriptor.getPartition() != null)
             {
@@ -142,7 +172,8 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
             return (((RelationshipDescriptor) val).getParentClass().getName().equals(getParentClass().getName())
             && ((RelationshipDescriptor) val).getName().equals(getName())
             && ((RelationshipDescriptor) val).getInverseClass().getName().equals(getInverseClass().getName())
-            && ((RelationshipDescriptor) val).getInverse().equals(getInverse()));
+            && ((RelationshipDescriptor) val).getInverse().equals(getInverse())
+            && comparison.loadFactor == this.loadFactor);
         }
 
         return false;

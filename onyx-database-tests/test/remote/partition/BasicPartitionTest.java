@@ -1,14 +1,14 @@
 package remote.partition;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.NoResultsException;
+import entities.partition.BasicPartitionEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.partition.BasicPartitionEntity;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 2/12/15.

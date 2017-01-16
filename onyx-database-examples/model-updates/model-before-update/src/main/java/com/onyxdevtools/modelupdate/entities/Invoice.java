@@ -5,7 +5,6 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.Date;
-import java.util.List;
 
 /**
  * Created by tosborn1 on 5/6/16.

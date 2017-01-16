@@ -1,15 +1,15 @@
 package embedded;
 
+import com.onyx.buffer.BufferStream;
 import com.onyx.request.pojo.RequestEndpoint;
 import com.onyx.request.pojo.RequestToken;
 import com.onyx.request.pojo.RequestTokenType;
-import com.onyx.buffer.BufferStream;
+import entities.AllAttributeEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
-import entities.AllAttributeEntity;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -34,7 +34,7 @@ public class SerializationTest extends RemoteBaseTest {
         entity.id = new BigInteger(130, random).toString(32);
         entity.longValue = 4l;
         entity.longPrimitive = 3l;
-        entity.stringValue = "STring value";
+        entity.stringValue = "STring key";
         entity.dateValue = new Date(1483736263743l);
         entity.doublePrimitive = 342.23;
         entity.doubleValue = 232.2;
@@ -88,7 +88,7 @@ public class SerializationTest extends RemoteBaseTest {
                 entity.id = new BigInteger(130, random).toString(32);
                 entity.longValue = 4l;
                 entity.longPrimitive = 3l;
-                entity.stringValue = "STring value";
+                entity.stringValue = "STring key";
                 entity.dateValue = new Date(1483736263743l);
                 entity.doublePrimitive = 342.23;
                 entity.doubleValue = 232.2;

@@ -2,15 +2,14 @@ package embedded.delete;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
 import embedded.base.BaseTest;
+import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -27,13 +26,13 @@ import static org.junit.Assert.fail;
 public class DeleteSequenceIndexEntityTest extends BaseTest
 {
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

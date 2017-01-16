@@ -1,15 +1,9 @@
 package com.onyx.server;
 
 import com.onyx.endpoint.ServerEndpoint;
-import com.onyx.request.pojo.*;
+import com.onyx.request.pojo.RequestToken;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Created by timothy.osborn on 4/22/15.

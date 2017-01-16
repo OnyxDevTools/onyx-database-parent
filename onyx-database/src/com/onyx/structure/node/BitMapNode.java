@@ -14,13 +14,14 @@ public class BitMapNode implements ObjectSerializable, Serializable
 {
     public static final int DEFAULT_BITMAP_ITERATIONS = 10;
 
-    public long[] next = new long[DEFAULT_BITMAP_ITERATIONS];
+    public long[] next;
     public long position;
 
     public BitMapNode()
     {
-
+        next = new long[DEFAULT_BITMAP_ITERATIONS];
     }
+
     /**
      * Write Object
      *
@@ -62,7 +63,7 @@ public class BitMapNode implements ObjectSerializable, Serializable
     @Override
     public int hashCode()
     {
-        return new Long(position).hashCode();
+        return Long.hashCode(position);
     }
 
     @Override

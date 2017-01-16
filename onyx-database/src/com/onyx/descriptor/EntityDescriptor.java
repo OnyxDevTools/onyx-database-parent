@@ -4,51 +4,21 @@ import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
-
-import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.EntityClassNotFoundException;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.EntityTypeMatchException;
-import com.onyx.exception.InvalidConstructorException;
-import com.onyx.exception.InvalidDataTypeForOperator;
-import com.onyx.exception.InvalidIdentifierException;
-import com.onyx.exception.InvalidIndexException;
-import com.onyx.exception.InvalidRelationshipTypeException;
-
+import com.onyx.exception.*;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.Attribute;
-import com.onyx.persistence.annotations.Entity;
-import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.IdentifierGenerator;
-import com.onyx.persistence.annotations.Index;
-import com.onyx.persistence.annotations.Partition;
-import com.onyx.persistence.annotations.PostInsert;
-import com.onyx.persistence.annotations.PostPersist;
-import com.onyx.persistence.annotations.PostRemove;
-import com.onyx.persistence.annotations.PostUpdate;
-import com.onyx.persistence.annotations.PreInsert;
-import com.onyx.persistence.annotations.PrePersist;
-import com.onyx.persistence.annotations.PreRemove;
-import com.onyx.persistence.annotations.PreUpdate;
-import com.onyx.persistence.annotations.Relationship;
-import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.annotations.*;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-
 import com.onyx.util.CompareUtil;
 import com.onyx.util.EntityClassLoader;
-import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
 import java.io.Serializable;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-
 import java.util.*;
-
 import java.util.function.Consumer;
 
 
@@ -137,6 +107,7 @@ public class EntityDescriptor implements Serializable
                 identifier.setName(field.getName());
                 identifier.setGenerator(annotation.generator());
                 identifier.setType(field.getType());
+                identifier.setLoadFactor((byte)annotation.loadFactor());
             }
 
             if (field.getAnnotation(Attribute.class) != null)
@@ -175,15 +146,19 @@ public class EntityDescriptor implements Serializable
                 relationship.setFetchPolicy(annotation.fetchPolicy());
                 relationship.setRelationshipType(annotation.type());
                 relationship.setEntityDescriptor(this);
+                relationship.setLoadFactor((byte)annotation.loadFactor());
                 relationships.put(field.getName(), relationship);
             }
 
             if (field.getAnnotation(Index.class) != null)
             {
 
+                final Index annotation = field.getAnnotation(Index.class);
+
                 // Build Index descriptor
                 final IndexDescriptor index = new IndexDescriptor();
                 index.setName(field.getName());
+                index.setLoadFactor(annotation.loadFactor());
                 index.setType(field.getType());
                 index.setEntityDescriptor(this);
 

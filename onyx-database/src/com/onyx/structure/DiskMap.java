@@ -1,7 +1,6 @@
 package com.onyx.structure;
 
 import com.onyx.exception.AttributeTypeMismatchException;
-import com.onyx.structure.base.LevelReadWriteLock;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.store.Store;
 
@@ -21,7 +20,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
     long getRecID(Object key);
 
     /**
-     * Get value with record id
+     * Get key with record id
      *
      * @param recordId
      * @return
@@ -29,7 +28,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
     V getWithRecID(long recordId);
 
     /**
-     * Get structure value with record id
+     * Get structure key with record id
      *
      * @param recordId
      * @return
@@ -42,7 +41,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @param attribute attribute name to gather
      * @param reference record reference where the record is stored
      *
-     * @return Attribute value of record
+     * @return Attribute key of record
      */
     Object getAttributeWithRecID(String attribute, long reference) throws AttributeTypeMismatchException;
 
@@ -52,15 +51,6 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @return The physical file store
      */
     Store getFileStore();
-
-    /**
-     * Public getter for Read Write Lock.  This is used for iterating.  Since
-     * the iterator may not be write thread safe, this can be used to ensure safety.
-     *
-     * @since 1.0.2
-     * @return Instance of Level Read Write Lock
-     */
-    LevelReadWriteLock getReadWriteLock();
 
     /**
      * Gets the reference of where the disk structure is located within the storage

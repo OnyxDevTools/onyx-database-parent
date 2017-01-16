@@ -8,18 +8,18 @@ import com.onyx.exception.RelationshipHydrationException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.PartitionHelper;
-import com.onyx.structure.DiskMap;
+import com.onyx.helpers.RelationshipHelper;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.collections.LazyRelationshipCollection;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
-import com.onyx.helpers.RelationshipHelper;
 import com.onyx.relationship.RelationshipReference;
+import com.onyx.structure.DiskMap;
 
 import java.util.*;
 
@@ -41,7 +41,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(entityDescriptor, relationshipDescriptor, context);
-        records = (DiskMap) dataFile.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        records = (DiskMap) dataFile.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
     /**
@@ -278,13 +278,13 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
                     RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, context);
                 }
                 relationshipObjects.add(relationshipObject);
-                
+
                 //sort related children if the child entity implements Comparable
                 if (relationshipObjects.size() > 0 && Comparable.class.isAssignableFrom(relationshipObjects.get(0).getClass()))
                 {
                     relationshipObjects.sort(null);
                 }
-                
+
             }
         }
 

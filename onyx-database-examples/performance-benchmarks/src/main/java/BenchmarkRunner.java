@@ -1,7 +1,6 @@
+import com.onyxdevtools.benchmark.base.BenchmarkTest;
 import com.onyxdevtools.provider.DatabaseProvider;
 import com.onyxdevtools.provider.PersistenceProviderFactory;
-import com.onyxdevtools.benchmark.*;
-import com.onyxdevtools.benchmark.base.BenchmarkTest;
 import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
 
 import java.io.File;
@@ -42,10 +41,10 @@ public class BenchmarkRunner {
      */
     public static void main(String args[]) throws Exception {
 
-        /* Default values to run via the IDE
+        /*Default values to run via the IDE
         args = new String[2];
         args[0] = "1";
-        args[1] = "InsertionSingleThreadBenchmarkTest";
+        args[1] = "RandomTransactionBenchmarkTest";
         */
         // Delete the existing database so we start with a clean slate
         deleteDirectory(new File(DatabaseProvider.DATABASE_LOCATION));

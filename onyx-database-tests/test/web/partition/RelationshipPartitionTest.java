@@ -3,12 +3,12 @@ package web.partition;
 import category.WebServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.NoResultsException;
+import entities.partition.*;
 import junit.framework.Assert;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.partition.*;
 
 import java.util.ArrayList;
 

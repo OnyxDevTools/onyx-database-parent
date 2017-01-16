@@ -2,17 +2,11 @@ package com.onyxdevtools.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.Attribute;
-import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.annotations.*;
 import com.onyx.persistence.annotations.Entity;
-import com.onyx.persistence.annotations.FetchPolicy;
-import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.Relationship;
-import com.onyx.persistence.annotations.RelationshipType;
 
 import javax.persistence.*;
 import java.util.ArrayList;
-
 import java.util.List;
 
 //J-
@@ -22,7 +16,7 @@ public class League extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier
+    @Identifier(loadFactor = 1)
     @Id
     protected String name;
 
@@ -34,7 +28,8 @@ public class League extends ManagedEntity implements IManagedEntity
             type = RelationshipType.ONE_TO_MANY,
             inverseClass = Season.class,
             cascadePolicy = CascadePolicy.ALL,
-            fetchPolicy = FetchPolicy.LAZY
+            fetchPolicy = FetchPolicy.LAZY,
+            loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     protected List<Season> seasons = new ArrayList();

@@ -1,44 +1,28 @@
 package embedded.save;
 
 import category.EmbeddedDatabaseTests;
-
-import embedded.base.BaseTest;
-
-import entities.AllAttributeEntity;
-
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
-
 import com.onyx.persistence.IManagedEntity;
-
+import embedded.base.BaseTest;
+import entities.AllAttributeEntity;
 import gnu.trove.THashMap;
+import org.junit.*;
+import org.junit.experimental.categories.Category;
+import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
-
 import java.math.BigInteger;
-
 import java.security.SecureRandom;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-
-import org.junit.experimental.categories.Category;
-
-import org.junit.runners.MethodSorters;
 
 import static junit.framework.Assert.assertEquals;
 
@@ -55,7 +39,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         initialize();
     }
 
-    @After public void after() throws EntityException, IOException
+    @After public void after() throws IOException
     {
         shutdown();
     }
@@ -99,7 +83,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -172,7 +156,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4L;
         entity2.longPrimitive = 3L;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743L);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -197,7 +181,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -278,7 +262,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4L;
         entity2.longPrimitive = 3L;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743L);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -303,7 +287,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -381,7 +365,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4L;
         entity2.longPrimitive = 3L;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743L);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -406,7 +390,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -481,7 +465,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -587,7 +571,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         entity2.id = new BigInteger(130, random).toString(32);
         entity2.longValue = 4L;
         entity2.longPrimitive = 3L;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743L);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -615,7 +599,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -687,7 +671,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -824,7 +808,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -913,7 +897,7 @@ public class HashIndexConcurrencyTest extends BaseTest
             entity.id = new BigInteger(130, random).toString(32);
             entity.longValue = 4L;
             entity.longPrimitive = 3L;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743L);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;

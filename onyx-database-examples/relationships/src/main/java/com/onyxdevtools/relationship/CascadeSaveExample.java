@@ -1,7 +1,5 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -18,7 +16,7 @@ import java.util.ArrayList;
  */
 public class CascadeSaveExample extends AbstractDemo
 {
-    public static void demo() throws InitializationException, EntityException, IOException
+    public static void demo() throws IOException
     {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

@@ -10,6 +10,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.util.CompareUtil;
+
 import java.util.*;
 import java.util.function.BiFunction;
 
@@ -66,8 +67,8 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
     public int compare(T t1, T t2)
     {
 
-        Object o1 = (Object)t1;
-        Object o2 = (Object)t2;
+        Object o1 = t1;
+        Object o2 = t2;
 
         Object attribute1 = null;
         Object attribute2 = null;
@@ -230,4 +231,4 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
 
         return 1;
     }
-};
+}

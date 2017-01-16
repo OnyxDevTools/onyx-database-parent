@@ -6,5 +6,5 @@ package pojo;
 public enum SimpleEnum
 {
     FIRST,
-    SECOND;
+    SECOND
 }

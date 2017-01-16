@@ -3,8 +3,6 @@ package com.onyx.index;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -13,7 +11,7 @@ import java.util.Set;
 public interface IndexController
 {
     /**
-     * Save an index value with the record reference
+     * Save an index key with the record reference
      *
      * @param indexValue
      * @param oldReferenceId
@@ -23,7 +21,7 @@ public interface IndexController
     void save(Object indexValue, long oldReferenceId, long newReferenceId) throws EntityException;
 
     /**
-     * Delete an index value with a record reference
+     * Delete an index key with a record reference
      *
      * @param reference
      * @throws EntityException

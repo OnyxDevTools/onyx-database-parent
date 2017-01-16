@@ -2,9 +2,10 @@ package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import embedded.base.BaseTest;
+import entities.relationship.OneToManyChild;
+import entities.relationship.OneToManyParent;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -12,8 +13,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.relationship.OneToManyChild;
-import entities.relationship.OneToManyParent;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,13 +27,13 @@ public class OneToManyTest extends BaseTest
 {
 
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

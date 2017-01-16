@@ -5,5 +5,5 @@ package com.onyx.entity;
  */
 public enum SystemUserRole
 {
-    ROLE_ADMIN,ROLE_USER;
+    ROLE_ADMIN,ROLE_USER
 }

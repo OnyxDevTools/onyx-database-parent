@@ -8,14 +8,14 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.SingletonException;
 import com.onyx.fetch.impl.*;
 import com.onyx.helpers.PartitionHelper;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryPartitionMode;
+import com.onyx.structure.MapBuilder;
 
 /**
  * Created by timothy.osborn on 1/6/15.

@@ -1,21 +1,24 @@
 package com.onyx.persistence.factory.impl;
 
-import com.onyx.exception.SingletonException;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.exception.InitializationException;
+import com.onyx.exception.SingletonException;
+import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
+import com.onyx.persistence.factory.PersistenceManagerFactory;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.util.EncryptionUtil;
-import java.io.*;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.RemoteException;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

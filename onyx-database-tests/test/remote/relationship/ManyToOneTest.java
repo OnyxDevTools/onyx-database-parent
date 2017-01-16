@@ -1,18 +1,17 @@
 package remote.relationship;
 
+import category.RemoteServerTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import entities.relationship.OneToManyChild;
+import entities.relationship.OneToManyParent;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-import entities.relationship.OneToManyChild;
-import entities.relationship.OneToManyParent;
 
 import java.io.IOException;
-import category.RemoteServerTests;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -22,13 +21,13 @@ public class ManyToOneTest extends RemoteBaseTest
 {
 
     @Before
-    public void before() throws InitializationException, EntityException
+    public void before() throws EntityException
     {
         initialize();
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

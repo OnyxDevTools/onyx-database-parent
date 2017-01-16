@@ -1,10 +1,11 @@
 package com.onyx.server.auth;
 
+import com.onyx.client.auth.Authorize;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.ServerSocket;
 import java.rmi.server.RMIServerSocketFactory;
-import com.onyx.client.auth.Authorize;
 
 /**
  * The purpose of this class is to ensure the socket is secure and requires authentication prior to use

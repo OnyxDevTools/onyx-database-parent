@@ -7,14 +7,14 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
+import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -75,7 +75,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     continue;
                 }
 
-                // Get the attribute value
+                // Get the attribute key
                 attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
 
                 // Compare and add
@@ -116,7 +116,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                     final MapBuilder dataFile = context.getDataFile(partitionDescriptor);
-                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getName());
+                    DiskMap recs = (DiskMap)dataFile.getScalableMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
                     Map partitionResults = scanPartition(recs, partition.getIndex());
                     results.putAll(partitionResults);

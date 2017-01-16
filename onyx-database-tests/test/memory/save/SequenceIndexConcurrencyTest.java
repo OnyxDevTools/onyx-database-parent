@@ -5,10 +5,10 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
+import entities.InheritedLongAttributeEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
-import entities.InheritedLongAttributeEntity;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -32,7 +32,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }
@@ -74,7 +74,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -136,7 +136,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -161,7 +161,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -237,7 +237,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -262,7 +262,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -334,7 +334,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -360,7 +360,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -427,7 +427,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -527,7 +527,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
         
         entity2.longValue = 4l;
         entity2.longPrimitive = 3l;
-        entity2.stringValue = "STring value";
+        entity2.stringValue = "STring key";
         entity2.dateValue = new Date(1483736263743l);
         entity2.doublePrimitive = 342.23;
         entity2.doubleValue = 232.2;
@@ -555,7 +555,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -620,7 +620,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -751,7 +751,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;
@@ -831,7 +831,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
             
             entity.longValue = 4l;
             entity.longPrimitive = 3l;
-            entity.stringValue = "STring value";
+            entity.stringValue = "STring key";
             entity.dateValue = new Date(1483736263743l);
             entity.doublePrimitive = 342.23;
             entity.doubleValue = 232.2;

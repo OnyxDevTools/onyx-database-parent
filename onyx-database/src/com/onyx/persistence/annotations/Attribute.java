@@ -34,7 +34,7 @@ public @interface Attribute
      * Determines whether the attribute is nullable
      *
      * @since 1.0.0
-     * @return Boolean value indicating nullable or not
+     * @return Boolean key indicating nullable or not
      */
     boolean nullable() default true;
 

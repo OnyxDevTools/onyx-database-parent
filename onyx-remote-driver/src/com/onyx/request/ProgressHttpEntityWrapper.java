@@ -44,8 +44,8 @@ public class ProgressHttpEntityWrapper extends HttpEntityWrapper {
 
     private final ProgressCallback progressCallback;
 
-    public static interface ProgressCallback {
-        public void progress(float progress);
+    public interface ProgressCallback {
+        void progress(float progress);
     }
 
     public ProgressHttpEntityWrapper(final HttpEntity entity, final ProgressCallback progressCallback) {

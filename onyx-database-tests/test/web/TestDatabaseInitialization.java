@@ -3,11 +3,13 @@ package web;
 import category.WebServerTests;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
-import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
+import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import jdk.nashorn.internal.ir.annotations.Ignore;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
 

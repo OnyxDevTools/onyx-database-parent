@@ -2,13 +2,13 @@ package web.exception;
 
 import category.WebServerTests;
 import com.onyx.exception.*;
+import entities.SimpleEntity;
+import entities.exception.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
-import entities.SimpleEntity;
-import entities.exception.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ public class TestEntitySaveExceptions extends BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

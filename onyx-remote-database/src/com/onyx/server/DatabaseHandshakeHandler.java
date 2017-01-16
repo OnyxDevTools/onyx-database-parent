@@ -2,20 +2,12 @@ package com.onyx.server;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.protocol.Handshake;
-import io.undertow.websockets.spi.AsyncWebSocketHttpServerExchange;
-import org.xnio.StreamConnection;
-
-import java.util.Iterator;
 
 /**
  * Created by timothy.osborn on 4/23/15.

@@ -12,7 +12,7 @@ import java.util.function.BiFunction;
 /**
  * Created by timothy.osborn on 3/26/15.
  */
-public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap implements Map<K, V> {
+public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap<K,V> implements Map<K, V> {
 
     protected LevelReadWriteLock readWriteLock = new DefaultLevelReadWriteLock();
 
@@ -28,6 +28,23 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
         keys = new KeyCollection(fileStore, this);
         dict = new DictionaryCollection(fileStore, this);
     }
+
+    /**
+     * Constructor
+     *
+     * @param fileStore
+     * @param header
+     * @param headless
+     */
+    public AbstractIterableDiskMap(Store fileStore, Header header, boolean headless)
+    {
+        super(fileStore, header, headless);
+        entries = new EntryCollection(fileStore, this);
+        values = new ValueCollection(fileStore, this);
+        keys = new KeyCollection(fileStore, this);
+        dict = new DictionaryCollection(fileStore, this);
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -101,7 +118,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      */
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
-        Iterator it = this.values().iterator();
+        Iterator it = this.entrySet().iterator();
         Entry<K, V> val = null;
         while (it.hasNext()) {
             val = (Entry<K, V>) it.next();
@@ -263,7 +280,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     }
 
     /**
-     * Entry Collection.  Much like KeyCollection except iterates through entries
+     * Entry Collection.  Much like KeyCollectionMulti except iterates through entries
      *
      * @param <V>
      */
@@ -282,7 +299,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
 
 
     /**
-     * Abstract Node Collection.  Holds onto references to all the nodes and fills the node values
+     * Abstract SkipListNode Collection.  Holds onto references to all the nodes and fills the node values
      * based on the Bitmap nodes
      *
      * @param <E>
@@ -471,6 +488,9 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public Object next() {
+
+
+
             final RecordReference reference = (RecordReference) super.next();
             if (reference != null) {
                 return new DiskMapEntry(reference);
@@ -563,7 +583,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     }
 
     /**
-     * Abstract Node iterator
+     * Abstract SkipListNode iterator
      * <p/>
      * Iterates through nodes and gets the left, right, next values
      */
@@ -678,16 +698,5 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
                 return false;
             }
         }
-    }
-
-    /**
-     * Public getter for Read Write Lock.  This is used for iterating.  Since
-     * the iterator may not be write thread safe, this can be used to ensure safety.
-     *
-     * @since 1.0.2
-     * @return Instance of Level Read Write Lock
-     */
-    public LevelReadWriteLock getReadWriteLock() {
-        return readWriteLock;
     }
 }

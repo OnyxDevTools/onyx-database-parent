@@ -3,6 +3,10 @@ package web.save;
 import category.WebServerTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import entities.identifiers.ImmutableIntSequenceIdentifierEntity;
+import entities.identifiers.ImmutableSequenceIdentifierEntity;
+import entities.identifiers.MutableIntSequenceIdentifierEntity;
+import entities.identifiers.MutableSequenceIdentifierEntity;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
@@ -11,10 +15,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 import web.base.BaseTest;
-import entities.identifiers.ImmutableIntSequenceIdentifierEntity;
-import entities.identifiers.ImmutableSequenceIdentifierEntity;
-import entities.identifiers.MutableIntSequenceIdentifierEntity;
-import entities.identifiers.MutableSequenceIdentifierEntity;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
     }
 
     @After
-    public void after() throws EntityException, IOException
+    public void after() throws IOException
     {
         shutdown();
     }

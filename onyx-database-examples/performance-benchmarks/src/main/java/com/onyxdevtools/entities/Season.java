@@ -15,7 +15,7 @@ public class Season extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
-    @Identifier
+    @Identifier(loadFactor = 1)
     @Id
     @Column
     protected Integer seasonYear;
@@ -25,7 +25,8 @@ public class Season extends ManagedEntity implements IManagedEntity
             inverseClass = Conference.class,
             inverse = "league",
             cascadePolicy = CascadePolicy.ALL,
-            fetchPolicy = FetchPolicy.LAZY
+            fetchPolicy = FetchPolicy.LAZY,
+            loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     protected List<Conference> conferences = new ArrayList();

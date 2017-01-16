@@ -13,24 +13,14 @@
  */
 package com.onyx.util;
 
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
-
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
+import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.UnsupportedEncodingException;
+import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 
 
 /**
@@ -461,14 +451,14 @@ public class Encryption {
         }
 
         /**
-         * @return the value used for salting
+         * @return the key used for salting
          */
         private String getSalt() {
             return mSalt;
         }
 
         /**
-         * @param salt the value used for salting
+         * @param salt the key used for salting
          *
          * @return this instance to follow the Builder patter
          */

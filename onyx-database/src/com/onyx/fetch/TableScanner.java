@@ -16,7 +16,7 @@ public interface TableScanner
      * @return
      * @throws EntityException
      */
-    public Map<Long, Long> scan() throws EntityException;
+    Map<Long, Long> scan() throws EntityException;
 
     /**
      * Scan with indexes
@@ -25,6 +25,6 @@ public interface TableScanner
      * @return
      * @throws EntityException
      */
-    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException;
+    Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException;
 
 }

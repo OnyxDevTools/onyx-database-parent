@@ -4,8 +4,6 @@ import com.onyx.exception.TransactionException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 
-import java.io.File;
-import java.util.Arrays;
 import java.util.function.Function;
 
 /**

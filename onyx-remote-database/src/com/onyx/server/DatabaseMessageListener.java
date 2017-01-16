@@ -1,10 +1,12 @@
 package com.onyx.server;
 
-import com.onyx.endpoint.*;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.persistence.manager.PersistenceManager;
+import com.onyx.endpoint.PersistenceEndpoint;
+import com.onyx.endpoint.ServerEndpoint;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.request.pojo.*;
+import com.onyx.persistence.manager.PersistenceManager;
+import com.onyx.request.pojo.RequestEndpoint;
+import com.onyx.request.pojo.RequestToken;
+import com.onyx.structure.serializer.ObjectBuffer;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSockets;
 
