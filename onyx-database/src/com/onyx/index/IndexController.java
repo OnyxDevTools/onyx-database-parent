@@ -38,6 +38,30 @@ public interface IndexController
     Set<Long> findAll(Object indexValue) throws EntityException;
 
     /**
+     * Find all the references above and perhaps equal to the key parameter
+     * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeValue Whether to compare above and equal or not.
+     * @return A set of record references
+     *
+     * @throws EntityException Exception while reading the data structure
+     *
+     * @since 1.2.0
+     */
+    Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException;
+
+    /**
+     * Find all the references blow and perhaps equal to the key parameter
+     * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeValue Whether to compare below and equal or not.
+     * @return A set of record references
+     *
+     * @throws EntityException Exception while reading the data structure
+     *
+     * @since 1.2.0
+     */
+    Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException;
+
+    /**
      * Get Index descriptor
      *
      * @return

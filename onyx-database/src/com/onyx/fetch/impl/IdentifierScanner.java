@@ -7,6 +7,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.record.RecordController;
 import com.onyx.structure.MapBuilder;
 
@@ -68,11 +69,25 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
         // Its an equals, if the object exists, add it to the results
         else
         {
-            long referenceId = recordController.getReferenceId(criteria.getValue());
-            if(referenceId > -1)
+
+
+            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                recordController.findAllAbove(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                recordController.findAllAbove(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                recordController.findAllBelow(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                recordController.findAllBelow(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+            else
             {
-                returnValue.put(referenceId, referenceId);
+                long referenceId = recordController.getReferenceId(criteria.getValue());
+                if(referenceId > -1)
+                {
+                    returnValue.put(referenceId, referenceId);
+                }
             }
+
         }
 
         return returnValue;
@@ -119,11 +134,21 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
             // Its an equals, if the object exists, add it to the results
             else
             {
-                long referenceId = recordController.getReferenceId(criteria.getValue());
-
-                if(referenceId == key)
+                if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                    recordController.findAllAbove(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+                else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                    recordController.findAllAbove(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                    recordController.findAllBelow(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                    recordController.findAllBelow(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+                else
                 {
-                    returnValue.put(referenceId, referenceId);
+                    long referenceId = recordController.getReferenceId(criteria.getValue());
+                    if(referenceId > -1)
+                    {
+                        returnValue.put(referenceId, referenceId);
+                    }
                 }
             }
         }

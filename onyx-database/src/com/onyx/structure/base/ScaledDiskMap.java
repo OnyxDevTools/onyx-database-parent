@@ -8,8 +8,10 @@ import com.onyx.structure.node.Header;
 import com.onyx.structure.node.SkipListHeadNode;
 import com.onyx.structure.store.Store;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by tosborn1 on 1/8/17.
@@ -284,7 +286,6 @@ public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> imp
         return k;
     }
 
-
     /**
      * Finds a head of the next data structure.  The head is to a skip list and we will go from bitmap to skip list.
      * This is different than in the bitmap since it takes into effect the load factor and will only do a pre defined
@@ -353,5 +354,50 @@ public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> imp
         }
 
         return null; // This should contain the drones you are looking for (Star Wars reference) // This contains the key to the linked list
+    }
+
+    /**
+     * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param index The index value to compare.  This must be comparable.  It does not work with hash codes.
+     * @param includeFirst Whether above and equals to
+     * @since 1.2.0
+     * @return A Set of references
+     */
+    public Set<Long> above(K index, boolean includeFirst)
+    {
+        Set returnValue = new HashSet();
+
+        Iterator iterator = mapSet().iterator();
+        while(iterator.hasNext())
+        {
+            setHead((SkipListHeadNode)iterator.next());
+            returnValue.addAll(super.above(index, includeFirst));
+        }
+        return returnValue;
+
+    }
+
+    /**
+     * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param index The index value to compare.  This must be comparable.  It does not work with hash codes.
+     * @param includeFirst Whether above and equals to
+     * @return A Set of references
+     * @since 1.2.0
+     */
+    public Set<Long> below(K index, boolean includeFirst)
+    {
+        Set returnValue = new HashSet();
+
+        Iterator iterator = mapSet().iterator();
+        while(iterator.hasNext())
+        {
+            setHead((SkipListHeadNode)iterator.next());
+            returnValue.addAll(super.below(index, includeFirst));
+        }
+        return returnValue;
     }
 }

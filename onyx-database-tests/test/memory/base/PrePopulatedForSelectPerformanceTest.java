@@ -35,7 +35,7 @@ public class PrePopulatedForSelectPerformanceTest extends memory.base.BaseTest
             PerformanceEntity entity = new PerformanceEntity();
             entity.stringValue = getRandomString();
             entity.dateValue = new Date();
-
+            entity.idValue = i+1;
             if((i %2) == 0)
             {
                 entity.booleanValue = true;
@@ -67,6 +67,7 @@ public class PrePopulatedForSelectPerformanceTest extends memory.base.BaseTest
         {
             e.printStackTrace();
         }
+
     }
 
 }

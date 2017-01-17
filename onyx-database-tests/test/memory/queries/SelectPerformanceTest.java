@@ -111,4 +111,152 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
         org.junit.Assert.assertTrue(results.size() == 20);
     }
 
+    /**
+     * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
+     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     *
+     * @throws EntityException Something bad happened
+     */
+    @Test
+    public void dTestGreaterThanOnIdValue() throws EntityException
+    {
+        Query query = new Query(PerformanceEntity.class, new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN_EQUAL, 99000l));
+        query.setFirstRow(100);
+        query.setMaxResults(20);
+
+        long time = System.currentTimeMillis();
+        List<PerformanceEntity> results = manager.executeQuery(query);
+
+
+        long after = System.currentTimeMillis();
+
+        System.out.println("Query took " + (after - time) + " seconds");
+
+//        org.junit.Assert.assertTrue((after - time) < 200);
+        org.junit.Assert.assertTrue(results.size() == 20);
+        org.junit.Assert.assertTrue(query.getResultsCount() == 1001);
+
+    }
+
+    /**
+     * Scans entities with an identifier less than or equal to 5k.  This should of course return 5k records.  Also,
+     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     *
+     * @throws EntityException Something bad happened
+     */
+    @Test
+    public void eTestLessThanOnIdValue() throws EntityException
+    {
+        Query query = new Query(PerformanceEntity.class, new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN_EQUAL, 5000l));
+        query.setFirstRow(100);
+        query.setMaxResults(20);
+
+        long time = System.currentTimeMillis();
+        List<PerformanceEntity> results = manager.executeQuery(query);
+
+
+        long after = System.currentTimeMillis();
+
+        System.out.println("Query took " + (after - time) + " seconds");
+
+        org.junit.Assert.assertTrue((after - time) < 200);
+        org.junit.Assert.assertTrue(results.size() == 20);
+        org.junit.Assert.assertTrue(query.getResultsCount() == 5000);
+
+    }
+
+    /**
+     * Scans entities with an index less than or equal to 5k.  This should of course return 5k records.  Also,
+     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     *
+     * @throws EntityException Something bad happened
+     */
+    @Test
+    public void fTestLessThanOnIndexValue() throws EntityException
+    {
+        Query query = new Query(PerformanceEntity.class, new QueryCriteria("idValue", QueryCriteriaOperator.LESS_THAN_EQUAL, 5000l));
+        query.setFirstRow(100);
+        query.setMaxResults(20);
+
+        long time = System.currentTimeMillis();
+        List<PerformanceEntity> results = manager.executeQuery(query);
+        long after = System.currentTimeMillis();
+
+        System.out.println("Query took " + (after - time) + " seconds");
+
+//        org.junit.Assert.assertTrue((after - time) < 300);
+        org.junit.Assert.assertTrue(results.size() == 20);
+        org.junit.Assert.assertTrue(query.getResultsCount() == 5000);
+
+    }
+
+
+    /**
+     * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
+     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     *
+     * @throws EntityException Something bad happened
+     */
+    @Test
+    public void gTestGreaterThanOnIdValue() throws EntityException
+    {
+        Query query = new Query(PerformanceEntity.class, new QueryCriteria("idValue", QueryCriteriaOperator.GREATER_THAN_EQUAL, 99000l));
+        query.setFirstRow(100);
+        query.setMaxResults(20);
+
+        long time = System.currentTimeMillis();
+        List<PerformanceEntity> results = manager.executeQuery(query);
+        long after = System.currentTimeMillis();
+
+        System.out.println("Query took " + (after - time) + " seconds");
+
+//        org.junit.Assert.assertTrue((after - time) < 200);
+        org.junit.Assert.assertTrue(results.size() == 20);
+        org.junit.Assert.assertTrue(query.getResultsCount() == 1001);
+    }
+
+    /**
+     * Scans entities with an index less than or equal to 5k.  This should of course return 5k records.  Also,
+     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     *
+     * @throws EntityException Something bad happened
+     */
+    @Test
+    public void hTestLessThanOnIndexValueCompound() throws EntityException
+    {
+        Query query = new Query(PerformanceEntity.class, new QueryCriteria("booleanPrimitive", QueryCriteriaOperator.EQUAL, true).and(new QueryCriteria("idValue", QueryCriteriaOperator.LESS_THAN, 5000l)));
+        query.setFirstRow(100);
+        query.setMaxResults(20);
+
+        long time = System.currentTimeMillis();
+        List<PerformanceEntity> results = manager.executeQuery(query);
+        long after = System.currentTimeMillis();
+
+        System.out.println("Query took " + (after - time) + " seconds");
+        org.junit.Assert.assertTrue(query.getResultsCount() == 2499);
+
+    }
+
+
+    /**
+     * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
+     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     *
+     * @throws EntityException Something bad happened
+     */
+    @Test
+    public void iTestGreaterThanOnIdValueCompound() throws EntityException
+    {
+        Query query = new Query(PerformanceEntity.class, new QueryCriteria("booleanPrimitive", QueryCriteriaOperator.EQUAL, true).and(new QueryCriteria("idValue", QueryCriteriaOperator.GREATER_THAN, 99000l)));
+        query.setFirstRow(100);
+        query.setMaxResults(20);
+
+        long time = System.currentTimeMillis();
+        List<PerformanceEntity> results = manager.executeQuery(query);
+        long after = System.currentTimeMillis();
+
+        System.out.println("Query took " + (after - time) + " seconds");
+
+        org.junit.Assert.assertTrue(query.getResultsCount() == 500);
+    }
 }

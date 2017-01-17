@@ -36,6 +36,10 @@ public class PerformanceEntity extends AbstractEntity implements IManagedEntity
     @Attribute
     public boolean booleanPrimitive;
 
+    @Attribute
+    @Index
+    public long idValue;
+
     @Relationship(type = RelationshipType.ONE_TO_ONE, inverseClass = PerformanceEntityChild.class, inverse = "parent", cascadePolicy = CascadePolicy.ALL)
     public PerformanceEntityChild child;
 

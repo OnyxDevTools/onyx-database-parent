@@ -11,11 +11,13 @@ import com.onyx.record.RecordController;
 import com.onyx.structure.DefaultDiskSet;
 import com.onyx.structure.DiskMap;
 import com.onyx.structure.MapBuilder;
+import com.onyx.structure.base.ScaledDiskMap;
 
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Created by timothy.osborn on 1/29/15.
@@ -131,6 +133,61 @@ public class IndexControllerImpl implements IndexController {
     public Set<Object> findAllValues() throws EntityException
     {
         return references.keySet();
+    }
+
+
+    /**
+     * Find all the references above and perhaps equal to the key parameter
+     *
+     * This has one prerequisite.  You must be using a ScaledDiskMap as the storage mechanism.  Otherwise it will not be
+     * sorted.
+     *
+     * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeValue Whether to compare above and equal or not.
+     * @return A set of record references
+     *
+     * @throws EntityException Exception while reading the data structure
+     *
+     * @since 1.2.0
+     */
+    public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
+    {
+        final Set<Long> allReferences = new HashSet();
+        final Set<Long> diskReferences = ((ScaledDiskMap)references).above(indexValue, includeValue);
+        diskReferences.forEach(aLong -> {
+            Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
+            ((DefaultDiskSet)subSet).attachStorage(dataFile);
+            allReferences.addAll(subSet);
+        });
+
+        return allReferences;
+    }
+
+    /**
+     * Find all the references blow and perhaps equal to the key parameter
+     *
+     * This has one prerequisite.  You must be using a ScaledDiskMap as the storage mechanism.  Otherwise it will not be
+     * sorted.
+     *
+     * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeValue Whether to compare below and equal or not.
+     * @return A set of record references
+     *
+     * @throws EntityException Exception while reading the data structure
+     *
+     * @since 1.2.0
+     */
+    public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
+    {
+        final Set<Long> allReferences = new HashSet();
+        final Set<Long> diskReferences = ((ScaledDiskMap)references).below(indexValue, includeValue);
+        diskReferences.forEach(aLong -> {
+            Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
+            ((DefaultDiskSet)subSet).attachStorage(dataFile);
+            allReferences.addAll(subSet);
+        });
+
+        return allReferences;
     }
 
     /**

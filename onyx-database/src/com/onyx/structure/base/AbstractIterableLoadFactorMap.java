@@ -28,6 +28,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
         values = new ValueCollectionMulti(fileStore, this);
         keys = new KeyCollectionMulti(fileStore, this);
         dict = new DictionaryCollectionMulti(fileStore, this);
+        maps = new MapCollection(fileStore, this);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,6 +51,17 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
         return keys;
     }
 
+    /**
+     * Getter for set of maps
+     *
+     * This is a collection of the underlying map structures.  It is used for
+     * iterating through the sub structures.
+     */
+    protected MapCollection maps;
+
+    public Set<K> mapSet() {
+        return maps;
+    }
 
     /**
      * Getter for set of keys
@@ -227,6 +239,54 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          *
          * @param a
          * @return
+         */
+        @Override
+        public Object[] toArray(Object[] a) {
+            Iterator it = iterator();
+            int i = 0;
+            while (it.hasNext()) {
+                V value = (V) it.next();
+                a[i] = value;
+                i++;
+            }
+            return a;
+        }
+    }
+
+    /**
+     * Class for sifting through child data structures
+     *
+     * @param <V>
+     * @see AbstractMultiNodeCollection
+     */
+    private class MapCollection<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
+        /**
+         * Constructor
+         *
+         * @param fileStore File storage mechanism
+         * @param diskMap Parent object
+         */
+        public MapCollection(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
+            super(fileStore, diskMap);
+            this.fileStore = fileStore;
+            this.diskMap = diskMap;
+        }
+
+        /**
+         * Get a new iterator
+         *
+         * @return Sub data structure iterator
+         */
+        @Override
+        public Iterator<V> iterator() {
+            return new AbstractIterableLoadFactorMap.MapIterator(header);
+        }
+
+        /**
+         * Convert to an array
+         *
+         * @param a object to map to
+         * @return The array you passed in
          */
         @Override
         public Object[] toArray(Object[] a) {
@@ -508,6 +568,47 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
         @Override
         public Object next() {
             return super.next();
+        }
+    }
+
+    /**
+     * Map Iterator.
+     * <p/>
+     * Iterates through and hydrates the sub data structures
+     */
+    class MapIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
+
+        /**
+         * Constructor
+         *
+         * @param header Head of the data parent data structure
+         */
+        public MapIterator(Header header) {
+            super(header);
+        }
+
+
+        /**
+         * Hash next,  only if the stack is not empty
+         *
+         * @return Whether there is a sub data structure
+         */
+        @Override
+        public boolean hasNext() {
+            queueUpNext();
+            return referenceStack.size() > 0;
+        }
+
+        /**
+         * Next, pop it off the stack
+         *
+         * @return Returns the nex sub map
+         */
+        @Override
+        public Object next()
+        {
+            SkipListHeadNode node = findNodeAtPosition((long)referenceStack.pop());
+            return node;
         }
     }
 
