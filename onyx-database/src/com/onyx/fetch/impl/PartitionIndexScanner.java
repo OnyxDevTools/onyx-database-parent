@@ -128,13 +128,13 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
         else
         {
 
-            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+            if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
                 partitionIndexController.findAllAbove(criteria.getValue(), false).forEach(o -> references.add(o));
-            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
                 partitionIndexController.findAllAbove(criteria.getValue(), true).forEach(o -> references.add(o));
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+            else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
                 partitionIndexController.findAllBelow(criteria.getValue(), false).forEach(o -> references.add(o));
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                 partitionIndexController.findAllBelow(criteria.getValue(), true).forEach(o -> references.add(o));
             else
                 partitionIndexController.findAll(criteria.getValue()).forEach(o -> references.add(o));

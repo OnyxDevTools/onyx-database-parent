@@ -57,13 +57,13 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 if(query.isTerminated())
                     return returnValue;
 
-                if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
                     indexController.findAllAbove(idValue, false).forEach(o -> references.add(o));
-                else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
                     indexController.findAllAbove(idValue, true).forEach(o -> references.add(o));
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
                     indexController.findAllBelow(idValue, false).forEach(o -> references.add(o));
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                     indexController.findAllBelow(idValue, true).forEach(o -> references.add(o));
                 else
                     indexController.findAll(idValue).forEach(o -> references.add(o));
@@ -72,16 +72,17 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
         else
         {
 
-            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+            if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
                 indexController.findAllAbove(criteria.getValue(), false).forEach(o -> references.add(o));
-            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
                 indexController.findAllAbove(criteria.getValue(), true).forEach(o -> references.add(o));
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+            else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
                 indexController.findAllBelow(criteria.getValue(), false).forEach(o -> references.add(o));
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                 indexController.findAllBelow(criteria.getValue(), true).forEach(o -> references.add(o));
             else
                 indexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
+
         }
 
         references.stream().forEach(val->
@@ -114,16 +115,17 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
 
                 Set<Long> results = null;
 
-                if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
                     results = indexController.findAllAbove(idValue, false);
-                else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
                     results = indexController.findAllAbove(idValue, true);
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
                     results = indexController.findAllBelow(idValue, false);
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                     results = indexController.findAllBelow(idValue, true);
                 else
                     results = indexController.findAll(idValue);
+
 
                 results.forEach(reference ->
                 {
@@ -137,16 +139,18 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
         {
             Set<Long> results = null;
 
-            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+            if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
                 results = indexController.findAllAbove(criteria.getValue(), false);
-            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
                 results = indexController.findAllAbove(criteria.getValue(), true);
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+            else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
                 results = indexController.findAllBelow(criteria.getValue(), false);
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                 results = indexController.findAllBelow(criteria.getValue(), true);
             else
                 results = indexController.findAll(criteria.getValue());
+
+
 
             results.stream().forEach(reference ->
             {

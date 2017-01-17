@@ -378,7 +378,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         }
 
 
-        // Boo it wasn't found.  Well return the closes than
+        // Boo it wasn't found.  Well return the closest than
         return previous;
     }
 
