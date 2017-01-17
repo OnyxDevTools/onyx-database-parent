@@ -5,6 +5,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -101,4 +102,9 @@ public interface RecordController
      * @throws EntityException
      */
     Object getAttributeWithReferenceId(String attribute, long referenceId) throws EntityException;
+
+    Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException;
+
+    Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException;
+
 }

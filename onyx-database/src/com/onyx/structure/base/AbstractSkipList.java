@@ -343,6 +343,48 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
+     * Find the nearest node associated to the key.  This does not work with hash values.  Only comparable values
+     *
+     * @param key The Key identifier
+     * @return Its closes node
+     * @since 1.2.0
+     */
+    protected SkipListHeadNode nearest(K key) {
+        if (key == null)
+            return null;
+
+        int hash = hash(key);
+
+        SkipListHeadNode current = getHead();
+        SkipListHeadNode previous = current;
+
+        while (current != null) {
+            SkipListHeadNode next = findNodeAtPosition(current.next);
+            if (next != null && key.equals(((SkipListNode<K>)next).key)) {
+                return next;
+            }
+
+            // Next node does not have values so we must move on down and continue the loop.
+            else if (current.next == 0L
+                    || (next != null && shouldMoveDown(0, 0, key, ((SkipListNode<K>)next).key))) {
+                current = findNodeAtPosition(current.down);
+                continue;
+            }
+
+            current = next;
+
+            if(current != null)
+                previous = current;
+        }
+
+
+        // Boo it wasn't found.  Well return the closest than
+        return previous;
+    }
+
+    /**
+
+    /**
      * The purpose of this method is to either utilize comparable so that the data set can be ordered.  If not,
      * it is based on the hash code of the keys
      *
@@ -354,11 +396,11 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     @SuppressWarnings("unchecked")
-    private boolean shouldMoveDown(int hash, int hash2, K key, K key2) {
+    protected boolean shouldMoveDown(int hash, int hash2, K key, K key2) {
         if (key.getClass() == key2.getClass()
                 && Comparable.class.isAssignableFrom(key.getClass())
                 && Comparable.class.isAssignableFrom(key2.getClass())) {
-            return ((Comparable) key).compareTo(key2) >= 0;
+            return ((Comparable) key2).compareTo(key) >= 0;
         }
         return hash >= hash2;
     }

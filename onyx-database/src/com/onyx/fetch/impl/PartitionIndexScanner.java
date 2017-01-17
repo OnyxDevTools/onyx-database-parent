@@ -13,6 +13,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.structure.MapBuilder;
 
@@ -126,7 +127,18 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
         }
         else
         {
-            partitionIndexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
+
+            if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
+                partitionIndexController.findAllAbove(criteria.getValue(), false).forEach(o -> references.add(o));
+            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
+                partitionIndexController.findAllAbove(criteria.getValue(), true).forEach(o -> references.add(o));
+            else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
+                partitionIndexController.findAllBelow(criteria.getValue(), false).forEach(o -> references.add(o));
+            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
+                partitionIndexController.findAllBelow(criteria.getValue(), true).forEach(o -> references.add(o));
+            else
+                partitionIndexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
+
         }
 
         references.stream().forEach(val->

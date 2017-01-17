@@ -84,7 +84,12 @@ public class ScannerFactory
         }
 
         // Identifiers criteria must be either an equal or in so that it can make exact matches
-        if (descriptor.getIdentifier().getName().equals(attributeToScan) && (criteria.getOperator() == QueryCriteriaOperator.EQUAL || criteria.getOperator() == QueryCriteriaOperator.IN))
+        if (descriptor.getIdentifier().getName().equals(attributeToScan) && (criteria.getOperator() == QueryCriteriaOperator.EQUAL
+                || criteria.getOperator() == QueryCriteriaOperator.IN
+                || criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN
+                || criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL
+                || criteria.getOperator() == QueryCriteriaOperator.LESS_THAN
+                || criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL))
         {
             if (PartitionHelper.hasPartitionField(query.getEntityType(), context))
             {
@@ -100,7 +105,12 @@ public class ScannerFactory
 
         // Indexes must be either an equal or in so that it can make exact matches
         final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(attributeToScan);
-        if (indexDescriptor != null && (criteria.getOperator() == QueryCriteriaOperator.EQUAL || criteria.getOperator() == QueryCriteriaOperator.IN))
+        if (indexDescriptor != null && (criteria.getOperator() == QueryCriteriaOperator.EQUAL
+                || criteria.getOperator() == QueryCriteriaOperator.IN
+                || criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN
+                || criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL
+                || criteria.getOperator() == QueryCriteriaOperator.LESS_THAN
+                || criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL))
         {
             if (PartitionHelper.hasPartitionField(query.getEntityType(), context))
             {

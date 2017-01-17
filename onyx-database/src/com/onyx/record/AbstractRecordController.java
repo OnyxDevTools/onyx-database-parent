@@ -11,11 +11,13 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.DiskMap;
 import com.onyx.structure.MapBuilder;
+import com.onyx.structure.base.ScaledDiskMap;
 import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -477,5 +479,31 @@ public abstract class AbstractRecordController
         return records.getAttributeWithRecID(attribute, referenceId);
     }
 
+    /**
+     * Find all objects greater than the key parameter.  The underlying data
+     * structure should be sorted
+     *
+     * @param indexValue The value to compare
+     * @param includeValue Include whether the keys match what you pass in as index value
+     * @return A set of REFERENCES not the actual values
+     * @throws EntityException Error when reading the store
+     */
+    public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
+    {
+        return ((ScaledDiskMap)records).above(indexValue, includeValue);
+    }
 
+    /**
+     * Find all objects less than the key parameter.  The underlying data
+     * structure should be sorted
+     *
+     * @param indexValue The value to compare
+     * @param includeValue Include whether the keys match what you pass in as index value
+     * @return A set of REFERENCES not the actual values
+     * @throws EntityException Error when reading the store
+     */
+    public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
+    {
+        return ((ScaledDiskMap)records).below(indexValue, includeValue);
+    }
 }
