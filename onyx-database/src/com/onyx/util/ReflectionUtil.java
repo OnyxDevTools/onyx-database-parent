@@ -405,11 +405,11 @@ public class ReflectionUtil {
      * @param value       double key to set
      */
     public static void setDouble(Object parent, OffsetField offsetField, double value) throws IllegalAccessException {
-/*        if (theUnsafe != null) {
+        if (theUnsafe != null) {
             theUnsafe.putDouble(parent, offsetField.offset, value);
             return;
         }
-*/
+
         offsetField.field.setDouble(parent, value);
     }
 
@@ -494,6 +494,7 @@ public class ReflectionUtil {
 
 
         try {
+
             final Class toClass = field.type;
             final PropertyType toType = PropertyType.valueOf(field.type);
             final PropertyType fromType = (child == null) ? null : PropertyType.valueOf(child.getClass());
@@ -505,6 +506,7 @@ public class ReflectionUtil {
                         case MUTABLE_INT:
                         case INT:
                         case LONG:
+                        case NULL:
                             setObject(parent, field, child);
                             break;
                         case MUTABLE_LONG:
@@ -513,9 +515,6 @@ public class ReflectionUtil {
                         case MUTABLE_BOOLEAN:
                         case BOOLEAN:
                             setObject(parent, field, ((boolean) child) ? new Integer(1) : new Integer(0));
-                            break;
-                        case NULL:
-                            setObject(parent, field, child);
                             break;
                         default:
                             setObject(parent, field, toClass.cast(child));
@@ -612,7 +611,7 @@ public class ReflectionUtil {
                 case DOUBLE:
                     switch (fromType) {
                         case MUTABLE_DOUBLE:
-                            setDouble(parent, field, ((Double)child).doubleValue());
+                            setDouble(parent, field, (Double) child);
                             break;
                         case DOUBLE:
                         case FLOAT:
@@ -876,7 +875,7 @@ public class ReflectionUtil {
                     setObject(parent, field, toClass.cast(child));
             }
         } catch (IllegalAccessException ignore) {
-            // This is supressed
+            // This is suppressed
         }
     }
 

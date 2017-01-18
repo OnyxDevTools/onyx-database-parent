@@ -517,54 +517,59 @@ public class ObjectBuffer
             return wrapNamed(value, ObjectType.RECORD);
         else if(value instanceof ObjectSerializable)
             return wrapNamed(value, serializers);
-        else if(value instanceof Long || value.getClass() == long.class)
+        else if(value instanceof String)
+            return wrapString((String) value);
+        else if(value instanceof Long)
             return wrapLong((Long)value);
-        else if(value instanceof Short || value.getClass() == short.class)
+        else if(value instanceof Short)
             return wrapShort((Short)value);
         else if(value instanceof Date)
             return wrapDate((Date) value);
-        else if(value.getClass().isEnum())
-            return wrapEnum((Enum)value);
-        else if(value instanceof Integer || value.getClass() == int.class)
+        else if(value instanceof Integer)
             return wrapInt((Integer) value);
-        else if(value instanceof Character || value.getClass() == char.class)
+        else if(value instanceof Character)
             return wrapChar((char)value);
-        else if(value instanceof Byte || value.getClass() == byte.class)
+        else if(value instanceof Byte)
             return wrapByte((byte)value);
-        else if(value.getClass() == int.class)
+        else if(value instanceof Integer)
             return wrapInt((Integer) value);
-        else if(value instanceof Double || value.getClass() == double.class)
+        else if(value instanceof Double)
             return wrapDouble((Double) value);
-        else if(value instanceof Float || value.getClass() == float.class)
+        else if(value instanceof Float)
             return wrapFloat((Float) value);
-        else if(value instanceof Boolean || value.getClass() == boolean.class)
+        else if(value instanceof Boolean)
             return wrapBoolean((Boolean) value);
-        else if(value instanceof byte[])
-            return wrapBytes((byte[]) value);
-        else if(value instanceof short[])
-            return wrapShorts((short[]) value);
-        else if(value instanceof boolean[])
-            return wrapBooleans((boolean[]) value);
-        else if(value instanceof double[])
-            return wrapDoubles((double[]) value);
-        else if(value instanceof int[])
-            return wrapInts((int[]) value);
-        else if(value instanceof long[])
-            return wrapLongs((long[]) value);
-        else if(value instanceof char[])
-            return wrapChars((char[]) value);
-        else if(value instanceof float[])
-            return wrapFloats((float[]) value);
-        else if(value instanceof String)
-            return wrapString((String) value);
-        else if(value.getClass().isArray())
-            return wrapArray(value);
         else if(value instanceof Collection)
             return wrapCollection((Collection) value);
         else if(value instanceof Map)
             return wrapMap((Map)value);
-        else
-            return wrapOther(value);
+        else {
+            final Class clazz = value.getClass();
+            if (clazz.isEnum())
+                return wrapEnum((Enum) value);
+            else if (clazz.isArray()) {
+                if (value instanceof byte[])
+                    return wrapBytes((byte[]) value);
+                else if (value instanceof short[])
+                    return wrapShorts((short[]) value);
+                else if (value instanceof boolean[])
+                    return wrapBooleans((boolean[]) value);
+                else if (value instanceof double[])
+                    return wrapDoubles((double[]) value);
+                else if (value instanceof int[])
+                    return wrapInts((int[]) value);
+                else if (value instanceof long[])
+                    return wrapLongs((long[]) value);
+                else if (value instanceof char[])
+                    return wrapChars((char[]) value);
+                else if (value instanceof float[])
+                    return wrapFloats((float[]) value);
+                else
+                    return wrapArray(value);
+            } else
+                return wrapOther(value);
+        }
+
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////
