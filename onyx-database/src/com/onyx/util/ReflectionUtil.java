@@ -9,6 +9,7 @@ import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Relationship;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -546,7 +547,36 @@ public class ReflectionUtil
                     setObject(parent, field, child);
                 else
                     setObject(parent, field, toType.cast(child));
-            } else if (toType == Integer.class) {
+            }
+            else if (toType == Byte.class) {
+                if (fromType == Byte.class)
+                    setObject(parent, field, child);
+                else if (fromType == byte.class)
+                    setObject(parent, field, child);
+                else if (fromType == Integer.class)
+                    setObject(parent, field, ((Byte) child).byteValue());
+                else if (fromType == int.class)
+                    setObject(parent, field, child);
+                else if (fromType == Boolean.class)
+                    setObject(parent, field, ((Boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
+                else if (fromType == boolean.class)
+                    setObject(parent, field, ((boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
+                else if (child == null)
+                    setObject(parent, field, child);
+                else
+                    setObject(parent, field, toType.cast(child));
+            }
+            else if (toType == Character.class) {
+                if (fromType == Character.class)
+                    setObject(parent, field, child);
+                else if (fromType == char.class)
+                    setObject(parent, field, child);
+                else if (child == null)
+                    setObject(parent, field, child);
+                else
+                    setObject(parent, field, toType.cast(child));
+            }
+            else if (toType == Integer.class) {
                 if (fromType == Long.class)
                     setObject(parent, field, ((Long) child).intValue());
                 else if (fromType == long.class)
@@ -563,7 +593,26 @@ public class ReflectionUtil
                     setObject(parent, field, child);
                 else
                     setObject(parent, field, toType.cast(child));
-            } else if (toType == Double.class) {
+            }
+            else if (toType == Short.class) {
+                if (fromType == Long.class)
+                    setObject(parent, field, ((Long) child).shortValue());
+                else if (fromType == long.class)
+                    setObject(parent, field, new Short((short) child));
+                else if (fromType == Integer.class)
+                    setObject(parent, field, ((Integer)child).shortValue());
+                else if (fromType == int.class)
+                    setObject(parent, field, new Short((short) child));
+                else if (fromType == Boolean.class)
+                    setObject(parent, field, ((Boolean) child) ? new Short((short)1) : new Short((short)0));
+                else if (fromType == boolean.class)
+                    setObject(parent, field, ((boolean) child) ? new Short((short)1) : new Short((short)0));
+                else if (child == null)
+                    setObject(parent, field, child);
+                else
+                    setObject(parent, field, toType.cast(child));
+            }
+            else if (toType == Double.class) {
                 if (fromType == Float.class)
                     setObject(parent, field, new Double(((Float) child).doubleValue()));
                 else if (fromType == float.class)
@@ -639,7 +688,37 @@ public class ReflectionUtil
                     setInt(parent, field, 0);
                 else
                     setInt(parent, field, (int) child);
-            } else if (toType == long.class) {
+            }else if (toType == char.class) {
+                if (fromType == long.class)
+                    setChar(parent, field, (char) child);
+                else if (fromType == int.class)
+                    setChar(parent, field, (char) child);
+                else if (fromType == Boolean.class)
+                    setChar(parent, field, ((Boolean) child) ? '1' : '0');
+                else if (fromType == boolean.class)
+                    setChar(parent, field, ((boolean) child) ? '1' : '0');
+                else
+                    setChar(parent, field, (char) child);
+            }
+            else if (toType == short.class) {
+                if (fromType == Long.class)
+                    setShort(parent, field, ((Long) child).shortValue());
+                else if (fromType == long.class)
+                    setShort(parent, field, (short) child);
+                else if (fromType == Integer.class)
+                    setShort(parent, field, ((Integer) child).shortValue());
+                else if (fromType == int.class)
+                    setShort(parent, field, (short) child);
+                else if (fromType == Boolean.class)
+                    setShort(parent, field, ((Boolean) child) ? (short)1 : (short)0);
+                else if (fromType == boolean.class)
+                    setShort(parent, field, ((boolean) child) ? (short)1 : (short)0);
+                else if (child == null)
+                    setShort(parent, field, (short)0);
+                else
+                    setShort(parent, field, (short) child);
+            }
+            else if (toType == long.class) {
                 if (fromType == Long.class)
                     setLong(parent, field, ((Long) child).longValue());
                 else if (fromType == long.class)
@@ -713,7 +792,27 @@ public class ReflectionUtil
                     setFloat(parent, field, 0);
                 else
                     setFloat(parent, field, (float) child);
-            } else if (fromType != toType)
+            }
+            else if (toType == byte.class) {
+                if (fromType == Byte.class)
+                    setByte(parent, field,((Byte)child).byteValue());
+                else if (fromType == byte.class)
+                    setByte(parent, field, (byte) child);
+                else if (fromType == Integer.class)
+                    setByte(parent, field, ( ((Integer)child).byteValue()));
+                else if (fromType == int.class)
+                    setByte(parent, field, (byte) child);
+                else
+                    setByte(parent, field, (byte) child);
+            } else if(toType.isArray() && fromType == Object[].class)
+            {
+                Object array = Array.newInstance(toType.getComponentType(), ((Object[])child).length);
+                System.arraycopy(child, 0, array, 0, ((Object[])child).length);
+                setObject(parent, field, array);
+            }
+
+
+            else if (fromType != toType)
                 setObject(parent, field, toType.cast(child));
             else
                 setObject(parent, field, child);

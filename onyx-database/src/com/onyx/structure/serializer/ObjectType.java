@@ -33,7 +33,17 @@ public enum ObjectType
     BYTE((byte) 23),
     CLASS((byte) 24),
     LAZY_RELATIONSHIP_COLLECTION((byte) 25),
-    LAZY_COLLECTION((byte) 26);
+    LAZY_COLLECTION((byte) 26),
+
+    FLOATS((byte) 27),
+    SHORTS((byte) 28),
+    BOOLEANS((byte) 29),
+    DOUBLES((byte) 30),
+    INTS((byte) 31),
+    LONGS((byte) 32),
+    CHARS((byte) 33)
+
+    ;
 
     private byte type;
 

@@ -8,6 +8,7 @@ import com.onyx.structure.node.Record;
 import com.onyx.structure.node.RecordReference;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -415,6 +416,22 @@ public class ObjectBuffer
             return unwrapNamed(buffer, serializers);
         else if(type == ObjectType.BYTES.getType())
             return unwrapBytes(buffer);
+
+        else if(type == ObjectType.FLOATS.getType())
+            return unwrapFloats(buffer);
+        else if(type == ObjectType.SHORTS.getType())
+            return unwrapShorts(buffer);
+        else if(type == ObjectType.BOOLEANS.getType())
+            return unwrapBooleans(buffer);
+        else if(type == ObjectType.DOUBLES.getType())
+            return unwrapDoubles(buffer);
+        else if(type == ObjectType.INTS.getType())
+            return unwrapInts(buffer);
+        else if(type == ObjectType.LONGS.getType())
+            return unwrapLongs(buffer);
+        else if(type == ObjectType.CHARS.getType())
+            return unwrapChars(buffer);
+
         else if(type == ObjectType.HASH_SET.getType())
             return unwrapCollection(buffer, ObjectType.HASH_SET, serializers);
         else if(type == ObjectType.COLLECTION.getType())
@@ -498,10 +515,28 @@ public class ObjectBuffer
             return wrapBoolean((Boolean) value);
         else if(value instanceof byte[])
             return wrapBytes((byte[]) value);
+
+
+        else if(value instanceof short[])
+            return wrapShorts((short[]) value);
+        else if(value instanceof boolean[])
+            return wrapBooleans((boolean[]) value);
+        else if(value instanceof double[])
+            return wrapDoubles((double[]) value);
+        else if(value instanceof int[])
+            return wrapInts((int[]) value);
+        else if(value instanceof long[])
+            return wrapLongs((long[]) value);
+        else if(value instanceof char[])
+            return wrapChars((char[]) value);
+        else if(value instanceof float[])
+            return wrapFloats((float[]) value);
+
+
         else if(value instanceof String)
             return wrapString((String) value);
         else if(value.getClass().isArray())
-            return wrapArray((Object[])value);
+            return wrapArray(value);
         else if(value instanceof Collection)
             return wrapCollection((Collection) value);
         else if(value instanceof Map)
@@ -685,11 +720,145 @@ public class ObjectBuffer
      */
     public int wrapBytes(byte[] value)
     {
-        ensureCapacity(Byte.BYTES + value.length + Integer.BYTES);
+        int length = (Byte.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
         buffer.put(ObjectType.BYTES.getType());
         buffer.putInt(value.length);
         buffer.put(value);
-        return Byte.BYTES + value.length + Integer.BYTES;
+        return length;
+    }
+
+    /**
+     * Wrap short Array
+     *
+     * @param value array of shorts
+     * @return number of bytes written
+     */
+    public int wrapShorts(short[] value)
+    {
+        int length = (Short.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+        ensureCapacity(length);
+        buffer.put(ObjectType.SHORTS.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.putShort(value[i]);
+        return length;
+    }
+
+    /**
+     * Wrap boolean Array
+     *
+     * @param value array of boolean
+     * @return number of bytes written
+     */
+    public int wrapBooleans(boolean[] value)
+    {
+        int length = (Byte.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
+        buffer.put(ObjectType.BOOLEANS.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.put(value[i] ? (byte) 1 : (byte) 0);
+        return length;
+    }
+
+    /**
+     * Wrap double Array
+     *
+     * @param value array of double
+     * @return number of bytes written
+     */
+    public int wrapDoubles(double[] value)
+    {
+        int length = (Double.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
+        buffer.put(ObjectType.DOUBLES.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.putDouble(value[i]);
+        return length;
+    }
+
+    /**
+     * Wrap int Array
+     *
+     * @param value array of int
+     * @return number of bytes written
+     */
+    public int wrapInts(int[] value)
+    {
+        int length = (Integer.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
+        buffer.put(ObjectType.INTS.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.putInt(value[i]);
+        return length;
+    }
+
+    /**
+     * Wrap long Array
+     *
+     * @param value array of long
+     * @return number of bytes written
+     */
+    public int wrapLongs(long[] value)
+    {
+        int length = (Long.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
+        buffer.put(ObjectType.LONGS.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.putLong(value[i]);
+        return length;
+    }
+
+    /**
+     * Wrap char Array
+     *
+     * @param value array of char
+     * @return number of bytes written
+     */
+    public int wrapChars(char[] value)
+    {
+        int length = (Long.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
+        buffer.put(ObjectType.CHARS.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.putChar(value[i]);
+        return length;
+    }
+
+    /**
+     * Wrap float Array
+     *
+     * @param value array of floats
+     * @return number of bytes written
+     */
+    public int wrapFloats(float[] value)
+    {
+        int length = (Float.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
+
+        ensureCapacity(length);
+        buffer.put(ObjectType.FLOATS.getType());
+        buffer.putInt(value.length);
+
+        for(int i = 0; i < value.length; i++)
+            buffer.putFloat(value[i]);
+        return length;
     }
 
     /**
@@ -822,18 +991,19 @@ public class ObjectBuffer
      * @param value
      * @return
      */
-    public int wrapArray(Object[] value) throws IOException
+    public int wrapArray(Object value) throws IOException
     {
         int bufferPosition = buffer.position();
 
         ensureCapacity(Byte.BYTES + Integer.BYTES);
 
+        int length = Array.getLength(value);
         buffer.put(ObjectType.ARRAY.getType());
-        buffer.putInt(value.length); // Put the size of the array
+        buffer.putInt(length); // Put the size of the array
 
-        for(Object obj : value)
+        for(int i = 0; i < length; i++)
         {
-            writeObject(obj);
+            writeObject(Array.get(value, i));
         }
 
         return buffer.position() - bufferPosition;
@@ -1092,6 +1262,111 @@ public class ObjectBuffer
         final byte[] bytes = new byte[size];
         buffer.get(bytes);
         return bytes;
+    }
+
+    /**
+     * Unwrap array of floats
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static float[] unwrapFloats(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final float[] array = new float[size];
+        for(int i = 0; i < size; i++)
+            array[i] = buffer.getFloat();
+        return array;
+    }
+
+    /**
+     * Unwrap array of short
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static short[] unwrapShorts(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final short[] array = new short[size];
+        for(int i = 0; i < size; i++)
+            array[i] = buffer.getShort();
+        return array;
+    }
+
+    /**
+     * Unwrap array of boolean
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static boolean[] unwrapBooleans(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final boolean[] array = new boolean[size];
+        for(int i = 0; i < size; i++)
+            array[i] = (buffer.get() == 1);
+        return array;
+    }
+
+    /**
+     * Unwrap array of double
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static double[] unwrapDoubles(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final double[] array = new double[size];
+        for(int i = 0; i < size; i++)
+            array[i] = buffer.getDouble();
+        return array;
+    }
+
+    /**
+     * Unwrap array of int
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static int[] unwrapInts(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final int[] array = new int[size];
+        for(int i = 0; i < size; i++)
+            array[i] = buffer.getInt();
+        return array;
+    }
+
+    /**
+     * Unwrap array of long
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static long[] unwrapLongs(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final long[] array = new long[size];
+        for(int i = 0; i < size; i++)
+            array[i] = buffer.getLong();
+        return array;
+    }
+
+    /**
+     * Unwrap array of char
+     *
+     * @param buffer Input Buffer
+     * @return The array read from the buffer
+     */
+    public static char[] unwrapChars(ByteBuffer buffer)
+    {
+        final int size = buffer.getInt();
+        final char[] array = new char[size];
+        for(int i = 0; i < size; i++)
+            array[i] = buffer.getChar();
+        return array;
     }
 
     /**

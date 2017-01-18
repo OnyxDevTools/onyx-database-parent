@@ -438,20 +438,50 @@ public class EntityDescriptor implements Serializable
         for (final AttributeDescriptor attribute : this.attributes.values())
         {
 
-            if (!attribute.getType().getName().equals(Date.class.getName()) &&
-                    !attribute.getType().getName().equals(Long.class.getName()) &&
-                    !attribute.getType().getName().equals(long.class.getName()) &&
-                    !attribute.getType().getName().equals(Integer.class.getName()) &&
-                    !attribute.getType().getName().equals(int.class.getName()) &&
-                    !attribute.getType().getName().equals(String.class.getName()) &&
-                    !attribute.getType().getName().equals(Double.class.getName()) &&
-                    !attribute.getType().getName().equals(double.class.getName()) &&
-                    !attribute.getType().getName().equals(boolean.class.getName()) &&
-                    !attribute.getType().getName().equals(Boolean.class.getName()))
+            Class type = attribute.getType();
+
+            if(Long.class.isAssignableFrom(type) ||
+                Integer.class.isAssignableFrom(type) ||
+                String.class.isAssignableFrom(type) ||
+                Double.class.isAssignableFrom(type) ||
+                Float.class.isAssignableFrom(type) ||
+                Boolean.class.isAssignableFrom(type) ||
+                Byte.class.isAssignableFrom(type) ||
+                Date.class.isAssignableFrom(type) ||
+                Short.class.isAssignableFrom(type) ||
+                Character.class.isAssignableFrom(type) ||
+                short.class.isAssignableFrom(type) ||
+                long.class.isAssignableFrom(type) ||
+                int.class.isAssignableFrom(type) ||
+                double.class.isAssignableFrom(type) ||
+                float.class.isAssignableFrom(type) ||
+                boolean.class.isAssignableFrom(type) ||
+                byte.class.isAssignableFrom(type) ||
+                char.class.isAssignableFrom(type) ||
+                byte[].class.isAssignableFrom(type) ||
+                int[].class.isAssignableFrom(type) ||
+                long[].class.isAssignableFrom(type) ||
+                float[].class.isAssignableFrom(type) ||
+                double[].class.isAssignableFrom(type) ||
+                boolean[].class.isAssignableFrom(type) ||
+                char[].class.isAssignableFrom(type) ||
+                short[].class.isAssignableFrom(type) ||
+                Character[].class.isAssignableFrom(type) ||
+                Short[].class.isAssignableFrom(type) ||
+                Byte[].class.isAssignableFrom(type) ||
+                Integer[].class.isAssignableFrom(type) ||
+                Long[].class.isAssignableFrom(type) ||
+                Float[].class.isAssignableFrom(type) ||
+                Double[].class.isAssignableFrom(type) ||
+                String[].class.isAssignableFrom(type) ||
+                Boolean[].class.isAssignableFrom(type) ||
+                IManagedEntity.class.isAssignableFrom(type))
             {
-                throw new EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " +
-                    attribute.getClass().getName());
+                continue;
             }
+
+            throw new EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " +
+                attribute.getClass().getName());
         }
     }
 

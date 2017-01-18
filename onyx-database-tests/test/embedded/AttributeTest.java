@@ -62,6 +62,21 @@ public class AttributeTest extends BaseTest {
         entity.doubleValue = 232.2;
         entity.booleanPrimitive = true;
         entity.booleanValue = false;
+        entity.mutableFloat = 23.234f;
+        entity.floatValue = 666.3453f;
+        entity.amutableByte = (byte)5;
+        entity.byteValue = (byte)7;
+        entity.mutableShort = 65;
+        entity.shortValue = 44;
+        entity.mutableChar = 'C';
+        entity.charValue = 'D';
+        entity.entity = new AllAttributeEntity();
+        entity.entity.shortValue = 49;
+        entity.bytes = new byte[]{(byte)4,(byte)4,(byte)2};
+        entity.shorts = new short[]{4,4,2};
+        entity.mutableBytes = new Byte[]{(byte)2,(byte)8,(byte)7};
+        entity.mutableShorts = new Short[]{4,4,2};
+        entity.strings = new String[]{"A","V"};
 
         manager.saveEntity(entity);
 
@@ -84,6 +99,20 @@ public class AttributeTest extends BaseTest {
         Assert.assertEquals(Double.valueOf(232.2), entity2.doubleValue);
         Assert.assertEquals(true, entity2.booleanPrimitive);
         Assert.assertEquals(Boolean.valueOf(false), entity2.booleanValue);
+        Assert.assertTrue(23.234f == entity2.mutableFloat);
+        Assert.assertTrue(666.3453f == entity2.floatValue);
+        Assert.assertTrue((byte)5 == entity2.amutableByte);
+        Assert.assertTrue((byte)7 == entity2.byteValue);
+        Assert.assertTrue(65 == entity2.mutableShort);
+        Assert.assertTrue(44 == entity2.shortValue);
+        Assert.assertTrue('C' == entity2.mutableChar);
+        Assert.assertTrue('D' == entity2.charValue);
+        Assert.assertTrue(entity2.entity != null && entity2.entity.shortValue == 49);
+        Assert.assertArrayEquals(entity2.bytes, new byte[]{(byte)4,(byte)4,(byte)2});
+        Assert.assertTrue(entity2.shorts.length == 3 && entity2.shorts[2] == 2);
+        Assert.assertArrayEquals(entity2.mutableBytes, new Byte[]{(byte)2,(byte)8,(byte)7});
+        Assert.assertTrue(entity2.mutableShorts.length == 3 && entity2.mutableShorts[2] == 2);
+        Assert.assertTrue(entity2.strings.length == 2 && entity2.strings[1].equals("V"));
 
     }
 
@@ -124,6 +153,23 @@ public class AttributeTest extends BaseTest {
         Assert.assertNull(entity2.doubleValue);
         Assert.assertEquals(false, entity2.booleanPrimitive);
         Assert.assertNull(entity2.booleanValue);
+
+        Assert.assertNull(entity2.mutableFloat);
+        Assert.assertNull(entity2.amutableByte);
+        Assert.assertNull(entity2.mutableShort);
+        Assert.assertNull(entity2.mutableChar);
+        Assert.assertNull(entity2.entity);
+        Assert.assertNull(entity2.mutableBytes);
+        Assert.assertNull(entity2.mutableShorts);
+        Assert.assertNull(entity2.strings);
+        Assert.assertNull(entity2.bytes);
+        Assert.assertNull(entity2.shorts);
+
+        Assert.assertTrue(entity2.floatValue == 0.0f);
+        Assert.assertTrue(entity2.byteValue == (byte)0);
+        Assert.assertTrue(entity2.shortValue == 0);
+        Assert.assertTrue(entity2.charValue == (char)0);
+
 
     }
 

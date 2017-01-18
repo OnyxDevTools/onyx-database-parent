@@ -18,4 +18,7 @@ public class InvalidAttributeTypeEntity extends ManagedEntity implements IManage
 
     @Attribute
     public float hiya;
+
+    @Attribute
+    public Object iduno;
 }
