@@ -248,7 +248,7 @@ public class PartitionQueryController extends PartitionContext
         }
         else
         {
-            results = temporaryDataFile.getScalableMap("sortingValues", this.descriptor.getIdentifier().getLoadFactor());
+            results = temporaryDataFile.getSkipListMap("sortingValues");
         }
 
         if(indexValues.size() == 0)

@@ -29,6 +29,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
         keys = new KeyCollectionMulti(fileStore, this);
         dict = new DictionaryCollectionMulti(fileStore, this);
         maps = new MapCollection(fileStore, this);
+        references = new ReferenceCollectionMulti(fileStore, this);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,6 +37,22 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
     // Iterate-able properties on structure
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    protected ReferenceCollectionMulti references;
+
+    /**
+     * Getter for set of references
+     *
+     * @return the reference collection
+     * @see AbstractIterableSkipList.KeyCollection
+     * @see AbstractIterableSkipList.AbstractNodeCollection
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public Set referenceSet() {
+        return references;
+    }
 
     /**
      * Getter for set of keys
@@ -79,6 +96,11 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
     // Getter for super entry set for the load factor map
     public Set<Entry<K, V>> superEntrySet() {
         return super.entrySet();
+    }
+
+    // Getter for super reference set for the load factor map
+    public Set<Entry<K, V>> superReferenceSet() {
+        return super.referenceSet();
     }
 
     // Getter for super dictionary set for the load factor map
@@ -332,6 +354,36 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
     }
 
     /**
+     * Reference Collection
+     *
+     * @param <V>
+     * @see AbstractMultiNodeCollection
+     */
+    protected class ReferenceCollectionMulti<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
+        /**
+         * Constructor
+         *
+         * @param fileStore Storage mechanism for the data structure
+         * @param diskMap Outer reference to data structure
+         */
+        public ReferenceCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
+            super(fileStore, diskMap);
+            this.fileStore = fileStore;
+            this.diskMap = diskMap;
+        }
+
+        /**
+         * Iterator that iterates through nodes
+         *
+         * @return New instance of reference iterator
+         */
+        @Override
+        public Iterator<V> iterator() {
+            return new AbstractIterableLoadFactorMap.ReferenceIterator(header);
+        }
+    }
+
+    /**
      * Entry Collection.  Much like KeyCollectionMulti except iterates through entries
      *
      * @param <V>
@@ -521,6 +573,21 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
     }
 
     /**
+     * Reference Iterator.
+     */
+    class ReferenceIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
+        public ReferenceIterator(Header header) {
+            super(header);
+            isReference = true;
+        }
+
+        @Override
+        public Object next() {
+            return super.next();
+        }
+    }
+
+    /**
      * Entry.  Similar to the Key and Value iterator except it returns a custom entry that will lazy load the keys and values
      */
     class EntryIterator extends AbstractIterableLoadFactorMap.AbstractNodeIterator implements Iterator {
@@ -623,7 +690,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
         protected Stack<Long> referenceStack = new Stack<Long>(); // Simple stack that hold onto the nodes
         protected Iterator currentIterator = null;
         protected boolean isDictionary = false;
-
+        protected boolean isReference = false;
         /**
          * Constructor
          *
@@ -702,6 +769,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
                     setHead(node);
                     if (isDictionary)
                         currentIterator = superDictionarySet().iterator();
+                    else if(isReference)
+                        currentIterator = superReferenceSet().iterator();
                     else
                         currentIterator = superEntrySet().iterator();
                     if (currentIterator.hasNext())

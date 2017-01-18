@@ -475,7 +475,10 @@ public class EntityDescriptor implements Serializable
                 Double[].class.isAssignableFrom(type) ||
                 String[].class.isAssignableFrom(type) ||
                 Boolean[].class.isAssignableFrom(type) ||
-                IManagedEntity.class.isAssignableFrom(type))
+                IManagedEntity.class.isAssignableFrom(type) ||
+                List.class.isAssignableFrom(type) ||
+                Set.class.isAssignableFrom(type) ||
+                type.isEnum())
             {
                 continue;
             }

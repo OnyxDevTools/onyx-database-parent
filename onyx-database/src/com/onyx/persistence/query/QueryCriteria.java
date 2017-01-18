@@ -82,6 +82,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     private Byte byteValue;
     private Short shortValue;
     private ManagedEntity entityValue;
+    private Enum enumValue;
 
     private List<Date> dateValueList;
     private List<Long> longValueList;
@@ -310,6 +311,22 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         this.entityValue = value;
         this.operator = criteriaEnum;
         this.type = QueryCriteriaType.ENTITY;
+    }
+
+    /**
+     * Constructor for enum key
+     *
+     * @since 1.2.0
+     * @param attribute Attribute
+     * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
+     * @param value Enum Value
+     */
+    public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Enum value)
+    {
+        this.attribute = attribute;
+        this.enumValue = value;
+        this.operator = criteriaEnum;
+        this.type = QueryCriteriaType.ENUM;
     }
 
     /**
@@ -753,6 +770,10 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         {
             return entityValue;
         }
+        else if(type == QueryCriteriaType.ENUM)
+        {
+            return enumValue;
+        }
         else if(type == QueryCriteriaType.LIST_DATE)
         {
             return dateValueList;
@@ -1007,6 +1028,14 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         this.entityValueList = entityValueList;
     }
 
+    public Enum getEnumValue() {
+        return enumValue;
+    }
+
+    public void setEnumValue(Enum enumValue) {
+        this.enumValue = enumValue;
+    }
+
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException
     {
@@ -1027,7 +1056,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         buffer.writeObject(andCriteria);
         buffer.writeObject(orCriteria);
 
-
+        buffer.writeObject(enumValue);
         buffer.writeObject(floatValue);
         buffer.writeObject(characterValue);
         buffer.writeObject(byteValue);
@@ -1060,9 +1089,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         andCriteria = (List<QueryCriteria>)buffer.readObject();
         orCriteria = (List<QueryCriteria>)buffer.readObject();
 
-
-
-
+        enumValue = (Enum)buffer.readObject();
         floatValue = (Float)buffer.readObject();
         characterValue = (Character)buffer.readObject();
         byteValue = (Byte)buffer.readObject();

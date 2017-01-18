@@ -9,6 +9,7 @@ import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Relationship;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -317,9 +318,7 @@ public class ReflectionUtil {
                 case CHAR:
                     return ReflectionUtil.getChar(object, offsetField);
                 default:
-                    if (!fieldType.isPrimitive())
-                        return ReflectionUtil.getObject(object, offsetField);
-                    throw new AttributeTypeMismatchException(AttributeTypeMismatchException.UNKNOWN_EXCEPTION, offsetField.type, object.getClass(), offsetField.name);
+                    return ReflectionUtil.getObject(object, offsetField);
 
             }
         } catch (IllegalAccessException e) {
@@ -872,7 +871,17 @@ public class ReflectionUtil {
                     }
                     break;
                 default:
-                    setObject(parent, field, toClass.cast(child));
+
+                    if(toType.isArray())
+                    {
+                        int arrayLength = Array.getLength(child);
+                        Object newArray = Array.newInstance(toClass, arrayLength);
+                        System.arraycopy(child, 0, newArray, 0, arrayLength);
+                        setObject(parent, field, newArray);
+                    }
+                    else {
+                        setObject(parent, field, toClass.cast(child));
+                    }
             }
         } catch (IllegalAccessException ignore) {
             // This is suppressed

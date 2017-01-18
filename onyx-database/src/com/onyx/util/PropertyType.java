@@ -1,5 +1,6 @@
 package com.onyx.util;
 
+import java.lang.reflect.Array;
 import java.util.Date;
 
 /**
@@ -88,6 +89,7 @@ enum PropertyType {
         else if (clazz == Date.class)
             return DATE;
 
+
         return OTHER;
     }
 
@@ -99,6 +101,15 @@ enum PropertyType {
      */
     public boolean isPrimitive() {
         return this.ordinal() < 8;
+    }
+
+    /**
+     * Return whether the object is an array
+     * @return The class is an array
+     */
+    public boolean isArray()
+    {
+        return this.type != null && this.type.isArray() && this.type.getComponentType().isPrimitive();
     }
 
     /**

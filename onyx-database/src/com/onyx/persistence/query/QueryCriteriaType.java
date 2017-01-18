@@ -28,6 +28,7 @@ public enum QueryCriteriaType
     BYTE,
     SHORT,
     ENTITY,
+    ENUM,
     LIST_FLOAT,
     LIST_CHARACTER,
     LIST_BYTE,
