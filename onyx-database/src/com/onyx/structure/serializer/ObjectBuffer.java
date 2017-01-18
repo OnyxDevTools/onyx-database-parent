@@ -515,8 +515,6 @@ public class ObjectBuffer
             return wrapBoolean((Boolean) value);
         else if(value instanceof byte[])
             return wrapBytes((byte[]) value);
-
-
         else if(value instanceof short[])
             return wrapShorts((short[]) value);
         else if(value instanceof boolean[])
@@ -531,8 +529,6 @@ public class ObjectBuffer
             return wrapChars((char[]) value);
         else if(value instanceof float[])
             return wrapFloats((float[]) value);
-
-
         else if(value instanceof String)
             return wrapString((String) value);
         else if(value.getClass().isArray())
