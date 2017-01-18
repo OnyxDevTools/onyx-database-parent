@@ -1,5 +1,9 @@
 package com.onyx.persistence.query;
 
+import com.onyx.persistence.ManagedEntity;
+
+import java.util.List;
+
 /**
  * Type of attribute to compare while filtering record
  *
@@ -19,6 +23,16 @@ public enum QueryCriteriaType
     DATE,
     INTEGER,
     BOOLEAN,
+    FLOAT,
+    CHARACTER,
+    BYTE,
+    SHORT,
+    ENTITY,
+    LIST_FLOAT,
+    LIST_CHARACTER,
+    LIST_BYTE,
+    LIST_SHORT,
+    LIST_ENTITY,
     LIST_STRING,
     LIST_LONG,
     LIST_INTEGER,

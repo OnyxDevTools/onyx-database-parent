@@ -1,6 +1,7 @@
 package com.onyx.persistence.query;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 
@@ -43,6 +44,7 @@ import java.util.List;
  * @see com.onyx.persistence.query.Query
  *
  */
+@SuppressWarnings({"unused", "unchecked", "SuspiciousToArrayCall"})
 public class QueryCriteria implements ObjectSerializable, Serializable
 {
 
@@ -64,25 +66,38 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     /**
      * Comparison properties
      */
-    protected String attribute;
-    protected QueryCriteriaOperator operator;
-    protected QueryCriteriaType type;
+    private String attribute;
+    private QueryCriteriaOperator operator;
+    private QueryCriteriaType type;
 
-    protected Date dateValue;
-    protected Long longValue;
-    protected Integer integerValue;
-    protected Boolean booleanValue;
-    protected Double doubleValue;
-    protected String stringValue;
+    private Date dateValue;
+    private Long longValue;
+    private Integer integerValue;
+    private Boolean booleanValue;
+    private Double doubleValue;
+    private String stringValue;
 
-    protected List<Date> dateValueList;
-    protected List<Long> longValueList;
-    protected List<Integer> integerValueList;
-    protected List<Double> doubleValueList;
-    protected List<String> stringValueList;
+    private Float floatValue;
+    private Character characterValue;
+    private Byte byteValue;
+    private Short shortValue;
+    private ManagedEntity entityValue;
 
-    protected List<QueryCriteria> andCriteria = new ArrayList<QueryCriteria>();
-    protected List<QueryCriteria> orCriteria = new ArrayList<QueryCriteria>();
+    private List<Date> dateValueList;
+    private List<Long> longValueList;
+    private List<Integer> integerValueList;
+    private List<Double> doubleValueList;
+    private List<String> stringValueList;
+
+    private List<Float> floatValueList;
+    private List<Character> characterValueList;
+    private List<Byte> byteValueList;
+    private List<Short> shortValueList;
+    private List<ManagedEntity> entityValueList;
+
+
+    private List<QueryCriteria> andCriteria = new ArrayList();
+    private List<QueryCriteria> orCriteria = new ArrayList();
 
     /**
      * Get Or Sub Criteria
@@ -160,11 +175,11 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         this.attribute = attribute;
         if (value == null)
         {
-            this.integerValue = Integer.valueOf(NULL_INTEGER_VALUE);
+            this.integerValue = NULL_INTEGER_VALUE;
         }
         else
         {
-            this.integerValue = Integer.valueOf(value);
+            this.integerValue = value;
         }
         this.operator = criteriaEnum;
         this.type = QueryCriteriaType.INTEGER;
@@ -218,6 +233,86 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     /**
+     * Constructor for float key
+     *
+     * @since 1.2.0
+     * @param attribute Attribute
+     * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
+     * @param value Float Value
+     */
+    public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Float value)
+    {
+        this.attribute = attribute;
+        this.floatValue = value;
+        this.operator = criteriaEnum;
+        this.type = QueryCriteriaType.FLOAT;
+    }
+
+    /**
+     * Constructor for Character key
+     *
+     * @since 1.0.0
+     * @param attribute Attribute
+     * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
+     * @param value Character Value
+     */
+    public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Character value)
+    {
+        this.attribute = attribute;
+        this.characterValue = value;
+        this.operator = criteriaEnum;
+        this.type = QueryCriteriaType.CHARACTER;
+    }
+
+    /**
+     * Constructor for date key
+     *
+     * @since 1.2.0
+     * @param attribute Attribute
+     * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
+     * @param value Byte Value
+     */
+    public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Byte value)
+    {
+        this.attribute = attribute;
+        this.byteValue = value;
+        this.operator = criteriaEnum;
+        this.type = QueryCriteriaType.BYTE;
+    }
+
+    /**
+     * Constructor for date key
+     *
+     * @since 1.2.0
+     * @param attribute Attribute
+     * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
+     * @param value Short Value
+     */
+    public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, Short value)
+    {
+        this.attribute = attribute;
+        this.shortValue = value;
+        this.operator = criteriaEnum;
+        this.type = QueryCriteriaType.SHORT;
+    }
+
+    /**
+     * Constructor for date key
+     *
+     * @since 1.2.0
+     * @param attribute Attribute
+     * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
+     * @param value Managed Entity Value
+     */
+    public QueryCriteria(String attribute, QueryCriteriaOperator criteriaEnum, ManagedEntity value)
+    {
+        this.attribute = attribute;
+        this.entityValue = value;
+        this.operator = criteriaEnum;
+        this.type = QueryCriteriaType.ENTITY;
+    }
+
+    /**
      * Constructor for in clause
      *
      * @since 1.0.0
@@ -259,6 +354,36 @@ public class QueryCriteria implements ObjectSerializable, Serializable
             Integer[] values = valueList.toArray(new Integer[valueList.size()]);
             this.integerValueList = Arrays.asList(values);
             this.type = QueryCriteriaType.LIST_INTEGER;
+        }
+        else if (valueList.get(0) instanceof Float)
+        {
+            Float[] values = valueList.toArray(new Float[valueList.size()]);
+            this.floatValueList = Arrays.asList(values);
+            this.type = QueryCriteriaType.LIST_FLOAT;
+        }
+        else if (valueList.get(0) instanceof Character)
+        {
+            Character[] values = valueList.toArray(new Character[valueList.size()]);
+            this.characterValueList = Arrays.asList(values);
+            this.type = QueryCriteriaType.LIST_CHARACTER;
+        }
+        else if (valueList.get(0) instanceof Short)
+        {
+            Short[] values = valueList.toArray(new Short[valueList.size()]);
+            this.shortValueList = Arrays.asList(values);
+            this.type = QueryCriteriaType.LIST_SHORT;
+        }
+        else if (valueList.get(0) instanceof Byte)
+        {
+            Byte[] values = valueList.toArray(new Byte[valueList.size()]);
+            this.byteValueList = Arrays.asList(values);
+            this.type = QueryCriteriaType.LIST_BYTE;
+        }
+        else if (valueList.get(0) instanceof ManagedEntity)
+        {
+            ManagedEntity[] values = valueList.toArray(new ManagedEntity[valueList.size()]);
+            this.entityValueList = Arrays.asList(values);
+            this.type = QueryCriteriaType.LIST_ENTITY;
         }
     }
 
@@ -607,6 +732,27 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         {
             return stringValue;
         }
+
+        else if(type == QueryCriteriaType.FLOAT)
+        {
+            return floatValue;
+        }
+        else if(type == QueryCriteriaType.CHARACTER)
+        {
+            return characterValue;
+        }
+        else if(type == QueryCriteriaType.BYTE)
+        {
+            return byteValue;
+        }
+        else if(type == QueryCriteriaType.SHORT)
+        {
+            return shortValue;
+        }
+        else if(type == QueryCriteriaType.ENTITY)
+        {
+            return entityValue;
+        }
         else if(type == QueryCriteriaType.LIST_DATE)
         {
             return dateValueList;
@@ -626,6 +772,26 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         else if(type == QueryCriteriaType.LIST_STRING)
         {
             return stringValueList;
+        }
+        else if(type == QueryCriteriaType.LIST_FLOAT)
+        {
+            return floatValueList;
+        }
+        else if(type == QueryCriteriaType.LIST_CHARACTER)
+        {
+            return characterValueList;
+        }
+        else if(type == QueryCriteriaType.LIST_BYTE)
+        {
+            return byteValueList;
+        }
+        else if(type == QueryCriteriaType.LIST_SHORT)
+        {
+            return shortValueList;
+        }
+        else if(type == QueryCriteriaType.LIST_ENTITY)
+        {
+            return entityValueList;
         }
 
         return null;
@@ -761,6 +927,85 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         this.orCriteria = orCriteria;
     }
 
+    public Float getFloatValue() {
+        return floatValue;
+    }
+
+    public void setFloatValue(Float floatValue) {
+        this.floatValue = floatValue;
+    }
+
+    public Character getCharacterValue() {
+        return characterValue;
+    }
+
+    public void setCharacterValue(Character characterValue) {
+        this.characterValue = characterValue;
+    }
+
+    public Byte getByteValue() {
+        return byteValue;
+    }
+
+    public void setByteValue(Byte byteValue) {
+        this.byteValue = byteValue;
+    }
+
+    public Short getShortValue() {
+        return shortValue;
+    }
+
+    public void setShortValue(Short shortValue) {
+        this.shortValue = shortValue;
+    }
+
+    public ManagedEntity getEntityValue() {
+        return entityValue;
+    }
+
+    public void setEntityValue(ManagedEntity entityValue) {
+        this.entityValue = entityValue;
+    }
+
+    public List<Float> getFloatValueList() {
+        return floatValueList;
+    }
+
+    public void setFloatValueList(List<Float> floatValueList) {
+        this.floatValueList = floatValueList;
+    }
+
+    public List<Character> getCharacterValueList() {
+        return characterValueList;
+    }
+
+    public void setCharacterValueList(List<Character> characterValueList) {
+        this.characterValueList = characterValueList;
+    }
+
+    public List<Byte> getByteValueList() {
+        return byteValueList;
+    }
+
+    public void setByteValueList(List<Byte> byteValueList) {
+        this.byteValueList = byteValueList;
+    }
+
+    public List<Short> getShortValueList() {
+        return shortValueList;
+    }
+
+    public void setShortValueList(List<Short> shortValueList) {
+        this.shortValueList = shortValueList;
+    }
+
+    public List<ManagedEntity> getEntityValueList() {
+        return entityValueList;
+    }
+
+    public void setEntityValueList(List<ManagedEntity> entityValueList) {
+        this.entityValueList = entityValueList;
+    }
 
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException
@@ -781,6 +1026,19 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         buffer.writeObject(stringValueList);
         buffer.writeObject(andCriteria);
         buffer.writeObject(orCriteria);
+
+
+        buffer.writeObject(floatValue);
+        buffer.writeObject(characterValue);
+        buffer.writeObject(byteValue);
+        buffer.writeObject(shortValue);
+        buffer.writeObject(entityValue);
+        buffer.writeObject(floatValueList);
+        buffer.writeObject(characterValueList);
+        buffer.writeObject(byteValueList);
+        buffer.writeObject(shortValueList);
+        buffer.writeObject(entityValueList);
+
     }
 
     @Override
@@ -801,6 +1059,20 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         stringValueList =(List<String>) buffer.readObject();
         andCriteria = (List<QueryCriteria>)buffer.readObject();
         orCriteria = (List<QueryCriteria>)buffer.readObject();
+
+
+
+
+        floatValue = (Float)buffer.readObject();
+        characterValue = (Character)buffer.readObject();
+        byteValue = (Byte)buffer.readObject();
+        shortValue = (Short)buffer.readObject();
+        entityValue = (ManagedEntity)buffer.readObject();
+        floatValueList = (List<Float>)buffer.readObject();
+        characterValueList = (List<Character>)buffer.readObject();
+        byteValueList = (List<Byte>)buffer.readObject();
+        shortValueList = (List<Short>)buffer.readObject();
+        entityValueList = (List<ManagedEntity>)buffer.readObject();
     }
 
     @Override
