@@ -31,6 +31,9 @@ public class CompareUtil
      */
     public static boolean compare(Object object, Object object2) throws InvalidDataTypeForOperator
     {
+        if(object instanceof Comparable && object2 instanceof Comparable)
+            return ((Comparable) object).compareTo(object2) == 0;
+
         if(object == null && object2 == null)
         {
             return true;
@@ -56,8 +59,6 @@ public class CompareUtil
         {
             return object2 == null;
         }
-
-
         else if(object instanceof Date && object == QueryCriteria.NULL_DATE_VALUE)
         {
             return object2 == null;

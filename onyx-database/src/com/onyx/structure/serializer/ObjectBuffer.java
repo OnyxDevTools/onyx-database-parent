@@ -16,13 +16,15 @@ import java.util.*;
 
 /**
  * Created by timothy.osborn on 3/22/15.
+ *
+ * This class is a legacy serializer.  It has since been replaced by the BufferStream class
  */
 public class ObjectBuffer
 {
 
-    public static final Charset CHARSET = Charset.forName("UTF-8"); // Supported Character set
+    private static final Charset CHARSET = Charset.forName("UTF-8"); // Supported Character set
 
-    protected static final int BUFFER_ALLOCATION = 88; // Initial Buffer allocation size
+    private static final int BUFFER_ALLOCATION = 88; // Initial Buffer allocation size
 
     public Serializers serializers;
 
@@ -31,7 +33,7 @@ public class ObjectBuffer
     /**
      * Constructor with serializers
      *
-     * @param serializers
+     * @param serializers Custom serializers
      */
     public ObjectBuffer(Serializers serializers)
     {
@@ -40,10 +42,10 @@ public class ObjectBuffer
     }
 
     /**
-     * Consturctor with initial byte buffer and serializers
+     * Constructor with initial byte buffer and serializers
      *
-     * @param buffer
-     * @param serializers
+     * @param buffer Underlying ByteBuffer to put or read from
+     * @param serializers Custom serializers
      */
     public ObjectBuffer(ByteBuffer buffer, Serializers serializers)
     {
@@ -51,6 +53,10 @@ public class ObjectBuffer
         this.buffer = buffer;
     }
 
+    /**
+     * Get the size of the buffer
+     * @return Integer value
+     */
     public int getSize()
     {
         return buffer.limit();
@@ -59,7 +65,7 @@ public class ObjectBuffer
     /**
      * Truncate the buffer and return it
      *
-     * @return
+     * @return The byte buffer being used.  This will also truncate and limit the value
      */
     public ByteBuffer getByteBuffer()
     {
@@ -71,9 +77,9 @@ public class ObjectBuffer
     /**
      * Read
      *
-     * @param type
-     * @return
-     * @throws java.io.IOException
+     * @param type Object Type to read
+     * @return The object read
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer.  Typically overflow.
      */
     public Object read(ObjectType type) throws IOException
     {
@@ -83,7 +89,7 @@ public class ObjectBuffer
     /**
      * Read Int
      *
-     * @return
+     * @return Int from buffer
      */
     public int readInt()
     {
@@ -93,8 +99,9 @@ public class ObjectBuffer
     /**
      * Read Date
      *
-     * @return
+     * @return Date from buffer
      */
+    @SuppressWarnings("unused")
     public Date readDate()
     {
         return new Date(buffer.getLong());
@@ -103,7 +110,7 @@ public class ObjectBuffer
     /**
      * Read Long
      *
-     * @return
+     * @return Long from buffer
      */
     public long readLong()
     {
@@ -113,7 +120,7 @@ public class ObjectBuffer
     /**
      * Read Long
      *
-     * @return
+     * @return double from buffer
      */
     public double readDouble()
     {
@@ -123,7 +130,7 @@ public class ObjectBuffer
     /**
      * Read Long
      *
-     * @return
+     * @return float from buffer
      */
     public float readFloat()
     {
@@ -133,7 +140,7 @@ public class ObjectBuffer
     /**
      * Read Long
      *
-     * @return
+     * @return byte from buffer
      */
     public byte readByte()
     {
@@ -141,10 +148,11 @@ public class ObjectBuffer
     }
 
     /**
-     * Read Long
+     * Read byte array
      *
-     * @return
+     * @return byte array from buffer
      */
+    @SuppressWarnings("unused")
     public byte[] readBytes()
     {
         int size = buffer.getInt();
@@ -156,7 +164,7 @@ public class ObjectBuffer
     /**
      * Write Boolean
      *
-     * @throws java.io.IOException
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from byte buffer
      */
     public boolean readBoolean() throws IOException
     {
@@ -166,8 +174,8 @@ public class ObjectBuffer
 
     /**
      * Read Long Array
-     * @param size
-     * @return
+     * @param size Size of long array
+     * @return array of longs
      */
     public long[] readLongArray(int size)
     {
@@ -183,14 +191,19 @@ public class ObjectBuffer
     /**
      * Read Short
      *
-     * @return
+     * @return short from buffer
      */
+    @SuppressWarnings("unused")
     public short readShort()
     {
         return buffer.getShort();
     }
 
-    protected void ensureCapacity(int more)
+    /**
+     * Ensure the capacity is large enough when writing to a byte buffer
+     * @param more How many more bytes you need
+     */
+    private void ensureCapacity(int more)
     {
         if(buffer.capacity() < more + buffer.position())
         {
@@ -206,8 +219,8 @@ public class ObjectBuffer
     /**
      * Helper for writing anything to a buffer which is dynamically growing
      *
-     * @param object
-     * @throws java.io.IOException
+     * @param object Object to serialize
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue writing to ByteBuffer
      */
     public int writeObject(Object object) throws IOException
     {
@@ -216,11 +229,15 @@ public class ObjectBuffer
         return buffer.position() - currentPosition;
     }
 
+    /**
+     * Write another buffer onto the existing buffer
+     * @param addBuffer Buffer to add
+     */
     public void write(ObjectBuffer addBuffer)
     {
         final ByteBuffer bufferToAdd = addBuffer.getByteBuffer();
 
-        ByteBuffer tempBuffer = null;
+        ByteBuffer tempBuffer;
         if(buffer.capacity() < (bufferToAdd.limit() + buffer.position()))
         {
             tempBuffer = allocate(buffer.limit() + bufferToAdd.limit() + BUFFER_ALLOCATION);
@@ -241,8 +258,8 @@ public class ObjectBuffer
     /**
      * Read Object
      *
-     * @return
-     * @throws java.io.IOException
+     * @return An object that is de-serialized from buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
     public Object readObject() throws IOException
     {
@@ -252,9 +269,10 @@ public class ObjectBuffer
     /**
      * Write Short
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val Short value to write
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("unused")
     public void writeShort(short val) throws IOException
     {
         ensureCapacity(Short.BYTES);
@@ -264,8 +282,8 @@ public class ObjectBuffer
     /**
      * Write Int
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val Integer to write to buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
     public void writeInt(int val) throws IOException
     {
@@ -276,8 +294,8 @@ public class ObjectBuffer
     /**
      * Write Byte
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val Byte to write to buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
     public void writeByte(byte val) throws IOException
     {
@@ -286,11 +304,12 @@ public class ObjectBuffer
     }
 
     /**
-     * Write Byte
+     * Write Byte array
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val byte array to write to buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("unused")
     public void writeBytes(byte[] val) throws IOException
     {
         ensureCapacity((Byte.BYTES * val.length) + Integer.BYTES);
@@ -301,8 +320,8 @@ public class ObjectBuffer
     /**
      * Write Long
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val long to write
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
     public void writeLong(long val) throws IOException
     {
@@ -313,21 +332,22 @@ public class ObjectBuffer
     /**
      * Write Boolean
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val boolean to write
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer  
      */
     public void writeBoolean(boolean val) throws IOException
     {
         ensureCapacity(Byte.BYTES);
-        buffer.put((val == true) ? (byte) 1 : (byte) 2);
+        buffer.put((val) ? (byte) 1 : (byte) 2);
     }
 
     /**
      * Write Date
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val date to write
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("unused")
     public void writeDate(Date val) throws IOException
     {
         ensureCapacity(Long.BYTES);
@@ -337,8 +357,8 @@ public class ObjectBuffer
     /**
      * Write Date
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val float to write to buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     public void writeFloat(Float val) throws IOException
     {
@@ -349,8 +369,8 @@ public class ObjectBuffer
     /**
      * Write Date
      *
-     * @param val
-     * @throws java.io.IOException
+     * @param val double to write to buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     public void writeDouble(Double val) throws IOException
     {
@@ -361,8 +381,8 @@ public class ObjectBuffer
     /**
      * Write Long Array
      *
-     * @param values
-     * @throws java.io.IOException
+     * @param values long array to write to buffer
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     public void writeLongArray(long[] values) throws IOException
     {
@@ -373,8 +393,8 @@ public class ObjectBuffer
 
     /**
      * Allocation that will encapsulate the endian as well as the allocation method
-     * @param count
-     * @return
+     * @param count amount of bytes to allocate
+     * @return The allocated byte buffer.
      */
     public static ByteBuffer allocate(int count)
     {
@@ -386,83 +406,88 @@ public class ObjectBuffer
     /**
      * Unwrap byte buffer into an object
      *
-     * @param buffer
-     * @return
-     * @throws java.io.IOException
+     * @param buffer Buffer to read from
+     * @return Object that was unwrapped
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public static Object unwrap(ByteBuffer buffer, byte type, Serializers serializers) throws IOException
+    private static Object unwrap(ByteBuffer buffer, byte type, Serializers serializers) throws IOException
     {
-        if(type == ObjectType.NULL.getType())
-            return null;
-        else if(type == ObjectType.LONG.getType())
-            return buffer.getLong();
-        else if(type == ObjectType.INT.getType())
-            return buffer.getInt();
-        else if(type == ObjectType.DOUBLE.getType())
-            return buffer.getDouble();
-        else if(type == ObjectType.FLOAT.getType())
-            return buffer.getFloat();
-        else if(type == ObjectType.SHORT.getType())
-            return buffer.getShort();
-        else if(type == ObjectType.BOOLEAN.getType())
-            return unwrapBoolean(buffer);
-        else if(type == ObjectType.DATE.getType())
-            return unwrapDate(buffer);
-        else if(type == ObjectType.ENUM.getType())
-            return unwrapEnum(buffer);
-        else if(type == ObjectType.STRING.getType())
-            return unwrapString(buffer);
-        else if(type == ObjectType.BUFFER_OBJ.getType())
-            return unwrapNamed(buffer, serializers);
-        else if(type == ObjectType.BYTES.getType())
-            return unwrapBytes(buffer);
+        ObjectType objectType = ObjectType.values()[type-1];
+        switch (objectType)
+        {
+            case NULL:
+                return null;
+            case LONG:
+                return buffer.getLong();
+            case INT:
+                return buffer.getInt();
+            case SHORT:
+                return buffer.getShort();
+            case DOUBLE:
+                return buffer.getDouble();
+            case FLOAT:
+                return buffer.getFloat();
+            case BOOLEAN:
+                return unwrapBoolean(buffer);
+            case STRING:
+                return unwrapString(buffer);
+            case BUFFER_OBJ:
+                return unwrapNamed(buffer, serializers);
+            case BYTES:
+                return unwrapBytes(buffer);
+            case HASH_SET:
+                return unwrapCollection(buffer, ObjectType.HASH_SET, serializers);
+            case COLLECTION:
+                return unwrapCollection(buffer, ObjectType.COLLECTION, serializers);
+            case MAP:
+                return unwrapMap(buffer, serializers);
+            case DATE:
+                return unwrapDate(buffer);
+            case OTHER:
+                return unwrapOther(buffer);
+            case NODE:
+                return unwrapNamed(buffer, BitMapNode.class);
+            case RECORD_REFERENCE:
+                return unwrapNamed(buffer, RecordReference.class);
+            case RECORD:
+                return unwrapNamed(buffer, Record.class);
+            case ENUM:
+                return unwrapEnum(buffer);
+            case ARRAY:
+                return unwrapArray(buffer, serializers);
+            case CHAR:
+                return buffer.getChar();
+            case BYTE:
+                return buffer.get();
+            case CLASS:
+                break;
+            case FLOATS:
+                return unwrapFloats(buffer);
+            case SHORTS:
+                return unwrapShorts(buffer);
+            case BOOLEANS:
+                return unwrapBooleans(buffer);
+            case DOUBLES:
+                return unwrapDoubles(buffer);
+            case INTS:
+                return unwrapInts(buffer);
+            case LONGS:
+                return unwrapLongs(buffer);
+            case CHARS:
+                return unwrapChars(buffer);
+        }
 
-        else if(type == ObjectType.FLOATS.getType())
-            return unwrapFloats(buffer);
-        else if(type == ObjectType.SHORTS.getType())
-            return unwrapShorts(buffer);
-        else if(type == ObjectType.BOOLEANS.getType())
-            return unwrapBooleans(buffer);
-        else if(type == ObjectType.DOUBLES.getType())
-            return unwrapDoubles(buffer);
-        else if(type == ObjectType.INTS.getType())
-            return unwrapInts(buffer);
-        else if(type == ObjectType.LONGS.getType())
-            return unwrapLongs(buffer);
-        else if(type == ObjectType.CHARS.getType())
-            return unwrapChars(buffer);
-
-        else if(type == ObjectType.HASH_SET.getType())
-            return unwrapCollection(buffer, ObjectType.HASH_SET, serializers);
-        else if(type == ObjectType.COLLECTION.getType())
-            return unwrapCollection(buffer, ObjectType.COLLECTION, serializers);
-        else if(type == ObjectType.MAP.getType())
-            return unwrapMap(buffer, serializers);
-        else if(type == ObjectType.OTHER.getType())
-            return unwrapOther(buffer);
-        else if(type == ObjectType.ARRAY.getType())
-            return unwrapArray(buffer, serializers);
-        else if(type == ObjectType.NODE.getType())
-            return unwrapNamed(buffer, BitMapNode.class);
-        else if(type == ObjectType.RECORD_REFERENCE.getType())
-            return unwrapNamed(buffer, RecordReference.class);
-        else if(type == ObjectType.RECORD.getType())
-            return unwrapNamed(buffer, Record.class);
-        else if(type == ObjectType.CHAR.getType())
-            return buffer.getChar();
-        else if(type == ObjectType.BYTE.getType())
-            return buffer.get();
         return null;
     }
 
     /**
      * Unwrap byte buffer into an object
      *
-     * @param buffer
-     * @return
-     * @throws java.io.IOException
+     * @param buffer Buffer to read from
+     * @return Object that was unwrapped
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public static Object unwrap(ByteBuffer buffer, byte type, Serializers serializers, int serializerId) throws IOException
+    private static Object unwrap(ByteBuffer buffer, byte type, Serializers serializers, int serializerId) throws IOException
     {
         if(type == ObjectType.NULL.getType())
             return null;
@@ -475,11 +500,12 @@ public class ObjectBuffer
     /**
      * Wrap
      *
-     * @param value
-     * @return
-     * @throws java.io.IOException
+     * @param value Value to serialize and wrap
+     * @return how many bytes were written
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public int wrap(Object value, Serializers serializers) throws IOException
+    @SuppressWarnings("unchecked")
+    private int wrap(Object value, Serializers serializers) throws IOException
     {
         if(value == null)
             return wrapNull();
@@ -505,7 +531,7 @@ public class ObjectBuffer
             return wrapChar((char)value);
         else if(value instanceof Byte || value.getClass() == byte.class)
             return wrapByte((byte)value);
-        else if(value instanceof Integer || value.getClass() == int.class)
+        else if(value.getClass() == int.class)
             return wrapInt((Integer) value);
         else if(value instanceof Double || value.getClass() == double.class)
             return wrapDouble((Double) value);
@@ -550,9 +576,9 @@ public class ObjectBuffer
     /**
      * Wrap Null
      *
-     * @return
+     * @return the amount of bytes written to buffer
      */
-    public int wrapNull()
+    private int wrapNull()
     {
         ensureCapacity(1);
         buffer.put(ObjectType.NULL.getType());
@@ -562,10 +588,10 @@ public class ObjectBuffer
     /**
      * Wrap Long
      *
-     * @param value
-     * @return
+     * @param value long to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapLong(long value)
+    private int wrapLong(long value)
     {
         ensureCapacity(Long.BYTES + Byte.BYTES);
 
@@ -577,12 +603,12 @@ public class ObjectBuffer
     /**
      * Wrap Class
      *
-     * @param value
-     * @return
+     * @param value class to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapClass(Class value)
+    @SuppressWarnings("unused")
+    private int wrapClass(Class value)
     {
-
         byte[] classNameBytes = value.getName().getBytes(CHARSET);
         short classNameLength = (short)value.getName().length();
 
@@ -597,10 +623,10 @@ public class ObjectBuffer
     /**
      * Wrap Long
      *
-     * @param value
-     * @return
+     * @param value date to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapDate(Date value)
+    private int wrapDate(Date value)
     {
         ensureCapacity(Long.BYTES + Byte.BYTES);
         buffer.put(ObjectType.DATE.getType());
@@ -611,10 +637,10 @@ public class ObjectBuffer
     /**
      * Wrap Short
      *
-     * @param value
-     * @return
+     * @param value short to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapShort(short value)
+    private int wrapShort(short value)
     {
         ensureCapacity(Byte.BYTES + Short.BYTES);
         buffer.put(ObjectType.SHORT.getType());
@@ -625,10 +651,10 @@ public class ObjectBuffer
     /**
      * Wrap Int
      *
-     * @param value
-     * @return
+     * @param value int to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapInt(int value)
+    private int wrapInt(int value)
     {
         ensureCapacity(Byte.BYTES + Integer.BYTES);
         buffer.put(ObjectType.INT.getType());
@@ -637,12 +663,12 @@ public class ObjectBuffer
     }
 
     /**
-     * Wrap Int
+     * Wrap Char
      *
-     * @param value
-     * @return
+     * @param value char to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapChar(char value)
+    private int wrapChar(char value)
     {
         ensureCapacity(Byte.BYTES + 2);
 
@@ -654,10 +680,10 @@ public class ObjectBuffer
     /**
      * Wrap Int
      *
-     * @param value
-     * @return
+     * @param value byte to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapByte(byte value)
+    private int wrapByte(byte value)
     {
         ensureCapacity(Byte.BYTES + Byte.BYTES);
 
@@ -669,10 +695,10 @@ public class ObjectBuffer
     /**
      * Wrap Double
      *
-     * @param value
-     * @return
+     * @param value double to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapDouble(double value)
+    private int wrapDouble(double value)
     {
         ensureCapacity(Byte.BYTES + Double.BYTES);
         buffer.put(ObjectType.DOUBLE.getType());
@@ -683,24 +709,24 @@ public class ObjectBuffer
     /**
      * Wrap Boolean
      *
-     * @param value
-     * @return
+     * @param value boolean to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapBoolean(boolean value)
+    private int wrapBoolean(boolean value)
     {
         ensureCapacity(Byte.BYTES + 1);
         buffer.put(ObjectType.BOOLEAN.getType());
-        buffer.put((value == true) ? (byte)1 : (byte)2);
+        buffer.put((value) ? (byte)1 : (byte)2);
         return Byte.BYTES + 1;
     }
 
     /**
      * Wrap Float
      *
-     * @param value
-     * @return
+     * @param value float to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapFloat(float value)
+    private int wrapFloat(float value)
     {
         ensureCapacity(Byte.BYTES + Float.BYTES);
         buffer.put(ObjectType.FLOAT.getType());
@@ -711,10 +737,10 @@ public class ObjectBuffer
     /**
      * Wrap Byte Array
      *
-     * @param value
-     * @return
+     * @param value byte array to write
+     * @return the amount of bytes written to buffer
      */
-    public int wrapBytes(byte[] value)
+    private int wrapBytes(byte[] value)
     {
         int length = (Byte.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -731,15 +757,14 @@ public class ObjectBuffer
      * @param value array of shorts
      * @return number of bytes written
      */
-    public int wrapShorts(short[] value)
+    private int wrapShorts(short[] value)
     {
         int length = (Short.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
         ensureCapacity(length);
         buffer.put(ObjectType.SHORTS.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.putShort(value[i]);
+        for (short aValue : value) buffer.putShort(aValue);
         return length;
     }
 
@@ -749,7 +774,7 @@ public class ObjectBuffer
      * @param value array of boolean
      * @return number of bytes written
      */
-    public int wrapBooleans(boolean[] value)
+    private int wrapBooleans(boolean[] value)
     {
         int length = (Byte.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -757,8 +782,7 @@ public class ObjectBuffer
         buffer.put(ObjectType.BOOLEANS.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.put(value[i] ? (byte) 1 : (byte) 0);
+        for (boolean aValue : value) buffer.put(aValue ? (byte) 1 : (byte) 0);
         return length;
     }
 
@@ -768,7 +792,7 @@ public class ObjectBuffer
      * @param value array of double
      * @return number of bytes written
      */
-    public int wrapDoubles(double[] value)
+    private int wrapDoubles(double[] value)
     {
         int length = (Double.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -776,8 +800,7 @@ public class ObjectBuffer
         buffer.put(ObjectType.DOUBLES.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.putDouble(value[i]);
+        for (double aValue : value) buffer.putDouble(aValue);
         return length;
     }
 
@@ -787,7 +810,7 @@ public class ObjectBuffer
      * @param value array of int
      * @return number of bytes written
      */
-    public int wrapInts(int[] value)
+    private int wrapInts(int[] value)
     {
         int length = (Integer.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -795,8 +818,7 @@ public class ObjectBuffer
         buffer.put(ObjectType.INTS.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.putInt(value[i]);
+        for (int aValue : value) buffer.putInt(aValue);
         return length;
     }
 
@@ -806,7 +828,7 @@ public class ObjectBuffer
      * @param value array of long
      * @return number of bytes written
      */
-    public int wrapLongs(long[] value)
+    private int wrapLongs(long[] value)
     {
         int length = (Long.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -814,8 +836,7 @@ public class ObjectBuffer
         buffer.put(ObjectType.LONGS.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.putLong(value[i]);
+        for (long aValue : value) buffer.putLong(aValue);
         return length;
     }
 
@@ -825,7 +846,7 @@ public class ObjectBuffer
      * @param value array of char
      * @return number of bytes written
      */
-    public int wrapChars(char[] value)
+    private int wrapChars(char[] value)
     {
         int length = (Long.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -833,8 +854,7 @@ public class ObjectBuffer
         buffer.put(ObjectType.CHARS.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.putChar(value[i]);
+        for (char aValue : value) buffer.putChar(aValue);
         return length;
     }
 
@@ -844,7 +864,7 @@ public class ObjectBuffer
      * @param value array of floats
      * @return number of bytes written
      */
-    public int wrapFloats(float[] value)
+    private int wrapFloats(float[] value)
     {
         int length = (Float.BYTES * value.length) + Integer.BYTES + Byte.BYTES;
 
@@ -852,18 +872,17 @@ public class ObjectBuffer
         buffer.put(ObjectType.FLOATS.getType());
         buffer.putInt(value.length);
 
-        for(int i = 0; i < value.length; i++)
-            buffer.putFloat(value[i]);
+        for (float aValue : value) buffer.putFloat(aValue);
         return length;
     }
 
     /**
      * Wrap String
      *
-     * @param value
-     * @return
+     * @param value string to write
+     * @return how many bytes were written
      */
-    public int wrapString(String value)
+    private int wrapString(String value)
     {
         final int length = value.length();
         final byte[] stringBytes = value.getBytes(CHARSET);
@@ -879,10 +898,10 @@ public class ObjectBuffer
     /**
      * Wrap Enum
      *
-     * @param enumValue
-     * @return
+     * @param enumValue enum to write
+     * @return How many bytes were written
      */
-    public int wrapEnum(Enum<?> enumValue)
+    private int wrapEnum(Enum<?> enumValue)
     {
         final byte[] stringBytes = enumValue.getDeclaringClass().getName().getBytes(CHARSET);
         final byte[] nameBytes = enumValue.name().getBytes(CHARSET);
@@ -899,12 +918,12 @@ public class ObjectBuffer
     }
 
     /**
-     * Wrap a named object that implements ByteBufferSerializable
+     * Wrap a named object that implements ObjectSerializable
      *
-     * @param value
-     * @param serializers
-     * @return
-     * @throws java.io.IOException
+     * @param value Named object to write.  Must implement ObjectSerializable
+     * @param serializers Custom serializers
+     * @return How many bytes were written
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     private int wrapNamed(Object value, Serializers serializers) throws IOException
     {
@@ -930,10 +949,10 @@ public class ObjectBuffer
     /**
      * Wrap a named object that implements ByteBufferSerializable
      *
-     * @param value
-     * @param type
-     * @return
-     * @throws java.io.IOException
+     * @param value Object to write
+     * @param type Type of object
+     * @return How many bytes were written
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     private int wrapNamed(Object value, ObjectType type) throws IOException
     {
@@ -949,15 +968,15 @@ public class ObjectBuffer
     /**
      * Wrap a collection of items
      *
-     * @param value
-     * @return
+     * @param value Collection to write
+     * @return How many bytes were written
      */
-    public int wrapCollection(Collection value) throws IOException
+    private int wrapCollection(Collection value) throws IOException
     {
         int bufferPosition = buffer.position();
         final Iterator iterator = value.iterator();
 
-        Object obj = null;
+        Object obj;
 
         ensureCapacity(Byte.BYTES + Integer.BYTES);
 
@@ -984,10 +1003,10 @@ public class ObjectBuffer
     /**
      * Wrap a collection of items
      *
-     * @param value
-     * @return
+     * @param value Array to write
+     * @return How many bytes were written
      */
-    public int wrapArray(Object value) throws IOException
+    private int wrapArray(Object value) throws IOException
     {
         int bufferPosition = buffer.position();
 
@@ -1008,16 +1027,17 @@ public class ObjectBuffer
     /**
      * Wrap a collection of items
      *
-     * @param value
-     * @return
+     * @param value Map to write
+     * @return How many bytes were written
      */
-    public int wrapMap(Map value) throws IOException
+    @SuppressWarnings("unchecked")
+    private int wrapMap(Map value) throws IOException
     {
         int bufferPosition = buffer.position();
 
         final Iterator<Map.Entry> iterator = value.entrySet().iterator();
 
-        Map.Entry obj = null;
+        Map.Entry obj;
 
         ensureCapacity(Byte.BYTES + Integer.BYTES);
 
@@ -1037,11 +1057,11 @@ public class ObjectBuffer
     /**
      * Wrap Other
      *
-     * @param value
-     * @return
-     * @throws java.io.IOException
+     * @param value Serializable object to write
+     * @return How many bytes were written
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public int wrapOther(Object value) throws IOException
+    private int wrapOther(Object value) throws IOException
     {
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         final ObjectOutputStream objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
@@ -1069,9 +1089,9 @@ public class ObjectBuffer
     /**
      * Unwrap byte buffer into an object
      *
-     * @param buffer
-     * @return
-     * @throws java.io.IOException
+     * @param buffer Buffer to read from
+     * @return How many bytes were written
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     public static Object unwrap(ByteBuffer buffer, Serializers serializers) throws IOException
     {
@@ -1082,9 +1102,9 @@ public class ObjectBuffer
     /**
      * Unwrap byte buffer into an object
      *
-     * @param buffer
-     * @return
-     * @throws java.io.IOException
+     * @param buffer Buffer to read from
+     * @return How many bytes were written
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
     public static Object unwrap(ByteBuffer buffer, Serializers serializers, int serializerId) throws IOException
     {
@@ -1095,10 +1115,10 @@ public class ObjectBuffer
     /**
      * Unwrap boolean
      *
-     * @param buffer
-     * @return
+     * @param buffer Buffer to read from
+     * @return unwrapped boolean
      */
-    public static boolean unwrapBoolean(ByteBuffer buffer)
+    private static boolean unwrapBoolean(ByteBuffer buffer)
     {
         byte b = buffer.get();
         return b != 2;
@@ -1107,10 +1127,10 @@ public class ObjectBuffer
     /**
      * Unwrap string
      *
-     * @param buffer
-     * @return
+     * @param buffer Buffer to read from
+     * @return unwrapped string
      */
-    public static String unwrapString(ByteBuffer buffer)
+    private static String unwrapString(ByteBuffer buffer)
     {
         int size = buffer.getInt();
         final byte[] stringBytes = new byte[size];
@@ -1121,10 +1141,11 @@ public class ObjectBuffer
     /**
      * Unwrap Class
      *
-     * @param buffer
-     * @return
+     * @param buffer Buffer to read from
+     * @return unwrapped class
      */
-    public static Class unwrapClass(ByteBuffer buffer)
+    @SuppressWarnings("unused")
+    private static Class unwrapClass(ByteBuffer buffer)
     {
         short classNameLength = buffer.getShort();
 
@@ -1145,10 +1166,11 @@ public class ObjectBuffer
     /**
      * Unwrap string
      *
-     * @param buffer
-     * @return
+     * @param buffer Buffer to read from
+     * @return unwrapped enum
      */
-    public static Enum<?> unwrapEnum(ByteBuffer buffer) throws IOException
+    @SuppressWarnings("unchecked")
+    private static Enum<?> unwrapEnum(ByteBuffer buffer) throws IOException
     {
         short classNameSize = buffer.getShort();
 
@@ -1161,7 +1183,7 @@ public class ObjectBuffer
         buffer.get(stringBytes);
         String enumName = new String(stringBytes, CHARSET);
 
-        Class<Enum> enumClass = null;
+        Class<Enum> enumClass;
         try
         {
             enumClass = (Class<Enum>)Class.forName(className);
@@ -1177,10 +1199,10 @@ public class ObjectBuffer
     /**
      * Unwrap string
      *
-     * @param buffer
-     * @return
+     * @param buffer Buffer to read from
+     * @return unwrapped date
      */
-    public static Date unwrapDate(ByteBuffer buffer)
+    private static Date unwrapDate(ByteBuffer buffer)
     {
         return new Date(buffer.getLong());
     }
@@ -1188,12 +1210,12 @@ public class ObjectBuffer
     /**
      * Unwrapped Named object from byte buffer to ByteBufferSerializable
      *
-     * @param buffer
-     * @param serializers
-     * @return
-     * @throws java.io.IOException
+     * @param buffer Buffer to read from
+     * @param serializers custom serializers
+     * @return unwrapped ObjectSerializable
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public static ObjectSerializable unwrapNamed(ByteBuffer buffer, Serializers serializers) throws IOException
+    private static ObjectSerializable unwrapNamed(ByteBuffer buffer, Serializers serializers) throws IOException
     {
         try
         {
@@ -1204,10 +1226,7 @@ public class ObjectBuffer
 
             serializable.readObject(objectBuffer);
             return serializable;
-        } catch (InstantiationException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
+        } catch (InstantiationException | IllegalAccessException e)
         {
             e.printStackTrace();
         }
@@ -1218,12 +1237,12 @@ public class ObjectBuffer
     /**
      * Unwrapped Named object from byte buffer to ByteBufferSerializable
      *
-     * @param buffer
-     * @param serializers
-     * @return
-     * @throws java.io.IOException
+     * @param buffer Buffer to read from
+     * @param serializers custom serializers
+     * @return unwrapped ObjectSerializable
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public static ObjectSerializable unwrapNamed(ByteBuffer buffer, Serializers serializers, int serializerId) throws IOException
+    private static ObjectSerializable unwrapNamed(ByteBuffer buffer, Serializers serializers, int serializerId) throws IOException
     {
         try
         {
@@ -1235,10 +1254,7 @@ public class ObjectBuffer
             serializable.readObject(objectBuffer, 0, serializerId);
 
             return serializable;
-        } catch (InstantiationException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
+        } catch (InstantiationException | IllegalAccessException e)
         {
             e.printStackTrace();
         }
@@ -1249,10 +1265,10 @@ public class ObjectBuffer
     /**
      * Unwrap bytes
      *
-     * @param buffer
-     * @return
+     * @param buffer Buffer to read from
+     * @return unwrapped byte array
      */
-    public static byte[] unwrapBytes(ByteBuffer buffer)
+    private static byte[] unwrapBytes(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final byte[] bytes = new byte[size];
@@ -1266,7 +1282,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static float[] unwrapFloats(ByteBuffer buffer)
+    private static float[] unwrapFloats(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final float[] array = new float[size];
@@ -1281,7 +1297,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static short[] unwrapShorts(ByteBuffer buffer)
+    private static short[] unwrapShorts(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final short[] array = new short[size];
@@ -1296,7 +1312,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static boolean[] unwrapBooleans(ByteBuffer buffer)
+    private static boolean[] unwrapBooleans(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final boolean[] array = new boolean[size];
@@ -1311,7 +1327,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static double[] unwrapDoubles(ByteBuffer buffer)
+    private static double[] unwrapDoubles(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final double[] array = new double[size];
@@ -1326,7 +1342,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static int[] unwrapInts(ByteBuffer buffer)
+    private static int[] unwrapInts(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final int[] array = new int[size];
@@ -1341,7 +1357,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static long[] unwrapLongs(ByteBuffer buffer)
+    private static long[] unwrapLongs(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final long[] array = new long[size];
@@ -1356,7 +1372,7 @@ public class ObjectBuffer
      * @param buffer Input Buffer
      * @return The array read from the buffer
      */
-    public static char[] unwrapChars(ByteBuffer buffer)
+    private static char[] unwrapChars(ByteBuffer buffer)
     {
         final int size = buffer.getInt();
         final char[] array = new char[size];
@@ -1368,12 +1384,13 @@ public class ObjectBuffer
     /**
      * Unwrap structure
      *
-     * @param buffer
-     * @param serializers
-     * @return
-     * @throws java.io.IOException
+     * @param buffer buffer to read from
+     * @param serializers custom serializers
+     * @return unwrapped map
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public static Map unwrapMap(ByteBuffer buffer, Serializers serializers) throws IOException
+    @SuppressWarnings("unchecked")
+    private static Map unwrapMap(ByteBuffer buffer, Serializers serializers) throws IOException
     {
         final Map map = new HashMap();
         final int size = buffer.getInt();
@@ -1386,7 +1403,14 @@ public class ObjectBuffer
         return map;
     }
 
-    public static Object unwrapNamed(ByteBuffer buffer, Class type) throws IOException
+    /**
+     * Unwrapped ObjectSerializable
+     * @param buffer buffer to read from
+     * @param type class to read
+     * @return The unwrapped object
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
+     */
+    private static Object unwrapNamed(ByteBuffer buffer, Class type) throws IOException
     {
         try
         {
@@ -1395,10 +1419,7 @@ public class ObjectBuffer
             serializable.readObject(objectBuffer);
 
             return serializable;
-        } catch (InstantiationException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
+        } catch (InstantiationException | IllegalAccessException e)
         {
             e.printStackTrace();
         }
@@ -1409,11 +1430,11 @@ public class ObjectBuffer
     /**
      * Unwrap other serializable or externalized object
      *
-     * @param buffer
-     * @return
-     * @throws java.io.IOException
+     * @param buffer buffer to read from
+     * @return unwrapped serializable object
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    public static Object unwrapOther(ByteBuffer buffer) throws IOException
+    private static Object unwrapOther(ByteBuffer buffer) throws IOException
     {
         int originalPosition = buffer.position();
 
@@ -1426,8 +1447,7 @@ public class ObjectBuffer
 
         try
         {
-            final Object value = ois.readObject();
-            return value;
+            return ois.readObject();
         } catch (ClassNotFoundException e)
         {
             e.printStackTrace();
@@ -1446,14 +1466,15 @@ public class ObjectBuffer
     /**
      * Un-wrapper for a collection
      *
-     * @param buffer
-     * @param type
-     * @return
-     * @throws java.io.IOException
+     * @param buffer buffer to read from
+     * @param type Type of collection
+     * @return Unwrapped collection
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    protected static Collection unwrapCollection(ByteBuffer buffer, ObjectType type, Serializers serializers) throws IOException
+    @SuppressWarnings("unchecked")
+    private static Collection unwrapCollection(ByteBuffer buffer, ObjectType type, Serializers serializers) throws IOException
     {
-        Collection collection = null;
+        Collection collection;
 
         if(type == ObjectType.HASH_SET)
         {
@@ -1477,14 +1498,14 @@ public class ObjectBuffer
     /**
      * Un-wrapper for a collection
      *
-     * @param buffer
-     * @param serializers
-     * @return
-     * @throws java.io.IOException
+     * @param buffer buffer to read from
+     * @param serializers Custom serializers
+     * @return Object array
+     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    protected static Object[] unwrapArray(ByteBuffer buffer, Serializers serializers) throws IOException
+    private static Object[] unwrapArray(ByteBuffer buffer, Serializers serializers) throws IOException
     {
-        Object[] collection = null;
+        Object[] collection;
 
         int size = buffer.getInt();
 
@@ -1505,8 +1526,8 @@ public class ObjectBuffer
     /**
      * Get Serializer ID for object.  This only applies to managed entities.  It will return the version id of the System Entity
      *
-     * @param value
-     * @return
+     * @param value object to check for serializer id
+     * @return get the custom serializer id
      */
     public int getSerializerId(Object value)
     {
@@ -1527,9 +1548,10 @@ public class ObjectBuffer
      * @param serializerId serializer id to use
      * @return Map representation of the object
      */
+    @SuppressWarnings("unchecked")
     public Map toMap(int serializerId)
     {
-        Map<String, Object> results = new HashMap();
+        HashMap results = new HashMap();
 
         // Read the type and serializer id to put the position in the right place to read attributes
         buffer.get();
@@ -1566,7 +1588,7 @@ public class ObjectBuffer
 
         for (SystemAttribute attribute : systemEntity.getAttributes())
         {
-            Object obj = null;
+            Object obj;
             try {
                 obj = this.readObject();
 
@@ -1581,7 +1603,4 @@ public class ObjectBuffer
         return null;
     }
 
-    public boolean hasRemaining() {
-        return buffer.hasRemaining();
-    }
 }
