@@ -299,7 +299,8 @@ public class ReflectionUtil {
     public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException {
         try {
 
-            final PropertyType fieldType = PropertyType.valueOf(offsetField.type);
+
+            final PropertyType fieldType = PropertyType.primitiveValueOf(offsetField.type);
             switch (fieldType) {
                 case INT:
                     return ReflectionUtil.getInt(object, offsetField);

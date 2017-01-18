@@ -3,9 +3,6 @@ package com.onyx.structure.serializer;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.structure.node.BitMapNode;
-import com.onyx.structure.node.Record;
-import com.onyx.structure.node.RecordReference;
 
 import java.io.*;
 import java.lang.reflect.Array;
@@ -412,7 +409,7 @@ public class ObjectBuffer
      */
     private static Object unwrap(ByteBuffer buffer, byte type, Serializers serializers) throws IOException
     {
-        ObjectType objectType = ObjectType.values()[type-1];
+        ObjectType objectType = ObjectType.values()[type];
         switch (objectType)
         {
             case NULL:
@@ -445,12 +442,6 @@ public class ObjectBuffer
                 return unwrapDate(buffer);
             case OTHER:
                 return unwrapOther(buffer);
-            case NODE:
-                return unwrapNamed(buffer, BitMapNode.class);
-            case RECORD_REFERENCE:
-                return unwrapNamed(buffer, RecordReference.class);
-            case RECORD:
-                return unwrapNamed(buffer, Record.class);
             case ENUM:
                 return unwrapEnum(buffer);
             case ARRAY:
@@ -459,8 +450,6 @@ public class ObjectBuffer
                 return buffer.getChar();
             case BYTE:
                 return buffer.get();
-            case CLASS:
-                break;
             case FLOATS:
                 return unwrapFloats(buffer);
             case SHORTS:
@@ -509,44 +498,36 @@ public class ObjectBuffer
     {
         if(value == null)
             return wrapNull();
-        else if(value instanceof BitMapNode)
-            return wrapNamed(value, ObjectType.NODE);
-        else if(value instanceof RecordReference)
-            return wrapNamed(value, ObjectType.RECORD_REFERENCE);
-        else if(value instanceof Record)
-            return wrapNamed(value, ObjectType.RECORD);
         else if(value instanceof ObjectSerializable)
             return wrapNamed(value, serializers);
         else if(value instanceof String)
-            return wrapString((String) value);
+            return wrapString((String)value);
         else if(value instanceof Long)
             return wrapLong((Long)value);
         else if(value instanceof Short)
-            return wrapShort((Short)value);
+            return wrapShort((Short) value);
         else if(value instanceof Date)
-            return wrapDate((Date) value);
+            return wrapDate((Date)value);
         else if(value instanceof Integer)
-            return wrapInt((Integer) value);
+            return wrapInt((Integer)value);
         else if(value instanceof Character)
-            return wrapChar((char)value);
+            return wrapChar((Character)value);
         else if(value instanceof Byte)
-            return wrapByte((byte)value);
-        else if(value instanceof Integer)
-            return wrapInt((Integer) value);
+            return wrapByte((Byte)value);
         else if(value instanceof Double)
-            return wrapDouble((Double) value);
+            return wrapDouble((Double)value);
         else if(value instanceof Float)
-            return wrapFloat((Float) value);
+            return wrapFloat((Float)value);
         else if(value instanceof Boolean)
-            return wrapBoolean((Boolean) value);
+            return wrapBoolean((Boolean)value);
         else if(value instanceof Collection)
-            return wrapCollection((Collection) value);
+            return wrapCollection((Collection)value);
         else if(value instanceof Map)
             return wrapMap((Map)value);
         else {
             final Class clazz = value.getClass();
             if (clazz.isEnum())
-                return wrapEnum((Enum) value);
+                return wrapEnum((Enum)value);
             else if (clazz.isArray()) {
                 if (value instanceof byte[])
                     return wrapBytes((byte[]) value);
@@ -569,7 +550,6 @@ public class ObjectBuffer
             } else
                 return wrapOther(value);
         }
-
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////
@@ -603,26 +583,6 @@ public class ObjectBuffer
         buffer.put(ObjectType.LONG.getType());
         buffer.putLong(value);
         return  Long.BYTES + Byte.BYTES;
-    }
-
-    /**
-     * Wrap Class
-     *
-     * @param value class to write
-     * @return the amount of bytes written to buffer
-     */
-    @SuppressWarnings("unused")
-    private int wrapClass(Class value)
-    {
-        byte[] classNameBytes = value.getName().getBytes(CHARSET);
-        short classNameLength = (short)value.getName().length();
-
-        ensureCapacity(Short.BYTES + Byte.BYTES + classNameBytes.length);
-
-        buffer.put(ObjectType.CLASS.getType());
-        buffer.putShort(classNameLength);
-        buffer.put(classNameBytes);
-        return Short.BYTES + Byte.BYTES + classNameBytes.length;
     }
 
     /**
@@ -952,25 +912,6 @@ public class ObjectBuffer
     }
 
     /**
-     * Wrap a named object that implements ByteBufferSerializable
-     *
-     * @param value Object to write
-     * @param type Type of object
-     * @return How many bytes were written
-     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
-     */
-    private int wrapNamed(Object value, ObjectType type) throws IOException
-    {
-        int bufferPosition = buffer.position();
-
-        ensureCapacity(Byte.BYTES);
-        buffer.put(type.getType());
-        ((ObjectSerializable)value).writeObject(this);
-
-        return buffer.position() - bufferPosition;
-    }
-
-    /**
      * Wrap a collection of items
      *
      * @param value Collection to write
@@ -1141,31 +1082,6 @@ public class ObjectBuffer
         final byte[] stringBytes = new byte[size];
         buffer.get(stringBytes);
         return new String(stringBytes, CHARSET);
-    }
-
-    /**
-     * Unwrap Class
-     *
-     * @param buffer Buffer to read from
-     * @return unwrapped class
-     */
-    @SuppressWarnings("unused")
-    private static Class unwrapClass(ByteBuffer buffer)
-    {
-        short classNameLength = buffer.getShort();
-
-        byte[] classNameBytes = new byte[classNameLength];
-
-        buffer.get(classNameBytes);
-
-        final String className = new String(classNameBytes, CHARSET);
-        try
-        {
-            return Class.forName(className);
-        } catch (ClassNotFoundException e)
-        {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
@@ -1406,30 +1322,6 @@ public class ObjectBuffer
         }
 
         return map;
-    }
-
-    /**
-     * Unwrapped ObjectSerializable
-     * @param buffer buffer to read from
-     * @param type class to read
-     * @return The unwrapped object
-     * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
-     */
-    private static Object unwrapNamed(ByteBuffer buffer, Class type) throws IOException
-    {
-        try
-        {
-            final ObjectSerializable serializable = (ObjectSerializable)type.newInstance();
-            final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, null);
-            serializable.readObject(objectBuffer);
-
-            return serializable;
-        } catch (InstantiationException | IllegalAccessException e)
-        {
-            e.printStackTrace();
-        }
-
-        return null;
     }
 
     /**
