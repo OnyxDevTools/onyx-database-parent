@@ -256,7 +256,7 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
         try {
             final SkipListNode node = (SkipListNode<K>) findNodeAtPosition(recordId);
 
-            V value = valueByPositionCache.get(node.recordPosition);
+            V value = findValueAtPosition(node.recordPosition, node.recordSize);
             if (value != null) {
                 final Class clazz = value.getClass();
                 OffsetField attributeField;
@@ -270,9 +270,8 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
                 return ReflectionUtil.getAny(value, attributeField);
             }
 
-            // We did not find it, lets return just the attribute
-            ObjectBuffer buffer = fileStore.read(node.recordPosition, node.recordSize);
-            return buffer.getAttribute(attribute, node.serializerId);
+            return null;
+
         } finally {
             readWriteLock.readLock().unlock();
         }

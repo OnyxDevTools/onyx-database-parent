@@ -11,8 +11,6 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
 import com.onyx.structure.MapBuilder;
-import com.onyx.structure.node.RecordReference;
-import com.onyx.structure.node.SkipListNode;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -52,21 +50,22 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
         final Map<Long, Long> allResults = new HashMap();
 
         // We need to do a full scan
-        final Iterator iterator = records.referenceSet().iterator();
+        final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
 
-        SkipListNode reference;
+        Map.Entry<Object, IManagedEntity> entry;
         Object attributeValue;
 
         while (iterator.hasNext()) {
             if (query.isTerminated())
                 return allResults;
 
-            reference = (SkipListNode)iterator.next();
-            attributeValue = records.getAttributeWithRecID(criteria.getAttribute(), reference.position);
+            entry = iterator.next();
+
+            attributeValue = ReflectionUtil.getAny(entry.getValue(), fieldToGrab);
 
             // Compare and add
             if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
-                long recId = reference.position;
+                long recId = records.getRecID(entry.getKey());
                 allResults.put(recId, recId);
             }
 
