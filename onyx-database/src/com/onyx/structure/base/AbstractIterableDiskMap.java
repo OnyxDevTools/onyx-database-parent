@@ -52,6 +52,21 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    protected ReferenceCollection references;
+
+    /**
+     * Getter for set of references
+     *
+     * @return the reference collection
+     * @see AbstractIterableSkipList.KeyCollection
+     * @see AbstractIterableSkipList.AbstractNodeCollection
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public Set referenceSet() {
+        return references;
+    }
+
     /**
      * Getter for set of keys
      *
@@ -280,6 +295,36 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     }
 
     /**
+     * Reference Collection
+     *
+     * @param <V>
+     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     */
+    protected class ReferenceCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+        /**
+         * Constructor
+         *
+         * @param fileStore Storage mechanism for data structure
+         * @param diskMap outer data structure
+         */
+        public ReferenceCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
+            super(fileStore, diskMap);
+            this.fileStore = fileStore;
+            this.diskMap = diskMap;
+        }
+
+        /**
+         * Iterator that iterates through nodes
+         *
+         * @return New instance of an Reference Indicator
+         */
+        @Override
+        public Iterator<V> iterator() {
+            return new ReferenceIterator(header);
+        }
+    }
+
+    /**
      * Entry Collection.  Much like KeyCollectionMulti except iterates through entries
      *
      * @param <V>
@@ -465,6 +510,20 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
                 return getRecordKey(reference);
             }
             return null;
+        }
+    }
+
+    /**
+     * Reference Iterator.  Same as AbstractNodeIterator iterator except returns just the keys
+     */
+    class ReferenceIterator extends AbstractNodeIterator implements Iterator {
+        public ReferenceIterator(Header header) {
+            super(header);
+        }
+
+        @Override
+        public Object next() {
+            return super.next();
         }
     }
 

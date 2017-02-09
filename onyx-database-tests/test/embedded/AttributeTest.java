@@ -3,8 +3,9 @@ package embedded;
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import embedded.base.BaseTest;
-import entities.AllAttributeEntity;
+import entities.AllAttributeV2Entity;
 import entities.InheritedAttributeEntity;
 import entities.SimpleEntity;
 import org.junit.*;
@@ -12,8 +13,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.*;
 
 import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -51,7 +51,7 @@ public class AttributeTest extends BaseTest {
      */
     @Test
     public void testPopulatedEntity() throws EntityException {
-        AllAttributeEntity entity = new AllAttributeEntity();
+        AllAttributeV2Entity entity = new AllAttributeV2Entity();
 
         entity.id = "A";
         entity.longValue = 4l;
@@ -62,14 +62,34 @@ public class AttributeTest extends BaseTest {
         entity.doubleValue = 232.2;
         entity.booleanPrimitive = true;
         entity.booleanValue = false;
+        entity.mutableFloat = 23.234f;
+        entity.floatValue = 666.3453f;
+        entity.mutableByte = (byte)5;
+        entity.byteValue = (byte)7;
+        entity.mutableShort = 65;
+        entity.shortValue = 44;
+        entity.mutableChar = 'C';
+        entity.charValue = 'D';
+        entity.entity = new AllAttributeV2Entity();
+        entity.entity.shortValue = 49;
+        entity.amutableBytes = new Byte[]{(byte)2,(byte)8,(byte)7};
+        entity.bytes = new byte[]{(byte)4,(byte)4,(byte)2};
+        entity.shorts = new short[]{4,4,2};
+        entity.mutableShorts = new Short[]{4,4,2};
+        entity.strings = new String[]{"A","V"};
+        entity.operator = QueryCriteriaOperator.CONTAINS;
+        entity.entitySet = new HashSet();
+        entity.entitySet.add(entity.entity);
+        entity.entityList = new ArrayList();
+        entity.entityList.add(entity.entity);
 
         manager.saveEntity(entity);
 
-        AllAttributeEntity entity2 = new AllAttributeEntity();
+        AllAttributeV2Entity entity2 = new AllAttributeV2Entity();
         entity2.id = "A";
         try
         {
-            entity2 = (AllAttributeEntity)manager.find(entity2);
+            entity2 = (AllAttributeV2Entity)manager.find(entity2);
         } catch (EntityException e)
         {
             e.printStackTrace();
@@ -84,7 +104,23 @@ public class AttributeTest extends BaseTest {
         Assert.assertEquals(Double.valueOf(232.2), entity2.doubleValue);
         Assert.assertEquals(true, entity2.booleanPrimitive);
         Assert.assertEquals(Boolean.valueOf(false), entity2.booleanValue);
-
+        Assert.assertTrue(23.234f == entity2.mutableFloat);
+        Assert.assertTrue(666.3453f == entity2.floatValue);
+        Assert.assertTrue((byte)5 == entity2.mutableByte);
+        Assert.assertTrue((byte)7 == entity2.byteValue);
+        Assert.assertTrue(65 == entity2.mutableShort);
+        Assert.assertTrue(44 == entity2.shortValue);
+        Assert.assertTrue('C' == entity2.mutableChar);
+        Assert.assertTrue('D' == entity2.charValue);
+        Assert.assertTrue(entity2.operator == QueryCriteriaOperator.CONTAINS);
+        Assert.assertTrue(entity2.entity != null && entity2.entity.shortValue == 49);
+        Assert.assertArrayEquals(entity2.bytes, new byte[]{(byte)4,(byte)4,(byte)2});
+        Assert.assertTrue(entity2.shorts.length == 3 && entity2.shorts[2] == 2);
+        Assert.assertTrue(entity2.mutableShorts.length == 3 && entity2.mutableShorts[2] == 2);
+        Assert.assertTrue(entity2.strings.length == 2 && entity2.strings[1].equals("V"));
+        Assert.assertArrayEquals(entity2.amutableBytes, new Byte[]{(byte)2,(byte)8,(byte)7});
+        Assert.assertTrue(entity2.entityList instanceof List && entity2.entityList.size() == 1);
+        Assert.assertTrue(entity2.entitySet instanceof Set && entity2.entitySet.size() == 1);
     }
 
     /**
@@ -93,7 +129,7 @@ public class AttributeTest extends BaseTest {
     @Test
     public void testNullPopulatedEntity()
     {
-        AllAttributeEntity entity = new AllAttributeEntity();
+        AllAttributeV2Entity entity = new AllAttributeV2Entity();
 
         entity.id = "B";
 
@@ -105,7 +141,7 @@ public class AttributeTest extends BaseTest {
             fail(e.getMessage());
         }
 
-        AllAttributeEntity entity2 = new AllAttributeEntity();
+        AllAttributeV2Entity entity2 = new AllAttributeV2Entity();
         entity2.id = "B";
         try
         {
@@ -124,6 +160,23 @@ public class AttributeTest extends BaseTest {
         Assert.assertNull(entity2.doubleValue);
         Assert.assertEquals(false, entity2.booleanPrimitive);
         Assert.assertNull(entity2.booleanValue);
+
+        Assert.assertNull(entity2.mutableFloat);
+        Assert.assertNull(entity2.mutableByte);
+        Assert.assertNull(entity2.mutableShort);
+        Assert.assertNull(entity2.mutableChar);
+        Assert.assertNull(entity2.entity);
+        Assert.assertNull(entity2.amutableBytes);
+/*        Assert.assertNull(entity2.mutableShorts);
+        Assert.assertNull(entity2.strings);
+        Assert.assertNull(entity2.bytes);
+        Assert.assertNull(entity2.shorts);
+*/
+        Assert.assertTrue(entity2.floatValue == 0.0f);
+        Assert.assertTrue(entity2.byteValue == (byte)0);
+        Assert.assertTrue(entity2.shortValue == 0);
+        Assert.assertTrue(entity2.charValue == (char)0);
+
 
     }
 

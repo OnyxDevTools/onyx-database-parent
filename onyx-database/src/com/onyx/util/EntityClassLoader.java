@@ -74,6 +74,7 @@ public class EntityClassLoader
             descriptor.getIdentifier().getGenerator().name());
         values.put("idType", descriptor.getIdentifier().getType().getName());
         values.put("idName", descriptor.getIdentifier().getName());
+        values.put("idLoadFactor", descriptor.getIdentifier().getLoadFactor());
 
         final List<Map<String, Object>> attributes = new ArrayList<>();
         values.put("attributes", attributes);
@@ -90,13 +91,23 @@ public class EntityClassLoader
 
             attributeMap = new HashMap();
             attributeMap.put("name", attribute.getName());
-            attributeMap.put("type", attribute.getType().getName());
+
+            if(attribute.getType().isArray())
+            {
+                attributeMap.put("type", attribute.getType().getSimpleName());
+            }
+            else {
+                attributeMap.put("type", attribute.getType().getName());
+            }
 
             attributeMap.put("isPartition",
                 ((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName())));
 
             final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(attribute.getName());
             attributeMap.put("isIndex", (indexDescriptor != null));
+            if(indexDescriptor != null) {
+                attributeMap.put("loadFactor", indexDescriptor.getLoadFactor());
+            }
 
             attributes.add(attributeMap);
         }
@@ -124,6 +135,7 @@ public class EntityClassLoader
                 relationshipMap.put("type", relationship.getType().getName());
             }
 
+            relationshipMap.put("loadFactor", relationship.getLoadFactor());
             relationshipMap.put("inverseClass", relationship.getInverseClass().getName());
             relationshipMap.put("inverse", relationship.getInverse());
             relationshipMap.put("fetchPolicy",

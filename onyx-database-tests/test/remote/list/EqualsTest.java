@@ -5,6 +5,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import entities.AllAttributeV2Entity;
 import entities.AllAttributeForFetch;
 import org.junit.After;
 import org.junit.Assert;
@@ -43,6 +44,18 @@ public class EqualsTest extends RemoteBaseTest
         entity.longValue = 323l;
         entity.intValue = 3;
         entity.intPrimitive = 3;
+        entity.mutableFloat = 34.3f;
+        entity.floatValue = 55.3f;
+        entity.mutableByte = (byte)43;
+        entity.byteValue = (byte)99;
+        entity.mutableShort = 828;
+        entity.shortValue = 882;
+        entity.mutableChar = 'A';
+        entity.charValue = 'C';
+        entity.entity = new AllAttributeV2Entity();
+        entity.entity.id = "ASDF";
+        entity.operator = QueryCriteriaOperator.CONTAINS;
+
         save(entity);
         find(entity);
 
@@ -58,6 +71,17 @@ public class EqualsTest extends RemoteBaseTest
         entity.longValue = 322l;
         entity.intValue = 2;
         entity.intPrimitive = 4;
+        entity.mutableFloat = 34.2f;
+        entity.floatValue = 55.2f;
+        entity.mutableByte = (byte)42;
+        entity.byteValue = (byte)98;
+        entity.mutableShort = 827;
+        entity.shortValue = 881;
+        entity.mutableChar = 'P';
+        entity.charValue = 'F';
+        entity.entity = new AllAttributeV2Entity();
+        entity.entity.id = "ASDFL";
+        entity.operator = QueryCriteriaOperator.EQUAL;
         save(entity);
         find(entity);
 
@@ -73,6 +97,17 @@ public class EqualsTest extends RemoteBaseTest
         entity.longValue = 322l;
         entity.intValue = 2;
         entity.intPrimitive = 4;
+        entity.mutableFloat = 34.1f;
+        entity.floatValue = 55.1f;
+        entity.mutableByte = (byte)41;
+        entity.byteValue = (byte)91;
+        entity.mutableShort = 821;
+        entity.shortValue = 881;
+        entity.mutableChar = '1';
+        entity.charValue = '2';
+        entity.entity = new AllAttributeV2Entity();
+        entity.entity.id = "ASDF1";
+        entity.operator = QueryCriteriaOperator.GREATER_THAN_EQUAL;
         save(entity);
         find(entity);
 
@@ -88,6 +123,17 @@ public class EqualsTest extends RemoteBaseTest
         entity.longValue = 321l;
         entity.intValue = 5;
         entity.intPrimitive = 6;
+        entity.mutableFloat = 31.3f;
+        entity.floatValue = 51.3f;
+        entity.mutableByte = (byte)13;
+        entity.byteValue = (byte)19;
+        entity.mutableShort = 818;
+        entity.shortValue = 812;
+        entity.mutableChar = '9';
+        entity.charValue = 'O';
+        entity.entity = new AllAttributeV2Entity();
+        entity.entity.id = "ASDAAF";
+        entity.operator = QueryCriteriaOperator.CONTAINS;
         save(entity);
         find(entity);
 
@@ -103,6 +149,18 @@ public class EqualsTest extends RemoteBaseTest
         entity.longValue = 322l;
         entity.intValue = 6;
         entity.intPrimitive = 3;
+        entity.mutableFloat = 34.3f;
+        entity.floatValue = 55.3f;
+        entity.mutableByte = (byte)43;
+        entity.byteValue = (byte)99;
+        entity.mutableShort = 828;
+        entity.shortValue = 882;
+        entity.mutableChar = 'A';
+        entity.charValue = 'C';
+        entity.entity = new AllAttributeV2Entity();
+        entity.entity.id = "ASDF";
+        entity.operator = QueryCriteriaOperator.CONTAINS;
+
         save(entity);
         find(entity);
 
@@ -203,6 +261,88 @@ public class EqualsTest extends RemoteBaseTest
         List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
         Assert.assertEquals(2, results2.size());
         Assert.assertEquals(results2.get(0).booleanPrimitive, true);
+    }
+
+
+
+
+    @Test
+    public void testFloatEquals() throws EntityException
+    {
+        final QueryCriteria criteria = new QueryCriteria("floatValue", QueryCriteriaOperator.EQUAL, 55.3f);
+        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
+        Assert.assertEquals(2, results.size());
+        Assert.assertTrue(results.get(0).floatValue == 55.3f);
+
+        final QueryCriteria criteria2 = new QueryCriteria("mutableFloat", QueryCriteriaOperator.EQUAL, 34.3f);
+        List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
+        Assert.assertEquals(2, results2.size());
+        Assert.assertTrue(results2.get(0).mutableFloat == 34.3f);
+    }
+
+
+    @Test
+    public void testByteEquals() throws EntityException
+    {
+        final QueryCriteria criteria = new QueryCriteria("mutableByte", QueryCriteriaOperator.EQUAL, (byte)43);
+        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
+        Assert.assertEquals(2, results.size());
+        Assert.assertTrue(results.get(0).mutableByte == (byte)43);
+
+        final QueryCriteria criteria2 = new QueryCriteria("byteValue", QueryCriteriaOperator.EQUAL, (byte)99);
+        List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
+        Assert.assertEquals(2, results2.size());
+        Assert.assertTrue(results2.get(0).byteValue == (byte)99);
+    }
+
+    @Test
+    public void testShortEquals() throws EntityException
+    {
+        final QueryCriteria criteria = new QueryCriteria("mutableShort", QueryCriteriaOperator.EQUAL, (short)828);
+        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
+        Assert.assertEquals(2, results.size());
+        Assert.assertTrue(results.get(0).mutableShort == 828);
+
+        final QueryCriteria criteria2 = new QueryCriteria("shortValue", QueryCriteriaOperator.EQUAL, (short)882);
+        List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
+        Assert.assertEquals(2, results2.size());
+        Assert.assertTrue(results2.get(0).shortValue == 882);
+    }
+
+    @Test
+    public void testCharEquals() throws EntityException
+    {
+        final QueryCriteria criteria = new QueryCriteria("mutableChar", QueryCriteriaOperator.EQUAL, 'A');
+        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
+        Assert.assertEquals(2, results.size());
+        Assert.assertTrue(results.get(0).mutableChar == 'A');
+
+        final QueryCriteria criteria2 = new QueryCriteria("charValue", QueryCriteriaOperator.EQUAL, 'C');
+        List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
+        Assert.assertEquals(2, results2.size());
+        Assert.assertTrue(results2.get(0).charValue == 'C');
+    }
+
+
+    @Test
+    public void testEntityEquals() throws EntityException
+    {
+        AllAttributeV2Entity entity = new AllAttributeV2Entity();
+        entity.id = "ASDF";
+        final QueryCriteria criteria = new QueryCriteria("entity", QueryCriteriaOperator.EQUAL, entity);
+        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
+        Assert.assertEquals(2, results.size());
+        Assert.assertTrue(results.get(0).entity.equals(entity));
+
+    }
+
+    @Test
+    public void testEnumEquals() throws EntityException
+    {
+        final QueryCriteria criteria = new QueryCriteria("operator", QueryCriteriaOperator.EQUAL, QueryCriteriaOperator.CONTAINS);
+        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
+        Assert.assertEquals(2, results.size());
+        Assert.assertTrue(results.get(0).operator == QueryCriteriaOperator.CONTAINS);
     }
 
 }

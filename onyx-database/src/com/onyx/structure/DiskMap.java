@@ -5,6 +5,7 @@ import com.onyx.structure.node.Header;
 import com.onyx.structure.store.Store;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by tosborn1 on 7/30/15.
@@ -58,4 +59,10 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @return Header reference item
      */
     Header getReference();
+
+    /**
+     * Get the set of references.  Not values nor keys
+     * @return Set of references.
+     */
+    Set referenceSet();
 }

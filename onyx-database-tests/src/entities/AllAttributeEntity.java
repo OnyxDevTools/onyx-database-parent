@@ -1,10 +1,10 @@
 package entities;
 
+
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
-
 import java.util.Date;
 
 /**

@@ -165,16 +165,4 @@ public class InTest extends BaseTest
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(3, results.size());
     }
-
-    @Test
-    public void testDoubleIn() throws EntityException
-    {
-        List stringArray = new ArrayList<>();
-        stringArray.add(1.126);
-        stringArray.add(1.11);
-        QueryCriteria criteriaList = new QueryCriteria("doubleValue", QueryCriteriaOperator.IN, stringArray);
-        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
-    }
-
 }

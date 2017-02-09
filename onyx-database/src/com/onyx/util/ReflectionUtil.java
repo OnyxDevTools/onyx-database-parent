@@ -9,24 +9,25 @@ import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Relationship;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
 
 /**
  * Created by tosborn1 on 8/2/16.
- *
+ * <p>
  * The purpose of this class is to encapsulate how we are performing reflection.  The default way is to use the unsafe api
  * but if it is not available, we default to generic reflection.
  */
-public class ReflectionUtil
-{
+@SuppressWarnings("unchecked")
+public class ReflectionUtil {
 
 
     private static sun.misc.Unsafe theUnsafe = null;
 
     // Cache of class' fields
-    protected static final Map<Class, List<OffsetField>> classFields = Collections.synchronizedMap(new WeakHashMap());
+    private static final Map<Class, List<OffsetField>> classFields = Collections.synchronizedMap(new WeakHashMap());
 
     // Get Unsafe instance
     static {
@@ -34,7 +35,7 @@ public class ReflectionUtil
             final Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
             theUnsafe = (sun.misc.Unsafe) field.get(null);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
     }
 
@@ -43,10 +44,8 @@ public class ReflectionUtil
      *
      * @param object The object to read the fields from
      * @return Fields with their offsets
-     * @throws Exception Generic exception due to the shittyness of reflection
      */
-    public static List<OffsetField> getFields(Object object)
-    {
+    public static List<OffsetField> getFields(Object object) {
         final Class clazz = object.getClass();
         final boolean isManagedEntity = object.getClass().isAnnotationPresent(Entity.class);
 
@@ -68,10 +67,8 @@ public class ReflectionUtil
                                 } else {
                                     fields.add(new OffsetField(-1, f.getName(), f));
                                 }
-                            }
-                            else if (f.isAnnotationPresent(Attribute.class)
-                                    || f.isAnnotationPresent(Relationship.class))
-                            {
+                            } else if (f.isAnnotationPresent(Attribute.class)
+                                    || f.isAnnotationPresent(Relationship.class)) {
                                 if (theUnsafe != null) {
                                     fields.add(new OffsetField(theUnsafe.objectFieldOffset(f), f.getName(), f));
                                 } else {
@@ -92,13 +89,12 @@ public class ReflectionUtil
     /**
      * Helper for getting field that may be an inherited field
      *
-     * @param clazz Parent class to reflect
+     * @param clazz     Parent class to reflect
      * @param attribute Attribute Name
      * @return Offset field which is a wrapper so that it can use Unsafe for reflection if it is available
      * @throws AttributeMissingException The attribute does not exist
      */
-    public static OffsetField getOffsetField(Class clazz, String attribute) throws AttributeMissingException
-    {
+    public static OffsetField getOffsetField(Class clazz, String attribute) throws AttributeMissingException {
         Field field = getField(clazz, attribute);
         return getOffsetField(field);
     }
@@ -109,8 +105,7 @@ public class ReflectionUtil
      * @param field Reflect field to wrap
      * @return The offset field
      */
-    public static OffsetField getOffsetField(Field field)
-    {
+    public static OffsetField getOffsetField(Field field) {
         if (theUnsafe != null)
             return new OffsetField(theUnsafe.objectFieldOffset(field), field.getName(), field);
 
@@ -120,28 +115,22 @@ public class ReflectionUtil
     /**
      * Helper for getting field that may be an inherited field
      *
-     * @param clazz Parent class to reflect upon
+     * @param clazz     Parent class to reflect upon
      * @param attribute Attribute to get field of
      * @return The Field that corresponds to that attribute name
      * @throws AttributeMissingException Exception thrown when the field is not there
      */
-    public static Field getField(Class clazz, String attribute) throws AttributeMissingException
-    {
-        while(clazz != Object.class)
-        {
-            try
-            {
+    public static Field getField(Class clazz, String attribute) throws AttributeMissingException {
+        while (clazz != Object.class) {
+            try {
                 Field f = clazz.getDeclaredField(attribute);
-                if (f != null)
-                {
-                    if(!f.isAccessible())
-                    {
+                if (f != null) {
+                    if (!f.isAccessible()) {
                         f.setAccessible(true);
                     }
                     return f;
                 }
-            } catch (NoSuchFieldException e)
-            {
+            } catch (NoSuchFieldException e) {
                 clazz = clazz.getSuperclass();
             }
         }
@@ -155,14 +144,12 @@ public class ReflectionUtil
      * Note: If using the unsafe API, this will bypass the constructor
      *
      * @param type the type of class to instantiate
-     *
      * @return the fully instantiated object
-     *
      * @throws InstantiationException Exception thrown when using unsafe to allocate an instance
      * @throws IllegalAccessException Exception thrown when using regular reflection
      */
     public static Object instantiate(Class type) throws InstantiationException, IllegalAccessException {
-        if(theUnsafe != null)
+        if (theUnsafe != null)
             return theUnsafe.allocateInstance(type);
 
         return type.newInstance();
@@ -177,13 +164,12 @@ public class ReflectionUtil
     /**
      * Get Int for an object and a field
      *
-     * @param parent The object to get the int field from
+     * @param parent      The object to get the int field from
      * @param offsetField The field to reflect on
      * @return a primitive int
      */
-    public static int getInt(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static int getInt(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getInt(parent, offsetField.offset);
 
         return offsetField.field.getInt(parent);
@@ -192,13 +178,12 @@ public class ReflectionUtil
     /**
      * Get byte for an object and a field
      *
-     * @param parent The object to get the byte field from
+     * @param parent      The object to get the byte field from
      * @param offsetField The field to reflect on
      * @return a primitive byte
      */
-    public static byte getByte(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static byte getByte(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getByte(parent, offsetField.offset);
 
         return offsetField.field.getByte(parent);
@@ -207,13 +192,12 @@ public class ReflectionUtil
     /**
      * Get long for an object and a field
      *
-     * @param parent The object to get the long field from
+     * @param parent      The object to get the long field from
      * @param offsetField The field to reflect on
      * @return a primitive long
      */
-    public static long getLong(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static long getLong(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getLong(parent, offsetField.offset);
 
         return offsetField.field.getLong(parent);
@@ -222,13 +206,12 @@ public class ReflectionUtil
     /**
      * Get float for an object and a field
      *
-     * @param parent The object to get the float field from
+     * @param parent      The object to get the float field from
      * @param offsetField The field to reflect on
      * @return a primitive float
      */
-    public static float getFloat(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static float getFloat(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getFloat(parent, offsetField.offset);
 
         return offsetField.field.getFloat(parent);
@@ -237,13 +220,12 @@ public class ReflectionUtil
     /**
      * Get double for an object and a field
      *
-     * @param parent The object to get the double field from
+     * @param parent      The object to get the double field from
      * @param offsetField The field to reflect on
      * @return a primitive double
      */
-    public static double getDouble(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static double getDouble(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getDouble(parent, offsetField.offset);
 
         return offsetField.field.getDouble(parent);
@@ -252,13 +234,12 @@ public class ReflectionUtil
     /**
      * Get short for an object and a field
      *
-     * @param parent The object to get the boolean field from
+     * @param parent      The object to get the boolean field from
      * @param offsetField The field to reflect on
      * @return a primitive boolean
      */
-    public static boolean getBoolean(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static boolean getBoolean(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getBoolean(parent, offsetField.offset);
 
         return offsetField.field.getBoolean(parent);
@@ -267,13 +248,12 @@ public class ReflectionUtil
     /**
      * Get short for an object and a field
      *
-     * @param parent The object to get the short field from
+     * @param parent      The object to get the short field from
      * @param offsetField The field to reflect on
      * @return a primitive short
      */
-    public static short getShort(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static short getShort(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getShort(parent, offsetField.offset);
 
         return offsetField.field.getShort(parent);
@@ -282,13 +262,12 @@ public class ReflectionUtil
     /**
      * Get char for an object and a field
      *
-     * @param parent The object to get the char field from
+     * @param parent      The object to get the char field from
      * @param offsetField The field to reflect on
      * @return a primitive char
      */
-    public static char getChar(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static char getChar(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getChar(parent, offsetField.offset);
 
         return offsetField.field.getChar(parent);
@@ -297,13 +276,12 @@ public class ReflectionUtil
     /**
      * Get object for an object and a field
      *
-     * @param parent The object to get the object field from
+     * @param parent      The object to get the object field from
      * @param offsetField The field to reflect on
      * @return a mutable object of any kind
      */
-    public static Object getObject(Object parent, OffsetField offsetField) throws IllegalAccessException
-    {
-        if(theUnsafe != null)
+    public static Object getObject(Object parent, OffsetField offsetField) throws IllegalAccessException {
+        if (theUnsafe != null)
             return theUnsafe.getObject(parent, offsetField.offset);
 
         return offsetField.field.get(parent);
@@ -314,36 +292,37 @@ public class ReflectionUtil
      * can either return a primitive or an object.  Note: If inteneded to get a
      * primitive, I recommend using the other api methods to avoid autoboxing.
      *
-     * @param object Parent object
+     * @param object      Parent object
      * @param offsetField field to get
      * @return field key
      */
-    public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException
-    {
-        try
-        {
-            if (offsetField.type == int.class)
-                return ReflectionUtil.getInt(object, offsetField);
-            else if (offsetField.type == long.class)
-                return ReflectionUtil.getLong(object, offsetField);
-            else if (offsetField.type == byte.class)
-                return ReflectionUtil.getByte(object, offsetField);
-            else if (offsetField.type == float.class)
-                return ReflectionUtil.getFloat(object, offsetField);
-            else if (offsetField.type == double.class)
-                return ReflectionUtil.getDouble(object, offsetField);
-            else if (offsetField.type == boolean.class)
-                return ReflectionUtil.getBoolean(object, offsetField);
-            else if (offsetField.type == short.class)
-                return ReflectionUtil.getShort(object, offsetField);
-            else if (offsetField.type == char.class)
-                return ReflectionUtil.getChar(object, offsetField);
-            else if (!offsetField.type.isPrimitive())
-                return ReflectionUtil.getObject(object, offsetField);
-            else
-                throw new AttributeTypeMismatchException(AttributeTypeMismatchException.UNKNOWN_EXCEPTION, offsetField.type, object.getClass(), offsetField.name);
-        }catch (IllegalAccessException e)
-        {
+    public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException {
+        try {
+
+
+            final PropertyType fieldType = PropertyType.primitiveValueOf(offsetField.type);
+            switch (fieldType) {
+                case INT:
+                    return ReflectionUtil.getInt(object, offsetField);
+                case LONG:
+                    return ReflectionUtil.getLong(object, offsetField);
+                case BYTE:
+                    return ReflectionUtil.getByte(object, offsetField);
+                case FLOAT:
+                    return ReflectionUtil.getFloat(object, offsetField);
+                case DOUBLE:
+                    return ReflectionUtil.getDouble(object, offsetField);
+                case BOOLEAN:
+                    return ReflectionUtil.getBoolean(object, offsetField);
+                case SHORT:
+                    return ReflectionUtil.getShort(object, offsetField);
+                case CHAR:
+                    return ReflectionUtil.getChar(object, offsetField);
+                default:
+                    return ReflectionUtil.getObject(object, offsetField);
+
+            }
+        } catch (IllegalAccessException e) {
             return null;
         }
     }
@@ -357,13 +336,12 @@ public class ReflectionUtil
     /**
      * Put an int on an parent object
      *
-     * @param parent The object to put the int on
+     * @param parent      The object to put the int on
      * @param offsetField The field to reflect on
-     * @param value int key to set
+     * @param value       int key to set
      */
-    public static void setInt(Object parent, OffsetField offsetField, int value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setInt(Object parent, OffsetField offsetField, int value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putInt(parent, offsetField.offset, value);
             return;
         }
@@ -374,13 +352,12 @@ public class ReflectionUtil
     /**
      * Put an long on an parent object
      *
-     * @param parent The object to put the long on
+     * @param parent      The object to put the long on
      * @param offsetField The field to reflect on
-     * @param value long key to set
+     * @param value       long key to set
      */
-    public static void setLong(Object parent, OffsetField offsetField, long value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setLong(Object parent, OffsetField offsetField, long value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putLong(parent, offsetField.offset, value);
             return;
         }
@@ -391,13 +368,12 @@ public class ReflectionUtil
     /**
      * Put an byte on an parent object
      *
-     * @param parent The object to put the byte on
+     * @param parent      The object to put the byte on
      * @param offsetField The field to reflect on
-     * @param value byte key to set
+     * @param value       byte key to set
      */
-    public static void setByte(Object parent, OffsetField offsetField, byte value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setByte(Object parent, OffsetField offsetField, byte value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putByte(parent, offsetField.offset, value);
             return;
         }
@@ -408,13 +384,12 @@ public class ReflectionUtil
     /**
      * Put an float on an parent object
      *
-     * @param parent The object to put the float on
+     * @param parent      The object to put the float on
      * @param offsetField The field to reflect on
-     * @param value float key to set
+     * @param value       float key to set
      */
-    public static void setFloat(Object parent, OffsetField offsetField, float value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setFloat(Object parent, OffsetField offsetField, float value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putFloat(parent, offsetField.offset, value);
             return;
         }
@@ -425,13 +400,12 @@ public class ReflectionUtil
     /**
      * Put an double on an parent object
      *
-     * @param parent The object to put the double on
+     * @param parent      The object to put the double on
      * @param offsetField The field to reflect on
-     * @param value double key to set
+     * @param value       double key to set
      */
-    public static void setDouble(Object parent, OffsetField offsetField, double value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setDouble(Object parent, OffsetField offsetField, double value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putDouble(parent, offsetField.offset, value);
             return;
         }
@@ -442,13 +416,12 @@ public class ReflectionUtil
     /**
      * Put an short on an parent object
      *
-     * @param parent The object to put the short on
+     * @param parent      The object to put the short on
      * @param offsetField The field to reflect on
-     * @param value short key to set
+     * @param value       short key to set
      */
-    public static void setShort(Object parent, OffsetField offsetField, short value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setShort(Object parent, OffsetField offsetField, short value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putShort(parent, offsetField.offset, value);
             return;
         }
@@ -459,13 +432,12 @@ public class ReflectionUtil
     /**
      * Put an boolean on an parent object
      *
-     * @param parent The object to put the boolean on
+     * @param parent      The object to put the boolean on
      * @param offsetField The field to reflect on
-     * @param value boolean key to set
+     * @param value       boolean key to set
      */
-    public static void setBoolean(Object parent, OffsetField offsetField, boolean value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setBoolean(Object parent, OffsetField offsetField, boolean value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putBoolean(parent, offsetField.offset, value);
             return;
         }
@@ -476,13 +448,12 @@ public class ReflectionUtil
     /**
      * Put an char on an parent object
      *
-     * @param parent The object to put the char on
+     * @param parent      The object to put the char on
      * @param offsetField The field to reflect on
-     * @param value char key to set
+     * @param value       char key to set
      */
-    public static void setChar(Object parent, OffsetField offsetField, char value) throws IllegalAccessException
-    {
-        if(theUnsafe != null) {
+    public static void setChar(Object parent, OffsetField offsetField, char value) throws IllegalAccessException {
+        if (theUnsafe != null) {
             theUnsafe.putChar(parent, offsetField.offset, value);
             return;
         }
@@ -493,14 +464,13 @@ public class ReflectionUtil
     /**
      * Put an object on an parent object
      *
-     * @param parent The object to put the object on
+     * @param parent      The object to put the object on
      * @param offsetField The field to reflect on
-     * @param value object key to set
+     * @param value       object key to set
      */
-    public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException,AttributeTypeMismatchException
-    {
-        if(theUnsafe != null) {
-            if(value == null || offsetField.field.getType().isAssignableFrom(value.getClass())
+    public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException, AttributeTypeMismatchException {
+        if (theUnsafe != null) {
+            if (value == null || offsetField.field.getType().isAssignableFrom(value.getClass())
                     || value.getClass().isArray() && offsetField.field.getType().isArray())
                 theUnsafe.putObject(parent, offsetField.offset, value);
             else
@@ -511,216 +481,411 @@ public class ReflectionUtil
         offsetField.field.set(parent, value);
     }
 
+
     /**
      * Reflection utility for setting an attribute
      *
-     * @param parent
-     * @param child
-     * @param field
+     * @param parent Parent object to set property on
+     * @param child Child object that is the property value
+     * @param field Field to set on the parent
      */
-    public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException,AttributeTypeMismatchException
-    {
-        final Class toType = field.type;
-        Class fromType = null;
+    @SuppressWarnings("ConstantConditions")
+    public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException, AttributeTypeMismatchException {
 
-        if(child != null)
-            fromType = child.getClass();
 
         try {
-            if (toType == String.class && fromType != String.class && child != null)
-                setObject(parent, field, child.toString());
-            else if (toType == Long.class) {
-                if (fromType == Long.class)
-                    setObject(parent, field, child);
-                else if (fromType == long.class)
-                    setObject(parent, field, child);
-                else if (fromType == Integer.class)
-                    setObject(parent, field, ((Integer) child).longValue());
-                else if (fromType == int.class)
-                    setObject(parent, field, child);
-                else if (fromType == Boolean.class)
-                    setObject(parent, field, ((Boolean) child) ? new Long(1) : new Long(0));
-                else if (fromType == boolean.class)
-                    setObject(parent, field, ((boolean) child) ? new Long(1) : new Long(0));
-                else if (child == null)
-                    setObject(parent, field, child);
-                else
-                    setObject(parent, field, toType.cast(child));
-            } else if (toType == Integer.class) {
-                if (fromType == Long.class)
-                    setObject(parent, field, ((Long) child).intValue());
-                else if (fromType == long.class)
-                    setObject(parent, field, new Integer((int) child));
-                else if (fromType == Integer.class)
-                    setObject(parent, field, child);
-                else if (fromType == int.class)
-                    setObject(parent, field, new Integer((int) child));
-                else if (fromType == Boolean.class)
-                    setObject(parent, field, ((Boolean) child) ? new Integer(1) : new Integer(0));
-                else if (fromType == boolean.class)
-                    setObject(parent, field, ((boolean) child) ? new Integer(1) : new Integer(0));
-                else if (child == null)
-                    setObject(parent, field, child);
-                else
-                    setObject(parent, field, toType.cast(child));
-            } else if (toType == Double.class) {
-                if (fromType == Float.class)
-                    setObject(parent, field, new Double(((Float) child).doubleValue()));
-                else if (fromType == float.class)
-                    setObject(parent, field, new Double((double) child));
-                else if (fromType == Double.class)
-                    setObject(parent, field, child);
-                else if (fromType == double.class)
-                    setObject(parent, field, new Double((double) child));
-                else if (fromType == Integer.class)
-                    setObject(parent, field, new Double(((Integer) child).doubleValue()));
-                else if (fromType == int.class)
-                    setObject(parent, field, new Double(new Integer((int) child).doubleValue()));
-                else if (fromType == Long.class)
-                    setObject(parent, field, new Double(((Long) child).doubleValue()));
-                else if (fromType == long.class)
-                    setDouble(parent, field, new Double(new Long((long) child).doubleValue()));
-                else if (child == null)
-                    setObject(parent, field, child);
-                else
-                    setObject(parent, field, toType.cast(child));
-            } else if (toType == Float.class) {
-                if (fromType == Float.class)
-                    setObject(parent, field, child);
-                else if (fromType == float.class)
-                    setObject(parent, field, new Float((float) child));
-                else if (fromType == Double.class)
-                    setObject(parent, field, child);
-                else if (fromType == double.class)
-                    setObject(parent, field, new Float((float) child));
-                else if (fromType == Integer.class)
-                    setObject(parent, field, new Float(((Integer) child).floatValue()));
-                else if (fromType == int.class)
-                    setObject(parent, field, new Float(new Integer((int) child).floatValue()));
-                else if (fromType == Long.class)
-                    setObject(parent, field, new Float(((Long) child).floatValue()));
-                else if (fromType == long.class)
-                    setDouble(parent, field, new Float(new Long((long) child).floatValue()));
-                else if (child == null)
-                    setObject(parent, field, child);
-                else
-                    setObject(parent, field, toType.cast(child));
-            } else if (toType == Boolean.class) {
-                if (fromType == boolean.class)
-                    setObject(parent, field, new Boolean((boolean) child));
-                else if (fromType == Boolean.class)
-                    setObject(parent, field, child);
-                else if (fromType == Integer.class)
-                    setObject(parent, field, new Boolean((((Integer) child).intValue() == 1)));
-                else if (fromType == int.class)
-                    setObject(parent, field, new Boolean(((int) child == 1)));
-                else if (fromType == Long.class)
-                    setObject(parent, field, new Boolean(((Long) child == 1)));
-                else if (fromType == long.class)
-                    setObject(parent, field, new Boolean(((long) child == 1)));
-                else if (child == null)
-                    setObject(parent, field, child);
-                else
-                    setObject(parent, field, toType.cast(child));
-            } else if (toType == int.class) {
-                if (fromType == Long.class)
-                    setInt(parent, field, ((Long) child).intValue());
-                else if (fromType == long.class)
-                    setInt(parent, field, (int) child);
-                else if (fromType == Integer.class)
-                    setInt(parent, field, ((Integer) child).intValue());
-                else if (fromType == int.class)
-                    setInt(parent, field, (int) child);
-                else if (fromType == Boolean.class)
-                    setInt(parent, field, ((Boolean) child) ? 1 : 0);
-                else if (fromType == boolean.class)
-                    setInt(parent, field, ((boolean) child) ? 1 : 0);
-                else if (child == null)
-                    setInt(parent, field, 0);
-                else
-                    setInt(parent, field, (int) child);
-            } else if (toType == long.class) {
-                if (fromType == Long.class)
-                    setLong(parent, field, ((Long) child).longValue());
-                else if (fromType == long.class)
-                    setLong(parent, field, (long) child);
-                else if (fromType == Integer.class)
-                    setLong(parent, field, ((Integer) child).longValue());
-                else if (fromType == Boolean.class)
-                    setLong(parent, field, ((Boolean) child) ? 1 : 0);
-                else if (fromType == boolean.class)
-                    setLong(parent, field, ((boolean) child) ? 1 : 0);
-                else if (child == null)
-                    setLong(parent, field, 0l);
-                else
-                    setLong(parent, field, (long) child);
-            } else if (toType == boolean.class) {
-                if (fromType == boolean.class)
-                    setBoolean(parent, field, (boolean) child);
-                else if (fromType == Boolean.class)
-                    setBoolean(parent, field, ((Boolean) child).booleanValue());
-                else if (fromType == Integer.class)
-                    setBoolean(parent, field, (((Integer) child).intValue() == 1));
-                else if (fromType == int.class)
-                    setBoolean(parent, field, ((int) child == 1));
-                else if (fromType == Long.class)
-                    setBoolean(parent, field, ((Long) child == 1));
-                else if (fromType == long.class)
-                    setBoolean(parent, field, ((long) child == 1));
-                else if (child == null)
-                    setBoolean(parent, field, false);
-                else
-                    setBoolean(parent, field, (boolean) toType.cast(child));
-            } else if (toType == double.class) {
-                if (fromType == Float.class)
-                    setDouble(parent, field, ((Float) child).doubleValue());
-                else if (fromType == float.class)
-                    setDouble(parent, field, (double) child);
-                else if (fromType == Double.class)
-                    setDouble(parent, field, ((Double) child).doubleValue());
-                else if (fromType == double.class)
-                    setDouble(parent, field, (double) child);
-                else if (fromType == Integer.class)
-                    setDouble(parent, field, ((Integer) child).doubleValue());
-                else if (fromType == int.class)
-                    setDouble(parent, field, new Integer((int) child).doubleValue());
-                else if (fromType == Long.class)
-                    setDouble(parent, field, ((Long) child).doubleValue());
-                else if (fromType == long.class)
-                    setDouble(parent, field, new Long((long) child).doubleValue());
-                else if (child == null)
-                    setDouble(parent, field, 0.0);
-                else
-                    setDouble(parent, field, (double) child);
-            } else if (toType == float.class) {
-                if (fromType == Float.class)
-                    setFloat(parent, field, ((Float) child).floatValue());
-                else if (fromType == float.class)
-                    setFloat(parent, field, (float) child);
-                else if (fromType == Double.class)
-                    setFloat(parent, field, ((Float) child).floatValue());
-                else if (fromType == double.class)
-                    setFloat(parent, field, (float) child);
-                else if (fromType == Integer.class)
-                    setFloat(parent, field, ((Integer) child).floatValue());
-                else if (fromType == int.class)
-                    setFloat(parent, field, new Integer((int) child).floatValue());
-                else if (fromType == Long.class)
-                    setFloat(parent, field, ((Long) child).floatValue());
-                else if (fromType == long.class)
-                    setFloat(parent, field, new Long((long) child).floatValue());
-                else if (child == null)
-                    setFloat(parent, field, 0);
-                else
-                    setFloat(parent, field, (float) child);
-            } else if (fromType != toType)
-                setObject(parent, field, toType.cast(child));
-            else
-                setObject(parent, field, child);
-        }
-        catch (IllegalAccessException illegalAccessException)
-        {
-            // This is supressed
+
+            final Class toClass = field.type;
+            final PropertyType toType = PropertyType.valueOf(field.type);
+            final PropertyType fromType = (child == null) ? null : PropertyType.valueOf(child.getClass());
+
+            switch (toType) {
+
+                case MUTABLE_INT:
+                    switch (fromType) {
+                        case MUTABLE_INT:
+                        case INT:
+                        case LONG:
+                        case NULL:
+                            setObject(parent, field, child);
+                            break;
+                        case MUTABLE_LONG:
+                            setObject(parent, field, ((Long) child).intValue());
+                            break;
+                        case MUTABLE_BOOLEAN:
+                        case BOOLEAN:
+                            setObject(parent, field, ((boolean) child) ? new Integer(1) : new Integer(0));
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case INT:
+                    switch (fromType) {
+                        case MUTABLE_INT:
+                        case INT:
+                        case LONG:
+                            setInt(parent, field, (int)child);
+                            break;
+                        case MUTABLE_LONG:
+                            setInt(parent, field, ((Long) child).intValue());
+                            break;
+                        case MUTABLE_BOOLEAN:
+                        case BOOLEAN:
+                            setInt(parent, field, ((boolean) child) ? 1 : 0);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case MUTABLE_LONG:
+                    switch (fromType) {
+                        case LONG:
+                        case MUTABLE_LONG:
+                        case INT:
+                        case NULL:
+                            setObject(parent, field, child);
+                            break;
+                        case MUTABLE_INT:
+                            setObject(parent, field, ((Integer) child).longValue());
+                            break;
+                        case MUTABLE_BOOLEAN:
+                        case BOOLEAN:
+                            setObject(parent, field, ((boolean) child) ? new Long(1) : new Long(0));
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case LONG:
+                    switch (fromType) {
+                        case LONG:
+                        case MUTABLE_LONG:
+                        case INT:
+                            setLong(parent, field, (long)child);
+                            break;
+                        case MUTABLE_INT:
+                            setLong(parent, field, ((Integer) child).longValue());
+                            break;
+                        case BOOLEAN:
+                        case MUTABLE_BOOLEAN:
+                            setLong(parent, field, ((boolean) child) ? 1L : 0L);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                    }
+                    break;
+                case MUTABLE_DOUBLE:
+                    switch (fromType) {
+                        case MUTABLE_DOUBLE:
+                        case DOUBLE:
+                            setObject(parent, field, child);
+                            break;
+                        case FLOAT:
+                        case MUTABLE_FLOAT:
+                            setObject(parent, field, ((Float) child).doubleValue());
+                            break;
+                        case NULL:
+                            setObject(parent, field, null);
+                            break;
+                        case MUTABLE_INT:
+                            setObject(parent, field, ((Integer) child).doubleValue());
+                            break;
+                        case INT:
+                            setObject(parent, field, new Integer((int) child).doubleValue());
+                            break;
+                        case MUTABLE_LONG:
+                            setObject(parent, field, ((Long) child).doubleValue());
+                            break;
+                        case LONG:
+                            setDouble(parent, field, new Long((long) child).doubleValue());
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case DOUBLE:
+                    switch (fromType) {
+                        case MUTABLE_DOUBLE:
+                            setDouble(parent, field, (Double) child);
+                            break;
+                        case DOUBLE:
+                        case FLOAT:
+                            setDouble(parent, field, (double) child);
+                            break;
+                        case MUTABLE_FLOAT:
+                            setDouble(parent, field, ((Float) child).doubleValue());
+                            break;
+                        case MUTABLE_INT:
+                            setDouble(parent, field, ((Integer) child).doubleValue());
+                            break;
+                        case INT:
+                            setDouble(parent, field, new Integer((int) child).doubleValue());
+                            break;
+                        case MUTABLE_LONG:
+                            setDouble(parent, field, ((Long) child).doubleValue());
+                            break;
+                        case LONG:
+                            setDouble(parent, field, new Long((long) child).doubleValue());
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case BOOLEAN:
+                    switch (fromType) {
+                        case BOOLEAN:
+                        case MUTABLE_BOOLEAN:
+                            setBoolean(parent, field, (boolean)child);
+                            break;
+                        case MUTABLE_INT:
+                            setBoolean(parent, field, (Integer) child == 1);
+                            break;
+                        case INT:
+                            setBoolean(parent, field, ((int) child == 1));
+                            break;
+                        case MUTABLE_LONG:
+                            setBoolean(parent, field, (Long) child == 1);
+                            break;
+                        case LONG:
+                            setBoolean(parent, field, ((long) child == 1));
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case MUTABLE_BOOLEAN:
+                    switch (fromType) {
+                        case BOOLEAN:
+                        case MUTABLE_BOOLEAN:
+                            setObject(parent, field, child);
+                            break;
+                        case MUTABLE_INT:
+                        case INT:
+                            setObject(parent, field, ((int) child == 1));
+                            break;
+                        case MUTABLE_LONG:
+                        case LONG:
+                            setObject(parent, field, ((long) child == 1));
+                            break;
+                        case NULL:
+                            setObject(parent, field, child);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case MUTABLE_BYTE:
+                    switch (fromType)
+                    {
+                        case MUTABLE_BYTE:
+                        case BYTE:
+                            setObject(parent, field, child);
+                            break;
+                        case INT:
+                        case MUTABLE_INT:
+                            setObject(parent, field, ((Integer) child).byteValue());
+                            break;
+                        case BOOLEAN:
+                            setObject(parent, field, ((boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
+                            break;
+                        case MUTABLE_BOOLEAN:
+                            setObject(parent, field, ((Boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
+                            break;
+                        case NULL:
+                            setObject(parent, field, null);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case BYTE:
+                    switch (fromType)
+                    {
+                        case MUTABLE_BYTE:
+                        case BYTE:
+                            setByte(parent, field, (byte)child);
+                            break;
+                        case INT:
+                        case MUTABLE_INT:
+                            setByte(parent, field, ((Integer) child).byteValue());
+                            break;
+                        case BOOLEAN:
+                            setByte(parent, field, ((boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
+                            break;
+                        case MUTABLE_BOOLEAN:
+                            setByte(parent, field, ((Boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
+                            break;
+                    }
+                    break;
+                case MUTABLE_SHORT:
+                    switch (fromType)
+                    {
+                        case MUTABLE_LONG:
+                            setObject(parent, field, ((Long) child).shortValue());
+                            break;
+                        case LONG:
+                        case SHORT:
+                        case INT:
+                            setObject(parent, field, child);
+                            break;
+                        case MUTABLE_INT:
+                            setObject(parent, field, ((Integer)child).shortValue());
+                            break;
+                        case MUTABLE_BOOLEAN:
+                            setObject(parent, field, ((Boolean) child) ? new Short((short)1) : new Short((short)0));
+                            break;
+                        case BOOLEAN:
+                            setObject(parent, field, ((boolean) child) ? new Short((short)1) : new Short((short)0));
+                            break;
+                        case NULL:
+                            setObject(parent, field, null);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case SHORT:
+                    switch (fromType)
+                    {
+                        case MUTABLE_LONG:
+                            setShort(parent, field, ((Long) child).shortValue());
+                            break;
+                        case LONG:
+                        case SHORT:
+                        case MUTABLE_SHORT:
+                        case INT:
+                            setShort(parent, field, (short)child);
+                            break;
+                        case MUTABLE_INT:
+                            setShort(parent, field, ((Integer)child).shortValue());
+                            break;
+                        case MUTABLE_BOOLEAN:
+                            setShort(parent, field, ((Boolean) child) ? new Short((short)1) : new Short((short)0));
+                            break;
+                        case BOOLEAN:
+                            setShort(parent, field, ((boolean) child) ? new Short((short)1) : new Short((short)0));
+                            break;
+                        default:
+                            setShort(parent, field, (short)toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case FLOAT:
+                    switch (fromType)
+                    {
+                        case MUTABLE_FLOAT:
+                        case FLOAT:
+                        case MUTABLE_DOUBLE:
+                        case DOUBLE:
+                            setFloat(parent, field, (float)child);
+                            break;
+                        case MUTABLE_INT:
+                            setFloat(parent, field, ((Integer) child).floatValue());
+                            break;
+                        case INT:
+                            setFloat(parent, field, new Integer((int) child).floatValue());
+                            break;
+                        case MUTABLE_LONG:
+                            setFloat(parent, field, ((Long) child).floatValue());
+                            break;
+                        case LONG:
+                            setFloat(parent, field, new Long((long) child).floatValue());
+                            break;
+                        default:
+                            setFloat(parent, field, (float)toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case MUTABLE_FLOAT:
+                    switch (fromType)
+                    {
+                        case MUTABLE_FLOAT:
+                        case FLOAT:
+                        case MUTABLE_DOUBLE:
+                        case DOUBLE:
+                            setObject(parent, field, child);
+                            break;
+                        case MUTABLE_INT:
+                            setObject(parent, field, ((Integer) child).floatValue());
+                            break;
+                        case INT:
+                            setObject(parent, field, new Integer((int) child).floatValue());
+                            break;
+                        case MUTABLE_LONG:
+                            setObject(parent, field, ((Long) child).floatValue());
+                            break;
+                        case LONG:
+                            setObject(parent, field, new Long((long) child).floatValue());
+                            break;
+                        case NULL:
+                            setObject(parent, field, null);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case MUTABLE_CHAR:
+                    switch (fromType)
+                    {
+                        case MUTABLE_CHAR:
+                        case CHAR:
+                            setObject(parent, field, child);
+                            break;
+                        case NULL:
+                            setObject(parent, field, null);
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case CHAR:
+                    switch (fromType)
+                    {
+                        case MUTABLE_CHAR:
+                        case CHAR:
+                            setChar(parent, field, (char)child);
+                            break;
+                        default:
+                            setChar(parent, field, (char)toClass.cast(child));
+                            break;
+                    }
+                    break;
+                case STRING:
+                    switch (fromType) {
+                        case STRING:
+                            setObject(parent, field, child.toString());
+                            break;
+                        default:
+                            setObject(parent, field, toClass.cast(child));
+                    }
+                    break;
+                default:
+
+                    if(toType.isArray())
+                    {
+                        int arrayLength = Array.getLength(child);
+                        Object newArray = Array.newInstance(toClass, arrayLength);
+                        System.arraycopy(child, 0, newArray, 0, arrayLength);
+                        setObject(parent, field, newArray);
+                    }
+                    else {
+                        setObject(parent, field, toClass.cast(child));
+                    }
+            }
+        } catch (IllegalAccessException ignore) {
+            // This is suppressed
         }
     }
 
@@ -728,43 +893,33 @@ public class ReflectionUtil
      * Returns a copy of the object, or null if the object cannot
      * be serialized.
      */
-    public static void copy(IManagedEntity orig, IManagedEntity dest, EntityDescriptor descriptor)
-    {
+    public static void copy(IManagedEntity orig, IManagedEntity dest, EntityDescriptor descriptor) {
         // Copy all attributes
-        for (AttributeDescriptor attribute : descriptor.getAttributes().values())
-        {
-            OffsetField field = null;
-            try
-            {
+        for (AttributeDescriptor attribute : descriptor.getAttributes().values()) {
+            OffsetField field;
+            try {
                 field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
                 ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
-            } catch (Exception e)
-            {
-                try
-                {
+            } catch (Exception e) {
+                try {
                     field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
                     ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
-                } catch (Exception e1)
-                {
+                } catch (Exception ignore) {
                 }
             }
         }
 
-        descriptor.getRelationships().values().stream().forEach(attribute ->
+        descriptor.getRelationships().values().forEach(attribute ->
         {
             OffsetField field = null;
-            try
-            {
-                field = ReflectionUtil.getOffsetField(orig.getClass(),attribute.getName());
+            try {
+                field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
                 ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
-            } catch (Exception e)
-            {
-                try
-                {
+            } catch (Exception e) {
+                try {
                     field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
                     ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
-                } catch (Exception e1)
-                {
+                } catch (Exception ignore) {
                 }
             }
         });

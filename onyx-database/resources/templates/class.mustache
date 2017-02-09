@@ -12,7 +12,7 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
     }
 
     @Attribute
-    @Identifier(generator = {{{generatorType}}})
+    @Identifier(generator = {{{generatorType}}}, loadFactor = {{{idLoadFactor}}})
     public {{{idType}}} {{idName}};
 
 {{#attributes}}
@@ -21,7 +21,7 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
     @Partition
     {{/isPartition}}
     {{#isIndex}}
-    @Index
+    @Index(loadFactor = {{{loadFactor}}})
     {{/isIndex}}
     @Attribute
     public {{{type}}} {{name}};
@@ -34,7 +34,8 @@ public class {{className}} extends ManagedEntity implements IManagedEntity
                   inverseClass = {{{inverseClass}}}.class,
                   inverse = "{{{inverse}}}",
                   fetchPolicy = {{{fetchPolicy}}},
-                  cascadePolicy = {{{cascadePolicy}}})
+                  cascadePolicy = {{{cascadePolicy}}},
+                  loadFactor = {{{loadFactor}}})
     public {{{type}}} {{{name}}};
 
 {{/relationships}}

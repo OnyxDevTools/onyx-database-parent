@@ -55,6 +55,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         values = new ValueCollection(this);
         keys = new KeyCollection(this);
         dict = new DictionaryCollection(this);
+        references = new ReferenceCollection(this);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,6 +63,21 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     // Iterate-able properties on structure
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    protected ReferenceCollection references;
+
+    /**
+     * Getter for set of keys
+     *
+     * @return the keys collection
+     * @see KeyCollection
+     * @see AbstractNodeCollection
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public Set referenceSet() {
+        return references;
+    }
 
     protected KeyCollection keys;
 
@@ -288,6 +304,34 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     }
 
     /**
+     * Key Collection
+     *
+     * @param <V> Key Types
+     * @see AbstractNodeCollection
+     */
+    private class ReferenceCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
+        /**
+         * Constructor
+         *
+         * @param skipList Reference to outer skip list
+         */
+        ReferenceCollection(AbstractIterableSkipList skipList) {
+            super(skipList);
+            this.skipList = skipList;
+        }
+
+        /**
+         * Iterator that iterates through nodes
+         *
+         * @return New Reference iterator
+         */
+        @Override
+        public Iterator<V> iterator() {
+            return new ReferenceIterator();
+        }
+    }
+
+    /**
      * Entry Collection.  Much like KeyCollection except iterates through entries
      *
      * @param <V> Entry Types
@@ -350,6 +394,29 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         public Object next() {
             final SkipListNode<K> next = (SkipListNode<K>)super.next();
             return next.key;
+        }
+    }
+
+    /**
+     * Key Iterator.  Same as Value iterator except returns just the keys
+     */
+    private class ReferenceIterator extends AbstractNodeIterator implements Iterator {
+
+        /**
+         * Constructor
+         */
+        ReferenceIterator() {
+            super();
+        }
+
+        /**
+         * Get the next reference object
+         * @return next reference object
+         */
+        @Override
+        public Object next() {
+            final SkipListNode<K> next = (SkipListNode<K>)super.next();
+            return next;
         }
     }
 
