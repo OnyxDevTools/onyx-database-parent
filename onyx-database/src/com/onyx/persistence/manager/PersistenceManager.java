@@ -3,11 +3,11 @@ package com.onyx.persistence.manager;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryOrder;
+import com.onyx.persistence.query.*;
 import com.onyx.stream.QueryStream;
+import com.onyx.util.ReflectionUtil;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,6 +117,18 @@ public interface PersistenceManager {
     int executeDelete(Query query) throws EntityException;
 
     /**
+     * Execute a delete query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException Exception when deleting entities
+     */
+    default QueryResult executeDeleteForResult(Query query) throws EntityException
+    {
+        return new QueryResult(query, executeDelete(query));
+    }
+
+    /**
      * Updates all rows returned by a given query
      *
      * The query#updates list must not be null or empty
@@ -132,6 +144,18 @@ public interface PersistenceManager {
     int executeUpdate(Query query) throws EntityException;
 
     /**
+     * Execute an update query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException when an update query failed
+     */
+    default QueryResult executeUpdateForResult(Query query) throws EntityException
+    {
+        return new QueryResult(query, executeUpdate(query));
+    }
+
+    /**
      * Execute query with criteria and optional row limitations
      *
      * @since 1.0.0
@@ -145,6 +169,18 @@ public interface PersistenceManager {
     List executeQuery(Query query) throws EntityException;
 
     /**
+     * Execute a query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException when the query is mal formed or general exception
+     */
+    default QueryResult executeQueryForResult(Query query) throws EntityException
+    {
+        return new QueryResult(query, executeQuery(query));
+    }
+
+    /**
      * Execute query with criteria and optional row limitations.  Specify lazy instantiation of query results.
      *
      * @since 1.0.0
@@ -156,6 +192,18 @@ public interface PersistenceManager {
      * @throws EntityException Error while executing query
      */
     List executeLazyQuery(Query query) throws EntityException;
+
+    /**
+     * Execute a lazy query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException General exception happened when the query.
+     */
+    default QueryResult executeLazyQueryForResult(Query query) throws EntityException
+    {
+        return new QueryResult(query, executeLazyQuery(query));
+    }
 
     /**
      * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition key if the data is partitioned.
@@ -247,6 +295,21 @@ public interface PersistenceManager {
     void initialize(IManagedEntity entity, String attribute) throws EntityException;
 
     /**
+     * Get relationship for an entity
+     *
+     * @param entity The entity to load
+     * @param attribute Attribute that represents the relationship
+     * @return The relationship Value
+     * @throws EntityException Error when hydrating relationship.  The attribute must exist and must be a annotated with a relationship
+     * @since 1.2.0
+     */
+    default Object getRelationship(IManagedEntity entity, String attribute) throws EntityException
+    {
+        initialize(entity, attribute);
+        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
+    }
+
+    /**
      * Provides a list of all entities with a given type
      *
      * @param clazz  Type of managed entity to retrieve
@@ -270,7 +333,10 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria) throws EntityException
+    {
+        return list(clazz, criteria, new QueryOrder[0]);
+    }
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -287,7 +353,10 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException
+    {
+        return list(clazz, criteria, 0, -1, orderBy);
+    }
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -304,7 +373,11 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException
+    {
+        QueryOrder[] queryOrders = {orderBy};
+        return list(clazz, criteria, queryOrders);
+    }
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -321,7 +394,10 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException
+    {
+        return list(clazz, criteria, new QueryOrder[0], partitionId);
+    }
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -340,7 +416,10 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    {
+        return list(clazz, criteria, 0, -1, orderBy, partitionId);
+    }
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -359,7 +438,12 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException
+    {
+        QueryOrder[] queryOrders = {orderBy};
+        return list(clazz, criteria, queryOrders, partitionId);
+    }
+
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -382,7 +466,17 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException
+    {
+        final Query tmpQuery = new Query(clazz, criteria);
+        tmpQuery.setMaxResults(maxResults);
+        tmpQuery.setFirstRow(start);
+        if (orderBy != null)
+        {
+            tmpQuery.setQueryOrders(Arrays.asList(orderBy));
+        }
+        return executeQuery(tmpQuery);
+    }
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -407,7 +501,20 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException;
+    default List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    {
+
+        final Query tmpQuery = new Query(clazz, criteria);
+        tmpQuery.setPartition(partitionId);
+        tmpQuery.setMaxResults(maxResults);
+        tmpQuery.setFirstRow(start);
+        if (orderBy != null)
+        {
+            tmpQuery.setQueryOrders(Arrays.asList(orderBy));
+        }
+
+        return executeQuery(tmpQuery);
+    }
 
     /**
      * This is a way to batch save all relationships for an entity.  This does not retain any existing relationships and will

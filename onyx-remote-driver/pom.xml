@@ -1,165 +1,104 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-    <modelVersion>4.0.0</modelVersion>
-    
-    <artifactId>onyx-remote-driver</artifactId>
-    <name>${project.groupId}:${project.artifactId}</name>
-    <description>onyx-remote-driver</description>
-    <url>http://onyxdevtools.com/products/onyx-database</url>
-    
-    <packaging>jar</packaging>
+        <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>com.onyxdevtools</groupId>
-        <artifactId>onyx-database-parent</artifactId>
-        <version>1.2.0</version>
-    </parent>
-    
-    <licenses>
-        <license>
-            <name>The GNU Affero General Public License, Version 3.0</name>
-            <url>http://www.gnu.org/licenses/agpl-3.0.en.html</url>
-        </license>
-    </licenses>
+        <artifactId>onyx-remote-driver</artifactId>
+        <name>${project.groupId}:${project.artifactId}</name>
+        <description>onyx-remote-driver</description>
+        <url>http://onyxdevtools.com</url>
 
-    <build>
+        <packaging>jar</packaging>
 
-        <sourceDirectory>src</sourceDirectory>
-
-        <resources>
-            <resource>
-                <directory>resources</directory>
-            </resource>
-            <resource>
-                <directory>../onyx-remote-driver/resources</directory>
-            </resource>
-        </resources>
-
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-        
-            <!-- to make source code available on maven central --> 
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar-no-fork</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- to make javadocs available on maven central   -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <additionalparam>-Xdoclint:none</additionalparam>
-                </configuration>
-            </plugin>
-            
-            <!-- signs all of the project's attached artifacts with GnuPG -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-gpg-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>sign-artifacts</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>sign</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            
-        </plugins>
-
-    </build>
-
-    <dependencies>
-
-        <dependency>
+        <parent>
             <groupId>com.onyxdevtools</groupId>
-            <artifactId>onyx-database</artifactId>
-        </dependency>
+            <artifactId>onyx-database-parent</artifactId>
+            <version>1.2.0</version>
+        </parent>
 
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
+        <licenses>
+            <license>
+                <name>The GNU Affero General Public License, Version 3.0</name>
+                <url>http://www.gnu.org/licenses/agpl-3.0.en.html</url>
+            </license>
+        </licenses>
 
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-        </dependency>
+        <build>
 
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
+            <sourceDirectory>src</sourceDirectory>
 
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpmime</artifactId>
-        </dependency>
+            <resources>
+                <resource>
+                    <directory>resources</directory>
+                </resource>
+                <resource>
+                    <directory>../onyx-remote-driver/resources</directory>
+                </resource>
+            </resources>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
-            <version>${spring.version}</version>
-        </dependency>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                </plugin>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-            <version>${spring.version}</version>
-        </dependency>
+                <!-- to make source code available on maven central -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>${spring.version}</version>
-        </dependency>
+                <!-- to make javadocs available on maven central   -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-javadocs</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <additionalparam>-Xdoclint:none</additionalparam>
+                    </configuration>
+                </plugin>
 
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-beans</artifactId>
-            <version>${spring.version}</version>
-        </dependency>
+                <!-- signs all of the project's attached artifacts with GnuPG -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>sign-artifacts</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sign</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
 
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-core</artifactId>
-            <version>${spring-security.version}</version>
-        </dependency>
+            </plugins>
 
-        <dependency>
-            <groupId>org.glassfish.tyrus.bundles</groupId>
-            <artifactId>tyrus-standalone-client-jdk</artifactId>
-            <version>${tyrus.version}</version>
-        </dependency>
+        </build>
 
-        <dependency>
-            <groupId>org.glassfish.tyrus</groupId>
-            <artifactId>tyrus-container-grizzly-client</artifactId>
-            <version>${tyrus.version}</version>
-        </dependency>
+        <dependencies>
 
-    </dependencies>
-</project>
+            <dependency>
+                <groupId>com.onyxdevtools</groupId>
+                <artifactId>onyx-database</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+        </dependencies>
+    </project>

@@ -1,8 +1,5 @@
 package com.onyx.persistence.query;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.structure.serializer.ObjectBuffer;
@@ -47,7 +44,6 @@ import java.util.List;
  * @see PersistenceManager#executeDelete(Query)
  * @see PersistenceManager#executeQuery(Query)
  */
-@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "@id")
 public class Query implements ObjectSerializable, Serializable
 {
 
@@ -65,7 +61,6 @@ public class Query implements ObjectSerializable, Serializable
      * Stop query before it finishes
      * @since 1.0.0
      */
-    @JsonIgnore
     protected volatile boolean kill;
 
     protected Object partition = "";
@@ -503,7 +498,6 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @return Boolean flag to terminate query
      */
-    @JsonIgnore
     public boolean isTerminated()
     {
         return kill;

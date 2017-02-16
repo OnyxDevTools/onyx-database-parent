@@ -14,7 +14,7 @@ import java.util.Arrays;
 public class Main extends AbstractDemo
 {
 
-    public static void main(final String[] args) throws IOException
+    public static void main(final String[] args) throws EntityException
     {
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox"
                 + File.separatorChar + "querying-db.oxd";

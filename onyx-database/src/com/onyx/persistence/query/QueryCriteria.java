@@ -1,6 +1,5 @@
 package com.onyx.persistence.query;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
@@ -722,7 +721,6 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @return attribute key
      */
-    @JsonIgnore
     public Object getValue()
     {
         if(type == QueryCriteriaType.BOOLEAN)

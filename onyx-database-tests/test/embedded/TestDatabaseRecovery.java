@@ -18,7 +18,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -67,7 +66,7 @@ public class TestDatabaseRecovery extends BaseTest
     }
 
     @Test
-    public void atestDatabaseRecovery() throws IOException
+    public void atestDatabaseRecovery() throws EntityException
     {
         this.populateTransactionData();
 
@@ -108,7 +107,7 @@ public class TestDatabaseRecovery extends BaseTest
     }
 
     @Test
-    public void btestDatabaseApplyTransactions() throws IOException
+    public void btestDatabaseApplyTransactions() throws EntityException
     {
 
         EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory();

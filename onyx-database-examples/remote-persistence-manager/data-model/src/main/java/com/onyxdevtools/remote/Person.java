@@ -1,4 +1,3 @@
-
 package com.onyxdevtools.remote;
 
 import com.onyx.persistence.ManagedEntity;

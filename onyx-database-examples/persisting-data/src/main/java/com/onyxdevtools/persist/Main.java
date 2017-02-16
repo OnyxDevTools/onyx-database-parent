@@ -1,11 +1,13 @@
 package com.onyxdevtools.persist;
 
+import com.onyx.exception.EntityException;
+
 import java.io.IOException;
 
 public class Main
 {
 
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws EntityException
     {
 
         SavingAnEntityExample.main(args);

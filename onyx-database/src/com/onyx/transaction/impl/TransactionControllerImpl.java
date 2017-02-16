@@ -63,7 +63,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -91,7 +91,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -119,7 +119,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -146,7 +146,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {

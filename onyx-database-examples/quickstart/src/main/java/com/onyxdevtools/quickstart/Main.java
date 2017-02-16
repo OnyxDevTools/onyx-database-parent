@@ -1,5 +1,6 @@
 package com.onyxdevtools.quickstart;
 
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
@@ -7,13 +8,12 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyxdevtools.quickstart.entities.Person;
 
-import java.io.IOException;
 import java.util.List;
 
 public class Main
 {
 
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws EntityException
     {
         //Create an instance of an entity
         final Person person1 = new Person();

@@ -33,6 +33,7 @@ public enum BufferObjectType {
     BOOLEAN_ARRAY(boolean[].class),
     CHAR_ARRAY(char[].class),
     OBJECT_ARRAY(Object[].class),
+    OTHER_ARRAY(Object[].class),
 
     // Mutable
     MUTABLE_BYTE(Byte.class),
@@ -94,6 +95,11 @@ public enum BufferObjectType {
 
         for (BufferObjectType bufferObjectType : BufferObjectType.values()) {
             if (bufferObjectType.type != null && bufferObjectType.type.isAssignableFrom(type)) {
+                if(bufferObjectType.equals(BufferObjectType.OBJECT_ARRAY)
+                        && type != Object[].class)
+                {
+                    return OTHER_ARRAY;
+                }
                 return bufferObjectType;
             }
         }

@@ -1,19 +1,20 @@
 package remote;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
+import com.onyx.client.exception.RequestTimeoutException;
+import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
+import com.onyx.application.DatabaseServer;
 import entities.SimpleEntity;
 import jdk.nashorn.internal.ir.annotations.Ignore;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
-
-import java.rmi.registry.Registry;
 
 /**
  * Created by timothy.osborn on 12/11/14.
@@ -28,14 +29,12 @@ public class TestDatabaseInitialization extends RemoteBaseTest
 
     public static final String PERSIST_CONN_DATABASE_LOCATION = "onx://localhost:8082";
 
-
     @Test
     public void testPersistantConnection() throws Exception
     {
         DatabaseServer dbServer = new DatabaseServer();
         dbServer.setPort(8082);
         dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
-        dbServer.setEnableSocketSupport(false);
         dbServer.start();
 
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
@@ -51,20 +50,14 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("MYIDYO");
 
-
         mgr.saveEntity(simpleEntity);
 
         dbServer.stop();
 
-        Thread.sleep(2000);
-
         dbServer = new DatabaseServer();
         dbServer.setPort(8082);
         dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
-        dbServer.setEnableSocketSupport(false);
         dbServer.start();
-
-        Thread.sleep(2000);
 
         SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
 
@@ -80,7 +73,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         DatabaseServer dbServer = new DatabaseServer();
         dbServer.setPort(8082);
         dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
-        dbServer.setEnableSocketSupport(false);
 
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
         fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
@@ -107,10 +99,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         {
         }
 
-        Thread.sleep(2000);
         dbServer.start();
-
-        Thread.sleep(2000);
 
         mgr.saveEntity(simpleEntity);
         SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
@@ -126,7 +115,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         DatabaseServer dbServer = new DatabaseServer();
         dbServer.setPort(8082);
         dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
-        dbServer.setEnableSocketSupport(false);
         dbServer.start();
 
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
@@ -147,8 +135,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
 
         dbServer.stop();
 
-        Thread.sleep(2000);
-
         SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
 
         assert foundAfterClose.getSimpleId().equals(simpleEntity.getSimpleId());
@@ -167,7 +153,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
         fac.setDatabaseLocation(DATABASE_LOCATION);
         fac.setCredentials("admin", "admin");
-        fac.setSocketPort(Registry.REGISTRY_PORT);
 
         long time = System.currentTimeMillis();
         fac.initialize();
@@ -206,7 +191,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
         fac.setDatabaseLocation(DATABASE_LOCATION);
         fac.setCredentials("bill", "tom");
-        fac.setSocketPort(Registry.REGISTRY_PORT);
         fac.initialize();
         fac.close();
     }

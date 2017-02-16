@@ -1,5 +1,6 @@
 package com.onyxdevtools.persist;
 
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -7,7 +8,6 @@ import com.onyx.persistence.query.Query;
 import com.onyxdevtools.persist.entities.RandomNumber;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -18,7 +18,7 @@ import java.util.Random;
  */
 public class BatchDeletingDataExample
 {
-     public static void main(String[] args) throws IOException
+     public static void main(String[] args) throws EntityException
     {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

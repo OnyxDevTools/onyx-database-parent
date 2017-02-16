@@ -1,11 +1,11 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import com.onyx.application.DatabaseServer;
 import entities.OneToOneChildFetchEntity;
 import entities.OneToOneFetchEntity;
 import entities.relationship.OneToManyChild;
@@ -15,7 +15,6 @@ import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
-import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -33,8 +32,6 @@ public class OneToOneRelationshipEqualsTest extends RemoteBaseTest
             databaseServer = new DatabaseServer();
             databaseServer.setPort(8080);
             databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
-            databaseServer.setEnableSocketSupport(true);
-            databaseServer.setSocketPort(Registry.REGISTRY_PORT);
             databaseServer.start();
             databaseServer.join();
         }

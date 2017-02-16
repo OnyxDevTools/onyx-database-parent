@@ -1,5 +1,4 @@
-
-package com.onyxdevtools.persist.entities;
+package com.onyxdevtools.embedded.entities;
 
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;

@@ -1,8 +1,5 @@
 package com.onyx.entity;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
@@ -17,7 +14,6 @@ import java.io.StringWriter;
  */
 
 @com.onyx.persistence.annotations.Entity
-@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "@uuid")
 public class SystemError extends ManagedEntity implements IManagedEntity {
 
     public SystemError()
@@ -65,7 +61,6 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
     @Attribute
     protected String type;
 
-    @JsonIgnore
     protected Throwable exception;
 
     public Throwable getException()

@@ -82,7 +82,7 @@ public class EntityDescriptor implements Serializable
         this.clazz = clazz;
         this.entity = (Entity) clazz.getAnnotation(Entity.class);
 
-        final Set<Field> fields = new HashSet<Field>();
+        final Set<Field> fields = new HashSet<>();
 
         Class tmpClass = clazz;
 
@@ -98,7 +98,8 @@ public class EntityDescriptor implements Serializable
         for (final Field field : fields)
         {
 
-            if (field.getAnnotation(Identifier.class) != null)
+            if (field.getAnnotation(Identifier.class) != null
+                    && field.getDeclaringClass() == clazz)
             {
 
                 // Build id descriptor

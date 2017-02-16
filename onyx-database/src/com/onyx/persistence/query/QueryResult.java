@@ -1,5 +1,9 @@
 package com.onyx.persistence.query;
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
+import com.onyx.exception.BufferingException;
+
 import java.io.*;
 
 /**
@@ -9,7 +13,7 @@ import java.io.*;
  * and the results.  Using the embedded, the reference of resultCount is used to update the query object
  * but since we do not have that luxury when dealing with a remote server we need this wrapper.
  */
-public class QueryResult implements Serializable, Externalizable
+public class QueryResult implements Serializable, Externalizable, BufferStreamable
 {
     protected Query query;
     protected Object results;
@@ -73,5 +77,17 @@ public class QueryResult implements Serializable, Externalizable
 
     public void setResults(Object results) {
         this.results = results;
+    }
+
+    @Override
+    public void read(BufferStream buffer) throws BufferingException {
+        query = (Query)buffer.getObject();
+        results = buffer.getObject();
+    }
+
+    @Override
+    public void write(BufferStream buffer) throws BufferingException {
+        buffer.putObject(query);
+        buffer.putObject(results);
     }
 }

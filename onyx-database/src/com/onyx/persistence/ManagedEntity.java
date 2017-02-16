@@ -1,8 +1,5 @@
 package com.onyx.persistence;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
@@ -23,13 +20,10 @@ import java.util.Map;
  * @see com.onyx.persistence.IManagedEntity
  * @since 1.0.0
  */
-@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "@id")
 public abstract class ManagedEntity implements IManagedEntity, ObjectSerializable {
 
-    @JsonIgnore
     private transient EntityDescriptor descriptor = null;
 
-    @JsonIgnore
     public transient boolean ignoreListeners = false;
 
     @Override

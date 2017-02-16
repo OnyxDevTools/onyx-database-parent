@@ -10,7 +10,6 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.collections.LazyQueryCollection;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.manager.SocketPersistenceManager;
 import com.onyx.persistence.query.*;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
@@ -21,8 +20,6 @@ import com.onyx.stream.QueryMapStream;
 import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
-import java.rmi.RemoteException;
-import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 /**
@@ -50,32 +47,17 @@ import java.util.*;
  * @see com.onyx.persistence.manager.PersistenceManager
  *
  */
-public class EmbeddedPersistenceManager extends UnicastRemoteObject implements PersistenceManager, SocketPersistenceManager {
+public class EmbeddedPersistenceManager implements PersistenceManager {
 
     protected SchemaContext context;
-    protected boolean journalingEnabled;
+
+    private boolean journalingEnabled;
 
     /**
      * Default constructor.  We do not want to export the object if in embedded mode.
-     * @throws RemoteException
      */
-    public EmbeddedPersistenceManager() throws RemoteException {
-        super();
-        UnicastRemoteObject.unexportObject(this, true);
-    }
+    public EmbeddedPersistenceManager() {
 
-    /**
-     * Constructor with option to export RMI service
-     * @param export Should export RMI Service
-     * @throws RemoteException RMI Exception
-     */
-    public EmbeddedPersistenceManager(boolean export) throws RemoteException
-    {
-        super();
-        if(!export)
-        {
-            UnicastRemoteObject.unexportObject(this, true);
-        }
     }
 
     /**
@@ -176,7 +158,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         final RecordController recordController = context.getRecordController(descriptor);
         long oldReferenceId = 0;
 
-        Object id = null;
+        Object id;
         for (IManagedEntity entity : entities)
         {
 
@@ -316,6 +298,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      * @return Number of entities updated
      */
     @Override
+    @SuppressWarnings("unchecked")
     public int executeUpdate(Query query) throws EntityException
     {
         if (context.getKillSwitch())
@@ -398,19 +381,15 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
 
                 final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQueryAttributes(query.getSelections().toArray(new String[query.getSelections().size()]), results, false, query.getFirstRow(), query.getMaxResults());
 
-                final List<Map<String, Object>> finalResults = new ArrayList<>(attributeValues.values());
-
-                return finalResults;
-
+                return new ArrayList<>(attributeValues.values());
             } else
             {
 
-                final List returnValue = queryController.hydrateResultsWithIndexes(results,
+                return queryController.hydrateResultsWithIndexes(results,
                         (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0],
                         query.getFirstRow(),
                         query.getMaxResults());
 
-                return returnValue;
             }
         } finally
         {
@@ -430,6 +409,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      * @throws EntityException Error while executing query
      */
     @Override
+    @SuppressWarnings("unchecked")
     public List executeLazyQuery(Query query) throws EntityException
     {
         if (context.getKillSwitch())
@@ -457,8 +437,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
                 results = queryController.sort(
                         (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
             }
-            LazyQueryCollection<IManagedEntity> retVal = new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
-            return retVal;
+            return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally
         {
             queryController.cleanup();
@@ -649,7 +628,7 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
 
         final Object identifier = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier());
-        RelationshipReference entityId = null;
+        RelationshipReference entityId;
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
 
         if (partitionValue != PartitionHelper.NULL_PARTITION && partitionValue != null)
@@ -681,12 +660,11 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      * @param attribute String representation of relationship attribute
      *
-     * @throws RemoteException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
      */
-    @Override
-    public Object findRelationship(IManagedEntity entity, String attribute) throws RemoteException {
+    @SuppressWarnings("unused")
+    public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
         this.initialize(entity, attribute);
-
         return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
     }
 
@@ -1019,11 +997,12 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws RemoteException Exception occurred while executing delete query
+     * @throws EntityException Exception occurred while executing delete query
      *
      * @return Number of entities deleted
      */
-    public QueryResult executeDeleteForResults(Query query) throws RemoteException
+    @SuppressWarnings("unused")
+    public QueryResult executeDeleteForResults(Query query) throws EntityException
     {
         return new QueryResult(query, this.executeDelete(query));
     }
@@ -1037,11 +1016,12 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws RemoteException Exception occurred while executing update query
+     * @throws EntityException Exception occurred while executing update query
      *
      * @return Number of entities updated
      */
-    public QueryResult executeUpdateForResults(Query query) throws RemoteException
+    @SuppressWarnings("unused")
+    public QueryResult executeUpdateForResults(Query query) throws EntityException
     {
         return new QueryResult(query, this.executeUpdate(query));
     }
@@ -1055,9 +1035,10 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      * @return Query Results
      *
-     * @throws RemoteException Error while executing query
+     * @throws EntityException Error while executing query
      */
-    public QueryResult executeQueryForResults(Query query) throws RemoteException
+    @SuppressWarnings("unused")
+    public QueryResult executeQueryForResults(Query query) throws EntityException
     {
         return new QueryResult(query, this.executeQuery(query));
     }
@@ -1071,9 +1052,10 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      * @return LazyQueryCollection lazy loaded results
      *
-     * @throws RemoteException Error while executing query
+     * @throws EntityException Error while executing query
      */
-    public QueryResult executeLazyQueryForResults(Query query) throws RemoteException
+    @SuppressWarnings("unused")
+    public QueryResult executeLazyQueryForResults(Query query) throws EntityException
     {
         return new QueryResult(query, this.executeLazyQuery(query));
     }
@@ -1111,13 +1093,14 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
      *
      */
     @Override
+    @SuppressWarnings("unchecked")
     public void stream(Query query, QueryStream streamer) throws EntityException
     {
         final LazyQueryCollection entityList = (LazyQueryCollection) executeLazyQuery(query);
         final PersistenceManager persistenceManagerInstance = this;
 
         for (int i = 0; i < entityList.size(); i++) {
-            Object objectToStream = null;
+            Object objectToStream;
 
             if (streamer instanceof QueryMapStream) {
                 objectToStream = entityList.getDict(i);
@@ -1142,12 +1125,10 @@ public class EmbeddedPersistenceManager extends UnicastRemoteObject implements P
     @Override
     public void stream(Query query, Class queryStreamClass) throws EntityException
     {
-        QueryStream streamer = null;
+        QueryStream streamer;
         try {
             streamer = (QueryStream)queryStreamClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
         }
         this.stream(query, streamer);

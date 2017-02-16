@@ -163,4 +163,14 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
     {
         this.relationshipType = relationshipType;
     }
+
+    public int hashCode()
+    {
+        return (id != null) ? id.hashCode() : 0;
+    }
+
+    public boolean equals(Object o)
+    {
+        return (o != null && o instanceof SystemRelationship && ((SystemRelationship) o).id != null && ((SystemRelationship) o).id.equals(id));
+    }
 }

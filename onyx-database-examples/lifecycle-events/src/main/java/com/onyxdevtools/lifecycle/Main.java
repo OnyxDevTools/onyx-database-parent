@@ -1,5 +1,6 @@
 package com.onyxdevtools.lifecycle;
 
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.lifecycle.entities.Beverage;
@@ -12,7 +13,7 @@ import java.io.IOException;
  */
 public class Main extends AbstractDemo {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws EntityException {
 
         //Initialize the database and get a handle on the PersistenceManager
         CacheManagerFactory factory = new CacheManagerFactory();

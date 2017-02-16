@@ -49,7 +49,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.embedded.Main</mainClass>
+                    <mainClass>com.onyxdevtools.client.Main</mainClass>
                 </configuration>
             </plugin>
 

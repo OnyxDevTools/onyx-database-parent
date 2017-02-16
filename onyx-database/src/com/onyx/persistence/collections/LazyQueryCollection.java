@@ -45,7 +45,7 @@ import java.util.WeakHashMap;
  * </pre>
  *
  */
-public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Externalizable, BufferStreamable {
+public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, BufferStreamable {
 
     protected List<Object> identifiers = null;
 
@@ -345,38 +345,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     {
         this.entityDescriptor = entityDescriptor;
         this.partitionContext = new PartitionContext(context, entityDescriptor);
-    }
-
-    /**
-     * Externalize for serialization with use in RMI Server
-     * @param out Object Output Stream.  Most likely a SocketOutputStream
-     *
-     * @throws IOException
-     */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(this.getIdentifiers());
-        out.writeUTF(this.getEntityDescriptor().getClazz().getName());
-        out.writeUTF(this.context.getContextId());
-    }
-
-    /**
-     * Read from the stream source.  Most likely used with the RMI Server
-     * @param in Input Stream aka SocketObjectInputStream
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        this.identifiers = (List) in.readObject();
-        String className = in.readUTF();
-        String contextId = in.readUTF();
-
-        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
-        this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
-        this.persistenceManager = this.context.getSystemPersistenceManager();
     }
 
     @Override

@@ -101,6 +101,8 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     @Override
     public int hashCode()
     {
+        if(id == null)
+            return 0;
         return id.hashCode();
     }
 
@@ -109,6 +111,8 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     {
         if(val instanceof SystemPartitionEntry)
         {
+            if(((SystemPartitionEntry) val).id == null && id == null)
+                return true;
             if(((SystemPartitionEntry) val).id.equals(id))
                 return true;
         }

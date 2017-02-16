@@ -2,8 +2,8 @@ package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyxdevtools.embedded.entities.Actor;
-import com.onyxdevtools.embedded.entities.Movie;
+import com.onyxdevtools.server.entities.Actor;
+import com.onyxdevtools.server.entities.Movie;
 import embedded.base.BaseTest;
 import junit.framework.Assert;
 import org.junit.After;

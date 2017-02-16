@@ -6,7 +6,6 @@ import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
 import entities.AllAttributeEntity;
-import gnu.trove.THashMap;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
@@ -14,10 +13,7 @@ import org.junit.runners.MethodSorters;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -560,7 +556,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
         List<AllAttributeEntity> entitiesToValidate = new ArrayList<AllAttributeEntity>();
         List<AllAttributeEntity> entitiesToValidateDeleted = new ArrayList<AllAttributeEntity>();
 
-        Map<String, AllAttributeEntity> ignore = new THashMap();
+        Map<String, AllAttributeEntity> ignore = new HashMap();
 
         for (int i = 0; i <= 10000; i++)
         {
@@ -752,7 +748,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
         List<AllAttributeEntity> entitiesToValidateDeleted = new ArrayList<AllAttributeEntity>();
         List<AllAttributeEntity> entitiesToValidateUpdated = new ArrayList<AllAttributeEntity>();
 
-        Map<String, AllAttributeEntity> ignore = new THashMap();
+        Map<String, AllAttributeEntity> ignore = new HashMap();
 
         /**
          * Save A whole bunch of records and keep track of some to update and delete

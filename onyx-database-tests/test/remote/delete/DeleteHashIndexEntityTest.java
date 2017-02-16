@@ -1,10 +1,10 @@
 package remote.delete;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
+import com.onyx.application.DatabaseServer;
 import entities.AllAttributeEntity;
 import entities.identifiers.IntegerIdentifierEntity;
 import org.junit.*;
@@ -12,7 +12,6 @@ import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
-import java.rmi.registry.Registry;
 import java.util.Date;
 
 /**
@@ -21,18 +20,6 @@ import java.util.Date;
 @Category({ RemoteServerTests.class })
 public class DeleteHashIndexEntityTest extends RemoteBaseTest
 {
-    @BeforeClass
-    public static void beforeClass()
-    {
-        if(databaseServer == null || !databaseServer.isRunning()) {
-            databaseServer = new DatabaseServer();
-            databaseServer.setPort(8080);
-            databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
-            databaseServer.setEnableSocketSupport(true);
-            databaseServer.setSocketPort(Registry.REGISTRY_PORT);
-            databaseServer.start();
-        }
-    }
 
     @Before
     public void before() throws InitializationException, InterruptedException

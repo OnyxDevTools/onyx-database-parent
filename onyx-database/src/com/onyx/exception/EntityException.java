@@ -1,16 +1,11 @@
 package com.onyx.exception;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import java.rmi.RemoteException;
-
 /**
  * Created by timothy.osborn on 11/3/14.
  * <p>
  * Base exception for an entity
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class EntityException extends RemoteException {
+public class EntityException extends Exception {
 
     public static final String UNKNOWN_EXCEPTION = "Unknown exception occurred";
 

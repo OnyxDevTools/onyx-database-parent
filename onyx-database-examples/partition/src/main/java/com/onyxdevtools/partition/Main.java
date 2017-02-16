@@ -19,7 +19,7 @@ import java.util.List;
  */
 public class Main extends AbstractDemo {
 
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws EntityException
     {
 
         //Initialize the database and get a handle on the PersistenceManager

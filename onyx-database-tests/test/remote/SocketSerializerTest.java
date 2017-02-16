@@ -2,13 +2,12 @@ package remote;
 
 import category.RemoteServerTests;
 import com.onyx.buffer.BufferStream;
-import gnu.trove.THashMap;
+import com.onyx.exception.BufferingException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import pojo.*;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,7 +20,7 @@ import java.util.HashMap;
 public class SocketSerializerTest
 {
     @Test
-    public void testSimple() throws IOException
+    public void testSimple() throws BufferingException
     {
         Simple instance = new Simple();
         instance.hiya = 4;
@@ -35,7 +34,7 @@ public class SocketSerializerTest
     }
 
     @Test
-    public void testAllValues() throws IOException
+    public void testAllValues() throws BufferingException
     {
         AllTypes instance = new AllTypes();
         instance.intValue = 654;
@@ -83,7 +82,7 @@ public class SocketSerializerTest
     }
 
     @Test
-    public void testEnum() throws IOException
+    public void testEnum() throws BufferingException
     {
         EnumTypeObject instance = new EnumTypeObject();
         instance.intValue = 44;
@@ -101,7 +100,7 @@ public class SocketSerializerTest
     }
 
     @Test
-    public void testTransient() throws IOException
+    public void testTransient() throws BufferingException
     {
         TransientValue instance = new TransientValue();
         instance.intValue = 44;
@@ -120,7 +119,7 @@ public class SocketSerializerTest
 
     
     @Test
-    public void testArrayObject() throws IOException
+    public void testArrayObject() throws BufferingException
     {
         ArrayObject instance = new ArrayObject();
         instance.longArray = new Long[3];
@@ -161,7 +160,7 @@ public class SocketSerializerTest
     }
 
     @Test
-    public void testListObject() throws IOException
+    public void testListObject() throws BufferingException
     {
         ListObject instance = new ListObject();
         instance.longArray = new ArrayList();
@@ -199,7 +198,7 @@ public class SocketSerializerTest
     }
 
     @Test
-    public void testMapSerialization() throws IOException
+    public void testMapSerialization() throws BufferingException
     {
         MapObject instance = new MapObject();
         instance.simpleMap = new HashMap();
@@ -212,7 +211,7 @@ public class SocketSerializerTest
         instance.simpleMap.get("NEW").hiya = 2324;
         instance.simpleMap.get("NEW3").hiya = 2924;
 
-        instance.objectMap = new THashMap();
+        instance.objectMap = new HashMap();
         instance.objectMap.put(new Long(23), new Integer(22));
         instance.objectMap.put(new Integer(12), false);
         instance.objectMap.put(new Simple(), new AllTypes());
@@ -235,7 +234,7 @@ public class SocketSerializerTest
     }
 
     @Test
-    public void testComplexObject() throws IOException
+    public void testComplexObject() throws BufferingException
     {
         ComplexObject object = new ComplexObject();
         object.child = new ComplexObjectChild();

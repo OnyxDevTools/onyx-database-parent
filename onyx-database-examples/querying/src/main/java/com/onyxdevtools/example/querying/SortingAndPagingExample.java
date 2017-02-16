@@ -1,5 +1,6 @@
 package com.onyxdevtools.example.querying;
 
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -22,7 +23,7 @@ public class SortingAndPagingExample
     {
     }
 
-    public static void demo() throws IOException
+    public static void demo() throws EntityException
     {
         // get an instance of the persistenceManager
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();

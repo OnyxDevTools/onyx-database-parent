@@ -1,0 +1,440 @@
+package com.onyx.client;
+
+import com.onyx.client.auth.AuthenticationManager;
+import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.base.RequestToken;
+import com.onyx.client.base.engine.PacketTransportEngine;
+import com.onyx.client.base.engine.impl.SecurePacketTransportEngine;
+import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine;
+import com.onyx.client.exception.*;
+import com.onyx.exception.InitializationException;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.security.SecureRandom;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
+import javax.net.ssl.*;
+
+/**
+ * Tim Osborn 02/13/2017
+ * <p>
+ * This class' purpose is to handle all the communication with the server.  It is setup
+ * to use either SSL TLS or un secure.
+ * <p>
+ * It was created in order to improve the performance and remove 3rd party libraries
+ *
+ * @since 1.2.0
+ */
+public class CommunicationPeer extends AbstractCommunicationPeer implements OnyxClient {
+
+    // Heartbeat and timeout
+    private int requestTimeout = 60; // 60 second timeout
+    private volatile boolean needsToRunHeartbeat = true; // If there was a response recently, there is no need to send a heartbeat
+    private Timer heartBeatTimer;
+
+    // Connection information
+    private ConnectionProperties connectionProperties;
+    private SocketChannel socketChannel;
+    private final Map<RequestToken, Consumer> pendingRequests = new ConcurrentHashMap<>();
+    private String host;
+
+    // User and authentication
+    private AuthenticationManager authenticationManager = null;
+    private String user;
+    private String password;
+
+    // Keeps track of a unique token.  There can only be about 64 K concurrent requests for a client.
+    private volatile short tokenCount = Short.MIN_VALUE;
+
+    /**
+     * Default Constructor
+     */
+    @SuppressWarnings("unused")
+    protected CommunicationPeer() {
+
+    }
+
+    /**
+     * Handle an response message
+     *
+     * @param socketChannel        Socket Channel read from
+     * @param connectionProperties ConnectionProperties information containing buffer and thread info
+     * @param buffer               ByteBuffer containing message
+     * @since 1.2.0
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void handleMessage(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
+        Consumer consumer;
+        RequestToken requestToken = null;
+        try {
+            requestToken = (RequestToken) serverSerializer.deserialize(buffer, new RequestToken());
+
+            // General unhandled exception that cannot be tied back to a request
+            if (requestToken.token == Short.MAX_VALUE) {
+                ((Exception) requestToken.packet).printStackTrace();
+            }
+
+            consumer = pendingRequests.remove(requestToken);
+
+            if (consumer != null) {
+                consumer.accept(requestToken.packet);
+                needsToRunHeartbeat = false;
+            }
+        } catch (Exception e) {
+            failure(requestToken, e);
+        }
+    }
+
+    /**
+     * Connect to a server with given host and port #
+     *
+     * @param host Host name or ip address
+     * @param port Server port
+     * @throws ConnectionFailedException Connection refused or server communication issue
+     * @since 1.2.0
+     */
+    @Override
+    public void connect(String host, int port) throws ConnectionFailedException {
+        this.port = port;
+        this.host = host;
+        PacketTransportEngine transportPacketTransportEngine;
+
+        // Setup SSL Settings
+        if (useSSL()) {
+            SSLContext context;
+            try {
+                context = SSLContext.getInstance(protocol);
+                context.init(createKeyManagers(sslKeystoreFilePath, sslStorePassword, sslKeystorePassword), createTrustManagers(sslTrustStoreFilePath, sslStorePassword), new SecureRandom());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            SSLEngine engine = context.createSSLEngine(host, port);
+            engine.setUseClientMode(true);
+            transportPacketTransportEngine = new SecurePacketTransportEngine(engine);
+        }
+        // Not SSL use un-secure transport engine
+        else {
+            transportPacketTransportEngine = new UnsecuredPacketTransportEngine();
+        }
+
+        // Try to open the connection
+        try {
+            socketChannel = SocketChannel.open();
+        } catch (IOException e) {
+            throw new ConnectionFailedException();
+        }
+
+        // Create a buffer and set the transport wrapper
+        this.connectionProperties = new ConnectionProperties(transportPacketTransportEngine);
+        if (!useSSL()) {
+            ((UnsecuredPacketTransportEngine) transportPacketTransportEngine).setSocketChannel(socketChannel);
+        }
+
+        try {
+
+            socketChannel.configureBlocking(true);
+            socketChannel.socket().connect(new InetSocketAddress(host, port), requestTimeout);
+            while (!socketChannel.finishConnect()) {
+                LockSupport.parkNanos(100);
+            }
+        } catch (IOException e) {
+            throw new ConnectionFailedException();
+        }
+
+        try {
+            // Perform Handshake.  If this is unsecured, it is just pass through
+            transportPacketTransportEngine.beginHandshake();
+            active = doHandshake(socketChannel, connectionProperties);
+
+        } catch (IOException e) {
+            throw new ConnectionFailedException();
+        }
+
+        connectionProperties.readThread.execute(this::pollForCommunication);
+        try {
+            this.authenticationManager.verify(this.user, this.password);
+            this.resumeHeartBeat();
+        } catch (InitializationException e) {
+
+            // Authentication failed, disconnect
+            this.close();
+        }
+    }
+
+    /**
+     * Verify the connection and attempt to re-connect if the connection is not valid
+     */
+    private void verifyConnection() {
+        if(!isConnected())
+        {
+            try {
+                this.connect(this.host, this.port);
+            } catch (ConnectionFailedException ignore) {}
+        }
+    }
+
+    /**
+     * Resume Heartbeat.  This is performed after successful authentication
+     *
+     * @since 1.2.0
+     */
+    private void resumeHeartBeat() {
+        if (this.heartBeatTimer == null) {
+            this.heartBeatTimer = new Timer();
+            int HEART_BEAT_INTERVAL = 5 * 1000;
+            this.heartBeatTimer.schedule(new RetryHeartbeatTask(), HEART_BEAT_INTERVAL, HEART_BEAT_INTERVAL);
+        }
+    }
+
+    /**
+     * Poll for communication responses from the server
+     *
+     * @since 1.2.0
+     */
+    private void pollForCommunication() {
+        while (active) {
+            try {
+                read(socketChannel, connectionProperties);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Send an object, wrap it with a request, and fire it off to the server.
+     * <p>
+     * This is non-blocking and will invoke the consumer upon response.
+     *
+     * @param packet   Object to send to server
+     * @param consumer Consumer for the results
+     * @throws OnyxServerException Error sending request
+     * @since 1.2.0
+     */
+    @Override
+    public void send(Object packet, Consumer<Object> consumer) throws OnyxServerException {
+
+        verifyConnection();
+        RequestToken token = new RequestToken(generateNewToken(), (Serializable) packet);
+        pendingRequests.put(token, consumer);
+        write(socketChannel, connectionProperties, token);
+    }
+
+    /**
+     * Send a message to the server.  This is blocking and will wait for the response.
+     *
+     * @param packet Object to send to server
+     * @return The response from the server
+     * @throws OnyxServerException Error sending request
+     * @since 1.2.0
+     */
+    @Override
+    public Object send(Object packet) throws OnyxServerException {
+        return send(packet, requestTimeout * 1000);
+    }
+
+    /**
+     * Send a message to the server.  This is blocking and will wait for the response.
+     *
+     * @param packet  Object to send to server
+     * @param timeout timeout in milliseconds
+     * @return The response from the server
+     * @since 1.2.0
+     */
+    private Object send(Object packet, int timeout) {
+
+        verifyConnection();
+
+        final CountDownLatch countDownLatch = new CountDownLatch(1);
+        final AtomicReference<Object> results = new AtomicReference<>();
+
+        // Release the thread lock
+        final Consumer consumer = o -> {
+            results.set(o);
+            countDownLatch.countDown();
+        };
+
+        final RequestToken token = new RequestToken(generateNewToken(), (Serializable) packet);
+        pendingRequests.put(token, consumer);
+
+        write(socketChannel, connectionProperties, token);
+
+        boolean successResponse;
+        try {
+            successResponse = countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            return new RequestTimeoutException();
+        }
+
+        if (!successResponse) {
+            pendingRequests.remove(token);
+            return new RequestTimeoutException();
+        }
+        return results.get();
+    }
+
+    /**
+     * Generates a new token.  Resets it to 0 if we have reached the maximum
+     *
+     * @return New token id
+     */
+    private synchronized short generateNewToken() {
+        if (tokenCount >= Short.MAX_VALUE - 1) // Short.MAX_VALUE is reserved for un-correlated error
+            tokenCount = Short.MIN_VALUE;
+        return tokenCount++;
+    }
+
+    /**
+     * Close connection
+     *
+     * @since 1.2.0
+     */
+    @Override
+    public void close() {
+        try {
+            active = false;
+            connectionProperties.readThread.shutdown();
+            closeConnection(socketChannel, connectionProperties);
+
+            if(this.heartBeatTimer != null) {
+                this.heartBeatTimer.purge();
+                this.heartBeatTimer.cancel();
+            }
+        } catch (IOException ignore) {
+        }
+    }
+
+    /**
+     * Getter for isConnected
+     *
+     * @return Whether the socket channel is connected
+     * @since 1.2.0
+     */
+    @Override
+    public boolean isConnected() {
+        return socketChannel != null && socketChannel.isConnected();
+    }
+
+    /**
+     * Set the timeout in seconds
+     *
+     * @param timeout Connection/Request timeout
+     * @since 1.2.0
+     */
+    @Override
+    public void setTimeout(int timeout) {
+        this.requestTimeout = timeout;
+    }
+
+    /**
+     * Get the timeout in seconds for a request
+     *
+     * @return timeout
+     * @since 1.2.0
+     */
+    @Override
+    public int getTimeout() {
+        return requestTimeout;
+    }
+
+    public void setAuthenticationManager(AuthenticationManager authenticationManager) {
+        this.authenticationManager = authenticationManager;
+    }
+
+    /**
+     * Set User credentials for persistant authentication
+     * @param user Username
+     * @param password Password
+     *
+     * @since 1.2.0
+     */
+    public void setCredentials(String user, String password) {
+        this.user = user;
+        this.password = password;
+    }
+
+    /**
+     * Message failure. Respond to the failure by sending the exception as the response.
+     *
+     * @param token Message ID
+     * @param e Exception that caused it to fail
+     *
+     * @since 1.2.0
+     */
+    @SuppressWarnings("unchecked")
+    protected void failure(RequestToken token, Exception e) {
+        final Consumer consumer = pendingRequests.remove(token);
+        if (consumer != null) {
+            consumer.accept(e);
+        }
+        e.printStackTrace();
+    }
+
+    private class RetryHeartbeatTask extends TimerTask
+    {
+        /**
+         * Run timer task to execute a heartbeat
+         */
+        @SuppressWarnings("unchecked")
+        @Override
+        public void run() {
+            Object result = null;
+            try {
+                // If there were no recent responses within the last 5 seconds, run a heartbeat
+                if(needsToRunHeartbeat) {
+                    int heartBeatTimeout = 1000;
+                    result = send(null, heartBeatTimeout);
+                } else
+                {
+                    needsToRunHeartbeat = true;
+                }
+            } catch (Exception e) {
+                result = e;
+            }
+
+            // If the connection is still active && there was an error during the heartbeat, try to re-connect
+            // After re-connect, retry the pending requests
+            if (active
+                    && result != null
+                    && result instanceof Exception) {
+                try {
+                    connect(host, port);
+
+                    if (socketChannel.isConnected()
+                            && socketChannel.isOpen()) {
+
+                        // If there are more than 20 requests, fail the requests and flush the queue
+                        if(pendingRequests.size() > 20)
+                        {
+                            pendingRequests.forEach((requestToken, consumer) -> consumer.accept(new InitializationException(InitializationException.CONNECTION_EXCEPTION)));
+                            pendingRequests.clear();
+                        }
+                        // Re-send all failed packets
+                        pendingRequests.forEach((requestToken, consumer) ->
+                        {
+                            // Ignore heartbeat packets
+                            if (requestToken.packet != null) {
+                                write(socketChannel, connectionProperties, requestToken);
+                            }
+                        });
+                    }
+                } catch (ConnectionFailedException ignore) {
+                    // If there are more than 20 requests, fail the requests and flush the queue
+                    pendingRequests.forEach((requestToken, consumer) -> consumer.accept(new InitializationException(InitializationException.CONNECTION_EXCEPTION)));
+                    pendingRequests.clear();
+                }
+            }
+        }
+    }
+}

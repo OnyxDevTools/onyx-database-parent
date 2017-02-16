@@ -4,6 +4,8 @@ import com.onyx.exception.BufferingException;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
+import java.lang.reflect.Array;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
@@ -169,7 +171,12 @@ public class BufferStream {
             throw e;
         } catch (Exception e) {
             buffer.position(maxBufferSize + bufferStartingPosition);
-            throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE);
+            if(e instanceof BufferUnderflowException)
+                throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW);
+            else if(e instanceof BufferingException)
+                throw (BufferingException)e;
+            else
+                throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE);
         }
 
         if (buffer.position() - bufferStartingPosition != maxBufferSize) {
@@ -261,7 +268,14 @@ public class BufferStream {
             expandableByteBuffer.ensureSize(Double.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
                 expandableByteBuffer.buffer.putDouble(arr[i]);
-        } else {
+        } else if(array.getClass() == Object[].class){
+            final Object[] arr = (Object[]) array;
+            putInt(arr.length);
+            for (int i = 0; i < arr.length; i++)
+                putObject(arr[i]);
+        } else
+        {
+            putObjectClass(array.getClass().getComponentType());
             final Object[] arr = (Object[]) array;
             putInt(arr.length);
             for (int i = 0; i < arr.length; i++)
@@ -625,6 +639,7 @@ public class BufferStream {
                 case BOOLEAN_ARRAY:
                 case CHAR_ARRAY:
                 case OBJECT_ARRAY:
+                case OTHER_ARRAY:
                     putArray(object);
                     break;
                 case BUFFERED:
@@ -650,7 +665,12 @@ public class BufferStream {
                     break;
             }
         } catch (Exception e) {
-            throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, (object != null) ? object.getClass() : null);
+            if(e instanceof BufferUnderflowException)
+                throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, (object != null) ? object.getClass() : null);
+            else if(e instanceof BufferingException)
+                throw (BufferingException)e;
+            else
+                throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, (object != null) ? object.getClass() : null);
         }
     }
 
@@ -838,6 +858,7 @@ public class BufferStream {
             case BOOLEAN_ARRAY:
             case CHAR_ARRAY:
             case OBJECT_ARRAY:
+            case OTHER_ARRAY:
                 return getArray(bufferObjectType);
             case BUFFERED:
                 return getBuffered();
@@ -893,8 +914,15 @@ public class BufferStream {
                 else
                     ReflectionUtil.setObject(instance, offsetField, getObject());
             }
-        } catch (Exception e) {
-            throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, objectType);
+        }
+        catch (Exception e)
+        {
+            if(e instanceof BufferUnderflowException)
+                throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, objectType);
+            else if(e instanceof BufferingException)
+                throw (BufferingException)e;
+            else
+                throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, objectType);
         }
 
         return instance;
@@ -969,7 +997,7 @@ public class BufferStream {
         try {
             collection = (Collection) collectionClass.newInstance();
         } catch (InstantiationException e) {
-            throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, collectionClass);
+            collection = new ArrayList();
         } catch (IllegalAccessException e) {
             throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, collectionClass);
         }
@@ -1073,6 +1101,14 @@ public class BufferStream {
             expandableByteBuffer.ensureRequiredSize(Double.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
                 arr[i] = expandableByteBuffer.buffer.getDouble();
+            return arr;
+        }
+        else if (type == BufferObjectType.OTHER_ARRAY) {
+            Object arr = Array.newInstance(getObjectClass(), getInt());
+            for (int i = 0; i < Array.getLength(arr); i++) {
+                Object value = getObject();
+                Array.set(arr, i, value);
+            }
             return arr;
         } else {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
