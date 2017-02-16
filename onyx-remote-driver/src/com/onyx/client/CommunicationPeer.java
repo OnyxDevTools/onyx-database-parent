@@ -279,7 +279,8 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
 
         if (!successResponse) {
             pendingRequests.remove(token);
-            return new RequestTimeoutException();
+            if(active)
+                return new RequestTimeoutException();
         }
         return results.get();
     }
@@ -307,9 +308,11 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             connectionProperties.readThread.shutdown();
             closeConnection(socketChannel, connectionProperties);
 
+            needsToRunHeartbeat = false;
+            pendingRequests.clear();
             if(this.heartBeatTimer != null) {
-                this.heartBeatTimer.purge();
                 this.heartBeatTimer.cancel();
+                this.heartBeatTimer.purge();
             }
         } catch (IOException ignore) {
         }
@@ -393,7 +396,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             try {
                 // If there were no recent responses within the last 5 seconds, run a heartbeat
                 if(needsToRunHeartbeat) {
-                    int heartBeatTimeout = 1000;
+                    int heartBeatTimeout = 1000*2;
                     result = send(null, heartBeatTimeout);
                 } else
                 {
@@ -411,7 +414,8 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
                 try {
                     connect(host, port);
 
-                    if (socketChannel.isConnected()
+                    if (active
+                            && socketChannel.isConnected()
                             && socketChannel.isOpen()) {
 
                         // If there are more than 20 requests, fail the requests and flush the queue

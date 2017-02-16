@@ -26,17 +26,6 @@ import java.util.List;
 public class OneToOneRelationshipEqualsTest extends RemoteBaseTest
 {
 
-    @BeforeClass
-    public static void beforeClass() throws InterruptedException {
-        if(databaseServer == null || !databaseServer.isRunning()) {
-            databaseServer = new DatabaseServer();
-            databaseServer.setPort(8080);
-            databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
-            databaseServer.start();
-            databaseServer.join();
-        }
-    }
-
     @After
     public void after() throws IOException
     {
