@@ -1,7 +1,6 @@
 package com.onyx.structure.store;
 
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.util.ReflectionUtil;
@@ -35,8 +34,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      *
      * @param filePath
      */
-    public MemoryMappedStore(String filePath, MapBuilder builder, SchemaContext context) {
-        super(filePath, builder, context);
+    public MemoryMappedStore(String filePath, SchemaContext context) {
+        super(filePath, context);
     }
 
     /**

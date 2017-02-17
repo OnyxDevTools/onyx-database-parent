@@ -846,6 +846,9 @@ public class DefaultSchemaContext implements SchemaContext {
             partitionId = "";
         }
 
+        if(entityClass == null)
+            throw  new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND);
+
         final String entityKey = entityClass.getName() + String.valueOf(partitionId);
 
         entityDescriptorLock.readLock().lock();

@@ -42,7 +42,8 @@ public class CompareUtil
     @SuppressWarnings("unchecked")
     public static boolean compare(Object object, Object object2) throws InvalidDataTypeForOperator
     {
-        if(object == null && object2 == null)
+
+        if(object == object2)
             return true;
 
         if(object instanceof Comparable
