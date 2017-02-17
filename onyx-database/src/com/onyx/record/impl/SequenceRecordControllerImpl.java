@@ -10,6 +10,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,6 +36,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     {
         super(entityDescriptor, context);
 
+        MapBuilder dataFile = context.getDataFile(entityDescriptor);
         metadata = (DiskMap)dataFile.getSkipListMap("metadata" + entityDescriptor.getClazz().getName());
 
         // Initialize the sequence key

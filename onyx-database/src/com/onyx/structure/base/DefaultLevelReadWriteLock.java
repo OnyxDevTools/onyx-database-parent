@@ -9,7 +9,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class DefaultLevelReadWriteLock implements LevelReadWriteLock
 {
-    public ReentrantReadWriteLock masterLock = new ReentrantReadWriteLock(true);
 
     public ReadWriteLock[] locks;
 
@@ -28,17 +27,6 @@ public class DefaultLevelReadWriteLock implements LevelReadWriteLock
         locks[9] = new ReentrantReadWriteLock(true);
     }
 
-    @Override
-    public Lock readLock()
-    {
-        return masterLock.readLock();
-    }
-
-    @Override
-    public Lock writeLock()
-    {
-        return masterLock.writeLock();
-    }
 
     public void lockReadLevel(int level)
     {
@@ -52,13 +40,11 @@ public class DefaultLevelReadWriteLock implements LevelReadWriteLock
 
     public void lockWriteLevel(int level)
     {
-//        masterLock.readLock().lock();
         locks[level].writeLock().lock();
     }
 
     public void unlockWriteLevel(int level)
     {
         locks[level].writeLock().unlock();
-//        masterLock.readLock().unlock();
     }
 }

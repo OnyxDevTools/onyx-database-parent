@@ -28,6 +28,10 @@ import java.util.function.BiFunction;
 @SuppressWarnings("unchecked")
 abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V> implements Map<K,V> {
 
+    public AbstractIterableSkipList()
+    {
+
+    }
     /**
      * Constructor with store.  Initialize the collection types
      * @param store Underlying storage mechanism
@@ -36,10 +40,6 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      */
     AbstractIterableSkipList(Store store, Header header) {
         super(store, header);
-        entries = new EntryCollection(this);
-        values = new ValueCollection(this);
-        keys = new KeyCollection(this);
-        dict = new DictionaryCollection(this);
     }
 
     /**
@@ -49,13 +49,8 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      * @param headless Whether the header should be ignored
      * @since 1.2.0
      */
-    AbstractIterableSkipList(Store store, Header header, boolean headless) {
-        super(store, header, headless);
-        entries = new EntryCollection(this);
-        values = new ValueCollection(this);
-        keys = new KeyCollection(this);
-        dict = new DictionaryCollection(this);
-        references = new ReferenceCollection(this);
+    AbstractIterableSkipList(Store store, Header header, boolean headless, boolean enableCaching) {
+        super(store, header, headless, enableCaching);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,8 +58,6 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     // Iterate-able properties on structure
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-    protected ReferenceCollection references;
 
     /**
      * Getter for set of keys
@@ -76,10 +69,8 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     @Override
     @SuppressWarnings("unchecked")
     public Set referenceSet() {
-        return references;
+        return new ReferenceCollection<>();
     }
-
-    protected KeyCollection keys;
 
     /**
      * Getter for set of keys
@@ -91,10 +82,8 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     @Override
     @SuppressWarnings("unchecked")
     public Set<K> keySet() {
-        return keys;
+        return new KeyCollection<>();
     }
-
-    private DictionaryCollection dict;
 
     /**
      * Getter for set of keys.  This is meant to iterate through the values as maps rather than
@@ -106,10 +95,8 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      */
     @SuppressWarnings({"unused", "unchecked"})
     public Set<Map> dictionarySet() {
-        return dict;
+        return new DictionaryCollection<>();
     }
-
-    protected ValueCollection values;
 
     /**
      * Getter for values
@@ -121,10 +108,9 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     @Override
     @SuppressWarnings("unchecked")
     public Collection<V> values() {
-        return values;
+        return new ValueCollection<>();
     }
 
-    private EntryCollection entries;
 
     /**
      * Getter for values.  This contains lazy loaded disk structure entries
@@ -137,7 +123,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
     @Override
     @SuppressWarnings("unchecked")
     public Set<Map.Entry<K, V>> entrySet() {
-        return entries;
+        return new EntryCollection<>();
     }
 
     /**
@@ -182,9 +168,8 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
          *
          * @param skipList Reference to outer skip list
          */
-        ValueCollection(AbstractIterableSkipList skipList) {
-            super(skipList);
-            this.skipList = skipList;
+        ValueCollection() {
+            super();
         }
 
         /**
@@ -238,11 +223,9 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         /**
          * Constructor
          *
-         * @param skipList Reference to outer skip list
          */
-        DictionaryCollection(AbstractIterableSkipList skipList) {
-            super(skipList);
-            this.skipList = skipList;
+        DictionaryCollection() {
+            super();
         }
 
         /**
@@ -285,11 +268,9 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         /**
          * Constructor
          *
-         * @param skipList Reference to outer skip list
          */
-        KeyCollection(AbstractIterableSkipList skipList) {
-            super(skipList);
-            this.skipList = skipList;
+        KeyCollection() {
+            super();
         }
 
         /**
@@ -313,11 +294,9 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         /**
          * Constructor
          *
-         * @param skipList Reference to outer skip list
          */
-        ReferenceCollection(AbstractIterableSkipList skipList) {
-            super(skipList);
-            this.skipList = skipList;
+        ReferenceCollection() {
+            super();
         }
 
         /**
@@ -337,9 +316,8 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      * @param <V> Entry Types
      */
     private class EntryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
-        EntryCollection(AbstractIterableSkipList skipList) {
-            super(skipList);
-            this.skipList = skipList;
+        EntryCollection() {
+            super();
         }
 
         @Override
@@ -603,16 +581,12 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
      */
     abstract class AbstractNodeCollection<E> implements Set<E> {
 
-        protected Store fileStore; // Reference to outer document fileStore
-
-        AbstractIterableSkipList<K,V> skipList; // Just a handle on the outer class
 
         /**
          * Constructor
-         * @param skipList Outer skip list reference
          */
-        AbstractNodeCollection(AbstractIterableSkipList skipList) {
-            this.skipList = skipList;
+        AbstractNodeCollection() {
+
         }
 
         /**
@@ -622,7 +596,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
          * It sends the size at the time of method invocation not creating the sub collection.
          */
         public int size() {
-            return (int)skipList.longSize();
+            return (int)AbstractIterableSkipList.this.longSize();
         }
 
         /**
@@ -632,7 +606,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
          */
         @Override
         public boolean isEmpty() {
-            return skipList.isEmpty();
+            return AbstractIterableSkipList.this.isEmpty();
         }
 
         /**
@@ -669,7 +643,7 @@ abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>
         @Override
         @Deprecated
         public boolean contains(Object o) {
-            return skipList.containsValue(o);
+            return AbstractIterableSkipList.this.containsValue(o);
         }
 
         @Deprecated

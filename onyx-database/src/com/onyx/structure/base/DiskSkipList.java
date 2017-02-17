@@ -33,8 +33,12 @@ import java.util.function.BiConsumer;
 @SuppressWarnings("unchecked")
 public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implements DiskMap<K, V> {
 
-    private ReadWriteLock readWriteLock;
+    protected ReadWriteLock readWriteLock;
 
+    public DiskSkipList()
+    {
+
+    }
     /**
      * Constructor with store.  Initialize the collection types
      *
@@ -55,8 +59,8 @@ public class DiskSkipList<K, V> extends AbstractIterableSkipList<K, V> implement
      * @param detached Whether the map is headless and should ignore updating the header
      * @since 1.2.0
      */
-    public DiskSkipList(Store store, Header header, boolean detached) {
-        super(store, header, detached);
+    public DiskSkipList(Store store, Header header, boolean detached, boolean enableCaching) {
+        super(store, header, detached, enableCaching);
 
         // If it is detached.  The concurrency will be handled by this class' parent
         if (detached)

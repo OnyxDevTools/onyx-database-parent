@@ -26,11 +26,11 @@ public class SystemIdentifier extends AbstractSystemEntity implements IManagedEn
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
     @Attribute
-    @Index(loadFactor = 1)
+    @Index(loadFactor = 3)
     protected String id;
 
     @Attribute
@@ -39,7 +39,7 @@ public class SystemIdentifier extends AbstractSystemEntity implements IManagedEn
     @Attribute
     protected int generator;
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "identifier", inverseClass = SystemEntity.class, loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "identifier", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
     public String getId()

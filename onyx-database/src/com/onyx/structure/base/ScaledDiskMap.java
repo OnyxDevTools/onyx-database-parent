@@ -23,7 +23,7 @@ import java.util.Set;
  * @since 1.2.0
  */
 @SuppressWarnings("unchecked")
-public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> implements Map<K, V>, DiskMap<K, V> {
+public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K,V> {
 
     // Cache of skip lists
     private Map<Integer, CombinedIndexNode> skipListMapCache = new ConcurrentWeakHashMap();
@@ -35,8 +35,8 @@ public class ScaledDiskMap<K, V> extends AbstractIterableLoadFactorMap<K, V> imp
      * @param header    Pointer to the DiskMap
      * @since 1.2.0
      */
-    public ScaledDiskMap(Store fileStore, Header header, int loadFactor) {
-        super(fileStore, header, true);
+    public ScaledDiskMap(Store fileStore, Header header, int loadFactor, boolean enableCaching) {
+        super(fileStore, header, true, enableCaching);
 
         this.defaultDiskMap = new DefaultDiskMap(fileStore, header, true);
 

@@ -32,17 +32,17 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
     @Attribute
-    @Index(loadFactor = 1)
+    @Index(loadFactor = 3)
     protected String id;
 
     @Attribute
     protected String name;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "relationships", inverseClass = SystemEntity.class, loadFactor = 1)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "relationships", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
     @Attribute

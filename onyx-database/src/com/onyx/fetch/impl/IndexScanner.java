@@ -66,7 +66,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                     indexController.findAllBelow(idValue, true).forEach(o -> references.add(o));
                 else
-                    indexController.findAll(idValue).forEach(o -> references.add(o));
+                    indexController.findAll(idValue).keySet().forEach(o -> references.add((long)o));
             }
         }
         else
@@ -81,7 +81,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
             else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                 indexController.findAllBelow(criteria.getValue(), true).forEach(o -> references.add(o));
             else
-                indexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
+                indexController.findAll(criteria.getValue()).keySet().forEach(o -> references.add((long)o));
 
         }
 
@@ -124,7 +124,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                     results = indexController.findAllBelow(idValue, true);
                 else
-                    results = indexController.findAll(idValue);
+                    results = indexController.findAll(idValue).keySet();
 
 
                 results.forEach(reference ->
@@ -148,7 +148,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
             else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                 results = indexController.findAllBelow(criteria.getValue(), true);
             else
-                results = indexController.findAll(criteria.getValue());
+                results = indexController.findAll(criteria.getValue()).keySet();
 
 
 

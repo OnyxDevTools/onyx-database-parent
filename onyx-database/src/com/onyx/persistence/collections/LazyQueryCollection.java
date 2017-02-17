@@ -52,7 +52,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
     transient protected EntityDescriptor entityDescriptor = null;
     transient protected PersistenceManager persistenceManager = null;
-    transient protected PartitionContext partitionContext = null;
+//    transient protected PartitionContext partitionContext = null;
     transient protected SchemaContext context;
 
     public LazyQueryCollection()
@@ -74,7 +74,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         this.persistenceManager = context.getSerializedPersistenceManager();
         this.identifiers = new ArrayList<>(identifiers.keySet());
         this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
+//        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     /**
@@ -90,7 +90,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         this.persistenceManager = context.getSerializedPersistenceManager();
         this.identifiers = new ArrayList<>(identifiers);
         this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
+        //this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     /**
@@ -160,7 +160,8 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     @Override
     public boolean add(E e)
     {
-        try
+        return false;
+/*        try
         {
             Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) e, entityDescriptor.getIdentifier());
             Object partitionId = partitionContext.getPartitionId((IManagedEntity) e);
@@ -171,7 +172,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         } catch (EntityException e1)
         {
             return false;
-        }
+        }*/
     }
 
     /**
@@ -248,7 +249,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     @Override
     public E set(int index, E element)
     {
-        try
+        /*try
         {
 
             Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) element, entityDescriptor.getIdentifier());
@@ -263,7 +264,8 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         } catch (EntityException e1)
         {
             return null;
-        }
+        }*/
+        return null;
     }
 
     /**
@@ -344,7 +346,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     public void setEntityDescriptor(EntityDescriptor entityDescriptor)
     {
         this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
+//        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     @Override
@@ -362,7 +364,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
+//        this.partitionContext = new PartitionContext(context, entityDescriptor);
         this.persistenceManager = this.context.getSystemPersistenceManager();
     }
 

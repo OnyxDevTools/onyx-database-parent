@@ -62,29 +62,12 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     transient protected EntityDescriptor entityDescriptor = null;
 
     transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
-    transient protected SchemaContext context = null;
-    transient protected PartitionContext partitionContext = null;
     transient protected PersistenceManager persistenceManager;
+    private String contextId;
 
     public LazyRelationshipCollection()
     {
 
-    }
-
-    /**
-     * Constructor
-     *
-     * @param entityDescriptor Record Entity Descriptor
-     * @param identifiers Map of Identifiers
-     * @param context Schema Context
-     */
-    public LazyRelationshipCollection(EntityDescriptor entityDescriptor, Map<Object, Object> identifiers, SchemaContext context)
-    {
-        this.persistenceManager = context.getSystemPersistenceManager();
-        this.identifiers = new ArrayList(identifiers.keySet());
-        this.entityDescriptor = entityDescriptor;
-        this.context = context;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     /**
@@ -108,8 +91,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
                 this.identifiers.add((RelationshipReference)it.next());
         }
         this.entityDescriptor = entityDescriptor;
-        this.context = context;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
+        this.contextId = context.getContextId();
     }
 
     /**
@@ -127,8 +109,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         this.persistenceManager = context.getSystemPersistenceManager();
         this.identifiers = identifiers;
         this.entityDescriptor = entityDescriptor;
-        this.context = context;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     /**
@@ -142,7 +122,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     public LazyRelationshipCollection(SchemaContext context)
     {
         this.persistenceManager = context.getSystemPersistenceManager();
-        this.context = context;
+        this.contextId = context.getContextId();
     }
 
     /**
@@ -185,22 +165,23 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public boolean contains(Object o)
     {
-        Object identifier = null;
         try
         {
-            identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
+            AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
+            return true;
         } catch (EntityException e)
         {
             return false;
         }
-        try
+
+/*        try
         {
             return identifiers.contains(new RelationshipReference(identifier, partitionContext.getPartitionId((IManagedEntity) o)));
         }
         catch (EntityException e)
         {
             return false;
-        }
+        }*/
     }
 
     /**
@@ -216,7 +197,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public boolean add(E e)
     {
-        try
+        /*try
         {
             Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) e, entityDescriptor.getIdentifier());
 
@@ -228,7 +209,8 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         } catch (EntityException e1)
         {
             return false;
-        }
+        }*/
+        return false;
     }
 
     /**
@@ -293,7 +275,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public E set(int index, E element)
     {
-        try
+        /*try
         {
             Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) element, entityDescriptor.getIdentifier());
 
@@ -309,7 +291,8 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         } catch (EntityException e1)
         {
             return null;
-        }
+        }*/
+        return null;
     }
 
     /**
@@ -356,15 +339,8 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public boolean remove(Object o)
     {
-        Object identifier = null;
-        try
-        {
-            identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
-        } catch (AttributeMissingException e)
-        {
-            return false;
-        }
-        try
+        return false;
+        /*try
         {
             RelationshipReference ref = new RelationshipReference(identifier, partitionContext.getPartitionId((IManagedEntity) o));
             values.remove(ref);
@@ -373,7 +349,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         catch (EntityException e)
         {
             return false;
-        }
+        }*/
     }
 
     public List<RelationshipReference> getIdentifiers()
@@ -394,7 +370,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     public void setEntityDescriptor(EntityDescriptor entityDescriptor)
     {
         this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     @Override
@@ -402,9 +377,9 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         this.values = new WeakHashMap<>();
         this.identifiers = (List) bufferStream.getCollection();
         String className = bufferStream.getString();
-        String contextId = bufferStream.getString();
+        this.contextId = bufferStream.getString();
 
-        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
         } catch (EntityException e) {
@@ -412,14 +387,14 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
-        this.persistenceManager = this.context.getSystemPersistenceManager();
+        this.persistenceManager = context.getSystemPersistenceManager();
     }
 
     @Override
     public void write(BufferStream bufferStream) throws BufferingException {
+
         bufferStream.putCollection(this.getIdentifiers());
         bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
-        bufferStream.putString(this.context.getContextId());
+        bufferStream.putString(this.contextId);
     }
 }

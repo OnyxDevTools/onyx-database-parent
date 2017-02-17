@@ -43,7 +43,6 @@ public class FileChannelStore implements Store
     // This is an internal structure only used to store serializers
     protected TreeSet<ReclaimedSpace> reclaim = new TreeSet<ReclaimedSpace>();
 
-    protected MapBuilder builder = null;
 
     /**
      * Constructor open file
@@ -54,7 +53,6 @@ public class FileChannelStore implements Store
         this.filePath = filePath;
         open(filePath);
         this.setSize();
-        this.builder = builder;
         this.context = context;
     }
 
@@ -66,7 +64,7 @@ public class FileChannelStore implements Store
     /**
      * Initialize the file
      */
-    public void init()
+    public void init(MapBuilder builder)
     {
         final Map<Short, String> mapById = (Map<Short, String>) builder.getDefaultMapByName(SERIALIZERS_MAP_NAME);
         final Map<String, Short> mapByName = (Map<String, Short>) builder.getDefaultMapByName(SERIALIZERS_MAP_ID);

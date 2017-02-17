@@ -10,7 +10,6 @@ import com.onyx.structure.store.*;
 import java.io.File;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -101,7 +100,7 @@ public class DefaultMapBuilder implements MapBuilder {
             this.storage = new FileChannelStore(path, this, context);
         } else if (type == StoreType.IN_MEMORY) {
             String storeId = String.valueOf(storeIdCounter.addAndGet(1));
-            this.storage = new InMemoryStore(this, context, storeId);
+            this.storage = new InMemoryStore(context, storeId);
         }
 
         // Create default maps
@@ -120,7 +119,7 @@ public class DefaultMapBuilder implements MapBuilder {
         }
 
         if (this.storage != null)
-            this.storage.init();
+            this.storage.init(this);
 
     }
 
@@ -128,9 +127,8 @@ public class DefaultMapBuilder implements MapBuilder {
      * Create a new Hash Set.  The underlying map is a Scalable Disk Map.  It sets the default load factor to 5
      * @return The map
      */
-    @Override
-    public Set newHashSet() {
-        int defaultLoadFactor = 1;
+    public Map newHashSet() {
+        int defaultLoadFactor = 3;
         return newHashSet(defaultLoadFactor);
     }
 
@@ -139,16 +137,13 @@ public class DefaultMapBuilder implements MapBuilder {
      * @param loadFactor Load factor for set
      * @return The map
      */
-    @Override
-    public Set newHashSet(int loadFactor) {
+    public Map newHashSet(int loadFactor) {
         // Create a new header for the new structure we are creating
         final Header newHeader = new Header();
         newHeader.position = storage.allocate(Header.HEADER_SIZE);
         newHeader.firstNode = 0;
         storage.write(newHeader, newHeader.position); //Write the new header
-
-        final DiskMap underlyingDiskMap = newScalableMap(storage, newHeader, loadFactor);
-        return newDiskSet(underlyingDiskMap, loadFactor);
+        return new DefaultDiskSet(storage, newHeader, false, false);
     }
 
     /**
@@ -187,7 +182,7 @@ public class DefaultMapBuilder implements MapBuilder {
             if (map != null)
                 return map;
 
-            return newScalableMap(storage, header, loadFactor);
+            return newScalableMap(storage, header, loadFactor, true);
         });
     }
 
@@ -207,20 +202,6 @@ public class DefaultMapBuilder implements MapBuilder {
         });
     }
 
-    /**
-     * Instantiate the disk set with an underlying disk structure
-     *
-     * @param underlyingDiskMap The thing that drives the hashing and the storge of the data
-     * @param loadFactor 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     *                   to change.  Always plan for scale when designing your data model.
-     *
-     * @return Instantiated Disk Set instance
-     * @since 1.0.2
-     */
-    private Set newDiskSet(DiskMap underlyingDiskMap, int loadFactor) {
-        return new DefaultDiskSet<>(underlyingDiskMap, underlyingDiskMap.getReference(), loadFactor);
-    }
 
     /**
      * Get a default map.  This is only good for pre defined maps
@@ -276,11 +257,23 @@ public class DefaultMapBuilder implements MapBuilder {
                     retVal = newSkipListMap(storage, header);
                     break;
                 case LOAD:
-                    retVal = newScalableMap(storage, header, loadFactor);
+                    retVal = newScalableMap(storage, header, loadFactor, true);
                     break;
             }
             return retVal;
         });
+    }
+
+    /**
+     * Create a new Map reference header
+     * @return the created header ripe for instantiating a new map
+     */
+    public Header newMapHeader()
+    {
+        Header header = new Header();
+        header.position = storage.allocate(Header.HEADER_SIZE);
+        storage.write(header, header.position);
+        return header;
     }
 
     /**
@@ -397,8 +390,10 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @return Instantiated disk map
      */
-    private DiskMap newScalableMap(Store store, Header header, int loadFactor) {
-        return new ScaledDiskMap(store, header, loadFactor);
+    private DiskMap newScalableMap(Store store, Header header, int loadFactor, boolean enableCaching) {
+//        if(loadFactor < 4)
+//            return new LowLoadFactorMap(store, header, loadFactor);
+        return new ScaledDiskMap(store, header, loadFactor, enableCaching);
     }
 
     /**
@@ -408,7 +403,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @param header Reference Node
      * @return Instantiated disk map
      */
-    private DiskMap newSkipListMap(Store store, Header header) {
+    public DiskMap newSkipListMap(Store store, Header header) {
         return new DiskSkipList(store, header);
     }
 

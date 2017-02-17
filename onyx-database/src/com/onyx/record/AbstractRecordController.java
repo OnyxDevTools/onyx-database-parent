@@ -11,7 +11,7 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.structure.DiskMap;
 import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.ScaledDiskMap;
+import com.onyx.structure.base.OrderedDiskMap;
 import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
@@ -26,7 +26,6 @@ public abstract class AbstractRecordController
 {
     protected DiskMap<Object, IManagedEntity> records = null;
     protected EntityDescriptor entityDescriptor;
-    protected MapBuilder dataFile;
     protected SchemaContext context;
 
     /**
@@ -38,7 +37,7 @@ public abstract class AbstractRecordController
     {
         this.context = context;
         this.entityDescriptor = descriptor;
-        dataFile = context.getDataFile(entityDescriptor);
+        MapBuilder dataFile = context.getDataFile(entityDescriptor);
         records = (DiskMap)dataFile.getScalableMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
     }
 
@@ -490,7 +489,7 @@ public abstract class AbstractRecordController
      */
     public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
     {
-        return ((ScaledDiskMap)records).above(indexValue, includeValue);
+        return ((OrderedDiskMap)records).above(indexValue, includeValue);
     }
 
     /**
@@ -504,6 +503,6 @@ public abstract class AbstractRecordController
      */
     public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
     {
-        return ((ScaledDiskMap)records).below(indexValue, includeValue);
+        return ((OrderedDiskMap)records).below(indexValue, includeValue);
     }
 }

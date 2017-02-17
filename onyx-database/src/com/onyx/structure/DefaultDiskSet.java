@@ -1,14 +1,24 @@
 package com.onyx.structure;
 
+import com.onyx.structure.base.ConcurrentWeakHashMap;
+import com.onyx.structure.base.DiskSkipList;
+import com.onyx.structure.base.EmptyMap;
+import com.onyx.structure.base.EmptyReadWriteLock;
 import com.onyx.structure.node.Header;
+import com.onyx.structure.node.SkipListHeadNode;
+import com.onyx.structure.node.SkipListNode;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.structure.store.Store;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 
 /**
@@ -20,66 +30,29 @@ import java.util.function.Consumer;
  *
  * @since 1.2.0 This was changed to use the scalable map
  */
-public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
-
-    // Disk Map the HashSet is based on.  The key just defaults to null
-    // The only overhead is 1 byte per record.
-    protected DiskMap underlyingDiskMap = null;
-
-    // Location to where the disk structure is located.  This is to be used as
-    // a reference marker so, a serialized disk structure can be referenced
-    // within another data structure
-    protected Header header;
+public class DefaultDiskSet<E> extends DiskSkipList implements ObjectSerializable {
 
 
-    private int loadFactor;
-
-    /**
-     * Constructor with no parameters
-     */
-    @SuppressWarnings("unused")
     public DefaultDiskSet()
     {
+        super();
+        this.readWriteLock = new EmptyReadWriteLock();
+        this.nodeCache = new EmptyMap();
+        this.valueCache = new EmptyMap();
+        this.keyCache = new EmptyMap();
+        this.valueByPositionCache = new EmptyMap();
 
     }
 
-    /**
-     * Default Constructor
-     *
-     * @param diskMap Underlying Disk structure
-     * @param header Header reference
-     *
-     * @param loadFactor 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     *                   to change.  Always plan for scale when designing your data model.
-     *
-     *
-     * @since 1.0.2
-     */
-    public DefaultDiskSet(DiskMap diskMap, Header header, int loadFactor) {
-        this.underlyingDiskMap = diskMap;
-        this.header = header;
-        this.loadFactor = loadFactor;
-    }
 
-    /**
-     * Amount of unique records within the Set
-     * @return Size of Set
-     * @since 1.0.2
-     */
-    @Override
-    public int size() {
-        return this.underlyingDiskMap.size();
-    }
+    public DefaultDiskSet(Store store, Header header, boolean detached, boolean enableCaching) {
+        super(store, header, detached, enableCaching);
+        this.readWriteLock = new EmptyReadWriteLock();
+        this.nodeCache = new EmptyMap();
+        this.valueCache = new EmptyMap();
+        this.keyCache = new EmptyMap();
+        this.valueByPositionCache = new EmptyMap();
 
-    /**
-     * Whether the disk set is empty or not
-     * @return longSize == 0
-     * @since 1.0.2
-     */
-    @Override
-    public boolean isEmpty() {
-        return this.underlyingDiskMap.isEmpty();
     }
 
     /**
@@ -90,9 +63,8 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @return Whether the object exist within the data structure
      * @since 1.0.2
      */
-    @Override
     public boolean contains(Object o) {
-        return this.underlyingDiskMap.containsKey(o);
+        return this.containsKey(o);
     }
 
     /**
@@ -102,9 +74,8 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @return an Iterator.
      * @since 1.0.2
      */
-    @Override
     public Iterator<E> iterator() {
-        return this.underlyingDiskMap.keySet().iterator();
+        return this.keySet().iterator();
     }
 
     /**
@@ -129,9 +100,8 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @throws NullPointerException if the specified action is null
      * @since 1.0.2
      */
-    @Override
     public void forEach(Consumer<? super E> action) {
-        Iterator iterator = this.underlyingDiskMap.keySet().iterator();
+        Iterator iterator = this.keySet().iterator();
         while (iterator.hasNext()) {
             E key = (E) iterator.next();
             action.accept(key);
@@ -155,7 +125,6 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @since 1.0.2
      * @return an array containing all the elements in this set
      */
-    @Override
     public Object[] toArray() {
         final Object[] array = new Object[this.size()];
         final AtomicInteger i = new AtomicInteger(0);
@@ -212,7 +181,6 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @since 1.0.2
      * @throws NullPointerException if the specified array is null
      */
-    @Override
     public <T> T[] toArray(T[] a) {
         final T[] array = (T[])java.lang.reflect.Array.newInstance(a.getClass().getComponentType(), size());
         final AtomicInteger i = new AtomicInteger(0);
@@ -251,32 +219,11 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      *         set does not permit null elements
      * @since 1.0.3
      */
-    @Override
     public boolean add(E e) {
-        this.underlyingDiskMap.put(e, null);
+        this.put(e, null);
         return true;
     }
 
-    /**
-     * Removes the specified element from this set if it is present
-     * (optional operation).  More formally, removes an element <tt>e</tt>
-     * such that
-     * <tt>(o==null&nbsp;?&nbsp;e==null&nbsp;:&nbsp;o.equals(e))</tt>, if
-     * this set contains such an element.  Returns <tt>true</tt> if this set
-     * contained the element (or equivalently, if this set changed as a
-     * result of the call).  (This set will not contain the element once the
-     * call returns.)
-     *
-     * @param o object to be removed from this set, if present
-     * @return <tt>true</tt> if this set contained the specified element
-     * @throws NullPointerException if the specified element is null and this
-     *         set does not permit null elements
-     */
-    @Override
-    public boolean remove(Object o) {
-        Object object = this.underlyingDiskMap.remove(o);
-        return (object != null);
-    }
 
     /**
      * Returns <tt>true</tt> if this set contains all of the elements of the
@@ -299,12 +246,11 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @see    #contains(Object)
      * @since 1.0.2
      */
-    @Override
     public boolean containsAll(Collection<?> c) {
         Iterator iterator = c.iterator();
         while (iterator.hasNext()) {
             Object key = iterator.next();
-            if (!this.underlyingDiskMap.containsKey(key))
+            if (!this.containsKey(key))
                 return false;
         }
         return true;
@@ -332,36 +278,12 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      *         specified collection prevents it from being added to this set
      * @see #add(Object)
      */
-    @Override
     public boolean addAll(Collection<? extends E> c) {
         Iterator iterator = c.iterator();
         while (iterator.hasNext()) {
             Object key = iterator.next();
-            this.underlyingDiskMap.put(key, null);
+            this.put(key, null);
         }
-        return true;
-    }
-
-    /**
-     * Retains only the elements in this set that are contained in the
-     * specified collection (optional operation).  In other words, removes
-     * from this set all of its elements that are not contained in the
-     * specified collection.  If the specified collection is also a set, this
-     * operation effectively modifies this set so that its key is the
-     * <i>intersection</i> of the two sets.
-     *
-     * @param  c collection containing elements to be retained in this set
-     * @return <tt>true</tt> if this set changed as a result of the call
-     * @throws NullPointerException if this set contains a null element and the
-     *         specified collection does not permit null elements
-     *         (<a href="Collection.html#optional-restrictions">optional</a>),
-     *         or if the specified collection is null
-     * @see #remove(Object)
-     */
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        this.clear();
-        addAll((Collection<E>)c);
         return true;
     }
 
@@ -382,26 +304,15 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      * @see #contains(Object)
      * @since 1.0.2
      */
-    @Override
     public boolean removeAll(Collection<?> c) {
         Iterator iterator = c.iterator();
         while (iterator.hasNext()) {
             Object key = iterator.next();
-            this.underlyingDiskMap.remove(key);
+            this.remove(key);
         }
         return true;
     }
 
-    /**
-     * Removes all of the elements from this collection (optional operation).
-     * The collection will be empty after this method returns.
-     *
-     * @since 1.0.2
-     */
-    @Override
-    public void clear() {
-        this.underlyingDiskMap.clear();
-    }
 
     /**
      * Write object to a storage stream.  This is so that it may serialize and deserialize so the disk set
@@ -413,7 +324,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException {
         buffer.writeObject(header);
-        buffer.writeByte((byte)loadFactor);
+        buffer.writeByte(loadFactor);
     }
 
     /**
@@ -425,7 +336,7 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
     @Override
     public void readObject(ObjectBuffer buffer) throws IOException {
         header = (Header)buffer.readObject();
-        loadFactor = (int)buffer.readByte();
+        loadFactor = buffer.readByte();
     }
 
     /**
@@ -436,9 +347,21 @@ public class DefaultDiskSet<E> implements ObjectSerializable, Set<E> {
      */
     public void attachStorage(MapBuilder mapBuilder)
     {
-        if(underlyingDiskMap == null)
-        {
-            underlyingDiskMap = (DiskMap)mapBuilder.getScalableMap(header, this.loadFactor);
+        this.fileStore = mapBuilder.getStore();
+        if (header.firstNode > 0L) {
+            setHead(findNodeAtPosition(header.firstNode));
+        } else {
+            SkipListHeadNode newHead = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
+            setHead(newHead);
+            this.header.firstNode = newHead.position;
+            updateHeaderFirstNode(this.header, this.header.firstNode);
         }
+        this.detached = false;
+        this.readWriteLock = new EmptyReadWriteLock();
+        this.nodeCache = new EmptyMap();
+        this.valueCache = new EmptyMap();
+        this.keyCache = new EmptyMap();
+        this.valueByPositionCache = new EmptyMap();
+
     }
 }

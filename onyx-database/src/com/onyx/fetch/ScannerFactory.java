@@ -60,16 +60,15 @@ public class ScannerFactory
      */
     public TableScanner getScannerForQueryCriteria(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws EntityException
     {
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(classToScan);
-        EntityDescriptor descriptor = null;
+        EntityDescriptor descriptor;
 
         if (query.getPartition() == QueryPartitionMode.ALL)
         {
-            descriptor = context.getDescriptorForEntity(entity, "");
+            descriptor = context.getDescriptorForEntity(classToScan, "");
         }
         else
         {
-            descriptor = context.getDescriptorForEntity(entity, query.getPartition());
+            descriptor = context.getDescriptorForEntity(classToScan, query.getPartition());
         }
 
         final String attributeToScan = criteria.getAttribute();

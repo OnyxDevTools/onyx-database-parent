@@ -1,6 +1,7 @@
 package com.onyx.structure.store;
 
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
 import com.onyx.structure.serializer.Serializers;
@@ -110,8 +111,9 @@ public interface Store {
 
     /**
      * Initialize
+     * @param builder Map builder used to initialize
      */
-    void init();
+    void init(MapBuilder builder);
 
     /**
      * Getter for schema context as it pertains to onyxdb

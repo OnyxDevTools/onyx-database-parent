@@ -7,6 +7,7 @@ import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.store.Store;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 /**
@@ -22,6 +23,10 @@ import java.nio.ByteBuffer;
  */
 abstract class AbstractDiskMap<K, V> implements DiskMap<K, V> {
 
+    public AbstractDiskMap()
+    {
+
+    }
     protected Store fileStore; // Underlying storage mechanism
     protected Header header = null;
     protected boolean detached = false;
@@ -29,7 +34,12 @@ abstract class AbstractDiskMap<K, V> implements DiskMap<K, V> {
 
     AbstractDiskMap(Store fileStore, Header header, boolean headless) {
         this.fileStore = fileStore;
-        this.header = header;
+        // Clone the header so that we do not have a cross reference
+        // This was preventing WeakHashMaps from ejecting the entire map object
+        this.header = new Header();
+        this.header.firstNode = header.firstNode;
+        this.header.position = header.position;
+        this.header.recordCount = new AtomicLong(header.recordCount.get());
         this.detached = headless;
     }
 

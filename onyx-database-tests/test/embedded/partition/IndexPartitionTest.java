@@ -60,7 +60,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -83,7 +83,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void cTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
+    public void dTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -106,7 +106,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void dTestDeleteQueryPartitionEntity() throws EntityException
+    public void eTestDeleteQueryPartitionEntity() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -129,7 +129,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndex() throws EntityException
+    public void fTestDeleteQueryPartitionEntityWithIndex() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -153,7 +153,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -177,7 +177,7 @@ public class IndexPartitionTest extends BasePartitionTest
 
 
     @Test
-    public void dTestUpdateQueryPartitionEntity() throws EntityException
+    public void hTestUpdateQueryPartitionEntity() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -201,7 +201,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndex() throws EntityException
+    public void iTestUpdateQueryPartitionEntityWithIndex() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -226,7 +226,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -250,7 +250,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdatePartitionField() throws EntityException
+    public void kTestUpdatePartitionField() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;

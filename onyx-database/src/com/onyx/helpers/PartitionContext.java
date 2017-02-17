@@ -25,7 +25,6 @@ public class PartitionContext
 {
 
     protected SchemaContext context = null;
-    protected MapBuilder defaultDataFile = null;
     protected RecordController defaultRecordController = null;
     protected EntityDescriptor defaultDescriptor = null;
 
@@ -40,7 +39,6 @@ public class PartitionContext
         this.context = context;
         this.defaultDescriptor = descriptor;
         this.defaultRecordController = context.getRecordController(this.defaultDescriptor);
-        this.defaultDataFile = context.getDataFile(descriptor);
     }
 
     /**
@@ -56,7 +54,7 @@ public class PartitionContext
     {
         if(partitionId == 0)
         {
-            return defaultDataFile;
+            return this.context.getDataFile(this.defaultDescriptor);
         }
 
         final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
@@ -290,23 +288,19 @@ public class PartitionContext
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            MapBuilder dataFile = cachedDataFilesPerEntity.compute(new PartitionKey(entity), new BiFunction<PartitionKey, MapBuilder, MapBuilder>() {
-                @Override
-                public MapBuilder apply(PartitionKey partitionKey, MapBuilder db)
+            MapBuilder dataFile = cachedDataFilesPerEntity.compute(new PartitionKey(entity), (partitionKey, db) -> {
+                if(db != null)
                 {
-                    if(db != null)
-                    {
-                        return db;
-                    }
-                    try
-                    {
-                        return context.getDataFile(getDescriptorForEntity(entity));
-                    } catch (EntityException e)
-                    {
-                        exceptionWrapper.exception = e;
-                    }
-                    return defaultDataFile;
+                    return db;
                 }
+                try
+                {
+                    return context.getDataFile(getDescriptorForEntity(entity));
+                } catch (EntityException e)
+                {
+                    exceptionWrapper.exception = e;
+                }
+                return null;
             });
 
             if(exceptionWrapper.exception != null)
@@ -314,11 +308,13 @@ public class PartitionContext
                 throw exceptionWrapper.exception;
             }
 
+            if(dataFile == null)
+                return this.context.getDataFile(this.defaultDescriptor);
             return dataFile;
         }
         else
         {
-            return defaultDataFile;
+            return this.context.getDataFile(this.defaultDescriptor);
         }
     }
 

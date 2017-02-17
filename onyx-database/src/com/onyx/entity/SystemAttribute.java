@@ -5,16 +5,18 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
 import com.onyx.util.OffsetField;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Created by timothy.osborn on 3/2/15.
  */
 @Entity(fileName = "system")
 public class SystemAttribute extends AbstractSystemEntity implements IManagedEntity
 {
+    private static final AtomicInteger counter = new AtomicInteger();
 
     public SystemAttribute()
     {
-
     }
 
     public SystemAttribute(AttributeDescriptor descriptor, SystemEntity entity)
@@ -29,7 +31,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
 //    @Index
@@ -54,7 +56,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     @Attribute
     protected boolean indexed;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 1)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
     public transient OffsetField field;

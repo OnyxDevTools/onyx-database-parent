@@ -1,6 +1,7 @@
 package com.onyx.structure;
 
 import com.onyx.exception.AttributeTypeMismatchException;
+import com.onyx.structure.base.LevelReadWriteLock;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.store.Store;
 
@@ -65,4 +66,11 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @return Set of references.
      */
     Set referenceSet();
+
+
+    default LevelReadWriteLock getReadWriteLock()
+    {
+        return null;
+    }
+
 }

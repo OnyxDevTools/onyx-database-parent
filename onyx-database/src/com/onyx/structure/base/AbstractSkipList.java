@@ -25,6 +25,10 @@ import java.util.Random;
 @SuppressWarnings("unchecked")
 abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Map<K, V> {
 
+    public AbstractSkipList()
+    {
+
+    }
     private static Random random = new Random(60); //To choose the threadLocalHead level node randomly; // Random number generator from 0.0 to 1.0
 
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
@@ -32,10 +36,10 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     private SkipListHeadNode headNode;
 
     // Caching maps
-    Map<Long, SkipListHeadNode> nodeCache = new ConcurrentWeakHashMap();
-    Map<K, V> valueCache = new ConcurrentWeakHashMap();
-    Map<K, SkipListNode> keyCache = new ConcurrentWeakHashMap();
-    Map<Long, V> valueByPositionCache = new ConcurrentWeakHashMap();
+    protected Map<Long, SkipListHeadNode> nodeCache = new ConcurrentWeakHashMap();
+    protected Map<K, V> valueCache = new ConcurrentWeakHashMap();
+    protected Map<K, SkipListNode> keyCache = new ConcurrentWeakHashMap();
+    protected Map<Long, V> valueByPositionCache = new ConcurrentWeakHashMap();
 
     /**
      * Constructor with file store
@@ -101,7 +105,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      *
      * @param head Head of the skip list
      */
-    void setHead(SkipListHeadNode head)
+    protected void setHead(SkipListHeadNode head)
     {
         if(detached)
         {

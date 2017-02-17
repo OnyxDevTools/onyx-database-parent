@@ -1,11 +1,10 @@
 package com.onyx.structure.base;
 
-import java.util.concurrent.locks.ReadWriteLock;
 
 /**
  * Created by timothy.osborn on 4/7/15.
  */
-public interface LevelReadWriteLock extends ReadWriteLock
+public interface LevelReadWriteLock
 {
     /**
      * Read Lock for level

@@ -27,20 +27,20 @@ public class SystemPartition extends AbstractSystemEntity implements IManagedEnt
     }
 
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
     @Attribute
-    @Index(loadFactor = 1)
+    @Index(loadFactor = 3)
     protected String id;
 
     @Attribute
     protected String name;
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "partition", inverseClass = SystemEntity.class, loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "partition", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
-    @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry.class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry.class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
     protected List<SystemPartitionEntry> entries = new ArrayList();
 
     public String getId()

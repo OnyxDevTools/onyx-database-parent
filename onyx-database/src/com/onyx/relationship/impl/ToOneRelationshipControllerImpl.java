@@ -16,6 +16,7 @@ import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.structure.DiskMap;
+import com.onyx.structure.MapBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +40,9 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     {
         super(entityDescriptor, relationshipDescriptor, context);
 
+        MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
         // Get the correct data file
-        toOneMap = (DiskMap)dataFile.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        toOneMap = (DiskMap)mapBuilder.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
     }
 
 

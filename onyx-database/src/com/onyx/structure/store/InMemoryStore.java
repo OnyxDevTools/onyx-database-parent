@@ -18,9 +18,8 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
      *
      * @param builder
      */
-    public InMemoryStore(MapBuilder builder, SchemaContext context, String storeId) {
+    public InMemoryStore(SchemaContext context, String storeId) {
         super();
-        this.builder = builder;
         this.context = context;
         open(storeId);
         this.setSize();

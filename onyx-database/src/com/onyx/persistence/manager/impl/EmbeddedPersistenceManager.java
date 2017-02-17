@@ -355,10 +355,9 @@ public class EmbeddedPersistenceManager implements PersistenceManager {
         PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
 
         final Class clazz = query.getEntityType();
-        IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
 
         // We want to lock the index controller so that it does not do background indexing
-        final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, query.getPartition());
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
 
         ValidationHelper.validateQuery(descriptor, query, context);
 

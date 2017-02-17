@@ -11,7 +11,6 @@ import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.structure.MapBuilder;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -33,9 +32,6 @@ public class AbstractRelationshipController extends PartitionContext
 
     protected RelationshipDescriptor defaultInverseRelationshipDescriptor;
 
-    protected MapBuilder dataFile = null;
-    protected MapBuilder defaultInverseDataFile = null;
-
     protected SchemaContext context;
 
     public AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
@@ -48,8 +44,6 @@ public class AbstractRelationshipController extends PartitionContext
         this.entityDescriptor = entityDescriptor;
         this.recordController = context.getRecordController(entityDescriptor);
 
-        IManagedEntity tmpEntity = EntityDescriptor.createNewEntity(relationshipDescriptor.getInverseClass());
-
         // Get the inverse entity details
 
         // If there is an inverse get the inverse relationship descriptor for saving the inverse
@@ -57,10 +51,6 @@ public class AbstractRelationshipController extends PartitionContext
         {
             this.defaultInverseRelationshipDescriptor = defaultDescriptor.getRelationships().get(relationshipDescriptor.getInverse());
         }
-
-        // Get the data files
-        this.dataFile = context.getDataFile(entityDescriptor);
-        this.defaultInverseDataFile = context.getDataFile(defaultDescriptor);
     }
 
     /**

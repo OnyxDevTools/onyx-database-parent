@@ -122,7 +122,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 if(query.isTerminated())
                     return returnValue;
 
-                partitionIndexController.findAll(idValue).forEach(o -> references.add(o));
+                partitionIndexController.findAll(idValue).keySet().forEach(o -> references.add((long)o));
             }
         }
         else
@@ -137,7 +137,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
             else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
                 partitionIndexController.findAllBelow(criteria.getValue(), true).forEach(o -> references.add(o));
             else
-                partitionIndexController.findAll(criteria.getValue()).forEach(o -> references.add(o));
+                partitionIndexController.findAll(criteria.getValue()).keySet().forEach(o -> references.add((long)o));
 
         }
 

@@ -12,12 +12,9 @@ import com.onyx.structure.DefaultDiskSet;
 import com.onyx.structure.DiskMap;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.base.ScaledDiskMap;
+import com.onyx.structure.node.Header;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
+import java.util.*;
 
 /**
  * Created by timothy.osborn on 1/29/15.
@@ -26,11 +23,11 @@ public class IndexControllerImpl implements IndexController {
 
     protected SchemaContext context;
 
-    protected Map<Object, Set<Long>> references = null; // Stores the references for an index key
+    protected Map<Object, Header> references = null; // Stores the references for an index key
     protected Map<Long, Object> indexValues = null;
     protected RecordController recordController = null;
-    protected MapBuilder dataFile = null;
     protected IndexDescriptor indexDescriptor = null;
+    protected EntityDescriptor descriptor;
 
     public IndexDescriptor getIndexDescriptor()
     {
@@ -47,9 +44,11 @@ public class IndexControllerImpl implements IndexController {
     public IndexControllerImpl(EntityDescriptor descriptor, IndexDescriptor indexDescriptor, SchemaContext context) throws EntityException
     {
         this.context = context;
-        dataFile = context.getDataFile(descriptor);
+
         this.indexDescriptor = indexDescriptor;
         this.recordController = context.getRecordController(descriptor);
+        this.descriptor = descriptor;
+        final MapBuilder dataFile = context.getDataFile(descriptor);
 
         references = dataFile.getScalableMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
         indexValues = dataFile.getScalableMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
@@ -72,13 +71,16 @@ public class IndexControllerImpl implements IndexController {
         }
 
         if(indexValue != null) {
-            references.compute(indexValue, (o, longs) -> {
-                if(longs == null)
-                    longs = dataFile.newHashSet();
-                else
-                    ((DefaultDiskSet)longs).attachStorage(dataFile);
-                longs.add(reference);
-                return longs;
+            final MapBuilder dataFile = context.getDataFile(descriptor);
+
+            references.compute(indexValue, (o, header) -> {
+                if(header == null) {
+                    header = dataFile.newMapHeader();
+                }
+                Map indexes = dataFile.getSkipListMap(header);
+                indexes.put(reference, null);
+                indexes = null;
+                return header;
             });
             indexValues.compute(reference, (aLong, o) -> indexValue);
         }
@@ -97,10 +99,13 @@ public class IndexControllerImpl implements IndexController {
             Object indexValue = indexValues.remove(reference);
             if (indexValue != null)
             {
-                references.computeIfPresent(indexValue, (o, longs) -> {
-                    ((DefaultDiskSet)longs).attachStorage(dataFile);
-                    longs.remove(reference);
-                    return longs;
+                final MapBuilder dataFile = context.getDataFile(descriptor);
+
+                references.computeIfPresent(indexValue, (o, header) -> {
+                    Map indexes = dataFile.getSkipListMap(header);
+                    indexes.remove(reference);
+                    indexes = null;
+                    return header;
                 });
             }
         }
@@ -113,15 +118,14 @@ public class IndexControllerImpl implements IndexController {
      * @return
      * @throws EntityException
      */
-    public Set<Long> findAll(Object indexValue) throws EntityException
+    public Map findAll(Object indexValue) throws EntityException
     {
-        final Set<Long> refs = references.get(indexValue);
-        if(refs == null)
-            return new HashSet();
-        else
-            ((DefaultDiskSet)refs).attachStorage(dataFile);
+        final Header header = references.get(indexValue);
+        if(header == null)
+            return new HashMap();
+        final MapBuilder dataFile = context.getDataFile(descriptor);
 
-        return refs;
+        return dataFile.getSkipListMap(header);
     }
 
     /**
@@ -154,6 +158,9 @@ public class IndexControllerImpl implements IndexController {
     {
         final Set<Long> allReferences = new HashSet();
         final Set<Long> diskReferences = ((ScaledDiskMap)references).above(indexValue, includeValue);
+
+        final MapBuilder dataFile = context.getDataFile(descriptor);
+
         diskReferences.forEach(aLong -> {
             Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
             ((DefaultDiskSet)subSet).attachStorage(dataFile);
@@ -181,6 +188,7 @@ public class IndexControllerImpl implements IndexController {
     {
         final Set<Long> allReferences = new HashSet();
         final Set<Long> diskReferences = ((ScaledDiskMap)references).below(indexValue, includeValue);
+        final MapBuilder dataFile = context.getDataFile(descriptor);
         diskReferences.forEach(aLong -> {
             Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
             ((DefaultDiskSet)subSet).attachStorage(dataFile);
@@ -197,6 +205,8 @@ public class IndexControllerImpl implements IndexController {
      */
     public void rebuild() throws EntityException
     {
+        final MapBuilder dataFile = context.getDataFile(descriptor);
+
         final DiskMap records = (DiskMap)dataFile.getScalableMap(indexDescriptor.getEntityDescriptor().getClazz().getName(), indexDescriptor.getLoadFactor());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 

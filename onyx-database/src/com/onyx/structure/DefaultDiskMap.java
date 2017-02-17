@@ -1,6 +1,7 @@
 package com.onyx.structure;
 
 import com.onyx.structure.base.AbstractIterableDiskMap;
+import com.onyx.structure.base.LevelReadWriteLock;
 import com.onyx.structure.node.BitMapNode;
 import com.onyx.structure.node.Header;
 import com.onyx.structure.node.RecordReference;
@@ -264,20 +265,11 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
     @Override
     public void clear()
     {
-        readWriteLock.writeLock().lock();
+        header.firstNode = 0;
+        header.recordCount.set(0);
+        updateHeaderRecordCount();
 
-        try
-        {
-            header.firstNode = 0;
-            header.recordCount.set(0);
-            updateHeaderRecordCount();
-
-            fileStore.write(header, header.position);
-
-        } finally
-        {
-            readWriteLock.writeLock().unlock();
-        }
+        fileStore.write(header, header.position);
     }
 
     /**
@@ -609,5 +601,10 @@ public class DefaultDiskMap<K, V> extends AbstractIterableDiskMap<K, V> implemen
             readWriteLock.unlockWriteLevel(hashDigits[0]);
         }
         return value;
+    }
+
+    public LevelReadWriteLock getReadWriteLock()
+    {
+        return readWriteLock;
     }
 }

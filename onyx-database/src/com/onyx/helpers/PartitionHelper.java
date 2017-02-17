@@ -60,7 +60,7 @@ public class PartitionHelper
     public static boolean hasPartitionField(Class type, SchemaContext context) throws EntityException
     {
         final EntityDescriptor baseDescriptor = context.getBaseDescriptorForEntity(type);
-        return (baseDescriptor.getPartition() != null);
+        return (baseDescriptor != null && baseDescriptor.getPartition() != null);
     }
 
     /**

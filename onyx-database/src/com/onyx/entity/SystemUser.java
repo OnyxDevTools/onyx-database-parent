@@ -20,7 +20,7 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
 
     }
 
-    @Identifier(loadFactor = 1)
+    @Identifier(loadFactor = 3)
     @Attribute
     protected String username;
 

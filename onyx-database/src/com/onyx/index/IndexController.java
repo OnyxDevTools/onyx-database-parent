@@ -3,6 +3,7 @@ package com.onyx.index;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.EntityException;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -35,7 +36,7 @@ public interface IndexController
      * @return
      * @throws EntityException
      */
-    Set<Long> findAll(Object indexValue) throws EntityException;
+    Map findAll(Object indexValue) throws EntityException;
 
     /**
      * Find all the references above and perhaps equal to the key parameter

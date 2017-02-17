@@ -29,6 +29,7 @@ import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
 import com.onyx.structure.DefaultMapBuilder;
 import com.onyx.structure.MapBuilder;
+import com.onyx.structure.base.ConcurrentWeakHashMap;
 import com.onyx.structure.store.StoreType;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
@@ -708,9 +709,9 @@ public class DefaultSchemaContext implements SchemaContext {
 
         if (!descriptor.equals(systemEntity)) {
             systemEntity = new SystemEntity(descriptor);
+            systemPersistenceManager.saveEntity(systemEntity);
         }
 
-        systemPersistenceManager.saveEntity(systemEntity);
         defaultSystemEntities.put(systemEntity.getName(), systemEntity);
         systemEntityByIDMap.put(systemEntity.getPrimaryKey(), systemEntity);
 
@@ -840,13 +841,54 @@ public class DefaultSchemaContext implements SchemaContext {
      * @since 1.0.0
      */
     public EntityDescriptor getDescriptorForEntity(final Class entityClass, Object partitionId) throws EntityException {
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(entityClass);
 
         if (partitionId == null) {
             partitionId = "";
         }
 
-        return getDescriptorForEntity(entity, String.valueOf(partitionId));
+        final String entityKey = entityClass.getName() + String.valueOf(partitionId);
+
+        entityDescriptorLock.readLock().lock();
+
+        try {
+            EntityDescriptor descriptor = descriptors.get(entityKey);
+
+            if(descriptor != null)
+            {
+                return descriptor;
+            }
+        }
+        finally {
+            entityDescriptorLock.readLock().unlock();
+        }
+
+        entityDescriptorLock.writeLock().lock();
+
+        try {
+
+            EntityDescriptor descriptor = new EntityDescriptor(entityClass, context);
+
+            if (descriptor.getPartition() != null) {
+                descriptor.getPartition().setPartitionValue(String.valueOf(partitionId));
+            }
+
+            descriptors.put(entityKey, descriptor);
+
+            // Get the latest System Entity
+            SystemEntity systemEntity = this.getSystemEntityByName(descriptor.getClazz().getName());
+
+            // If it does not exist, lets create a new one
+            if (systemEntity == null) {
+                systemEntity = new SystemEntity(descriptor);
+            }
+
+            checkForValidDescriptorPartition(descriptor, systemEntity);
+            checkForEntityChanges(descriptor, systemEntity);
+
+            return descriptor;
+        } finally {
+            entityDescriptorLock.writeLock().unlock();
+        }
     }
 
     /**
@@ -879,9 +921,47 @@ public class DefaultSchemaContext implements SchemaContext {
      * @since 1.0.0
      */
     public EntityDescriptor getBaseDescriptorForEntity(final Class entityClass) throws EntityException {
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(entityClass);
 
-        return getDescriptorForEntity(entity, "");
+        if(entityClass == null)
+            return null;
+        final String entityKey = entityClass.getName();
+
+        entityDescriptorLock.readLock().lock();
+
+        try {
+            EntityDescriptor descriptor = descriptors.get(entityKey);
+
+            if(descriptor != null)
+            {
+                return descriptor;
+            }
+        }
+        finally {
+            entityDescriptorLock.readLock().unlock();
+        }
+
+        entityDescriptorLock.writeLock().lock();
+
+        try {
+
+            EntityDescriptor descriptor = new EntityDescriptor(entityClass, context);
+            descriptors.put(entityKey, descriptor);
+
+            // Get the latest System Entity
+            SystemEntity systemEntity = this.getSystemEntityByName(entityKey);
+
+            // If it does not exist, lets create a new one
+            if (systemEntity == null) {
+                systemEntity = new SystemEntity(descriptor);
+            }
+
+            checkForValidDescriptorPartition(descriptor, systemEntity);
+            checkForEntityChanges(descriptor, systemEntity);
+
+            return descriptor;
+        } finally {
+            entityDescriptorLock.writeLock().unlock();
+        }
     }
 
     ///////////////////////////////////////////////////////////////
@@ -892,7 +972,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new HashMap<>();
+    private Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
 
     private ReadWriteLock relationshipControllerReadWriteLock = new ReentrantReadWriteLock(true);
     /**
@@ -948,7 +1028,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
+    private Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentWeakHashMap<>();
 
     /**
      * Method for creating a new index controller.

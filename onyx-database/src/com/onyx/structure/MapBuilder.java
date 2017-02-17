@@ -5,7 +5,6 @@ import com.onyx.structure.serializer.Serializers;
 import com.onyx.structure.store.Store;
 
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by tosborn1 on 7/30/15.
@@ -18,7 +17,7 @@ public interface MapBuilder {
      * Method get returns an instance of a hashmap
      *
      * @param name Name of the hashmap
-     * @return Instantiated hashmap.  This defaults to a the Bitmap implementation
+     * @return Instantiated hashmape.  This defaults to a the Bitmap implementation
      */
     Map getHashMap(String name);
 
@@ -53,14 +52,14 @@ public interface MapBuilder {
      *
      * @return Disk Set
      */
-    Set newHashSet();
+    Map newHashSet();
 
     /**
      * Create a new Hash Set.  The underlying map is a Scalable Disk Map
      * @param loadFactor Load factor for set
      * @return Disk Set
      */
-    Set newHashSet(int loadFactor);
+    Map newHashSet(int loadFactor);
 
     /**
      * Get the instance of a map which uses a skip list index
@@ -126,4 +125,11 @@ public interface MapBuilder {
      * @since 1.2.0
      */
     Map getDefaultMapByName(String name);
+
+    /**
+     * Create a new Map reference header
+     * @return the created header ripe for instantiating a new map
+     */
+    Header newMapHeader();
+
 }

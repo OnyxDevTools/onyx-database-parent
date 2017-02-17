@@ -44,7 +44,7 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     @Index(loadFactor = 3)
     protected long index;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition.class, inverse = "entries", loadFactor = 1)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition.class, inverse = "entries", loadFactor = 3)
     protected SystemPartition partition;
 
     public String getId()

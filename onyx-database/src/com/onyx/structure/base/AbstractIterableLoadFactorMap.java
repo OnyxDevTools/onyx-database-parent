@@ -15,21 +15,15 @@ import java.util.function.BiFunction;
  */
 public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
 
-    protected DefaultDiskMap<K, DiskSkipList<K, V>> defaultDiskMap = null;
+    protected DefaultDiskMap defaultDiskMap = null;
 
     /**
      * Constructor
      *
      * @param store
      */
-    public AbstractIterableLoadFactorMap(Store store, Header header, boolean isHeadless) {
-        super(store, header, isHeadless);
-        entries = new EntryCollectionMulti(fileStore, this);
-        values = new ValueCollectionMulti(fileStore, this);
-        keys = new KeyCollectionMulti(fileStore, this);
-        dict = new DictionaryCollectionMulti(fileStore, this);
-        maps = new MapCollection(fileStore, this);
-        references = new ReferenceCollectionMulti(fileStore, this);
+    public AbstractIterableLoadFactorMap(Store store, Header header, boolean isHeadless, boolean enableCaching) {
+        super(store, header, isHeadless, enableCaching);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,9 +31,6 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
     // Iterate-able properties on structure
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    protected ReferenceCollectionMulti references;
 
     /**
      * Getter for set of references
@@ -51,7 +42,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
     @Override
     @SuppressWarnings("unchecked")
     public Set referenceSet() {
-        return references;
+        return new ReferenceCollectionMulti<>();
     }
 
     /**
@@ -61,11 +52,10 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * @see KeyCollectionMulti
      * @see AbstractMultiNodeCollection
      */
-    protected KeyCollectionMulti keys;
 
     @Override
     public Set<K> keySet() {
-        return keys;
+        return new KeyCollectionMulti<>();
     }
 
     /**
@@ -74,10 +64,9 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * This is a collection of the underlying map structures.  It is used for
      * iterating through the sub structures.
      */
-    protected MapCollection maps;
 
     public Set<K> mapSet() {
-        return maps;
+        return new MapCollection<>();
     }
 
     /**
@@ -87,10 +76,9 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * @see DictionaryCollectionMulti
      * @see AbstractMultiNodeCollection
      */
-    protected DictionaryCollectionMulti dict;
 
     public Set<Map> dictionarySet() {
-        return dict;
+        return new DictionaryCollectionMulti<>();
     }
 
     // Getter for super entry set for the load factor map
@@ -116,11 +104,9 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * @see AbstractMultiNodeCollection
      */
 
-    protected ValueCollectionMulti values;
-
     @Override
     public Collection<V> values() {
-        return values;
+        return new ValueCollectionMulti<>();
     }
 
     /**
@@ -130,11 +116,10 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * @see KeyCollectionMulti
      * @see AbstractMultiNodeCollection
      */
-    protected EntryCollectionMulti entries;
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return entries;
+        return new EntryCollectionMulti<>();
     }
 
     /**
@@ -180,10 +165,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          * @param fileStore
          * @param diskMap
          */
-        public ValueCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public ValueCollectionMulti() {
+            super();
         }
 
         /**
@@ -239,10 +222,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          * @param fileStore
          * @param diskMap
          */
-        public DictionaryCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public DictionaryCollectionMulti() {
+            super();
         }
 
         /**
@@ -288,10 +269,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          * @param fileStore File storage mechanism
          * @param diskMap Parent object
          */
-        public MapCollection(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public MapCollection() {
+            super();
         }
 
         /**
@@ -336,10 +315,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          * @param fileStore
          * @param diskMap
          */
-        public KeyCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public KeyCollectionMulti() {
+            super();
         }
 
         /**
@@ -366,10 +343,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          * @param fileStore Storage mechanism for the data structure
          * @param diskMap Outer reference to data structure
          */
-        public ReferenceCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public ReferenceCollectionMulti() {
+            super();
         }
 
         /**
@@ -389,10 +364,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * @param <V>
      */
     protected class EntryCollectionMulti<V> extends AbstractMultiNodeCollection<V> implements Collection<V> {
-        public EntryCollectionMulti(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public EntryCollectionMulti() {
+            super();
         }
 
         @Override
@@ -409,13 +382,8 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
      * @param <E>
      */
     abstract class AbstractMultiNodeCollection<E> implements Set<E> {
-        protected Store fileStore; // Reference to outer document fileStore
 
-        protected AbstractIterableLoadFactorMap diskMap; // Just a handle on the outer class
-
-        public AbstractMultiNodeCollection(Store fileStore, AbstractIterableLoadFactorMap diskMap) {
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public AbstractMultiNodeCollection() {
         }
 
         /**
@@ -425,7 +393,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          */
         @Override
         public int size() {
-            return diskMap.size();
+            return AbstractIterableLoadFactorMap.this.size();
         }
 
         /**
@@ -435,7 +403,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
          */
         @Override
         public boolean isEmpty() {
-            return diskMap.isEmpty();
+            return AbstractIterableLoadFactorMap.this.isEmpty();
         }
 
         /**
@@ -471,7 +439,7 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
         @Override
         @Deprecated
         public boolean contains(Object o) {
-            return diskMap.containsValue(o);
+            return AbstractIterableLoadFactorMap.this.containsValue(o);
         }
 
         @Deprecated
@@ -741,7 +709,6 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
 
                 // Add all the other related nodes in the bitmap
                 for (int i = 0; i < defaultDiskMap.getLoadFactor(); i++) {
-
                     reference = node.next[i];
                     if (reference > 0) {
                         if (nodeEntry.level < (loadFactor - 2)) {
@@ -809,17 +776,6 @@ public class AbstractIterableLoadFactorMap<K,V> extends DiskSkipList<K,V> {
             @Override
             public int hashCode() {
                 return new Long(reference).hashCode();
-            }
-
-            @Override
-            public boolean equals(Object val) {
-                if (val == null)
-                    return false;
-
-                if (val.getClass() == AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry.class) {
-                    return ((AbstractIterableLoadFactorMap.AbstractNodeIterator.NodeEntry) val).reference == reference;
-                }
-                return false;
             }
         }
     }

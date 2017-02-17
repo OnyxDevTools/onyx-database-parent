@@ -5,6 +5,8 @@ import com.onyx.structure.node.SkipListHeadNode;
 import com.onyx.structure.node.SkipListNode;
 import com.onyx.structure.store.Store;
 
+import java.util.Map;
+
 /**
  * Created by tosborn1 on 1/7/17.
  * <p>
@@ -20,6 +22,10 @@ import com.onyx.structure.store.Store;
  */
 abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
 
+    public AbstractCachedSkipList()
+    {
+
+    }
     /**
      * Constructor defines the caching medium for the nodes and values.
      *
@@ -39,8 +45,15 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
      * @param headless  Whether the header should be ignored or not
      * @since 1.2.0
      */
-    AbstractCachedSkipList(Store fileStore, Header header, boolean headless) {
+    AbstractCachedSkipList(Store fileStore, Header header, boolean headless, boolean enableCaching) {
         super(fileStore, header, headless);
+        if(!enableCaching)
+        {
+            nodeCache = new EmptyMap();
+            valueCache = new EmptyMap();
+            keyCache = new EmptyMap();
+            valueByPositionCache = new EmptyMap();
+        }
     }
 
     /**

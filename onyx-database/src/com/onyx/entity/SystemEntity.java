@@ -18,7 +18,6 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
 {
     public SystemEntity()
     {
-
     }
 
     public SystemEntity(EntityDescriptor descriptor)
@@ -55,30 +54,30 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         this.getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
     }
 
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     @Attribute
     protected int primaryKey;
 
-    @Index(loadFactor = 1)
+    @Index(loadFactor = 3)
     @Attribute
     protected String name;
 
     @Attribute
     protected String className;
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemIdentifier.class, loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemIdentifier.class, loadFactor = 3)
     protected SystemIdentifier identifier;
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemPartition.class, loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemPartition.class, loadFactor = 3)
     protected SystemPartition partition;
 
-    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemAttribute.class, inverse = "entity", loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemAttribute.class, inverse = "entity", loadFactor = 3)
     protected List<SystemAttribute> attributes;
 
-    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemRelationship.class, inverse = "entity", loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemRelationship.class, inverse = "entity", loadFactor = 3)
     protected List<SystemRelationship> relationships;
 
-    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemIndex.class, inverse = "entity", loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemIndex.class, inverse = "entity", loadFactor = 3)
     protected List<SystemIndex> indexes;
 
     public int getPrimaryKey() {

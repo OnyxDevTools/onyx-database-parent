@@ -570,7 +570,18 @@ public class PartitionQueryController extends PartitionContext
 
     public void cleanup()
     {
-        temporaryDataFile.delete();
+        this.context = null;
+        this.temporaryDataFile.delete();
+        this.temporaryDataFile = null;
+        this.criteria = null;
+        this.classToScan = null;
+        this.descriptor = null;
+        this.recordController = null;
+        this.query = null;
+        this.temporaryDataFile = null;
+        this.persistenceManager = null;
+        this.defaultRecordController = null;
+        this.defaultDescriptor = null;
     }
 
 }

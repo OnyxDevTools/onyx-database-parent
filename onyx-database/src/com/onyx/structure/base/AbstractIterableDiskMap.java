@@ -23,10 +23,6 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      */
     public AbstractIterableDiskMap(Store store, Header header) {
         super(store, header);
-        entries = new EntryCollection(fileStore, this);
-        values = new ValueCollection(fileStore, this);
-        keys = new KeyCollection(fileStore, this);
-        dict = new DictionaryCollection(fileStore, this);
     }
 
     /**
@@ -39,10 +35,6 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     public AbstractIterableDiskMap(Store fileStore, Header header, boolean headless)
     {
         super(fileStore, header, headless);
-        entries = new EntryCollection(fileStore, this);
-        values = new ValueCollection(fileStore, this);
-        keys = new KeyCollection(fileStore, this);
-        dict = new DictionaryCollection(fileStore, this);
     }
 
 
@@ -52,7 +44,6 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    protected ReferenceCollection references;
 
     /**
      * Getter for set of references
@@ -64,21 +55,19 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
     @Override
     @SuppressWarnings("unchecked")
     public Set referenceSet() {
-        return references;
+        return new ReferenceCollection<>();
     }
 
     /**
      * Getter for set of keys
      *
      * @return
-     * @see AbstractIterableDiskMap.KeyCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.KeyCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
-    protected KeyCollection keys;
-
     @Override
     public Set<K> keySet() {
-        return keys;
+        return new KeyCollection<>();
     }
 
 
@@ -86,13 +75,11 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Getter for set of keys
      *
      * @return
-     * @see AbstractIterableDiskMap.DictionaryCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.DictionaryCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
-    protected DictionaryCollection dict;
-
     public Set<Map> dictionarySet() {
-        return dict;
+        return new DictionaryCollection<>();
     }
 
 
@@ -100,30 +87,26 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Getter for values
      *
      * @return
-     * @see AbstractIterableDiskMap.KeyCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.KeyCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
-
-    protected ValueCollection values;
-
     @Override
     public Collection<V> values() {
-        return values;
+        return new ValueCollection<>();
     }
 
     /**
      * Getter for values.  This contains lazy loaded disk structure entries
      *
      * @return
-     * @see AbstractIterableDiskMap.KeyCollection
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
-     * @see AbstractIterableDiskMap.DiskMapEntry
+     * @see AbstractIterableAbstractIterableDiskMap.this.KeyCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.DiskMapEntry
      */
-    protected EntryCollection entries;
 
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return entries;
+        return new EntryCollection();
     }
 
     /**
@@ -160,7 +143,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Class for sifting through values
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
     protected class ValueCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
@@ -169,10 +152,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          * @param fileStore
          * @param diskMap
          */
-        public ValueCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public ValueCollection() {
+            super();
         }
 
         /**
@@ -219,7 +200,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Class for sifting through values
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
     protected class DictionaryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
@@ -228,10 +209,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          * @param fileStore
          * @param diskMap
          */
-        public DictionaryCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public DictionaryCollection() {
+            super();
         }
 
         /**
@@ -268,7 +247,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Key Collection
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
     protected class KeyCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
@@ -277,10 +256,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          * @param fileStore
          * @param diskMap
          */
-        public KeyCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public KeyCollection() {
+            super();
         }
 
         /**
@@ -298,7 +275,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * Reference Collection
      *
      * @param <V>
-     * @see AbstractIterableDiskMap.AbstractNodeCollection
+     * @see AbstractIterableAbstractIterableDiskMap.this.AbstractNodeCollection
      */
     protected class ReferenceCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
         /**
@@ -307,10 +284,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          * @param fileStore Storage mechanism for data structure
          * @param diskMap outer data structure
          */
-        public ReferenceCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public ReferenceCollection() {
+            super();
         }
 
         /**
@@ -330,10 +305,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * @param <V>
      */
     protected class EntryCollection<V> extends AbstractNodeCollection<V> implements Collection<V> {
-        public EntryCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
-            super(fileStore, diskMap);
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public EntryCollection() {
+            super();
         }
 
         @Override
@@ -350,13 +323,8 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
      * @param <E>
      */
     abstract class AbstractNodeCollection<E> implements Set<E> {
-        protected Store fileStore; // Reference to outer document fileStore
 
-        protected AbstractIterableDiskMap diskMap; // Just a handle on the outer class
-
-        public AbstractNodeCollection(Store fileStore, AbstractIterableDiskMap diskMap) {
-            this.fileStore = fileStore;
-            this.diskMap = diskMap;
+        public AbstractNodeCollection() {
         }
 
         /**
@@ -366,7 +334,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public int size() {
-            return diskMap.size();
+            return AbstractIterableDiskMap.this.size();
         }
 
         /**
@@ -376,7 +344,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
          */
         @Override
         public boolean isEmpty() {
-            return diskMap.isEmpty();
+            return AbstractIterableDiskMap.this.isEmpty();
         }
 
         /**
@@ -412,7 +380,7 @@ public abstract class AbstractIterableDiskMap<K, V> extends AbstractCachedBitMap
         @Override
         @Deprecated
         public boolean contains(Object o) {
-            return diskMap.containsValue(o);
+            return AbstractIterableDiskMap.this.containsValue(o);
         }
 
         @Deprecated
