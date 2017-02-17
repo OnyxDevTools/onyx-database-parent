@@ -93,8 +93,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             EntityRelationshipManager newManager = new EntityRelationshipManager();
             newManager.add(entity, entityDescriptor.getIdentifier());
 
-            IndexHelper.saveAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), newReference.identifier, oldReference, relationshipObject);
-            RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, new EntityRelationshipManager(), context);
+            IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), newReference.identifier, oldReference, relationshipObject);
+            RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, new EntityRelationshipManager(), getContext());
         }
 
         // Cascade Delete. Make sure it is either ALL, or DELETE.
@@ -116,8 +116,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
                 if (relationshipObject != null && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
                 {
-                    IndexHelper.deleteAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(existingReference.identifier));
-                    RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, context);
+                    IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(existingReference.identifier));
+                    RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
                     getRecordControllerForEntity(relationshipObject).deleteWithId(existingReference.identifier);
                 }
 
@@ -182,8 +182,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             {
                 manager.add(relationshipObject, inverseDescriptor.getIdentifier());
 
-                IndexHelper.deleteAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(inverseIdentifier.identifier));
-                RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, context);
+                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(inverseIdentifier.identifier));
+                RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
 
                 inverseRecordController.deleteWithId(inverseIdentifier.identifier);
             }
@@ -245,7 +245,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
                 setRelationshipValue(relationshipDescriptor, entity, relationshipObject);
             }
 
-            RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, context);
+            RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, getContext());
         }
         else
         {

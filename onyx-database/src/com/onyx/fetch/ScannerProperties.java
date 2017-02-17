@@ -22,11 +22,11 @@ public class ScannerProperties
     public AttributeDescriptor attributeDescriptor = null;
     public boolean useParentDescriptor = true;
     protected Query query;
-    protected SchemaContext context;
+    protected String contextId;
 
     public ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, boolean useParentDescriptor, SchemaContext context)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
         this.descriptor = descriptor;
         this.attributeDescriptor = attributeDescriptor;
         this.recordController = context.getRecordController(descriptor);

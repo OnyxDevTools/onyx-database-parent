@@ -94,10 +94,10 @@ public class DefaultMapBuilder implements MapBuilder {
             path = fileSystemPath + File.separator + filePath;
 
         if (type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported()) {
-            this.storage = new MemoryMappedStore(path, this, context);
+            this.storage = new MemoryMappedStore(path, context);
         }
         if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
-            this.storage = new FileChannelStore(path, this, context);
+            this.storage = new FileChannelStore(path, context);
         } else if (type == StoreType.IN_MEMORY) {
             String storeId = String.valueOf(storeIdCounter.addAndGet(1));
             this.storage = new InMemoryStore(context, storeId);
@@ -194,12 +194,7 @@ public class DefaultMapBuilder implements MapBuilder {
      */
     @Override
     public Map getSkipListMap(Header header) {
-        return mapsByHeader.compute(header, (header1, map) -> {
-            if (map != null)
-                return map;
-
-            return newSkipListMap(storage, header);
-        });
+        return newSkipListMap(storage, header);
     }
 
 

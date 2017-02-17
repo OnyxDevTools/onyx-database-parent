@@ -116,12 +116,6 @@ public interface Store {
     void init(MapBuilder builder);
 
     /**
-     * Getter for schema context as it pertains to onyxdb
-     * @return
-     */
-    SchemaContext getContext();
-
-    /**
      * Delete File
      *
      */

@@ -52,8 +52,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
     transient protected EntityDescriptor entityDescriptor = null;
     transient protected PersistenceManager persistenceManager = null;
-//    transient protected PartitionContext partitionContext = null;
-    transient protected SchemaContext context;
+    transient protected String contextId;
 
     public LazyQueryCollection()
     {
@@ -69,28 +68,11 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
      */
     public LazyQueryCollection(EntityDescriptor entityDescriptor, Map identifiers, SchemaContext context)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
 
         this.persistenceManager = context.getSerializedPersistenceManager();
         this.identifiers = new ArrayList<>(identifiers.keySet());
         this.entityDescriptor = entityDescriptor;
-//        this.partitionContext = new PartitionContext(context, entityDescriptor);
-    }
-
-    /**
-     * Constructor
-     *
-     * @param entityDescriptor EntityDescriptor for records
-     * @param identifiers List of identifiers
-     * @param context Schema Context
-     */
-    public LazyQueryCollection(EntityDescriptor entityDescriptor, List<Object> identifiers, SchemaContext context)
-    {
-        this.context = context;
-        this.persistenceManager = context.getSerializedPersistenceManager();
-        this.identifiers = new ArrayList<>(identifiers);
-        this.entityDescriptor = entityDescriptor;
-        //this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     /**
@@ -354,9 +336,10 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         this.values = new WeakHashMap<>();
         this.identifiers = (List) bufferStream.getCollection();
         String className = bufferStream.getString();
-        String contextId = bufferStream.getString();
+        this.contextId = bufferStream.getString();
 
-        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+
+        SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
         } catch (EntityException e) {
@@ -365,13 +348,13 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
             e.printStackTrace();
         }
 //        this.partitionContext = new PartitionContext(context, entityDescriptor);
-        this.persistenceManager = this.context.getSystemPersistenceManager();
+        this.persistenceManager = context.getSystemPersistenceManager();
     }
 
     @Override
     public void write(BufferStream bufferStream) throws BufferingException {
         bufferStream.putCollection(this.getIdentifiers());
         bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
-        bufferStream.putString(this.context.getContextId());
+        bufferStream.putString(contextId);
     }
 }

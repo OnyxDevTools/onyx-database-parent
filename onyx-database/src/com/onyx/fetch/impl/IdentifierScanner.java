@@ -46,7 +46,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     {
         final Map<Long, Long> returnValue = new HashMap();
 
-        final RecordController recordController = context.getRecordController(descriptor);
+        final RecordController recordController = getContext().getRecordController(descriptor);
 
         // If it is an in clause
         if(criteria.getValue() instanceof List)
@@ -105,7 +105,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     {
         final Map<Long, Long> returnValue = new HashMap();
 
-        final RecordController recordController = context.getRecordController(descriptor);
+        final RecordController recordController = getContext().getRecordController(descriptor);
 
         Iterator<Long> iterator = existingValues.keySet().iterator();
 

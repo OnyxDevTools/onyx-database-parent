@@ -103,8 +103,8 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
             {
                 try
                 {
-                    final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                    final RecordController recordController = context.getRecordController(partitionDescriptor);
+                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                    final RecordController recordController = getContext().getRecordController(partitionDescriptor);
                     Map partitionResults = scanPartition(recordController, partition.getIndex());
                     results.putAll(partitionResults);
                 } catch (EntityException e)
@@ -139,7 +139,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     {
         final Map returnValue = new HashMap();
 
-        final RecordController recordController = context.getRecordController(descriptor);
+        final RecordController recordController = getContext().getRecordController(descriptor);
 
         Iterator iterator = existingValues.keySet().iterator();
 

@@ -26,7 +26,7 @@ public abstract class AbstractRecordController
 {
     protected DiskMap<Object, IManagedEntity> records = null;
     protected EntityDescriptor entityDescriptor;
-    protected SchemaContext context;
+    protected String contextId;
 
     /**
      * Constructor
@@ -35,7 +35,7 @@ public abstract class AbstractRecordController
      */
     public AbstractRecordController(EntityDescriptor descriptor, SchemaContext context)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
         this.entityDescriptor = descriptor;
         MapBuilder dataFile = context.getDataFile(entityDescriptor);
         records = (DiskMap)dataFile.getScalableMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());

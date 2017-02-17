@@ -32,12 +32,9 @@ public class AbstractRelationshipController extends PartitionContext
 
     protected RelationshipDescriptor defaultInverseRelationshipDescriptor;
 
-    protected SchemaContext context;
-
     public AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(context, context.getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass()));
-        this.context = context;
 
         // Assign the Entity Details
         this.relationshipDescriptor = relationshipDescriptor;

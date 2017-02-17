@@ -76,7 +76,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         criteria.setAttribute(criteria.getAttribute().replaceFirst(segments[0] + "\\.", ""));
 
         // Get the next scanner because we are not at the end of the line.  Otherwise, we would not have gotten to this place
-        final TableScanner tableScanner = ScannerFactory.getInstance(context).getScannerForQueryCriteria(criteria, relationshipDescriptor.getInverseClass(), temporaryDataFile, query, persistenceManager);
+        final TableScanner tableScanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(criteria, relationshipDescriptor.getInverseClass(), temporaryDataFile, query, persistenceManager);
 
         // Sweet, lets get the scanner.  Note, this very well can be recursive, but sooner or later it will get to the
         // other scanners
@@ -109,7 +109,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         final Iterator iterator = existingValues.keySet().iterator();
 
         relationshipDescriptor = descriptor.getRelationships().get(attribute);
-        final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
+        final RelationshipController relationshipController = getContext().getRelationshipController(relationshipDescriptor);
         final RecordController inverseRecordController = getDefaultInverseRecordController();
 
         List<RelationshipReference> relationshipIdentifiers = null;
@@ -158,7 +158,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      */
     protected RecordController getDefaultInverseRecordController() throws EntityException
     {
-        final EntityDescriptor inverseDescriptor = context.getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
-        return context.getRecordController(inverseDescriptor);
+        final EntityDescriptor inverseDescriptor = getContext().getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
+        return getContext().getRecordController(inverseDescriptor);
     }
 }

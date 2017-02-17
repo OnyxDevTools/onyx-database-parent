@@ -27,7 +27,6 @@ import java.util.*;
 public class PartitionQueryController extends PartitionContext
 {
     protected QueryCriteria criteria;
-    protected SchemaContext context;
     protected Class classToScan;
     protected EntityDescriptor descriptor;
     protected RecordController recordController;
@@ -47,7 +46,6 @@ public class PartitionQueryController extends PartitionContext
 
         super(context, descriptor);
         this.criteria = criteria;
-        this.context = context;
         this.classToScan = classToScan;
         this.descriptor = descriptor;
         this.recordController = context.getRecordController(descriptor);
@@ -75,7 +73,7 @@ public class PartitionQueryController extends PartitionContext
             criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_EQUAL);
         }
 
-        final TableScanner scanner = ScannerFactory.getInstance(context).getScannerForQueryCriteria(criteria, classToScan, temporaryDataFile, query, persistenceManager);
+        final TableScanner scanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(criteria, classToScan, temporaryDataFile, query, persistenceManager);
 
         if (startingResults != null)
         {
@@ -185,7 +183,7 @@ public class PartitionQueryController extends PartitionContext
                 value = recordController.getWithReferenceId((long)index);
             }
             if(value != null) {
-                RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), context);
+                RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), getContext());
                 returnValue.add(value);
             }
             i++;
@@ -219,7 +217,7 @@ public class PartitionQueryController extends PartitionContext
      */
     public Map sort(QueryOrder[] orderBy, Map indexValues) throws EntityException
     {
-        final Map retVal = new TreeMap(new PartitionSortCompare(query, orderBy, indexValues, descriptor, context, this));
+        final Map retVal = new TreeMap(new PartitionSortCompare(query, orderBy, indexValues, descriptor, getContext(), this));
         retVal.putAll(indexValues);
         return retVal;
     }
@@ -239,7 +237,7 @@ public class PartitionQueryController extends PartitionContext
      */
     public Map<Object, Map<String, Object>> hydrateQueryAttributes(String[] attributes, Map indexValues, boolean forSort, long start, long count) throws EntityException
     {
-        final List<ScannerProperties> scanObjects = ScannerProperties.getScannerProperties(attributes, descriptor, query, context);
+        final List<ScannerProperties> scanObjects = ScannerProperties.getScannerProperties(attributes, descriptor, query, getContext());
 
         Map<Object, Map<String, Object>> results = null;
         if(!forSort)
@@ -374,16 +372,16 @@ public class PartitionQueryController extends PartitionContext
             {
                 PartitionReference ref = (PartitionReference) referenceId;
                 entity = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
-                IndexHelper.deleteAllIndexesForEntity(context, getDescriptorWithPartitionId(ref.partition), ref.reference);
+                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorWithPartitionId(ref.partition), ref.reference);
             }
             else
             {
                 entity = recordController.getWithReferenceId((long)referenceId);
-                IndexHelper.deleteAllIndexesForEntity(context, descriptor, (long)referenceId);
+                IndexHelper.deleteAllIndexesForEntity(getContext(), descriptor, (long)referenceId);
             }
 
 
-            RelationshipHelper.deleteAllRelationshipsForEntity(entity, new EntityRelationshipManager(), context);
+            RelationshipHelper.deleteAllRelationshipsForEntity(entity, new EntityRelationshipManager(), getContext());
 
             if(referenceId instanceof PartitionReference)
             {
@@ -467,7 +465,7 @@ public class PartitionQueryController extends PartitionContext
                 // Identify whether the partition has changed
                 if(referenceId instanceof PartitionReference
                         && PartitionHelper.isPartitionField(updateInstruction.getFieldName(), entity, descriptor)
-                        && !CompareUtil.compare(oldPartitionValue = PartitionHelper.getPartitionFieldValue(entity, context), updateInstruction.getValue(), QueryCriteriaOperator.EQUAL))
+                        && !CompareUtil.compare(oldPartitionValue = PartitionHelper.getPartitionFieldValue(entity, getContext()), updateInstruction.getValue(), QueryCriteriaOperator.EQUAL))
                 {
                     updatedPartition = true;
                 }
@@ -482,8 +480,8 @@ public class PartitionQueryController extends PartitionContext
 
                     if(referenceId instanceof PartitionReference && query.getPartition() == QueryPartitionMode.ALL) // This is in the case it is a mixed bag of partitioned data.  NOT EFFICIENT
                     {
-                        EntityDescriptor oldDescriptor = context.getDescriptorForEntity(entity, PartitionHelper.getPartitionFieldValue(entity, context));
-                        IndexController previousIndexController = context.getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
+                        EntityDescriptor oldDescriptor = getContext().getDescriptorForEntity(entity, PartitionHelper.getPartitionFieldValue(entity, getContext()));
+                        IndexController previousIndexController = getContext().getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                         previousIndexController.delete(((PartitionReference) referenceId).reference);
                     }
@@ -494,8 +492,8 @@ public class PartitionQueryController extends PartitionContext
                 }
                 else if(updatedPartition == true && updateInstruction.getIndexController() != null && referenceId instanceof PartitionReference)
                 {
-                    EntityDescriptor oldDescriptor = context.getDescriptorForEntity(entity, oldPartitionValue);
-                    IndexController previousIndexController = context.getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
+                    EntityDescriptor oldDescriptor = getContext().getDescriptorForEntity(entity, oldPartitionValue);
+                    IndexController previousIndexController = getContext().getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                     // Delete old index key and insert new one in new partition
                     previousIndexController.delete(((PartitionReference) referenceId).reference);
@@ -508,14 +506,14 @@ public class PartitionQueryController extends PartitionContext
             {
                 if(updatedPartition)
                 {
-                    context.getDescriptorForEntity(entity);
+                    getContext().getDescriptorForEntity(entity);
 
                     PartitionReference ref = (PartitionReference) referenceId;
                     getRecordControllerForPartition(ref.partition).delete(entity);
 
                     if(possibleNewRecordControllerForPartition == null)
                     {
-                        possibleNewRecordControllerForPartition = context.getRecordController(context.getDescriptorForEntity(entity));
+                        possibleNewRecordControllerForPartition = getContext().getRecordController(getContext().getDescriptorForEntity(entity));
                     }
                     possibleNewRecordControllerForPartition.save(entity); // Re-partitioning this will be slooooowwww
                     newReferenceId = possibleNewRecordControllerForPartition.getReferenceId(identifier);
@@ -547,8 +545,8 @@ public class PartitionQueryController extends PartitionContext
                 else if(updatedPartition == true && updateInstruction.getIndexController() != null && referenceId instanceof PartitionReference)
                 {
 
-                    EntityDescriptor newDescriptor = context.getDescriptorForEntity(entity);
-                    IndexController newIndexController = context.getIndexController(newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
+                    EntityDescriptor newDescriptor = getContext().getDescriptorForEntity(entity);
+                    IndexController newIndexController = getContext().getIndexController(newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                     final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
@@ -570,7 +568,7 @@ public class PartitionQueryController extends PartitionContext
 
     public void cleanup()
     {
-        this.context = null;
+        this.contextId = null;
         this.temporaryDataFile.delete();
         this.temporaryDataFile = null;
         this.criteria = null;

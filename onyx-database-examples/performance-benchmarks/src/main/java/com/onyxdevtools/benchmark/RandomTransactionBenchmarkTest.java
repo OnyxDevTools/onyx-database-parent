@@ -32,7 +32,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
     final BlockingQueue<Integer> cachedStatRushingYards = new LinkedBlockingQueue();
     final BlockingQueue<String> cachedPlayerFirstNames = new LinkedBlockingQueue();
 
-    protected int NUMBER_OF_UPDATES = 3000000;
+    protected int NUMBER_OF_UPDATES = 30000;
     protected int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
 
     /**

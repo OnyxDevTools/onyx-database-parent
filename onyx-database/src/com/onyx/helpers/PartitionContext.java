@@ -6,6 +6,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.RecordController;
 import com.onyx.structure.MapBuilder;
 
@@ -24,7 +25,7 @@ import java.util.function.BiFunction;
 public class PartitionContext
 {
 
-    protected SchemaContext context = null;
+    protected String contextId = null;
     protected RecordController defaultRecordController = null;
     protected EntityDescriptor defaultDescriptor = null;
 
@@ -36,7 +37,7 @@ public class PartitionContext
      */
     public PartitionContext(SchemaContext context, EntityDescriptor descriptor)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
         this.defaultDescriptor = descriptor;
         this.defaultRecordController = context.getRecordController(this.defaultDescriptor);
     }
@@ -54,7 +55,7 @@ public class PartitionContext
     {
         if(partitionId == 0)
         {
-            return this.context.getDataFile(this.defaultDescriptor);
+            return this.getContext().getDataFile(this.defaultDescriptor);
         }
 
         final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
@@ -64,7 +65,7 @@ public class PartitionContext
             {
                 try
                 {
-                    return context.getPartitionDataFile(defaultDescriptor, partitionId);
+                    return getContext().getPartitionDataFile(defaultDescriptor, partitionId);
                 } catch (EntityException e)
                 {
                     exceptionWrapper.exception = e;
@@ -95,7 +96,7 @@ public class PartitionContext
         public PartitionKey(IManagedEntity entity) throws EntityException
         {
             this.entityType = entity.getClass();
-            this.partitionVal = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
+            this.partitionVal = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, getContext()));
         }
 
         @Override
@@ -122,7 +123,7 @@ public class PartitionContext
 
     public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws EntityException
     {
-        if(PartitionHelper.hasPartitionField(entity, context))
+        if(PartitionHelper.hasPartitionField(entity, getContext()))
         {
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
@@ -135,7 +136,7 @@ public class PartitionContext
                     {
                         try
                         {
-                            return context.getDescriptorForEntity(entity);
+                            return getContext().getDescriptorForEntity(entity);
                         }
                         catch (EntityException e)
                         {
@@ -175,13 +176,13 @@ public class PartitionContext
                     {
                         try
                         {
-                            SystemPartitionEntry partitionEntry = context.getPartitionWithId(defaultDescriptor.getClazz(), partitionId);
+                            SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(defaultDescriptor.getClazz(), partitionId);
                             if(partitionEntry == null)
                             {
                                 return defaultDescriptor;
                             }
 
-                            return context.getDescriptorForEntity(defaultDescriptor.getClazz(), partitionEntry.getValue());
+                            return getContext().getDescriptorForEntity(defaultDescriptor.getClazz(), partitionEntry.getValue());
                         }
                         catch (EntityException e)
                         {
@@ -206,7 +207,7 @@ public class PartitionContext
 
     public RecordController getRecordControllerForEntity(IManagedEntity entity) throws EntityException
     {
-        if(PartitionHelper.hasPartitionField(entity, context))
+        if(PartitionHelper.hasPartitionField(entity, getContext()))
         {
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
@@ -219,7 +220,7 @@ public class PartitionContext
                     {
                         try
                         {
-                            return context.getRecordController(getDescriptorForEntity(entity));
+                            return getContext().getRecordController(getDescriptorForEntity(entity));
                         }
                         catch (EntityException e)
                         {
@@ -258,7 +259,7 @@ public class PartitionContext
                         try
                         {
                             EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
-                            return context.getRecordController(inverseDescriptor);
+                            return getContext().getRecordController(inverseDescriptor);
                         }
                         catch (EntityException e)
                         {
@@ -284,7 +285,7 @@ public class PartitionContext
 
     public MapBuilder getDataFileForEntity(IManagedEntity entity) throws EntityException
     {
-        if (PartitionHelper.hasPartitionField(entity, context))
+        if (PartitionHelper.hasPartitionField(entity, getContext()))
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
@@ -295,7 +296,7 @@ public class PartitionContext
                 }
                 try
                 {
-                    return context.getDataFile(getDescriptorForEntity(entity));
+                    return getContext().getDataFile(getDescriptorForEntity(entity));
                 } catch (EntityException e)
                 {
                     exceptionWrapper.exception = e;
@@ -309,12 +310,12 @@ public class PartitionContext
             }
 
             if(dataFile == null)
-                return this.context.getDataFile(this.defaultDescriptor);
+                return this.getContext().getDataFile(this.defaultDescriptor);
             return dataFile;
         }
         else
         {
-            return this.context.getDataFile(this.defaultDescriptor);
+            return this.getContext().getDataFile(this.defaultDescriptor);
         }
     }
 
@@ -324,7 +325,7 @@ public class PartitionContext
 
     public long getPartitionId(IManagedEntity entity) throws EntityException
     {
-        if (PartitionHelper.hasPartitionField(entity, context))
+        if (PartitionHelper.hasPartitionField(entity, getContext()))
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
@@ -338,12 +339,12 @@ public class PartitionContext
                     }
                     try
                     {
-                        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
+                        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, getContext());
                         if (partitionValue == null || partitionValue == PartitionHelper.NULL_PARTITION)
                         {
                             return 0l;
                         }
-                        return context.getPartitionWithValue(partitionKey.entityType, partitionKey.partitionVal).getIndex();
+                        return getContext().getPartitionWithValue(partitionKey.entityType, partitionKey.partitionVal).getIndex();
                     }
                     catch (EntityException e)
                     {
@@ -364,5 +365,10 @@ public class PartitionContext
         {
             return 0;
         }
+    }
+
+    protected SchemaContext getContext()
+    {
+        return DefaultSchemaContext.registeredSchemaContexts.get(contextId);
     }
 }

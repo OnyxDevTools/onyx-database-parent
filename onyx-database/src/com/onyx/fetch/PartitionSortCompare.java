@@ -26,7 +26,7 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
     protected List<Map<Object, Object>> parentObjects = new ArrayList<>();
     protected List<Map<Object, Object>> childrenObjects = new ArrayList<>();
     protected Query query;
-    protected SchemaContext context;
+    protected String context;
     protected PartitionQueryController queryController;
 
     /**
@@ -40,7 +40,7 @@ public class PartitionSortCompare<T> extends PartitionContext implements Compara
     {
         super(context, descriptor);
 
-        this.context = context;
+        this.contextId = context.getContextId();
         this.query = query;
         final String attributes[] = new String[orderBy.length];
         int i = 0;

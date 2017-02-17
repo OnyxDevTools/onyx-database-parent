@@ -124,8 +124,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                     relationshipObjectIdentifier = new RelationshipReference(inverseRecordController.save(relationshipObject), getPartitionId(relationshipObject));
 
-                    IndexHelper.saveAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), relationshipObjectIdentifier.identifier, oldReference, relationshipObject);
-                    RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, newManager, context);
+                    IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), relationshipObjectIdentifier.identifier, oldReference, relationshipObject);
+                    RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, newManager, getContext());
 
                     // The record exists
                     saveRelationship = true;
@@ -242,7 +242,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
         if (relationshipDescriptor.getFetchPolicy() == FetchPolicy.LAZY && !force)
         {
-            relationshipObjects = new LazyRelationshipCollection(defaultDescriptor, existingRelationshipObjects, context);
+            relationshipObjects = new LazyRelationshipCollection(defaultDescriptor, existingRelationshipObjects, getContext());
         }
         else if (relationshipObjects == null && !(relationshipObjects instanceof LazyRelationshipCollection))
         {
@@ -278,7 +278,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
                 {
-                    RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, context);
+                    RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, getContext());
                 }
                 relationshipObjects.add(relationshipObject);
 
@@ -360,12 +360,12 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
     {
-        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.context);
+        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.getContext());
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         RelationshipReference entityId = null;
         if(partitionValue != "" && partitionValue != null) {
-            SystemPartitionEntry relationshipDescriptor = this.context.getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.context));
+            SystemPartitionEntry relationshipDescriptor = this.getContext().getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.getContext()));
             entityId = new RelationshipReference(indexValue, relationshipDescriptor.getIndex());
         } else {
             entityId = new RelationshipReference(indexValue, 0L);

@@ -71,8 +71,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 executorService.execute(() -> {
                     try
                     {
-                        final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                        final IndexController partitionIndexController = context.getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                        final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                        final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
                         Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
                         results.putAll(partitionResults);
                         countDownLatch.countDown();
@@ -178,8 +178,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                     {
                         try
                         {
-                            final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                            final IndexController partitionIndexController = context.getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                            final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
                             Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
 
                             results.putAll(partitionResults);
@@ -218,8 +218,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 {
                     try
                     {
-                        final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                        final IndexController partitionIndexController = context.getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                        final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                        final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
                         Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
 
                         results.putAll(partitionResults);

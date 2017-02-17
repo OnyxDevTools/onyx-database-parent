@@ -1,6 +1,7 @@
 package com.onyx.structure.store;
 
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 import com.onyx.structure.serializer.ObjectSerializable;
@@ -23,8 +24,8 @@ public class FileChannelStore implements Store
 {
 
     protected FileChannel channel;
-    protected SchemaContext context;
     protected String filePath;
+    protected String contextId = "";
 
     @Override
     public String getFilePath() {
@@ -48,12 +49,13 @@ public class FileChannelStore implements Store
      * Constructor open file
      * @param filePath
      */
-    public FileChannelStore(String filePath, MapBuilder builder, SchemaContext context)
+    public FileChannelStore(String filePath, SchemaContext context)
     {
         this.filePath = filePath;
         open(filePath);
         this.setSize();
-        this.context = context;
+        if(context != null)
+            this.contextId = context.getContextId();
     }
 
     public FileChannelStore()
@@ -68,7 +70,7 @@ public class FileChannelStore implements Store
     {
         final Map<Short, String> mapById = (Map<Short, String>) builder.getDefaultMapByName(SERIALIZERS_MAP_NAME);
         final Map<String, Short> mapByName = (Map<String, Short>) builder.getDefaultMapByName(SERIALIZERS_MAP_ID);
-        serializers = new Serializers(mapById, mapByName, context);
+        serializers = new Serializers(mapById, mapByName, DefaultSchemaContext.registeredSchemaContexts.get(contextId));
     }
 
 
@@ -423,12 +425,6 @@ public class FileChannelStore implements Store
     @Override
     public long getFileSize() {
         return fileSize.get();
-    }
-
-    @Override
-    public SchemaContext getContext()
-    {
-        return this.context;
     }
 
     /**

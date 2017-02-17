@@ -25,7 +25,6 @@ public abstract class AbstractTableScanner extends PartitionContext
     protected ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     protected QueryCriteria criteria;
-    protected SchemaContext context;
     protected Class classToScan;
     protected EntityDescriptor descriptor;
     protected OffsetField fieldToGrab = null;
@@ -48,9 +47,7 @@ public abstract class AbstractTableScanner extends PartitionContext
         this.criteria = criteria;
         this.classToScan = classToScan;
         this.descriptor = descriptor;
-        this.context = context;
         this.query = query;
-        this.context = context;
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);

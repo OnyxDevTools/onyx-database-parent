@@ -1,7 +1,6 @@
 package com.onyx.structure.store;
 
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.structure.MapBuilder;
 import com.onyx.structure.serializer.ObjectBuffer;
 
 import java.nio.ByteBuffer;
@@ -16,11 +15,10 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
     /**
      * Constructor open file
      *
-     * @param builder
      */
     public InMemoryStore(SchemaContext context, String storeId) {
         super();
-        this.context = context;
+        this.contextId = context.getContextId();
         open(storeId);
         this.setSize();
     }

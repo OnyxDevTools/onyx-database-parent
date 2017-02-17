@@ -113,9 +113,9 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                 futures.add(executorService.submit(() -> {
                 try
                 {
-                    final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
-                    final MapBuilder dataFile = context.getDataFile(partitionDescriptor);
+                    final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
                     DiskMap recs = (DiskMap)dataFile.getScalableMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
                     Map partitionResults = scanPartition(recs, partition.getIndex());
