@@ -336,7 +336,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @return Instantiated disk map
      */
     private DiskMap newScalableMap(Store store, Header header, int loadFactor) {
-        if(loadFactor < 6)
+        if(loadFactor < 5)
             return new DiskMultiHashMap(store, header, loadFactor);
         return new DiskMultiMatrixHashMap(store, header, loadFactor);
     }
@@ -365,7 +365,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @since 1.2.0
      */
     public DiskMap newHashMap(Header header, int loadFactor) {
-        return new DiskMultiHashMap(storage, header, loadFactor);
+        return new DiskMultiHashMap(storage, header, loadFactor, false);
     }
 
     /**

@@ -32,7 +32,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
     private ThreadLocal<SkipListHeadNode> threadLocalHead; // Default threadLocalHead of the SkipList
     private SkipListHeadNode headNode;
-    Map<Long, SkipListHeadNode> nodeCache = new ConcurrentWeakHashMap<>();
+    protected Map<Long, SkipListHeadNode> nodeCache = new ConcurrentWeakHashMap<>();
 
     /**
      * Constructor with file store

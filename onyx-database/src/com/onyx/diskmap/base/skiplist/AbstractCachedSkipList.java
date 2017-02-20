@@ -24,8 +24,8 @@ import java.util.Map;
 abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
 
     // Caching maps
-    private Map<K, SkipListNode> keyCache = new ConcurrentWeakHashMap<>();
-    private Map<Long, V> valueByPositionCache = new ConcurrentWeakHashMap<>();
+    protected Map<K, SkipListNode> keyCache = new ConcurrentWeakHashMap<>();
+    protected Map<Long, V> valueByPositionCache = new ConcurrentWeakHashMap<>();
 
     /**
      * Constructor defines the caching medium for the nodes and values.
@@ -67,7 +67,6 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
         nodeCache.put(newNode.position, newNode);
         keyCache.put(key, newNode);
         valueByPositionCache.put(newNode.recordPosition, value);
-//        valueCache.put(key, value);
         return newNode;
     }
 

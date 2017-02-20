@@ -16,8 +16,8 @@ import java.util.Map;
  */
 public abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
 
-    private Map<Integer, Long> cache;
-    private Map<Integer, Integer> mapCache;
+    protected Map<Integer, Long> cache;
+    protected Map<Integer, Integer> mapCache;
 
     /**
      * Constructor

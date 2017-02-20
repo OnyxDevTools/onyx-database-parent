@@ -1068,7 +1068,9 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     public MapBuilder createTemporaryMapBuilder() {
         try {
-            return new DefaultMapBuilder(File.createTempFile("query-temp", "db").getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, false);
+            File file = File.createTempFile("query-temp", "db");
+            file.deleteOnExit();
+            return new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, false);
         } catch (IOException e) {
             return null;
         }

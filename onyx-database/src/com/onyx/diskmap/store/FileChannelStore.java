@@ -32,10 +32,6 @@ public class FileChannelStore implements Store
     // This is an internal structure only used to store serializers
     public Serializers serializers = null;
 
-    // This is an internal structure only used to store serializers
-    protected TreeSet<ReclaimedSpace> reclaim = new TreeSet<ReclaimedSpace>();
-
-
     /**
      * Constructor open file
      * @param filePath
@@ -378,25 +374,6 @@ public class FileChannelStore implements Store
      */
     public long allocate(int size)
     {
-        synchronized(reclaim)
-        {
-            if (reclaim.size() > 0)
-            {
-                final ReclaimedSpace space = reclaim.higher(new ReclaimedSpace(0, size));
-                if (space != null)
-                {
-                    long retVal = space.position;
-                    reclaim.remove(space);
-                    if (size + 20 < space.size) // Check to see if the remainder is > 20.  If not, its too small to worry about
-                    {
-                        space.size -= size;
-                        space.position += size;
-                        reclaim.add(space);
-                    }
-                    return retVal;
-                }
-            }
-        }
         final ObjectBuffer buffer = new ObjectBuffer(serializers);
         long newFileSize = fileSize.getAndAdd(size);
         try {
@@ -406,21 +383,6 @@ public class FileChannelStore implements Store
         }
         this.write(buffer, 0);
         return newFileSize;
-    }
-
-    /**
-     * De-allocates a record
-     *
-     * @param position
-     * @param size
-     * @return
-     */
-    public void deallocate(long position, int size)
-    {
-        synchronized (reclaim)
-        {
-            reclaim.add(new ReclaimedSpace(position, size));
-        }
     }
 
     @Override
@@ -440,7 +402,6 @@ public class FileChannelStore implements Store
     public void delete()
     {
         final File dataFile = new File(filePath);
-        if(dataFile.exists())
-            dataFile.delete();
+        dataFile.delete();
     }
 }

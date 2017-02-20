@@ -2,7 +2,7 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.OrderedDiskMap;
-import com.onyx.diskmap.base.concurrent.DefaultLevelReadWriteLock;
+import com.onyx.diskmap.base.concurrent.*;
 import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
 import com.onyx.diskmap.node.CombinedIndexHashNode;
 import com.onyx.diskmap.node.Header;
@@ -23,7 +23,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K, V> {
 
-    private DefaultLevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
+    private LevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
 
     /**
      * Constructor
@@ -34,6 +34,27 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      */
     public DiskMultiHashMap(Store fileStore, Header header, int loadFactor) {
         super(fileStore, header, true, loadFactor);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param fileStore File storage mechanism
+     * @param header    Pointer to the DiskMap
+     *
+     * @since 1.2.0
+     */
+    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, boolean enableCaching) {
+        super(fileStore, header, true, loadFactor);
+        if(!enableCaching)
+        {
+            cache = new EmptyMap();
+            mapCache = new EmptyMap();
+            keyCache = new EmptyMap();
+            valueByPositionCache = new EmptyMap();
+            nodeCache = new EmptyMap();
+            levelReadWriteLock = new EmptyLevelReadWriteLock();
+        }
     }
 
     /**
