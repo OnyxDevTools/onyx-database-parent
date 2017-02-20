@@ -10,7 +10,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;
 import com.onyx.serialization.CustomAnnotationInspector;
-import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectBuffer;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;

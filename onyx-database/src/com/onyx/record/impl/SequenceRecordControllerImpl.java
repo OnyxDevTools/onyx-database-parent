@@ -9,8 +9,8 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,6 +27,8 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
 
     protected Map<Integer, Long> metadata = null;
 
+    private static final int METADATA_MAP_LOAD_FACTOR = 1;
+
     /**
      * Constructor including the entity descriptor
      *
@@ -37,7 +39,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
         super(entityDescriptor, context);
 
         MapBuilder dataFile = context.getDataFile(entityDescriptor);
-        metadata = (DiskMap)dataFile.getSkipListMap("metadata" + entityDescriptor.getClazz().getName());
+        metadata = (DiskMap)dataFile.getHashMap("metadata" + entityDescriptor.getClazz().getName(), METADATA_MAP_LOAD_FACTOR);
 
         // Initialize the sequence key
         Long val = metadata.get(LAST_SEQUENCE_VALUE);

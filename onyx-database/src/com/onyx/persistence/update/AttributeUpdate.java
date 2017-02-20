@@ -4,8 +4,8 @@ import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.Externalizable;
 import java.io.IOException;

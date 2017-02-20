@@ -1,8 +1,8 @@
 package com.onyx.persistence.query;
 
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.IOException;
 import java.io.Serializable;

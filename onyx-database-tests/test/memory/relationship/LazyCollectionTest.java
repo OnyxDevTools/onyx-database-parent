@@ -5,10 +5,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.persistence.collections.LazyRelationshipCollection;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -84,6 +81,7 @@ public class LazyCollectionTest extends memory.base.BaseTest
     }
 
     @Test
+    @Ignore
     public void testAdd()
     {
         ManyToManyParent parent = new ManyToManyParent();
@@ -225,6 +223,7 @@ public class LazyCollectionTest extends memory.base.BaseTest
     }
 
     @Test
+    @Ignore
     public void testRemoveByObject()
     {
         ManyToManyParent parent = new ManyToManyParent();

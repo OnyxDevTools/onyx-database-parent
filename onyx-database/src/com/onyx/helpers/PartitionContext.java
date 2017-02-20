@@ -8,7 +8,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.RecordController;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 
 import java.util.Collections;
 import java.util.Map;

@@ -27,10 +27,9 @@ import com.onyx.record.impl.SequenceRecordControllerImpl;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
-import com.onyx.structure.DefaultMapBuilder;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.ConcurrentWeakHashMap;
-import com.onyx.structure.store.StoreType;
+import com.onyx.diskmap.DefaultMapBuilder;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.store.StoreType;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
 import com.onyx.util.FileUtil;
@@ -45,8 +44,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -327,7 +326,7 @@ public class DefaultSchemaContext implements SchemaContext {
     protected FileChannel lastWalFileChannel = null;
 
     // Re-entrant lock for creation of WAL File
-    protected ReentrantLock transactionFileLock = new ReentrantLock();
+    protected Boolean transactionFileLock = new Boolean(true);
 
     /**
      * Get WAL Transaction File. This will get the appropriate file channel and return it
@@ -337,63 +336,61 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     @Override
     public FileChannel getTransactionFile() throws TransactionException {
-        transactionFileLock.lock();
+        synchronized (transactionFileLock) {
 
-        try {
+            try {
+                if (lastWalFileChannel == null) {
 
-            if (lastWalFileChannel == null) {
+                    // Create the journaling directory if it does'nt exist
+                    final String directory = getWALDirectory();
+                    final Path journalingPath = Paths.get(directory);
 
-                // Create the journaling directory if it does'nt exist
-                final String directory = getWALDirectory();
-                final Path journalingPath = Paths.get(directory);
+                    if (!Files.exists(journalingPath)) {
+                        Files.createDirectories(journalingPath);
+                    }
 
-                if (!Files.exists(journalingPath)) {
-                    Files.createDirectories(journalingPath);
+                    // Grab the last used WAL File
+                    final String[] directoryListing = new File(directory).list();
+                    Arrays.sort(directoryListing);
+
+                    File lastWalFile = null;
+
+                    if (directoryListing.length > 0) {
+                        String fileName = directoryListing[directoryListing.length - 1];
+                        fileName = fileName.replace(".wal", "");
+
+                        journalFileIndex.addAndGet(Integer.valueOf(fileName));
+                    }
+
+                    lastWalFile = new File(directory + journalFileIndex.get() + ".wal");
+
+                    if (!lastWalFile.exists()) {
+                        lastWalFile.createNewFile();
+                    }
+
+                    // Open file channel
+                    lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
                 }
 
-                // Grab the last used WAL File
-                final String[] directoryListing = new File(directory).list();
-                Arrays.sort(directoryListing);
+                // If the last wal file exceeds longSize limit threshold, create a new one
+                if (lastWalFileChannel.size() > MAX_JOURNAL_SIZE) {
 
-                File lastWalFile = null;
+                    // Close the previous
+                    lastWalFileChannel.force(true);
+                    lastWalFileChannel.close();
 
-                if (directoryListing.length > 0) {
-                    String fileName = directoryListing[directoryListing.length - 1];
-                    fileName = fileName.replace(".wal", "");
-
-                    journalFileIndex.addAndGet(Integer.valueOf(fileName));
-                }
-
-                lastWalFile = new File(directory + journalFileIndex.get() + ".wal");
-
-                if (!lastWalFile.exists()) {
+                    final String directory = getWALDirectory();
+                    final File lastWalFile = new File(directory + journalFileIndex.addAndGet(1) + ".wal");
                     lastWalFile.createNewFile();
+
+                    lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
                 }
 
-                // Open file channel
-                lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
+                return lastWalFileChannel;
+
+            } catch (IOException e) {
+                throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE);
             }
-
-            // If the last wal file exceeds longSize limit threshold, create a new one
-            if (lastWalFileChannel.size() > MAX_JOURNAL_SIZE) {
-
-                // Close the previous
-                lastWalFileChannel.force(true);
-                lastWalFileChannel.close();
-
-                final String directory = getWALDirectory();
-                final File lastWalFile = new File(directory + journalFileIndex.addAndGet(1) + ".wal");
-                lastWalFile.createNewFile();
-
-                lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
-            }
-
-            return lastWalFileChannel;
-
-        } catch (IOException e) {
-            throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE);
-        } finally {
-            transactionFileLock.unlock();
         }
     }
 
@@ -627,7 +624,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
     protected AtomicLong partitions = new AtomicLong(0);
 
-    protected ReadWriteLock entityDescriptorLock = new ReentrantReadWriteLock(true);
+    protected ReadWriteLock entityDescriptorLock = new ReentrantReadWriteLock(false);
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -652,12 +649,10 @@ public class DefaultSchemaContext implements SchemaContext {
         try {
             EntityDescriptor descriptor = descriptors.get(entityKey);
 
-            if(descriptor != null)
-            {
+            if (descriptor != null) {
                 return descriptor;
             }
-        }
-        finally {
+        } finally {
             entityDescriptorLock.readLock().unlock();
         }
 
@@ -846,8 +841,8 @@ public class DefaultSchemaContext implements SchemaContext {
             partitionId = "";
         }
 
-        if(entityClass == null)
-            throw  new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND);
+        if (entityClass == null)
+            throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND);
 
         final String entityKey = entityClass.getName() + String.valueOf(partitionId);
 
@@ -856,12 +851,10 @@ public class DefaultSchemaContext implements SchemaContext {
         try {
             EntityDescriptor descriptor = descriptors.get(entityKey);
 
-            if(descriptor != null)
-            {
+            if (descriptor != null) {
                 return descriptor;
             }
-        }
-        finally {
+        } finally {
             entityDescriptorLock.readLock().unlock();
         }
 
@@ -925,7 +918,7 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     public EntityDescriptor getBaseDescriptorForEntity(final Class entityClass) throws EntityException {
 
-        if(entityClass == null)
+        if (entityClass == null)
             return null;
         final String entityKey = entityClass.getName();
 
@@ -934,12 +927,10 @@ public class DefaultSchemaContext implements SchemaContext {
         try {
             EntityDescriptor descriptor = descriptors.get(entityKey);
 
-            if(descriptor != null)
-            {
+            if (descriptor != null) {
                 return descriptor;
             }
-        }
-        finally {
+        } finally {
             entityDescriptorLock.readLock().unlock();
         }
 
@@ -977,7 +968,8 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     private Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
 
-    private ReadWriteLock relationshipControllerReadWriteLock = new ReentrantReadWriteLock(true);
+    private StampedLock relationshipControllerReadWriteLock = new StampedLock();
+
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
      * <p>
@@ -993,15 +985,14 @@ public class DefaultSchemaContext implements SchemaContext {
 
         RelationshipController retVal = null;
 
-        relationshipControllerReadWriteLock.readLock().lock();
+        long stamp = relationshipControllerReadWriteLock.readLock();
         try {
             retVal = relationshipControllers.get(relationshipDescriptor);
 
             if (retVal != null)
                 return retVal;
-        }
-        finally {
-            relationshipControllerReadWriteLock.readLock().unlock();
+        } finally {
+            relationshipControllerReadWriteLock.unlockRead(stamp);
         }
 
         if ((relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) ||
@@ -1012,14 +1003,13 @@ public class DefaultSchemaContext implements SchemaContext {
             retVal = new ToOneRelationshipControllerImpl(relationshipDescriptor.getEntityDescriptor(), relationshipDescriptor, context);
         }
 
-        relationshipControllerReadWriteLock.writeLock().lock();
+        stamp = relationshipControllerReadWriteLock.writeLock();
         try {
 
             relationshipControllers.put(relationshipDescriptor, retVal);
             return retVal;
-        }
-        finally {
-            relationshipControllerReadWriteLock.writeLock().unlock();
+        } finally {
+            relationshipControllerReadWriteLock.unlockWrite(stamp);
         }
     }
 
@@ -1031,7 +1021,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentWeakHashMap<>();
+    private Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
 
     /**
      * Method for creating a new index controller.
@@ -1078,7 +1068,7 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     public MapBuilder createTemporaryMapBuilder() {
         try {
-            return new DefaultMapBuilder(File.createTempFile("query-temp", "db").getPath(), StoreType.MEMORY_MAPPED_FILE, this.context);
+            return new DefaultMapBuilder(File.createTempFile("query-temp", "db").getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, false);
         } catch (IOException e) {
             return null;
         }

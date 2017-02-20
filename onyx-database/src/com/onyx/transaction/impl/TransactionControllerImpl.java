@@ -8,7 +8,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
-import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.transaction.*;
 import com.onyx.util.FileUtil;
 

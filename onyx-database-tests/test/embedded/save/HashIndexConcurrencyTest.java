@@ -93,20 +93,16 @@ public class HashIndexConcurrencyTest extends BaseTest
                 final List<IManagedEntity> tmpList = new ArrayList<IManagedEntity>(entities);
                 entities.removeAll(entities);
 
-                final Runnable runnable = new Runnable()
+                final Runnable runnable = () -> {
+                    try
                     {
-                        @Override public void run()
-                        {
-                            try
-                            {
-                                manager.saveEntities(tmpList);
-                            }
-                            catch (EntityException e)
-                            {
-                                e.printStackTrace();
-                            }
-                        }
-                    };
+                        manager.saveEntities(tmpList);
+                    }
+                    catch (EntityException e)
+                    {
+                        e.printStackTrace();
+                    }
+                };
                 threads.add(pool.submit(runnable));
             }
 

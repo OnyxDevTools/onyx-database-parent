@@ -19,8 +19,8 @@ import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 
 import java.util.*;
 
@@ -44,7 +44,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         super(entityDescriptor, relationshipDescriptor, context);
         MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
 
-        records = (DiskMap) mapBuilder.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        records = (DiskMap) mapBuilder.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName(), RELATIONSHIP_MAP_LOAD_FACTOR);
     }
 
     /**

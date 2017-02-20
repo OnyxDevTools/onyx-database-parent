@@ -9,9 +9,9 @@ import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.OrderedDiskMap;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.OrderedDiskMap;
 import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Field;
@@ -38,7 +38,7 @@ public abstract class AbstractRecordController
         this.contextId = context.getContextId();
         this.entityDescriptor = descriptor;
         MapBuilder dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getScalableMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
+        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
     }
 
     /**

@@ -13,8 +13,8 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -116,7 +116,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                     final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                     final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
-                    DiskMap recs = (DiskMap)dataFile.getScalableMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                    DiskMap recs = (DiskMap)dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
                     Map partitionResults = scanPartition(recs, partition.getIndex());
                     results.putAll(partitionResults);

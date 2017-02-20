@@ -4,15 +4,14 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ReflectionUtil;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -50,9 +49,9 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
         final Map<Long, Long> allResults = new HashMap();
 
         // We need to do a full scan
-        final Iterator<Map.Entry<Object, IManagedEntity>> iterator = records.entrySet().iterator();
+        final Iterator<SkipListNode> iterator = records.referenceSet().iterator();
 
-        Map.Entry<Object, IManagedEntity> entry;
+        SkipListNode entry;
         Object attributeValue;
 
         while (iterator.hasNext()) {
@@ -61,11 +60,11 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
 
             entry = iterator.next();
 
-            attributeValue = ReflectionUtil.getAny(entry.getValue(), fieldToGrab);
+            attributeValue = records.getAttributeWithRecID(fieldToGrab, entry);
 
             // Compare and add
             if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
-                long recId = records.getRecID(entry.getKey());
+                long recId = entry.position;
                 allResults.put(recId, recId);
             }
 
@@ -105,13 +104,6 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
             {
                 entityAttribute = records.getAttributeWithRecID(fieldToGrab.field.getName(), (long)keyValue);
             }
-
-            /*
-            if(entity == null)
-            {
-                continue;
-            }
-            */
 
             // Compare and add
             if (CompareUtil.compare(criteria.getValue(), entityAttribute, criteria.getOperator()))

@@ -15,7 +15,7 @@ import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -33,6 +33,8 @@ public class PartitionQueryController extends PartitionContext
     protected Query query;
     protected MapBuilder temporaryDataFile;
     protected PersistenceManager persistenceManager;
+
+    private static int TEMPORARY_MAP_LOAD_FACTOR = 1;
 
     /**
      * Constructor that gets the necessary entity information
@@ -246,7 +248,7 @@ public class PartitionQueryController extends PartitionContext
         }
         else
         {
-            results = temporaryDataFile.getSkipListMap("sortingValues");
+            results = temporaryDataFile.getHashMap("sortingValues", TEMPORARY_MAP_LOAD_FACTOR);
         }
 
         if(indexValues.size() == 0)

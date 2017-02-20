@@ -13,7 +13,7 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 
 import java.util.HashMap;
 import java.util.Iterator;

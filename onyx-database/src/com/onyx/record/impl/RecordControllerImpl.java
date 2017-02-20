@@ -8,9 +8,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.structure.base.ScaledDiskMap;
 
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**

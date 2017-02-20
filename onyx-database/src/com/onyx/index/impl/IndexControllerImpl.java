@@ -9,11 +9,10 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.structure.DefaultDiskSet;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.ScaledDiskMap;
-import com.onyx.structure.node.Header;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.base.DiskMultiMatrixHashMap;
+import com.onyx.diskmap.node.Header;
 
 import java.util.*;
 
@@ -29,6 +28,8 @@ public class IndexControllerImpl implements IndexController {
     protected RecordController recordController = null;
     protected IndexDescriptor indexDescriptor = null;
     protected EntityDescriptor descriptor;
+
+    private static final int INDEX_VALUE_MAP_LOAD_FACTOR = 1;
 
     public IndexDescriptor getIndexDescriptor()
     {
@@ -51,8 +52,8 @@ public class IndexControllerImpl implements IndexController {
         this.descriptor = descriptor;
         final MapBuilder dataFile = context.getDataFile(descriptor);
 
-        references = dataFile.getScalableMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
-        indexValues = dataFile.getScalableMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
+        references = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
+        indexValues = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
     }
 
     /**
@@ -78,7 +79,7 @@ public class IndexControllerImpl implements IndexController {
                 if(header == null) {
                     header = dataFile.newMapHeader();
                 }
-                DiskMap indexes = (DiskMap)dataFile.getSkipListMap(header);
+                DiskMap indexes = dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
                 indexes.put(reference, null);
                 header.firstNode = indexes.getReference().firstNode;
                 header.position = indexes.getReference().position;
@@ -106,7 +107,7 @@ public class IndexControllerImpl implements IndexController {
                 final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
                 references.computeIfPresent(indexValue, (o, header) -> {
-                    DiskMap indexes = (DiskMap)dataFile.getSkipListMap(header);
+                    DiskMap indexes = dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
                     indexes.remove(reference);
                     header.firstNode = indexes.getReference().firstNode;
                     header.position = indexes.getReference().position;
@@ -132,7 +133,7 @@ public class IndexControllerImpl implements IndexController {
             return new HashMap();
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
-        return dataFile.getSkipListMap(header);
+        return dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
     }
 
     /**
@@ -150,7 +151,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all the references above and perhaps equal to the key parameter
      *
-     * This has one prerequisite.  You must be using a ScaledDiskMap as the storage mechanism.  Otherwise it will not be
+     * This has one prerequisite.  You must be using a DiskMultiMatrixHashMap as the storage mechanism.  Otherwise it will not be
      * sorted.
      *
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
@@ -164,14 +165,14 @@ public class IndexControllerImpl implements IndexController {
     public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
     {
         final Set<Long> allReferences = new HashSet();
-        final Set<Long> diskReferences = ((ScaledDiskMap)references).above(indexValue, includeValue);
+        final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).above(indexValue, includeValue);
 
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
         diskReferences.forEach(aLong -> {
-            Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
-            ((DefaultDiskSet)subSet).attachStorage(dataFile);
-            allReferences.addAll(subSet);
+            Header header = (Header)((DiskMultiMatrixHashMap) references).getWithRecID(aLong);
+            DiskMap map = (DiskMap)dataFile.getHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
+            map.keySet().forEach(o -> allReferences.add((long)o));
         });
 
         return allReferences;
@@ -180,7 +181,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all the references blow and perhaps equal to the key parameter
      *
-     * This has one prerequisite.  You must be using a ScaledDiskMap as the storage mechanism.  Otherwise it will not be
+     * This has one prerequisite.  You must be using a DiskMultiMatrixHashMap as the storage mechanism.  Otherwise it will not be
      * sorted.
      *
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
@@ -194,12 +195,12 @@ public class IndexControllerImpl implements IndexController {
     public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
     {
         final Set<Long> allReferences = new HashSet();
-        final Set<Long> diskReferences = ((ScaledDiskMap)references).below(indexValue, includeValue);
+        final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).below(indexValue, includeValue);
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
         diskReferences.forEach(aLong -> {
-            Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
-            ((DefaultDiskSet)subSet).attachStorage(dataFile);
-            allReferences.addAll(subSet);
+            Header header = (Header)((DiskMultiMatrixHashMap) references).getWithRecID(aLong);
+            DiskMap map = (DiskMap)dataFile.getHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
+            map.keySet().forEach(o -> allReferences.add((long)o));
         });
 
         return allReferences;
@@ -214,7 +215,7 @@ public class IndexControllerImpl implements IndexController {
     {
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
-        final DiskMap records = (DiskMap)dataFile.getScalableMap(indexDescriptor.getEntityDescriptor().getClazz().getName(), indexDescriptor.getLoadFactor());
+        final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getName(), indexDescriptor.getLoadFactor());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
             // Iterate Through all of the values and re-structure the key key for the record id

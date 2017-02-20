@@ -8,8 +8,8 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -51,7 +51,7 @@ public abstract class AbstractTableScanner extends PartitionContext
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);
-        records = (DiskMap)dataFile.getScalableMap(descriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
+        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
 
         this.temporaryDataFile = temporaryDataFile;
 

@@ -12,7 +12,7 @@ import com.onyx.index.IndexController;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.transaction.TransactionController;
 
 import java.nio.channels.FileChannel;
