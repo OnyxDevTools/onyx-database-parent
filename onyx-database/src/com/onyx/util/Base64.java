@@ -24,18 +24,18 @@ import java.io.UnsupportedEncodingException;
  * href="http://www.ietf.org/rfc/rfc2045.txt">2045</a> and <a
  * href="http://www.ietf.org/rfc/rfc3548.txt">3548</a>.
  */
-public class Base64 {
+class Base64 {
 
     /**
      * Default values for encoder/decoder flags.
      */
-    public static final int DEFAULT = 0;
+    static final int DEFAULT = 0;
 
     /**
      * Encoder flag bit to omit the padding '=' characters at the end
      * of the output (if any).
      */
-    public static final int NO_PADDING = 1;
+    static final int NO_PADDING = 1;
 
     /**
      * Encoder flag bit to omit all line terminators (i.e., the output
@@ -87,7 +87,7 @@ public class Base64 {
      * @throws IllegalArgumentException if the input contains
      * incorrect padding
      */
-    public static byte[] decode(String str, int flags) {
+    static byte[] decode(String str, int flags) {
         return decode(str.getBytes(), flags);
     }
 
@@ -416,7 +416,7 @@ public class Base64 {
      *               Passing {@code DEFAULT} results in output that
      *               adheres to RFC 2045.
      */
-    public static String encodeToString(byte[] input, int flags) {
+    static String encodeToString(byte[] input, int flags) {
         try {
             return new String(encode(input, flags), "US-ASCII");
         } catch (UnsupportedEncodingException e) {

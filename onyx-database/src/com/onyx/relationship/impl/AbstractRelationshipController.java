@@ -14,7 +14,6 @@ import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
-import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,19 +21,21 @@ import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/5/15.
+ *
+ * Base class for handling relationships
  */
-public class AbstractRelationshipController extends PartitionContext
+class AbstractRelationshipController extends PartitionContext
 {
 
     protected RelationshipDescriptor relationshipDescriptor;
     protected EntityDescriptor entityDescriptor;
     protected RecordController recordController;
 
-    protected RelationshipDescriptor defaultInverseRelationshipDescriptor;
+    private RelationshipDescriptor defaultInverseRelationshipDescriptor;
 
-    protected static final int RELATIONSHIP_MAP_LOAD_FACTOR = 1;
+    static final int RELATIONSHIP_MAP_LOAD_FACTOR = 1;
 
-    public AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
+    AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(context, context.getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass()));
 
@@ -55,10 +56,11 @@ public class AbstractRelationshipController extends PartitionContext
     /**
      * Save the inverse relationship, this will handle both to many relationships and to one relationships
      *
-     * @param parentIdentifier
-     * @param childIdentifier
+     * @param parentIdentifier Parent entity identifier
+     * @param childIdentifier Child entity identifier
      */
-    protected void saveInverseRelationship(IManagedEntity parentEntity, IManagedEntity childEntity, RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws EntityException
+    @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
+    void saveInverseRelationship(IManagedEntity parentEntity, IManagedEntity childEntity, RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws EntityException
     {
         // There is no inverse defined, nothing left to do
         if(defaultInverseRelationshipDescriptor == null)
@@ -76,7 +78,7 @@ public class AbstractRelationshipController extends PartitionContext
             {
                 // Push it on the toManyRelationships
                 Object toManyRelationshipsObj = relationshipMap.get(childIdentifier);
-                Set<Object> toManyRelationships = null;
+                Set<Object> toManyRelationships;
 
                 // The purpose of this check is to ensure a relationship that has gone from a to one relationship
                 // and is now a to many can have a fallback and convert it from a to one to a to many.
@@ -114,10 +116,11 @@ public class AbstractRelationshipController extends PartitionContext
     /**
      * Save the inverse relationship, this will handle both to many relationships and to one relationships
      *
-     * @param parentIdentifier
-     * @param childIdentifier
+     * @param parentIdentifier Parent entity identifier
+     * @param childIdentifier Child entity identifier
      */
-    protected void deleteInverseRelationshipReference(RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws EntityException
+    @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
+    void deleteInverseRelationshipReference(RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws EntityException
     {
         // There is no inverse defined, nothing left to do
         if(defaultInverseRelationshipDescriptor == null)
@@ -157,22 +160,17 @@ public class AbstractRelationshipController extends PartitionContext
     /**
      * Helper that uses reflection to get the relationship object, for a to one relationship
      *
-     * @param entity
-     * @return
-     * @throws com.onyx.exception.AttributeMissingException
+     * @param entity Entity to reflect
+     * @return Entity relationship value
+     * @throws com.onyx.exception.AttributeMissingException relationship property does not exist
      */
-    protected IManagedEntity getRelationshipValue(IManagedEntity entity) throws AttributeMissingException
+    IManagedEntity getRelationshipValue(IManagedEntity entity) throws AttributeMissingException
     {
         try
         {
-            final Field relationshipField = ReflectionUtil.getField(entity.getClass(), relationshipDescriptor.getName());
-            if (!relationshipField.isAccessible())
-            {
-                relationshipField.setAccessible(true);
-            }
-            IManagedEntity inverse = (IManagedEntity) relationshipField.get(entity);
-            return inverse;
-        } catch (IllegalAccessException e)
+            final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
+            return (IManagedEntity)ReflectionUtil.getAny(entity, relationshipField);
+        } catch (EntityException e)
         {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE);
         }
@@ -181,11 +179,10 @@ public class AbstractRelationshipController extends PartitionContext
     /**
      * Helper that uses reflection to get the relationship object
      *
-     * @param entity
-     * @return
-     * @throws com.onyx.exception.AttributeMissingException
+     * @param entity Entity to set relationship value on
+     * @throws com.onyx.exception.AttributeMissingException property does not exsit
      */
-    public static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException, AttributeTypeMismatchException
+    static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException, AttributeTypeMismatchException
     {
         final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
         ReflectionUtil.setAny(entity, child, relationshipField);
@@ -194,23 +191,18 @@ public class AbstractRelationshipController extends PartitionContext
     /**
      * Get Relationship Values for to many relationship
      *
-     * @param relationshipDescriptor
-     * @param entity
-     * @return
-     * @throws AttributeMissingException
+     * @param relationshipDescriptor Entity relationship descriptor
+     * @param entity Entity to get relationship list
+     * @return Relationship list
+     * @throws AttributeMissingException Property does not exist
      */
-    public static List getRelationshipListValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity) throws AttributeMissingException
+    static List getRelationshipListValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity) throws AttributeMissingException
     {
         try
         {
-            final Field relationshipField = ReflectionUtil.getField(entity.getClass(), relationshipDescriptor.getName());
-            if(!relationshipField.isAccessible())
-            {
-                relationshipField.setAccessible(true);
-            }
-            List inverse = (List)relationshipField.get(entity);
-            return inverse;
-        } catch (IllegalAccessException e)
+            final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
+            return (List)ReflectionUtil.getAny(entity, relationshipField);
+        } catch (EntityException e)
         {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE);
         }

@@ -8,11 +8,14 @@ import java.io.IOException;
 
 /**
  * Created by tosborn1 on 3/25/16.
+ *
+ * Update query transaction
  */
 public class UpdateQueryTransaction implements ObjectSerializable, Transaction
 {
     public Query query;
 
+    @SuppressWarnings("unused")
     public UpdateQueryTransaction()
     {
 

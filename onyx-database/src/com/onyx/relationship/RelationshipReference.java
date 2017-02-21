@@ -10,10 +10,13 @@ import java.io.IOException;
 
 /**
  * Created by timothy.osborn on 3/19/15.
+ *
+ * Reference of a relationship
  */
 public class RelationshipReference implements ObjectSerializable, Comparable
 {
 
+    @SuppressWarnings("unused")
     public RelationshipReference()
     {
 
@@ -72,23 +75,13 @@ public class RelationshipReference implements ObjectSerializable, Comparable
     }
 
     @Override
-    public void readObject(ObjectBuffer buffer, long position) throws IOException
-    {
-        this.readObject(buffer, position);
-    }
-
-    @Override
-    public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException {
-
-    }
-
-    @Override
     public String toString()
     {
         return "Identifier " + identifier.toString() + " Partition ID " + partitionId;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public int compareTo(Object o) {
 
         if(o instanceof RelationshipReference)

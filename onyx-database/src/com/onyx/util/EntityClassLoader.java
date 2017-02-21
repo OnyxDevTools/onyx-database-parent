@@ -29,24 +29,23 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-
 /**
  Created by timothy.osborn on 3/6/15.
+
+ This class saves the entity information and formats the source on disk
  */
 public class EntityClassLoader
 {
-    protected static final String CLASS_TEMPLATE_PATH = "templates/class.mustache";
+    private static final String CLASS_TEMPLATE_PATH = "templates/class.mustache";
 
-    public static Set<String> LOADED_CLASSES = new HashSet<>();
+    private static final String GENERATED_DIRECTORY = "generated";
+    private static final String GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities";
+    private static final String GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries";
 
-    public static final String GENERATED_DIRECTORY = "generated";
-    public static final String GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities";
-    public static final String GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries";
+    private static final String SOURCE_DIRECTORY = "source";
+    private static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
 
-    public static final String SOURCE_DIRECTORY = "source";
-    public static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
-
-    protected static final Mustache CLASS_TEMPLATE;
+    private static final Mustache CLASS_TEMPLATE;
 
     static
     {
@@ -57,16 +56,18 @@ public class EntityClassLoader
     /**
      * Generate Write a class to disk.
      *
-     * @param  descriptor
-     * @param  databaseLocation
+     * @param  descriptor Entity descriptor
+     * @param  databaseLocation Database location
      */
-    public synchronized static final void writeClass(final EntityDescriptor descriptor, final String databaseLocation)
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation)
     {
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
+        //noinspection ResultOfMethodCallIgnored
         new File(outputDirectory).mkdirs();
 
-        final Map<String, Object> values = new HashMap();
+        final Map<String, Object> values = new HashMap<>();
         values.put("className", descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", ""));
         values.put("packageName", descriptor.getClazz().getPackage().getName());
         values.put("generatorType",
@@ -79,7 +80,7 @@ public class EntityClassLoader
         final List<Map<String, Object>> attributes = new ArrayList<>();
         values.put("attributes", attributes);
 
-        Map<String, Object> attributeMap = null;
+        Map<String, Object> attributeMap;
 
         for (final AttributeDescriptor attribute : descriptor.getAttributes().values())
         {
@@ -89,7 +90,7 @@ public class EntityClassLoader
                 continue;
             }
 
-            attributeMap = new HashMap();
+            attributeMap = new HashMap<>();
             attributeMap.put("name", attribute.getName());
 
             if(attribute.getType().isArray())
@@ -112,14 +113,14 @@ public class EntityClassLoader
             attributes.add(attributeMap);
         }
 
-        final List<Map<String, Object>> relationships = new ArrayList();
+        final List<Map<String, Object>> relationships = new ArrayList<>();
         values.put("relationships", relationships);
 
-        Map<String, Object> relationshipMap = null;
+        Map<String, Object> relationshipMap;
 
         for (final RelationshipDescriptor relationship : descriptor.getRelationships().values())
         {
-            relationshipMap = new HashMap();
+            relationshipMap = new HashMap<>();
             relationshipMap.put("name", relationship.getName());
 
             if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY) ||
@@ -179,32 +180,28 @@ public class EntityClassLoader
     /**
      * Generate Write a class to disk.  This is used for remote purposes.  Since we do not have a handle on the entity descriptors, we use the system entity to load
      *
-     * @param  systemEntity
-     * @param  databaseLocation
+     * @param  systemEntity System entity
+     * @param  databaseLocation Database location
      */
-    @SuppressWarnings("unused")
-    public synchronized static final void writeClass(final SystemEntity systemEntity, final String databaseLocation)
+    @SuppressWarnings({"unused", "ResultOfMethodCallIgnored"})
+    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation)
     {
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
         new File(outputDirectory).mkdirs();
 
-        final Map<String, Object> values = new HashMap();
+        final Map<String, Object> values = new HashMap<>();
         values.put("className", systemEntity.getClassName());
         values.put("packageName", systemEntity.getName().replace("."+systemEntity.getClassName(), ""));
         values.put("generatorType", IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString());
 
-        for(SystemAttribute attribute : systemEntity.getAttributes())
-        {
-            if(attribute.getName().equals(systemEntity.getIdentifier().getName()))
-                values.put("idType", attribute.getDataType());
-        }
+        systemEntity.getAttributes().stream().filter(attribute -> attribute.getName().equals(systemEntity.getIdentifier().getName())).forEach(attribute -> values.put("idType", attribute.getDataType()));
         values.put("idName", systemEntity.getIdentifier().getName());
 
         final List<Map<String, Object>> attributes = new ArrayList<>();
         values.put("attributes", attributes);
 
-        Map<String, Object> attributeMap = null;
+        Map<String, Object> attributeMap;
 
         for (final SystemAttribute attribute : systemEntity.getAttributes())
         {
@@ -214,7 +211,7 @@ public class EntityClassLoader
                 continue;
             }
 
-            attributeMap = new HashMap();
+            attributeMap = new HashMap<>();
             attributeMap.put("name", attribute.getName());
             attributeMap.put("type", attribute.getDataType());
 
@@ -235,14 +232,14 @@ public class EntityClassLoader
             attributes.add(attributeMap);
         }
 
-        final List<Map<String, Object>> relationships = new ArrayList();
+        final List<Map<String, Object>> relationships = new ArrayList<>();
         values.put("relationships", relationships);
 
-        Map<String, Object> relationshipMap = null;
+        Map<String, Object> relationshipMap;
 
         for (final SystemRelationship relationship : systemEntity.getRelationships())
         {
-            relationshipMap = new HashMap();
+            relationshipMap = new HashMap<>();
             relationshipMap.put("name", relationship.getName());
 
             if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()) ||
@@ -298,7 +295,7 @@ public class EntityClassLoader
         }
     }
 
-    protected static SchemaContext schemaContext = null;
+    private static SchemaContext schemaContext = null;
 
     public EntityClassLoader()
     {
@@ -307,9 +304,10 @@ public class EntityClassLoader
     /**
      * Load the class source from file and load it into class loader.
      *
-     * @param  context
+     * @param  context Schema Context
      */
-    public static final void loadClasses(final SchemaContext context, String location)
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static void loadClasses(final SchemaContext context, String location)
     {
         schemaContext = context;
 
@@ -321,44 +319,29 @@ public class EntityClassLoader
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         final StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
 
-        final List<File> classes = new ArrayList();
+        final List<File> classes = new ArrayList<>();
 
         try
         {
             Files.walk(Paths.get(entitiesSourceDirectory.getPath())).filter((e) ->
-            {
-                return (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"));
-            }).forEach((e) -> { classes.add(e.toFile()); });
+                    (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"))).forEach((e) -> classes.add(e.toFile()));
 
-            fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(entitiesGeneratedDirectory));
+            fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Collections.singletonList(entitiesGeneratedDirectory));
 
             // Compile the file
             compiler.getTask(null, fileManager, null, null, null, fileManager.getJavaFileObjectsFromFiles(classes)).call();
 
             fileManager.close();
 
-            final URLClassLoader systemClassLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
-
             addClassPaths();
 
             Files.walk(Paths.get(entitiesSourceDirectory.getPath())).filter((e) ->
+                    (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"))).forEach((e) ->
             {
-                return (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"));
-            }).forEach((e) ->
-            {
-
-                try
-                {
-                    String path = e.toFile().getPath().replace(entitiesSourceDirectory.getPath() + File.separator, "");
-                    path = path.replaceAll("\\.java", "");
-                    path = path.replaceAll("\\\\", ".");
-                    path = path.replaceAll("/", ".");
-                    LOADED_CLASSES.add(systemClassLoader.loadClass(path).getName());
-                }
-                catch (ClassNotFoundException ex)
-                {
-                    ex.printStackTrace();
-                }
+                String path = e.toFile().getPath().replace(entitiesSourceDirectory.getPath() + File.separator, "");
+                path = path.replaceAll("\\.java", "");
+                path = path.replaceAll("\\\\", ".");
+                path = path.replaceAll("/", ".");
             });
         }
         catch (Exception e)
@@ -370,14 +353,15 @@ public class EntityClassLoader
     /**
      * Load the class source from file and load it into class loader.
      *
-     * @param  context
+     * @param  context Schema Context
      */
-    public static final void loadClasses(final SchemaContext context)
+    public static void loadClasses(final SchemaContext context)
     {
        loadClasses(context, context.getLocation());
     }
 
-    public static void addClassPaths()
+    @SuppressWarnings("unchecked")
+    private static void addClassPaths()
     {
         final URLClassLoader systemClassLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
 

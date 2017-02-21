@@ -877,6 +877,7 @@ public class ReflectionUtil {
                     {
                         int arrayLength = Array.getLength(child);
                         Object newArray = Array.newInstance(toClass, arrayLength);
+                        //noinspection SuspiciousSystemArraycopy
                         System.arraycopy(child, 0, newArray, 0, arrayLength);
                         setObject(parent, field, newArray);
                     }

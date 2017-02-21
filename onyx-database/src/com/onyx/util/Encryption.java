@@ -1,16 +1,3 @@
-/**
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 package com.onyx.util;
 
 import javax.crypto.*;
@@ -22,11 +9,10 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 
-
 /**
  * A class to make more easy and simple the encrypt routines, this is the core of Encryption library
  */
-public class Encryption {
+class Encryption {
 
     /**
      * The Builder used to create the Encryption instance and that contains the information about
@@ -46,7 +32,7 @@ public class Encryption {
      * @return an default encryption instance or {@code null} if occur some Exception, you can
      * create yur own Encryption instance using the Encryption.Builder
      */
-    public static Encryption getDefault(String key, String salt, byte[] iv) {
+    static Encryption getDefault(String key, String salt, byte[] iv) {
         try {
             return Builder.getDefaultBuilder(key, salt, iv).build();
         } catch (NoSuchAlgorithmException e) {
@@ -54,18 +40,6 @@ public class Encryption {
         }
     }
 
-    /**
-     * @return an default encryption instance with iteration count equals to 1 to faster run
-     * purposes or {@code null} if occur some Exception, you can create yur own Encryption instance
-     * using the Encryption.Builder
-     */
-    public static Encryption getLowIteration(String key, String salt, byte[] iv) {
-        try {
-            return Builder.getDefaultBuilder(key, salt, iv).setIterationCount(1).build();
-        } catch (NoSuchAlgorithmException e) {
-            return null;
-        }
-    }
 
     /**
      * Encrypt a String
@@ -99,7 +73,7 @@ public class Encryption {
      * @throws IllegalStateException              if the cipher instance is not initialized for
      *                                            encryption or decryption
      */
-    public String encrypt(String data) throws UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, InvalidKeyException, InvalidKeySpecException, BadPaddingException, IllegalBlockSizeException {
+    private String encrypt(String data) throws UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidAlgorithmParameterException, InvalidKeyException, InvalidKeySpecException, BadPaddingException, IllegalBlockSizeException {
         if (data == null) return null;
         SecretKey secretKey = getSecretKey(hashTheKey(mBuilder.getKey()));
         byte[] dataBytes = data.getBytes(mBuilder.getCharsetName());
@@ -116,39 +90,12 @@ public class Encryption {
      *
      * @return the encrypted String or {@code null} if you send the data as {@code null}
      */
-    public String encryptOrNull(String data) {
+    String encryptOrNull(String data) {
         try {
             return encrypt(data);
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /**
-     * This is a sugar method that calls encrypt method in background, it is a good idea to use this
-     * one instead the default method because encryption can take several time and with this method
-     * the process occurs in a AsyncTask, other advantage is the Callback with separated methods,
-     * one for success and other for the exception
-     *
-     * @param data     the String to be encrypted
-     * @param callback the Callback to handle the results
-     */
-    public void encryptAsync(final String data, final Callback callback) {
-        if (callback == null) return;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String encrypt = encrypt(data);
-                    if (encrypt == null) {
-                        callback.onError(new Exception("Encrypt return null, it normally occurs when you send a null data"));
-                    }
-                    callback.onSuccess(encrypt);
-                } catch (Exception e) {
-                    callback.onError(e);
-                }
-            }
-        }).start();
     }
 
     /**
@@ -183,7 +130,7 @@ public class Encryption {
      * @throws IllegalStateException              if the cipher instance is not initialized for
      *                                            encryption or decryption
      */
-    public String decrypt(String data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    private String decrypt(String data) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
         if (data == null) return null;
         byte[] dataBytes = Base64.decode(data, mBuilder.getBase64Mode());
         SecretKey secretKey = getSecretKey(hashTheKey(mBuilder.getKey()));
@@ -201,39 +148,12 @@ public class Encryption {
      *
      * @return the decrypted String or {@code null} if you send the data as {@code null}
      */
-    public String decryptOrNull(String data) {
+    String decryptOrNull(String data) {
         try {
             return decrypt(data);
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /**
-     * This is a sugar method that calls decrypt method in background, it is a good idea to use this
-     * one instead the default method because decryption can take several time and with this method
-     * the process occurs in a AsyncTask, other advantage is the Callback with separated methods,
-     * one for success and other for the exception
-     *
-     * @param data     the String to be decrypted
-     * @param callback the Callback to handle the results
-     */
-    public void decryptAsync(final String data, final Callback callback) {
-        if (callback == null) return;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String decrypt = decrypt(data);
-                    if (decrypt == null) {
-                        callback.onError(new Exception("Decrypt return null, it normally occurs when you send a null data"));
-                    }
-                    callback.onSuccess(decrypt);
-                } catch (Exception e) {
-                    callback.onError(e);
-                }
-            }
-        }).start();
     }
 
     /**
@@ -277,31 +197,10 @@ public class Encryption {
     }
 
     /**
-     * When you encrypt or decrypt in callback mode you get noticed of result using this interface
-     */
-    public interface Callback {
-
-        /**
-         * Called when encrypt or decrypt job ends and the process was a success
-         *
-         * @param result the encrypted or decrypted String
-         */
-        void onSuccess(String result);
-
-        /**
-         * Called when encrypt or decrypt job ends and has occurred an error in the process
-         *
-         * @param exception the Exception related to the error
-         */
-        void onError(Exception exception);
-
-    }
-
-    /**
      * This class is used to create an Encryption instance, you should provide ALL data or start
      * with the Default Builder provided by the getDefaultBuilder method
      */
-    public static class Builder {
+    private static class Builder {
 
         private byte[] mIv;
         private int mKeyLength;
@@ -330,7 +229,7 @@ public class Encryption {
          * the default secure random algorithm is SHA1PRNG
          * the default message digest algorithm SHA1
          */
-        public static Builder getDefaultBuilder(String key, String salt, byte[] iv) {
+        static Builder getDefaultBuilder(String key, String salt, byte[] iv) {
             return new Builder()
                     .setIv(iv)
                     .setKey(key)
@@ -375,7 +274,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setCharsetName(String charsetName) {
+        Builder setCharsetName(String charsetName) {
             mCharsetName = charsetName;
             return this;
         }
@@ -392,7 +291,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setAlgorithm(String algorithm) {
+        Builder setAlgorithm(String algorithm) {
             mAlgorithm = algorithm;
             return this;
         }
@@ -409,7 +308,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setKeyAlgorithm(String keyAlgorithm) {
+        Builder setKeyAlgorithm(String keyAlgorithm) {
             mKeyAlgorithm = keyAlgorithm;
             return this;
         }
@@ -426,7 +325,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setBase64Mode(int base64Mode) {
+        Builder setBase64Mode(int base64Mode) {
             mBase64Mode = base64Mode;
             return this;
         }
@@ -445,7 +344,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setSecretKeyType(String secretKeyType) {
+        Builder setSecretKeyType(String secretKeyType) {
             mSecretKeyType = secretKeyType;
             return this;
         }
@@ -462,7 +361,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setSalt(String salt) {
+        Builder setSalt(String salt) {
             mSalt = salt;
             return this;
         }
@@ -496,7 +395,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setKeyLength(int keyLength) {
+        Builder setKeyLength(int keyLength) {
             mKeyLength = keyLength;
             return this;
         }
@@ -513,7 +412,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setIterationCount(int iterationCount) {
+        Builder setIterationCount(int iterationCount) {
             mIterationCount = iterationCount;
             return this;
         }
@@ -530,7 +429,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setSecureRandomAlgorithm(String secureRandomAlgorithm) {
+        Builder setSecureRandomAlgorithm(String secureRandomAlgorithm) {
             mSecureRandomAlgorithm = secureRandomAlgorithm;
             return this;
         }
@@ -547,7 +446,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setIv(byte[] iv) {
+        Builder setIv(byte[] iv) {
             mIv = iv;
             return this;
         }
@@ -564,7 +463,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setSecureRandom(SecureRandom secureRandom) {
+        Builder setSecureRandom(SecureRandom secureRandom) {
             mSecureRandom = secureRandom;
             return this;
         }
@@ -581,7 +480,7 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setIvParameterSpec(IvParameterSpec ivParameterSpec) {
+        Builder setIvParameterSpec(IvParameterSpec ivParameterSpec) {
             mIvParameterSpec = ivParameterSpec;
             return this;
         }
@@ -598,13 +497,11 @@ public class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        public Builder setDigestAlgorithm(String digestAlgorithm) {
+        Builder setDigestAlgorithm(String digestAlgorithm) {
             mDigestAlgorithm = digestAlgorithm;
             return this;
         }
 
         //endregion
-
     }
-
 }

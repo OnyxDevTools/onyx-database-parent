@@ -26,18 +26,20 @@ import java.util.*;
 
 /**
  * Created by timothy.osborn on 2/5/15.
+ *
+ * Handles the to many relationship persistence
  */
+@SuppressWarnings("unchecked")
 public class ToManyRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController
 {
 
-    protected DiskMap<Object, Set<RelationshipReference>> records;
+    protected final DiskMap<Object, Set<RelationshipReference>> records;
 
     /**
      * To Many Relationship Controller Constructor
      *
-     * @param entityDescriptor
-     * @param relationshipDescriptor
-     * @throws EntityException
+     * @param entityDescriptor Parent entity descriptor
+     * @param relationshipDescriptor Child entity descriptor
      */
     public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
@@ -49,9 +51,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
     /**
      *
-     * @param entity
-     * @param manager
-     * @throws EntityException
+     * @param entity Entity to save relationship
+     * @param manager Relationship manager keeps track of actions already taken on entity relationships
      */
     @Override
     public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException
@@ -87,16 +88,14 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         }
 
         Set<RelationshipReference> relationshipObjectCopy = new HashSet<>();
-        RelationshipReference relationshipObjectIdentifier = null;
+        RelationshipReference relationshipObjectIdentifier ;
 
-        boolean saveRelationship = false;
-        Object reltnIdentifier = null;
+        boolean saveRelationship;
+        Object reltnIdentifier;
 
         if (relationshipObjects != null)
         {
             relationshipObjectCopy = new HashSet(existingRelationshipObjects);
-
-            saveRelationship = false;
 
             // Iterate through and save the relationship
             for (IManagedEntity relationshipObject : relationshipObjects)
@@ -178,9 +177,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * Deletes the entire relationship list for a to many relationship
      *
-     * @param entityIdentifier
-     * @param manager
-     * @throws EntityException
+     * @param entityIdentifier Relationship reference key
+     * @param manager Relationship manager keeps track of actions already taken on entity relationships
      */
     @Override
     public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws EntityException
@@ -188,7 +186,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         IManagedEntity entity = recordController.getWithId(entityIdentifier.identifier);
         manager.add(entity, entityDescriptor.getIdentifier());
 
-        Set<RelationshipReference> existingRelationshipObjects = null;
+        Set<RelationshipReference> existingRelationshipObjects;
         synchronized (records)
         {
             Object retVal = records.get(entityIdentifier);
@@ -215,11 +213,10 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * Hydrate relationship for entity
      *
-     * @param entityIdentifier
-     * @param entity
-     * @param manager
-     * @param force
-     * @throws EntityException
+     * @param entityIdentifier Entity relationship id
+     * @param entity Entity to hydrate
+     * @param manager Relationship manager prevents recursion
+     * @param force Force hydrate
      */
     @Override
     public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws EntityException
@@ -259,32 +256,27 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
         setRelationshipValue(relationshipDescriptor, entity, relationshipObjects);
 
-        RelationshipReference inverseIdentifier = null;
+        RelationshipReference inverseIdentifier;
 
         if (existingRelationshipObjects != null
-                && (relationshipDescriptor.getFetchPolicy() != FetchPolicy.LAZY || force == true))
+                && (relationshipDescriptor.getFetchPolicy() != FetchPolicy.LAZY || force))
         {
-            Iterator<RelationshipReference> keyIterator = existingRelationshipObjects.iterator();
 
-            while (keyIterator.hasNext())
-            {
-                inverseIdentifier = keyIterator.next();
+            for (RelationshipReference existingRelationshipObject : existingRelationshipObjects) {
+                inverseIdentifier = existingRelationshipObject;
                 IManagedEntity relationshipObject = getRecordControllerForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
 
-                if (relationshipObject == null)
-                {
+                if (relationshipObject == null) {
                     throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
                 }
 
-                if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
-                {
+                if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
                     RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, getContext());
                 }
                 relationshipObjects.add(relationshipObject);
 
                 //sort related children if the child entity implements Comparable
-                if (relationshipObjects.size() > 0 && Comparable.class.isAssignableFrom(relationshipObjects.get(0).getClass()))
-                {
+                if (relationshipObjects.size() > 0 && Comparable.class.isAssignableFrom(relationshipObjects.get(0).getClass())) {
                     relationshipObjects.sort(null);
                 }
 
@@ -296,9 +288,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * Get Relationship Identifiers
      *
-     * @param referenceId
-     * @return
-     * @throws EntityException
+     * @param referenceId Relationship reference
+     * @return List of relationship references
      */
     @Override
     public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws EntityException
@@ -326,7 +317,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * Retrieves the identifiers for a given entity
      *
-     * @return
+     * @return List of relationship references
      */
     @Override
     public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws EntityException
@@ -355,15 +346,15 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * Batch Save all relationship ids
      *
-     * @param entity
-     * @param relationshipIdentifiers
+     * @param entity entity to update
+     * @param relationshipIdentifiers Relationship references
      */
     public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
     {
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.getContext());
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
-        RelationshipReference entityId = null;
+        RelationshipReference entityId;
         if(partitionValue != "" && partitionValue != null) {
             SystemPartitionEntry relationshipDescriptor = this.getContext().getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.getContext()));
             entityId = new RelationshipReference(indexValue, relationshipDescriptor.getIndex());

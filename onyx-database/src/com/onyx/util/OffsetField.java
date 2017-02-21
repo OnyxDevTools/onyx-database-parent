@@ -28,14 +28,14 @@ public class OffsetField
             field.setAccessible(true);
     }
 
-    public long offset;
+    long offset;
     public Class type;
     public String name;
     public Field field;
 
     /**
      * Getter to determine whether the field is an array type
-     * @return
+     * @return Whether the field is an array
      */
     public boolean isArray() {
         return type.isArray();

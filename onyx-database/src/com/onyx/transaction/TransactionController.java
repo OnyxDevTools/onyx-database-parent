@@ -37,7 +37,7 @@ public interface TransactionController
 
     /**
      * Write a delete query to a WAL file
-     * @param query
+     * @param query Query to write to WAL
      */
     void writeDeleteQuery(Query query) throws TransactionException;
 
