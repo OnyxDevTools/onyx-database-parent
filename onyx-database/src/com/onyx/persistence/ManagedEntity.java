@@ -33,15 +33,15 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 descriptor = buffer.serializers.context.getDescriptorForEntity(this, "");
             }
 
-            descriptor.getAttributes().values().stream().forEach(attribute ->
+            descriptor.getAttributes().values().forEach(attribute ->
             {
                 try {
                     final Object obj = ReflectionUtil.getAny(this, attribute.field);
                     buffer.writeObject(obj);
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             });
-        } catch (EntityException e) {
+        } catch (EntityException ignore) {
         }
     }
 
@@ -64,14 +64,14 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             if (descriptor == null) {
                 try {
                     descriptor = buffer.serializers.context.getDescriptorForEntity(this, "");
-                } catch (EntityException e) {}
+                } catch (EntityException ignore) {}
             }
 
-            descriptor.getAttributes().values().stream().forEach(attribute ->
+            descriptor.getAttributes().values().forEach(attribute ->
             {
                 try {
                     ReflectionUtil.setAny(this, buffer.readObject(), attribute.field);
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             });
         }
@@ -87,7 +87,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                         attribute.field = ReflectionUtil.getOffsetField(this.getClass(), attribute.getName());
 
                     ReflectionUtil.setAny(this, obj, attribute.field);
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             }
         }
@@ -104,21 +104,21 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             if (descriptor == null) {
                 try {
                     descriptor = context.getDescriptorForEntity(this, "");
-                } catch (EntityException e) {}
+                } catch (EntityException ignore) {}
             }
 
-            descriptor.getAttributes().values().stream().forEach(attribute ->
+            descriptor.getAttributes().values().forEach(attribute ->
             {
                 try {
-                    if(mapObj.containsKey(attribute.field.field.getName())) {
+                    if (mapObj.containsKey(attribute.field.field.getName())) {
                         Object attributeValueWithinMap = mapObj.get(attribute.field.field.getName());
                         ReflectionUtil.setAny(this, attributeValueWithinMap, attribute.field);
                     }
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             });
         }
-        catch (Exception e){}
+        catch (Exception ignore){}
     }
 
 }

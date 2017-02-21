@@ -90,8 +90,6 @@ public interface PersistenceManagerFactory
     /**
      * Safe shutdown of database
      * @since 1.0.0
-     * @throws java.io.IOException Failure to write checksum to database storage
-     * @throws com.onyx.exception.SingletonException Accessing singletons that cannot have more than one instance
      */
     void close();
 

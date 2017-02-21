@@ -8,33 +8,32 @@ import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/10/15.
+ *
+ * Contract on how an index interacts
  */
 public interface IndexController
 {
     /**
      * Save an index key with the record reference
      *
-     * @param indexValue
-     * @param oldReferenceId
-     * @param newReferenceId
-     * @throws EntityException
+     * @param indexValue Index value to save
+     * @param oldReferenceId Old entity reference for the index
+     * @param newReferenceId New entity reference for the index
      */
     void save(Object indexValue, long oldReferenceId, long newReferenceId) throws EntityException;
 
     /**
      * Delete an index key with a record reference
      *
-     * @param reference
-     * @throws EntityException
+     * @param reference Entity reference
      */
     void delete(long reference) throws EntityException;
 
     /**
      * Find all index references
      *
-     * @param indexValue
-     * @return
-     * @throws EntityException
+     * @param indexValue Index value to find values for
+     * @return References matching that index value
      */
     Map findAll(Object indexValue) throws EntityException;
 
@@ -65,15 +64,14 @@ public interface IndexController
     /**
      * Get Index descriptor
      *
-     * @return
+     * @return Index descriptor for entity
      */
     IndexDescriptor getIndexDescriptor();
 
     /**
      * Find all index references
      *
-     * @return
-     * @throws EntityException
+     * @return All index references
      */
     Set<Object> findAllValues() throws EntityException;
 
@@ -81,7 +79,6 @@ public interface IndexController
     /**
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *
-     * @throws EntityException
      */
     void rebuild() throws EntityException;
 

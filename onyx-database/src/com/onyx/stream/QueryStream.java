@@ -6,6 +6,8 @@ import java.util.Objects;
 
 /**
  * Created by tosborn1 on 5/19/16.
+ *
+ * This is a lambda for the Onyx Database Stream API.  This will iterate through entities
  */
 @FunctionalInterface
 public interface QueryStream<T>

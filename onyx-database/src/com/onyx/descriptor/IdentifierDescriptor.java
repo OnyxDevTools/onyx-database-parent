@@ -4,6 +4,8 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 
 /**
  * Created by timothy.osborn on 12/11/14.
+ *
+ * General information about a key identifier for an entity
  */
 public class IdentifierDescriptor extends IndexDescriptor
 {

@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by tosborn on 3/27/15.
+ *
+ * Rather than writing to a file, this writes to memory.
  */
 public class InMemoryStore extends MemoryMappedStore implements Store {
 
@@ -17,7 +19,6 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
      *
      */
     public InMemoryStore(SchemaContext context, String storeId) {
-        super();
         this.contextId = context.getContextId();
         open(storeId);
         this.setSize();
@@ -26,19 +27,17 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
     /**
      * Open the data file
      *
-     * @param filePath
-     * @return
+     * @param filePath  Ignored.  There is no file to open.  Should be blank
+     * @return Always true
      */
     public synchronized boolean open(String filePath) {
 
         this.filePath = filePath;
-        slices = new ConcurrentHashMap();
+        slices = new ConcurrentHashMap<>();
 
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
         // using an int for position.  We are gonna bust that.
-        ByteBuffer buffer = null;
-
-        buffer = ObjectBuffer.allocate(SLICE_SIZE);
+        ByteBuffer buffer = ObjectBuffer.allocate(SLICE_SIZE);
         slices.put(0, new FileSlice(buffer));
 
         return true;
@@ -48,8 +47,8 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
      * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
      * er "slice" of the file
      *
-     * @param position
-     * @return
+     * @param position The position within the combined FileSlice buffers
+     * @return The file slice located at the position specified.
      */
     protected FileSlice getBuffer(long position) {
 
@@ -77,7 +76,7 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
     /**
      * Close the data file
      *
-     * @return
+     * @return Whether the in memory buffers were cleared
      */
     public synchronized boolean close() {
         this.slices.values().forEach(file ->

@@ -13,49 +13,56 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by timothy.osborn on 3/25/15.
+ * <p>
+ * The default implementation of a store that includes the i/o of writting to a basic file channel.
+ * This is recommended for larger data sets.
+ *
+ * This class also encapsulates the serialization of objects that are read and written to the store.
+ *
+ * @since 1.0.0
  */
-public class FileChannelStore implements Store
-{
+public class FileChannelStore implements Store {
 
     protected FileChannel channel;
-    protected String filePath;
     protected String contextId = "";
     protected boolean force = true;
+    String filePath;
 
-    public AtomicLong fileSize = new AtomicLong(0);
+    AtomicLong fileSize = new AtomicLong(0);
 
     // This is an internal structure only used to store serializers
-    public Serializers serializers = null;
+    Serializers serializers = null;
 
     /**
      * Constructor open file
-     * @param filePath
+     *
+     * @param filePath Location of the store
      */
-    public FileChannelStore(String filePath, SchemaContext context, boolean force)
-    {
+    public FileChannelStore(String filePath, SchemaContext context, boolean force) {
         this.filePath = filePath;
         this.force = force;
         open(filePath);
         this.setSize();
-        if(context != null)
+        if (context != null)
             this.contextId = context.getContextId();
     }
 
-    public FileChannelStore()
-    {
+    /**
+     * Constructor
+     */
+    FileChannelStore() {
 
     }
 
     /**
      * Initialize the file
      */
-    public void init(Map mapById, Map mapByName)
-    {
+    @SuppressWarnings("unchecked")
+    public void init(Map mapById, Map mapByName) {
         serializers = new Serializers(mapById, mapByName, DefaultSchemaContext.registeredSchemaContexts.get(contextId));
     }
 
@@ -63,17 +70,15 @@ public class FileChannelStore implements Store
     /**
      * Open the data file
      *
-     * @param filePath
-     * @return
+     * @param filePath Path of the file to open
+     * @return Whether the file was opened or not
      */
-    public boolean open(String filePath)
-    {
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public boolean open(String filePath) {
         final File file = new File(filePath);
-        try
-        {
+        try {
             // Create the data file if it does not exist
-            if (!file.exists())
-            {
+            if (!file.exists()) {
                 file.getParentFile().mkdirs();
                 file.createNewFile();
             }
@@ -83,59 +88,56 @@ public class FileChannelStore implements Store
             this.channel = randomAccessFile.getChannel();
             this.fileSize.set(this.channel.size());
 
-        } catch (FileNotFoundException e)
-        {
+        } catch (FileNotFoundException e) {
             return false;
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             return false;
         }
 
         return channel.isOpen();
     }
 
-    public void setSize()
-    {
+    /**
+     * Set the size after opening a file.  The first 8 bytes are reserved for the size.  The reason why we maintain the size
+     * outside of relying of the fileChannel is because it may not be accurate.  In order to force it's accuracy
+     * we have to configure the file channel to do so.  That causes the store to be severly slowed down.
+     */
+    void setSize() {
         final ObjectBuffer buffer = this.read(0, 8);
 
         try {
-            if(buffer == null || channel.size() == 0)
-            {
+            if (buffer == null || channel.size() == 0) {
                 this.allocate(8);
-            }
-            else {
+            } else {
                 Long fSize = buffer.readLong();
                 this.fileSize.set(fSize);
             }
-        } catch (IOException e) {
-
-        }
+        } catch (IOException ignore) {}
     }
 
     /**
      * Close the data file
      *
-     * @return
+     * @return Whether the file was closed successfully.
      */
-    public boolean close()
-    {
-        try
-        {
+    public boolean close() {
+        try {
             this.channel.force(force);
             this.channel.close();
             return !this.channel.isOpen();
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             return false;
         }
     }
 
+    /**
+     * Commit all file writes
+     */
     @Override
     public void commit() {
         try {
             this.channel.force(true);
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -143,18 +145,15 @@ public class FileChannelStore implements Store
     /**
      * Write an Object Buffer
      *
-     * @param buffer
-     * @param position
-     * @return
+     * @param buffer Object buffer to write
+     * @param position Position within the volume to write to.
+     * @return How many bytes were written
      */
-    public int write(ObjectBuffer buffer, long position)
-    {
+    public int write(ObjectBuffer buffer, long position) {
 
-        try
-        {
+        try {
             return channel.write(buffer.getByteBuffer(), position);
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -162,29 +161,23 @@ public class FileChannelStore implements Store
     }
 
     /**
-     * Write a serializable object to
+     * Write a serializable object to a volume.  This uses the ObjectBuffer for serialization
      *
-     * @param serializable
-     * @param position
-     * @throws java.io.IOException
+     * @param serializable Object
+     * @param position Position to write to
      */
-    public int write(ObjectSerializable serializable, long position)
-    {
+    public int write(ObjectSerializable serializable, long position) {
         final ObjectBuffer objectBuffer = new ObjectBuffer(serializers);
 
-        try
-        {
+        try {
             serializable.writeObject(objectBuffer);
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        try
-        {
+        try {
             return channel.write(objectBuffer.getByteBuffer(), position);
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -192,49 +185,36 @@ public class FileChannelStore implements Store
     }
 
     /**
-     * Write a serializable object
+     * Read a serializable object from the store
      *
-     * @param position
-     * @param size
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param type class type
+     * @return The object that was read from the store
      */
-    public Object read(long position, int size, Class type)
-    {
-        if(position >= fileSize.get())
+    public Object read(long position, int size, Class type) {
+        if (position >= fileSize.get())
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
 
-        try
-        {
+        try {
             channel.read(buffer, position);
             buffer.rewind();
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        try
-        {
-            if(ObjectSerializable.class.isAssignableFrom(type))
-            {
+        try {
+            if (ObjectSerializable.class.isAssignableFrom(type)) {
                 Object serializable = type.newInstance();
                 final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, serializers);
-                ((ObjectSerializable)serializable).readObject(objectBuffer, position);
+                ((ObjectSerializable) serializable).readObject(objectBuffer, position);
                 return serializable;
-            }
-            else
-            {
+            } else {
                 return ObjectBuffer.unwrap(buffer, serializers);
             }
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        } catch (InstantiationException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
-        {
+        } catch (IOException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
 
@@ -244,25 +224,22 @@ public class FileChannelStore implements Store
     /**
      * Read a serializable object
      *
-     * @param position
-     * @param size
-     * @param object
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param object object to read into
+     * @return same object instance that was sent in.
      */
-    public Object read(long position, int size, ObjectSerializable object)
-    {
-        if(position >= fileSize.get())
+    public Object read(long position, int size, ObjectSerializable object) {
+        if (position >= fileSize.get())
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
 
-        try
-        {
+        try {
             channel.read(buffer, position);
             buffer.rewind();
             object.readObject(new ObjectBuffer(buffer, serializers), position);
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
@@ -271,79 +248,61 @@ public class FileChannelStore implements Store
     }
 
     /**
-     * Write a serializable object
+     * Read a serializable object
      *
-     * @param position
-     * @param size
-     * @param serializerId
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param serializerId Key to the serializer version that was used when written to the store
+     * @return Object read from the store
      */
-    public Object read(long position, int size, Class type, int serializerId)
-    {
-        if(position >= fileSize.get())
+    public Object read(long position, int size, Class type, int serializerId) {
+        if (position >= fileSize.get())
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
 
-        try
-        {
+        try {
             channel.read(buffer, position);
             buffer.rewind();
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
-        try
-        {
-            if(serializerId > 0)
-            {
+        try {
+            if (serializerId > 0) {
                 return ObjectBuffer.unwrap(buffer, serializers, serializerId);
-            }
-            else if(ObjectSerializable.class.isAssignableFrom(type))
-            {
+            } else if (ObjectSerializable.class.isAssignableFrom(type)) {
                 Object serializable = type.newInstance();
                 final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, serializers);
-                ((ObjectSerializable)serializable).readObject(objectBuffer, position);
+                ((ObjectSerializable) serializable).readObject(objectBuffer, position);
                 return serializable;
-            }
-            else
-            {
+            } else {
                 return ObjectBuffer.unwrap(buffer, serializers);
             }
-        } catch (IOException e)
-        {
-            e.printStackTrace();
-        } catch (InstantiationException e)
-        {
-            e.printStackTrace();
-        } catch (IllegalAccessException e)
-        {
+        } catch (IOException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
 
         return null;
     }
+
     /**
      * Write a serializable object
      *
-     * @param position
-     * @param size
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @return Object Buffer contains bytes read
      */
-    public ObjectBuffer read(long position, int size)
-    {
-        if(position >= fileSize.get())
+    public ObjectBuffer read(long position, int size) {
+        if (position >= fileSize.get())
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
 
-        try
-        {
+        try {
             channel.read(buffer, position);
             buffer.rewind();
-        } catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -353,7 +312,8 @@ public class FileChannelStore implements Store
 
     /**
      * Read the file channel and put it into a buffer at a position
-     * @param buffer Buffer to put into
+     *
+     * @param buffer   Buffer to put into
      * @param position position in store to read
      */
     @Override
@@ -369,11 +329,10 @@ public class FileChannelStore implements Store
     /**
      * Allocates a spot in the file
      *
-     * @param size
-     * @return
+     * @param size Allocate space within the store.
+     * @return position of started allocated bytes
      */
-    public long allocate(int size)
-    {
+    public long allocate(int size) {
         final ObjectBuffer buffer = new ObjectBuffer(serializers);
         long newFileSize = fileSize.getAndAdd(size);
         try {
@@ -398,9 +357,9 @@ public class FileChannelStore implements Store
     /**
      * Delete File
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override
-    public void delete()
-    {
+    public void delete() {
         final File dataFile = new File(filePath);
         dataFile.delete();
     }

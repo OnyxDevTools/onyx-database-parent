@@ -42,7 +42,7 @@ public class QueryResult implements Serializable, Externalizable, BufferStreamab
      * Custom Write Serialization
      * @param out Object Output buffer
      *
-     * @throws IOException
+     * @throws IOException Exception when writing to output stream
      */
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
@@ -54,8 +54,6 @@ public class QueryResult implements Serializable, Externalizable, BufferStreamab
      * Custom De-Serialization
      * @param in Object Input Buffer
      *
-     * @throws IOException
-     * @throws ClassNotFoundException
      */
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {

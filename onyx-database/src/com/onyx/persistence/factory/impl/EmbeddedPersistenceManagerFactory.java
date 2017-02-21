@@ -1,7 +1,6 @@
 package com.onyx.persistence.factory.impl;
 
 import com.onyx.exception.InitializationException;
-import com.onyx.exception.SingletonException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
@@ -72,7 +71,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
     protected String instance = DEFAULT_INSTANCE;
 
     // Enable history journaling ot keep a transaction history
-    protected boolean enableJournaling = false;
+    private boolean enableJournaling = false;
 
     /**
      * Overridden constructor to include SchemaContext
@@ -310,9 +309,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
     @Override
     public void close()
     {
-        try {
-            context.shutdown();
-        } catch (SingletonException ignore) {}
+        context.shutdown();
         releaseLock();
     }
 

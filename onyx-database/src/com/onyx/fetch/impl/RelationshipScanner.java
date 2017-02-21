@@ -22,6 +22,8 @@ import java.util.Map;
 
 /**
  * Created by timothy.osborn on 1/3/15.
+ *
+ * Scan relationships for matching criteria
  */
 public class RelationshipScanner extends AbstractTableScanner implements TableScanner {
 
@@ -30,14 +32,13 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     /**
      * Constructor
      *
-     * @param criteria
-     * @param classToScan
-     * @param descriptor
+     * @param criteria Query Criteria
+     * @param classToScan Class type to scan
+     * @param descriptor Entity descriptor of entity type to scan
      */
     public RelationshipScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-
     }
 
     /**
@@ -45,6 +46,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      *
      */
     @Override
+    @SuppressWarnings("unchecked")
     public Map<Long, Long> scan() throws EntityException
     {
         return scan(records);
@@ -53,11 +55,12 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     /**
      * Full Scan with existing values
      *
-     * @param existingValues
-     * @return
-     * @throws EntityException
+     * @param existingValues Existing values to check criteria
+     * @return filterd map of results matching additional criteria
+     * @throws EntityException Cannot scan relationship values
      */
     @Override
+    @SuppressWarnings("unchecked")
     public Map scan(Map existingValues) throws EntityException
     {
         // Retain the original attribute
@@ -97,12 +100,12 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     /**
      * Get Relationship Indexes
      *
-     * @param attribute
-     * @param existingValues
-     * @return
-     * @throws EntityException
+     * @param attribute Attribute match
+     * @param existingValues Existing values to check
+     * @return References that match criteria
      */
-    protected Map getRelationshipIndexes(String attribute, Map existingValues) throws EntityException
+    @SuppressWarnings("unchecked")
+    private Map getRelationshipIndexes(String attribute, Map existingValues) throws EntityException
     {
         final Map allResults = new HashMap();
 
@@ -112,8 +115,8 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         final RelationshipController relationshipController = getContext().getRelationshipController(relationshipDescriptor);
         final RecordController inverseRecordController = getDefaultInverseRecordController();
 
-        List<RelationshipReference> relationshipIdentifiers = null;
-        Object keyValue = null;
+        List<RelationshipReference> relationshipIdentifiers;
+        Object keyValue;
 
         while(iterator.hasNext())
         {
@@ -153,10 +156,10 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     /**
      * Grabs the inverse record controller
      *
-     * @return
-     * @throws EntityException
+     * @return Record controller for inverse relationship
+     * @throws EntityException Cannot get record controller for inverse relatioship
      */
-    protected RecordController getDefaultInverseRecordController() throws EntityException
+    private RecordController getDefaultInverseRecordController() throws EntityException
     {
         final EntityDescriptor inverseDescriptor = getContext().getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
         return getContext().getRecordController(inverseDescriptor);

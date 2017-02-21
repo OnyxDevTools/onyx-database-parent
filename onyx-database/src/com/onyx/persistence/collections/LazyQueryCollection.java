@@ -7,17 +7,12 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
-import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +40,7 @@ import java.util.WeakHashMap;
  * </pre>
  *
  */
+@SuppressWarnings("unchecked")
 public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, BufferStreamable {
 
     protected List<Object> identifiers = null;
@@ -54,6 +50,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     transient protected PersistenceManager persistenceManager = null;
     transient protected String contextId;
 
+    @SuppressWarnings("unused")
     public LazyQueryCollection()
     {
 
@@ -78,7 +75,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     /**
      * Quantity or record references within the List
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @return Size of the List
@@ -92,10 +88,9 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     /**
      * Boolean key indicating whether the list is empty
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
-     * @return (size == 0)
+     * @return (size equals 0)
      */
     @Override
     public boolean isEmpty()
@@ -106,7 +101,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     /**
      * Contains an object and is initialized
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param o Object to check
@@ -115,7 +109,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     @Override
     public boolean contains(Object o)
     {
-        Object identifier = null;
+        Object identifier;
         try
         {
             identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
@@ -133,7 +127,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
      * This must add a managed entity
      * </pre>
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param e Record that implements ManagedEntity
@@ -142,25 +135,12 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     @Override
     public boolean add(E e)
     {
-        return false;
-/*        try
-        {
-            Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) e, entityDescriptor.getIdentifier());
-            Object partitionId = partitionContext.getPartitionId((IManagedEntity) e);
-            IManagedEntity entity = persistenceManager.findByIdInPartition(e.getClass(), identifier, partitionId);
-            values.put(identifier, entity);
-            identifiers.add(identifier);
-            return true;
-        } catch (EntityException e1)
-        {
-            return false;
-        }*/
+        throw new RuntimeException("Method unsupported");
     }
 
     /**
      * Remove all objects
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      */
@@ -174,7 +154,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     /**
      * Get object at index and initialize it if it does not exist
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -201,7 +180,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     /**
      * Get object at index and initialize it if it does not exist
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -221,7 +199,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     /**
      * Set object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -231,29 +208,12 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     @Override
     public E set(int index, E element)
     {
-        /*try
-        {
-
-            Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) element, entityDescriptor.getIdentifier());
-            Object partitionId = partitionContext.getPartitionId((IManagedEntity)element);
-            IManagedEntity entity = persistenceManager.findByIdInPartition(element.getClass(), identifier, partitionId);
-
-            Object existingObject = identifiers.get(index);
-            values.remove(existingObject);
-            values.put(identifier, entity);
-            identifiers.set(index, identifier);
-            return element;
-        } catch (EntityException e1)
-        {
-            return null;
-        }*/
-        return null;
+        throw new RuntimeException("Method unsupported");
     }
 
     /**
      * Add object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -269,7 +229,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
      * Remove object at index
      *
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -287,7 +246,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
      * Remove object at index
      *
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param o ManagedEntity
@@ -296,7 +254,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     @Override
     public boolean remove(Object o)
     {
-        Object identifier = null;
+        Object identifier;
         try
         {
             identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
@@ -342,12 +300,10 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        } catch (EntityException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (EntityException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-//        this.partitionContext = new PartitionContext(context, entityDescriptor);
+
         this.persistenceManager = context.getSystemPersistenceManager();
     }
 

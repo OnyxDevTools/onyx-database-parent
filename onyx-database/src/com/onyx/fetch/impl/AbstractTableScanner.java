@@ -19,15 +19,17 @@ import java.util.concurrent.Executors;
 
 /**
  * Created by timothy.osborn on 1/3/15.
+ *
+ * This contains the abstract inforamtion for a table scanner.
  */
-public abstract class AbstractTableScanner extends PartitionContext
+abstract class AbstractTableScanner extends PartitionContext
 {
-    protected ExecutorService executorService = Executors.newFixedThreadPool(8);
+    ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     protected QueryCriteria criteria;
     protected Class classToScan;
     protected EntityDescriptor descriptor;
-    protected OffsetField fieldToGrab = null;
+    OffsetField fieldToGrab = null;
 
     protected DiskMap<Object, IManagedEntity> records = null;
     protected MapBuilder temporaryDataFile = null;
@@ -37,11 +39,12 @@ public abstract class AbstractTableScanner extends PartitionContext
     /**
      * Constructor
      *
-     * @param criteria
-     * @param classToScan
-     * @param descriptor
+     * @param criteria Query Criteria
+     * @param classToScan Class type to scan
+     * @param descriptor Entity descriptor of entity type to scan
      */
-    public AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    @SuppressWarnings("unchecked")
+    AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(context, descriptor);
         this.criteria = criteria;

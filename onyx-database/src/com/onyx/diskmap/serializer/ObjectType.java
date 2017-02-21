@@ -3,6 +3,8 @@ package com.onyx.diskmap.serializer;
 /**
  * Object Types
  *
+ * This is used by the Object buffer.  They are the supported object types.
+ *
  */
 enum ObjectType
 {
@@ -44,5 +46,4 @@ enum ObjectType
     {
         return type;
     }
-
 }

@@ -18,6 +18,8 @@ import java.util.Map;
 
 /**
  * Created by timothy.osborn on 1/3/15.
+ *
+ * Scan identifier values
  */
 public class IdentifierScanner extends AbstractTableScanner implements TableScanner
 {
@@ -25,10 +27,11 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     /**
      * Constructor
      *
-     * @param criteria
-     * @param classToScan
-     * @param descriptor
-     * @throws EntityException
+     * @param criteria Query Criteria
+     * @param classToScan Class type to scan
+     * @param descriptor Entity descriptor of entity type to scan
+     *
+     * @throws EntityException Cannot find entity information
      */
     public IdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
@@ -38,13 +41,13 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     /**
      * Full scan with ids
      *
-     * @return
-     * @throws EntityException
+     * @return Identifiers matching criteria
+     * @throws EntityException Cannot scan records
      */
     @Override
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> returnValue = new HashMap();
+        final Map<Long, Long> returnValue = new HashMap<>();
 
         final RecordController recordController = getContext().getRecordController(descriptor);
 
@@ -96,20 +99,20 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     /**
      * Scan existing values for identifiers
      *
-     * @param existingValues
-     * @return
-     * @throws EntityException
+     * @param existingValues Existing values to check
+     * @return Existing values that meed additional criteria
+     * @throws EntityException Cannot scan records
      */
     @Override
     public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
     {
-        final Map<Long, Long> returnValue = new HashMap();
+        final Map<Long, Long> returnValue = new HashMap<>();
 
         final RecordController recordController = getContext().getRecordController(descriptor);
 
         Iterator<Long> iterator = existingValues.keySet().iterator();
 
-        Long key = null;
+        Long key;
 
         while (iterator.hasNext())
         {

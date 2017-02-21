@@ -9,7 +9,6 @@ package com.onyx.exception;
  */
 public class AttributeMissingException extends EntityException{
 
-    public static final String PARTITION_MISSING_ATTRIBUTE = "Partition attribute is missing for entity";
     public static final String ENTITY_MISSING_ATTRIBUTE = "Entity attribute does not exist";
     public static final String ILLEGAL_ACCESS_ATTRIBUTE = "Illegal access for attribute";
 
@@ -21,8 +20,8 @@ public class AttributeMissingException extends EntityException{
     /**
      * Constructor with message and cause
      *
-     * @param message
-     * @param cause
+     * @param message Error message
+     * @param cause Root cause
      */
     public AttributeMissingException(String message, Throwable cause)
     {
@@ -32,7 +31,7 @@ public class AttributeMissingException extends EntityException{
     /**
      * Constructor with message
      *
-     * @param message
+     * @param message Error message
      */
     public AttributeMissingException(String message)
     {

@@ -12,6 +12,7 @@ public class StreamException extends EntityException
     /**
      * Default Constructor
      */
+    @SuppressWarnings("unused")
     public StreamException()
     {
 

@@ -20,11 +20,21 @@ import java.util.Set;
 /**
  * Created by tosborn1 on 1/8/17.
  * <p>
- * This class is used to combine both a Bitmap index and a SkipList.  The tail end of the bitmap points to a skip list.
+ * This class is used to combine both a Hash Matrix index and a SkipList.  The tail end of the hash matrix points to a skip list.
  * The load factor indicates how bit the bitmap index should be.  The larger the bitmap load factor, the larger the disk
  * space.  It also implies the index will run faster.
  *
- * @since 1.2.0
+ * The performance indicates a big o notation of O(log n) / O(logFactor)  where the O(logFactor) indicates the Big O of the
+ * Hash matrix.  Each hash matrix points to a reference to a skip list that has a big o notation of O(log n)
+ *
+ * The log factor indicates how many skip list references there can be.  So, if the logFactor is 10, there can be a
+ * maximum of 9999999999 Skip list heads.
+ *
+ * The difference between this and the DiskMultiHashMap is that this does not pre define the allocated space for the hash matrix
+ * It does not becuase, if the loadFactor were to be 10, that would be a massive amount of storage space.  For smaller loadFactors
+ * where you can afford the allocation, the DiskMultiHashMap will perform better.
+ *
+ * @since 1.2.0 This was re-factored not to have a dependent sub map.
  */
 @SuppressWarnings("unchecked")
 public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K,V> {
@@ -43,12 +53,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      */
     public DiskMultiMatrixHashMap(Store fileStore, Header header, int loadFactor) {
         super(fileStore, header, true);
-
         this.loadFactor = (byte)loadFactor;
-
-        // If there are a small number of skip lists lets keep it in memory.  The max is going to be 999
-        if (loadFactor <= 3)
-            skipListMapCache = new ConcurrentWeakHashMap();
     }
 
     /**
@@ -260,7 +265,6 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
             return skipListMapCache.computeIfAbsent(skipListMapId, integer -> seek(forInsert, hashDigits));
 
-
         } finally {
             if (forInsert)
                 this.getReadWriteLock().unlockWriteLevel(hashDigit, stamp);
@@ -310,7 +314,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
         } else {
             // No default node, lets create one // It must mean we are inserting
             node = new HashMatrixNode();
-            node.position = fileStore.allocate(this.getBitmapNodeSize());
+            node.position = fileStore.allocate(this.getHashMatrixNodeSize());
 
             this.writeHashMatrixNode(node.position, node);
             this.forceUpdateHeaderFirstNode(header, node.position);
@@ -338,7 +342,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
                     return new CombinedIndexHashMatrixNode(headNode, previousNode, hashDigit);
                 } else {
                     node = new HashMatrixNode();
-                    node.position = fileStore.allocate(this.getBitmapNodeSize());
+                    node.position = fileStore.allocate(this.getHashMatrixNodeSize());
                     this.writeHashMatrixNode(node.position, node);
                     this.updateHashMatrixReference(previousNode, hashDigit, node.position);
                 }

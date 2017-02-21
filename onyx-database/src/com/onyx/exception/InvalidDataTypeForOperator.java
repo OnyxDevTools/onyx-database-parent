@@ -2,6 +2,7 @@ package com.onyx.exception;
 
 /**
  * Created by timothy.osborn on 1/3/15.
+ *
  */
 public class InvalidDataTypeForOperator extends EntityException
 {
@@ -11,13 +12,14 @@ public class InvalidDataTypeForOperator extends EntityException
     /**
      * Constructor with message
      *
-     * @param message
+     * @param message Error message
      */
     public InvalidDataTypeForOperator(String message)
     {
         super(message);
     }
 
+    @SuppressWarnings("unused")
     public InvalidDataTypeForOperator()
     {
         super();

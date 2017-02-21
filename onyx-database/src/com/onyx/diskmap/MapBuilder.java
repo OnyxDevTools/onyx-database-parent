@@ -86,6 +86,8 @@ public interface MapBuilder {
      * If you were to invoke this with the same header and use the maps concurrently you WILL corrupt your data.
      * You must use alternative means of thread safety.
      *
+     * Since this implementation is stateless, it does not provide caching nor thread safety.
+     *
      * @param header Head of the disk map
      * @param loadFactor Load factor in which the map was instantiated with.
      * @return Stateless instance of a disk map

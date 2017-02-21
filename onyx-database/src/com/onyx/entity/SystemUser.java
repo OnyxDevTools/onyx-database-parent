@@ -10,6 +10,8 @@ import java.security.Principal;
 
 /**
  * Created by cosbor11 on 3/2/2015.
+ *
+ * User for the database
  */
 @Entity
 public class SystemUser extends AbstractSystemEntity implements IManagedEntity, Principal
@@ -28,9 +30,9 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
     protected String password;
 
     @Attribute
-    protected int roleOrdinal;
+    private int roleOrdinal;
 
-    protected SystemUserRole role;
+    private SystemUserRole role;
 
     public String getId() {
         return username;
@@ -56,12 +58,13 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
         this.password = password;
     }
 
-
+    @SuppressWarnings("unused")
     public int getRoleOrdinal()
     {
         return roleOrdinal;
     }
 
+    @SuppressWarnings("unused")
     public void setRoleOrdinal(int roleOrdinal)
     {
         this.roleOrdinal = roleOrdinal;
@@ -86,8 +89,8 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
 
         SystemUser that = (SystemUser) o;
 
-        if (username != null ? !username.equals(that.username) : that.username != null) return false;
-        return password != null ? password.equals(that.password) : that.password == null;
+        return username != null ? username.equals(that.username) : that.username == null
+                && (password != null ? password.equals(that.password) : that.password == null);
 
     }
 

@@ -2,6 +2,8 @@ package com.onyx.exception;
 
 /**
  * Created by timothy.osborn on 12/12/14.
+ *
+ * Needs a valid constructor
  */
 public class InvalidConstructorException extends EntityException
 {
@@ -18,6 +20,7 @@ public class InvalidConstructorException extends EntityException
         super(message, cause);
     }
 
+    @SuppressWarnings("unused")
     public InvalidConstructorException()
     {
         super();

@@ -25,21 +25,12 @@ public class Header implements ObjectSerializable
     /**
      * Override equals key to compare all values
      *
-     * @param val
-     * @return
+     * @param val Object to compare agains
+     * @return Whether the header = the parameter value
      */
     @Override
-    public boolean equals(Object val)
-    {
-        if(val == this)
-        {
-            return true;
-        }
-        if(val instanceof Header)
-        {
-            return position == ((Header) val).position;
-        }
-        return false;
+    public boolean equals(Object val) {
+        return val == this || val instanceof Header && position == ((Header) val).position;
     }
 
     /**
@@ -47,8 +38,8 @@ public class Header implements ObjectSerializable
      *
      * Write to an Object Output Stream
      *
-     * @param buffer
-     * @throws java.io.IOException
+     * @param buffer Buffer to write to
+     * @throws java.io.IOException Serialization exception
      */
     public void writeObject(ObjectBuffer buffer) throws IOException
     {
@@ -60,9 +51,8 @@ public class Header implements ObjectSerializable
     /**
      * Read from an Object Buffer
      *
-     * @param buffer
-     * @throws java.io.IOException
-     * @throws ClassNotFoundException
+     * @param buffer Object buffer to read from
+     * @throws java.io.IOException Serialization exception
      */
     public void readObject(ObjectBuffer buffer) throws IOException
     {
@@ -88,5 +78,4 @@ public class Header implements ObjectSerializable
     public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException {
 
     }
-
 }

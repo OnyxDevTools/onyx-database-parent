@@ -5,21 +5,20 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
 import com.onyx.util.OffsetField;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  * Created by timothy.osborn on 3/2/15.
+ *
+ * Contains entity attribute inforamtion
  */
 @Entity(fileName = "system")
 public class SystemAttribute extends AbstractSystemEntity implements IManagedEntity
 {
-    private static final AtomicInteger counter = new AtomicInteger();
-
+    @SuppressWarnings("unused")
     public SystemAttribute()
     {
     }
 
-    public SystemAttribute(AttributeDescriptor descriptor, SystemEntity entity)
+    SystemAttribute(AttributeDescriptor descriptor, SystemEntity entity)
     {
         this.entity = entity;
         this.name = descriptor.getName();
@@ -34,7 +33,6 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
-//    @Index
     @Attribute
     protected String id;
 
@@ -42,7 +40,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     protected String name;
 
     @Attribute
-    protected String dataType;
+    private String dataType;
 
     @Attribute
     protected int size;
@@ -52,9 +50,6 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
 
     @Attribute
     protected boolean key;
-
-    @Attribute
-    protected boolean indexed;
 
     @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
@@ -96,6 +91,7 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
         return dataType;
     }
 
+    @SuppressWarnings("unused")
     public void setDataType(String type)
     {
         this.dataType = type;

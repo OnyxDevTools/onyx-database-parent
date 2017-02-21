@@ -8,7 +8,6 @@ import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIdentifier;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
-import com.onyx.exception.SingletonException;
 import com.onyx.persistence.context.impl.WebSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -145,10 +144,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
      */
     @Override
     public void close() {
-        try {
-            context.shutdown();
-        } catch (SingletonException ignore) {
-        }
+        context.shutdown();
     }
 
     /**

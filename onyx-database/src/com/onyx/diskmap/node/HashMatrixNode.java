@@ -9,6 +9,8 @@ import java.io.Serializable;
 
 /**
  * Created by timothy.osborn on 3/25/15.
+ *
+ * This is a node for sifting through a hash matrix to find the end of the chain that points to a skip list node
  */
 public class HashMatrixNode implements ObjectSerializable, Serializable
 {
@@ -25,8 +27,8 @@ public class HashMatrixNode implements ObjectSerializable, Serializable
     /**
      * Write Object
      *
-     * @param buffer
-     * @throws java.io.IOException
+     * @param buffer Object buffer to write to.
+     * @throws java.io.IOException Serialization error
      */
     @Override
     public void writeObject(ObjectBuffer buffer) throws IOException
@@ -37,8 +39,8 @@ public class HashMatrixNode implements ObjectSerializable, Serializable
 
     /**
      * Read Object
-     * @param buffer
-     * @throws java.io.IOException
+     * @param buffer Object buffer to read from
+     * @throws java.io.IOException Serialization error
      */
     @Override
     public void readObject(ObjectBuffer buffer) throws IOException

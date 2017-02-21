@@ -19,6 +19,7 @@ public class EntityTypeMatchException extends EntityException {
         super(message);
     }
 
+    @SuppressWarnings("unused")
     public EntityTypeMatchException()
     {
         super();

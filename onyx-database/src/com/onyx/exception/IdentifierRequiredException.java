@@ -2,6 +2,7 @@ package com.onyx.exception;
 
 /**
  * Created by timothy.osborn on 1/21/15.
+ *
  */
 public class IdentifierRequiredException extends EntityException
 {
@@ -9,6 +10,7 @@ public class IdentifierRequiredException extends EntityException
 
     protected String attribute;
 
+    @SuppressWarnings("unused")
     public IdentifierRequiredException()
     {
 
@@ -17,8 +19,8 @@ public class IdentifierRequiredException extends EntityException
     /**
      * Constructor with message and attribute
      *
-     * @param message
-     * @param attribute
+     * @param message Error message
+     * @param attribute Attribute causing exception
      */
     public IdentifierRequiredException(String message, String attribute)
     {

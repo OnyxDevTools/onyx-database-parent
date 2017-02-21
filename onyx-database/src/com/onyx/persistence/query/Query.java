@@ -8,6 +8,7 @@ import com.onyx.diskmap.serializer.ObjectSerializable;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,21 +48,21 @@ import java.util.List;
 public class Query implements ObjectSerializable, Serializable
 {
 
-    protected List<String> selections;
+    private List<String> selections;
     protected List<AttributeUpdate> updates;
     protected QueryCriteria criteria;
-    protected List<QueryOrder> queryOrders;
+    private List<QueryOrder> queryOrders;
 
-    protected Class entityType;
-    protected int firstRow = 0;
+    private Class entityType;
+    private int firstRow = 0;
     protected int maxResults = -1;
-    protected int resultsCount;
+    private int resultsCount;
 
     /**
      * Stop query before it finishes
      * @since 1.0.0
      */
-    protected volatile boolean kill;
+    private volatile boolean kill;
 
     protected Object partition = "";
 
@@ -118,7 +119,7 @@ public class Query implements ObjectSerializable, Serializable
     {
         this.entityType = entityType;
         this.criteria = criteria;
-        this.queryOrders = Arrays.asList(queryOrder);
+        this.queryOrders = Collections.singletonList(queryOrder);
     }
 
     /**
@@ -141,7 +142,7 @@ public class Query implements ObjectSerializable, Serializable
     public Query(Class entityType, QueryOrder queryOrder)
     {
         this.entityType = entityType;
-        this.queryOrders = Arrays.asList(queryOrder);
+        this.queryOrders = Collections.singletonList(queryOrder);
     }
 
     /**
@@ -552,6 +553,7 @@ public class Query implements ObjectSerializable, Serializable
      * @throws IOException failure to deserialize query
      */
     @Override
+    @SuppressWarnings("unchecked")
     public void readObject(ObjectBuffer buffer) throws IOException
     {
         selections = (List<String>) buffer.readObject();

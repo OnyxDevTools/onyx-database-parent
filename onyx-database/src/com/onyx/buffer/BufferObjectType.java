@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * This Enum indicates all of the different types of objects that can be serialized
  */
-public enum BufferObjectType {
+enum BufferObjectType {
 
     NULL(null),
     REFERENCE(null),
@@ -83,6 +83,7 @@ public enum BufferObjectType {
      * @param object Object in Question
      * @return The serializer type that correlates to that class.
      */
+    @SuppressWarnings("unchecked")
     public static BufferObjectType getTypeCodeForClass(Object object) {
 
         if(object == null)

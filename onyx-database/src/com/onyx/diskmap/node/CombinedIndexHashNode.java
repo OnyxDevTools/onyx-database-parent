@@ -2,11 +2,13 @@ package com.onyx.diskmap.node;
 
 /**
  * Created by tosborn1 on 2/16/17.
+ *
+ * This indicates a head of a data structor for a Hash table with a child index of a skip list.
  */
 public class CombinedIndexHashNode {
 
     public int hashDigit;
-    public volatile SkipListHeadNode head;
+    public SkipListHeadNode head;
     public int mapId;
 
     public CombinedIndexHashNode(final SkipListHeadNode base, final int mapId, int hashDigit) {

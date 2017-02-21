@@ -9,11 +9,11 @@ import java.nio.ByteBuffer;
  * to a expandableByteBuffer as the underlying ByteBuffer can change.
  *
  */
-public class ExpandableByteBuffer
+class ExpandableByteBuffer
 {
 
     // Default Buffer Size
-    protected static final int BUFFER_ALLOCATION = 1024 * 5; // Initial Buffer allocation size 5kb
+    static final int BUFFER_ALLOCATION = 1024 * 5; // Initial Buffer allocation size 5kb
 
     public ByteBuffer buffer;
     private int maxBufferSize = 0;
@@ -25,7 +25,7 @@ public class ExpandableByteBuffer
      * @param maxBufferSize maximum size to read fro the expandableByteBuffer
      * @param bufferStartingPosition starting index of the expandableByteBuffer
      */
-    public ExpandableByteBuffer(ByteBuffer buffer, int maxBufferSize, int bufferStartingPosition)
+    ExpandableByteBuffer(ByteBuffer buffer, int maxBufferSize, int bufferStartingPosition)
     {
         this.buffer = buffer;
         this.maxBufferSize = maxBufferSize;
@@ -39,7 +39,7 @@ public class ExpandableByteBuffer
      * @param buffer ByteBuffer to initialize with
      */
     @SuppressWarnings("unused")
-    public ExpandableByteBuffer(ByteBuffer buffer)
+    ExpandableByteBuffer(ByteBuffer buffer)
     {
         this.buffer = buffer;
         this.maxBufferSize = Integer.MAX_VALUE;
@@ -47,11 +47,11 @@ public class ExpandableByteBuffer
     }
 
     /**
-     * Ensure the
-     * @param required
-     * @return
+     * Check to see if the buffer need additional bytes
+     * @param required Number of additional required bytes
+     * @return Whether the buffer already has enough bytes remaining
      */
-    protected boolean ensureRequiredSize(int required)
+    boolean ensureRequiredSize(int required)
     {
         return (buffer.position() + required) < (maxBufferSize + bufferStartingPosition);
     }
@@ -59,9 +59,9 @@ public class ExpandableByteBuffer
     /**
      * Check size and ensure the expandableByteBuffer has enough space to accommodate
      *
-     * @param needs
+     * @param needs How many more bytes to allocate if the buffer does not have enough
      */
-    protected void ensureSize(int needs) {
+    void ensureSize(int needs) {
         if(buffer.limit() < needs + buffer.position()
                 && buffer.capacity() >= needs + buffer.position())
         {

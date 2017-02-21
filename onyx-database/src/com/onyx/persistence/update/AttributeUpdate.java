@@ -38,6 +38,7 @@ import java.io.ObjectOutput;
  * @see com.onyx.persistence.query.Query
  * @see PersistenceManager#executeQuery(Query)
  */
+@SuppressWarnings("unchecked")
 public class AttributeUpdate<T>  implements ObjectSerializable, Externalizable
 {
 
@@ -49,10 +50,10 @@ public class AttributeUpdate<T>  implements ObjectSerializable, Externalizable
 
     }
 
-    protected String fieldName;
+    private String fieldName;
     protected T value;
-    transient protected AttributeDescriptor attributeDescriptor;
-    transient protected IndexController indexController;
+    transient private AttributeDescriptor attributeDescriptor;
+    transient private IndexController indexController;
 
     /**
      * Creates a new IntegerUpdate Instruction object

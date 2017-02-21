@@ -30,7 +30,6 @@ public class ViewerSchemaContext extends DefaultSchemaContext
 
     /**
      * Overridden Constructor
-     * @param contextId Database Instance Name
      * @param location Remote endpoint to database or local store location
      *
      */

@@ -1,13 +1,10 @@
 package com.onyx.persistence.collections;
 
-
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
-import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
@@ -15,10 +12,6 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.relationship.RelationshipReference;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.*;
 
 /**
@@ -65,6 +58,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     transient protected PersistenceManager persistenceManager;
     private String contextId;
 
+    @SuppressWarnings("unused")
     public LazyRelationshipCollection()
     {
 
@@ -73,7 +67,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Constructor
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param entityDescriptor  Record Entity Descriptor
@@ -86,49 +79,15 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         this.identifiers = new ArrayList<>();
         if(identifiers != null)
         {
-            Iterator it = identifiers.iterator();
-            while (it.hasNext())
-                this.identifiers.add((RelationshipReference)it.next());
+            for (Object identifier : identifiers) this.identifiers.add((RelationshipReference) identifier);
         }
         this.entityDescriptor = entityDescriptor;
         this.contextId = context.getContextId();
     }
 
     /**
-     * Constructor
-     *
-     * @author Tim Osborn
-     * @since 1.0.0
-     *
-     * @param entityDescriptor Record Entity Descriptor
-     * @param identifiers  List of References
-     * @param context Schema Context
-     */
-    public LazyRelationshipCollection(EntityDescriptor entityDescriptor, List identifiers, SchemaContext context)
-    {
-        this.persistenceManager = context.getSystemPersistenceManager();
-        this.identifiers = identifiers;
-        this.entityDescriptor = entityDescriptor;
-    }
-
-    /**
-     * Constructor
-     *
-     * @author Tim Osborn
-     * @since 1.0.0
-     *
-     * @param context Schema Context
-     */
-    public LazyRelationshipCollection(SchemaContext context)
-    {
-        this.persistenceManager = context.getSystemPersistenceManager();
-        this.contextId = context.getContextId();
-    }
-
-    /**
      * Size of record references
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @return Size of References
@@ -142,7 +101,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Collection is Empty
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @return Flag for indicating Collection is empty ( longSize == 0 )
@@ -156,7 +114,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Contains an object and is initialized
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param o Record to check
@@ -173,22 +130,12 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         {
             return false;
         }
-
-/*        try
-        {
-            return identifiers.contains(new RelationshipReference(identifier, partitionContext.getPartitionId((IManagedEntity) o)));
-        }
-        catch (EntityException e)
-        {
-            return false;
-        }*/
     }
 
     /**
      * Add an element to the lazy collection
      * This must add a managed entity
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param e Record Managed Entity
@@ -197,26 +144,12 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public boolean add(E e)
     {
-        /*try
-        {
-            Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) e, entityDescriptor.getIdentifier());
-
-            IManagedEntity entity = persistenceManager.findByIdWithPartitionId(e.getClass(), identifier, partitionContext.getPartitionId((IManagedEntity) e));
-
-            values.put(identifier, entity);
-            identifiers.add(new RelationshipReference(identifier, partitionContext.getPartitionId(entity)));
-            return true;
-        } catch (EntityException e1)
-        {
-            return false;
-        }*/
-        return false;
+        throw new RuntimeException("Method unsupported, hydrate relationship using initialize before modifying");
     }
 
     /**
      * Remove all objects
      *
-     * @author Tim Osborn
      * @since 1.0.0
      */
     @Override
@@ -229,13 +162,13 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Get object at index and initialize it if it does not exist
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record index
      * @return ManagedEntity
      */
     @Override
+    @SuppressWarnings("unchecked")
     public E get(int index)
     {
         IManagedEntity entity = values.get(index);
@@ -265,7 +198,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Set object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -275,30 +207,12 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public E set(int index, E element)
     {
-        /*try
-        {
-            Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) element, entityDescriptor.getIdentifier());
-
-            Long partitionId = partitionContext.getPartitionId((IManagedEntity) element);
-            IManagedEntity entity = persistenceManager.findByIdWithPartitionId(entityDescriptor.getClazz(), identifier, partitionId);
-
-
-            Object existingObject = identifiers.get(index);
-            values.remove(existingObject);
-            values.put(identifier, entity);
-            identifiers.set(index, new RelationshipReference(identifier, partitionId));
-            return element;
-        } catch (EntityException e1)
-        {
-            return null;
-        }*/
-        return null;
+        throw new RuntimeException("Method unsupported, hydrate relationship using initialize before modifying");
     }
 
     /**
      * Add object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -313,13 +227,13 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Remove object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
      * @return Record removed
      */
     @Override
+    @SuppressWarnings({"unchecked", "SuspiciousMethodCalls"})
     public E remove(int index)
     {
         Object existingObject = identifiers.get(index);
@@ -330,7 +244,6 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     /**
      * Remove object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param o Record
@@ -339,17 +252,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     public boolean remove(Object o)
     {
-        return false;
-        /*try
-        {
-            RelationshipReference ref = new RelationshipReference(identifier, partitionContext.getPartitionId((IManagedEntity) o));
-            values.remove(ref);
-            return identifiers.remove(ref);
-        }
-        catch (EntityException e)
-        {
-            return false;
-        }*/
+        throw new RuntimeException("Method unsupported, hydrate relationship using initialize before modifying");
     }
 
     public List<RelationshipReference> getIdentifiers()
@@ -373,6 +276,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void read(BufferStream bufferStream) throws BufferingException {
         this.values = new WeakHashMap<>();
         this.identifiers = (List) bufferStream.getCollection();
@@ -382,9 +286,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        } catch (EntityException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (EntityException | ClassNotFoundException e) {
             e.printStackTrace();
         }
         this.persistenceManager = context.getSystemPersistenceManager();

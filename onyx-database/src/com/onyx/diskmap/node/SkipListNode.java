@@ -7,6 +7,8 @@ import java.io.IOException;
 
 /**
  * Created by tosborn1 on 1/6/17.
+ *
+ * This is a record pointer for a skip list.
  */
 public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializable {
 
@@ -43,6 +45,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public void readObject(ObjectBuffer buffer) throws IOException {
         recordPosition = buffer.readLong();
         recordSize = buffer.readInt();

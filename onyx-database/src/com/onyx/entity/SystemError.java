@@ -11,16 +11,19 @@ import java.io.StringWriter;
 
 /**
  * Created by timothy.osborn on 4/9/15.
+ *
+ * System error.  To be logged when logging gets to be implemented
  */
-
 @com.onyx.persistence.annotations.Entity
 public class SystemError extends ManagedEntity implements IManagedEntity {
 
+    @SuppressWarnings("unused")
     public SystemError()
     {
 
     }
 
+    @SuppressWarnings("unused")
     public SystemError(Throwable e)
     {
         e.printStackTrace();
@@ -50,10 +53,10 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
     }
 
     @Attribute
-    protected String packageClass;
+    private String packageClass;
 
     @Attribute
-    protected String operation;
+    private String operation;
 
     @Attribute(size = 20000)
     protected String message;
@@ -83,21 +86,25 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
         this.message = message;
     }
 
+    @SuppressWarnings("unused")
     public String getPackageClass()
     {
         return packageClass;
     }
 
+    @SuppressWarnings("unused")
     public void setPackageClass(String packageClass)
     {
         this.packageClass = packageClass;
     }
 
+    @SuppressWarnings("unused")
     public String getOperation()
     {
         return operation;
     }
 
+    @SuppressWarnings("unused")
     public void setOperation(String operation)
     {
         this.operation = operation;

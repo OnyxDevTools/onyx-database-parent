@@ -28,9 +28,9 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
     /**
      * Constructor
      *
-     * @param criteria
-     * @param classToScan
-     * @param descriptor
+     * @param criteria Query Criteria
+     * @param classToScan Class type to scan
+     * @param descriptor Entity descriptor of entity type to scan
      */
     public FullTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
@@ -41,15 +41,16 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
     /**
      * Full Table Scan
      *
-     * @return
-     * @throws EntityException
+     * @return Map of identifiers.  The key is the partition reference and the value is the reference within file.
+     * @throws EntityException Query exception while trying to scan elements
      */
+    @SuppressWarnings("unckecked")
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> allResults = new HashMap();
+        final Map<Long, Long> allResults = new HashMap<>();
 
         // We need to do a full scan
-        final Iterator<SkipListNode> iterator = records.referenceSet().iterator();
+        final Iterator iterator = records.referenceSet().iterator();
 
         SkipListNode entry;
         Object attributeValue;
@@ -58,7 +59,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
             if (query.isTerminated())
                 return allResults;
 
-            entry = iterator.next();
+            entry = (SkipListNode)iterator.next();
 
             attributeValue = records.getAttributeWithRecID(fieldToGrab, entry);
 
@@ -76,17 +77,18 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
     /**
      * Scan records with existing values
      *
-     * @param existingValues
-     * @return
-     * @throws EntityException
+     * @param existingValues Existing values to scan from
+     * @throws EntityException Exception while scanning entity records
+     * @return Remaining values that meet the criteria
      */
+    @SuppressWarnings("unchecked")
     public Map scan(Map existingValues) throws EntityException
     {
         final Map allResults = new HashMap();
 
-        final Iterator<Long> iterator = existingValues.keySet().iterator();
-        Object entityAttribute = null;
-        Object keyValue = null;
+        final Iterator iterator = existingValues.keySet().iterator();
+        Object entityAttribute;
+        Object keyValue;
 
         while(iterator.hasNext())
         {

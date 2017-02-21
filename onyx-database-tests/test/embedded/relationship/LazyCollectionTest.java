@@ -165,7 +165,7 @@ public class LazyCollectionTest extends BaseTest
         Assert.assertTrue(parent.childCascade.isEmpty());
     }
 
-    @Test
+    @Test(expected = RuntimeException.class)
     public void testSet()
     {
         ManyToManyParent parent = new ManyToManyParent();

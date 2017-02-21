@@ -9,98 +9,100 @@ import java.util.Map;
 
 /**
  * Created by tosborn on 3/27/15.
+ *
+ * This declares the contract for the volume storage
  */
 public interface Store {
 
     /**
      * Write a serializable object to
      *
-     * @param serializable
-     * @param position
-     * @throws java.io.IOException
+     * @param serializable Object serializable to write to store
+     * @param position location to write to
      */
     int write(ObjectSerializable serializable, long position);
 
     /**
-     * Write a serializable object to
+     * Write an Object Buffer
      *
-     * @param serializable
-     * @param position
-     * @throws java.io.IOException
+     * @param serializable Object to write
+     * @param position Position within the volume to write to.
+     * @return How many bytes were written
      */
     int write(ObjectBuffer serializable, long position);
 
     /**
-     * Read a buffer at position for a longSize
+     * Write a serializable object
      *
-     * @param position
-     * @param size
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @return Object Buffer contains bytes read
      */
     ObjectBuffer read(long position, int size);
 
     /**
-     * Read a file at a position for a and put value into byte buffer
-     * @param position position in store to read
-     * @param buffer Buffer to put into
+     * Read the file channel and put it into a buffer at a position
      *
+     * @param buffer   Buffer to put into
+     * @param position position in store to read
      */
     void read(ByteBuffer buffer, long position);
 
     /**
-     * Write a serializable object
+     * Read a serializable object from the store
      *
-     * @param position
-     * @param size
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param type class type
+     * @return The object that was read from the store
      */
     Object read(long position, int size, Class type);
 
     /**
-     * Write a serializable object
+     * Read a serializable object
      *
-     * @param position
-     * @param size
-     * @param object
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param object object to read into
+     * @return same object instance that was sent in.
      */
     Object read(long position, int size, ObjectSerializable object);
 
     /**
-     * Write a serializable object
+     * Read a serializable object
      *
-     * @param position
-     * @param size
-     * @param serializerId
-     * @return
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param serializerId Key to the serializer version that was used when written to the store
+     * @return Object read from the store
      */
     Object read(long position, int size, Class type, int serializerId);
 
     /**
      * Allocates a spot in the file
      *
-     * @param size
-     * @return
+     * @param size Allocate space within the store.
+     * @return position of started allocated bytes
      */
     long allocate(int size);
 
     /**
      * Getter for serializers
-     * @return
+     * @return Serializers used to serialize Object Buffers
      */
     Serializers getSerializers();
 
     /**
      * Getter for file longSize
      *
-     * @return
+     * @return The self tracked size of the storage
      */
     long getFileSize();
 
     /**
      * Close file storage
      *
-     * @return
+     * @return Whether the store was closed
      */
     boolean close();
 
@@ -111,7 +113,8 @@ public interface Store {
 
     /**
      * Initialize
-     * @param builder Map builder used to initialize
+     * @param mapById Serializers by id
+     * @param mapByName Serializers by namre
      */
     void init(Map mapById, Map mapByName);
 

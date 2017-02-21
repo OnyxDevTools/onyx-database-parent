@@ -12,13 +12,26 @@ import com.onyx.diskmap.store.Store;
 import java.util.*;
 
 /**
- * Created by tosborn1 on 1/8/17.
+ * Created by tosborn1 on 2/20/17.
  * <p>
- * This class is used to combine both a Bitmap index and a SkipList.  The tail end of the bitmap points to a skip list.
+ * This class is used to combine both a Hash Matrix index and a SkipList.  The tail end of the hash matrix points to a skip list.
  * The load factor indicates how bit the bitmap index should be.  The larger the bitmap load factor, the larger the disk
  * space.  It also implies the index will run faster.
  *
- * @since 1.2.0
+ * The performance indicates a big o notation of O(log n) / O(1)  where the O(1) indicates the Big O of the
+ * Hash table.  The hash table is guaranteed to have 1 iteration.  Each hash matrix points to a reference to a skip list that has a big o notation of O(log n)
+ *
+ * The log factor indicates how many skip list references there can be.  So, if the logFactor is 10, there can be a
+ * maximum of 9999999999 Skip list heads.
+ *
+ * So, say you had 1,000,000,000 records and a load factor of 5, the first iteration would provide the skip list containing a 10,000.  The remaining Big O would
+ * be log(n) on 10k records.
+ *
+ * The difference between this and the DiskMultiHashMatrixMap is that this does this structure pre define the allocated space for the hash table
+ * If you were to define a large load factor > 5 this could be allocating a great deal of space.  If your data set may be sparse, you may want
+ * to use the DiskMultiMatrixHashMap since it does not bare the brunt of allocating space upon instantiation.
+ *
+ * @since 1.2.0 This was added to offer a more efficient version of the DiskMultiMatrixHashMap for smaller data sets.
  */
 @SuppressWarnings("unchecked")
 public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K, V> {
@@ -41,12 +54,17 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      *
      * @param fileStore File storage mechanism
      * @param header    Pointer to the DiskMap
+     * @param loadFactor The max size of the hash that is generated
+     * @param stateless If designated as true, this map does not retain state.  The state is handled elsewhere.  Without a state
+     *                  there can not be a meaningful cache nor a meaningful lock.  In that case, in this constructor,
+     *                  we set the cache elements and lock to empty implmementations.
      *
      * @since 1.2.0
      */
-    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, boolean enableCaching) {
+    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, boolean stateless) {
         super(fileStore, header, true, loadFactor);
-        if(!enableCaching)
+
+        if(!stateless)
         {
             cache = new EmptyMap();
             mapCache = new EmptyMap();

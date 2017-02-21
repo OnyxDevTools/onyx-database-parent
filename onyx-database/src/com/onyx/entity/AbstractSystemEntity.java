@@ -9,43 +9,51 @@ import java.util.Date;
 
 /**
  * Created by timothy.osborn on 3/15/15.
+ *
+ * Contains date modified information
  */
-public class AbstractSystemEntity extends ManagedEntity
+class AbstractSystemEntity extends ManagedEntity
 {
 
     @Attribute
-    protected Date dateUpdated;
+    private Date dateUpdated;
 
     @Attribute
-    protected Date dateCreated;
+    private Date dateCreated;
 
+    @SuppressWarnings("unused")
     public Date getDateUpdated()
     {
         return dateUpdated;
     }
 
+    @SuppressWarnings("unused")
     public void setDateUpdated(Date dateUpdated)
     {
         this.dateUpdated = dateUpdated;
     }
 
+    @SuppressWarnings("unused")
     public Date getDateCreated()
     {
         return dateCreated;
     }
 
+    @SuppressWarnings("unused")
     public void setDateCreated(Date dateCreated)
     {
         this.dateCreated = dateCreated;
     }
 
     @PreInsert
+    @SuppressWarnings("unused")
     protected void onPrePersist()
     {
         dateCreated = new Date();
     }
 
     @PreUpdate
+    @SuppressWarnings("unused")
     protected void onPreUpdate()
     {
         dateUpdated = new Date();

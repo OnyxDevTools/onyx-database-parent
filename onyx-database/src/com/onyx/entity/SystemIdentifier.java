@@ -6,18 +6,20 @@ import com.onyx.persistence.annotations.*;
 
 /**
  * Created by timothy.osborn on 3/2/15.
+ *
+ * System entity for entity identifier
  */
-
 @Entity(fileName = "system")
 public class SystemIdentifier extends AbstractSystemEntity implements IManagedEntity
 {
 
+    @SuppressWarnings("unused")
     public SystemIdentifier()
     {
 
     }
 
-    public SystemIdentifier(IdentifierDescriptor descriptor, SystemEntity entity)
+    SystemIdentifier(IdentifierDescriptor descriptor, SystemEntity entity)
     {
         this.entity = entity;
         this.name = descriptor.getName();

@@ -6,7 +6,6 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.SingletonException;
 import com.onyx.exception.TransactionException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -159,9 +158,8 @@ public interface SchemaContext
      * Shutdown schema context.  Close files, connections or any other IO mechanisms used within the context
      *
      * @since 1.0.0
-     * @throws SingletonException Only one instance of the record and index factories must exist
      */
-    void shutdown() throws SingletonException;
+    void shutdown();
 
     /**
      * Start the context and initialize storage, connection, or any other IO mechanisms used within the schema context
@@ -266,14 +264,6 @@ public interface SchemaContext
     String getLocation();
 
     /**
-     * Get location of file base
-     *
-     * @since 1.0.0
-     * @return Remote file path for file server
-     */
-    String getRemoteFileBase();
-
-    /**
      * Create Temporary Map Builder
      * @since 1.0.0
      *
@@ -295,7 +285,6 @@ public interface SchemaContext
      *
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
-     * @throws EntityException Default Exception
      */
     SystemEntity getSystemEntityById(int systemEntityId);
 

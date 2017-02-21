@@ -9,12 +9,12 @@ public class EntityException extends Exception {
 
     public static final String UNKNOWN_EXCEPTION = "Unknown exception occurred";
 
-    transient public Throwable rootCause = null;
+    transient Throwable rootCause = null;
 
     /**
      * Constructor with cause
      *
-     * @param cause
+     * @param cause Root cause
      */
     public EntityException(Throwable cause)
     {
@@ -33,7 +33,7 @@ public class EntityException extends Exception {
     /**
      * Constructor with error message
      *
-     * @param message
+     * @param message Exception message
      */
     public EntityException(String message)
     {
@@ -43,8 +43,8 @@ public class EntityException extends Exception {
     /**
      * Constructor with message and cause
      *
-     * @param message
-     * @param cause
+     * @param message Exception message
+     * @param cause Root cause
      */
     public EntityException(String message, Throwable cause)
     {

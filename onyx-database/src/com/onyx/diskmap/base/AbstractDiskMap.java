@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
 
-    public AbstractDiskMap()
+    protected AbstractDiskMap()
     {
 
     }
@@ -161,8 +161,8 @@ public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
     /**
      * Helper method for getting the digits of a hash number.  This relies on it being a 10 digit number max
      *
-     * @param hash
-     * @return
+     * @param hash Hash value
+     * @return the hash value in format of an array of single digits
      */
     protected int[] getHashDigits(int hash)
     {

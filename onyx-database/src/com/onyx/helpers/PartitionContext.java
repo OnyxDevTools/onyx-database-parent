@@ -13,7 +13,6 @@ import com.onyx.diskmap.MapBuilder;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
-import java.util.function.BiFunction;
 
 /**
  * Created by timothy.osborn on 3/19/15.
@@ -32,8 +31,8 @@ public class PartitionContext
     /**
      * Constructor
      *
-     * @param context
-     * @param descriptor
+     * @param context Schema Context
+     * @param descriptor Entity Descriptor
      */
     public PartitionContext(SchemaContext context, EntityDescriptor descriptor)
     {
@@ -45,13 +44,13 @@ public class PartitionContext
     /**
      * Cached Partition Files
      */
-    protected Map<Long, MapBuilder> cachedPartitionFiles = Collections.synchronizedMap(new WeakHashMap<Long, MapBuilder>());
+    private Map<Long, MapBuilder> cachedPartitionFiles = Collections.synchronizedMap(new WeakHashMap<Long, MapBuilder>());
 
     /**
      * Cached Data Files for partition ids, return default if there is no partition.  Otherwise insert into cache.
      *
      */
-    public MapBuilder getDataFileWithPartitionId(long partitionId) throws EntityException
+    protected MapBuilder getDataFileWithPartitionId(long partitionId) throws EntityException
     {
         if(partitionId == 0)
         {
@@ -82,18 +81,13 @@ public class PartitionContext
         return retVal;
     }
 
-
-
-
     /**
      * Cached Partition Files
      */
-
-    class PartitionKey
+    private class PartitionKey
     {
-        public PartitionKey(){}
 
-        public PartitionKey(IManagedEntity entity) throws EntityException
+        PartitionKey(IManagedEntity entity) throws EntityException
         {
             this.entityType = entity.getClass();
             this.partitionVal = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, getContext()));
@@ -115,11 +109,11 @@ public class PartitionContext
             return false;
         }
 
-        public Class entityType;
-        public String partitionVal;
+        Class entityType;
+        String partitionVal;
     }
 
-    protected Map<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, EntityDescriptor>());
+    private Map<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, EntityDescriptor>());
 
     public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws EntityException
     {
@@ -128,23 +122,19 @@ public class PartitionContext
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            EntityDescriptor retVal = cachedDescriptorsPerEntity.compute(new PartitionKey(entity), new BiFunction<PartitionKey, EntityDescriptor, EntityDescriptor>() {
-                @Override
-                public EntityDescriptor apply(PartitionKey partitionKey, EntityDescriptor descriptor)
+            EntityDescriptor retVal = cachedDescriptorsPerEntity.compute(new PartitionKey(entity), (partitionKey, descriptor) -> {
+                if(descriptor == null)
                 {
-                    if(descriptor == null)
+                    try
                     {
-                        try
-                        {
-                            return getContext().getDescriptorForEntity(entity);
-                        }
-                        catch (EntityException e)
-                        {
-                            exceptionWrapper.exception = e;
-                        }
+                        return getContext().getDescriptorForEntity(entity);
                     }
-                    return descriptor;
+                    catch (EntityException e)
+                    {
+                        exceptionWrapper.exception = e;
+                    }
                 }
+                return descriptor;
             });
 
             if(exceptionWrapper.exception != null)
@@ -159,38 +149,34 @@ public class PartitionContext
 
 
 
-    protected Map<Long, EntityDescriptor> cachedDescriptorsPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, EntityDescriptor>());
+    private Map<Long, EntityDescriptor> cachedDescriptorsPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, EntityDescriptor>());
 
-    public EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws EntityException
+    protected EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws EntityException
     {
         if(partitionId != 0)
         {
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            EntityDescriptor retVal = cachedDescriptorsPerPartition.compute(partitionId, new BiFunction<Long, EntityDescriptor, EntityDescriptor>() {
-                @Override
-                public EntityDescriptor apply(Long partitionKey, EntityDescriptor descriptor)
+            EntityDescriptor retVal = cachedDescriptorsPerPartition.compute(partitionId, (partitionKey, descriptor) -> {
+                if(descriptor == null)
                 {
-                    if(descriptor == null)
+                    try
                     {
-                        try
+                        SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(defaultDescriptor.getClazz(), partitionId);
+                        if(partitionEntry == null)
                         {
-                            SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(defaultDescriptor.getClazz(), partitionId);
-                            if(partitionEntry == null)
-                            {
-                                return defaultDescriptor;
-                            }
+                            return defaultDescriptor;
+                        }
 
-                            return getContext().getDescriptorForEntity(defaultDescriptor.getClazz(), partitionEntry.getValue());
-                        }
-                        catch (EntityException e)
-                        {
-                            exceptionWrapper.exception = e;
-                        }
+                        return getContext().getDescriptorForEntity(defaultDescriptor.getClazz(), partitionEntry.getValue());
                     }
-                    return descriptor;
+                    catch (EntityException e)
+                    {
+                        exceptionWrapper.exception = e;
+                    }
                 }
+                return descriptor;
             });
 
             if(exceptionWrapper.exception != null)
@@ -203,32 +189,28 @@ public class PartitionContext
         return defaultDescriptor;
     }
 
-    protected Map<PartitionKey, RecordController> cachedControllersPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, RecordController>());
+    private Map<PartitionKey, RecordController> cachedControllersPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, RecordController>());
 
-    public RecordController getRecordControllerForEntity(IManagedEntity entity) throws EntityException
+    protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws EntityException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
         {
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            final RecordController retVal = cachedControllersPerEntity.compute(new PartitionKey(entity), new BiFunction<PartitionKey, RecordController, RecordController>() {
-                @Override
-                public RecordController apply(PartitionKey partitionKey, RecordController controller)
+            final RecordController retVal = cachedControllersPerEntity.compute(new PartitionKey(entity), (partitionKey, controller) -> {
+                if(controller == null)
                 {
-                    if(controller == null)
+                    try
                     {
-                        try
-                        {
-                            return getContext().getRecordController(getDescriptorForEntity(entity));
-                        }
-                        catch (EntityException e)
-                        {
-                            exceptionWrapper.exception = e;
-                        }
+                        return getContext().getRecordController(getDescriptorForEntity(entity));
                     }
-                    return controller;
+                    catch (EntityException e)
+                    {
+                        exceptionWrapper.exception = e;
+                    }
                 }
+                return controller;
             });
 
             if(exceptionWrapper.exception != null)
@@ -242,7 +224,7 @@ public class PartitionContext
     }
 
 
-    protected Map<Long, RecordController> cachedControllersPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, RecordController>());
+    private Map<Long, RecordController> cachedControllersPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, RecordController>());
 
     public RecordController getRecordControllerForPartition(long partitionId) throws EntityException
     {
@@ -250,24 +232,20 @@ public class PartitionContext
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            RecordController retVal = cachedControllersPerPartition.compute(partitionId, new BiFunction<Long, RecordController, RecordController>() {
-                @Override
-                public RecordController apply(Long partitionKey, RecordController controller)
+            RecordController retVal = cachedControllersPerPartition.compute(partitionId, (partitionKey, controller) -> {
+                if(controller == null)
                 {
-                    if(controller == null)
+                    try
                     {
-                        try
-                        {
-                            EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
-                            return getContext().getRecordController(inverseDescriptor);
-                        }
-                        catch (EntityException e)
-                        {
-                            exceptionWrapper.exception = e;
-                        }
+                        EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
+                        return getContext().getRecordController(inverseDescriptor);
                     }
-                    return controller;
+                    catch (EntityException e)
+                    {
+                        exceptionWrapper.exception = e;
+                    }
                 }
+                return controller;
             });
 
             if(exceptionWrapper.exception != null)
@@ -281,9 +259,9 @@ public class PartitionContext
     }
 
 
-    protected Map<PartitionKey, MapBuilder> cachedDataFilesPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, MapBuilder>());
+    private Map<PartitionKey, MapBuilder> cachedDataFilesPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, MapBuilder>());
 
-    public MapBuilder getDataFileForEntity(IManagedEntity entity) throws EntityException
+    protected MapBuilder getDataFileForEntity(IManagedEntity entity) throws EntityException
     {
         if (PartitionHelper.hasPartitionField(entity, getContext()))
         {
@@ -319,38 +297,32 @@ public class PartitionContext
         }
     }
 
+    private Map<PartitionKey, Long> cachedPartitionIds = Collections.synchronizedMap(new WeakHashMap<PartitionKey, Long>());
 
-
-    protected Map<PartitionKey, Long> cachedPartitionIds = Collections.synchronizedMap(new WeakHashMap<PartitionKey, Long>());
-
-    public long getPartitionId(IManagedEntity entity) throws EntityException
+    protected long getPartitionId(IManagedEntity entity) throws EntityException
     {
         if (PartitionHelper.hasPartitionField(entity, getContext()))
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            Long partitionId = cachedPartitionIds.compute(new PartitionKey(entity), new BiFunction<PartitionKey, Long, Long>() {
-                @Override
-                public Long apply(PartitionKey partitionKey, Long id)
+            Long partitionId = cachedPartitionIds.compute(new PartitionKey(entity), (partitionKey, id) -> {
+                if(id != null)
                 {
-                    if(id != null)
+                    return id;
+                }
+                try
+                {
+                    Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, getContext());
+                    if (partitionValue == null || partitionValue == PartitionHelper.NULL_PARTITION)
                     {
-                        return id;
+                        return 0L;
                     }
-                    try
-                    {
-                        Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, getContext());
-                        if (partitionValue == null || partitionValue == PartitionHelper.NULL_PARTITION)
-                        {
-                            return 0l;
-                        }
-                        return getContext().getPartitionWithValue(partitionKey.entityType, partitionKey.partitionVal).getIndex();
-                    }
-                    catch (EntityException e)
-                    {
-                        exceptionWrapper.exception = e;
-                        return 0l;
-                    }
+                    return getContext().getPartitionWithValue(partitionKey.entityType, partitionKey.partitionVal).getIndex();
+                }
+                catch (EntityException e)
+                {
+                    exceptionWrapper.exception = e;
+                    return 0L;
                 }
             });
 

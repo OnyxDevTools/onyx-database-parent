@@ -4,10 +4,12 @@ import java.io.IOException;
 
 /**
  * Created by timothy.osborn on 4/2/15.
+ *
+ * Error while serializing object
  */
 public class SerializationException extends IOException
 {
-    public static final String CHECKSUM = "Invalid serialization checksum";
+    private static final String CHECKSUM = "Invalid serialization checksum";
 
     /**
      * Constructor

@@ -9,11 +9,14 @@ import java.util.List;
 
 /**
  * Created by timothy.osborn on 3/2/15.
+ *
+ * Partition information for an entity
  */
 @Entity(fileName = "system")
 public class SystemPartition extends AbstractSystemEntity implements IManagedEntity
 {
 
+    @SuppressWarnings("unused")
     public SystemPartition()
     {
 
@@ -41,7 +44,7 @@ public class SystemPartition extends AbstractSystemEntity implements IManagedEnt
     protected SystemEntity entity;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry.class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
-    protected List<SystemPartitionEntry> entries = new ArrayList();
+    private List<SystemPartitionEntry> entries = new ArrayList<>();
 
     public String getId()
     {
@@ -78,6 +81,7 @@ public class SystemPartition extends AbstractSystemEntity implements IManagedEnt
         return entries;
     }
 
+    @SuppressWarnings("unused")
     public void setEntries(List<SystemPartitionEntry> entries)
     {
         this.entries = entries;

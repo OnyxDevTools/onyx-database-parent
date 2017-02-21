@@ -4,7 +4,6 @@ import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
-import com.onyx.exception.SingletonException;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -176,9 +175,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         onyxRMIClient.close();
 
         if(context != null) {
-            try {
-                context.shutdown();
-            } catch (SingletonException ignore) {}
+            context.shutdown();
         }
         persistenceManager = null;
         context = null;

@@ -6,6 +6,8 @@ import java.util.Set;
 
 /**
  * Created by tosborn1 on 2/19/17.
+ * <p>
+ * This class is a map that does not perform any actions.  The purpose is so that it can be injected to ignore caching
  */
 public class EmptyMap implements Map {
     @Override
@@ -44,14 +46,10 @@ public class EmptyMap implements Map {
     }
 
     @Override
-    public void putAll(Map m) {
-
-    }
+    public void putAll(Map m) {}
 
     @Override
-    public void clear() {
-
-    }
+    public void clear() {}
 
     @Override
     public Set keySet() {

@@ -18,22 +18,24 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by timothy.osborn on 2/5/15.
+ *
+ * This implementation of the record controller will create a new sequence if the id was not defined
  */
 public class SequenceRecordControllerImpl extends AbstractRecordController implements RecordController {
 
-    protected static final int LAST_SEQUENCE_VALUE = 1;
-
-    protected AtomicLong sequenceValue = new AtomicLong(0);
-
-    protected Map<Integer, Long> metadata = null;
+    private static final int LAST_SEQUENCE_VALUE = 1;
+    private final AtomicLong sequenceValue = new AtomicLong(0);
+    private Map<Integer, Long> metadata = null;
 
     private static final int METADATA_MAP_LOAD_FACTOR = 1;
 
     /**
      * Constructor including the entity descriptor
      *
-     * @param entityDescriptor
+     * @param entityDescriptor Record Entity Descriptor
+     * @param context Schema context
      */
+    @SuppressWarnings("unchecked")
     public SequenceRecordControllerImpl(EntityDescriptor entityDescriptor, SchemaContext context)
     {
         super(entityDescriptor, context);
@@ -50,16 +52,16 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     /**
      * Save an entity
      *
-     * @param entity
-     * @return
-     * @throws EntityException
+     * @param entity Entity to save
+     * @return Entity identifier
+     * @throws EntityException Error saving entity
      */
     @Override
     public Object save(IManagedEntity entity) throws EntityException
     {
 
         Object retval = getIndexValueFromEntity(entity);
-        Long val = 0l;
+        Long val;
         if(retval instanceof Integer || retval.getClass() == int.class)
         {
             val = ((Integer)retval).longValue();
@@ -107,7 +109,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
                 {
                     invokePreUpdateCallback(entity);
                 }
-            } catch (EntityCallbackException e)
+            } catch (EntityCallbackException ignore)
             {
             }
             return entity;
@@ -131,9 +133,9 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     /**
      * Overridden in order to ensure it is a long
      *
-     * @param entity
-     * @return
-     * @throws com.onyx.exception.AttributeMissingException
+     * @param entity Entity to get index value of
+     * @return identifier value for entity
+     * @throws com.onyx.exception.AttributeMissingException Attribute does not exist on entity
      */
     protected Object getIndexValueFromEntity(IManagedEntity entity) throws AttributeMissingException
     {
@@ -146,8 +148,8 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     /**
      * Returns true if the record exists in database
      *
-     * @param entity
-     * @return
+     * @param entity entity to check to see if it exists
+     * @return Whether it alread exist in the record set
      */
     public boolean exists(IManagedEntity entity) throws EntityException
     {
@@ -160,8 +162,8 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     /**
      * Delete
      *
-     * @param entity
-     * @throws EntityException
+     * @param entity Entity to delete
+     * @throws EntityException Error deleting entity
      */
     public void delete(IManagedEntity entity) throws EntityException
     {
@@ -178,8 +180,8 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
     /**
      * Get an entity by the entity with populated primary key
      *
-     * @param entity
-     * @return
+     * @param entity Entity to get.  A prereq is that it has its identifier defined
+     * @return The entity if it exsts
      */
     public IManagedEntity get(IManagedEntity entity) throws EntityException
     {

@@ -10,12 +10,27 @@ import java.util.*;
 /**
  * Created by tosborn1 on 1/9/17.
  *
+ * This class manages the iteration behavior of a multi indexed map.  The first index being a hash matrix.  The second,
+ * is a skip list.
  *
+ * So, first it will iterate through the hash matrix, and grab a reference to each second index being the rerence to the
+ * skip lists.
+ *
+ * @since 1.2.0
  */
 @SuppressWarnings("unchecked")
 public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCachedHashMatrix<K,V> implements Map<K, V> {
 
-
+    /**
+     * Constructor, initializes cache
+     *
+     * @param store Storage volume for hash matrix
+     * @param header Head of the data structure
+     * @param detached Whether the object is detached.  If it is detached, ignore writing
+     *                 values to the header
+     *
+     * @since 1.2.0
+     */
     protected AbstractIterableMultiMapHashMatrix(Store store, Header header, boolean detached) {
         super(store, header, detached);
     }
@@ -176,6 +191,11 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
 
     private class EntryIterator extends AbstractMultiMapIterator implements Iterator {}
 
+    /**
+     * This is the base implenetation of the iterators
+     *
+     * @since 1.2.0
+     */
     abstract class AbstractMultiMapIterator implements Iterator {
 
         Stack<AbstractIterableMultiMapHashMatrix.NodeEntry> nodeStack = new Stack<>(); // Simple stack that hold onto the nodes
@@ -184,13 +204,18 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
         boolean isDictionary = false;
         boolean isReference = false;
 
+        /**
+         * Constructor.  Queue up the first reference of a skip list
+         */
         AbstractMultiMapIterator() {
-            if (header.firstNode > 0) {
-                nodeStack.push(new AbstractIterableMultiMapHashMatrix.NodeEntry(header.firstNode, (short) -1));
-            }
-            queueUpNext();
+            this(false);
         }
 
+        /**
+         * Constructor.  Queue up the first reference of a skip list.
+         *
+         * @param isDictionary Identify if the value is a map/dictionary object or the default entry key value pair
+         */
         AbstractMultiMapIterator(boolean isDictionary) {
             this.isDictionary = isDictionary;
             if (header.firstNode > 0) {
@@ -199,12 +224,26 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
             queueUpNext();
         }
 
+        /**
+         * The cursor of the skip list has next.  The currentIterator indicates the iterator of the current skip list
+         * set by queueUpNext.
+         * @return Whether there are values left in the skip list or there are skip lists still to check that may have
+         *         values
+         *
+         * @since 1.2.0
+         */
         @Override
         public boolean hasNext() {
             prepareNext();
             return (currentIterator != null && currentIterator.hasNext());
         }
 
+        /**
+         * Queue up the next reference so, we can check ahead rather than do the processing in the next() while
+         * the hasNext may not know if there is a next value or not.
+         *
+         * @since 1.2.0
+         */
         void queueUpNext() {
             NodeEntry nodeEntry;
             NodeEntry newEntry;
@@ -232,6 +271,11 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
             }
         }
 
+        /**
+         * Prepare next value
+         *
+         * @since 1.2.0
+         */
         private void prepareNext()
         {
             if(currentIterator != null && currentIterator.hasNext())
@@ -259,6 +303,10 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
             }
         }
 
+        /**
+         * Return the next object which is located in the current iterator.
+         * @return Either a map reference, dictionary, or entry key value pair based on the parents' requirement
+         */
         @Override
         public Object next()
         {

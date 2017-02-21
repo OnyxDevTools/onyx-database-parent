@@ -7,6 +7,8 @@ import java.io.IOException;
 
 /**
  * Created by tosborn1 on 1/9/17.
+ *
+ * This is a head of a skip list level.
  */
 public class SkipListHeadNode implements ObjectSerializable {
 

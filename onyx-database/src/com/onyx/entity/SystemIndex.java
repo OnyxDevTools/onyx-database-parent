@@ -6,17 +6,19 @@ import com.onyx.persistence.annotations.*;
 
 /**
  * Created by timothy.osborn on 3/2/15.
+ *
+ * Index information for entity
  */
 @Entity(fileName = "system")
 public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
 {
-
+    @SuppressWarnings("unused")
     public SystemIndex()
     {
 
     }
 
-    public SystemIndex(IndexDescriptor descriptor, SystemEntity entity)
+    SystemIndex(IndexDescriptor descriptor, SystemEntity entity)
     {
         this.entity = entity;
         this.name = descriptor.getName();

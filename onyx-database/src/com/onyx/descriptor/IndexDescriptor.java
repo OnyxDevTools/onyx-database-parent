@@ -2,6 +2,8 @@ package com.onyx.descriptor;
 
 /**
  * Created by timothy.osborn on 12/11/14.
+ *
+ * General information regarding an index within an entity
  */
 public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescriptor {
 
@@ -54,12 +56,12 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
     /**
      * Used for calculating hash structure
      *
-     * @return
+     * @return Index descriptor hash code
      */
     @Override
     public int hashCode() {
         if (entityDescriptor.getPartition() != null) {
-            (getType().getName() + getName() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
+            return (getType().getName() + getName() + entityDescriptor.getPartition().getPartitionValue()).hashCode();
         }
         return (getType().getName() + getName() + entityDescriptor.getClazz().getName()).hashCode();
     }
@@ -67,8 +69,8 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
     /**
      * Used for usage within a hashmap
      *
-     * @param val
-     * @return
+     * @param val Object to compare
+     * @return Whether the object is equal to the param or not
      */
     @Override
     public boolean equals(Object val) {

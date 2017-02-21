@@ -6,18 +6,21 @@ import com.onyx.persistence.annotations.*;
 
 /**
  * Created by timo
- * thy.osborn on 3/2/15.
+ * tim.osborn on 3/2/15.
+ *
+ * Relationship information for an entity
  */
 @Entity(fileName = "system")
 public class SystemRelationship extends AbstractSystemEntity implements IManagedEntity
 {
 
+    @SuppressWarnings("unused")
     public SystemRelationship()
     {
 
     }
 
-    public SystemRelationship(RelationshipDescriptor relationshipDescriptor, SystemEntity entity)
+    SystemRelationship(RelationshipDescriptor relationshipDescriptor, SystemEntity entity)
     {
         id = entity.getName() + relationshipDescriptor.getName() +  inverseClass + inverse;
         this.entity = entity;
@@ -52,7 +55,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
     protected String inverseClass;
 
     @Attribute
-    protected String parentClass;
+    private String parentClass;
 
     @Attribute
     protected int fetchPolicy;
@@ -61,7 +64,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
     protected int cascadePolicy;
 
     @Attribute
-    protected int relationshipType;
+    private int relationshipType;
 
     @Attribute
     protected int loadFactor;
@@ -129,6 +132,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return parentClass;
     }
 
+    @SuppressWarnings("unused")
     public void setParentClass(String parentClass)
     {
         this.parentClass = parentClass;
@@ -159,6 +163,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return relationshipType;
     }
 
+    @SuppressWarnings("unused")
     public void setRelationshipType(int relationshipType)
     {
         this.relationshipType = relationshipType;

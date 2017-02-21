@@ -17,21 +17,23 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by tosborn on 3/27/15.
+ *
+ * This class uses buffers that are mapped to memory rather than a direct file channel
  */
 public class MemoryMappedStore extends FileChannelStore implements Store {
 
-    public static final int SLICE_SIZE = ((1024 * 1024) * 3);
+    static final int SLICE_SIZE = ((1024 * 1024) * 3);
 
-    public Map<Integer, FileSlice> slices;
+    Map<Integer, FileSlice> slices;
 
-    public MemoryMappedStore() {
-        super();
+    MemoryMappedStore()
+    {
+
     }
-
     /**
      * Constructor open file
      *
-     * @param filePath
+     * @param filePath File location for the store
      */
     public MemoryMappedStore(String filePath, SchemaContext context, boolean force) {
         super(filePath, context, force);
@@ -40,8 +42,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Open the data file
      *
-     * @param filePath
-     * @return
+     * @param filePath File location for the store
+     * @return Whether the file was opened and the first file slice was allocated
      */
     public synchronized boolean open(String filePath) {
         try {
@@ -66,18 +68,18 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Close the data file
      *
-     * @return
+     * @return  Close the memory mapped flie and truncate to get rid of the remainder of allocated space for the last
+     * file slice
      */
     public synchronized boolean close() {
         try {
 
             if (force) {
-                this.slices.values().stream().forEach(file -> file.flush());
+                this.slices.values().forEach(FileSlice::flush);
 
                 try {
                     channel.truncate(fileSize.get());
-                } catch (IOException e) {
-                }
+                } catch (IOException ignore) {}
             }
 
             this.channel.close();
@@ -90,9 +92,9 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Write an Object Buffer
      *
-     * @param buffer
-     * @param position
-     * @return
+     * @param buffer Object buffer to write
+     * @param position position within store to write to
+     * @return How many bytes were written
      */
     public int write(ObjectBuffer buffer, long position) {
         final ByteBuffer byteBuffer = buffer.getByteBuffer();
@@ -102,10 +104,11 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Write a buffer.  This is a helper function to work with a buffer rather than a FileChannel
      *
-     * @param byteBuffer
-     * @param position
-     * @return
+     * @param byteBuffer Byte buffer to write
+     * @param position position within store to write to
+     * @return how many bytes were written
      */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     protected int write(ByteBuffer byteBuffer, long position) {
 
         final FileSlice slice = getBuffer(position);
@@ -140,9 +143,10 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Read a mem mapped file
      *
-     * @param buffer
-     * @param position
+     * @param buffer Byte buffer to read
+     * @param position within the store
      */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     public void read(ByteBuffer buffer, long position) {
 
         final FileSlice slice = getBuffer(position);
@@ -179,9 +183,9 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Write a serializable object
      *
-     * @param position
-     * @param size
-     * @return
+     * @param position within the store
+     * @param size Amount of bytes to read
+     * @return Object buffer that was read
      */
     public ObjectBuffer read(long position, int size) {
         if (position >= fileSize.get())
@@ -221,8 +225,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
      * er "slice" of the file
      *
-     * @param position
-     * @return
+     * @param position position within memory mapped store
+     * @return The corresponding slice that is at that position
      */
     protected FileSlice getBuffer(long position) {
 
@@ -245,17 +249,15 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
                 e.printStackTrace();
             }
 
-            FileSlice newFileSize = new FileSlice(buffer);
-            return newFileSize;
+            return new FileSlice(buffer);
         });
     }
 
     /**
      * Write a serializable object to
      *
-     * @param serializable
-     * @param position
-     * @throws java.io.IOException
+     * @param serializable Object serializable to write to store
+     * @param position location to write to
      */
     public int write(ObjectSerializable serializable, long position) {
         final ObjectBuffer objectBuffer = new ObjectBuffer(serializers);
@@ -272,10 +274,12 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Write a serializable object
      *
-     * @param position
-     * @param size
-     * @param serializerId
-     * @return
+     * @since 1.2.0 This was migrated to use the Buffer stream.
+     *
+     * @param position Position within store
+     * @param size Size of object to read
+     * @param serializerId Serializer version
+     * @return instantiated serialized object read from store
      */
     public Object read(long position, int size, Class type, int serializerId) {
         if (position >= fileSize.get())
@@ -297,11 +301,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             } else {
                 return ObjectBuffer.unwrap(buffer, serializers);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+        } catch (IOException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         } finally {
             BufferStream.recycle(buffer);
@@ -311,11 +311,12 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     }
 
     /**
-     * Write a serializable object
+     * Read a serializable object
      *
-     * @param position
-     * @param size
-     * @return
+     * @param position position within store
+     * @param size size of object to read
+     * @param type Type of object to assign object to
+     * @return Instantiated object of type
      */
     public Object read(long position, int size, Class type) {
         if (position >= fileSize.get())
@@ -335,11 +336,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             } else {
                 return ObjectBuffer.unwrap(buffer, serializers);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+        } catch (IOException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         } finally {
             BufferStream.recycle(buffer);
@@ -351,10 +348,10 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     /**
      * Get the location within the buffer slice
      *
-     * @param position
-     * @return
+     * @param position Position within the store
+     * @return file slice id
      */
-    protected int getBufferLocation(long position) {
+    private int getBufferLocation(long position) {
         int index = 0;
         if (position > 0) {
             index = (int) (position % SLICE_SIZE);
@@ -370,7 +367,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     class FileSlice {
         public ByteBuffer buffer;
 
-        public FileSlice(ByteBuffer buffer) {
+        FileSlice(ByteBuffer buffer) {
             this.buffer = buffer;
         }
 
@@ -379,7 +376,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         * There is no public JVM API to unmap buffer, so this tries to use SUN proprietary API for unmap.
         * Any error is silently ignored (for example SUN API does not exist on Android).
         */
-        public void flush() {
+        void flush() {
             if (buffer instanceof MappedByteBuffer) {
                 ((MappedByteBuffer) buffer).force(); // Flush the contents of the buffer
                 try {

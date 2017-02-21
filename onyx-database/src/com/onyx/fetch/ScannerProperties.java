@@ -14,17 +14,19 @@ import java.util.List;
 
 /**
  * Created by timothy.osborn on 2/11/15.
+ *
+ * Properties to use to scan an entity
  */
-public class ScannerProperties
+class ScannerProperties
 {
     public EntityDescriptor descriptor = null;
     public RecordController recordController = null;
-    public AttributeDescriptor attributeDescriptor = null;
-    public boolean useParentDescriptor = true;
+    AttributeDescriptor attributeDescriptor = null;
+    boolean useParentDescriptor = true;
     protected Query query;
     protected String contextId;
 
-    public ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, boolean useParentDescriptor, SchemaContext context)
+    private ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, boolean useParentDescriptor, SchemaContext context)
     {
         this.contextId = context.getContextId();
         this.descriptor = descriptor;
@@ -35,24 +37,21 @@ public class ScannerProperties
 
     /**
      * Get scanner properties for certain attributes
-     * @param attributes
-     * @return
-     * @throws IllegalAccessException
-     * @throws InstantiationException
-     * @throws com.onyx.exception.EntityException
+     * @param attributes Attributes to scan
+     * @return List of scanner properties
      */
-    public static List<ScannerProperties> getScannerProperties(String[] attributes, EntityDescriptor descriptor, Query query, SchemaContext context) throws EntityException
+    static List<ScannerProperties> getScannerProperties(String[] attributes, EntityDescriptor descriptor, Query query, SchemaContext context) throws EntityException
     {
         // Get the attribute names so that we can hydrate them later on
         final List<ScannerProperties> scanObjects = new ArrayList<>();
 
-        String[] attributeTokens = null; // Contains the . notation attribute name or relationship designation say for instance child.sampleAttribute.id
+        String[] attributeTokens; // Contains the . notation attribute name or relationship designation say for instance child.sampleAttribute.id
 
         String relationshipsAttributeName; // Get the last in the list so we know what the actual relationship's attribute name is
 
         EntityDescriptor previousDescriptor; // This is so we can keep track of what the final descriptor is in the DOM
         RelationshipDescriptor relationshipDescriptor;
-        Object tmpObject = null; // Temporary object instantiated so that we can gather descriptor information
+        Object tmpObject; // Temporary object instantiated so that we can gather descriptor information
 
 
         // We need to go through the attributes and get the correct serializer and attribute that we need to scan

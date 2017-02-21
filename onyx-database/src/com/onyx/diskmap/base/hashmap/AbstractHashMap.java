@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @param <K> Key
  * @param <V> Value
  */
-public abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
+abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
 
     volatile AtomicInteger mapCount; // Count of allocated hash table used
     private int referenceOffset; // Offest of the references
@@ -34,7 +34,7 @@ public abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      *
      * @since 1.2.0
      */
-    protected AbstractHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
+    AbstractHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
         super(fileStore, header, headless);
         this.loadFactor = (byte) loadFactor;
         int allocation = 1;
@@ -154,5 +154,4 @@ public abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
         final ObjectBuffer objectBuffer = fileStore.read(position, Long.BYTES);
         return objectBuffer.readLong();
     }
-
 }

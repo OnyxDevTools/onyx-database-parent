@@ -8,10 +8,14 @@ import com.onyx.persistence.annotations.*;
 
 /**
  * Created by timothy.osborn on 3/5/15.
+ *
+ * Partition entity for an entity
  */
 @Entity(fileName = "system")
 public class SystemPartitionEntry extends AbstractSystemEntity implements IManagedEntity
 {
+
+    @SuppressWarnings("unused")
     public SystemPartitionEntry()
     {
 

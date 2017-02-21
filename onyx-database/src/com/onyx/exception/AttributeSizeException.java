@@ -2,6 +2,8 @@ package com.onyx.exception;
 
 /**
  * Created by timothy.osborn on 1/21/15.
+ *
+ * Value exceeds maximum size
  */
 public class AttributeSizeException extends EntityException
 {
@@ -9,6 +11,7 @@ public class AttributeSizeException extends EntityException
 
     protected String attribute;
 
+    @SuppressWarnings("unused")
     public AttributeSizeException()
     {
 
@@ -17,8 +20,8 @@ public class AttributeSizeException extends EntityException
     /**
      * Constructor with message and attribute
      *
-     * @param message
-     * @param attribute
+     * @param message Exception message
+     * @param attribute Attribute caused exception
      */
     public AttributeSizeException(String message, String attribute)
     {

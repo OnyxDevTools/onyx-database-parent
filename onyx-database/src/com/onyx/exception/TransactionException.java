@@ -18,6 +18,7 @@ public class TransactionException extends EntityException
     public static final String TRANSACTION_FAILED_TO_RECOVER_FROM_DIRECTORY = "Failed to recover database.  The WAL directory does not exist or is not a directory";
     public static final String TRANSACTION_FAILED_TO_EXECUTE = "Failed to execute transaction.";
 
+    @SuppressWarnings("unused")
     public TransactionException()
     {
         super();

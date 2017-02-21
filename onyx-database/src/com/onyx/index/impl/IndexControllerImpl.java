@@ -18,13 +18,16 @@ import java.util.*;
 
 /**
  * Created by timothy.osborn on 1/29/15.
+ *
+ * Controls actions of an index
  */
+@SuppressWarnings("unchecked")
 public class IndexControllerImpl implements IndexController {
 
     protected String contextId;
 
     protected Map<Object, Header> references = null; // Stores the references for an index key
-    protected Map<Long, Object> indexValues = null;
+    private Map<Long, Object> indexValues = null;
     protected RecordController recordController = null;
     protected IndexDescriptor indexDescriptor = null;
     protected EntityDescriptor descriptor;
@@ -39,9 +42,8 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Constructor with entity descriptor and index descriptor
      *
-     * @param descriptor
-     * @param indexDescriptor
-     * @throws EntityException
+     * @param descriptor Entity Descriptor
+     * @param indexDescriptor Index Descriptor
      */
     public IndexControllerImpl(EntityDescriptor descriptor, IndexDescriptor indexDescriptor, SchemaContext context) throws EntityException
     {
@@ -59,10 +61,9 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Save an index key with the record reference
      *
-     * @param indexValue
-     * @param oldReference
-     * @param reference
-     * @throws EntityException
+     * @param indexValue Index value to save
+     * @param oldReference Old entity reference for the index
+     * @param reference New entity reference for the index
      */
     public void save(Object indexValue, long oldReference, long reference) throws EntityException
     {
@@ -94,8 +95,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Delete an index key with a record reference
      *
-     * @param reference
-     * @throws EntityException
+     * @param reference Entity reference
      */
     public void delete(long reference) throws EntityException
     {
@@ -122,9 +122,8 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all index references
      *
-     * @param indexValue
-     * @return
-     * @throws EntityException
+     * @param indexValue Index value to find values for
+     * @return References matching that index value
      */
     public Map findAll(Object indexValue) throws EntityException
     {
@@ -139,8 +138,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all index references
      *
-     * @return
-     * @throws EntityException
+     * @return All index references
      */
     public Set<Object> findAllValues() throws EntityException
     {
@@ -209,7 +207,6 @@ public class IndexControllerImpl implements IndexController {
     /**
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *
-     * @throws EntityException
      */
     public void rebuild() throws EntityException
     {
@@ -219,7 +216,7 @@ public class IndexControllerImpl implements IndexController {
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
             // Iterate Through all of the values and re-structure the key key for the record id
-            Map.Entry entry = null;
+            Map.Entry entry;
             while (iterator.hasNext()) {
                 try {
                     entry = iterator.next();

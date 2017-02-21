@@ -46,7 +46,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
      * Method for creating a new data storage factory
      * @since 1.0.0
      */
-    protected Function createDataFile = new Function<String, MapBuilder>() {
+    private Function createDataFile = new Function<String, MapBuilder>() {
         @Override
         public MapBuilder apply(String path)
         {
@@ -62,6 +62,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
      *
      * @return Data storage mechanism factory
      */
+    @SuppressWarnings("unchecked")
     public synchronized MapBuilder getDataFile(EntityDescriptor descriptor)
     {
         return dataFiles.computeIfAbsent(descriptor.getFileName() + ((descriptor.getPartition() == null) ? "" : descriptor.getPartition().getPartitionValue()), createDataFile);

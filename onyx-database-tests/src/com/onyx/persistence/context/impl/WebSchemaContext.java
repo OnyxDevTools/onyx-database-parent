@@ -1,6 +1,5 @@
 package com.onyx.persistence.context.impl;
 
-import com.onyx.exception.SingletonException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.diskmap.DefaultMapBuilder;
@@ -89,7 +88,7 @@ public class WebSchemaContext extends DefaultSchemaContext implements SchemaCont
      * Close the local database cache store
      * @since 1.0.0
      */
-    public void shutdown() throws SingletonException
+    public void shutdown()
     {
         if(metadataMapBuilder != null)
         {

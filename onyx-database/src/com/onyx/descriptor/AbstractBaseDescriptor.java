@@ -4,13 +4,15 @@ import com.onyx.util.OffsetField;
 
 /**
  * Created by timothy.osborn on 12/12/14.
+ *
+ * This is a base descriptor for an attribute.  It defines the properties based on annotation scanning
  */
 public abstract class AbstractBaseDescriptor
 {
 
     protected String name;
     protected Class type;
-    protected OffsetField partitionField = null;
+    private OffsetField partitionField = null;
 
     public String getName()
     {
@@ -37,7 +39,7 @@ public abstract class AbstractBaseDescriptor
         return partitionField;
     }
 
-    public void setPartitionField(OffsetField partitionField)
+    void setPartitionField(OffsetField partitionField)
     {
         this.partitionField = partitionField;
     }

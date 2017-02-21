@@ -44,9 +44,9 @@ public class QueryOrder implements ObjectSerializable, Serializable
 
     }
 
-    boolean ascending = true;
+    private boolean ascending = true;
 
-    String attribute = "";
+    private String attribute = "";
 
     /**
      * Constructor with default ascending order
