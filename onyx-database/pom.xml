@@ -33,15 +33,6 @@
 
         <sourceDirectory>src</sourceDirectory>
 
-        <resources>
-            <resource>
-                <directory>resources</directory>
-            </resource>
-            <resource>
-                <directory>../onyx-database/resources</directory>
-            </resource>
-        </resources>
-
         <plugins>
 
             <plugin>
