@@ -3,6 +3,9 @@ package com.onyx.persistence.context.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.diskmap.DefaultMapBuilder;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.store.StoreType;
 import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.EntityException;
@@ -26,9 +29,6 @@ import com.onyx.record.impl.SequenceRecordControllerImpl;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
-import com.onyx.diskmap.store.StoreType;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
 import com.onyx.util.EntityClassLoader;
@@ -38,9 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
@@ -359,10 +356,10 @@ public class DefaultSchemaContext implements SchemaContext {
 
                     // Create the journaling directory if it does'nt exist
                     final String directory = getWALDirectory();
-                    final Path journalingPath = Paths.get(directory);
 
-                    if (!Files.exists(journalingPath)) {
-                        Files.createDirectories(journalingPath);
+                    File journalingDirector = new File(directory);
+                    if (!journalingDirector.exists()) {
+                        journalingDirector.mkdirs();
                     }
 
                     // Grab the last used WAL File

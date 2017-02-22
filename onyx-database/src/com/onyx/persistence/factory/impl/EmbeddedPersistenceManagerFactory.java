@@ -8,15 +8,10 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.util.EncryptionUtil;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -333,7 +328,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
         {
             // Read the credentials and compare
             File credFile = new File(location + File.separator + CREDENTIALS_FILE);
-            String credentials = new String(Files.readAllBytes(Paths.get(credFile.getAbsolutePath())), StandardCharsets.UTF_16);
+            String credentials = new String(readContentIntoByteArray(credFile), StandardCharsets.UTF_16);
             return credentials.equals(encryptCredentials());
 
         } catch (IOException e)
@@ -342,7 +337,25 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
         }
 
     }
-    
+
+    /**
+     * Helper method for reading they contents of a file into a byte array
+     *
+     * @param file File to read
+     * @return byte array of contents
+     * @throws IOException Failure to read file
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static byte[] readContentIntoByteArray(File file) throws IOException {
+        FileInputStream fileInputStream;
+        byte[] bFile = new byte[(int) file.length()];
+        //convert file into array of bytes
+        fileInputStream = new FileInputStream(file);
+        fileInputStream.read(bFile);
+        fileInputStream.close();
+        return bFile;
+    }
+
      /**
       * Encrypt Credentials
       *

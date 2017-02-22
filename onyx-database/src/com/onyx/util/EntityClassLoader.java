@@ -20,14 +20,16 @@ import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  Created by timothy.osborn on 3/6/15.
@@ -370,8 +372,7 @@ public class EntityClassLoader
 
         try
         {
-            Files.walk(Paths.get(entitiesSourceDirectory.getPath())).filter((e) ->
-                    (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"))).forEach((e) -> classes.add(e.toFile()));
+            forEachClass(new File(entitiesSourceDirectory.getPath()), classes::add);
 
             fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Collections.singletonList(entitiesGeneratedDirectory));
 
@@ -384,10 +385,8 @@ public class EntityClassLoader
 
             addClassPaths(context);
 
-            Files.walk(Paths.get(entitiesSourceDirectory.getPath())).filter((e) ->
-                    (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"))).forEach((e) ->
-            {
-                String path = e.toFile().getPath().replace(entitiesSourceDirectory.getPath() + File.separator, "");
+            forEachClass(new File(entitiesSourceDirectory.getPath()), o -> {
+                String path = o.getPath().replace(entitiesSourceDirectory.getPath() + File.separator, "");
                 path = path.replaceAll("\\.java", "");
                 path = path.replaceAll("\\\\", ".");
                 path = path.replaceAll("/", ".");
@@ -397,6 +396,7 @@ public class EntityClassLoader
                     e1.printStackTrace();
                 }
             });
+
         }
         catch (Exception e)
         {
@@ -404,6 +404,19 @@ public class EntityClassLoader
         }
     }
 
+    public static void forEachClass(File root, Consumer<File> consumer) {
+
+        File[] list = root.listFiles();
+
+        for (File f : list) {
+            if (!f.isDirectory() && !f.isHidden() && f.getPath().endsWith(".java")) {
+                consumer.accept(f);
+            }
+            if (f.isDirectory()) {
+                forEachClass(f, consumer);
+            }
+        }
+    }
     /**
      * Load the class source from file and load it into class loader.
      *
