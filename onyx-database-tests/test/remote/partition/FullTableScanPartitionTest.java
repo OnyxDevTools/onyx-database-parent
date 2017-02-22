@@ -57,7 +57,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -79,7 +79,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void cTestQueryFindQueryPartitionEntityWithIndex() throws EntityException {
+    public void dTestQueryFindQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -101,7 +101,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void dTestDeleteQueryPartitionEntity() throws EntityException {
+    public void eTestDeleteQueryPartitionEntity() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -123,7 +123,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndex() throws EntityException {
+    public void fTestDeleteQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -146,7 +146,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
         FullTablePartitionEntity entity = new FullTablePartitionEntity();
         entity.id = 1l;
         entity.partitionId = 3l;
@@ -169,7 +169,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
 
 
     @Test
-    public void dTestUpdateQueryPartitionEntity() throws EntityException {
+    public void hTestUpdateQueryPartitionEntity() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -192,7 +192,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndex() throws EntityException {
+    public void iTestUpdateQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -216,7 +216,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -239,7 +239,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestUpdatePartitionField() throws EntityException {
+    public void kTestUpdatePartitionField() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
