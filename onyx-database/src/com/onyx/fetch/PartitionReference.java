@@ -12,6 +12,7 @@ import java.io.ObjectOutput;
  */
 public class PartitionReference implements Externalizable, Comparable
 {
+    @SuppressWarnings("unused")
     public PartitionReference()
     {
 

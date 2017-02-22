@@ -18,15 +18,17 @@ import java.util.*;
  */
 class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
 {
-    protected Query query;
+    @SuppressWarnings("unused")
+    protected final Query query;
+    @SuppressWarnings("unused")
     protected String context;
 
     private List<ScannerProperties> scanObjects = null;
     private QueryOrder[] orderBy = null;
-    private Map<Object, Object> indexValues;
+    private final Map<Object, Object> indexValues;
 
-    private List<Map<Object, Object>> parentObjects = new ArrayList<>();
-    private List<Map<Object, Object>> childrenObjects = new ArrayList<>();
+    private final List<Map<Object, Object>> parentObjects = new ArrayList<>();
+    private final List<Map<Object, Object>> childrenObjects = new ArrayList<>();
 
     /**
      * Constructor

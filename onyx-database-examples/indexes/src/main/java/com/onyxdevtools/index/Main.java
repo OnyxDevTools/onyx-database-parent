@@ -8,12 +8,12 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyxdevtools.index.entities.Book;
 
-import java.io.IOException;
 import java.util.List;
 
 public class Main extends AbstractDemo
 {
 
+    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws EntityException
     {
 
@@ -41,7 +41,7 @@ public class Main extends AbstractDemo
      *
      * @param manager Persistence Manager used to insert data
      */
-    protected static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws EntityException
     {
         // Create test data
         Book harryPotter = new Book();

@@ -6,6 +6,7 @@ package com.onyx.exception;
  */
 public class UnknownDatabaseException extends EntityException
 {
+    @SuppressWarnings("unused")
     protected String cause = null;
 
     @SuppressWarnings("unused")
@@ -14,6 +15,7 @@ public class UnknownDatabaseException extends EntityException
 
     }
 
+    @SuppressWarnings("unused")
     public UnknownDatabaseException(Exception e)
     {
         this.cause = e.getMessage();

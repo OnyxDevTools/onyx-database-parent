@@ -9,7 +9,6 @@ import com.onyx.persistence.query.QueryOrder;
 import com.onyxdevtools.example.querying.entities.Player;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,12 +16,10 @@ import java.util.List;
 /**
  @author  cosborn
  */
-public class SortingAndPagingExample
+class SortingAndPagingExample
 {
-    public SortingAndPagingExample()
-    {
-    }
 
+    @SuppressWarnings("unchecked")
     public static void demo() throws EntityException
     {
         // get an instance of the persistenceManager

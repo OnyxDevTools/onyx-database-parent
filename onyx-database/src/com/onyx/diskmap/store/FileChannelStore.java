@@ -27,12 +27,15 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class FileChannelStore implements Store {
 
+    @SuppressWarnings("WeakerAccess")
     protected FileChannel channel;
+    @SuppressWarnings("WeakerAccess")
     protected String contextId = "";
+    @SuppressWarnings("WeakerAccess")
     protected boolean force = true;
     String filePath;
 
-    AtomicLong fileSize = new AtomicLong(0);
+    final AtomicLong fileSize = new AtomicLong(0);
 
     // This is an internal structure only used to store serializers
     Serializers serializers = null;
@@ -73,7 +76,7 @@ public class FileChannelStore implements Store {
      * @param filePath Path of the file to open
      * @return Whether the file was opened or not
      */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @SuppressWarnings({"ResultOfMethodCallIgnored", "UnusedReturnValue", "WeakerAccess"})
     public boolean open(String filePath) {
         final File file = new File(filePath);
         try {

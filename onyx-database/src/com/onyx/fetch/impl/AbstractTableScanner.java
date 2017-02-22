@@ -24,16 +24,23 @@ import java.util.concurrent.Executors;
  */
 abstract class AbstractTableScanner extends PartitionContext
 {
-    ExecutorService executorService = Executors.newFixedThreadPool(8);
+    final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
-    protected QueryCriteria criteria;
-    protected Class classToScan;
-    protected EntityDescriptor descriptor;
+    @SuppressWarnings("WeakerAccess")
+    protected final QueryCriteria criteria;
+    @SuppressWarnings("unused")
+    protected final Class classToScan;
+    @SuppressWarnings("WeakerAccess")
+    protected final EntityDescriptor descriptor;
     OffsetField fieldToGrab = null;
 
+    @SuppressWarnings("WeakerAccess")
     protected DiskMap<Object, IManagedEntity> records = null;
+    @SuppressWarnings("WeakerAccess")
     protected MapBuilder temporaryDataFile = null;
-    protected Query query;
+    @SuppressWarnings("WeakerAccess")
+    protected final Query query;
+    @SuppressWarnings("WeakerAccess")
     protected PersistenceManager persistenceManager;
 
     /**

@@ -32,6 +32,7 @@ public interface QueryStream<T>
      * operation followed by the {@code after} operation
      * @throws NullPointerException if {@code after} is null
      */
+    @SuppressWarnings("unused")
     default QueryStream<T> andThen(QueryStream<? super T> after) {
         Objects.requireNonNull(after);
 

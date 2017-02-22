@@ -28,12 +28,19 @@ import java.util.*;
  */
 public class PartitionQueryController extends PartitionContext
 {
+    @SuppressWarnings("unused")
     protected QueryCriteria criteria;
+    @SuppressWarnings("WeakerAccess")
     protected Class classToScan;
+    @SuppressWarnings("WeakerAccess")
     protected EntityDescriptor descriptor;
+    @SuppressWarnings("WeakerAccess")
     protected RecordController recordController;
+    @SuppressWarnings("WeakerAccess")
     protected Query query;
+    @SuppressWarnings("WeakerAccess")
     protected MapBuilder temporaryDataFile;
+    @SuppressWarnings("WeakerAccess")
     protected PersistenceManager persistenceManager;
 
     /**
@@ -205,7 +212,7 @@ public class PartitionQueryController extends PartitionContext
      * @return Sorted references
      * @throws EntityException Error sorting objects
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "RedundantThrows"})
     public Map sort(QueryOrder[] orderBy, Map indexValues) throws EntityException
     {
         final Map retVal = new TreeMap(new PartitionSortCompare(query, orderBy, indexValues, descriptor, getContext()));
@@ -226,7 +233,7 @@ public class PartitionQueryController extends PartitionContext
      * @throws EntityException Cannot hydrate entities
      */
     @SuppressWarnings("unchecked")
-    public Map<Object, Map<String, Object>> hydrateQueryAttributes(String[] attributes, Map indexValues, boolean forSort, long start, long count) throws EntityException
+    public Map<Object, Map<String, Object>> hydrateQueryAttributes(String[] attributes, Map indexValues, @SuppressWarnings("SameParameterValue") boolean forSort, long start, long count) throws EntityException
     {
         final List<ScannerProperties> scanObjects = ScannerProperties.getScannerProperties(attributes, descriptor, query, getContext());
 

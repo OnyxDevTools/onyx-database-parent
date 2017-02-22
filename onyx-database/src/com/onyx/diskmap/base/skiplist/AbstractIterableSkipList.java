@@ -82,6 +82,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
      * @see DictionaryCollection
      * @see AbstractNodeCollection
      */
+    @SuppressWarnings("WeakerAccess")
     public Set<Map> dictionarySet() {
         return new DictionaryCollection();
     }
@@ -264,6 +265,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
          * Constructor
          *
          */
+        @SuppressWarnings("unused")
         AbstractNodeIterator() {
             current = getHead();
             while (current.down != 0L)
@@ -338,8 +340,11 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
      *
      */
     private class SkipListEntry implements Entry {
+        @SuppressWarnings("WeakerAccess")
         protected SkipListNode node = null;
+        @SuppressWarnings("unused")
         protected Object key;
+        @SuppressWarnings("WeakerAccess")
         protected Object value;
 
         /**

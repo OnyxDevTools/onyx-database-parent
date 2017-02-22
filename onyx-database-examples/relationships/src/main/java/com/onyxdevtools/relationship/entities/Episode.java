@@ -6,10 +6,8 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by timothy.osborn on 11/4/14.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Episode extends ManagedEntity implements IManagedEntity
 {
     public Episode()
@@ -25,27 +23,66 @@ public class Episode extends ManagedEntity implements IManagedEntity
 
     @Attribute
     @Identifier
-    public String episodeId;
+    private String episodeId;
 
     @Attribute
-    public int episodeNumber;
+    private int episodeNumber;
 
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             cascadePolicy = CascadePolicy.NONE,
             inverse = "episodes",
             inverseClass = Season.class)
-    public Season season;
+    private Season season;
 
     @Relationship(type = RelationshipType.ONE_TO_ONE,
             inverse = "pilotEpisode",
             inverseClass = Series.class)
-    public Series series;
+    private Series series;
 
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
                   inverseClass = Actor.class,
                   cascadePolicy = CascadePolicy.SAVE,
                   fetchPolicy = FetchPolicy.NONE)
-    public List<Actor> actors;
+    private List<Actor> actors;
 
+    public String getEpisodeId() {
+        return episodeId;
+    }
+
+    public void setEpisodeId(String episodeId) {
+        this.episodeId = episodeId;
+    }
+
+    public int getEpisodeNumber() {
+        return episodeNumber;
+    }
+
+    public void setEpisodeNumber(int episodeNumber) {
+        this.episodeNumber = episodeNumber;
+    }
+
+    public Season getSeason() {
+        return season;
+    }
+
+    public void setSeason(Season season) {
+        this.season = season;
+    }
+
+    public Series getSeries() {
+        return series;
+    }
+
+    public void setSeries(Series series) {
+        this.series = series;
+    }
+
+    public List<Actor> getActors() {
+        return actors;
+    }
+
+    public void setActors(List<Actor> actors) {
+        this.actors = actors;
+    }
 }

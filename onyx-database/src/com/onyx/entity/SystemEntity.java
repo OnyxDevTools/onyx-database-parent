@@ -43,10 +43,12 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         this.getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
     }
 
+    @SuppressWarnings("WeakerAccess")
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     @Attribute
     protected int primaryKey;
 
+    @SuppressWarnings("WeakerAccess")
     @Index(loadFactor = 3)
     @Attribute
     protected String name;
@@ -54,18 +56,23 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
     @Attribute
     private String className;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemIdentifier.class, loadFactor = 3)
     protected SystemIdentifier identifier;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemPartition.class, loadFactor = 3)
     protected SystemPartition partition;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemAttribute.class, inverse = "entity", loadFactor = 3)
     protected List<SystemAttribute> attributes;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemRelationship.class, inverse = "entity", loadFactor = 3)
     protected List<SystemRelationship> relationships;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemIndex.class, inverse = "entity", loadFactor = 3)
     protected List<SystemIndex> indexes;
 
@@ -82,6 +89,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         return name;
     }
 
+    @SuppressWarnings("unused")
     public void setName(String name)
     {
         this.name = name;
@@ -92,6 +100,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         return identifier;
     }
 
+    @SuppressWarnings("unused")
     public void setIdentifier(SystemIdentifier identifier)
     {
         this.identifier = identifier;
@@ -112,6 +121,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         return attributes;
     }
 
+    @SuppressWarnings("unused")
     public void setAttributes(List<SystemAttribute> attributes)
     {
         this.attributes = attributes;
@@ -122,6 +132,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         return relationships;
     }
 
+    @SuppressWarnings("unused")
     public void setRelationships(List<SystemRelationship> relationship)
     {
         this.relationships = relationship;
@@ -132,6 +143,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         return indexes;
     }
 
+    @SuppressWarnings("unused")
     public void setIndexes(List<SystemIndex> indexes)
     {
         this.indexes = indexes;

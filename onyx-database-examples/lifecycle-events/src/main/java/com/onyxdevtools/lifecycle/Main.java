@@ -6,10 +6,10 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.lifecycle.entities.Beverage;
 import com.onyxdevtools.lifecycle.entities.BeverageEffects;
 
-import java.io.IOException;
-
 /**
  * Created by tosborn1 on 4/4/16.
+ *
+ * This demo highlights usage of lifecycle events associated to entities.
  */
 public class Main extends AbstractDemo {
 

@@ -11,14 +11,16 @@ import com.onyxdevtools.partition.entities.CallLog;
 import com.onyxdevtools.partition.entities.CellPhone;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 /**
  * Created by tosborn1 on 3/31/16.
+ *
+ * This demonstrates how to declare and use a partition
  */
 public class Main extends AbstractDemo {
 
+    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws EntityException
     {
 
@@ -71,7 +73,7 @@ public class Main extends AbstractDemo {
      * @param manager Persistence Manager to use to seed data
      * @throws EntityException Generic exception from persistence manager
      */
-    protected static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws EntityException
     {
         // Create a call log for area code (555)
         CellPhone myPhoneNumber = new CellPhone();

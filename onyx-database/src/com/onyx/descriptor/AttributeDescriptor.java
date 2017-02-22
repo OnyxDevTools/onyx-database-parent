@@ -12,7 +12,9 @@ import java.lang.reflect.Field;
  */
 public class AttributeDescriptor extends AbstractBaseDescriptor
 {
+    @SuppressWarnings("WeakerAccess")
     protected boolean nullable;
+    @SuppressWarnings("WeakerAccess")
     protected int size;
     public OffsetField field;
 

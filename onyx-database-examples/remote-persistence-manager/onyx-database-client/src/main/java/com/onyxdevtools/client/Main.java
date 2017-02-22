@@ -14,6 +14,7 @@ import java.util.List;
 public class Main
 {
 
+    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws EntityException
     {
 
@@ -26,7 +27,7 @@ public class Main
         factory.initialize();  //4
 
         // The Socket Persistence Manager is an alternative PM used to increase performance and reduce network latency
-        PersistenceManager manager = ((RemotePersistenceManagerFactory)factory).getPersistenceManager();  //5
+        PersistenceManager manager = factory.getPersistenceManager();  //5
         // PersistenceManager manager = factory.getPersistenceManager();
 
         //Create an instance of an entity
@@ -49,6 +50,8 @@ public class Main
         System.out.println("first person in the list: " + people.get(0).getFirstName() + " " + people.get(0).getLastName());
 
         factory.close(); //Close the embedded database after you're done with it
+
+        System.exit(0);
     }
 
 }

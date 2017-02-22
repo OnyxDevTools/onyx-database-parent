@@ -22,7 +22,7 @@ public class EntityCallbackException extends EntityException
 
     }
 
-    public EntityCallbackException(String methodName, String message, Throwable cause)
+    public EntityCallbackException(String methodName, @SuppressWarnings("SameParameterValue") String message, Throwable cause)
     {
 
         super(message + methodName, cause);

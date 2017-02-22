@@ -7,9 +7,7 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 5/6/16.
- */
+@SuppressWarnings("unused")
 @Entity
 public class Account extends ManagedEntity implements IManagedEntity
 {
@@ -17,14 +15,14 @@ public class Account extends ManagedEntity implements IManagedEntity
     // Note for Example 2: I have changed the type of the accountId from an int to a long.  Also the generator was removed.
     @Attribute
     @Identifier
-    protected long accountId;
+    private long accountId;
 
     // Note for Example 1: I have added the Account Holder's Name
     @Attribute
     protected String accountHolderName;
 
     @Attribute
-    protected String accountName;
+    private String accountName;
 
     // Note for Example 1: I have removed the balance Due since it should not be reflected on the Account
     // and should be reflected on the Invoice
@@ -36,7 +34,7 @@ public class Account extends ManagedEntity implements IManagedEntity
             inverseClass = Invoice.class,
             cascadePolicy = CascadePolicy.NONE,
             fetchPolicy = FetchPolicy.LAZY)
-    protected List<Invoice> invoices;
+    private List<Invoice> invoices;
 
     public long getAccountId() {
         return accountId;

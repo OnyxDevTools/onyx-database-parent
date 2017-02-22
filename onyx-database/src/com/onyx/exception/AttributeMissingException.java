@@ -12,6 +12,7 @@ public class AttributeMissingException extends EntityException{
     public static final String ENTITY_MISSING_ATTRIBUTE = "Entity attribute does not exist";
     public static final String ILLEGAL_ACCESS_ATTRIBUTE = "Illegal access for attribute";
 
+    @SuppressWarnings("unused")
     public AttributeMissingException()
     {
 
@@ -23,7 +24,7 @@ public class AttributeMissingException extends EntityException{
      * @param message Error message
      * @param cause Root cause
      */
-    public AttributeMissingException(String message, Throwable cause)
+    public AttributeMissingException(@SuppressWarnings("SameParameterValue") String message, Throwable cause)
     {
         super(message, cause);
     }

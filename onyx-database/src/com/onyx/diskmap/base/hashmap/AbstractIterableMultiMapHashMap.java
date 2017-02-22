@@ -26,7 +26,7 @@ public abstract class AbstractIterableMultiMapHashMap<K, V> extends AbstractIter
      *
      * @since 1.2.0
      */
-    protected AbstractIterableMultiMapHashMap(Store store, Header header, boolean isHeadless, int loadFactor) {
+    protected AbstractIterableMultiMapHashMap(Store store, Header header, @SuppressWarnings("SameParameterValue") boolean isHeadless, int loadFactor) {
         super(store, header, isHeadless, loadFactor);
     }
 
@@ -88,7 +88,7 @@ public abstract class AbstractIterableMultiMapHashMap<K, V> extends AbstractIter
     }
 
     class MultiMapIterator implements Iterator {
-        Iterator otherMapIterator;
+        final Iterator otherMapIterator;
         Iterator cursorIterator = null;
 
         boolean isDictionary = false;
@@ -135,7 +135,7 @@ public abstract class AbstractIterableMultiMapHashMap<K, V> extends AbstractIter
     }
 
     private class MultiMapSkipListIterator implements Iterator {
-        Iterator otherMapIterator;
+        final Iterator otherMapIterator;
 
         MultiMapSkipListIterator() {
             otherMapIterator = AbstractIterableMultiMapHashMap.this.skipListMaps().iterator();

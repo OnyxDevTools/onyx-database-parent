@@ -8,16 +8,12 @@ import com.onyxdevtools.relationship.entities.Actor;
 import com.onyxdevtools.relationship.entities.Movie;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by tosborn1 on 3/28/16.
- */
-public class ManyToManyExample extends AbstractDemo
+class ManyToManyExample extends AbstractDemo
 {
-    public static void demo() throws EntityException
+    static void demo() throws EntityException
     {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

@@ -40,6 +40,7 @@ public enum QueryCriteriaType
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     QueryCriteriaType()
     {
 

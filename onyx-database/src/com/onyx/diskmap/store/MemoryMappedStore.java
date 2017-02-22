@@ -108,7 +108,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @param position position within store to write to
      * @return how many bytes were written
      */
-    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+    @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter", "WeakerAccess"})
     protected int write(ByteBuffer byteBuffer, long position) {
 
         final FileSlice slice = getBuffer(position);
@@ -228,6 +228,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @param position position within memory mapped store
      * @return The corresponding slice that is at that position
      */
+    @SuppressWarnings("WeakerAccess")
     protected FileSlice getBuffer(long position) {
 
         int index = 0;

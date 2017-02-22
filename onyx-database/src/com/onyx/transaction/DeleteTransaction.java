@@ -9,6 +9,7 @@ import com.onyx.persistence.IManagedEntity;
  */
 public class DeleteTransaction implements Transaction
 {
+    @SuppressWarnings("WeakerAccess")
     public IManagedEntity entity;
 
     @SuppressWarnings("unused")
@@ -22,10 +23,12 @@ public class DeleteTransaction implements Transaction
         this.entity = entity;
     }
 
+    @SuppressWarnings("unused")
     public IManagedEntity getEntity() {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(IManagedEntity entity) {
         this.entity = entity;
     }

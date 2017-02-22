@@ -150,6 +150,7 @@ public class PartitionHelper
      *
      * @param entity Entity to set partition value
      */
+    @SuppressWarnings("unused")
     public static void setPartitionValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
     {
         try

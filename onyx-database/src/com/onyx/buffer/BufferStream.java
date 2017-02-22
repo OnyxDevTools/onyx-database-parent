@@ -23,6 +23,7 @@ public class BufferStream {
     /**
      * Default constructor with no buffer
      */
+    @SuppressWarnings("WeakerAccess")
     public BufferStream()
     {
         this(allocate(ExpandableByteBuffer.BUFFER_ALLOCATION));
@@ -50,10 +51,10 @@ public class BufferStream {
     private final static TreeSet<RecycledBuffer> buffers = new TreeSet<>();
 
     // References by class and object hash.
-    private Map<Class, Map<Object, Integer>> references = new HashMap<>();
+    private final Map<Class, Map<Object, Integer>> references = new HashMap<>();
 
     // References by index number ordered by first used
-    private Map<Integer, Object> referencesByIndex = new HashMap();
+    private final Map<Integer, Object> referencesByIndex = new HashMap();
 
     // 5 Megabytes of allocated memory max that can be sitting in stale unused buffers waiting to be used
     private static final int MAX_MEMORY_USE = 1024 * 1024 * 5;
@@ -463,6 +464,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     private void putByte(byte value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put(value);
@@ -476,6 +478,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public void putInt(int value) throws BufferingException {
         expandableByteBuffer.ensureSize(Integer.BYTES);
         expandableByteBuffer.buffer.putInt(value);
@@ -489,6 +492,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     private void putLong(long value) throws BufferingException {
         expandableByteBuffer.ensureSize(Long.BYTES);
         expandableByteBuffer.buffer.putLong(value);
@@ -502,6 +506,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public void putShort(short value) throws BufferingException {
         expandableByteBuffer.ensureSize(Short.BYTES);
         expandableByteBuffer.buffer.putShort(value);
@@ -515,6 +520,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     private void putFloat(float value) throws BufferingException {
         expandableByteBuffer.ensureSize(Float.BYTES);
         expandableByteBuffer.buffer.putFloat(value);
@@ -528,6 +534,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     private void putDouble(double value) throws BufferingException {
         expandableByteBuffer.ensureSize(Double.BYTES);
         expandableByteBuffer.buffer.putDouble(value);
@@ -541,6 +548,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     private void putBoolean(boolean value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put((value) ? (byte) 1 : (byte) 0);
@@ -554,6 +562,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     private void putChar(char value) throws BufferingException {
         expandableByteBuffer.ensureSize(Character.BYTES);
         expandableByteBuffer.buffer.putChar(value);
@@ -677,6 +686,7 @@ public class BufferStream {
      * @return The instantiated object.
      * @throws BufferingException Instantiation failure
      */
+    @SuppressWarnings("WeakerAccess")
     public Object instantiate(Class type) throws BufferingException {
         try {
             return ReflectionUtil.instantiate(type);
@@ -698,6 +708,7 @@ public class BufferStream {
      * @return long read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public long getLong() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Long.BYTES);
         return expandableByteBuffer.buffer.getLong();
@@ -710,6 +721,7 @@ public class BufferStream {
      * @return int read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public int getInt() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
         return expandableByteBuffer.buffer.getInt();
@@ -722,6 +734,7 @@ public class BufferStream {
      * @return float read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public float getFloat() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Float.BYTES);
         return expandableByteBuffer.buffer.getFloat();
@@ -734,6 +747,7 @@ public class BufferStream {
      * @return double read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public double getDouble() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Double.BYTES);
         return expandableByteBuffer.buffer.getDouble();
@@ -746,6 +760,7 @@ public class BufferStream {
      * @return byte read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public byte getByte() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
         return expandableByteBuffer.buffer.get();
@@ -758,6 +773,7 @@ public class BufferStream {
      * @return short read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public short getShort() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Short.BYTES);
         return expandableByteBuffer.buffer.getShort();
@@ -770,6 +786,7 @@ public class BufferStream {
      * @return boolean read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public boolean getBoolean() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
         return (expandableByteBuffer.buffer.get() == 1);
@@ -782,6 +799,7 @@ public class BufferStream {
      * @return char read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public char getChar() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Character.BYTES);
         return expandableByteBuffer.buffer.getChar();
@@ -874,6 +892,7 @@ public class BufferStream {
      * @return The Object read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public Object getOther() throws BufferingException {
         Class objectType = (Class) getObject();
         Object instance;
@@ -946,6 +965,7 @@ public class BufferStream {
      * @return string read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public String getString() throws BufferingException {
         final int stringSize = expandableByteBuffer.buffer.getInt();
         byte[] stringBytes = new byte[stringSize];
@@ -960,6 +980,7 @@ public class BufferStream {
      * @return Date read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public Date getDate() throws BufferingException {
         final long epoch = expandableByteBuffer.buffer.getLong();
         return new Date(epoch);
@@ -1004,6 +1025,7 @@ public class BufferStream {
      * @return Map read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public Map getMap() throws BufferingException {
         Class mapClass = (Class) getObject();
         Map map;
@@ -1111,6 +1133,7 @@ public class BufferStream {
      * @return The enum from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public Enum getEnum() throws BufferingException {
         Class enumClass = (Class) getObject();
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
@@ -1198,6 +1221,7 @@ public class BufferStream {
      * Getter for underlying byte buffer
      * @return The underlying byte buffer with the goods
      */
+    @SuppressWarnings("unused")
     public ByteBuffer getByteBuffer()
     {
         return expandableByteBuffer.buffer;

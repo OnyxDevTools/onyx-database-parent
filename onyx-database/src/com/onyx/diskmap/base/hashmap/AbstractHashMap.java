@@ -20,9 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
 
-    volatile AtomicInteger mapCount; // Count of allocated hash table used
-    private int referenceOffset; // Offest of the references
-    private int listReferenceOffset; // Offest of the iteration list reference
+    final AtomicInteger mapCount; // Count of allocated hash table used
+    private final int referenceOffset; // Offest of the references
+    private final int listReferenceOffset; // Offest of the iteration list reference
 
     /**
      * Constructor
@@ -73,6 +73,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      *
      * @since 1.2.0
      */
+    @SuppressWarnings({"UnusedReturnValue", "WeakerAccess"})
     protected long insertReference(int hash, long reference)
     {
         ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
@@ -118,6 +119,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      * @since 1.2.0
      * @return The reference that was sent in.
      */
+    @SuppressWarnings({"UnusedReturnValue", "WeakerAccess"})
     protected long updateReference(int hash, long reference)
     {
         long position = (header.firstNode + referenceOffset + (hash*8));
@@ -134,6 +136,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      * @return The hash identifier of the sub data structure
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected int getMapIdentifier(int index)
     {
         long position = header.firstNode + listReferenceOffset + (index * Integer.BYTES);
@@ -148,6 +151,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      *
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected long getReference(int hash)
     {
         long position = (hash*8) + referenceOffset + header.firstNode;

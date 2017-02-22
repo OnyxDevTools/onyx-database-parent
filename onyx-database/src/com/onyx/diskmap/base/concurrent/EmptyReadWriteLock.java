@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class EmptyReadWriteLock implements ReadWriteLock {
 
     // A lock that does not lock
-    private EmptyLock emptyLock = new EmptyLock();
+    private final EmptyLock emptyLock = new EmptyLock();
 
     @Override
     public Lock readLock() {

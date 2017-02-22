@@ -8,15 +8,16 @@ import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 
 @Entity
+@SuppressWarnings("unused")
 public class RandomNumber extends ManagedEntity
 {
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    public Integer id;
+    private Integer id;
 
     @Attribute(nullable=false)
-    public int number;
+    private int number;
 
     public Integer getId()
     {
@@ -37,7 +38,5 @@ public class RandomNumber extends ManagedEntity
     {
         this.number = number;
     }
-    
-    
 
 }

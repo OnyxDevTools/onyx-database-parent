@@ -10,7 +10,9 @@ import com.onyx.util.OffsetField;
 public abstract class AbstractBaseDescriptor
 {
 
+    @SuppressWarnings("WeakerAccess")
     protected String name;
+    @SuppressWarnings("WeakerAccess")
     protected Class type;
     private OffsetField partitionField = null;
 

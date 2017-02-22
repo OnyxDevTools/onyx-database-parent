@@ -24,15 +24,15 @@ public class DefaultMapBuilder implements MapBuilder {
 
     private Store storage = null;
 
-    private static AtomicInteger storeIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger storeIdCounter = new AtomicInteger(0);
 
     private static volatile Boolean memMapIsSupprted = null;
 
     // Contains all initialized maps
-    private Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
+    private final Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
-    private Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
+    private final Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
 
     // Internal map that runs on storage
     private Map<String, Long> internalMaps = null;
@@ -43,6 +43,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @param filePath Where the file is located to store the maps
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public DefaultMapBuilder(String filePath) {
         this(filePath, StoreType.MEMORY_MAPPED_FILE, null);
     }
@@ -66,6 +67,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public DefaultMapBuilder(String filePath, StoreType type) {
         this(filePath, type, null);
     }
@@ -93,7 +95,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @since 1.2.0
      */
-    public DefaultMapBuilder(String filePath, StoreType type, SchemaContext context, boolean force) {
+    public DefaultMapBuilder(String filePath, @SuppressWarnings("SameParameterValue") StoreType type, SchemaContext context, @SuppressWarnings("SameParameterValue") boolean force) {
         this("", filePath, type, context, force);
     }
 
@@ -103,7 +105,8 @@ public class DefaultMapBuilder implements MapBuilder {
      * @param filePath File path to hold the disk structure data
      * @since 1.0.0
      */
-    public DefaultMapBuilder(String fileSystemPath, String filePath, StoreType type, SchemaContext context, boolean force) {
+    @SuppressWarnings("WeakerAccess")
+    public DefaultMapBuilder(@SuppressWarnings("SameParameterValue") String fileSystemPath, String filePath, StoreType type, SchemaContext context, boolean force) {
         String path;
 
         if (fileSystemPath == null || fileSystemPath.equals(""))
@@ -312,6 +315,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @return The store the map builder uses
      */
+    @SuppressWarnings("unused")
     public Store getStore() {
         return storage;
     }

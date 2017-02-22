@@ -16,13 +16,19 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
     }
 
     private RelationshipType relationshipType;
+    @SuppressWarnings("WeakerAccess")
     protected String inverse;
+    @SuppressWarnings("WeakerAccess")
     protected Class inverseClass;
     private Class parentClass;
+    @SuppressWarnings("WeakerAccess")
     protected FetchPolicy fetchPolicy;
+    @SuppressWarnings("WeakerAccess")
     protected CascadePolicy cascadePolicy;
+    @SuppressWarnings("WeakerAccess")
     protected EntityDescriptor entityDescriptor;
 
+    @SuppressWarnings("WeakerAccess")
     protected byte loadFactor = 1;
 
     /**

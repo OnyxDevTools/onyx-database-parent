@@ -7,7 +7,9 @@ package com.onyx.descriptor;
  */
 public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescriptor {
 
+    @SuppressWarnings("unused")
     protected String type = null;
+    @SuppressWarnings("WeakerAccess")
     protected EntityDescriptor entityDescriptor;
 
     public EntityDescriptor getEntityDescriptor() {
@@ -18,6 +20,7 @@ public class IndexDescriptor extends AbstractBaseDescriptor implements BaseDescr
         this.entityDescriptor = entityDescriptor;
     }
 
+    @SuppressWarnings("WeakerAccess")
     protected byte loadFactor = 1;
 
     /**

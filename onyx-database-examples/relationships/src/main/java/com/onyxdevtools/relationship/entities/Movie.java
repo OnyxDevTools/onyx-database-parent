@@ -6,18 +6,16 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 3/26/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Movie extends ManagedEntity implements IManagedEntity
 {
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
-    public int movieId;
+    private int movieId;
 
     @Attribute
-    public String title;
+    private String title;
 
     @Relationship(type = RelationshipType.MANY_TO_MANY,
                   cascadePolicy = CascadePolicy.DEFER_SAVE,
@@ -39,5 +37,13 @@ public class Movie extends ManagedEntity implements IManagedEntity
 
     public void setActors(List<Actor> actors) {
         this.actors = actors;
+    }
+
+    public int getMovieId() {
+        return movieId;
+    }
+
+    public void setMovieId(int movieId) {
+        this.movieId = movieId;
     }
 }

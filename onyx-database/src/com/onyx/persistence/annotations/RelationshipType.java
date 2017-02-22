@@ -34,6 +34,7 @@ public enum RelationshipType
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     RelationshipType()
     {
 

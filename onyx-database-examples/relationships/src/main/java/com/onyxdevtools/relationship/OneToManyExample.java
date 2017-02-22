@@ -8,21 +8,16 @@ import com.onyxdevtools.relationship.entities.CrewMember;
 import com.onyxdevtools.relationship.entities.Sailboat;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 
 /**
  This demonstrates how to define and persist a One To Many relationship.
  */
-public class OneToManyExample extends AbstractDemo
+class OneToManyExample extends AbstractDemo
 {
-    public OneToManyExample()
-    {
-    }
 
-    public static void demo() throws EntityException
+    static void demo() throws EntityException
     {
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

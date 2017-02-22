@@ -15,12 +15,15 @@ import java.io.*;
  */
 public class QueryResult implements Serializable, Externalizable, BufferStreamable
 {
+    @SuppressWarnings("WeakerAccess")
     protected Query query;
+    @SuppressWarnings("WeakerAccess")
     protected Object results;
 
     /**
      * Default Constructor for serialization
      */
+    @SuppressWarnings("unused")
     public QueryResult()
     {
 
@@ -61,18 +64,22 @@ public class QueryResult implements Serializable, Externalizable, BufferStreamab
         this.results = in.readObject();
     }
 
+    @SuppressWarnings("unused")
     public Query getQuery() {
         return query;
     }
 
+    @SuppressWarnings("unused")
     public void setQuery(Query query) {
         this.query = query;
     }
 
+    @SuppressWarnings("unused")
     public Object getResults() {
         return results;
     }
 
+    @SuppressWarnings("unused")
     public void setResults(Object results) {
         this.results = results;
     }

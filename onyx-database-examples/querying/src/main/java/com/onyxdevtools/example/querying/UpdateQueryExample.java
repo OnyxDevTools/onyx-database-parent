@@ -11,20 +11,16 @@ import com.onyx.persistence.update.AttributeUpdate;
 import com.onyxdevtools.example.querying.entities.Player;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 /**
  * @author cosborn
  */
 //J-
-public class UpdateQueryExample
+class UpdateQueryExample
 {
 
-    public UpdateQueryExample()
-    {
-    }
-
+    @SuppressWarnings("unchecked")
     public static void demo() throws EntityException
     {
         // get an instance of the persistenceManager

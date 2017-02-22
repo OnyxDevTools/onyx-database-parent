@@ -23,6 +23,7 @@ public interface ObjectSerializable extends Serializable
      * @param buffer Buffer to read from
      * @throws IOException Exception while reading
      */
+    @SuppressWarnings("unused")
     void readObject(ObjectBuffer buffer) throws IOException;
 
     /**
@@ -44,7 +45,7 @@ public interface ObjectSerializable extends Serializable
      * @param position position to verify the checksum with
      * @throws IOException Exception while reading
      */
-    default void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException{
+    default void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException{
         readObject(buffer, position);
     }
 }

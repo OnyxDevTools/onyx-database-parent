@@ -32,24 +32,4 @@ public class AbstractTest
         }
     }
 
-    @Test
-    @Ignore
-    public void testInit()
-    {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
-        Map<String, Externalizable> myMap = store.getHashMap("first");
-        store.close();
-    }
-
-    @Test
-    @Ignore
-    public void testInitMultiple()
-    {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
-        Map<String, Externalizable> myMap = store.getHashMap("first");
-        Map<String, Externalizable> myMap2 = store.getHashMap("second");
-        store.close();
-    }
-
-
 }

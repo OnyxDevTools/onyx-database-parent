@@ -8,6 +8,7 @@ public class AttributeUpdateException extends EntityException
 {
     public static final String ATTRIBUTE_UPDATE_IDENTIFIER = "Cannot update the entity's identifier";
 
+    @SuppressWarnings("unused")
     protected String attribute;
 
     /**
@@ -16,7 +17,7 @@ public class AttributeUpdateException extends EntityException
      * @param message Exception message
      * @param attribute Attribute causing exception
      */
-    public AttributeUpdateException(String message, String attribute)
+    public AttributeUpdateException(@SuppressWarnings("SameParameterValue") String message, String attribute)
     {
         super(message + " : " + attribute);
         this.attribute = attribute;

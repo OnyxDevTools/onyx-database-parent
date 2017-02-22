@@ -30,32 +30,40 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
         this.index = index;
     }
 
+    @SuppressWarnings("unused")
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
+    @SuppressWarnings("WeakerAccess")
     @Index(loadFactor = 3)
     @Attribute
     protected String id;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute(size = 1024)
     protected String value;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute(size = 2048)
     protected String fileName;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     @Index(loadFactor = 3)
     protected long index;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition.class, inverse = "entries", loadFactor = 3)
     protected SystemPartition partition;
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id)
     {
         this.id = id;
@@ -66,26 +74,31 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
         return value;
     }
 
+    @SuppressWarnings("unused")
     public void setValue(String value)
     {
         this.value = value;
     }
 
+    @SuppressWarnings("unused")
     public String getFileName()
     {
         return fileName;
     }
 
+    @SuppressWarnings("unused")
     public void setFileName(String fileName)
     {
         this.fileName = fileName;
     }
 
+    @SuppressWarnings("unused")
     public SystemPartition getPartition()
     {
         return partition;
     }
 
+    @SuppressWarnings("unused")
     public void setPartition(SystemPartition partition)
     {
         this.partition = partition;
@@ -96,6 +109,7 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
         return index;
     }
 
+    @SuppressWarnings("unused")
     public void setIndex(int index)
     {
         this.index = index;

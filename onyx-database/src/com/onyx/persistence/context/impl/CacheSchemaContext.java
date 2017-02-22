@@ -46,7 +46,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
      * Method for creating a new data storage factory
      * @since 1.0.0
      */
-    private Function createDataFile = new Function<String, MapBuilder>() {
+    private final Function createDataFile = new Function<String, MapBuilder>() {
         @Override
         public MapBuilder apply(String path)
         {

@@ -13,6 +13,7 @@ import java.util.List;
 public class Main
 {
 
+    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws EntityException
     {
         //Create an instance of an entity

@@ -5,6 +5,7 @@ package com.onyxdevtools.lifecycle.entities;
  *
  * These are the possible beverages that lead to different behaviors.
  */
+@SuppressWarnings("unused")
 public enum Beverage
 {
     BEER("Im feeling dangerous", "Lets makeout on a plane and annoy the people around me!", "Hold my hair back"),

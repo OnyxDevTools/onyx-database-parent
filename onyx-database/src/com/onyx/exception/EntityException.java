@@ -9,6 +9,7 @@ public class EntityException extends Exception {
 
     public static final String UNKNOWN_EXCEPTION = "Unknown exception occurred";
 
+    @SuppressWarnings("unused")
     transient Throwable rootCause = null;
 
     /**
@@ -16,6 +17,7 @@ public class EntityException extends Exception {
      *
      * @param cause Root cause
      */
+    @SuppressWarnings("WeakerAccess")
     public EntityException(Throwable cause)
     {
         super(cause.getLocalizedMessage());
@@ -25,6 +27,7 @@ public class EntityException extends Exception {
     /**
      * Constructor
      */
+    @SuppressWarnings("WeakerAccess")
     public EntityException()
     {
         super();
@@ -35,6 +38,7 @@ public class EntityException extends Exception {
      *
      * @param message Exception message
      */
+    @SuppressWarnings("WeakerAccess")
     public EntityException(String message)
     {
         super(message);

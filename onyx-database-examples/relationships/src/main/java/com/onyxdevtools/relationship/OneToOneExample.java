@@ -8,7 +8,6 @@ import com.onyxdevtools.relationship.entities.Sailboat;
 import com.onyxdevtools.relationship.entities.Skipper;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * This Demo illustrates how to define an entity and a One To One relationship.
@@ -16,10 +15,10 @@ import java.io.IOException;
  * @see Sailboat
  * @see Skipper
  */
-public class OneToOneExample extends AbstractDemo
+class OneToOneExample extends AbstractDemo
 {
 
-    public static void demo() throws EntityException
+    static void demo() throws EntityException
     {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 

@@ -46,6 +46,7 @@ public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
     /**
      * This method will only update the record count rather than the entire header
      */
+    @SuppressWarnings("WeakerAccess")
     void updateHeaderRecordCount() {
         final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
         buffer.putLong(header.recordCount.get());
@@ -59,6 +60,7 @@ public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
      * @param header    Data structure header
      * @param firstNode First Node location
      */
+    @SuppressWarnings("unused")
     protected void updateHeaderFirstNode(Header header, long firstNode) {
         this.header.firstNode = firstNode;
         final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
@@ -95,6 +97,7 @@ public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
      * @return The size of the map as a long
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     public long longSize() {
         return header.recordCount.get();
     }
@@ -153,6 +156,7 @@ public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
      *
      * @return Load Factor. A key from 5-10.  5 is for minimum data sets and 10 is for fully scalable data sets.
      */
+    @SuppressWarnings("unused")
     public int getLoadFactor()
     {
         return loadFactor;
@@ -164,6 +168,7 @@ public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
      * @param hash Hash value
      * @return the hash value in format of an array of single digits
      */
+    @SuppressWarnings("WeakerAccess")
     protected int[] getHashDigits(int hash)
     {
         hash = Math.abs(hash);

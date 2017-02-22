@@ -27,6 +27,7 @@ import java.util.Map;
  */
 public class RelationshipScanner extends AbstractTableScanner implements TableScanner {
 
+    @SuppressWarnings("WeakerAccess")
     protected RelationshipDescriptor relationshipDescriptor;
 
     /**

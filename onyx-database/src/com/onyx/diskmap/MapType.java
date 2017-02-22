@@ -5,6 +5,7 @@ package com.onyx.diskmap;
  *
  * These are the supported DiskMap types
  */
+@SuppressWarnings("unused")
 enum  MapType {
     SKIPLIST,LOAD
 }

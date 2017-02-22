@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 class RecycledBuffer implements Comparable<RecycledBuffer> {
 
     private ByteBuffer buffer;
-    private int capacity;
+    private final int capacity;
 
     /**
      * Constructor with ByteBuffer

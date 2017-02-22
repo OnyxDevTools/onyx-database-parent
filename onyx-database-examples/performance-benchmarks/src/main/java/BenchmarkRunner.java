@@ -39,18 +39,19 @@ public class BenchmarkRunner {
      * @param args Main arguments
      * @throws Exception Generic Exception
      */
+    @SuppressWarnings("unchecked")
     public static void main(String args[]) throws Exception {
 
         //Default values to run via the IDE
-        args = new String[2];
+        /*args = new String[2];
         args[0] = "1";
-        args[1] = "RandomTransactionBenchmarkTest";
+        args[1] = "RandomTransactionBenchmarkTest";*/
 
         // Delete the existing database so we start with a clean slate
         deleteDirectory(new File(DatabaseProvider.DATABASE_LOCATION));
 
         // Default Provider properties
-        DatabaseProvider databaseProvider = DatabaseProvider.ONYX;
+        DatabaseProvider databaseProvider;
         BenchmarkTest benchmarkBenchmarkTest = null;
 
         // If the arguments exist through command line use them
@@ -72,7 +73,8 @@ public class BenchmarkRunner {
      * Helper method for deleting the database directory
      * @param path Directory path of database
      */
-    static public void deleteDirectory(File path) {
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    static private void deleteDirectory(File path) {
         if (path.exists()) {
             for (File f : path.listFiles()) {
                 if (f.isDirectory()) {
@@ -88,7 +90,7 @@ public class BenchmarkRunner {
      * Execute a test and go through the benchmark test workflow
      * @param benchmarkTest instance of benchmark test
      */
-    public static void runTest(BenchmarkTest benchmarkTest) {
+    private static void runTest(BenchmarkTest benchmarkTest) {
         benchmarkTest.before();
         benchmarkTest.markBeginingOfTest();
         benchmarkTest.execute(benchmarkTest.getNumberOfExecutions());

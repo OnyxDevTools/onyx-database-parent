@@ -24,13 +24,18 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class IndexControllerImpl implements IndexController {
 
-    protected String contextId;
+    @SuppressWarnings("WeakerAccess")
+    protected final String contextId;
 
+    @SuppressWarnings("WeakerAccess")
     protected Map<Object, Header> references = null; // Stores the references for an index key
     private Map<Long, Object> indexValues = null;
+    @SuppressWarnings("unused")
     protected RecordController recordController = null;
+    @SuppressWarnings("WeakerAccess")
     protected IndexDescriptor indexDescriptor = null;
-    protected EntityDescriptor descriptor;
+    @SuppressWarnings("WeakerAccess")
+    protected final EntityDescriptor descriptor;
 
     private static final int INDEX_VALUE_MAP_LOAD_FACTOR = 1;
 
@@ -45,6 +50,7 @@ public class IndexControllerImpl implements IndexController {
      * @param descriptor Entity Descriptor
      * @param indexDescriptor Index Descriptor
      */
+    @SuppressWarnings("RedundantThrows")
     public IndexControllerImpl(EntityDescriptor descriptor, IndexDescriptor indexDescriptor, SchemaContext context) throws EntityException
     {
         this.contextId = context.getContextId();
@@ -232,6 +238,7 @@ public class IndexControllerImpl implements IndexController {
         }
     }
 
+    @SuppressWarnings("WeakerAccess")
     protected SchemaContext getContext()
     {
         return DefaultSchemaContext.registeredSchemaContexts.get(contextId);

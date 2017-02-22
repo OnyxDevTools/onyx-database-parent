@@ -23,8 +23,9 @@ public class ObjectBuffer
 
     private static final int BUFFER_ALLOCATION = 88; // Initial Buffer allocation size
 
-    public Serializers serializers;
+    public final Serializers serializers;
 
+    @SuppressWarnings("WeakerAccess")
     protected ByteBuffer buffer = null;
 
     /**
@@ -54,6 +55,7 @@ public class ObjectBuffer
      * Get the size of the buffer
      * @return Integer value
      */
+    @SuppressWarnings("unused")
     public int getSize()
     {
         return buffer.limit();
@@ -78,6 +80,7 @@ public class ObjectBuffer
      * @return The object read
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer.  Typically overflow.
      */
+    @SuppressWarnings("unused")
     public Object read(ObjectType type) throws IOException
     {
         return unwrap(buffer, type.getType(), serializers);
@@ -119,6 +122,7 @@ public class ObjectBuffer
      *
      * @return double from buffer
      */
+    @SuppressWarnings("unused")
     public double readDouble()
     {
         return buffer.getDouble();
@@ -129,6 +133,7 @@ public class ObjectBuffer
      *
      * @return float from buffer
      */
+    @SuppressWarnings("unused")
     public float readFloat()
     {
         return buffer.getFloat();
@@ -163,6 +168,7 @@ public class ObjectBuffer
      *
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from byte buffer
      */
+    @SuppressWarnings("RedundantThrows")
     public boolean readBoolean() throws IOException
     {
         byte b = buffer.get();
@@ -174,7 +180,7 @@ public class ObjectBuffer
      * @param size Size of long array
      * @return array of longs
      */
-    public long[] readLongArray(int size)
+    public long[] readLongArray(@SuppressWarnings("SameParameterValue") int size)
     {
         final long[] array = new long[size];
         for(int i = 0; i < size; i++)
@@ -230,6 +236,7 @@ public class ObjectBuffer
      * Write another buffer onto the existing buffer
      * @param addBuffer Buffer to add
      */
+    @SuppressWarnings("unused")
     public void write(ObjectBuffer addBuffer)
     {
         final ByteBuffer bufferToAdd = addBuffer.getByteBuffer();
@@ -282,6 +289,7 @@ public class ObjectBuffer
      * @param val Integer to write to buffer
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("RedundantThrows")
     public void writeInt(int val) throws IOException
     {
         ensureCapacity(Integer.BYTES);
@@ -294,6 +302,7 @@ public class ObjectBuffer
      * @param val Byte to write to buffer
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("RedundantThrows")
     public void writeByte(byte val) throws IOException
     {
         ensureCapacity(Byte.BYTES);
@@ -320,6 +329,7 @@ public class ObjectBuffer
      * @param val long to write
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("RedundantThrows")
     public void writeLong(long val) throws IOException
     {
         ensureCapacity(Long.BYTES);
@@ -332,6 +342,7 @@ public class ObjectBuffer
      * @param val boolean to write
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer  
      */
+    @SuppressWarnings("RedundantThrows")
     public void writeBoolean(boolean val) throws IOException
     {
         ensureCapacity(Byte.BYTES);
@@ -357,6 +368,7 @@ public class ObjectBuffer
      * @param val float to write to buffer
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("unused")
     public void writeFloat(Float val) throws IOException
     {
         ensureCapacity(Float.BYTES);
@@ -369,6 +381,7 @@ public class ObjectBuffer
      * @param val double to write to buffer
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("unused")
     public void writeDouble(Double val) throws IOException
     {
         ensureCapacity(Double.BYTES);
@@ -381,6 +394,7 @@ public class ObjectBuffer
      * @param values long array to write to buffer
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
+    @SuppressWarnings("RedundantThrows")
     public void writeLongArray(long[] values) throws IOException
     {
         ensureCapacity(Long.BYTES * values.length);
@@ -493,7 +507,7 @@ public class ObjectBuffer
      * @return how many bytes were written
      * @throws java.io.IOException Issue reading from buffer Issue reading from buffer
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "UnusedReturnValue"})
     private int wrap(Object value, Serializers serializers) throws IOException
     {
         if(value == null)
@@ -563,6 +577,7 @@ public class ObjectBuffer
      *
      * @return the amount of bytes written to buffer
      */
+    @SuppressWarnings("SameReturnValue")
     private int wrapNull()
     {
         ensureCapacity(1);
@@ -1090,7 +1105,7 @@ public class ObjectBuffer
      * @param buffer Buffer to read from
      * @return unwrapped enum
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "RedundantThrows"})
     private static Enum<?> unwrapEnum(ByteBuffer buffer) throws IOException
     {
         short classNameSize = buffer.getShort();
@@ -1477,6 +1492,7 @@ public class ObjectBuffer
      *
      * @return Attribute key from buffer
      */
+    @SuppressWarnings("unused")
     public Object getAttribute(String attributeName, int serializerId)
     {
         SystemEntity systemEntity = serializers.context.getSystemEntityById(serializerId);

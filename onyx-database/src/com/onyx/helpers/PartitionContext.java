@@ -44,7 +44,7 @@ public class PartitionContext
     /**
      * Cached Partition Files
      */
-    private Map<Long, MapBuilder> cachedPartitionFiles = Collections.synchronizedMap(new WeakHashMap<Long, MapBuilder>());
+    private final Map<Long, MapBuilder> cachedPartitionFiles = Collections.synchronizedMap(new WeakHashMap<Long, MapBuilder>());
 
     /**
      * Cached Data Files for partition ids, return default if there is no partition.  Otherwise insert into cache.
@@ -109,12 +109,13 @@ public class PartitionContext
             return false;
         }
 
-        Class entityType;
+        final Class entityType;
         String partitionVal;
     }
 
-    private Map<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, EntityDescriptor>());
+    private final Map<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, EntityDescriptor>());
 
+    @SuppressWarnings("WeakerAccess")
     public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws EntityException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
@@ -149,7 +150,7 @@ public class PartitionContext
 
 
 
-    private Map<Long, EntityDescriptor> cachedDescriptorsPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, EntityDescriptor>());
+    private final Map<Long, EntityDescriptor> cachedDescriptorsPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, EntityDescriptor>());
 
     protected EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws EntityException
     {
@@ -163,7 +164,7 @@ public class PartitionContext
                 {
                     try
                     {
-                        SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(defaultDescriptor.getClazz(), partitionId);
+                        SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(partitionId);
                         if(partitionEntry == null)
                         {
                             return defaultDescriptor;
@@ -189,7 +190,7 @@ public class PartitionContext
         return defaultDescriptor;
     }
 
-    private Map<PartitionKey, RecordController> cachedControllersPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, RecordController>());
+    private final Map<PartitionKey, RecordController> cachedControllersPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, RecordController>());
 
     protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws EntityException
     {
@@ -224,7 +225,7 @@ public class PartitionContext
     }
 
 
-    private Map<Long, RecordController> cachedControllersPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, RecordController>());
+    private final Map<Long, RecordController> cachedControllersPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, RecordController>());
 
     public RecordController getRecordControllerForPartition(long partitionId) throws EntityException
     {
@@ -259,7 +260,7 @@ public class PartitionContext
     }
 
 
-    private Map<PartitionKey, MapBuilder> cachedDataFilesPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, MapBuilder>());
+    private final Map<PartitionKey, MapBuilder> cachedDataFilesPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, MapBuilder>());
 
     protected MapBuilder getDataFileForEntity(IManagedEntity entity) throws EntityException
     {
@@ -297,7 +298,7 @@ public class PartitionContext
         }
     }
 
-    private Map<PartitionKey, Long> cachedPartitionIds = Collections.synchronizedMap(new WeakHashMap<PartitionKey, Long>());
+    private final Map<PartitionKey, Long> cachedPartitionIds = Collections.synchronizedMap(new WeakHashMap<PartitionKey, Long>());
 
     protected long getPartitionId(IManagedEntity entity) throws EntityException
     {

@@ -54,6 +54,7 @@ public interface TransactionController
      * @param fromDirectoryPath Directory containing WAL transaction files.
      * @param executeTransaction Function that determines whether or not you should execute the transaction
      */
+    @SuppressWarnings("unused")
     void recoverDatabase(String fromDirectoryPath, Function<Transaction, Boolean> executeTransaction) throws TransactionException;
 
 
@@ -68,6 +69,7 @@ public interface TransactionController
      * @param executeTransaction Function that determines whether or not you should execute the transaction
      * @throws TransactionException If a transaction failed to execute, this will be thrown
      */
+    @SuppressWarnings({"SameReturnValue", "unused"})
     boolean applyTransactionLog(String walTransactionFile, Function<Transaction, Boolean> executeTransaction) throws TransactionException;
 
 }

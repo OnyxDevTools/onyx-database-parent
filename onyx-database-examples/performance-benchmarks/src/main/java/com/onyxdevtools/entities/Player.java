@@ -21,23 +21,23 @@ public class Player extends ManagedEntity implements IManagedEntity
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 2)
     @Id
-    protected int playerId;
+    private int playerId;
 
     @Attribute
     @Column
-    protected String firstName;
+    private String firstName;
 
     @Attribute
     @Column
-    protected String lastName;
+    private String lastName;
 
     @Attribute
     @Column
-    protected String position;
+    private String position;
 
     @Attribute
     @Column
-    protected boolean active = true;
+    private boolean active = true;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
@@ -46,7 +46,7 @@ public class Player extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @ManyToOne(targetEntity = Team.class)
-    protected Team team;
+    private Team team;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -57,8 +57,9 @@ public class Player extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, targetEntity = Stats.class, mappedBy = "player")
-    protected List<Stats> stats = new ArrayList();
+    private List<Stats> stats = new ArrayList<>();
 
+    @SuppressWarnings("unused")
     public Player()
     {
     }
@@ -139,7 +140,7 @@ public class Player extends ManagedEntity implements IManagedEntity
         return active;
     }
 
-    public void setActive(boolean active)
+    public void setActive(@SuppressWarnings("SameParameterValue") boolean active)
     {
         this.active = active;
     }

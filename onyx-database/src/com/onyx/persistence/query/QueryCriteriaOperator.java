@@ -33,6 +33,7 @@ public enum QueryCriteriaOperator
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     QueryCriteriaOperator()
     {
 

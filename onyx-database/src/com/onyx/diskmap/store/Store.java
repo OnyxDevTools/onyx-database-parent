@@ -20,6 +20,7 @@ public interface Store {
      * @param serializable Object serializable to write to store
      * @param position location to write to
      */
+    @SuppressWarnings("UnusedReturnValue")
     int write(ObjectSerializable serializable, long position);
 
     /**
@@ -29,6 +30,7 @@ public interface Store {
      * @param position Position within the volume to write to.
      * @return How many bytes were written
      */
+    @SuppressWarnings("UnusedReturnValue")
     int write(ObjectBuffer serializable, long position);
 
     /**
@@ -46,6 +48,7 @@ public interface Store {
      * @param buffer   Buffer to put into
      * @param position position in store to read
      */
+    @SuppressWarnings("unused")
     void read(ByteBuffer buffer, long position);
 
     /**
@@ -76,6 +79,7 @@ public interface Store {
      * @param serializerId Key to the serializer version that was used when written to the store
      * @return Object read from the store
      */
+    @SuppressWarnings("unused")
     Object read(long position, int size, Class type, int serializerId);
 
     /**
@@ -104,6 +108,7 @@ public interface Store {
      *
      * @return Whether the store was closed
      */
+    @SuppressWarnings("UnusedReturnValue")
     boolean close();
 
     /**

@@ -28,7 +28,9 @@ import java.util.function.Function;
 public class TransactionControllerImpl implements TransactionController
 {
 
+    @SuppressWarnings("WeakerAccess")
     protected static final byte SAVE = 1;
+    @SuppressWarnings("WeakerAccess")
     protected static final byte DELETE = 2;
     private static final byte DELETE_QUERY = 3;
     private static final byte UPDATE_QUERY = 4;
@@ -36,7 +38,7 @@ public class TransactionControllerImpl implements TransactionController
     private final String contextId;
     private final PersistenceManager persistenceManager;
 
-    private ReentrantLock transactionLock = new ReentrantLock(true);
+    private final ReentrantLock transactionLock = new ReentrantLock(true);
 
     /**
      * Constructor with schema Context
@@ -280,6 +282,7 @@ public class TransactionControllerImpl implements TransactionController
         return true;
     }
 
+    @SuppressWarnings("WeakerAccess")
     protected SchemaContext getContext()
     {
         return DefaultSchemaContext.registeredSchemaContexts.get(contextId);

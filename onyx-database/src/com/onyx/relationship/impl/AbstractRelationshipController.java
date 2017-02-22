@@ -27,8 +27,11 @@ import java.util.Set;
 class AbstractRelationshipController extends PartitionContext
 {
 
+    @SuppressWarnings("WeakerAccess")
     protected RelationshipDescriptor relationshipDescriptor;
+    @SuppressWarnings("WeakerAccess")
     protected EntityDescriptor entityDescriptor;
+    @SuppressWarnings("WeakerAccess")
     protected RecordController recordController;
 
     private RelationshipDescriptor defaultInverseRelationshipDescriptor;

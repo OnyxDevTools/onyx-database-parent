@@ -9,6 +9,7 @@ public class AttributeNonNullException extends EntityException
 {
     public static final String ATTRIBUTE_NULL_EXCEPTION = "Attribute must not be null";
 
+    @SuppressWarnings("unused")
     protected String attribute;
 
     /**
@@ -17,7 +18,7 @@ public class AttributeNonNullException extends EntityException
      * @param message Exception message
      * @param attribute that failed null check
      */
-    public AttributeNonNullException(String message, String attribute)
+    public AttributeNonNullException(@SuppressWarnings("SameParameterValue") String message, String attribute)
     {
         super(message + " : " + attribute);
         this.attribute = attribute;

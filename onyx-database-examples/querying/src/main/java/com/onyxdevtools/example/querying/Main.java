@@ -7,7 +7,6 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.example.querying.entities.*;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 
 //J-
@@ -60,7 +59,7 @@ public class Main extends AbstractDemo
         LazyQueryExample.demo();
     }
 
-    public static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws EntityException
     {
 
         //Create league

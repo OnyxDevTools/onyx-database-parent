@@ -4,7 +4,6 @@ import com.onyx.application.DatabaseServer;
 
 import java.io.File;
 
-
 public class Main
 {
 
@@ -13,8 +12,8 @@ public class Main
      *
      * ex:  executable /Database/Location/On/Disk 8080 admin admin
      *
-     * @param args
-     * @throws Exception
+     * @param args Command line arguments
+     * @throws Exception General exception
      */
     public static void main(String[] args) throws Exception
     {

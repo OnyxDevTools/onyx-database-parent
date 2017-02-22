@@ -43,11 +43,16 @@ import java.util.WeakHashMap;
 @SuppressWarnings("unchecked")
 public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, BufferStreamable {
 
+    @SuppressWarnings("WeakerAccess")
     protected List<Object> identifiers = null;
 
+    @SuppressWarnings("WeakerAccess")
     transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
+    @SuppressWarnings("WeakerAccess")
     transient protected EntityDescriptor entityDescriptor = null;
+    @SuppressWarnings("WeakerAccess")
     transient protected PersistenceManager persistenceManager = null;
+    @SuppressWarnings("WeakerAccess")
     transient protected String contextId;
 
     @SuppressWarnings("unused")
@@ -267,22 +272,26 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
     }
 
 
+    @SuppressWarnings("WeakerAccess")
     public List<Object> getIdentifiers()
     {
         return identifiers;
     }
 
+    @SuppressWarnings("unused")
     public void setIdentifiers(List<Object> identifiers)
     {
         this.identifiers = identifiers;
     }
 
 
+    @SuppressWarnings("WeakerAccess")
     public EntityDescriptor getEntityDescriptor()
     {
         return entityDescriptor;
     }
 
+    @SuppressWarnings("unused")
     public void setEntityDescriptor(EntityDescriptor entityDescriptor)
     {
         this.entityDescriptor = entityDescriptor;

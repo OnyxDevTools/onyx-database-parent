@@ -22,11 +22,6 @@
             <artifactId>onyx-database</artifactId>
             <version>${onyx-database.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.onyxdevtools</groupId>
-            <artifactId>onyx-database</artifactId>
-            <version>1.2.0</version>
-        </dependency>
     </dependencies>
 
     <build>

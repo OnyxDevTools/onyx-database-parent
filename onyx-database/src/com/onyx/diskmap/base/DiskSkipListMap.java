@@ -53,6 +53,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @param detached Whether the map is headless and should ignore updating the header
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     public DiskSkipListMap(Store store, Header header, boolean detached) {
         super(store, header, detached);
 
@@ -208,6 +209,8 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
     public V getWithRecID(long recordId) {
         readWriteLock.readLock().lock();
 
+        if(recordId <= 0)
+            return null;
         try {
             SkipListNode<K> node = (SkipListNode<K>) findNodeAtPosition(recordId);
             return findValueAtPosition(node.recordPosition, node.recordSize);
@@ -289,6 +292,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @return A Set of references
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     public Set<Long> above(K index, boolean includeFirst) {
         readWriteLock.readLock().lock();
 
@@ -337,6 +341,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @return A Set of references
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     public Set<Long> below(K index, boolean includeFirst) {
         readWriteLock.readLock().lock();
 

@@ -63,11 +63,14 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
 
     protected String location;
     protected SchemaContext context;
+    @SuppressWarnings("WeakerAccess")
     protected String user = "admin";
+    @SuppressWarnings("WeakerAccess")
     protected String password = "admin";
 
     static final String DEFAULT_INSTANCE = "ONYX_DATABASE";
 
+    @SuppressWarnings("WeakerAccess")
     protected String instance = DEFAULT_INSTANCE;
 
     // Enable history journaling ot keep a transaction history
@@ -428,6 +431,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      *
      * @param enableJournaling True or False
      */
+    @SuppressWarnings("unused")
     public void setEnableJournaling(boolean enableJournaling) {
         this.enableJournaling = enableJournaling;
     }

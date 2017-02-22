@@ -8,19 +8,15 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.persist.entities.Person;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 
-
 /**
- *
  * @author cosborn
  */
-public class DeletingAnEntityExample
-{
+public class DeletingAnEntityExample {
 
-    public static void main(String[] args) throws EntityException
-    {
+
+    public static void main(String[] args) throws EntityException {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 
         factory.setCredentials("username", "password");
@@ -34,23 +30,23 @@ public class DeletingAnEntityExample
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();
-        
+
         Person person1 = new Person();
         person1.setFirstName("John");
         person1.setLastName("Elway");
         person1.setDateCreated(new Date());
-        
+
         Person savedPerson = (Person) manager.saveEntity(person1);
 
         manager.deleteEntity(savedPerson);
 
         Person deletedPerson = (Person) manager.findById(Person.class, savedPerson.getId());
 
-        if(deletedPerson == null){
+        if (deletedPerson == null) {
             System.out.println("Entity was deleted sucessfully");
         }
-        
+
         factory.close(); //Close the embedded database after you're done with it
-        
+
     }
 }

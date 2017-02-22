@@ -6,26 +6,24 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 3/31/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class CellPhone extends ManagedEntity implements IManagedEntity
 {
     @Identifier
     @Attribute
-    protected String cellPhoneNumber;
+    private String cellPhoneNumber;
 
     @Attribute
     @Partition
-    protected int areaCode;
+    private int areaCode;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverseClass = CallLog.class,
             inverse = "callFrom",
             cascadePolicy = CascadePolicy.SAVE,
             fetchPolicy = FetchPolicy.NONE)
-    protected List<CallLog> callLogs;
+    private List<CallLog> callLogs;
 
     public String getCellPhoneNumber() {
         return cellPhoneNumber;

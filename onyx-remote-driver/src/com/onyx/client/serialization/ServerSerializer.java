@@ -3,7 +3,6 @@ package com.onyx.client.serialization;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -19,7 +18,7 @@ public interface ServerSerializer
      * @param serializable Object to serialize
      * @param inputBuffer Buffer to put results in
      *
-     * @throws IOException Problem while reading from input stream
+     * @throws BufferingException Problem while reading from input stream
      */
     ByteBuffer serialize(BufferStreamable serializable, ByteBuffer inputBuffer) throws BufferingException;
 
@@ -29,7 +28,7 @@ public interface ServerSerializer
      * @param streamable Object to apply deserialization to
      * @return Object that was de-serialized
      *
-     * @throws IOException Problem while writing to output stream
+     * @throws BufferingException Problem while writing to output stream
      */
     BufferStreamable deserialize(ByteBuffer buffer, BufferStreamable streamable) throws BufferingException;
 }

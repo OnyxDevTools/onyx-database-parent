@@ -49,6 +49,7 @@ public interface MapBuilder {
      * @return Disk Map implementation
      * @since 1.2.0
      */
+    @SuppressWarnings("unused")
     Map getHashMap(String name);
 
     /**
@@ -59,6 +60,7 @@ public interface MapBuilder {
      * @return Implementation of a disk map using a skip list index
      * @since 1.2.0
      */
+    @SuppressWarnings("unused")
     Map getSkipListMap(String name);
 
     /**
@@ -94,7 +96,7 @@ public interface MapBuilder {
      *
      * @since 1.2.0
      */
-    DiskMap newHashMap(Header header, int loadFactor);
+    DiskMap newHashMap(Header header, @SuppressWarnings("SameParameterValue") int loadFactor);
 
     /**
      * Close Map Builder.  Flush the file writes
@@ -106,6 +108,7 @@ public interface MapBuilder {
      * Commit Map Builder file synchronize file writes
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     void commit();
 
     /**
@@ -120,6 +123,7 @@ public interface MapBuilder {
      * @return Custom serializes shared within the data structures
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     Serializers getSerializers();
 
     /**

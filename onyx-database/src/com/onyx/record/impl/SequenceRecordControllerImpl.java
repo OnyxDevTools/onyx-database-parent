@@ -137,6 +137,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      * @return identifier value for entity
      * @throws com.onyx.exception.AttributeMissingException Attribute does not exist on entity
      */
+    @SuppressWarnings("WeakerAccess")
     protected Object getIndexValueFromEntity(IManagedEntity entity) throws AttributeMissingException
     {
         Object indexObjectValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());

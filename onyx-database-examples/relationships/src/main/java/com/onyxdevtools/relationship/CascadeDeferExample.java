@@ -8,22 +8,14 @@ import com.onyxdevtools.relationship.entities.Actor;
 import com.onyxdevtools.relationship.entities.Movie;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-
-/**
- Created by tosborn1 on 3/26/16.
- */
-public class CascadeDeferExample extends AbstractDemo
+class CascadeDeferExample extends AbstractDemo
 {
-    public CascadeDeferExample()
-    {
-    }
 
-    public static void demo() throws EntityException
+    @SuppressWarnings("unchecked")
+    static void demo() throws EntityException
     {
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
 
@@ -42,22 +34,17 @@ public class CascadeDeferExample extends AbstractDemo
 
         // Populate the movie data with actors //1
         final Movie starWarsMovie = new Movie();
-        starWarsMovie.title = "Star Wars, A new Hope";
-
-        final ArrayList<Actor> actors = new ArrayList<>();
+        starWarsMovie.setTitle("Star Wars, A new Hope");
 
         final Actor markHamil = new Actor();
-        markHamil.actorId = 1;
-        markHamil.firstName = "Mark";
-        markHamil.lastName = "Hamil";
+        markHamil.setActorId(1);
+        markHamil.setFirstName("Mark");
+        markHamil.setLastName("Hamil");
 
         final Actor carrieFisher = new Actor();
-        carrieFisher.actorId = 2;
-        carrieFisher.firstName = "Carrie";
-        carrieFisher.lastName = "Fisher";
-
-        actors.add(markHamil);
-        actors.add(carrieFisher);
+        carrieFisher.setActorId(2);
+        carrieFisher.setFirstName("Carrie");
+        carrieFisher.setLastName("Fisher");
 
         // Save The movie and actors
         manager.saveEntity(markHamil);
@@ -65,7 +52,7 @@ public class CascadeDeferExample extends AbstractDemo
         manager.saveEntity(starWarsMovie);
 
         // The Persistence Manager did not save the actors and associated it to the movie //2
-        final Movie starWarsAfterSave1 = (Movie) manager.findById(Movie.class, starWarsMovie.movieId);
+        final Movie starWarsAfterSave1 = (Movie) manager.findById(Movie.class, starWarsMovie.getMovieId());
         manager.initialize(starWarsAfterSave1, "actors");
         assertEquals("Movie should not have any associated actors", 0, starWarsAfterSave1.actors.size());
 
@@ -77,7 +64,7 @@ public class CascadeDeferExample extends AbstractDemo
         manager.saveRelationshipsForEntity(starWarsMovie, "actors", actorIds);
 
         // The Persistence Manager did save the actors and associated it to the movie //4
-        final Movie starWarsAfterSave2 = (Movie) manager.findById(Movie.class, starWarsMovie.movieId);
+        final Movie starWarsAfterSave2 = (Movie) manager.findById(Movie.class, starWarsMovie.getMovieId());
         manager.initialize(starWarsAfterSave2, "actors");
         assertEquals("Movie SHOULD have associated actors", 2, starWarsAfterSave1.actors.size());
 

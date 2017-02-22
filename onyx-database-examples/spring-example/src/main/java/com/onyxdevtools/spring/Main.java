@@ -10,9 +10,6 @@ import java.util.List;
 
 import static java.lang.System.exit;
 
-/**
- * Created by tosborn1 on 4/12/16.
- */
 @SpringBootApplication
 @EnableAutoConfiguration
 public class Main

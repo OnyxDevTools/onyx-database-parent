@@ -57,12 +57,13 @@ enum BufferObjectType {
 
     OTHER(null);
 
-    private Class type;
+    private final Class type;
 
     /**
      * Constructor
      * @param type Class type
      */
+    @SuppressWarnings("unused")
     BufferObjectType(Class type) {
         this.type = type;
     }
@@ -71,6 +72,7 @@ enum BufferObjectType {
      * Indicates whether the serializer type is an array
      * @return Whether the enum indicates an array
      */
+    @SuppressWarnings("unused")
     public boolean isArray()
     {
         return (this.ordinal() >= BufferObjectType.BYTE_ARRAY.ordinal()

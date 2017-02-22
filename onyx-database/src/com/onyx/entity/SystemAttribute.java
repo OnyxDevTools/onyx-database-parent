@@ -29,38 +29,47 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
         this.key = descriptor.getName().equals(entity.getIdentifier().getName());
     }
 
+    @SuppressWarnings("unused")
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String id;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String name;
 
     @Attribute
     private String dataType;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected int size;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected boolean nullable;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected boolean key;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
     public transient OffsetField field;
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id)
     {
         this.id = id;
@@ -71,16 +80,19 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
         return name;
     }
 
+    @SuppressWarnings("unused")
     public void setName(String name)
     {
         this.name = name;
     }
 
+    @SuppressWarnings("unused")
     public SystemEntity getEntity()
     {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(SystemEntity entity)
     {
         this.entity = entity;
@@ -97,30 +109,36 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
         this.dataType = type;
     }
 
+    @SuppressWarnings("unused")
     public int getSize()
     {
         return size;
     }
 
+    @SuppressWarnings("unused")
     public void setSize(int size)
     {
         this.size = size;
     }
 
+    @SuppressWarnings("unused")
     public boolean isNullable()
     {
         return nullable;
     }
 
+    @SuppressWarnings("unused")
     public void setNullable(boolean nullable)
     {
         this.nullable = nullable;
     }
 
+    @SuppressWarnings("unused")
     public boolean isKey() {
         return key;
     }
 
+    @SuppressWarnings("unused")
     public void setKey(boolean key) {
         this.key = key;
     }

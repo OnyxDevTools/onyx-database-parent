@@ -5,6 +5,7 @@ package com.onyx.entity;
  *
  * User roles
  */
+@SuppressWarnings("unused")
 public enum SystemUserRole
 {
     ROLE_ADMIN,ROLE_USER

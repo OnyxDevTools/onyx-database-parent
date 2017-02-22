@@ -67,6 +67,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
      *
      * @return The physical file store
      */
+    @SuppressWarnings("unused")
     Store getFileStore();
 
     /**
@@ -88,6 +89,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @since 1.2.0
      * @return Null if it does not apply.
      */
+    @SuppressWarnings("unused")
     default LevelReadWriteLock getReadWriteLock()
     {
         return null;

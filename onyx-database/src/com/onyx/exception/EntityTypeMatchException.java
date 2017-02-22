@@ -12,7 +12,7 @@ public class EntityTypeMatchException extends EntityException {
     /**
      * Constructor
      *
-     * @param message
+     * @param message Error message
      */
     public EntityTypeMatchException(String message)
     {

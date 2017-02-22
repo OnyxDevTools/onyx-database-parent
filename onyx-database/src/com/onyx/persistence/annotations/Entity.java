@@ -38,7 +38,7 @@ public @interface Entity
      *
      * @return Cachable Indicator
      */
-    boolean cachable() default false;
+    @SuppressWarnings("unused") boolean cachable() default false;
 
     /**
      * The maximum cache size in records
@@ -46,7 +46,7 @@ public @interface Entity
      * @since 1.0.0
      * @return Cache Size in records
      */
-    int cacheSize() default 0; // Cache Size in Records
+    @SuppressWarnings("unused") int cacheSize() default 0; // Cache Size in Records
 
     /**
      * File in which the data lives
@@ -54,6 +54,6 @@ public @interface Entity
      * @since 1.0.0
      * @return File Name
      */
-    String fileName() default "";
+    @SuppressWarnings("unused") String fileName() default "";
 
 }

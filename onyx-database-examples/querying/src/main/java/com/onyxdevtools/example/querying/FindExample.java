@@ -7,17 +7,13 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.example.querying.entities.League;
 
 import java.io.File;
-import java.io.IOException;
 
 
 /**
  @author  cosborn
  */
-public class FindExample
+class FindExample
 {
-    public FindExample()
-    {
-    }
 
     public static void demo() throws EntityException
     {

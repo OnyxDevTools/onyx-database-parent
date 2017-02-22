@@ -51,6 +51,7 @@ class ExpandableByteBuffer
      * @param required Number of additional required bytes
      * @return Whether the buffer already has enough bytes remaining
      */
+    @SuppressWarnings("UnusedReturnValue")
     boolean ensureRequiredSize(int required)
     {
         return (buffer.position() + required) < (maxBufferSize + bufferStartingPosition);

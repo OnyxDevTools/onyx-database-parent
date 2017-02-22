@@ -80,13 +80,15 @@ import java.util.function.Function;
 public class DefaultSchemaContext implements SchemaContext {
 
     // Random generator for generating random temporary file names
-    private static SecureRandom random = new SecureRandom();
+    private static final SecureRandom random = new SecureRandom();
 
     // Reference to self
-    protected SchemaContext context;
+    @SuppressWarnings("WeakerAccess")
+    protected final SchemaContext context;
 
     // Context id that maps back to the database instance name
-    protected String contextId;
+    @SuppressWarnings("WeakerAccess")
+    protected final String contextId;
 
     // The purpose of this is to gather the registed instances of SchemaContexts so that we may structure a context to a database instance in
     // event of multiple instances
@@ -332,7 +334,7 @@ public class DefaultSchemaContext implements SchemaContext {
     private static final int MAX_JOURNAL_SIZE = 1024 * 1024 * 20;
 
     // Journal File index in directory
-    private AtomicLong journalFileIndex = new AtomicLong(0L);
+    private final AtomicLong journalFileIndex = new AtomicLong(0L);
 
     // Last Wal File Channel
     private FileChannel lastWalFileChannel = null;
@@ -479,12 +481,12 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
-    Map<String, MapBuilder> dataFiles = new ConcurrentHashMap<>();
+    final Map<String, MapBuilder> dataFiles = new ConcurrentHashMap<>();
 
     /**
      * @since 1.0.0 Method for creating a new data file
      */
-    private Function createDataFile = new Function<String, MapBuilder>() {
+    private final Function createDataFile = new Function<String, MapBuilder>() {
         @Override
         public MapBuilder apply(final String path) {
             return new DefaultMapBuilder(location + "/" + path, context);
@@ -560,13 +562,12 @@ public class DefaultSchemaContext implements SchemaContext {
      * <p>
      * <p>This is not meant to be a public API.</p>
      *
-     * @param classToGet  Entity type of record
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
      * @throws EntityException Generic Exception
      * @since 1.0.0
      */
-    public SystemPartitionEntry getPartitionWithId(final Class classToGet, final long partitionId) throws EntityException {
+    public SystemPartitionEntry getPartitionWithId(final long partitionId) throws EntityException {
         final Query query = new Query(SystemPartitionEntry.class, new QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId));
         final List<SystemPartitionEntry> partitions = systemPersistenceManager.executeQuery(query);
 
@@ -587,14 +588,14 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
-    private Map<EntityDescriptor, RecordController> recordControllers = new ConcurrentHashMap();
+    private final Map<EntityDescriptor, RecordController> recordControllers = new ConcurrentHashMap();
 
     /**
      * Method for creating a new record controller.
      *
      * @since 1.0.0
      */
-    private Function createRecordController = new Function<EntityDescriptor, RecordController>() {
+    private final Function createRecordController = new Function<EntityDescriptor, RecordController>() {
         @Override
         public RecordController apply(final EntityDescriptor descriptor) {
             if (descriptor.getIdentifier().getGenerator() == IdentifierGenerator.SEQUENCE) {
@@ -624,11 +625,11 @@ public class DefaultSchemaContext implements SchemaContext {
     //
     //////////////////////////////////////////////////////////////////
     // Contains the initialized entity descriptors
-    private Map<String, EntityDescriptor> descriptors = new HashMap();
+    private final Map<String, EntityDescriptor> descriptors = new HashMap();
 
-    private AtomicLong partitions = new AtomicLong(0);
+    private final AtomicLong partitions = new AtomicLong(0);
 
-    private ReadWriteLock entityDescriptorLock = new ReentrantReadWriteLock(false);
+    private final ReadWriteLock entityDescriptorLock = new ReentrantReadWriteLock(false);
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -678,6 +679,7 @@ public class DefaultSchemaContext implements SchemaContext {
             // If it does not exist, lets create a new one
             if (systemEntity == null) {
                 systemEntity = new SystemEntity(descriptor);
+                systemPersistenceManager.saveEntity(systemEntity);
             }
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
@@ -699,6 +701,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * @throws EntityException default exception
      * @since 1.1.0
      */
+    @SuppressWarnings("UnusedReturnValue")
     private SystemEntity checkForEntityChanges(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
         // Re-Build indexes if necessary
         descriptor.checkIndexChanges(systemEntity, rebuildIndexConsumer);
@@ -752,7 +755,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private Map<String, SystemEntity> defaultSystemEntities = new HashMap();
+    private final Map<String, SystemEntity> defaultSystemEntities = new HashMap();
 
     /**
      * Get System Entity By Name.
@@ -795,7 +798,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private Map<Integer, SystemEntity> systemEntityByIDMap = new HashMap();
+    private final Map<Integer, SystemEntity> systemEntityByIDMap = new HashMap();
 
     /**
      * Get System Entity By ID.
@@ -880,6 +883,7 @@ public class DefaultSchemaContext implements SchemaContext {
             // If it does not exist, lets create a new one
             if (systemEntity == null) {
                 systemEntity = new SystemEntity(descriptor);
+                systemPersistenceManager.saveEntity(systemEntity);
             }
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
@@ -969,9 +973,9 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
+    private final Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
 
-    private StampedLock relationshipControllerReadWriteLock = new StampedLock();
+    private final StampedLock relationshipControllerReadWriteLock = new StampedLock();
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -1024,12 +1028,12 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
+    private final Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
 
     /**
      * Method for creating a new index controller.
      */
-    private Function createIndexController = new Function<IndexDescriptor, IndexController>() {
+    private final Function createIndexController = new Function<IndexDescriptor, IndexController>() {
         @Override
         public IndexController apply(final IndexDescriptor descriptor) {
             try {
@@ -1078,7 +1082,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Consumer that initiates a new index rebuild.
      */
-    private Consumer<IndexDescriptor> rebuildIndexConsumer = indexDescriptor ->
+    private final Consumer<IndexDescriptor> rebuildIndexConsumer = indexDescriptor ->
     {
         try {
 

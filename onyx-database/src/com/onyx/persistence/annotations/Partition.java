@@ -27,6 +27,7 @@ import java.lang.annotation.Target;
  *
  * @see com.onyx.persistence.annotations.Attribute
  */
+@SuppressWarnings("unused")
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Partition

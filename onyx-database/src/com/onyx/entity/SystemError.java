@@ -38,15 +38,18 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
         setType(exception.getClass().getName());
     }
 
+    @SuppressWarnings("WeakerAccess")
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
     protected Long id;
 
+    @SuppressWarnings("unused")
     public Long getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(Long id)
     {
         this.id = id;
@@ -58,29 +61,36 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
     @Attribute
     private String operation;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute(size = 20000)
     protected String message;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String type;
 
+    @SuppressWarnings("WeakerAccess")
     protected Throwable exception;
 
+    @SuppressWarnings("unused")
     public Throwable getException()
     {
         return exception;
     }
 
+    @SuppressWarnings("unused")
     public void setException(Throwable exception)
     {
         this.exception = exception;
     }
 
+    @SuppressWarnings("unused")
     public String getMessage()
     {
         return message;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public void setMessage(String message)
     {
         this.message = message;
@@ -110,11 +120,13 @@ public class SystemError extends ManagedEntity implements IManagedEntity {
         this.operation = operation;
     }
 
+    @SuppressWarnings("unused")
     public String getType()
     {
         return type;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public void setType(String type)
     {
         this.type = type;

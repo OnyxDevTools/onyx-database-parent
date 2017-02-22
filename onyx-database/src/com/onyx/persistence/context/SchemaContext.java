@@ -64,6 +64,7 @@ public interface SchemaContext
      *
      * @param defaultPersistenceManager Default Persistence Manager used to access system level entities
      */
+    @SuppressWarnings("unused")
     void setSystemPersistenceManager(PersistenceManager defaultPersistenceManager);
 
     /**
@@ -71,6 +72,7 @@ public interface SchemaContext
      * @return System Persistence Manager
      *
      */
+    @SuppressWarnings("unused")
     PersistenceManager getSystemPersistenceManager();
 
     /**
@@ -133,6 +135,7 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
+    @SuppressWarnings("unused")
     EntityDescriptor getDescriptorForEntity(Object entity) throws EntityException;
 
     /**
@@ -152,18 +155,21 @@ public interface SchemaContext
      * @since 1.0.0
      * @return Volatile indicator the database is shutting down
      */
-     boolean getKillSwitch();
+    @SuppressWarnings("unused")
+    boolean getKillSwitch();
 
     /**
      * Shutdown schema context.  Close files, connections or any other IO mechanisms used within the context
      *
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     void shutdown();
 
     /**
      * Start the context and initialize storage, connection, or any other IO mechanisms used within the schema context
      */
+    @SuppressWarnings("unused")
     void start();
 
     /**
@@ -213,13 +219,12 @@ public interface SchemaContext
      * This is not meant to be a public API.
      *
      * @since 1.0.0
-     * @param classToGet Record Entity type
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
      *
      * @throws EntityException Generic Exception
      */
-    SystemPartitionEntry getPartitionWithId(Class classToGet, long partitionId) throws EntityException;
+    SystemPartitionEntry getPartitionWithId(long partitionId) throws EntityException;
 
     /**
      * Get Record Controller
@@ -278,6 +283,7 @@ public interface SchemaContext
      * @throws EntityException Default Exception
      * @return Latest System Entity version with matching name
      */
+    @SuppressWarnings("RedundantThrows")
     SystemEntity getSystemEntityByName(String name) throws EntityException;
 
     /**
@@ -307,6 +313,7 @@ public interface SchemaContext
      *
      * @return Transaction Controller implementation.
      */
+    @SuppressWarnings("unused")
     TransactionController getTransactionController();
 
 }

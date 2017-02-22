@@ -31,7 +31,7 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
      *
      * @since 1.2.0
      */
-    protected AbstractIterableMultiMapHashMatrix(Store store, Header header, boolean detached) {
+    protected AbstractIterableMultiMapHashMatrix(Store store, Header header, @SuppressWarnings("SameParameterValue") boolean detached) {
         super(store, header, detached);
     }
 
@@ -198,8 +198,8 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
      */
     abstract class AbstractMultiMapIterator implements Iterator {
 
-        Stack<AbstractIterableMultiMapHashMatrix.NodeEntry> nodeStack = new Stack<>(); // Simple stack that hold onto the nodes
-        Stack<Long> referenceStack = new Stack<>(); // Simple stack that hold onto the nodes
+        final Stack<AbstractIterableMultiMapHashMatrix.NodeEntry> nodeStack = new Stack<>(); // Simple stack that hold onto the nodes
+        final Stack<Long> referenceStack = new Stack<>(); // Simple stack that hold onto the nodes
         Iterator currentIterator = null;
         boolean isDictionary = false;
         boolean isReference = false;
@@ -316,8 +316,8 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
     }
 
     private class NodeEntry {
-        public long reference;
-        public short level;
+        public final long reference;
+        public final short level;
 
         NodeEntry(long reference, short level) {
             this.reference = reference;

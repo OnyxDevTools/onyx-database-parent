@@ -8,6 +8,7 @@ public class IdentifierRequiredException extends EntityException
 {
     public static final String IDENTIFIER_REQUIRED_EXCEPTION = "Identifier key is required";
 
+    @SuppressWarnings("unused")
     protected String attribute;
 
     @SuppressWarnings("unused")
@@ -22,7 +23,7 @@ public class IdentifierRequiredException extends EntityException
      * @param message Error message
      * @param attribute Attribute causing exception
      */
-    public IdentifierRequiredException(String message, String attribute)
+    public IdentifierRequiredException(@SuppressWarnings("SameParameterValue") String message, String attribute)
     {
         super(message + " : " + attribute);
         this.attribute = attribute;

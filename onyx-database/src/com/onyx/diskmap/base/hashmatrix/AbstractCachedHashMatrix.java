@@ -18,7 +18,7 @@ import java.util.Map;
  */
 abstract class AbstractCachedHashMatrix<K, V> extends AbstractHashMatrix<K, V> {
 
-    protected Map<Long, HashMatrixNode> nodeCache;
+    protected final Map<Long, HashMatrixNode> nodeCache;
 
     /**
      * Constructor, initializes cache

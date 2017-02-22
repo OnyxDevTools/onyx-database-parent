@@ -3,13 +3,14 @@ package com.onyx.util;
 /**
  * Class that is a quick and dirty encryption utility.
  */
+@SuppressWarnings("unused")
 public final class EncryptionUtil
 {
 
     private static final byte[] iv = {-12, -19, 17, -32, 86, 106, -31, 48, -5, -111, 61, -75, -127, 95, 120, -53};
 
     // Encryption Instance
-    private static Encryption encryption = null;
+    private static Encryption encryption;
 
     static
     {
@@ -27,6 +28,7 @@ public final class EncryptionUtil
      * @param encryptedText Text to Decrypt
      * @return Decrypted Text
      */
+    @SuppressWarnings("unused")
     public static String decrypt(String encryptedText)
     {
         return encryption.decryptOrNull(encryptedText);

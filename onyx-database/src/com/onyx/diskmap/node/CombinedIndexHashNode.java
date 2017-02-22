@@ -7,9 +7,9 @@ package com.onyx.diskmap.node;
  */
 public class CombinedIndexHashNode {
 
-    public int hashDigit;
+    public final int hashDigit;
     public SkipListHeadNode head;
-    public int mapId;
+    public final int mapId;
 
     public CombinedIndexHashNode(final SkipListHeadNode base, final int mapId, int hashDigit) {
         this.head = base;

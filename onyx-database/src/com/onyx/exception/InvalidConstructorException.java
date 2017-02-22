@@ -12,8 +12,8 @@ public class InvalidConstructorException extends EntityException
     /**
      * Constructor with message and cause
      *
-     * @param message
-     * @param cause
+     * @param message error message
+     * @param cause Root cause
      */
     public InvalidConstructorException(String message, Throwable cause)
     {

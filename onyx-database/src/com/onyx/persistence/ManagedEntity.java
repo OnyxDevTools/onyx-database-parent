@@ -97,6 +97,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
      * This method maps the keys from a structure to the attributes of the entity
      * @param mapObj Map to convert from
      */
+    @SuppressWarnings("unused")
     public void fromMap(Map<String, Object> mapObj, SchemaContext context)
     {
         try {

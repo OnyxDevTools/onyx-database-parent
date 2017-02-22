@@ -14,7 +14,7 @@ public class InvalidDataTypeForOperator extends EntityException
      *
      * @param message Error message
      */
-    public InvalidDataTypeForOperator(String message)
+    public InvalidDataTypeForOperator(@SuppressWarnings("SameParameterValue") String message)
     {
         super(message);
     }

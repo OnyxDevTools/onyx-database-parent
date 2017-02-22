@@ -12,31 +12,32 @@ import java.util.List;
  */
 //J-
 @Entity
+@SuppressWarnings("unused")
 public class Player extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    protected int playerId;
+    private int playerId;
 
     @Attribute
-    protected String firstName;
+    private String firstName;
 
     @Attribute
-    protected String lastName;
+    private String lastName;
 
     @Attribute
-    protected String position;
+    private String position;
 
     @Attribute
-    protected boolean active = true;
+    private boolean active = true;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "players",
             inverseClass = Team.class
     )
-    protected Team team;
+    private Team team;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -45,7 +46,7 @@ public class Player extends ManagedEntity implements IManagedEntity
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.LAZY
     )
-    protected List<Stats> stats = new ArrayList<>();
+    private List<Stats> stats = new ArrayList<>();
 
     public Player()
     {

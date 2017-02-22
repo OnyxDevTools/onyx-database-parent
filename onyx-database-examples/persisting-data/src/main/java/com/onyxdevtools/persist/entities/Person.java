@@ -10,24 +10,25 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 import java.util.Date;
 
 @Entity
+@SuppressWarnings("unused")
 public class Person extends ManagedEntity
 {
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    public Integer id;
+    private Integer id;
 
     @Attribute(nullable=false)
-    public Date dateCreated;
+    private Date dateCreated;
 
     @Attribute
-    public Date dateUpdated;
+    private Date dateUpdated;
 
     @Attribute(nullable=false)
-    public String firstName;
+    private String firstName;
 
     @Attribute(nullable=false)
-    public String lastName;
+    private String lastName;
 
     public Integer getId()
     {

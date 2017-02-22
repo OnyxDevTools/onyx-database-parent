@@ -14,45 +14,50 @@ public class Person extends ManagedEntity
 
     @Identifier
     @Attribute
-    public String id;
+    private String id;
 
     @Attribute
-    public Date dateCreated;
+    private Date dateCreated;
 
     @Attribute
-    public Date dateUpdated;
+    private Date dateUpdated;
 
     @Attribute
-    public String firstName;
+    private String firstName;
 
     @Attribute
-    public String lastName;
+    private String lastName;
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
     }
 
-    public void setId(String id)
+    public void setId(@SuppressWarnings("SameParameterValue") String id)
     {
         this.id = id;
     }
 
+    @SuppressWarnings("unused")
     public Date getDateCreated()
     {
         return dateCreated;
     }
 
+    @SuppressWarnings("unused")
     public void setDateCreated(Date dateCreated)
     {
         this.dateCreated = dateCreated;
     }
 
+    @SuppressWarnings("unused")
     public Date getDateUpdated()
     {
         return dateUpdated;
     }
 
+    @SuppressWarnings("unused")
     public void setDateUpdated(Date dateUpdated)
     {
         this.dateUpdated = dateUpdated;
@@ -63,7 +68,7 @@ public class Person extends ManagedEntity
         return firstName;
     }
 
-    public void setFirstName(String firstName)
+    public void setFirstName(@SuppressWarnings("SameParameterValue") String firstName)
     {
         this.firstName = firstName;
     }
@@ -73,7 +78,7 @@ public class Person extends ManagedEntity
         return lastName;
     }
 
-    public void setLastName(String lastName)
+    public void setLastName(@SuppressWarnings("SameParameterValue") String lastName)
     {
         this.lastName = lastName;
     }

@@ -27,8 +27,9 @@ import java.util.Set;
 public abstract class AbstractRecordController
 {
     protected DiskMap<Object, IManagedEntity> records = null;
-    protected EntityDescriptor entityDescriptor;
-    protected String contextId;
+    protected final EntityDescriptor entityDescriptor;
+    @SuppressWarnings("unused")
+    protected final String contextId;
 
     /**
      * Constructor
@@ -36,6 +37,7 @@ public abstract class AbstractRecordController
      * @param descriptor Entity Descriptor
      * @param context Schema context
      */
+    @SuppressWarnings("WeakerAccess")
     public AbstractRecordController(EntityDescriptor descriptor, SchemaContext context)
     {
         this.contextId = context.getContextId();
@@ -50,6 +52,7 @@ public abstract class AbstractRecordController
      * @param primaryKey Identifier of an entity
      * @return Entity if it exist
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public IManagedEntity getWithId(Object primaryKey) throws EntityException
     {
         return records.get(primaryKey);
@@ -61,6 +64,7 @@ public abstract class AbstractRecordController
      * @param entity Entity to check
      * @return Whether it exists
      */
+    @SuppressWarnings("unused")
     public boolean exists(IManagedEntity entity) throws EntityException
     {
         // Get the Identifier key
@@ -75,6 +79,7 @@ public abstract class AbstractRecordController
      * @param primaryKey Idnetifier of entity
      * @return Whether that id is taken
      */
+    @SuppressWarnings("unused")
     public boolean existsWithId(Object primaryKey) throws EntityException
     {
         return records.containsKey(primaryKey);
@@ -86,6 +91,7 @@ public abstract class AbstractRecordController
      * @param entity Entity to delete
      * @throws EntityException Error deleting an entity
      */
+    @SuppressWarnings("unused")
     public void delete(IManagedEntity entity) throws EntityException
     {
         // Get the Identifier key
@@ -103,6 +109,7 @@ public abstract class AbstractRecordController
      *
      * @param primaryKey Identifier of an entity
      */
+    @SuppressWarnings("WeakerAccess")
     public void deleteWithId(Object primaryKey)
     {
         records.remove(primaryKey);
@@ -114,6 +121,7 @@ public abstract class AbstractRecordController
      * @param entity Entity to get.  Its id must be defined
      * @return Hydrated entity
      */
+    @SuppressWarnings("unused")
     public IManagedEntity get(IManagedEntity entity) throws EntityException
     {
         // Get the Identifier key
@@ -338,6 +346,7 @@ public abstract class AbstractRecordController
      * @param entity Entity to set attribute
      * @throws AttributeMissingException Attribute does not exist
      */
+    @SuppressWarnings("unused")
     public static void setIndexValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
     {
 
@@ -359,6 +368,7 @@ public abstract class AbstractRecordController
      * @param primaryKey Identifier for entity
      * @return Entity reference id
      */
+    @SuppressWarnings("unused")
     public long getReferenceId(Object primaryKey) throws EntityException
     {
         return records.getRecID(primaryKey);
@@ -371,6 +381,7 @@ public abstract class AbstractRecordController
      * @param referenceId Entity reference id
      * @return Hydrated entity
      */
+    @SuppressWarnings("unused")
     public IManagedEntity getWithReferenceId(long referenceId) throws EntityException
     {
         return records.getWithRecID(referenceId);
@@ -382,6 +393,7 @@ public abstract class AbstractRecordController
      * @param referenceId Entity reference id
      * @return Entity as a map
      */
+    @SuppressWarnings("unused")
     public Map getMapWithReferenceId(long referenceId) throws EntityException
     {
         return records.getMapWithRecID(referenceId);
@@ -394,6 +406,7 @@ public abstract class AbstractRecordController
      * @param referenceId location of record within storage
      * @return Attribute key
      */
+    @SuppressWarnings("unused")
     public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
         return records.getAttributeWithRecID(attribute, referenceId);
     }
@@ -407,6 +420,7 @@ public abstract class AbstractRecordController
      * @return A set of REFERENCES not the actual values
      * @throws EntityException Error when reading the store
      */
+    @SuppressWarnings("unused")
     public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
     {
         return ((OrderedDiskMap)records).above(indexValue, includeValue);
@@ -421,6 +435,7 @@ public abstract class AbstractRecordController
      * @return A set of REFERENCES not the actual values
      * @throws EntityException Error when reading the store
      */
+    @SuppressWarnings("unused")
     public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
     {
         return ((OrderedDiskMap)records).below(indexValue, includeValue);

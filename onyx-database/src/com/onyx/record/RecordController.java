@@ -43,6 +43,7 @@ public interface RecordController
      * @param primaryKey entity id
      * @return hydrated entity
      */
+    @SuppressWarnings("RedundantThrows")
     IManagedEntity getWithId(Object primaryKey) throws EntityException;
 
     /**
@@ -67,6 +68,7 @@ public interface RecordController
      * @param primaryKey entity primary key
      * @return whether it exist
      */
+    @SuppressWarnings("RedundantThrows")
     boolean existsWithId(Object primaryKey) throws EntityException;
 
     /**
@@ -75,6 +77,7 @@ public interface RecordController
      * @param primaryKey entity id
      * @return reference within store
      */
+    @SuppressWarnings("RedundantThrows")
     long getReferenceId(Object primaryKey) throws EntityException;
 
     /**
@@ -83,6 +86,7 @@ public interface RecordController
      * @param referenceId entity reference within store
      * @return hydrated entity
      */
+    @SuppressWarnings("RedundantThrows")
     IManagedEntity getWithReferenceId(long referenceId) throws EntityException;
 
     /**
@@ -91,6 +95,7 @@ public interface RecordController
      * @param referenceId entity reference
      * @return entity as a map
      */
+    @SuppressWarnings("RedundantThrows")
     Map getMapWithReferenceId(long referenceId) throws EntityException;
 
     /**
@@ -101,6 +106,7 @@ public interface RecordController
      * @return entity attribute
      * @throws EntityException Attribute does not exist
      */
+    @SuppressWarnings("RedundantThrows")
     Object getAttributeWithReferenceId(String attribute, long referenceId) throws EntityException;
 
     /**
@@ -114,6 +120,7 @@ public interface RecordController
      *
      * @since 1.2.0
      */
+    @SuppressWarnings("RedundantThrows")
     Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException;
 
     /**
@@ -127,6 +134,7 @@ public interface RecordController
      *
      * @since 1.2.0
      */
+    @SuppressWarnings("RedundantThrows")
     Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException;
 
 }

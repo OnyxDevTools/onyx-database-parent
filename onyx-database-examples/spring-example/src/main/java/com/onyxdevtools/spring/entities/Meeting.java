@@ -9,31 +9,29 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 
 import java.util.Date;
 
-/**
- * Created by tosborn1 on 4/12/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Meeting extends ManagedEntity implements IManagedEntity
 {
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
-    protected long meetingId;
+    private long meetingId;
 
     @Attribute
-    protected Date startTime;
+    private Date startTime;
 
     @Attribute
-    protected Date endTime;
+    private Date endTime;
 
     @Attribute
-    protected String description;
+    private String description;
 
     @Attribute
-    protected String location;
+    private String location;
 
     @Attribute
-    protected String notes;
+    private String notes;
 
     public long getMeetingId() {
         return meetingId;

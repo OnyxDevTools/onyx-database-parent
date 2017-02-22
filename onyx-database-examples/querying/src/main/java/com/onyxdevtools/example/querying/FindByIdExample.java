@@ -7,17 +7,13 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.example.querying.entities.Season;
 
 import java.io.File;
-import java.io.IOException;
 
 
 /**
  @author  cosborn
  */
-public class FindByIdExample
+class FindByIdExample
 {
-    public FindByIdExample()
-    {
-    }
 
     public static void demo() throws EntityException
     {

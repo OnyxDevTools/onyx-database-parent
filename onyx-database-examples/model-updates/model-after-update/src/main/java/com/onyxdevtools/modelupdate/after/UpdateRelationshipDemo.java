@@ -14,11 +14,11 @@ import java.util.List;
  * easy model updates.  One thing to note is that it may be easy for Onyx to transpose a relationship
  * going from one to many but, going back to a To One Relationship is not handled by the lightweight migration.
  */
-public class UpdateRelationshipDemo {
+class UpdateRelationshipDemo {
 
-    public static void demo(PersistenceManager persistenceManager) throws EntityException
+    static void demo(PersistenceManager persistenceManager) throws EntityException
     {
-        final Invoice myLatestInvoice = (Invoice)persistenceManager.findById(Invoice.class, 1l);
+        final Invoice myLatestInvoice = (Invoice)persistenceManager.findById(Invoice.class, 1L);
 
         // This used to be a single entity and now it is a list of payments since the relationship has changed from a One To One
         // to a One To Many.  This is also handled by the light weight migration.

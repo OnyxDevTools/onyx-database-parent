@@ -30,6 +30,7 @@ public enum IdentifierGenerator
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     IdentifierGenerator()
     {
 

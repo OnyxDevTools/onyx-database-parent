@@ -8,7 +8,6 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.persist.entities.Person;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Date;
 
 

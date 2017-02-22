@@ -33,6 +33,7 @@ public class ViewerSchemaContext extends DefaultSchemaContext
      * @param location Remote endpoint to database or local store location
      *
      */
+    @SuppressWarnings("unused")
     public ViewerSchemaContext(String location)
     {
         super(location);

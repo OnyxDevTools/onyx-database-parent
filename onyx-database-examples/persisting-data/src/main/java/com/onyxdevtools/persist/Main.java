@@ -2,8 +2,6 @@ package com.onyxdevtools.persist;
 
 import com.onyx.exception.EntityException;
 
-import java.io.IOException;
-
 public class Main
 {
 

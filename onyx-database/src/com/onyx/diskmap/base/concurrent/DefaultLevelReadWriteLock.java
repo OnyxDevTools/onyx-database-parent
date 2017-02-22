@@ -10,7 +10,7 @@ import java.util.concurrent.locks.StampedLock;
 public class DefaultLevelReadWriteLock implements LevelReadWriteLock
 {
     // Lock for each level
-    private StampedLock[] locks;
+    private final StampedLock[] locks;
 
     /**
      * Constructor.  Instantiate the level locks

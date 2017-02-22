@@ -61,7 +61,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      *
      * @since 1.2.0
      */
-    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, boolean stateless) {
+    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, @SuppressWarnings("SameParameterValue") boolean stateless) {
         super(fileStore, header, true, loadFactor);
 
         if(!stateless)
@@ -174,7 +174,6 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         return null;
     }
 
-
     /**
      * Simple map method to see if an object exists within the map by its key.
      *
@@ -218,6 +217,35 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     }
 
     /**
+     * Get the record id of a corresponding node.  Note, this points to the SkipListNode position.  Not the actual
+     * record position.
+     *
+     * @param key Identifier
+     * @return The position of the record reference if it exists.  Otherwise -1
+     * @since 1.2.0
+     */
+    @Override
+    public long getRecID(Object key) {
+        final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, false);
+        if(combinedNode == null)
+            return -1;
+
+        setHead(combinedNode.head);
+
+        long stamp = this.getReadWriteLock().lockReadLevel(combinedNode.hashDigit);
+
+        try {
+            if (combinedNode.head != null) {
+                return super.getRecID(key);
+            }
+        } finally {
+            this.getReadWriteLock().unlockReadLevel(combinedNode.hashDigit, stamp);
+        }
+
+        return 0;
+    }
+
+    /**
      * Put all the objects from one map into this map.
      *
      * @param m Map to convert from
@@ -250,7 +278,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         }
     }
 
-    private Map<Integer, CombinedIndexHashNode> hashIndexNodeCache = Collections.synchronizedMap(new WeakHashMap<>());
+    private final Map<Integer, CombinedIndexHashNode> hashIndexNodeCache = Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
      * The nuts and bolts of the map lie here.  This finds the head of the skip list based on the key
@@ -261,7 +289,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @return The Combined Index node of the skip list and it contains the bitmap node information.
      * @since 1.2.0
      */
-    private CombinedIndexHashNode getHeadReferenceForKey(Object key, boolean forInsert) {
+    private CombinedIndexHashNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
         int hash = Math.abs(hash(key));
         int hashDigits[] = getHashDigits(hash);
         int hashDigit = hashDigits[loadFactor - 1];
@@ -345,4 +373,14 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         return returnValue;
     }
 
+    /**
+     *
+     * Return the Level read write lock implementation
+     *
+     */
+    @Override
+    public LevelReadWriteLock getReadWriteLock()
+    {
+        return this.levelReadWriteLock;
+    }
 }

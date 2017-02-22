@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public class EntityRelationshipManager
 {
-    private Map<String, Map<Object, IManagedEntity>> entities = new HashMap<>();
+    private final Map<String, Map<Object, IManagedEntity>> entities = new HashMap<>();
 
     /**
      *

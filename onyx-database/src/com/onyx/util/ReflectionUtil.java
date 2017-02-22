@@ -24,7 +24,8 @@ import java.util.*;
 public class ReflectionUtil {
 
 
-    private static sun.misc.Unsafe theUnsafe = null;
+    @SuppressWarnings("CanBeFinal")
+    private static sun.misc.Unsafe theUnsafe;
 
     // Cache of class' fields
     private static final Map<Class, List<OffsetField>> classFields = Collections.synchronizedMap(new WeakHashMap());
@@ -296,6 +297,7 @@ public class ReflectionUtil {
      * @param offsetField field to get
      * @return field key
      */
+    @SuppressWarnings("RedundantThrows")
     public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException {
         try {
 
@@ -489,7 +491,7 @@ public class ReflectionUtil {
      * @param child Child object that is the property value
      * @param field Field to set on the parent
      */
-    @SuppressWarnings("ConstantConditions")
+    @SuppressWarnings({"ConstantConditions", "RedundantThrows"})
     public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException, AttributeTypeMismatchException {
 
 

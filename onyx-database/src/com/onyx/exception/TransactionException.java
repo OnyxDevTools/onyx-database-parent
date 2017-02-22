@@ -10,6 +10,7 @@ import com.onyx.transaction.Transaction;
 public class TransactionException extends EntityException
 {
 
+    @SuppressWarnings("unused")
     protected Transaction transaction;
 
     public static final String TRANSACTION_FAILED_TO_OPEN_FILE = "Failed to open transaction file";
@@ -35,7 +36,7 @@ public class TransactionException extends EntityException
      * @param message message
      * @param transaction transaction
      */
-    public TransactionException(String message, Transaction transaction, Throwable cause)
+    public TransactionException(@SuppressWarnings("SameParameterValue") String message, Transaction transaction, Throwable cause)
     {
         super(message);
         this.transaction = transaction;

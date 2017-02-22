@@ -13,6 +13,7 @@ import java.io.IOException;
  */
 public class DeleteQueryTransaction implements ObjectSerializable, Transaction {
 
+    @SuppressWarnings("WeakerAccess")
     public Query query;
 
     @SuppressWarnings("unused")

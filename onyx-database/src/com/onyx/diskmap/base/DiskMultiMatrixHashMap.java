@@ -6,10 +6,7 @@ import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
 import com.onyx.diskmap.base.concurrent.DefaultLevelReadWriteLock;
 import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
 import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
-import com.onyx.diskmap.node.HashMatrixNode;
-import com.onyx.diskmap.node.CombinedIndexHashMatrixNode;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
+import com.onyx.diskmap.node.*;
 import com.onyx.diskmap.store.Store;
 
 import java.util.HashSet;
@@ -39,10 +36,10 @@ import java.util.Set;
 @SuppressWarnings("unchecked")
 public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K,V> {
 
-    private LevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
+    private final LevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
 
     // Cache of skip lists
-    private Map<Integer, CombinedIndexHashMatrixNode> skipListMapCache = new ConcurrentWeakHashMap();
+    private final Map<Integer, CombinedIndexHashMatrixNode> skipListMapCache = new ConcurrentWeakHashMap();
 
     /**
      * Constructor
@@ -239,6 +236,33 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     }
 
     /**
+     * Get the record id of a corresponding node.  Note, this points to the SkipListNode position.  Not the actual
+     * record position.
+     *
+     * @param key Identifier
+     * @return The position of the record reference if it exists.  Otherwise -1
+     * @since 1.2.0
+     */
+    @Override
+    public long getRecID(Object key) {
+        final CombinedIndexHashMatrixNode combinedNode = getHeadReferenceForKey(key, false);
+        if(combinedNode == null)
+            return -1;
+        setHead(combinedNode.head);
+
+        long stamp = this.getReadWriteLock().lockReadLevel(combinedNode.hashDigit);
+
+        try {
+            if (combinedNode.head != null) {
+                return super.getRecID(key);
+            }
+        } finally {
+            this.getReadWriteLock().unlockReadLevel(combinedNode.hashDigit, stamp);
+        }
+        return 0;
+    }
+
+    /**
      * The nuts and bolts of the map lie here.  This finds the head of the skip list based on the key
      * It uses the bitmap index on the disk map.
      *
@@ -247,7 +271,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      * @return The Combined Index node of the skip list and it contains the bitmap node information.
      * @since 1.2.0
      */
-    private CombinedIndexHashMatrixNode getHeadReferenceForKey(Object key, boolean forInsert) {
+    private CombinedIndexHashMatrixNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
         int hash = Math.abs(hash(key));
         int hashDigits[] = getHashDigits(hash);
         int hashDigit = hashDigits[loadFactor - 1];

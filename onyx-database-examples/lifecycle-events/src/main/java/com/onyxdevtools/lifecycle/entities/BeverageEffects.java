@@ -4,19 +4,18 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
-/**
- * Created by tosborn1 on 4/4/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class BeverageEffects extends ManagedEntity implements IManagedEntity
 {
+
+
+    private Beverage beverage;
+
     public BeverageEffects()
     {
 
     }
-
-    protected Beverage beverage;
-
     public BeverageEffects(Beverage beverage)
     {
         this.beverage = beverage;
@@ -24,10 +23,10 @@ public class BeverageEffects extends ManagedEntity implements IManagedEntity
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
-    protected long behaviorId;
+    private long behaviorId;
 
     @Attribute
-    protected String description;
+    private String description;
 
 
     /////////////////////////////////////////////////////////////////////

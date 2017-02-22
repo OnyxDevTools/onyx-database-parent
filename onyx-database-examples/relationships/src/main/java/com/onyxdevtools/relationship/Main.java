@@ -16,5 +16,7 @@ public class Main
         CascadeSaveExample.demo();
 
         FetchPolicyExample.demo();
+
+        System.exit(0);
     }
 }

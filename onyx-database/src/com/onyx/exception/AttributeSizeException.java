@@ -9,6 +9,7 @@ public class AttributeSizeException extends EntityException
 {
     public static final String ATTRIBUTE_SIZE_EXCEPTION = "Attribute size exceeds maximum length";
 
+    @SuppressWarnings("unused")
     protected String attribute;
 
     @SuppressWarnings("unused")
@@ -23,7 +24,7 @@ public class AttributeSizeException extends EntityException
      * @param message Exception message
      * @param attribute Attribute caused exception
      */
-    public AttributeSizeException(String message, String attribute)
+    public AttributeSizeException(@SuppressWarnings("SameParameterValue") String message, String attribute)
     {
         super(message + " : " + attribute);
         this.attribute = attribute;

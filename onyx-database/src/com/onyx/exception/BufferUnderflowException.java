@@ -8,11 +8,11 @@ public class BufferUnderflowException extends BufferingException {
 
     public static final String BUFFER_UNDERFLOW = "Buffer Underflow exception ";
 
-    public BufferUnderflowException(String message) {
+    public BufferUnderflowException(@SuppressWarnings("SameParameterValue") String message) {
         super(message);
     }
 
-    public BufferUnderflowException(String message, Class clazz) {
+    public BufferUnderflowException(@SuppressWarnings("SameParameterValue") String message, Class clazz) {
         super(message, clazz);
     }
 }

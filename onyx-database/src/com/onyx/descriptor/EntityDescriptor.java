@@ -28,11 +28,15 @@ import java.util.function.Consumer;
  * This class defines the properties of an entity
  */
 public class EntityDescriptor implements Serializable {
+    @SuppressWarnings("WeakerAccess")
     protected Class clazz;
 
+    @SuppressWarnings("WeakerAccess")
     protected Entity entity;
 
+    @SuppressWarnings("WeakerAccess")
     protected IdentifierDescriptor identifier;
+    @SuppressWarnings("WeakerAccess")
     protected PartitionDescriptor partition;
 
     private Method preUpdateCallback;
@@ -44,8 +48,11 @@ public class EntityDescriptor implements Serializable {
     private Method postRemoveCallback;
     private Method postPersistCallback;
 
+    @SuppressWarnings("WeakerAccess")
     protected Map<String, AttributeDescriptor> attributes = new TreeMap<>();
+    @SuppressWarnings("WeakerAccess")
     protected Map<String, IndexDescriptor> indexes = new TreeMap<>();
+    @SuppressWarnings("WeakerAccess")
     protected Map<String, RelationshipDescriptor> relationships = new TreeMap<>();
 
     /**
@@ -682,10 +689,12 @@ public class EntityDescriptor implements Serializable {
         return clazz;
     }
 
+    @SuppressWarnings("unused")
     public Entity getEntity() {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(final Entity entity) {
         this.entity = entity;
     }
@@ -694,6 +703,7 @@ public class EntityDescriptor implements Serializable {
         return identifier;
     }
 
+    @SuppressWarnings("unused")
     public void setIdentifier(final IdentifierDescriptor identifier) {
         this.identifier = identifier;
     }
@@ -702,6 +712,7 @@ public class EntityDescriptor implements Serializable {
         return partition;
     }
 
+    @SuppressWarnings("unused")
     public void setPartition(final PartitionDescriptor partition) {
         this.partition = partition;
     }
@@ -782,6 +793,7 @@ public class EntityDescriptor implements Serializable {
         return attributes;
     }
 
+    @SuppressWarnings("unused")
     public void setAttributes(final Map<String, AttributeDescriptor> attributes) {
         this.attributes = attributes;
     }
@@ -790,6 +802,7 @@ public class EntityDescriptor implements Serializable {
         return indexes;
     }
 
+    @SuppressWarnings("unused")
     public void setIndexes(final Map<String, IndexDescriptor> indexes) {
         this.indexes = indexes;
     }
@@ -798,6 +811,7 @@ public class EntityDescriptor implements Serializable {
         return relationships;
     }
 
+    @SuppressWarnings("unused")
     public void setRelationships(final Map<String, RelationshipDescriptor> relationships) {
         this.relationships = relationships;
     }

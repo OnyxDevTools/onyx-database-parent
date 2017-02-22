@@ -6,7 +6,7 @@ import com.onyxdevtools.entities.Player;
 import com.onyxdevtools.entities.Stats;
 import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -15,19 +15,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This test inserts several records.  To demonstrate a valid test, we insert a base level object, and an object with
  * a relationships.  This illustrates not just the speed of the database but the ORM as well.
  */
-public class InsertionBenchmarkTest extends BenchmarkTest {
+class InsertionBenchmarkTest extends BenchmarkTest {
 
-    protected static AtomicInteger playerIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger playerIdCounter = new AtomicInteger(0);
 
-    protected int NUMBER_OF_INSERTIONS = 50000;
-    protected int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
+    @SuppressWarnings("FieldCanBeLocal")
+    private final int NUMBER_OF_INSERTIONS = 50000;
+    @SuppressWarnings("FieldCanBeLocal")
+    private final int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
 
     /**
      * Default Constructor
      *
      * @param providerPersistenceManager The underlying persistence manager
      */
-    public InsertionBenchmarkTest(ProviderPersistenceManager providerPersistenceManager) {
+    InsertionBenchmarkTest(ProviderPersistenceManager providerPersistenceManager) {
         super(providerPersistenceManager);
     }
 
@@ -59,37 +61,33 @@ public class InsertionBenchmarkTest extends BenchmarkTest {
      */
     @Override
     public Runnable getTestingUnitRunnable() {
-        final Runnable runnable = new Runnable() {
-            public void run() {
-                League league = new League();
-                league.setName(generateRandomString());
+        return () -> {
+            League league = new League();
+            league.setName(generateRandomString());
 
-                providerPersistenceManager.insert(league);
+            providerPersistenceManager.insert(league);
 
-                // I had to generate the id myself for JPA databases.  Apparently they don't like if you try to build an entire
-                // graph and save it.  That is a limitation that Onyx does not need.
-                Player player = new Player(playerIdCounter.addAndGet(1));
-                player.setFirstName(generateRandomString());
-                player.setLastName(generateRandomString());
-                player.setActive(true);
-                player.setPosition(generateRandomString());
+            // I had to generate the id myself for JPA databases.  Apparently they don't like if you try to build an entire
+            // graph and save it.  That is a limitation that Onyx does not need.
+            Player player = new Player(playerIdCounter.addAndGet(1));
+            player.setFirstName(generateRandomString());
+            player.setLastName(generateRandomString());
+            player.setActive(true);
+            player.setPosition(generateRandomString());
 
-                Stats stats = new Stats();
-                stats.setFantasyPoints(generateRandomInt());
-                stats.setPassAttempts(generateRandomInt());
-                stats.setPassingYards(generateRandomInt());
-                stats.setReceptions(generateRandomInt());
-                stats.setRushingTouchdowns(generateRandomInt());
-                stats.setRushingAttempts(generateRandomInt());
+            Stats stats = new Stats();
+            stats.setFantasyPoints(generateRandomInt());
+            stats.setPassAttempts(generateRandomInt());
+            stats.setPassingYards(generateRandomInt());
+            stats.setReceptions(generateRandomInt());
+            stats.setRushingTouchdowns(generateRandomInt());
+            stats.setRushingAttempts(generateRandomInt());
 
-                player.setStats(Arrays.asList(stats));
+            player.setStats(Collections.singletonList(stats));
 
-                providerPersistenceManager.insert(player);
+            providerPersistenceManager.insert(player);
 
-                completionLatch.countDown();
-            }
+            completionLatch.countDown();
         };
-
-        return runnable;
     }
 }

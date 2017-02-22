@@ -27,6 +27,7 @@ public interface IndexController
      *
      * @param reference Entity reference
      */
+    @SuppressWarnings("RedundantThrows")
     void delete(long reference) throws EntityException;
 
     /**
@@ -35,6 +36,7 @@ public interface IndexController
      * @param indexValue Index value to find values for
      * @return References matching that index value
      */
+    @SuppressWarnings("RedundantThrows")
     Map findAll(Object indexValue) throws EntityException;
 
     /**
@@ -47,6 +49,7 @@ public interface IndexController
      *
      * @since 1.2.0
      */
+    @SuppressWarnings("RedundantThrows")
     Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException;
 
     /**
@@ -59,6 +62,7 @@ public interface IndexController
      *
      * @since 1.2.0
      */
+    @SuppressWarnings("RedundantThrows")
     Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException;
 
     /**
@@ -73,6 +77,7 @@ public interface IndexController
      *
      * @return All index references
      */
+    @SuppressWarnings("RedundantThrows")
     Set<Object> findAllValues() throws EntityException;
 
 
@@ -80,6 +85,7 @@ public interface IndexController
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *
      */
+    @SuppressWarnings("RedundantThrows")
     void rebuild() throws EntityException;
 
 }

@@ -30,6 +30,7 @@ public class ValidationHelper {
      * @param entity     Entity to validate
      * @return Whether the entity passes validation
      */
+    @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
     public static boolean validateEntity(EntityDescriptor descriptor, IManagedEntity entity) throws EntityException {
 
         final List<Throwable> exceptionsThrown = new ArrayList<>();
@@ -102,6 +103,7 @@ public class ValidationHelper {
      * @param context    Schema context
      * @return Whether the query is valid
      */
+    @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
     public static boolean validateQuery(EntityDescriptor descriptor, Query query, SchemaContext context) throws EntityException {
         if (query.getUpdates() == null) {
             return true;

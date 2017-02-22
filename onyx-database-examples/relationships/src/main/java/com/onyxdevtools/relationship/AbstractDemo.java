@@ -2,33 +2,16 @@ package com.onyxdevtools.relationship;
 
 import java.io.File;
 
-/**
- * Created by tosborn1 on 3/28/16.
- */
-public abstract class AbstractDemo {
+abstract class AbstractDemo {
     /**
      * Helper method to verify an the object is not null.
      *
      * @param message Message displayed if the object is null
      * @param nonNullObject Object to assert
      */
-    public static void assertNotNull(String message, Object nonNullObject)
+    static void assertNotNull(String message, Object nonNullObject)
     {
         if(nonNullObject == null)
-        {
-            System.err.println(message);
-        }
-    }
-
-    /**
-     * Helper method to verify an the object is null
-     *
-     * @param message Message displayed if the object is null
-     * @param nonNullObject Object to assert
-     */
-    public static void assertNull(String message, Object nonNullObject)
-    {
-        if(nonNullObject != null)
         {
             System.err.println(message);
         }
@@ -41,7 +24,7 @@ public abstract class AbstractDemo {
      * @param comparison1 First object to compare
      * @param comparison2 Second object to compare against
      */
-    public static void assertEquals(String message, Object comparison1, Object comparison2)
+    static void assertEquals(String message, Object comparison1, Object comparison2)
     {
         if(comparison1 == comparison2)
         {
@@ -60,7 +43,7 @@ public abstract class AbstractDemo {
      * @param message Message to show if assert fails
      * @param operator boolean to assert
      */
-    public static void assertTrue(String message, boolean operator)
+    static void assertTrue(String message, boolean operator)
     {
         if(!operator)
         {
@@ -73,7 +56,8 @@ public abstract class AbstractDemo {
      *
      * @param pathToDb Path to onyx database
      */
-    public static void deleteDatabase(String pathToDb)
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    static void deleteDatabase(String pathToDb)
     {
         File database = new File(pathToDb);
         if (database != null && database.exists()) {
@@ -86,6 +70,7 @@ public abstract class AbstractDemo {
      * Delete files within a directory
      * @param f directory to delete
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private static void delete(File f) {
         if (f.isDirectory()) {
             for (File c : f.listFiles())

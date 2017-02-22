@@ -32,7 +32,7 @@ class Encryption {
      * @return an default encryption instance or {@code null} if occur some Exception, you can
      * create yur own Encryption instance using the Encryption.Builder
      */
-    static Encryption getDefault(String key, String salt, byte[] iv) {
+    static Encryption getDefault(@SuppressWarnings("SameParameterValue") String key, @SuppressWarnings("SameParameterValue") String salt, @SuppressWarnings("SameParameterValue") byte[] iv) {
         try {
             return Builder.getDefaultBuilder(key, salt, iv).build();
         } catch (NoSuchAlgorithmException e) {
@@ -274,7 +274,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setCharsetName(String charsetName) {
+        Builder setCharsetName(@SuppressWarnings("SameParameterValue") String charsetName) {
             mCharsetName = charsetName;
             return this;
         }
@@ -291,7 +291,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setAlgorithm(String algorithm) {
+        Builder setAlgorithm(@SuppressWarnings("SameParameterValue") String algorithm) {
             mAlgorithm = algorithm;
             return this;
         }
@@ -308,7 +308,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setKeyAlgorithm(String keyAlgorithm) {
+        Builder setKeyAlgorithm(@SuppressWarnings("SameParameterValue") String keyAlgorithm) {
             mKeyAlgorithm = keyAlgorithm;
             return this;
         }
@@ -325,7 +325,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setBase64Mode(int base64Mode) {
+        Builder setBase64Mode(@SuppressWarnings("SameParameterValue") int base64Mode) {
             mBase64Mode = base64Mode;
             return this;
         }
@@ -344,7 +344,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setSecretKeyType(String secretKeyType) {
+        Builder setSecretKeyType(@SuppressWarnings("SameParameterValue") String secretKeyType) {
             mSecretKeyType = secretKeyType;
             return this;
         }
@@ -395,7 +395,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setKeyLength(int keyLength) {
+        Builder setKeyLength(@SuppressWarnings("SameParameterValue") int keyLength) {
             mKeyLength = keyLength;
             return this;
         }
@@ -412,7 +412,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setIterationCount(int iterationCount) {
+        Builder setIterationCount(@SuppressWarnings("SameParameterValue") int iterationCount) {
             mIterationCount = iterationCount;
             return this;
         }
@@ -429,7 +429,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setSecureRandomAlgorithm(String secureRandomAlgorithm) {
+        Builder setSecureRandomAlgorithm(@SuppressWarnings("SameParameterValue") String secureRandomAlgorithm) {
             mSecureRandomAlgorithm = secureRandomAlgorithm;
             return this;
         }
@@ -463,6 +463,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
+        @SuppressWarnings("UnusedReturnValue")
         Builder setSecureRandom(SecureRandom secureRandom) {
             mSecureRandom = secureRandom;
             return this;
@@ -480,6 +481,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
+        @SuppressWarnings("UnusedReturnValue")
         Builder setIvParameterSpec(IvParameterSpec ivParameterSpec) {
             mIvParameterSpec = ivParameterSpec;
             return this;
@@ -497,7 +499,7 @@ class Encryption {
          *
          * @return this instance to follow the Builder patter
          */
-        Builder setDigestAlgorithm(String digestAlgorithm) {
+        Builder setDigestAlgorithm(@SuppressWarnings("SameParameterValue") String digestAlgorithm) {
             mDigestAlgorithm = digestAlgorithm;
             return this;
         }

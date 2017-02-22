@@ -67,7 +67,7 @@ public class ConnectionProperties extends ConnectionBufferPool
      * @param authenticated Set authenticated to value
      * @since 1.2.0
      */
-    public void setAuthenticated(boolean authenticated) {
+    public void setAuthenticated(@SuppressWarnings("SameParameterValue") boolean authenticated) {
         this.authenticated = authenticated;
     }
 }

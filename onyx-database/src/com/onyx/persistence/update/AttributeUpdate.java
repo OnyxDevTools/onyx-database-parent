@@ -45,12 +45,14 @@ public class AttributeUpdate<T>  implements ObjectSerializable, Externalizable
     /**
      * Default Constructor
      */
+    @SuppressWarnings("unused")
     public AttributeUpdate()
     {
 
     }
 
     private String fieldName;
+    @SuppressWarnings("WeakerAccess")
     protected T value;
     transient private AttributeDescriptor attributeDescriptor;
     transient private IndexController indexController;
@@ -60,6 +62,7 @@ public class AttributeUpdate<T>  implements ObjectSerializable, Externalizable
      * @param fieldName Attribute Name
      * @param value Value to update to
      */
+    @SuppressWarnings("unused")
     public AttributeUpdate(String fieldName, T value) {
         this.fieldName = fieldName;
         this.value = value;

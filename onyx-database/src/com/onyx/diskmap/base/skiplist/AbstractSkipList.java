@@ -7,6 +7,7 @@ import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
+import com.onyx.util.CompareUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,7 +28,7 @@ import java.util.Random;
 @SuppressWarnings("unchecked")
 abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Map<K, V> {
 
-    private static Random random = new Random(60); //To choose the threadLocalHead level node randomly; // Random number generator from 0.0 to 1.0
+    private static final Random random = new Random(60); //To choose the threadLocalHead level node randomly; // Random number generator from 0.0 to 1.0
 
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
     private ThreadLocal<SkipListHeadNode> threadLocalHead; // Default threadLocalHead of the SkipList
@@ -196,7 +197,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
                     (shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), (K)key, ((SkipListNode<K>)next).key))) {
 
                 // We found the record we want
-                if (next != null && key.equals(((SkipListNode<K>)next).key)) {
+                if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
                     // Get the return value
                     value = findValueAtPosition(((SkipListNode<K>)next).recordPosition, ((SkipListNode<K>)next).recordSize);
                     updateNodeNext(current, next.next);
@@ -286,7 +287,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
                     (shouldMoveDown(hash, hash(((SkipListNode<K>) next).key), key, ((SkipListNode<K>) next).key))) {
 
                 // We found the record we want
-                if (next != null && key.equals(((SkipListNode<K>)next).key)) {
+                if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
                     // Get the return value
                     updateNodeValue((SkipListNode)next, value);
                     victory = true;
@@ -310,6 +311,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @return Its corresponding node
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected SkipListNode<K> find(K key) {
         if (key == null)
             return null;
@@ -320,7 +322,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
         while (current != null) {
             SkipListHeadNode next = findNodeAtPosition(current.next);
-            if (next != null && key.equals(((SkipListNode<K>)next).key)) {
+            if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
                 return (SkipListNode<K>)next;
             }
 
@@ -355,7 +357,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
         while (current != null) {
             SkipListHeadNode next = findNodeAtPosition(current.next);
-            if (next != null && key.equals(((SkipListNode<K>)next).key)) {
+            if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
                 return next;
             }
 
@@ -443,7 +445,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @return The value as long as it serialized ok.
      * @since 1.2.0
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "WeakerAccess"})
     protected V findValueAtPosition(long position, int recordSize) {
         if(position == 0L)
             return null;
@@ -467,6 +469,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @param value The value of the reference
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected void updateNodeValue(SkipListNode<K> node, V value) {
         final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
         try {
@@ -565,7 +568,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @return The newly created Skip List Node
      * @since 1.2.0
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "WeakerAccess"})
     protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down) {
         final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
 
@@ -622,7 +625,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @return The newly created Skip List Node
      * @since 1.2.0
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "WeakerAccess"})
     protected SkipListHeadNode createHeadNode(byte level, long next, long down) {
         SkipListHeadNode newNode = null;
 
@@ -663,7 +666,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @return The Hydrated Skip List Node from the file store
      * @since 1.2.0
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "WeakerAccess"})
     protected SkipListHeadNode findNodeAtPosition(long position) {
         if (position == 0L)
             return null;

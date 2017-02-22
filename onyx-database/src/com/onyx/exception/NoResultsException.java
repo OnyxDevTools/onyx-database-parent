@@ -12,6 +12,7 @@ public class NoResultsException extends EntityException {
         super();
     }
 
+    @SuppressWarnings("unused")
     public NoResultsException(Throwable e)
     {
         super(e);

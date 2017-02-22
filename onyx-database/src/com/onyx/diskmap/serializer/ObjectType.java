@@ -35,8 +35,9 @@ enum ObjectType
     LONGS((byte) 24),
     CHARS((byte) 25);
 
-    private byte type;
+    private final byte type;
 
+    @SuppressWarnings("unused")
     ObjectType(byte type)
     {
         this.type = type;

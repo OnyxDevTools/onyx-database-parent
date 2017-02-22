@@ -18,6 +18,7 @@ import java.util.Random;
  */
 public class BatchDeletingDataExample
 {
+    @SuppressWarnings("unchecked")
      public static void main(String[] args) throws EntityException
     {
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();

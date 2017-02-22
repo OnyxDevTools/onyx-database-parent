@@ -29,28 +29,34 @@ public class SystemPartition extends AbstractSystemEntity implements IManagedEnt
         id = entity.getName() + descriptor.getName();
     }
 
+    @SuppressWarnings("unused")
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     @Index(loadFactor = 3)
     protected String id;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String name;
 
+    @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "partition", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry.class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
     private List<SystemPartitionEntry> entries = new ArrayList<>();
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id)
     {
         this.id = id;
@@ -61,16 +67,19 @@ public class SystemPartition extends AbstractSystemEntity implements IManagedEnt
         return name;
     }
 
+    @SuppressWarnings("unused")
     public void setName(String name)
     {
         this.name = name;
     }
 
+    @SuppressWarnings("unused")
     public SystemEntity getEntity()
     {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(SystemEntity entity)
     {
         this.entity = entity;

@@ -17,15 +17,18 @@ import java.security.Principal;
 public class SystemUser extends AbstractSystemEntity implements IManagedEntity, Principal
 {
 
+    @SuppressWarnings("unused")
     public SystemUser()
     {
 
     }
 
+    @SuppressWarnings("WeakerAccess")
     @Identifier(loadFactor = 3)
     @Attribute
     protected String username;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute(size = 255)
     protected String password;
 
@@ -34,26 +37,32 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
 
     private SystemUserRole role;
 
+    @SuppressWarnings("unused")
     public String getId() {
         return username;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id) {
         this.username = id;
     }
 
+    @SuppressWarnings("unused")
     public String getUsername() {
         return username;
     }
 
+    @SuppressWarnings("unused")
     public void setUsername(String username) {
         this.username = username;
     }
 
+    @SuppressWarnings("unused")
     public String getPassword() {
         return password;
     }
 
+    @SuppressWarnings("unused")
     public void setPassword(String password) {
         this.password = password;
     }
@@ -70,12 +79,14 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
         this.roleOrdinal = roleOrdinal;
     }
 
+    @SuppressWarnings("unused")
     public SystemUserRole getRole()
     {
         role = SystemUserRole.values()[roleOrdinal];
         return role;
     }
 
+    @SuppressWarnings("unused")
     public void setRole(SystemUserRole role)
     {
         this.role = role;

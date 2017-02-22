@@ -60,6 +60,7 @@ public abstract class AbstractDatabaseServer extends AbstractSSLPeer {
      * @return Boolean flag running
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public boolean isRunning() {
         return (state == ServerState.RUNNING);
     }

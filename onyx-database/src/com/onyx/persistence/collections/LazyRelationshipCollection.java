@@ -51,10 +51,14 @@ import java.util.*;
  */
 public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<E>, BufferStreamable {
 
+    @SuppressWarnings("WeakerAccess")
     protected List<RelationshipReference> identifiers = null;
+    @SuppressWarnings("WeakerAccess")
     transient protected EntityDescriptor entityDescriptor = null;
 
+    @SuppressWarnings("WeakerAccess")
     transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
+    @SuppressWarnings("WeakerAccess")
     transient protected PersistenceManager persistenceManager;
     private String contextId;
 
@@ -79,6 +83,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         this.identifiers = new ArrayList<>();
         if(identifiers != null)
         {
+            //noinspection Convert2streamapi
             for (Object identifier : identifiers) this.identifiers.add((RelationshipReference) identifier);
         }
         this.entityDescriptor = entityDescriptor;
@@ -255,21 +260,25 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
         throw new RuntimeException("Method unsupported, hydrate relationship using initialize before modifying");
     }
 
+    @SuppressWarnings("WeakerAccess")
     public List<RelationshipReference> getIdentifiers()
     {
         return identifiers;
     }
 
+    @SuppressWarnings("unused")
     public void setIdentifiers(List<RelationshipReference> identifiers)
     {
         this.identifiers = identifiers;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public EntityDescriptor getEntityDescriptor()
     {
         return entityDescriptor;
     }
 
+    @SuppressWarnings("unused")
     public void setEntityDescriptor(EntityDescriptor entityDescriptor)
     {
         this.entityDescriptor = entityDescriptor;

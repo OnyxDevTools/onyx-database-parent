@@ -19,12 +19,15 @@ import java.util.List;
  */
 class ScannerProperties
 {
+    @SuppressWarnings("unused")
     public EntityDescriptor descriptor = null;
     public RecordController recordController = null;
     AttributeDescriptor attributeDescriptor = null;
     boolean useParentDescriptor = true;
+    @SuppressWarnings("unused")
     protected Query query;
-    protected String contextId;
+    @SuppressWarnings("unused")
+    protected final String contextId;
 
     private ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, boolean useParentDescriptor, SchemaContext context)
     {

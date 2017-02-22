@@ -33,6 +33,7 @@ import java.util.*;
 public class ToManyRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController
 {
 
+    @SuppressWarnings("WeakerAccess")
     protected final DiskMap<Object, Set<RelationshipReference>> records;
 
     /**

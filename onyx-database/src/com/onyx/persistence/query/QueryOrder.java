@@ -39,6 +39,7 @@ public class QueryOrder implements ObjectSerializable, Serializable
      * Default Constructor
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public QueryOrder()
     {
 
@@ -54,6 +55,7 @@ public class QueryOrder implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Entity attribute name
      */
+    @SuppressWarnings("unused")
     public QueryOrder(String attribute)
     {
         this.attribute = attribute;

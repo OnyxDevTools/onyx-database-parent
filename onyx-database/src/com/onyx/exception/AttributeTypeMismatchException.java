@@ -9,6 +9,7 @@ public class AttributeTypeMismatchException extends EntityException
 {
     public static final String ATTRIBUTE_TYPE_MISMATCH = "Attribute type mismatch, expecting ";
 
+    @SuppressWarnings("WeakerAccess")
     protected String attribute;
     private Class expectedClass;
     private Class actualClass;
@@ -19,7 +20,7 @@ public class AttributeTypeMismatchException extends EntityException
      * @param message Exception message
      * @param attribute Attribute causing exception
      */
-    public AttributeTypeMismatchException(String message, Class expectedClass, Class actualClass, String attribute)
+    public AttributeTypeMismatchException(@SuppressWarnings("SameParameterValue") String message, Class expectedClass, Class actualClass, String attribute)
     {
         super(message + expectedClass.getName() + " actual " + actualClass.getName() + " for attribute " + attribute);
         this.attribute = attribute;
@@ -27,11 +28,13 @@ public class AttributeTypeMismatchException extends EntityException
         this.actualClass = actualClass;
     }
 
+    @SuppressWarnings("unused")
     public AttributeTypeMismatchException()
     {
 
     }
 
+    @SuppressWarnings("unused")
     public String getAttribute() {
         return attribute;
     }

@@ -8,19 +8,16 @@ import com.onyx.persistence.query.Query;
 import com.onyxdevtools.example.querying.entities.Player;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 
 /**
  @author  cosborn
  */
-public class LazyQueryExample
+class LazyQueryExample
 {
-    public LazyQueryExample()
-    {
-    }
 
+    @SuppressWarnings("unchecked")
     public static void demo() throws EntityException
     {
         // get an instance of the persistenceManager
@@ -41,9 +38,7 @@ public class LazyQueryExample
         final List<Player> allPlayers = manager.executeLazyQuery(query); // returns LazyQueryCollection
 
         // Get and print out all of the entites in the LazyQueryCollection
-        for (int i = 0; i < allPlayers.size(); i++)
-        {
-            final Player player = allPlayers.get(i); // retreives the Player when invoked
+        for (final Player player : allPlayers) {
             System.out.println(player.getFirstName() + " " + player.getLastName());
         }
 

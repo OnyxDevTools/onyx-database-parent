@@ -11,21 +11,18 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 4/12/16.
- */
 @Controller
-public class MeetingController
+class MeetingController
 {
     // Persistence Manager injected by spring
     @Autowired
-    protected PersistenceManager persistenceManager;
+    private PersistenceManager persistenceManager;
 
     /**
      * Simple method used to encapsulate the saving of a meeting.
      * @param meeting Meeting to persist
      */
-    public void saveMeeting(Meeting meeting)
+    void saveMeeting(Meeting meeting)
     {
         try {
             persistenceManager.saveEntity(meeting);
@@ -42,7 +39,8 @@ public class MeetingController
      *
      * @return A list of really boring meetings
      */
-    public List<Meeting> findBoringMeetings()
+    @SuppressWarnings("unchecked")
+    List<Meeting> findBoringMeetings()
     {
         Query query = new Query(Meeting.class, new QueryCriteria("notes", QueryCriteriaOperator.CONTAINS, "Boring"));
         List<Meeting> boringMeetings = null;

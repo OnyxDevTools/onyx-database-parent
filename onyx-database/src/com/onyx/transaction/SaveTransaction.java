@@ -8,6 +8,7 @@ import com.onyx.persistence.IManagedEntity;
  * Save entity transaction
  */
 public class SaveTransaction implements Transaction{
+    @SuppressWarnings("WeakerAccess")
     public IManagedEntity entity;
 
     @SuppressWarnings("unused")
@@ -21,10 +22,12 @@ public class SaveTransaction implements Transaction{
         this.entity = entity;
     }
 
+    @SuppressWarnings("unused")
     public IManagedEntity getEntity() {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(IManagedEntity entity) {
         this.entity = entity;
     }

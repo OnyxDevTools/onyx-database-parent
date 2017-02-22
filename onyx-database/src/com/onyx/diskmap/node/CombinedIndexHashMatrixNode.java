@@ -9,8 +9,8 @@ package com.onyx.diskmap.node;
  */
 public class CombinedIndexHashMatrixNode {
 
-    public HashMatrixNode bitMapNode;
-    public int hashDigit;
+    public final HashMatrixNode bitMapNode;
+    public final int hashDigit;
     public SkipListHeadNode head;
 
     public CombinedIndexHashMatrixNode(final SkipListHeadNode base, final HashMatrixNode node, int hashDigit) {

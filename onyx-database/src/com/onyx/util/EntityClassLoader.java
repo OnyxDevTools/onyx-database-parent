@@ -297,6 +297,7 @@ public class EntityClassLoader
 
     private static SchemaContext schemaContext = null;
 
+    @SuppressWarnings("WeakerAccess")
     public EntityClassLoader()
     {
     }
