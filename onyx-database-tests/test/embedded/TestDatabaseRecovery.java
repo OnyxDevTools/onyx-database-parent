@@ -27,7 +27,6 @@ import java.util.List;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ EmbeddedDatabaseTests.class })
-@Ignore
 public class TestDatabaseRecovery extends BaseTest
 {
 
@@ -130,7 +129,7 @@ public class TestDatabaseRecovery extends BaseTest
         existsQuery.setEntityType(AllAttributeEntity.class);
         List results = newManager.executeLazyQuery(existsQuery);
 
-        Assert.assertTrue(results.size() == 999999);
+        Assert.assertTrue(results.size() == 101000);
 
         newFactory.close();
     }
