@@ -77,14 +77,16 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
      * @param identifiers Set of References
      * @param context Schema Context
      */
-    public LazyRelationshipCollection(EntityDescriptor entityDescriptor, Set<Object> identifiers, SchemaContext context)
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter unchecked")
+    public LazyRelationshipCollection(EntityDescriptor entityDescriptor, final Set<Object> identifiers, SchemaContext context)
     {
         this.persistenceManager = context.getSystemPersistenceManager();
         this.identifiers = new ArrayList<>();
         if(identifiers != null)
         {
-            //noinspection Convert2streamapi
-            for (Object identifier : identifiers) this.identifiers.add((RelationshipReference) identifier);
+            synchronized (identifiers) {
+                this.identifiers.addAll((Collection) identifiers);
+            }
         }
         this.entityDescriptor = entityDescriptor;
         this.contextId = context.getContextId();

@@ -100,7 +100,9 @@ class AbstractRelationshipController extends PartitionContext
                 {
                     toManyRelationships = new HashSet();
                 }
-                toManyRelationships.add(parentIdentifier);
+                synchronized (toManyRelationships) {
+                    toManyRelationships.add(parentIdentifier);
+                }
 
                 // Save the relationship by
                 relationshipMap.put(childIdentifier, toManyRelationships);
@@ -144,7 +146,9 @@ class AbstractRelationshipController extends PartitionContext
 
                 if(toManyRelationships != null)
                 {
-                    toManyRelationships.remove(parentIdentifier);
+                    synchronized (toManyRelationships) {
+                        toManyRelationships.remove(parentIdentifier);
+                    }
 
                     // Save the relationship by
                     relationshipMap.put(childIdentifier, toManyRelationships);

@@ -14,6 +14,7 @@ import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.CacheSchemaContext;
 
 import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
@@ -55,6 +56,9 @@ public class EntityClassLoader
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation, SchemaContext context)
     {
+        if(context instanceof CacheSchemaContext)
+            return;
+
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
         //noinspection ResultOfMethodCallIgnored

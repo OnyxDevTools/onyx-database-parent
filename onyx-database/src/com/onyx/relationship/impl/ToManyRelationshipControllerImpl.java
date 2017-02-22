@@ -26,12 +26,11 @@ import java.util.*;
 
 /**
  * Created by timothy.osborn on 2/5/15.
- *
+ * <p>
  * Handles the to many relationship persistence
  */
-@SuppressWarnings("unchecked")
-public class ToManyRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController
-{
+@SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
+public class ToManyRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController {
 
     @SuppressWarnings("WeakerAccess")
     protected final DiskMap<Object, Set<RelationshipReference>> records;
@@ -39,11 +38,10 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * To Many Relationship Controller Constructor
      *
-     * @param entityDescriptor Parent entity descriptor
+     * @param entityDescriptor       Parent entity descriptor
      * @param relationshipDescriptor Child entity descriptor
      */
-    public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
-    {
+    public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException {
         super(entityDescriptor, relationshipDescriptor, context);
         MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
 
@@ -51,15 +49,12 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     }
 
     /**
-     *
-     * @param entity Entity to save relationship
+     * @param entity  Entity to save relationship
      * @param manager Relationship manager keeps track of actions already taken on entity relationships
      */
     @Override
-    public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException
-    {
-        if (relationshipDescriptor.getCascadePolicy() == CascadePolicy.DEFER_SAVE)
-        {
+    public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException {
+        if (relationshipDescriptor.getCascadePolicy() == CascadePolicy.DEFER_SAVE) {
             return;
         }
 
@@ -69,19 +64,15 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         Set<RelationshipReference> existingRelationshipObjects = null;
 
         // If the structure does not exist, lets create one and persist it
-        synchronized (records)
-        {
+        synchronized (records) {
             Object retVal = records.get(entityIdentifier);
             if (retVal instanceof Set)
                 existingRelationshipObjects = (Set) retVal;
-            // This is to account for a schema change from a to one to a to many
-            else if (retVal != null)
-            {
+                // This is to account for a schema change from a to one to a to many
+            else if (retVal != null) {
                 existingRelationshipObjects = new HashSet<>();
                 existingRelationshipObjects.add((RelationshipReference) retVal);
-            }
-            else if (existingRelationshipObjects == null)
-            {
+            } else if (existingRelationshipObjects == null) {
                 existingRelationshipObjects = new HashSet<>();
                 // Commit the relationship record
                 records.put(entityIdentifier, existingRelationshipObjects);
@@ -89,18 +80,29 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         }
 
         Set<RelationshipReference> relationshipObjectCopy = new HashSet<>();
-        RelationshipReference relationshipObjectIdentifier ;
+        RelationshipReference relationshipObjectIdentifier;
 
         boolean saveRelationship;
         Object reltnIdentifier;
 
-        if (relationshipObjects != null)
-        {
+        if (relationshipObjects != null) {
             relationshipObjectCopy = new HashSet(existingRelationshipObjects);
 
-            // Iterate through and save the relationship
-            for (IManagedEntity relationshipObject : relationshipObjects)
-            {
+
+                int size = relationshipObjects.size();
+            for(int i = 0; i < size; i++) {
+                IManagedEntity relationshipObject;
+
+                try {
+                    relationshipObject = relationshipObjects.get(i);
+                } catch (IndexOutOfBoundsException e) {
+                    break;
+                }
+
+                if (relationshipObject == null)
+                    break;
+
+
                 // Get the inverse identifier
                 reltnIdentifier = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
                 relationshipObjectIdentifier = new RelationshipReference(reltnIdentifier, getPartitionId(relationshipObject));
@@ -110,8 +112,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 // Cascade save the entity
                 if ((relationshipDescriptor.getCascadePolicy() == CascadePolicy.ALL || relationshipDescriptor.getCascadePolicy() == CascadePolicy.SAVE)
-                        && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
-                {
+                        && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
 
                     // The EntityRelationshipManager ensures we do not recursively save cascading objects
                     EntityRelationshipManager newManager = new EntityRelationshipManager();
@@ -130,24 +131,21 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
                     // The record exists
                     saveRelationship = true;
 
-                }
-                else
-                {
+                } else {
                     // Ensure the record exists
                     saveRelationship = getRecordControllerForPartition(relationshipObjectIdentifier.partitionId).existsWithId(relationshipObjectIdentifier.identifier);
                 }
 
                 // The entity exists yay, that means we can save it
-                if (saveRelationship)
-                {
-                    existingRelationshipObjects.add(relationshipObjectIdentifier);
+                if (saveRelationship) {
+                    synchronized (existingRelationshipObjects) {
+                        existingRelationshipObjects.add(relationshipObjectIdentifier);
+                    }
                 }
 
                 // Save the inverse relationship
-                if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
-                {
-                    if (relationshipDescriptor.getInverse() != null && relationshipDescriptor.getInverse().length() > 0)
-                    {
+                if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
+                    if (relationshipDescriptor.getInverse() != null && relationshipDescriptor.getInverse().length() > 0) {
                         saveInverseRelationship(entity, relationshipObject, entityIdentifier, relationshipObjectIdentifier);
                     }
                 }
@@ -158,19 +156,19 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         if ((relationshipDescriptor.getCascadePolicy() == CascadePolicy.DELETE
                 || relationshipDescriptor.getCascadePolicy() == CascadePolicy.ALL)) // 5/7/2015 Prevent lazy relationships from cascading.  It must be initialized
         {
-            for (RelationshipReference relationshipKeyToDelete : relationshipObjectCopy)
-            {
+            for (RelationshipReference relationshipKeyToDelete : relationshipObjectCopy) {
 
                 // Delete the actual relationship
-                existingRelationshipObjects.remove(relationshipKeyToDelete);
+                synchronized (existingRelationshipObjects) {
+                    existingRelationshipObjects.remove(relationshipKeyToDelete);
+                }
 
                 // Delete the inverse
                 deleteInverseRelationshipReference(entityIdentifier, relationshipKeyToDelete);
             }
         }
 
-        synchronized (records)
-        {
+        synchronized (records) {
             records.put(entityIdentifier, existingRelationshipObjects);
         }
     }
@@ -179,34 +177,31 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * Deletes the entire relationship list for a to many relationship
      *
      * @param entityIdentifier Relationship reference key
-     * @param manager Relationship manager keeps track of actions already taken on entity relationships
+     * @param manager          Relationship manager keeps track of actions already taken on entity relationships
      */
     @Override
-    public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws EntityException
-    {
+    public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws EntityException {
         IManagedEntity entity = recordController.getWithId(entityIdentifier.identifier);
         manager.add(entity, entityDescriptor.getIdentifier());
 
         Set<RelationshipReference> existingRelationshipObjects;
-        synchronized (records)
-        {
+        synchronized (records) {
             Object retVal = records.get(entityIdentifier);
             if (retVal instanceof Set)
                 existingRelationshipObjects = (Set) retVal;
-            else
-            {
+            else {
                 existingRelationshipObjects = new HashSet<>();
                 existingRelationshipObjects.add((RelationshipReference) retVal);
             }
 
-            for (RelationshipReference inverseIdentifier : existingRelationshipObjects)
-            {
-                deleteInverseRelationshipReference(entityIdentifier, inverseIdentifier);
+            synchronized (existingRelationshipObjects) {
+                for (RelationshipReference inverseIdentifier : existingRelationshipObjects) {
+                    deleteInverseRelationshipReference(entityIdentifier, inverseIdentifier);
+                }
             }
         }
 
-        synchronized (records)
-        {
+        synchronized (records) {
             records.remove(entityIdentifier);
         }
     }
@@ -215,13 +210,13 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * Hydrate relationship for entity
      *
      * @param entityIdentifier Entity relationship id
-     * @param entity Entity to hydrate
-     * @param manager Relationship manager prevents recursion
-     * @param force Force hydrate
+     * @param entity           Entity to hydrate
+     * @param manager          Relationship manager prevents recursion
+     * @param force            Force hydrate
      */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     @Override
-    public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws EntityException
-    {
+    public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws EntityException {
         manager.add(entity, entityDescriptor.getIdentifier());
 
         Set<RelationshipReference> existingRelationshipObjects = null;
@@ -229,29 +224,21 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         Object retVal = records.get(entityIdentifier);
         if (retVal instanceof Set)
             existingRelationshipObjects = (Set) retVal;
-        // This is to account for a schema change from a to one to a to many
-        else if (retVal != null)
-        {
+            // This is to account for a schema change from a to one to a to many
+        else if (retVal != null) {
             existingRelationshipObjects = new HashSet<>();
             existingRelationshipObjects.add((RelationshipReference) retVal);
         }
 
         List<IManagedEntity> relationshipObjects = getRelationshipListValue(relationshipDescriptor, entity);
 
-        if (relationshipDescriptor.getFetchPolicy() == FetchPolicy.LAZY && !force)
-        {
+        if (relationshipDescriptor.getFetchPolicy() == FetchPolicy.LAZY && !force) {
             relationshipObjects = new LazyRelationshipCollection(defaultDescriptor, existingRelationshipObjects, getContext());
-        }
-        else if (relationshipObjects == null && !(relationshipObjects instanceof LazyRelationshipCollection))
-        {
+        } else if (relationshipObjects == null && !(relationshipObjects instanceof LazyRelationshipCollection)) {
             relationshipObjects = new ArrayList<>();
-        }
-        else if (force && relationshipObjects instanceof LazyRelationshipCollection)
-        {
+        } else if (force && relationshipObjects instanceof LazyRelationshipCollection) {
             relationshipObjects = new ArrayList<>();
-        }
-        else
-        {
+        } else {
             relationshipObjects.clear();
         }
 
@@ -260,8 +247,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         RelationshipReference inverseIdentifier;
 
         if (existingRelationshipObjects != null
-                && (relationshipDescriptor.getFetchPolicy() != FetchPolicy.LAZY || force))
-        {
+                && (relationshipDescriptor.getFetchPolicy() != FetchPolicy.LAZY || force)) {
 
             for (RelationshipReference existingRelationshipObject : existingRelationshipObjects) {
                 inverseIdentifier = existingRelationshipObject;
@@ -274,13 +260,14 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
                 if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
                     RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, getContext());
                 }
-                relationshipObjects.add(relationshipObject);
+                synchronized (relationshipObjects) {
+                    relationshipObjects.add(relationshipObject);
 
-                //sort related children if the child entity implements Comparable
-                if (relationshipObjects.size() > 0 && Comparable.class.isAssignableFrom(relationshipObjects.get(0).getClass())) {
-                    relationshipObjects.sort(null);
+                    //sort related children if the child entity implements Comparable
+                    if (relationshipObjects.size() > 0 && Comparable.class.isAssignableFrom(relationshipObjects.get(0).getClass())) {
+                        relationshipObjects.sort(null);
+                    }
                 }
-
             }
         }
 
@@ -293,23 +280,20 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @return List of relationship references
      */
     @Override
-    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws EntityException
-    {
+    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws EntityException {
         IManagedEntity entity = recordController.getWithReferenceId(referenceId);
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
         Set<RelationshipReference> existingRelationshipObjects = null;
         Object retVal = records.get(new RelationshipReference(indexValue, 0));
         if (retVal instanceof Set)
             existingRelationshipObjects = (Set) retVal;
-        // This is to account for a schema change from a to one to a to many
-        else if (retVal != null)
-        {
+            // This is to account for a schema change from a to one to a to many
+        else if (retVal != null) {
             existingRelationshipObjects = new HashSet<>();
             existingRelationshipObjects.add((RelationshipReference) retVal);
         }
 
-        if (existingRelationshipObjects != null)
-        {
+        if (existingRelationshipObjects != null) {
             return new ArrayList<>(existingRelationshipObjects);
         }
         return new ArrayList<>();
@@ -321,8 +305,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @return List of relationship references
      */
     @Override
-    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws EntityException
-    {
+    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws EntityException {
         IManagedEntity entity = getRecordControllerForPartition(referenceId.partition).getWithReferenceId(referenceId.reference);
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
         Set<RelationshipReference> existingRelationshipObjects = null;
@@ -330,15 +313,13 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         Object retVal = records.get(new RelationshipReference(indexValue, referenceId.partition));
         if (retVal instanceof Set)
             existingRelationshipObjects = (Set) retVal;
-        // This is to account for a schema change from a to one to a to many
-        else if (retVal != null)
-        {
+            // This is to account for a schema change from a to one to a to many
+        else if (retVal != null) {
             existingRelationshipObjects = new HashSet<>();
             existingRelationshipObjects.add((RelationshipReference) retVal);
         }
 
-        if (existingRelationshipObjects != null)
-        {
+        if (existingRelationshipObjects != null) {
             return new ArrayList<>(existingRelationshipObjects);
         }
         return new ArrayList<>();
@@ -347,16 +328,15 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     /**
      * Batch Save all relationship ids
      *
-     * @param entity entity to update
+     * @param entity                  entity to update
      * @param relationshipIdentifiers Relationship references
      */
-    public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
-    {
+    public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException {
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.getContext());
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         RelationshipReference entityId;
-        if(partitionValue != "" && partitionValue != null) {
+        if (partitionValue != "" && partitionValue != null) {
             SystemPartitionEntry relationshipDescriptor = this.getContext().getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.getContext()));
             entityId = new RelationshipReference(indexValue, relationshipDescriptor.getIndex());
         } else {
