@@ -75,6 +75,16 @@ public class RelationshipReference implements ObjectSerializable, Comparable
     }
 
     @Override
+    public void readObject(ObjectBuffer buffer, long position) throws IOException {
+
+    }
+
+    @Override
+    public void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException {
+
+    }
+
+    @Override
     public String toString()
     {
         return "Identifier " + identifier.toString() + " Partition ID " + partitionId;

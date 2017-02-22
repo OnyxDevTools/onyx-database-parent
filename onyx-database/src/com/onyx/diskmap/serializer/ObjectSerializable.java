@@ -33,9 +33,7 @@ public interface ObjectSerializable extends Serializable
      * @param position position to verify the checksum with
      * @throws IOException Exception while reading
      */
-    default void readObject(ObjectBuffer buffer, long position) throws IOException{
-        readObject(buffer);
-    }
+    void readObject(ObjectBuffer buffer, long position) throws IOException;
 
     /**
      * Read an object from the object buffer an check the checksum to ensure the record was de-serialized propertly.  Also
@@ -45,7 +43,5 @@ public interface ObjectSerializable extends Serializable
      * @param position position to verify the checksum with
      * @throws IOException Exception while reading
      */
-    default void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException{
-        readObject(buffer, position);
-    }
+    void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException;
 }

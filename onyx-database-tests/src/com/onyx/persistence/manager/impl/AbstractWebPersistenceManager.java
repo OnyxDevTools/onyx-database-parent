@@ -29,7 +29,7 @@ import java.util.function.Consumer;
  * @since 1.0.0
  *
  */
-public abstract class AbstractWebPersistenceManager
+public abstract class AbstractWebPersistenceManager extends AbstractPersistenceManager
 {
 
     protected WebSchemaContext context;

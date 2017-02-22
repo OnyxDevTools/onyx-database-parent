@@ -47,7 +47,7 @@ import java.util.*;
  * @see com.onyx.persistence.manager.PersistenceManager
  *
  */
-public class EmbeddedPersistenceManager implements PersistenceManager {
+public class EmbeddedPersistenceManager extends AbstractPersistenceManager implements PersistenceManager {
 
     @SuppressWarnings("WeakerAccess")
     protected SchemaContext context;

@@ -1,8 +1,8 @@
 package com.onyx.util;
 
-import com.github.mustachejava.DefaultMustacheFactory;
+/*import com.github.mustachejava.DefaultMustacheFactory;
 import com.github.mustachejava.Mustache;
-import com.github.mustachejava.MustacheFactory;
+import com.github.mustachejava.MustacheFactory;*/
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
@@ -28,6 +28,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  Created by timothy.osborn on 3/6/15.
@@ -36,7 +37,6 @@ import java.util.*;
  */
 public class EntityClassLoader
 {
-    private static final String CLASS_TEMPLATE_PATH = "templates/class.mustache";
 
     private static final String GENERATED_DIRECTORY = "generated";
     private static final String GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities";
@@ -44,14 +44,6 @@ public class EntityClassLoader
 
     private static final String SOURCE_DIRECTORY = "source";
     private static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
-
-    private static final Mustache CLASS_TEMPLATE;
-
-    static
-    {
-        MustacheFactory mf = new DefaultMustacheFactory();
-        CLASS_TEMPLATE = mf.compile(new InputStreamReader(EntityClassLoader.class.getClassLoader().getResourceAsStream(CLASS_TEMPLATE_PATH)), CLASS_TEMPLATE_PATH);
-    }
 
     /**
      * Generate Write a class to disk.
@@ -67,90 +59,97 @@ public class EntityClassLoader
         //noinspection ResultOfMethodCallIgnored
         new File(outputDirectory).mkdirs();
 
-        final Map<String, Object> values = new HashMap<>();
-        values.put("className", descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", ""));
-        values.put("packageName", descriptor.getClazz().getPackage().getName());
-        values.put("generatorType",
-            descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
-            descriptor.getIdentifier().getGenerator().name());
-        values.put("idType", descriptor.getIdentifier().getType().getName());
-        values.put("idName", descriptor.getIdentifier().getName());
-        values.put("idLoadFactor", descriptor.getIdentifier().getLoadFactor());
+        String packageName = descriptor.getClazz().getPackage().getName();
+        String className = descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", "");
+        String generatorType = descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
+                        descriptor.getIdentifier().getGenerator().name();
+        String idType = descriptor.getIdentifier().getType().getName();
+        String idName = descriptor.getIdentifier().getName();
+        String idLoadFactor = String.valueOf(descriptor.getIdentifier().getLoadFactor());
 
-        final List<Map<String, Object>> attributes = new ArrayList<>();
-        values.put("attributes", attributes);
 
-        Map<String, Object> attributeMap;
+        StringBuilder builder = new StringBuilder();
+        builder.append("package ");
+        builder.append(packageName);
+        builder.append(";\n" +
+                "\n" +
+                "import com.onyx.persistence.annotations.*;\n" +
+                "import com.onyx.persistence.*;\n" +
+                "\n" +
+                "@Entity\n" +
+                "public class ");
+        builder.append(className);
+        builder.append(" extends ManagedEntity implements IManagedEntity\n" +
+                "{\n" +
+                "    public ");
+        builder.append(className);
+        builder.append("()\n" +
+                "    {\n" +
+                "\n" +
+                "    }\n" +
+                "\n" +
+                "    @Attribute\n" +
+                "    @Identifier(generator = ");
+        builder.append(generatorType);
+        builder.append(", loadFactor = ");
+        builder.append(idLoadFactor);
+        builder.append(")\n" +
+                "    public ");
+        builder.append(idType);
+        builder.append(" ");
+        builder.append(idName);
+        builder.append(";\n\n");
 
         for (final AttributeDescriptor attribute : descriptor.getAttributes().values())
         {
-
             if (attribute.getName().equals(descriptor.getIdentifier().getName()))
             {
                 continue;
             }
 
-            attributeMap = new HashMap<>();
-            attributeMap.put("name", attribute.getName());
-
-            if(attribute.getType().isArray())
-            {
-                attributeMap.put("type", attribute.getType().getSimpleName());
-            }
-            else {
-                attributeMap.put("type", attribute.getType().getName());
-            }
-
-            attributeMap.put("isPartition",
-                ((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName())));
+            builder.append("\n     @Attribute\n");
 
             final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(attribute.getName());
-            attributeMap.put("isIndex", (indexDescriptor != null));
-            if(indexDescriptor != null) {
-                attributeMap.put("loadFactor", indexDescriptor.getLoadFactor());
+            if(indexDescriptor != null)
+            {
+                builder.append("     @Index\n");
             }
-
-            attributes.add(attributeMap);
+            if((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName()))
+            {
+                builder.append("     @Partition\n");
+            }
+            builder.append("     public ");
+            if(attribute.getType().isArray())
+            {
+                builder.append(attribute.getType().getSimpleName());
+            }
+            else {
+                builder.append(attribute.getType().getName());
+            }
+            builder.append(" ").append(attribute.getName()).append(";");
         }
 
-        final List<Map<String, Object>> relationships = new ArrayList<>();
-        values.put("relationships", relationships);
 
-        Map<String, Object> relationshipMap;
+        for (final RelationshipDescriptor relationship : descriptor.getRelationships().values()) {
 
-        for (final RelationshipDescriptor relationship : descriptor.getRelationships().values())
-        {
-            relationshipMap = new HashMap<>();
-            relationshipMap.put("name", relationship.getName());
-
-            if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY) ||
-                    (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY))
-            {
-                final String genericType = relationship.getInverseClass().getName();
-                final String collectionClass = relationship.getType().getName();
-                final String type = collectionClass + "<" + genericType + ">";
-                relationshipMap.put("type", type);
-            }
-            else
-            {
-                relationshipMap.put("type", relationship.getType().getName());
-            }
-
-            relationshipMap.put("loadFactor", relationship.getLoadFactor());
-            relationshipMap.put("inverseClass", relationship.getInverseClass().getName());
-            relationshipMap.put("inverse", relationship.getInverse());
-            relationshipMap.put("fetchPolicy",
-                relationship.getFetchPolicy().getDeclaringClass().getName() + "." + relationship.getFetchPolicy().name());
-            relationshipMap.put("cascadePolicy",
-                relationship.getCascadePolicy().getDeclaringClass().getName() + "." + relationship.getCascadePolicy().name());
-
-            relationshipMap.put("relationshipType",
-                relationship.getRelationshipType().getDeclaringClass().getName() + "." + relationship.getRelationshipType().name());
-
-            relationshipMap.put("parentClass", relationship.getParentClass().getName());
-
-            relationships.add(relationshipMap);
+            builder.append("\n     @Relationship(type = ");
+            builder.append(relationship.getRelationshipType().getDeclaringClass().getName()).append(".").append(relationship.getRelationshipType().name());
+            builder.append(", inverseClass = ");
+            builder.append(relationship.getInverseClass().getName());
+            builder.append(".class, inverse = \"");
+            builder.append(relationship.getInverse());
+            builder.append("\", fetchPolicy = ");
+            builder.append(relationship.getFetchPolicy().getDeclaringClass().getName()).append(".").append(relationship.getFetchPolicy().name());
+            builder.append(", cascadePolicy = ");
+            builder.append(relationship.getCascadePolicy().getDeclaringClass().getName()).append(".").append(relationship.getCascadePolicy().name());
+            builder.append(", loadFactor = ");
+            builder.append(String.valueOf(relationship.getLoadFactor()));
+            builder.append(")\n" +
+                    "            public ");
+            builder.append(relationship.getType().getName()).append(" ").append(relationship.getName()).append(";");
         }
+
+        builder.append("\n}\n");
 
         try
         {
@@ -164,7 +163,7 @@ public class EntityClassLoader
             final Writer file = new FileWriter(outputDirectory + File.separator +
                     descriptor.getClazz().getName().replaceAll("\\.", "/") + ".java");
 
-            CLASS_TEMPLATE.execute(file, values);
+            file.append(builder.toString());
             file.flush();
 
             file.flush();
@@ -190,33 +189,57 @@ public class EntityClassLoader
 
         new File(outputDirectory).mkdirs();
 
-        final Map<String, Object> values = new HashMap<>();
-        values.put("className", systemEntity.getClassName());
-        values.put("packageName", systemEntity.getName().replace("."+systemEntity.getClassName(), ""));
-        values.put("generatorType", IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString());
+        String packageName = systemEntity.getName().replace("."+systemEntity.getClassName(), "");
+        String className = systemEntity.getClassName();
+        String generatorType = IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString();
+        AtomicReference<String> idType = new AtomicReference<>();
+        AtomicReference<String> idName = new AtomicReference<>();
+        systemEntity.getAttributes().stream().filter(attribute -> attribute.getName().equals(systemEntity.getIdentifier().getName())).forEach(attribute ->
+        {
+            idType.set(attribute.getDataType());
+            idName.set(attribute.getName());
+        });
+        String idLoadFactor = String.valueOf(systemEntity.getIdentifier().getLoadFactor());
 
-        systemEntity.getAttributes().stream().filter(attribute -> attribute.getName().equals(systemEntity.getIdentifier().getName())).forEach(attribute -> values.put("idType", attribute.getDataType()));
-        values.put("idName", systemEntity.getIdentifier().getName());
 
-        final List<Map<String, Object>> attributes = new ArrayList<>();
-        values.put("attributes", attributes);
-
-        Map<String, Object> attributeMap;
+        StringBuilder builder = new StringBuilder();
+        builder.append("package ");
+        builder.append(packageName);
+        builder.append(";\n" +
+                "\n" +
+                "import com.onyx.persistence.annotations.*;\n" +
+                "import com.onyx.persistence.*;\n" +
+                "\n" +
+                "@Entity\n" +
+                "public class ");
+        builder.append(className);
+        builder.append(" extends ManagedEntity implements IManagedEntity\n" +
+                "{\n" +
+                "    public ");
+        builder.append(className);
+        builder.append("()\n" +
+                "    {\n" +
+                "\n" +
+                "    }\n" +
+                "\n" +
+                "    @Attribute\n" +
+                "    @Identifier(generator = ");
+        builder.append(generatorType);
+        builder.append(", loadFactor = ");
+        builder.append(idLoadFactor);
+        builder.append(")\n" +
+                "    public ");
+        builder.append(idType.get());
+        builder.append(" ");
+        builder.append(idName.get());
+        builder.append(";\n\n");
 
         for (final SystemAttribute attribute : systemEntity.getAttributes())
         {
-
             if (attribute.getName().equals(systemEntity.getIdentifier().getName()))
             {
                 continue;
             }
-
-            attributeMap = new HashMap<>();
-            attributeMap.put("name", attribute.getName());
-            attributeMap.put("type", attribute.getDataType());
-
-            attributeMap.put("isPartition",
-                    ((systemEntity.getPartition() != null) && systemEntity.getPartition().getName().equals(attribute.getName())));
 
             boolean isIndex = false;
             for(SystemIndex indexDescriptor : systemEntity.getIndexes())
@@ -226,49 +249,58 @@ public class EntityClassLoader
                     break;
                 }
             }
-
-            attributeMap.put("isIndex", isIndex);
-
-            attributes.add(attributeMap);
+            builder.append("\n     @Attribute\n");
+            if(isIndex)
+            {
+                builder.append("     @Index\n");
+            }
+            if((systemEntity.getPartition() != null) && systemEntity.getPartition().getName().equals(attribute.getName()))
+            {
+                builder.append("     @Partition\n");
+            }
+            builder.append("     public ");
+            builder.append(attribute.getDataType());
+            builder.append(" ").append(attribute.getName()).append(";");
         }
 
-        final List<Map<String, Object>> relationships = new ArrayList<>();
-        values.put("relationships", relationships);
+        builder.append("\n\n");
 
-        Map<String, Object> relationshipMap;
+        for (final SystemRelationship relationship : systemEntity.getRelationships()) {
 
-        for (final SystemRelationship relationship : systemEntity.getRelationships())
-        {
-            relationshipMap = new HashMap<>();
-            relationshipMap.put("name", relationship.getName());
+            String type;
 
             if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()) ||
                     (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()))
             {
                 final String genericType = relationship.getInverseClass();
                 final String collectionClass = List.class.getName();
-                final String type = collectionClass + "<" + genericType + ">";
-                relationshipMap.put("type", type);
+                type = collectionClass + "<" + genericType + ">";
             }
             else
             {
-                relationshipMap.put("type", relationship.getInverseClass());
+                type = relationship.getInverseClass();
             }
 
-            relationshipMap.put("inverseClass", relationship.getInverseClass());
-            relationshipMap.put("inverse", relationship.getInverse());
-            relationshipMap.put("fetchPolicy",
-                    FetchPolicy.values()[relationship.getFetchPolicy()].getDeclaringClass().getName() + "." + FetchPolicy.values()[relationship.getFetchPolicy()].name());
-            relationshipMap.put("cascadePolicy",
-                    CascadePolicy.values()[relationship.getCascadePolicy()].getDeclaringClass().getName() + "." + CascadePolicy.values()[relationship.getCascadePolicy()].name());
 
-            relationshipMap.put("relationshipType",
-                    RelationshipType.values()[relationship.getRelationshipType()].getDeclaringClass().getName() + "." + RelationshipType.values()[relationship.getRelationshipType()].name());
+            builder.append("@Relationship(type = ");
+            builder.append(type);
+            builder.append(", inverseClass = ");
+            builder.append(relationship.getInverseClass());
+            builder.append(".class, inverse = \"");
+            builder.append(relationship.getInverse());
+            builder.append("\", fetchPolicy = ");
+            builder.append(FetchPolicy.values()[relationship.getFetchPolicy()].getDeclaringClass().getName()).append(".").append(FetchPolicy.values()[relationship.getFetchPolicy()].name());
+            builder.append(", cascadePolicy = ");
+            builder.append(CascadePolicy.values()[relationship.getCascadePolicy()].getDeclaringClass().getName()).append(".").append(CascadePolicy.values()[relationship.getCascadePolicy()].name());
+            builder.append(", loadFactor = ");
+            builder.append(String.valueOf(relationship.getLoadFactor()));
+            builder.append(")\n" +
+                    "            public ");
+            builder.append(type).append(" ").append(relationship.getName()).append(";");
 
-            relationshipMap.put("parentClass", relationship.getParentClass());
-
-            relationships.add(relationshipMap);
         }
+
+        builder.append("\n}\n");
 
         try
         {
@@ -282,7 +314,7 @@ public class EntityClassLoader
             final Writer file = new FileWriter(outputDirectory + File.separator +
                     systemEntity.getClassName().replaceAll("\\.", "/") + ".java");
 
-            CLASS_TEMPLATE.execute(file, values);
+            file.write(builder.toString());
             file.flush();
 
             file.flush();

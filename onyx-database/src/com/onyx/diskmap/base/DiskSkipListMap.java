@@ -1,5 +1,6 @@
 package com.onyx.diskmap.base;
 
+import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.diskmap.DiskMap;
@@ -280,6 +281,11 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             return ReflectionUtil.getAny(value, attributeField);
         }
 
+        return null;
+    }
+
+    @Override
+    public LevelReadWriteLock getReadWriteLock() {
         return null;
     }
 

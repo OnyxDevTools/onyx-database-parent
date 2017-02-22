@@ -44,7 +44,7 @@ import java.util.Set;
  * Tim Osborn - 02/13/2017 This was augmented to use the new RMI Server.  Also, simplified
  *              so that we take advantage of default methods within the PersistenceManager interface.
  */
-public class RemotePersistenceManager implements PersistenceManager {
+public class RemotePersistenceManager extends AbstractPersistenceManager implements PersistenceManager {
 
     private SchemaContext context;
     private final PersistenceManager proxy;

@@ -80,8 +80,7 @@ public class LazyCollectionTest extends memory.base.BaseTest
         Assert.assertTrue(parent.childCascade.size() == 1);
     }
 
-    @Test
-    @Ignore
+    @Test(expected = RuntimeException.class)
     public void testAdd()
     {
         ManyToManyParent parent = new ManyToManyParent();
@@ -163,7 +162,7 @@ public class LazyCollectionTest extends memory.base.BaseTest
         Assert.assertTrue(parent.childCascade.isEmpty());
     }
 
-    @Test
+    @Test(expected = RuntimeException.class)
     public void testSet()
     {
         ManyToManyParent parent = new ManyToManyParent();
@@ -222,8 +221,7 @@ public class LazyCollectionTest extends memory.base.BaseTest
         Assert.assertTrue(parent.childCascade.size() == 0);
     }
 
-    @Test
-    @Ignore
+    @Test(expected = RuntimeException.class)
     public void testRemoveByObject()
     {
         ManyToManyParent parent = new ManyToManyParent();

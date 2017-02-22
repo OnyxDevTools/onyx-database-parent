@@ -81,8 +81,7 @@ public class LazyCollectionTest extends RemoteBaseTest
         Assert.assertTrue(parent.childCascade.size() == 1);
     }
 
-    @Test
-    @Ignore
+    @Test(expected = RuntimeException.class)
     public void testAdd()
     {
         ManyToManyParent parent = new ManyToManyParent();
@@ -223,8 +222,7 @@ public class LazyCollectionTest extends RemoteBaseTest
         Assert.assertTrue(parent.childCascade.size() == 0);
     }
 
-    @Test
-    @Ignore
+    @Test(expected = RuntimeException.class)
     public void testRemoveByObject()
     {
         ManyToManyParent parent = new ManyToManyParent();
