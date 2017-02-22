@@ -306,7 +306,11 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         this.contextId = bufferStream.getString();
 
 
-        SchemaContext context = (DefaultSchemaContext.registeredSchemaContexts.size() == 1) ? (SchemaContext)DefaultSchemaContext.registeredSchemaContexts.values().toArray()[0] : DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        if(context == null)
+        {
+            context = (SchemaContext)DefaultSchemaContext.registeredSchemaContexts.values().toArray()[0];
+        }
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
         } catch (EntityException | ClassNotFoundException e) {
