@@ -4,6 +4,7 @@ import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -98,6 +99,8 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         PersistenceManager proxy = (PersistenceManager)onyxRMIClient.getRemoteObject((short)1, PersistenceManager.class);
         this.persistenceManager = new RemotePersistenceManager(proxy);
         this.persistenceManager.setContext(context);
+
+        DefaultSchemaContext.registeredSchemaContexts.put(instance, context);
 
         final EmbeddedPersistenceManager systemPersistenceManager;
 

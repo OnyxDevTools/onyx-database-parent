@@ -28,7 +28,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         this.relationships = new ArrayList<>();
         this.attributes = new ArrayList<>();
         this.identifier = new SystemIdentifier(descriptor.getIdentifier(), this);
-
+        this.fileName = descriptor.getFileName();
         this.attributes.addAll(descriptor.getAttributes().values().stream().map(attributeDescriptor -> new SystemAttribute(attributeDescriptor, this)).collect(Collectors.toList()));
         this.relationships.addAll(descriptor.getRelationships().values().stream().map(relationshipDescriptor -> new SystemRelationship(relationshipDescriptor, this)).collect(Collectors.toList()));
         this.indexes.addAll(descriptor.getIndexes().values().stream().map(indexDescriptor -> new SystemIndex(indexDescriptor, this)).collect(Collectors.toList()));
@@ -55,6 +55,10 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
 
     @Attribute
     private String className;
+
+    @SuppressWarnings("WeakerAccess")
+    @Attribute
+    private String fileName;
 
     @SuppressWarnings("WeakerAccess")
     @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemIdentifier.class, loadFactor = 3)
@@ -149,6 +153,7 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         this.indexes = indexes;
     }
 
+    @SuppressWarnings("unused")
     public String getClassName()
     {
         return className;
@@ -158,5 +163,14 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
     public void setClassName(String className)
     {
         this.className = className;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    @SuppressWarnings("unused")
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
     }
 }

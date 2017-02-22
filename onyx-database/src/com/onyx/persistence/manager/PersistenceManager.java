@@ -5,9 +5,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.*;
 import com.onyx.stream.QueryStream;
-import com.onyx.util.ReflectionUtil;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

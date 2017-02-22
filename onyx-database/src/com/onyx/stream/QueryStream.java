@@ -2,8 +2,6 @@ package com.onyx.stream;
 
 import com.onyx.persistence.manager.PersistenceManager;
 
-import java.util.Objects;
-
 /**
  * Created by tosborn1 on 5/19/16.
  *

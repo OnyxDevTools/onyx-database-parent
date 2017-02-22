@@ -89,6 +89,7 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @since 1.2.0
      * @return Null if it does not apply.
      */
+    @SuppressWarnings("unused")
     LevelReadWriteLock getReadWriteLock();
 
 }

@@ -31,6 +31,7 @@ import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.store.StoreType;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
+import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
 
 import java.io.File;
@@ -230,13 +231,13 @@ public class DefaultSchemaContext implements SchemaContext {
     private void initializeSystemEntities() {
         try {
 
-            descriptors.put(SystemEntity.class.getName(), new EntityDescriptor(SystemEntity.class, context));
-            descriptors.put(SystemAttribute.class.getName(), new EntityDescriptor(SystemAttribute.class, context));
-            descriptors.put(SystemRelationship.class.getName(), new EntityDescriptor(SystemRelationship.class, context));
-            descriptors.put(SystemIndex.class.getName(), new EntityDescriptor(SystemIndex.class, context));
-            descriptors.put(SystemIdentifier.class.getName(), new EntityDescriptor(SystemIdentifier.class, context));
-            descriptors.put(SystemPartition.class.getName(), new EntityDescriptor(SystemPartition.class, context));
-            descriptors.put(SystemPartitionEntry.class.getName(), new EntityDescriptor(SystemPartitionEntry.class, context));
+            descriptors.put(SystemEntity.class.getName(), new EntityDescriptor(SystemEntity.class));
+            descriptors.put(SystemAttribute.class.getName(), new EntityDescriptor(SystemAttribute.class));
+            descriptors.put(SystemRelationship.class.getName(), new EntityDescriptor(SystemRelationship.class));
+            descriptors.put(SystemIndex.class.getName(), new EntityDescriptor(SystemIndex.class));
+            descriptors.put(SystemIdentifier.class.getName(), new EntityDescriptor(SystemIdentifier.class));
+            descriptors.put(SystemPartition.class.getName(), new EntityDescriptor(SystemPartition.class));
+            descriptors.put(SystemPartitionEntry.class.getName(), new EntityDescriptor(SystemPartitionEntry.class));
 
             SystemEntity systemEntity = new SystemEntity(descriptors.get(SystemEntity.class.getName()));
             SystemEntity systemAttributeEntity = new SystemEntity(descriptors.get(SystemAttribute.class.getName()));
@@ -665,7 +666,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
         try {
 
-            EntityDescriptor descriptor = new EntityDescriptor(entity.getClass(), context);
+            EntityDescriptor descriptor = new EntityDescriptor(entity.getClass());
 
             if (descriptor.getPartition() != null) {
                 descriptor.getPartition().setPartitionValue(String.valueOf(partitionId));
@@ -684,6 +685,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
+            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
 
             return descriptor;
         } finally {
@@ -869,7 +871,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
         try {
 
-            EntityDescriptor descriptor = new EntityDescriptor(entityClass, context);
+            EntityDescriptor descriptor = new EntityDescriptor(entityClass);
 
             if (descriptor.getPartition() != null) {
                 descriptor.getPartition().setPartitionValue(String.valueOf(partitionId));
@@ -888,6 +890,8 @@ public class DefaultSchemaContext implements SchemaContext {
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
+
+            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
 
             return descriptor;
         } finally {
@@ -945,7 +949,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
         try {
 
-            EntityDescriptor descriptor = new EntityDescriptor(entityClass, context);
+            EntityDescriptor descriptor = new EntityDescriptor(entityClass);
             descriptors.put(entityKey, descriptor);
 
             // Get the latest System Entity
@@ -954,10 +958,13 @@ public class DefaultSchemaContext implements SchemaContext {
             // If it does not exist, lets create a new one
             if (systemEntity == null) {
                 systemEntity = new SystemEntity(descriptor);
+                systemPersistenceManager.saveEntity(systemEntity);
             }
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
+
+            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
 
             return descriptor;
         } finally {

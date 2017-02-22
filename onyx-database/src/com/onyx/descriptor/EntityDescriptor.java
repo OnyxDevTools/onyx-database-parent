@@ -8,11 +8,8 @@ import com.onyx.exception.*;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
-import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.EntityClassLoader;
 import com.onyx.util.ReflectionUtil;
 
 import java.io.Serializable;
@@ -59,10 +56,9 @@ public class EntityDescriptor implements Serializable {
      * Constructor - Initializes the entity descriptor with the target class.
      *
      * @param clazz   Base entity class
-     * @param context Schema context
      * @throws EntityException General exception wrapped in entity exception
      */
-    public EntityDescriptor(final Class clazz, final SchemaContext context) throws EntityException {
+    public EntityDescriptor(final Class clazz) throws EntityException {
         final boolean interfaceFound = IManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
 
         if (!interfaceFound) {
@@ -174,10 +170,6 @@ public class EntityDescriptor implements Serializable {
         validateAttributes();
         validateRelationships();
         validateIndexes();
-
-        if ((context != null) && (context.getLocation() != null) && (context.getClass() == DefaultSchemaContext.class)) {
-            EntityClassLoader.writeClass(this, context.getLocation());
-        }
 
     }
 
@@ -561,6 +553,9 @@ public class EntityDescriptor implements Serializable {
     @Override
     public boolean equals(final Object val) {
         if (val instanceof SystemEntity) {
+
+            if(!((SystemEntity) val).getFileName().equals(this.getFileName()))
+                return false;
 
             // Compare Attributes
             final Iterator<Map.Entry<String, AttributeDescriptor>> it = this.attributes.entrySet().iterator();

@@ -8,6 +8,7 @@ import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.annotations.IdentifierGenerator;
@@ -32,15 +33,18 @@ import java.util.concurrent.atomic.AtomicReference;
 
  This class saves the entity information and formats the source on disk
  */
+@SuppressWarnings("WeakerAccess")
 public class EntityClassLoader
 {
 
-    private static final String GENERATED_DIRECTORY = "generated";
-    private static final String GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities";
-    private static final String GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries";
+    public static final Set<String> LOADED_CLASSES = new HashSet<>();
 
-    private static final String SOURCE_DIRECTORY = "source";
-    private static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
+    public static final String GENERATED_DIRECTORY = "generated";
+    public static final String GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities";
+    public static final String GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries";
+
+    public static final String SOURCE_DIRECTORY = "source";
+    public static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
 
     /**
      * Generate Write a class to disk.
@@ -49,7 +53,7 @@ public class EntityClassLoader
      * @param  databaseLocation Database location
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation)
+    public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation, SchemaContext context)
     {
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
@@ -57,6 +61,7 @@ public class EntityClassLoader
         new File(outputDirectory).mkdirs();
 
         String packageName = descriptor.getClazz().getPackage().getName();
+        String fileName = descriptor.getFileName();
         String className = descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", "");
         String generatorType = descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
                         descriptor.getIdentifier().getGenerator().name();
@@ -73,8 +78,8 @@ public class EntityClassLoader
                 "import com.onyx.persistence.annotations.*;\n" +
                 "import com.onyx.persistence.*;\n" +
                 "\n" +
-                "@Entity\n" +
-                "public class ");
+                "@Entity(fileName = \"");
+        builder.append(fileName).append("\")\n").append( "public class ");
         builder.append(className);
         builder.append(" extends ManagedEntity implements IManagedEntity\n" +
                 "{\n" +
@@ -129,6 +134,11 @@ public class EntityClassLoader
 
         for (final RelationshipDescriptor relationship : descriptor.getRelationships().values()) {
 
+            // Get the base Descriptor so that we ensure they get generated also
+            try {
+                context.getBaseDescriptorForEntity(relationship.getInverseClass());
+            } catch (EntityException ignore) {}
+
             builder.append("\n     @Relationship(type = ");
             builder.append(relationship.getRelationshipType().getDeclaringClass().getName()).append(".").append(relationship.getRelationshipType().name());
             builder.append(", inverseClass = ");
@@ -180,7 +190,7 @@ public class EntityClassLoader
      * @param  databaseLocation Database location
      */
     @SuppressWarnings({"unused", "ResultOfMethodCallIgnored"})
-    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation)
+    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext context)
     {
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
@@ -189,6 +199,7 @@ public class EntityClassLoader
         String packageName = systemEntity.getName().replace("."+systemEntity.getClassName(), "");
         String className = systemEntity.getClassName();
         String generatorType = IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString();
+        String fileName = systemEntity.getFileName();
         AtomicReference<String> idType = new AtomicReference<>();
         AtomicReference<String> idName = new AtomicReference<>();
         systemEntity.getAttributes().stream().filter(attribute -> attribute.getName().equals(systemEntity.getIdentifier().getName())).forEach(attribute ->
@@ -207,9 +218,8 @@ public class EntityClassLoader
                 "import com.onyx.persistence.annotations.*;\n" +
                 "import com.onyx.persistence.*;\n" +
                 "\n" +
-                "@Entity\n" +
-                "public class ");
-        builder.append(className);
+                "@Entity(fileName = \"");
+        builder.append(fileName).append("\")\n").append( "public class ");
         builder.append(" extends ManagedEntity implements IManagedEntity\n" +
                 "{\n" +
                 "    public ");
@@ -295,6 +305,12 @@ public class EntityClassLoader
                     "            public ");
             builder.append(type).append(" ").append(relationship.getName()).append(";");
 
+            // Get the base Descriptor so that we ensure they get generated also
+            try {
+                context.getBaseDescriptorForEntity(Class.forName(relationship.getInverseClass()));
+            } catch (EntityException | ClassNotFoundException ignore) {}
+
+
         }
 
         builder.append("\n}\n");
@@ -324,9 +340,7 @@ public class EntityClassLoader
         }
     }
 
-    private static SchemaContext schemaContext = null;
-
-    @SuppressWarnings("WeakerAccess")
+    @SuppressWarnings({"WeakerAccess", "unused"})
     public EntityClassLoader()
     {
     }
@@ -339,7 +353,6 @@ public class EntityClassLoader
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private static void loadClasses(final SchemaContext context, String location)
     {
-        schemaContext = context;
 
         final File entitiesSourceDirectory = new File(location + File.separator + SOURCE_ENTITIES_DIRECTORY);
         final File entitiesGeneratedDirectory = new File(location + File.separator + GENERATED_ENTITIES_DIRECTORY);
@@ -363,7 +376,9 @@ public class EntityClassLoader
 
             fileManager.close();
 
-            addClassPaths();
+            final URLClassLoader systemClassLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
+
+            addClassPaths(context);
 
             Files.walk(Paths.get(entitiesSourceDirectory.getPath())).filter((e) ->
                     (!e.toFile().isDirectory() && !e.toFile().isHidden() && e.toFile().getPath().endsWith(".java"))).forEach((e) ->
@@ -372,6 +387,11 @@ public class EntityClassLoader
                 path = path.replaceAll("\\.java", "");
                 path = path.replaceAll("\\\\", ".");
                 path = path.replaceAll("/", ".");
+                try {
+                    LOADED_CLASSES.add(systemClassLoader.loadClass(path).getName());
+                } catch (ClassNotFoundException e1) {
+                    e1.printStackTrace();
+                }
             });
         }
         catch (Exception e)
@@ -391,7 +411,7 @@ public class EntityClassLoader
     }
 
     @SuppressWarnings("unchecked")
-    private static void addClassPaths()
+    public static void addClassPaths(SchemaContext schemaContext)
     {
         final URLClassLoader systemClassLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
 

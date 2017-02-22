@@ -25,6 +25,7 @@ public class SampleDatabaseServer extends WebDatabaseServer
     {
         SampleDatabaseServer server1 = new SampleDatabaseServer();
         server1.setPort(8080);
+        server1.setWebServicePort(8082);
         server1.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         server1.start();
 

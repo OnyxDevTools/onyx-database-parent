@@ -43,5 +43,6 @@ public interface ObjectSerializable extends Serializable
      * @param position position to verify the checksum with
      * @throws IOException Exception while reading
      */
+    @SuppressWarnings("UnusedParameters")
     void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException;
 }
