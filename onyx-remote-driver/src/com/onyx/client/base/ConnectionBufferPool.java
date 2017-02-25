@@ -15,13 +15,12 @@ import java.util.concurrent.Executors;
  */
 public class ConnectionBufferPool {
 
-    public final ExecutorService readThread;
-    public final ExecutorService writeThread;
+    public ExecutorService readThread;
+    public ExecutorService writeThread;
     public ByteBuffer writeApplicationData;
     public ByteBuffer writeNetworkData;
     public ByteBuffer readApplicationData;
     public ByteBuffer readNetworkData;
-    public ByteBuffer readOverflowData;
 
     /**
      * Default Constructor
@@ -46,26 +45,8 @@ public class ConnectionBufferPool {
         writeNetworkData = BufferStream.allocate(packetSize);
         readApplicationData = BufferStream.allocate(applicationBufferSize);
         readNetworkData = BufferStream.allocate(packetSize);
-        readOverflowData = BufferStream.allocate(packetSize);
         readThread = Executors.newSingleThreadExecutor();
         writeThread = Executors.newSingleThreadExecutor();
     }
 
-    /**
-     * Handles the remainder of the the buffer fro a read.  This is so that in the next
-     * loop left over from the read, the connection retains the fail over.  If partial
-     * packets are left orphaned, that would be bad.
-     *
-     * @since 1.2.0
-     */
-    public void handleConnectionRemainder()
-    {
-        // We have some left over data from the last read.  Lets use that for this next iteration
-        if(readOverflowData.position() > 0)
-        {
-            readOverflowData.flip();
-            readNetworkData.put(readOverflowData);
-            readOverflowData.clear();
-        }
-    }
 }

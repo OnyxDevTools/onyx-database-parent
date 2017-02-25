@@ -7,7 +7,7 @@
     <artifactId>onyx-remote-database</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Onyx Remote Database</description>
-    <url>http://onyxdevtools.com</url>
+    <url>https://onyxdevtools.com</url>
 
     <packaging>jar</packaging>
 

@@ -7,7 +7,7 @@
     
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Integration Tests for Onyx Database</description>
-    <url>http://onyxdevtools.com/products/onyx-database</url>
+    <url>https://onyxdevtools.com/products/onyx-database</url>
 
     <artifactId>onyx-database-tests</artifactId>
 

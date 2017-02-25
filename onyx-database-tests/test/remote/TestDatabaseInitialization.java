@@ -119,7 +119,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
 
             long time = System.currentTimeMillis();
             fac.initialize();
-            System.out.println("Done in " + (System.currentTimeMillis() - time));
 
             PersistenceManager mgr = fac.getPersistenceManager();
 

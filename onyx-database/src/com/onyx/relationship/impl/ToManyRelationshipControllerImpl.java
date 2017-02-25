@@ -52,6 +52,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @param entity  Entity to save relationship
      * @param manager Relationship manager keeps track of actions already taken on entity relationships
      */
+    @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override
     public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException {
         if (relationshipDescriptor.getCascadePolicy() == CascadePolicy.DEFER_SAVE) {
@@ -89,7 +90,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
             relationshipObjectCopy = new HashSet(existingRelationshipObjects);
 
 
-                int size = relationshipObjects.size();
+            int size = relationshipObjects.size();
             for(int i = 0; i < size; i++) {
                 IManagedEntity relationshipObject;
 

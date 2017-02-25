@@ -8,6 +8,7 @@ package com.onyx.exception;
 public class EntityException extends Exception {
 
     public static final String UNKNOWN_EXCEPTION = "Unknown exception occurred";
+    public static final String CONNECTION_TIMEOUT = "Connection Timeout Ocurred";
 
     @SuppressWarnings("unused")
     transient Throwable rootCause = null;

@@ -66,6 +66,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     /**
      * Handle an response message
      *
+     * @param packetType           Indicates if the packet can fit into 1 buffer or multiple
      * @param socketChannel        Socket Channel read from
      * @param connectionProperties ConnectionProperties information containing buffer and thread info
      * @param buffer               ByteBuffer containing message
@@ -73,7 +74,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
      */
     @Override
     @SuppressWarnings("unchecked")
-    protected void handleMessage(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
+    protected void handleMessage(byte packetType, SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
         Consumer consumer;
         RequestToken requestToken = null;
         try {
@@ -169,6 +170,9 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
 
             // Authentication failed, disconnect
             this.close();
+        } catch (RequestTimeoutException e) {
+            this.close();
+            throw new ConnectionFailedException(ConnectionFailedException.CONNECTION_TIMEOUT);
         }
     }
 
@@ -396,7 +400,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             try {
                 // If there were no recent responses within the last 5 seconds, run a heartbeat
                 if(needsToRunHeartbeat) {
-                    int heartBeatTimeout = 1000*2;
+                    int heartBeatTimeout = 1000*5;
                     result = send(null, heartBeatTimeout);
                 } else
                 {
@@ -412,6 +416,9 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
                     && result != null
                     && result instanceof Exception) {
                 try {
+                    try {
+                        socketChannel.close();
+                    } catch (IOException ignore) {}
                     connect(host, port);
 
                     if (active
@@ -419,7 +426,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
                             && socketChannel.isOpen()) {
 
                         // If there are more than 20 requests, fail the requests and flush the queue
-                        if(pendingRequests.size() > 20)
+                        if(pendingRequests.size() > 5)
                         {
                             pendingRequests.forEach((requestToken, consumer) -> consumer.accept(new InitializationException(InitializationException.CONNECTION_EXCEPTION)));
                             pendingRequests.clear();

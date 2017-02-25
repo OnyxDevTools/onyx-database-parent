@@ -6,7 +6,7 @@
         <artifactId>onyx-remote-driver</artifactId>
         <name>${project.groupId}:${project.artifactId}</name>
         <description>onyx-remote-driver</description>
-        <url>http://onyxdevtools.com</url>
+        <url>https://onyxdevtools.com</url>
 
         <packaging>jar</packaging>
 

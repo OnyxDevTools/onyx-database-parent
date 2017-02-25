@@ -11,13 +11,13 @@
     
     <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-database-parent</description>
-    <url>http://onyxdevtools.com/products/onyx-database</url>
+    <url>https://onyxdevtools.com/products/onyx-database</url>
     
     <packaging>pom</packaging>
     
     <organization>
         <name>Onyx Development Tools, Inc.</name>
-        <url>http://onyxdevtools.com</url>
+        <url>https://onyxdevtools.com</url>
     </organization>
     
     <licenses>
@@ -37,13 +37,13 @@
             <name>Tim Osborn</name>
             <email>tim@onyxdevtools.com</email>
             <organization>Onyx Development Tools, Inc.</organization>
-            <organizationUrl>http://www.onyxdevtools.com</organizationUrl>
+            <organizationUrl>https://www.onyxdevtools.com</organizationUrl>
         </developer>
         <developer>
             <name>Chris Osborn</name>
             <email>chris@onyxdevtools.com</email>
             <organization>Onyx Development Tools, Inc.</organization>
-            <organizationUrl>http://www.onyxdevtools.com</organizationUrl>
+            <organizationUrl>https://www.onyxdevtools.com</organizationUrl>
         </developer>
     </developers>
 

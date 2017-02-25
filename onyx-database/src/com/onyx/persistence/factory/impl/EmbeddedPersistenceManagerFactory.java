@@ -52,6 +52,7 @@ import java.util.logging.Logger;
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
+@SuppressWarnings("WeakerAccess")
 public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFactory {
 
     private static final String CREDENTIALS_FILE = "tmp";
@@ -81,8 +82,6 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
     {
         super();
         this.instance = instance;
-
-
     }
 
     /**

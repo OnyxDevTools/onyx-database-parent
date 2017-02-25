@@ -26,15 +26,14 @@ import java.util.concurrent.Executors;
 import javax.net.ssl.*;
 
 /**
- *
  * Tim Osborn 02/13/2016
  *
  * @since 1.2.0
- *
+ * <p>
  * The purpose of this class is to route connections and traffic.  It has been added
  * as a response to remove 3rd party dependencies and improve performance.  Also, to
  * simplify SSL communication.  All socket server communication must go through here.
- *
+ * <p>
  * This utilizes off heap buffering.  It sets up a buffer pool for how many active threads you can have.
  * Each connection buffer pool contains 5 allocated buffers with a minimum of 16k bytes.  Be
  * wary on how much you allocate.
@@ -60,6 +59,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
     /**
      * Constructor
+     *
      * @since 1.2.0
      */
     protected CommunicationServer() {
@@ -70,11 +70,10 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
      * Retrieve a round robin buffer pool.  This is used to sparse the connections
      * to given allocated buffers and thread pools.  This must be thread safe
      *
-     * @since 1.2.0
      * @return A ConnectionProperties Buffer Pool
+     * @since 1.2.0
      */
-    private synchronized ConnectionBufferPool getRoundRobinConnectionBuffer()
-    {
+    private synchronized ConnectionBufferPool getRoundRobinConnectionBuffer() {
         ConnectionBufferPool pool;
         if (connectionRoundRobin >= maxWorkerThreads)
             connectionRoundRobin = 0;
@@ -106,8 +105,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                 appBufferSize = dummySession.getApplicationBufferSize();
                 packetBufferSize = dummySession.getPacketBufferSize();
                 dummySession.invalidate();
-            } else
-            {
+            } else {
                 UnsecuredPacketTransportEngine unsecuredEngine = new UnsecuredPacketTransportEngine();
                 appBufferSize = unsecuredEngine.getApplicationSize();
                 packetBufferSize = unsecuredEngine.getPacketSize();
@@ -121,7 +119,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
             // Create Buffer Pool for connections
             connectionBufferPools = new ConnectionBufferPool[maxWorkerThreads];
-            for(int i = 0; i < maxWorkerThreads; i++)
+            for (int i = 0; i < maxWorkerThreads; i++)
                 connectionBufferPools[i] = new ConnectionBufferPool(appBufferSize, packetBufferSize);
 
         } catch (Exception e) {
@@ -140,7 +138,8 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
     /**
      * Poll the server connections for inbound communication
-     * @throws ServerClosedException  Whoops, the server closed.  No need to be reading any more data
+     *
+     * @throws ServerClosedException Whoops, the server closed.  No need to be reading any more data
      * @since 1.2.0
      */
     private void pollForCommunication() throws ServerClosedException {
@@ -159,6 +158,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                 selectedKeys.remove();
                 // Ensure connection still open
                 if (!key.isValid()) {
+                    handleEndOfStream((SocketChannel) key.channel(), (ConnectionProperties)key.attachment());
                     continue;
                 }
                 try {
@@ -166,11 +166,9 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                         try {
                             accept(key);
                         } catch (Exception ignore) {
-                            // General exception occurred when trying to accept.  Close the connection
-                            key.channel().close();
+                            handleEndOfStream((SocketChannel) key.channel(), (ConnectionProperties) key.attachment());
                         }
-                    } else if (key.isReadable())
-                    {
+                    } else if (key.isReadable()) {
                         // Read from the connectionProperties.  Notice it goes down on the readThread for the connectionProperties.
                         // That is a shared thread pool for multiple connections
                         final ConnectionProperties connectionProperties = (ConnectionProperties) key.attachment();
@@ -180,10 +178,8 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                             }
                         });
                     }
-                } catch (CancelledKeyException ignore)
-                {}
-                catch (Exception e)
-                {
+                } catch (CancelledKeyException ignore) {
+                } catch (Exception e) {
                     failure(null, e);
                 }
             }
@@ -193,29 +189,28 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     /**
      * Handle an inbound message
      *
-     * @param socketChannel Socket Channel read from
+     * @param packetType           Indicates if the packet can fit into 1 buffer or multiple
+     * @param socketChannel        Socket Channel read from
      * @param connectionProperties ConnectionProperties information containing buffer and thread info
-     * @param buffer ByteBuffer containing message
-     *
+     * @param buffer               ByteBuffer containing message
      * @since 1.2.0
      */
     @Override
-    protected void handleMessage(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
+    protected void handleMessage(byte packetType, SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
         RequestToken message = null;
 
-        final boolean isInLargePacket = buffer != connectionProperties.readApplicationData;
-        if(!isInLargePacket) {
+        final boolean isInLargePacket = (packetType != SINGLE_PACKET);
+        if (!isInLargePacket) {
             message = parseRequestToken(socketChannel, connectionProperties, buffer);
         }
 
         final RequestToken threadPoolMessage = message;
         workerThreadPool.execute(() -> {
-            final RequestToken useThisRequestToken = (isInLargePacket) ? parseRequestToken(socketChannel, connectionProperties, buffer) : threadPoolMessage ;
-            if(isInLargePacket)
-            {
+            final RequestToken useThisRequestToken = (isInLargePacket) ? parseRequestToken(socketChannel, connectionProperties, buffer) : threadPoolMessage;
+            if (isInLargePacket) {
                 BufferStream.recycle(buffer);
             }
-            if(useThisRequestToken.packet != null) {
+            if (useThisRequestToken.packet != null) {
                 try {
                     useThisRequestToken.packet = (Serializable) requestHandler.accept(connectionProperties, useThisRequestToken.packet);
                 } catch (Exception e) {
@@ -226,8 +221,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
         });
     }
 
-    private RequestToken parseRequestToken(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer)
-    {
+    private RequestToken parseRequestToken(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
         RequestToken message = null;
         try {
             message = (RequestToken) serverSerializer.deserialize(buffer, new RequestToken());
@@ -240,8 +234,10 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
         return message;
     }
+
     /**
      * Accept an inbound connection
+     *
      * @param key Selection Key
      * @throws Exception ConnectionProperties was not successful
      * @since 1.2.0
@@ -259,9 +255,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             engine.setUseClientMode(false);
             engine.beginHandshake();
             transportPacketTransportEngine = new SecurePacketTransportEngine(engine);
-        }
-        else
-        {
+        } else {
             transportPacketTransportEngine = new UnsecuredPacketTransportEngine(socketChannel);
         }
 
@@ -276,28 +270,32 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             // Poo, no talking to you
             socketChannel.close();
         }
+
     }
 
 
     /**
      * Stop Server
+     *
      * @since 1.2.0
      */
     public void stop() {
         active = false;
 
-        if(daemonCountDownLatch != null)
+        if (daemonCountDownLatch != null)
             daemonCountDownLatch.countDown();
         workerThreadPool.shutdown();
         daemonService.shutdown();
         try {
             selector.wakeup();
             serverSocketChannel.close();
-        } catch (IOException ignore) {}
+        } catch (IOException ignore) {
+        }
     }
 
     /**
      * Join Server.  Have it pause on a daemon thread
+     *
      * @since 1.2.0
      */
     @Override
@@ -315,15 +313,17 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
      * setup a keystore and trust store.  If you do not choose to use SSL, auth is done
      * on an application level.
      *
-     * @param user Username
+     * @param user     Username
      * @param password Password
      * @since 1.2.0
      */
     @Override
-    public void setCredentials(String user, String password) {}
+    public void setCredentials(String user, String password) {
+    }
 
     /**
      * Set Max Number of worker threads.  This is the threads running the request handlers
+     *
      * @param maxThreads Number of io threads
      * @since 1.2.0
      */
@@ -345,6 +345,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
     /**
      * Get Server port.  This defaults to 8080
+     *
      * @return int value for port number
      * @since 1.2.0
      */
@@ -355,6 +356,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
     /**
      * Set the port number
+     *
      * @param port Port Number
      * @since 1.2.0
      */
@@ -365,13 +367,13 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
     /**
      * Failure within the server.  This should be logged
+     *
      * @param token Original request
-     * @param e The underlying exception
+     * @param e     The underlying exception
      * @since 1.2.0
      */
-    protected void failure(RequestToken token, Exception e)
-    {
-        if(!(e instanceof InitializationException))
+    protected void failure(RequestToken token, Exception e) {
+        if (!(e instanceof InitializationException))
             e.printStackTrace();
     }
 }

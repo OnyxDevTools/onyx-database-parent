@@ -1,5 +1,6 @@
 package com.onyx.client.auth;
 
+import com.onyx.client.exception.RequestTimeoutException;
 import com.onyx.exception.InitializationException;
 
 /**
@@ -14,5 +15,6 @@ public interface AuthenticationManager {
      * @param username User id
      * @param password Password
      */
-    void verify(String username, String password) throws InitializationException;
+    @SuppressWarnings("RedundantThrows")
+    void verify(String username, String password) throws InitializationException, RequestTimeoutException;
 }

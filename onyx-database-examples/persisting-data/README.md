@@ -1,6 +1,6 @@
 # quickstart
 
-This project was created as a supplemental resource for this tutorial: [onyx database quickstart](http://onyxdevtools.com/learn/tutorials/persisting-data) 
+This project was created as a supplemental resource for this tutorial: [onyx database quickstart](https://onyxdevtools.com/learn/tutorials/persisting-data)
 
 ***How To Install:*** <br />
 From the persisting-data directory simply run this command:

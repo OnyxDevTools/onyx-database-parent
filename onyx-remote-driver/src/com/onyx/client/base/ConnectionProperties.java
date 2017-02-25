@@ -3,6 +3,8 @@ package com.onyx.client.base;
 import com.onyx.buffer.BufferStream;
 import com.onyx.client.base.engine.PacketTransportEngine;
 
+import java.nio.ByteBuffer;
+
 /**
  * Created by tosborn1 on 2/12/17.
  *
@@ -16,6 +18,7 @@ public class ConnectionProperties extends ConnectionBufferPool
 
     // PacketTransportEngine for wrapping and unwrapping connection
     public final PacketTransportEngine packetTransportEngine;
+    public final ByteBuffer readOverflowData;
 
     /**
      * Constructor with packetTransportEngine
@@ -49,7 +52,9 @@ public class ConnectionProperties extends ConnectionBufferPool
         this.writeNetworkData = base.writeNetworkData;
         this.readApplicationData = base.readApplicationData;
         this.readNetworkData = base.readNetworkData;
-        this.readOverflowData = base.readOverflowData;
+        this.readOverflowData = BufferStream.allocate(packetTransportEngine.getPacketSize());
+        this.readThread = base.readThread;
+        this.writeThread = base.writeThread;
     }
 
     /**
@@ -69,5 +74,23 @@ public class ConnectionProperties extends ConnectionBufferPool
      */
     public void setAuthenticated(@SuppressWarnings("SameParameterValue") boolean authenticated) {
         this.authenticated = authenticated;
+    }
+
+    /**
+     * Handles the remainder of the the buffer fro a read.  This is so that in the next
+     * loop left over from the read, the connection retains the fail over.  If partial
+     * packets are left orphaned, that would be bad.
+     *
+     * @since 1.2.0
+     */
+    public void handleConnectionRemainder()
+    {
+        // We have some left over data from the last read.  Lets use that for this next iteration
+        if(readOverflowData.position() > 0)
+        {
+            readOverflowData.flip();
+            readNetworkData.put(readOverflowData);
+            readOverflowData.clear();
+        }
     }
 }

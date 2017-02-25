@@ -23,7 +23,6 @@ public class RemoteBaseTest {
 
     static public DatabaseServer databaseServer = null;
 
-    public static final boolean USE_SOCKET_PROTOCOL = true;
     protected PersistenceManager manager;
     protected RemoteSchemaContext context;
 

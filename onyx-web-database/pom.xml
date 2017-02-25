@@ -6,7 +6,7 @@
     <artifactId>onyx-web-database</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-web-database</description>
-    <url>http://onyxdevtools.com/products</url>
+    <url>https://onyxdevtools.com/products</url>
 
     <packaging>jar</packaging>
 

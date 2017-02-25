@@ -21,14 +21,13 @@ import javax.net.ssl.*;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 
 /**
- *
  * Created by Tim Osborn 02/13/2017
- *
+ * <p>
  * This class contains the base responsibility of the network communication for the
  * server and the client
  *
  * @since 1.2.0
- *
+ * <p>
  * It has been in order to remove the dependency on 3rd party libraries and improve performance.
  */
 public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
@@ -43,7 +42,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
     final protected ServerSerializer serverSerializer = new DefaultServerSerializer();
 
     // Packet indicators
-    private static final byte SINGLE_PACKET = (byte) 0;
+    protected static final byte SINGLE_PACKET = (byte) 0;
     private static final byte MULTI_PACKET_START = (byte) 1;
     private static final byte MULTI_PACKET_MIDDLE = (byte) 2;
     private static final byte MULTI_PACKET_STOP = (byte) 3;
@@ -56,9 +55,8 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * This method is setup to use use buffers that are given to a specific connectionProperties.  There are pools of buffers
      * used that are given by a round robin.
      *
-     * @param socketChannel Socket Channel to read data from.
+     * @param socketChannel        Socket Channel to read data from.
      * @param connectionProperties Buffer and connectionProperties information
-     *
      * @since 1.2.0
      */
     protected void read(SocketChannel socketChannel, ConnectionProperties connectionProperties) {
@@ -77,6 +75,10 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                 // Read from the socket channel
                 int bytesRead;
                 try {
+                    if(socketChannel.socket() == null) {
+                        closeConnection(socketChannel, connectionProperties);
+                        return;
+                    }
                     bytesRead = socketChannel.read(connectionProperties.readNetworkData);
                     if (bytesRead > 0) {
 
@@ -99,7 +101,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
 
                                     // It is a single packet.  Yay, we got what we were looking for and it was small enough to fit into a single pack
                                     if (packetType == SINGLE_PACKET) {
-                                        handleMessage(socketChannel, connectionProperties, connectionProperties.readApplicationData);
+                                        handleMessage(packetType, socketChannel, connectionProperties, connectionProperties.readApplicationData);
                                         exitReadLoop = true;
                                     }
                                     // This is the start of a larger packet that is too big to fit onto a single buffer
@@ -120,7 +122,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                                         // Handle the message buffer and send process it
                                         readMultiPacketData.put(connectionProperties.readApplicationData);
                                         readMultiPacketData.flip();
-                                        handleMessage(socketChannel, connectionProperties, readMultiPacketData);
+                                        handleMessage(packetType, socketChannel, connectionProperties, readMultiPacketData);
                                         exitReadLoop = true;
                                     }
                                     break;
@@ -132,7 +134,8 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                                 case CLOSED:
                                     try {
                                         closeConnection(socketChannel, connectionProperties);
-                                    } catch (IOException ignore) {}
+                                    } catch (IOException ignore) {
+                                    }
                                     return;
                                 default:
                                     throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
@@ -145,8 +148,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                 } catch (ClosedChannelException closed) {
                     handleEndOfStream(socketChannel, connectionProperties);
                 }
-            } catch (IOException exception)
-            {
+            } catch (IOException exception) {
                 exception.printStackTrace();
                 // Write the exception back to the client
                 final ServerReadException readException = new ServerReadException(exception);
@@ -157,10 +159,10 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
 
     /**
      * Write a single packet to the socket channel.
-     *
+     * <p>
      * This requires the packet to be less than 16kbs.  If it is larger, this will blow up.
      *
-     * @param socketChannel Socket Channel to write to
+     * @param socketChannel        Socket Channel to write to
      * @param connectionProperties Socket ConnectionProperties
      * @throws IOException Issue writing to the channel.
      * @since 1.2.0
@@ -200,13 +202,14 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
 
     /**
      * Unsure the buffer is large enough to handle the additional bytes.  If not, resize it
-     * @param buffer Buffer to check
+     *
+     * @param buffer     Buffer to check
      * @param additional Additional bytes needed
      * @return Resized or existing buffer based on needs
      * @since 1.2.0
      */
     private ByteBuffer ensureBufferCapacity(ByteBuffer buffer, int additional) {
-        if(buffer.capacity() < buffer.position() + additional) {
+        if (buffer.capacity() < buffer.position() + additional) {
             ByteBuffer temporaryBuffer = BufferStream.allocate(buffer.capacity() + MULTI_PACKET_BUFFER_ALLOCATION);
             buffer.flip();
             temporaryBuffer.put(buffer);
@@ -220,9 +223,9 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
     /**
      * Write a message to the socket channel
      *
-     * @param socketChannel Socket Channel to write to
+     * @param socketChannel        Socket Channel to write to
      * @param connectionProperties ConnectionProperties Buffer Pool
-     * @param message Serializable message
+     * @param message              Serializable message
      * @since 1.2.0
      */
     protected void write(SocketChannel socketChannel, ConnectionProperties connectionProperties, Serializable message) {
@@ -232,16 +235,15 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
         buffer.position(1);
 
         try {
-            buffer = serverSerializer.serialize((BufferStreamable)message, buffer);
+            buffer = serverSerializer.serialize((BufferStreamable) message, buffer);
         } catch (BufferingException exception) {
-            if(message instanceof RequestToken) {
+            if (message instanceof RequestToken) {
                 RequestToken requestToken = ((RequestToken) message);
-                if(!requestToken.reTry) {
+                if (!requestToken.reTry) {
                     requestToken.reTry = true;
                     requestToken.packet = new ServerWriteException(exception);
                     write(socketChannel, connectionProperties, requestToken);
-                }
-                else {
+                } else {
                     failure(requestToken, exception);
                 }
             }
@@ -313,123 +315,132 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
     /**
      * Perform SSL Handshake.  This will only be executed if it is using an SSLEngine.
      *
-     * @param socketChannel Socket Channel to perform handshake with
+     * @param socketChannel        Socket Channel to perform handshake with
      * @param connectionProperties Buffer Pool tied to connectionProperties
      * @return Whether the handshake was successful
      * @throws IOException General IO Exception
-     *
      * @since 1.2.0
      */
     protected boolean doHandshake(SocketChannel socketChannel, ConnectionProperties connectionProperties) throws IOException {
 
-        if(connectionProperties == null)
+        if (connectionProperties == null)
             return false;
 
         SSLEngineResult result;
         HandshakeStatus handshakeStatus;
 
-        connectionProperties.writeNetworkData.clear();
-        connectionProperties.readNetworkData.clear();
+        ByteBuffer writeHandshakeBuffer = BufferStream.allocate(connectionProperties.writeApplicationData.capacity());
+        ByteBuffer writeHandshakeApplicationBuffer = BufferStream.allocate(connectionProperties.writeApplicationData.capacity());
+        ByteBuffer readHandshakeData = BufferStream.allocate(connectionProperties.writeNetworkData.capacity());
+        ByteBuffer readHandshakeApplicationData = BufferStream.allocate(connectionProperties.writeApplicationData.capacity());
 
         handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
-        while (handshakeStatus != HandshakeStatus.FINISHED
-                && handshakeStatus != HandshakeStatus.NOT_HANDSHAKING) {
-            switch (handshakeStatus) {
-            case NEED_UNWRAP:
-                if (socketChannel.read(connectionProperties.readNetworkData) < 0) {
-                    if (connectionProperties.packetTransportEngine.isInboundDone() && connectionProperties.packetTransportEngine.isOutboundDone()) {
-                        return false;
-                    }
-                    try {
-                        connectionProperties.packetTransportEngine.closeInbound();
-                    } catch (SSLException e) {
-                        // Ignore
-                    }
-                    connectionProperties.packetTransportEngine.closeOutbound();
-                    // After closeOutbound the packetTransportEngine will be set to WRAP state, in order to try to send a close message to the client.
-                    handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
-                    break;
-                }
-                connectionProperties.readNetworkData.flip();
-                try {
-                    result = connectionProperties.packetTransportEngine.unwrap(connectionProperties.readNetworkData, connectionProperties.readApplicationData);
-                    connectionProperties.readNetworkData.compact();
-                    handshakeStatus = result.getHandshakeStatus();
-                } catch (SSLException sslException) {
-                    connectionProperties.packetTransportEngine.closeOutbound();
-                    handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
-                    break;
-                }
-                switch (result.getStatus()) {
-                case OK:
-                    break;
-                case BUFFER_OVERFLOW:
-                    break;
-                case BUFFER_UNDERFLOW:
-                    break;
-                case CLOSED:
-                    if (connectionProperties.packetTransportEngine.isOutboundDone()) {
-                        return false;
-                    } else {
-                        connectionProperties.packetTransportEngine.closeOutbound();
+        try {
+            while (handshakeStatus != HandshakeStatus.FINISHED
+                    && handshakeStatus != HandshakeStatus.NOT_HANDSHAKING) {
+                switch (handshakeStatus) {
+                    case NEED_UNWRAP:
+                        if (socketChannel.read(readHandshakeData) < 0) {
+                            if (connectionProperties.packetTransportEngine.isInboundDone() && connectionProperties.packetTransportEngine.isOutboundDone()) {
+                                return false;
+                            }
+                            try {
+                                connectionProperties.packetTransportEngine.closeInbound();
+                            } catch (SSLException e) {
+                                // Ignore
+                            }
+                            connectionProperties.packetTransportEngine.closeOutbound();
+                            // After closeOutbound the packetTransportEngine will be set to WRAP state, in order to try to send a close message to the client.
+                            handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
+                            break;
+                        }
+                        readHandshakeData.flip();
+                        try {
+                            result = connectionProperties.packetTransportEngine.unwrap(readHandshakeData, readHandshakeApplicationData);
+                            readHandshakeData.compact();
+                            handshakeStatus = result.getHandshakeStatus();
+                        } catch (SSLException sslException) {
+                            connectionProperties.packetTransportEngine.closeOutbound();
+                            handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
+                            break;
+                        }
+                        switch (result.getStatus()) {
+                            case OK:
+                                break;
+                            case BUFFER_OVERFLOW:
+                                break;
+                            case BUFFER_UNDERFLOW:
+                                break;
+                            case CLOSED:
+                                if (connectionProperties.packetTransportEngine.isOutboundDone()) {
+                                    return false;
+                                } else {
+                                    connectionProperties.packetTransportEngine.closeOutbound();
+                                    handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
+                                    break;
+                                }
+                            default:
+                                throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
+                        }
+                        break;
+                    case NEED_WRAP:
+                        writeHandshakeBuffer.clear();
+                        try {
+                            result = connectionProperties.packetTransportEngine.wrap(writeHandshakeApplicationBuffer, writeHandshakeBuffer);
+                            handshakeStatus = result.getHandshakeStatus();
+                        } catch (SSLException sslException) {
+                            connectionProperties.packetTransportEngine.closeOutbound();
+                            handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
+                            break;
+                        }
+                        switch (result.getStatus()) {
+                            case OK:
+                                writeHandshakeBuffer.flip();
+                                while (writeHandshakeBuffer.hasRemaining()) {
+                                    socketChannel.write(writeHandshakeBuffer);
+                                }
+                                break;
+                            case BUFFER_OVERFLOW:
+                                throw new SSLException("Buffer overflow occurred after a wrap during handshake.");
+                            case BUFFER_UNDERFLOW:
+                                throw new SSLException("Buffer underflow occurred after a wrap during handshake");
+                            case CLOSED:
+                                try {
+                                    writeHandshakeBuffer.flip();
+                                    while (writeHandshakeBuffer.hasRemaining()) {
+                                        socketChannel.write(writeHandshakeBuffer);
+                                    }
+                                    // At this point the handshake status will probably be NEED_UNWRAP so we make sure that readNetworkData is clear to read.
+                                    writeHandshakeBuffer.clear();
+                                } catch (Exception e) {
+                                    handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
+                                }
+                                break;
+                            default:
+                                throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
+                        }
+                        break;
+                    case NEED_TASK:
+                        Runnable task;
+                        while ((task = connectionProperties.packetTransportEngine.getDelegatedTask()) != null) {
+                            connectionProperties.writeThread.execute(task);
+                        }
                         handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
                         break;
-                    }
-                default:
-                    throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
+                    case FINISHED:
+                        break;
+                    case NOT_HANDSHAKING:
+                        break;
+                    default:
+                        throw new IllegalStateException("Invalid SSL status: " + handshakeStatus);
                 }
-                break;
-            case NEED_WRAP:
-                connectionProperties.writeNetworkData.clear();
-                try {
-                    result = connectionProperties.packetTransportEngine.wrap(connectionProperties.writeApplicationData, connectionProperties.writeNetworkData);
-                    handshakeStatus = result.getHandshakeStatus();
-                } catch (SSLException sslException) {
-                    connectionProperties.packetTransportEngine.closeOutbound();
-                    handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
-                    break;
-                }
-                switch (result.getStatus()) {
-                case OK :
-                    connectionProperties.writeNetworkData.flip();
-                    while (connectionProperties.writeNetworkData.hasRemaining()) {
-                        socketChannel.write(connectionProperties.writeNetworkData);
-                    }
-                    break;
-                case BUFFER_OVERFLOW:
-                    throw new SSLException("Buffer overflow occurred after a wrap during handshake.");
-                case BUFFER_UNDERFLOW:
-                    throw new SSLException("Buffer underflow occurred after a wrap during handshake");
-                case CLOSED:
-                    try {
-                        connectionProperties.writeNetworkData.flip();
-                        while (connectionProperties.writeNetworkData.hasRemaining()) {
-                            socketChannel.write(connectionProperties.writeNetworkData);
-                        }
-                        // At this point the handshake status will probably be NEED_UNWRAP so we make sure that readNetworkData is clear to read.
-                        connectionProperties.readNetworkData.clear();
-                    } catch (Exception e) {
-                        handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
-                    }
-                    break;
-                default:
-                    throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
-                }
-                break;
-            case NEED_TASK:
-                Runnable task;
-                while ((task = connectionProperties.packetTransportEngine.getDelegatedTask()) != null) {
-                    connectionProperties.writeThread.execute(task);
-                }
-                handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
-                break;
-            case FINISHED:
-                break;
-            case NOT_HANDSHAKING:
-                break;
-            default:
-                throw new IllegalStateException("Invalid SSL status: " + handshakeStatus);
             }
+        }
+        finally {
+            BufferStream.recycle(readHandshakeData);
+            BufferStream.recycle(readHandshakeApplicationData);
+            BufferStream.recycle(writeHandshakeBuffer);
+            BufferStream.recycle(writeHandshakeApplicationBuffer);
         }
 
         return true;
@@ -440,49 +451,51 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * Abstract method for handling a message.  Overwrite this as needed.  Pre requirements are that
      * the message should be in a formed message that should deserialize into a token and are in a meaningful token object.
      *
-     * @param socketChannel Socket Channel read from
+     * @param packetType           Indicates if the packet can fit into 1 buffer or multiple
+     * @param socketChannel        Socket Channel read from
      * @param connectionProperties ConnectionProperties information containing buffer and thread info
-     * @param buffer ByteBuffer containing message
-     *
+     * @param buffer               ByteBuffer containing message
      * @since 1.2.0
      */
-    protected abstract void handleMessage(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer);
+    protected abstract void handleMessage(byte packetType, SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer);
 
     /**
      * Close ConnectionProperties
-     * @param socketChannel Socket Channel to close
+     *
+     * @param socketChannel        Socket Channel to close
      * @param connectionProperties Buffer information.
      * @throws IOException General IO Exception
      */
-    void closeConnection(SocketChannel socketChannel, ConnectionProperties connectionProperties) throws IOException  {
+    void closeConnection(SocketChannel socketChannel, ConnectionProperties connectionProperties) throws IOException {
         connectionProperties.packetTransportEngine.closeOutbound();
-        doHandshake(socketChannel, connectionProperties);
         socketChannel.close();
     }
 
     /**
      * Handle the end of a stream.  Handle it by closing the inbound and outbound connections
-     * @param socketChannel Socket channel
+     *
+     * @param socketChannel        Socket channel
      * @param connectionProperties Buffer information
-     * @throws IOException General socket exception
      */
-    private void handleEndOfStream(SocketChannel socketChannel, ConnectionProperties connectionProperties) throws IOException  {
+    protected void handleEndOfStream(SocketChannel socketChannel, ConnectionProperties connectionProperties) {
         try {
             connectionProperties.packetTransportEngine.closeInbound();
         } catch (Exception e) {
             // Ignore
         }
-        closeConnection(socketChannel, connectionProperties);
+        try {
+            closeConnection(socketChannel, connectionProperties);
+        } catch (IOException ignore) {
+        }
     }
 
     /**
      * Identify whether we should use SSL or not.  This is based on the ssl info being populated
-     * @return If the keystore file path is populated
      *
+     * @return If the keystore file path is populated
      * @since 1.2.0
      */
-    protected boolean useSSL()
-    {
+    protected boolean useSSL() {
         return this.sslKeystoreFilePath != null && this.sslKeystoreFilePath.length() > 0;
     }
 
@@ -490,7 +503,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * Exception handling.  Both the client and server need to override this so they can have their own custom handling.
      *
      * @param token Original request
-     * @param e The underlying exception
+     * @param e     The underlying exception
      */
     protected abstract void failure(RequestToken token, Exception e);
 }
