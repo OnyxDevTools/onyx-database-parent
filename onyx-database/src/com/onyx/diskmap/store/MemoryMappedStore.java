@@ -74,9 +74,9 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     public synchronized boolean close() {
         try {
 
-            if (force) {
-                this.slices.values().forEach(FileSlice::flush);
+            this.slices.values().forEach(FileSlice::flush);
 
+            if (force) {
                 try {
                     channel.truncate(fileSize.get());
                 } catch (IOException ignore) {}
@@ -379,7 +379,9 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         */
         void flush() {
             if (buffer instanceof MappedByteBuffer) {
-                ((MappedByteBuffer) buffer).force(); // Flush the contents of the buffer
+                if(force) {
+                    ((MappedByteBuffer) buffer).force(); // Flush the contents of the buffer
+                }
                 try {
                     Method cleanerMethod = buffer.getClass().getMethod("cleaner");
                     if (cleanerMethod != null) {
