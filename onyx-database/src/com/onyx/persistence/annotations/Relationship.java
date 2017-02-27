@@ -51,7 +51,7 @@ public @interface Relationship
      *
      * @return Relationship Type
      */
-    RelationshipType type();
+    @SuppressWarnings("unused") RelationshipType type();
 
     /**
      * Specify the relationship inverse type.
@@ -59,7 +59,7 @@ public @interface Relationship
      * @since 1.0.0
      * @return Class that relationship objects are declared as
      */
-    Class inverseClass();
+    @SuppressWarnings("unused") Class inverseClass();
 
     /**
      * Inverse relationship property name
@@ -67,7 +67,7 @@ public @interface Relationship
      * @since 1.0.0
      * @return Inverse name as identified on the inverse class
      */
-    String inverse() default "";
+    @SuppressWarnings("unused") String inverse() default "";
 
     /**
      * Fetch policy for the relationship.  This will determine how the relationship objects are hydrated
@@ -80,7 +80,7 @@ public @interface Relationship
      * @return Fetch Policy for relationship
      *
      */
-    FetchPolicy fetchPolicy() default FetchPolicy.LAZY;
+    @SuppressWarnings("unused") FetchPolicy fetchPolicy() default FetchPolicy.LAZY;
 
     /**
      * Cascade policy whether to save the child when you are saving the parent entity
@@ -93,7 +93,7 @@ public @interface Relationship
      *
      * @return The relationships Cascade Policy
      */
-    CascadePolicy cascadePolicy() default CascadePolicy.NONE;
+    @SuppressWarnings("unused") CascadePolicy cascadePolicy() default CascadePolicy.NONE;
 
     /**
      * Getter for the load factor
@@ -108,6 +108,6 @@ public @interface Relationship
      *
      * @since 1.2.0
      */
-    int loadFactor() default 5;
+    @SuppressWarnings("unused") int loadFactor() default 5;
 
 }

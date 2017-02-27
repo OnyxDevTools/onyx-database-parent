@@ -1,6 +1,7 @@
 package remote.partition;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -8,6 +9,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
 import entities.partition.IndexPartitionEntity;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -23,6 +25,7 @@ import java.util.List;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IndexPartitionTest extends BasePartitionTest
 {
+
     @Test
     public void aTestSavePartitionEntityWithIndex()
     {
@@ -59,7 +62,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -82,7 +85,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void cTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
+    public void dTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -105,7 +108,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void dTestDeleteQueryPartitionEntity() throws EntityException
+    public void eTestDeleteQueryPartitionEntity() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -128,7 +131,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndex() throws EntityException
+    public void fTestDeleteQueryPartitionEntityWithIndex() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -152,7 +155,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -176,7 +179,7 @@ public class IndexPartitionTest extends BasePartitionTest
 
 
     @Test
-    public void dTestUpdateQueryPartitionEntity() throws EntityException
+    public void hTestUpdateQueryPartitionEntity() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -200,7 +203,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndex() throws EntityException
+    public void iTestUpdateQueryPartitionEntityWithIndex() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -225,7 +228,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -249,7 +252,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdatePartitionField() throws EntityException
+    public void kTestUpdatePartitionField() throws EntityException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;

@@ -13,12 +13,13 @@ import java.util.List;
  */
 //J-
 @Entity
+@SuppressWarnings("unused")
 public class Conference extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier
-    public String name;
+    private String name;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -27,7 +28,7 @@ public class Conference extends ManagedEntity implements IManagedEntity
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.EAGER
     )
-    protected List<Division> divisions = new ArrayList<>();
+    private List<Division> divisions = new ArrayList<>();
 
     public String getName()
     {

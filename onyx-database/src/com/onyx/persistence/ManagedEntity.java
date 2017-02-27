@@ -1,15 +1,12 @@
 package com.onyx.persistence;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.util.ReflectionUtil;
 
 import java.io.IOException;
@@ -23,13 +20,10 @@ import java.util.Map;
  * @see com.onyx.persistence.IManagedEntity
  * @since 1.0.0
  */
-@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "@id")
 public abstract class ManagedEntity implements IManagedEntity, ObjectSerializable {
 
-    @JsonIgnore
     private transient EntityDescriptor descriptor = null;
 
-    @JsonIgnore
     public transient boolean ignoreListeners = false;
 
     @Override
@@ -39,15 +33,15 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 descriptor = buffer.serializers.context.getDescriptorForEntity(this, "");
             }
 
-            descriptor.getAttributes().values().stream().forEach(attribute ->
+            descriptor.getAttributes().values().forEach(attribute ->
             {
                 try {
                     final Object obj = ReflectionUtil.getAny(this, attribute.field);
                     buffer.writeObject(obj);
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             });
-        } catch (EntityException e) {
+        } catch (EntityException ignore) {
         }
     }
 
@@ -70,14 +64,14 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             if (descriptor == null) {
                 try {
                     descriptor = buffer.serializers.context.getDescriptorForEntity(this, "");
-                } catch (EntityException e) {}
+                } catch (EntityException ignore) {}
             }
 
-            descriptor.getAttributes().values().stream().forEach(attribute ->
+            descriptor.getAttributes().values().forEach(attribute ->
             {
                 try {
                     ReflectionUtil.setAny(this, buffer.readObject(), attribute.field);
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             });
         }
@@ -93,7 +87,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                         attribute.field = ReflectionUtil.getOffsetField(this.getClass(), attribute.getName());
 
                     ReflectionUtil.setAny(this, obj, attribute.field);
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             }
         }
@@ -103,6 +97,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
      * This method maps the keys from a structure to the attributes of the entity
      * @param mapObj Map to convert from
      */
+    @SuppressWarnings("unused")
     public void fromMap(Map<String, Object> mapObj, SchemaContext context)
     {
         try {
@@ -110,21 +105,21 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             if (descriptor == null) {
                 try {
                     descriptor = context.getDescriptorForEntity(this, "");
-                } catch (EntityException e) {}
+                } catch (EntityException ignore) {}
             }
 
-            descriptor.getAttributes().values().stream().forEach(attribute ->
+            descriptor.getAttributes().values().forEach(attribute ->
             {
                 try {
-                    if(mapObj.containsKey(attribute.field.field.getName())) {
+                    if (mapObj.containsKey(attribute.field.field.getName())) {
                         Object attributeValueWithinMap = mapObj.get(attribute.field.field.getName());
                         ReflectionUtil.setAny(this, attributeValueWithinMap, attribute.field);
                     }
-                } catch (Exception e) {
+                } catch (Exception ignore) {
                 }
             });
         }
-        catch (Exception e){}
+        catch (Exception ignore){}
     }
 
 }

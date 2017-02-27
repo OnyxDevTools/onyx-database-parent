@@ -4,24 +4,22 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
-/**
- * Created by tosborn1 on 3/28/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Skipper extends ManagedEntity implements IManagedEntity
 {
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
-    protected long id;
+    private long id;
 
     @Attribute
-    protected String firstName;
+    private String firstName;
 
     @Attribute
-    protected String lastName;
+    private String lastName;
 
     @Relationship(type = RelationshipType.ONE_TO_ONE, inverseClass = Sailboat.class, inverse = "skipper", cascadePolicy = CascadePolicy.NONE)
-    protected Sailboat sailboat;
+    private Sailboat sailboat;
 
     public long getId() {
         return id;

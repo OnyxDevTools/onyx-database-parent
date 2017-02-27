@@ -6,21 +6,19 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by timothy.osborn on 11/4/14.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Series extends ManagedEntity implements IManagedEntity
 {
     @Attribute
     @Identifier
-    public String seriesId;
+    private String seriesId;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             cascadePolicy = CascadePolicy.NONE,
             inverseClass = Season.class,
             inverse = "downloadableSeries")
-    public List<Season> availableSeasons;
+    private List<Season> availableSeasons;
 
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
@@ -28,11 +26,42 @@ public class Series extends ManagedEntity implements IManagedEntity
             inverseClass = Season.class,
             fetchPolicy = FetchPolicy.EAGER,
             inverse = "series")
-    public List<Season> seasons;
+    private List<Season> seasons;
 
     @Relationship(type = RelationshipType.ONE_TO_ONE,
                   inverse = "series",
                   inverseClass = Episode.class)
-    public Episode pilotEpisode;
+    private Episode pilotEpisode;
 
+    public String getSeriesId() {
+        return seriesId;
+    }
+
+    public void setSeriesId(String seriesId) {
+        this.seriesId = seriesId;
+    }
+
+    public List<Season> getAvailableSeasons() {
+        return availableSeasons;
+    }
+
+    public void setAvailableSeasons(List<Season> availableSeasons) {
+        this.availableSeasons = availableSeasons;
+    }
+
+    public List<Season> getSeasons() {
+        return seasons;
+    }
+
+    public void setSeasons(List<Season> seasons) {
+        this.seasons = seasons;
+    }
+
+    public Episode getPilotEpisode() {
+        return pilotEpisode;
+    }
+
+    public void setPilotEpisode(Episode pilotEpisode) {
+        this.pilotEpisode = pilotEpisode;
+    }
 }

@@ -1,8 +1,8 @@
 package embedded;
 
 import com.onyx.exception.InitializationException;
-import com.onyx.structure.DefaultMapBuilder;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DefaultMapBuilder;
+import com.onyx.diskmap.MapBuilder;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;

@@ -1,18 +1,22 @@
 package com.onyx.transaction;
 
 import com.onyx.persistence.query.Query;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.IOException;
 
 /**
  * Created by tosborn1 on 3/25/16.
+ *
+ * Update query transaction
  */
 public class UpdateQueryTransaction implements ObjectSerializable, Transaction
 {
+    @SuppressWarnings("WeakerAccess")
     public Query query;
 
+    @SuppressWarnings("unused")
     public UpdateQueryTransaction()
     {
 

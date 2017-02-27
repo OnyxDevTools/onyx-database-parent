@@ -7,29 +7,27 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 5/6/16.
- */
+@SuppressWarnings("unused")
 @Entity
 public class Account extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    protected int accountId;
+    private int accountId;
 
     @Attribute
-    protected String accountName;
+    private String accountName;
 
     @Attribute
-    protected double balanceDue;
+    private double balanceDue;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "account",
             inverseClass = Invoice.class,
             cascadePolicy = CascadePolicy.NONE,
             fetchPolicy = FetchPolicy.LAZY)
-    protected List<Invoice> invoices;
+    private List<Invoice> invoices;
 
     public int getAccountId() {
         return accountId;

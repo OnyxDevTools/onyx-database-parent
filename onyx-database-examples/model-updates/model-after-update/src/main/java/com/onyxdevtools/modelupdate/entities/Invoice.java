@@ -7,42 +7,40 @@ import com.onyx.persistence.annotations.*;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Created by tosborn1 on 5/6/16.
- */
+@SuppressWarnings("unused")
 @Entity
 public class Invoice extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier
-    protected Long invoiceId;
+    private Long invoiceId;
 
     @Attribute
-    protected Date invoiceDate;
+    private Date invoiceDate;
 
     // Note for Example 4: I have added an index the the invoice due date
     @Index
     @Attribute
-    protected Date dueDate;
+    private Date dueDate;
 
     @Attribute
-    protected double amount;
+    private double amount;
 
     @Attribute
-    protected String notes;
+    private String notes;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "invoice",
             inverseClass = Payment.class,
             cascadePolicy = CascadePolicy.SAVE,
             fetchPolicy = FetchPolicy.EAGER)
-    protected List<Payment> payments;
+    private List<Payment> payments;
 
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             inverseClass = Account.class,
             inverse = "invoices")
-    protected Account account;
+    private Account account;
 
     public Long getInvoiceId() {
         return invoiceId;

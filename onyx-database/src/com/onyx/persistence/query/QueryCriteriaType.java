@@ -1,8 +1,5 @@
 package com.onyx.persistence.query;
 
-import com.onyx.persistence.ManagedEntity;
-
-import java.util.List;
 
 /**
  * Type of attribute to compare while filtering record
@@ -43,6 +40,7 @@ public enum QueryCriteriaType
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     QueryCriteriaType()
     {
 

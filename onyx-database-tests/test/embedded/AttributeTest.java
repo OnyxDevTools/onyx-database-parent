@@ -186,7 +186,7 @@ public class AttributeTest extends BaseTest {
      * @throws EntityException
      */
     @Test
-    public void testInheritedPopulatedEntity() throws EntityException {
+    public void testInheritedPopulatedEntity() throws EntityException, InterruptedException {
 
         InheritedAttributeEntity entity = new InheritedAttributeEntity();
 

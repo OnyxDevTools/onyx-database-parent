@@ -1,6 +1,6 @@
 package web.base;
 
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.WebDatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
@@ -29,7 +29,7 @@ public class BaseTest {
     protected static final String DATABASE_LOCATION = "http://localhost:8080";
     protected static final String LOCAL_DATABASE_LOCATION = "onyx.database.location=C:/Sandbox/Onyx/Tests/web.oxd";
 
-    public static DatabaseServer testApplication = null;
+    public static WebDatabaseServer testApplication = null;
 
     /**
      * Initialize Database

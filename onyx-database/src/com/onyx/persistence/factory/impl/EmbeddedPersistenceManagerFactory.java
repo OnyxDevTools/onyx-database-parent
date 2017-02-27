@@ -1,7 +1,6 @@
 package com.onyx.persistence.factory.impl;
 
 import com.onyx.exception.InitializationException;
-import com.onyx.exception.SingletonException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
@@ -9,16 +8,10 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.util.EncryptionUtil;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.rmi.RemoteException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -59,21 +52,25 @@ import java.util.logging.Logger;
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
+@SuppressWarnings("WeakerAccess")
 public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFactory {
 
     private static final String CREDENTIALS_FILE = "tmp";
 
     protected String location;
     protected SchemaContext context;
+    @SuppressWarnings("WeakerAccess")
     protected String user = "admin";
+    @SuppressWarnings("WeakerAccess")
     protected String password = "admin";
 
-    public static final String DEFAULT_INSTANCE = "ONYX_DATABASE";
+    static final String DEFAULT_INSTANCE = "ONYX_DATABASE";
 
+    @SuppressWarnings("WeakerAccess")
     protected String instance = DEFAULT_INSTANCE;
 
     // Enable history journaling ot keep a transaction history
-    protected boolean enableJournaling = false;
+    private boolean enableJournaling = false;
 
     /**
      * Overridden constructor to include SchemaContext
@@ -85,8 +82,6 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
     {
         super();
         this.instance = instance;
-
-
     }
 
     /**
@@ -221,6 +216,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
 
             if (!databaseDirectory.exists())
             {
+                //noinspection ResultOfMethodCallIgnored
                 databaseDirectory.mkdirs();
                 createCredentialsFile();
             }
@@ -262,7 +258,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * Acquire Database Lock
      *
      * @since 1.0.0
-     * @throws IOException
+     * @throws IOException Error acquiring database lock
      */
     private void acquireLock() throws IOException
     {
@@ -270,6 +266,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
 
         if(!lockFile.exists())
         {
+            //noinspection ResultOfMethodCallIgnored
             lockFile.createNewFile();
         }
 
@@ -298,22 +295,18 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
                     fileChannelLock.close();
                 }
             }
-        } catch (Exception e){
+        } catch (Exception ignore){
         }
     }
 
     /**
      * Safe shutdown of database
      * @since 1.0.0
-     * @throws java.io.IOException Cannot flush file changes
-     * @throws com.onyx.exception.SingletonException Highlander, there can be only one
      */
     @Override
     public void close()
     {
-        try {
-            context.shutdown();
-        } catch (SingletonException ignore) {}
+        context.shutdown();
         releaseLock();
     }
 
@@ -323,7 +316,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @since 1.0.0
      * @return Indicator to see if the factory's credentials are valid
      */
-    private final boolean checkCredentials() throws InitializationException
+    private boolean checkCredentials() throws InitializationException
     {
         final File databaseFile = new File(location);
         if (!databaseFile.exists())
@@ -334,27 +327,41 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
         {
             // Read the credentials and compare
             File credFile = new File(location + File.separator + CREDENTIALS_FILE);
-            String credentials = new String(Files.readAllBytes(Paths.get(credFile.getAbsolutePath())), StandardCharsets.UTF_16);
+            String credentials = new String(readContentIntoByteArray(credFile), StandardCharsets.UTF_16);
             return credentials.equals(encryptCredentials());
 
-        } catch (InitializationException e)
-        {
-            throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);
-        }
-        catch (IOException e)
+        } catch (IOException e)
         {
             throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);
         }
 
     }
-    
+
+    /**
+     * Helper method for reading they contents of a file into a byte array
+     *
+     * @param file File to read
+     * @return byte array of contents
+     * @throws IOException Failure to read file
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static byte[] readContentIntoByteArray(File file) throws IOException {
+        FileInputStream fileInputStream;
+        byte[] bFile = new byte[(int) file.length()];
+        //convert file into array of bytes
+        fileInputStream = new FileInputStream(file);
+        fileInputStream.read(bFile);
+        fileInputStream.close();
+        return bFile;
+    }
+
      /**
       * Encrypt Credentials
       *
       * @since 1.0.0
       * @return Encrypted Credentials
       */
-    private final String encryptCredentials() throws InitializationException
+    private String encryptCredentials() throws InitializationException
     {
         try
         {
@@ -370,7 +377,8 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @throws InitializationException Cannot create or write to credentials file
      * @since 1.0.0
      */
-    private final void createCredentialsFile() throws InitializationException
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private void createCredentialsFile() throws InitializationException
     {
         FileOutputStream fileStream = null;
         try
@@ -381,11 +389,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
             credentialsFile.createNewFile();
             fileStream = new FileOutputStream(credentialsFile);
             fileStream.write(encryptCredentials().getBytes(StandardCharsets.UTF_16));
-        } catch (InitializationException e)
-        {
-            throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);
-        }
-        catch (IOException e)
+        } catch (IOException e)
         {
             throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);
         } finally
@@ -416,12 +420,8 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
     {
         if(persistenceManager == null)
         {
-            try {
-                this.persistenceManager = new EmbeddedPersistenceManager();
-                ((EmbeddedPersistenceManager)this.persistenceManager).setJournalingEnabled(this.enableJournaling);
-            } catch (RemoteException e) {
-                throw new RuntimeException(e);
-            }
+            this.persistenceManager = new EmbeddedPersistenceManager();
+            ((EmbeddedPersistenceManager)this.persistenceManager).setJournalingEnabled(this.enableJournaling);
             this.persistenceManager.setContext(context);
         }
         return persistenceManager;
@@ -432,6 +432,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      *
      * @return Whether journaling is enabled or disabled
      */
+    @SuppressWarnings("unused")
     public boolean isEnableJournaling() {
         return enableJournaling;
     }
@@ -442,25 +443,9 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      *
      * @param enableJournaling True or False
      */
+    @SuppressWarnings("unused")
     public void setEnableJournaling(boolean enableJournaling) {
         this.enableJournaling = enableJournaling;
-    }
-
-    /**
-     * Ignore for embedded factory.  This does not have relevance.
-     * @param socketPort
-     */
-    public void setSocketPort(int socketPort) {}
-
-    /**
-     * This method parses the location to get the host name
-     * @return Parsed host name in format onyx://(hostname):port
-     */
-    protected String getHostName()
-    {
-        String registryEndpoint = this.location.replace("onx://", "").replace("ws://", "").replace("wss://", "");
-        registryEndpoint = registryEndpoint.replaceFirst(":\\d+", "");
-        return registryEndpoint;
     }
 
 }

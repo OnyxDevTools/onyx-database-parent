@@ -7,9 +7,12 @@ import java.io.ObjectOutput;
 
 /**
  * Created by timothy.osborn on 3/5/15.
+ *
+ * This is a combined reference of the partition the entity is in and its location
  */
 public class PartitionReference implements Externalizable, Comparable
 {
+    @SuppressWarnings("unused")
     public PartitionReference()
     {
 

@@ -34,6 +34,7 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
     /**
      * Default Constructor
      */
+    @SuppressWarnings("unused")
     public CacheManagerFactory()
     {
         this(DEFAULT_INSTANCE);
@@ -42,7 +43,8 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
     /**
      * Default Constructor with instance name
      */
-    public CacheManagerFactory(String instance)
+    @SuppressWarnings("WeakerAccess")
+    public CacheManagerFactory(@SuppressWarnings("SameParameterValue") String instance)
     {
         this.instance = instance;
         this.setSchemaContext(new CacheSchemaContext(instance));

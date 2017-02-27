@@ -4,8 +4,8 @@ import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -38,27 +38,31 @@ import java.io.ObjectOutput;
  * @see com.onyx.persistence.query.Query
  * @see PersistenceManager#executeQuery(Query)
  */
+@SuppressWarnings("unchecked")
 public class AttributeUpdate<T>  implements ObjectSerializable, Externalizable
 {
 
     /**
      * Default Constructor
      */
+    @SuppressWarnings("unused")
     public AttributeUpdate()
     {
 
     }
 
-    protected String fieldName;
+    private String fieldName;
+    @SuppressWarnings("WeakerAccess")
     protected T value;
-    transient protected AttributeDescriptor attributeDescriptor;
-    transient protected IndexController indexController;
+    transient private AttributeDescriptor attributeDescriptor;
+    transient private IndexController indexController;
 
     /**
      * Creates a new IntegerUpdate Instruction object
      * @param fieldName Attribute Name
      * @param value Value to update to
      */
+    @SuppressWarnings("unused")
     public AttributeUpdate(String fieldName, T value) {
         this.fieldName = fieldName;
         this.value = value;

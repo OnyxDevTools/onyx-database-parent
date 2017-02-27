@@ -25,7 +25,6 @@ import java.util.List;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SelectPerformanceTest extends RemotePrePopulatedForSelectPerformanceTest
 {
-
     /**
      * Scans 1 table, searching by 1 field. No results found
      * Last result: 151(win), 141(mac)

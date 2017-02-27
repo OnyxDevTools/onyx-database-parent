@@ -9,12 +9,13 @@ import java.util.List;
 
 //J-
 @Entity
+@SuppressWarnings("unused")
 public class Season extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier
-    protected int year;
+    private int year;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -23,7 +24,7 @@ public class Season extends ManagedEntity implements IManagedEntity
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.EAGER
     )
-    protected List<Conference> conferences = new ArrayList<>();
+    private List<Conference> conferences = new ArrayList<>();
 
     public Season()
     {

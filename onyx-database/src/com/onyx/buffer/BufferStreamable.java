@@ -17,6 +17,7 @@ public interface BufferStreamable {
      * @throws BufferingException Generic IO Exception from the expandableByteBuffer
      * @since 1.1.0
      */
+    @SuppressWarnings("unused")
     void read(BufferStream buffer) throws BufferingException;
 
     /**
@@ -26,6 +27,7 @@ public interface BufferStreamable {
      * @throws BufferingException Generic IO Exception from the expandableByteBuffer
      * @since 1.1.0
      */
+    @SuppressWarnings("unused")
     void write(BufferStream buffer) throws BufferingException;
 
 }

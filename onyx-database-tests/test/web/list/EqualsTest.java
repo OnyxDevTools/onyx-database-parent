@@ -1,6 +1,7 @@
 package web.list;
 
 import category.WebServerTests;
+import com.onyx.application.WebDatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
@@ -8,10 +9,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.AllAttributeEntity;
 import entities.AllAttributeForFetch;
 import entities.AllAttributeV2Entity;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
 
@@ -319,27 +317,5 @@ public class EqualsTest extends BaseTest
         List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
         Assert.assertEquals(2, results2.size());
         Assert.assertTrue(results2.get(0).charValue == 'C');
-    }
-
-
-    @Test
-    public void testEntityEquals() throws EntityException
-    {
-        AllAttributeEntity entity = new AllAttributeEntity();
-        entity.id = "ASDF";
-        final QueryCriteria criteria = new QueryCriteria("entity", QueryCriteriaOperator.EQUAL, entity);
-        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(2, results.size());
-        Assert.assertTrue(results.get(0).entity.equals(entity));
-
-    }
-
-    @Test
-    public void testEnumEquals() throws EntityException
-    {
-        final QueryCriteria criteria = new QueryCriteria("operator", QueryCriteriaOperator.EQUAL, QueryCriteriaOperator.CONTAINS);
-        List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(2, results.size());
-        Assert.assertTrue(results.get(0).operator == QueryCriteriaOperator.CONTAINS);
     }
 }

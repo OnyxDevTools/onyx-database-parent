@@ -18,13 +18,13 @@ import java.util.List;
 //J-
 @Entity
 @javax.persistence.Entity
-public class Conference extends ManagedEntity implements IManagedEntity
+class Conference extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier(loadFactor = 1)
     @Id
-    public String conferenceName;
+    private String conferenceName;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -35,7 +35,7 @@ public class Conference extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, targetEntity = Division.class)
-    protected List<Division> divisions = new ArrayList();
+    private List<Division> divisions = new ArrayList<>();
 
     @SuppressWarnings("unused")
     public String getConferenceName()

@@ -8,10 +8,10 @@ import java.nio.ByteBuffer;
  * Wrapper to sort a buffer by the capacity.  This is used to grab the smallest available buffer that fits our needs.
  *
  */
-public class RecycledBuffer implements Comparable<RecycledBuffer> {
+class RecycledBuffer implements Comparable<RecycledBuffer> {
 
     private ByteBuffer buffer;
-    private int capacity;
+    private final int capacity;
 
     /**
      * Constructor with ByteBuffer
@@ -19,7 +19,7 @@ public class RecycledBuffer implements Comparable<RecycledBuffer> {
      * @param buffer ByteBuffer to sort
      */
     @SuppressWarnings("unused")
-    public RecycledBuffer(ByteBuffer buffer) {
+    RecycledBuffer(ByteBuffer buffer) {
         buffer.limit(buffer.capacity());
         buffer.rewind();
         this.buffer = buffer;
@@ -30,7 +30,7 @@ public class RecycledBuffer implements Comparable<RecycledBuffer> {
      * Getter for buffer's capacity
      * @return The buffer's original capacity.
      */
-    public int capacity()
+    int capacity()
     {
         return capacity;
     }
@@ -41,7 +41,7 @@ public class RecycledBuffer implements Comparable<RecycledBuffer> {
      * @param capacity The size of the buffer required.
      */
     @SuppressWarnings("unused")
-    public RecycledBuffer(int capacity) {
+    RecycledBuffer(int capacity) {
         this.capacity = capacity;
     }
 
@@ -60,9 +60,10 @@ public class RecycledBuffer implements Comparable<RecycledBuffer> {
      * @param obj buffer to compare
      * @return if the 2 buffers are the same
      */
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     @Override
     public boolean equals(Object obj) {
-        return buffer.equals(obj);
+        return buffer instanceof ByteBuffer && buffer.equals(obj);
     }
 
     /**
@@ -73,7 +74,7 @@ public class RecycledBuffer implements Comparable<RecycledBuffer> {
      */
     @Override
     public int compareTo(RecycledBuffer o) {
-        return new Integer(capacity).compareTo(new Integer(o.capacity));
+        return new Integer(capacity).compareTo(o.capacity);
     }
 
     /**

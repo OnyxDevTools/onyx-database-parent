@@ -1,11 +1,11 @@
 package com.onyxdevtools.relationship;
 
-import java.io.IOException;
+import com.onyx.exception.EntityException;
 
 public class Main
 {
 
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws EntityException
     {
         OneToOneExample.demo();
         OneToManyExample.demo();
@@ -16,5 +16,7 @@ public class Main
         CascadeSaveExample.demo();
 
         FetchPolicyExample.demo();
+
+        System.exit(0);
     }
 }

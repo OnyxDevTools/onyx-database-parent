@@ -18,7 +18,7 @@ import java.util.List;
 public class OnyxPersistenceManager implements ProviderPersistenceManager {
 
 
-    private PersistenceManager persistenceManager;
+    private final PersistenceManager persistenceManager;
 
     /**
      * Constructor with persistence manager
@@ -38,7 +38,7 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     public void update(Object object) {
         try {
             persistenceManager.saveEntity((IManagedEntity) object);
-        } catch (InitializationException ex){}
+        } catch (InitializationException ignore){}
         catch (Exception e) {
             e.printStackTrace();
         }
@@ -53,7 +53,7 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     public void insert(Object object) {
         try {
             persistenceManager.saveEntity((IManagedEntity) object);
-        } catch (InitializationException ex){}
+        } catch (InitializationException ignore){}
         catch (Exception e) {
             e.printStackTrace();
         }
@@ -68,7 +68,7 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     public void delete(Class clazz, Object identifier) {
         try {
             persistenceManager.deleteEntity(persistenceManager.findById(clazz, identifier));
-        } catch (InitializationException ex){}
+        } catch (InitializationException ignore){}
         catch (Exception e) {
             e.printStackTrace();
         }
@@ -85,7 +85,7 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     public Object find(Class clazz, Object identifier) {
         try {
             return persistenceManager.findById(clazz, identifier);
-        } catch (InitializationException ex){}
+        } catch (InitializationException ignore){}
         catch (Exception e) {
             e.printStackTrace();
         }
@@ -112,7 +112,7 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
         Query query = new Query(clazz, criteria);
         try {
             return persistenceManager.executeLazyQuery(query);
-        } catch (InitializationException ex){}
+        } catch (InitializationException ignore){}
         catch (Exception e) {
             e.printStackTrace();
         }

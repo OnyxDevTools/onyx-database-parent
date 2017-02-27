@@ -7,17 +7,12 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
-import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,16 +40,22 @@ import java.util.WeakHashMap;
  * </pre>
  *
  */
-public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Externalizable, BufferStreamable {
+@SuppressWarnings("unchecked")
+public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, BufferStreamable {
 
+    @SuppressWarnings("WeakerAccess")
     protected List<Object> identifiers = null;
 
+    @SuppressWarnings("WeakerAccess")
     transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
+    @SuppressWarnings("WeakerAccess")
     transient protected EntityDescriptor entityDescriptor = null;
+    @SuppressWarnings("WeakerAccess")
     transient protected PersistenceManager persistenceManager = null;
-    transient protected PartitionContext partitionContext = null;
-    transient protected SchemaContext context;
+    @SuppressWarnings("WeakerAccess")
+    transient protected String contextId;
 
+    @SuppressWarnings("unused")
     public LazyQueryCollection()
     {
 
@@ -69,34 +70,16 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
      */
     public LazyQueryCollection(EntityDescriptor entityDescriptor, Map identifiers, SchemaContext context)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
 
         this.persistenceManager = context.getSerializedPersistenceManager();
         this.identifiers = new ArrayList<>(identifiers.keySet());
         this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
-    }
-
-    /**
-     * Constructor
-     *
-     * @param entityDescriptor EntityDescriptor for records
-     * @param identifiers List of identifiers
-     * @param context Schema Context
-     */
-    public LazyQueryCollection(EntityDescriptor entityDescriptor, List<Object> identifiers, SchemaContext context)
-    {
-        this.context = context;
-        this.persistenceManager = context.getSerializedPersistenceManager();
-        this.identifiers = new ArrayList<>(identifiers);
-        this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     /**
      * Quantity or record references within the List
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @return Size of the List
@@ -110,10 +93,9 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     /**
      * Boolean key indicating whether the list is empty
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
-     * @return (size == 0)
+     * @return (size equals 0)
      */
     @Override
     public boolean isEmpty()
@@ -124,7 +106,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     /**
      * Contains an object and is initialized
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param o Object to check
@@ -133,7 +114,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     @Override
     public boolean contains(Object o)
     {
-        Object identifier = null;
+        Object identifier;
         try
         {
             identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
@@ -151,7 +132,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
      * This must add a managed entity
      * </pre>
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param e Record that implements ManagedEntity
@@ -160,24 +140,12 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     @Override
     public boolean add(E e)
     {
-        try
-        {
-            Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) e, entityDescriptor.getIdentifier());
-            Object partitionId = partitionContext.getPartitionId((IManagedEntity) e);
-            IManagedEntity entity = persistenceManager.findByIdInPartition(e.getClass(), identifier, partitionId);
-            values.put(identifier, entity);
-            identifiers.add(identifier);
-            return true;
-        } catch (EntityException e1)
-        {
-            return false;
-        }
+        throw new RuntimeException("Method unsupported");
     }
 
     /**
      * Remove all objects
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      */
@@ -191,7 +159,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     /**
      * Get object at index and initialize it if it does not exist
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -218,7 +185,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     /**
      * Get object at index and initialize it if it does not exist
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -238,7 +204,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     /**
      * Set object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -248,28 +213,12 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     @Override
     public E set(int index, E element)
     {
-        try
-        {
-
-            Object identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) element, entityDescriptor.getIdentifier());
-            Object partitionId = partitionContext.getPartitionId((IManagedEntity)element);
-            IManagedEntity entity = persistenceManager.findByIdInPartition(element.getClass(), identifier, partitionId);
-
-            Object existingObject = identifiers.get(index);
-            values.remove(existingObject);
-            values.put(identifier, entity);
-            identifiers.set(index, identifier);
-            return element;
-        } catch (EntityException e1)
-        {
-            return null;
-        }
+        throw new RuntimeException("Method unsupported");
     }
 
     /**
      * Add object at index
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -285,7 +234,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
      * Remove object at index
      *
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param index Record Index
@@ -303,7 +251,6 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
      * Remove object at index
      *
      *
-     * @author Tim Osborn
      * @since 1.0.0
      *
      * @param o ManagedEntity
@@ -312,7 +259,7 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     @Override
     public boolean remove(Object o)
     {
-        Object identifier = null;
+        Object identifier;
         try
         {
             identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
@@ -325,58 +272,30 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
     }
 
 
+    @SuppressWarnings("WeakerAccess")
     public List<Object> getIdentifiers()
     {
         return identifiers;
     }
 
+    @SuppressWarnings("unused")
     public void setIdentifiers(List<Object> identifiers)
     {
         this.identifiers = identifiers;
     }
 
 
+    @SuppressWarnings("WeakerAccess")
     public EntityDescriptor getEntityDescriptor()
     {
         return entityDescriptor;
     }
 
+    @SuppressWarnings("unused")
     public void setEntityDescriptor(EntityDescriptor entityDescriptor)
     {
         this.entityDescriptor = entityDescriptor;
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
-    }
-
-    /**
-     * Externalize for serialization with use in RMI Server
-     * @param out Object Output Stream.  Most likely a SocketOutputStream
-     *
-     * @throws IOException
-     */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeObject(this.getIdentifiers());
-        out.writeUTF(this.getEntityDescriptor().getClazz().getName());
-        out.writeUTF(this.context.getContextId());
-    }
-
-    /**
-     * Read from the stream source.  Most likely used with the RMI Server
-     * @param in Input Stream aka SocketObjectInputStream
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        this.identifiers = (List) in.readObject();
-        String className = in.readUTF();
-        String contextId = in.readUTF();
-
-        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
-        this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
-        this.persistenceManager = this.context.getSystemPersistenceManager();
+//        this.partitionContext = new PartitionContext(context, entityDescriptor);
     }
 
     @Override
@@ -384,24 +303,27 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Ext
         this.values = new WeakHashMap<>();
         this.identifiers = (List) bufferStream.getCollection();
         String className = bufferStream.getString();
-        String contextId = bufferStream.getString();
+        this.contextId = bufferStream.getString();
 
-        this.context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+
+        SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        if(context == null)
+        {
+            context = (SchemaContext)DefaultSchemaContext.registeredSchemaContexts.values().toArray()[0];
+        }
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        } catch (EntityException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+        } catch (EntityException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-        this.partitionContext = new PartitionContext(context, entityDescriptor);
-        this.persistenceManager = this.context.getSystemPersistenceManager();
+
+        this.persistenceManager = context.getSystemPersistenceManager();
     }
 
     @Override
     public void write(BufferStream bufferStream) throws BufferingException {
         bufferStream.putCollection(this.getIdentifiers());
         bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
-        bufferStream.putString(this.context.getContextId());
+        bufferStream.putString(contextId);
     }
 }

@@ -14,7 +14,7 @@ Onyx Database can run on any platform that supports Java JDK 1.8 or higher
 
 Documentation
 -------------
-For tutorials and detailed documentation go to: [onyx database tutorials](http://onyxdevtools.com/learn/tutorials) 
+For tutorials and detailed documentation go to: [onyx database tutorials](https://onyxdevtools.com/learn/tutorials)
 
 ##How To Install:
 

@@ -1,9 +1,8 @@
 package embedded;
 
 import com.onyx.buffer.BufferStream;
-import com.onyx.request.pojo.RequestEndpoint;
-import com.onyx.request.pojo.RequestToken;
-import com.onyx.request.pojo.RequestTokenType;
+import com.onyx.client.base.RequestToken;
+import com.onyx.exception.EntityException;
 import entities.AllAttributeEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
@@ -12,6 +11,7 @@ import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ public class SerializationTest extends RemoteBaseTest {
 
 
     @Test
-    public void testBasic() throws IOException
+    public void testBasic() throws EntityException
     {
 
         final AllAttributeEntity entity = new AllAttributeEntity();
@@ -41,13 +41,13 @@ public class SerializationTest extends RemoteBaseTest {
         entity.booleanPrimitive = true;
         entity.booleanValue = false;
 
-        RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.DELETE, entity);
+        RequestToken token = new RequestToken(Short.MIN_VALUE, entity);
 
 
         final ByteBuffer buf =  BufferStream.toBuffer(token);
         RequestToken token2 = (RequestToken) BufferStream.fromBuffer(buf);
 
-        Assert.assertTrue(token2.getMessageId() == token.getMessageId());
+        Assert.assertTrue(token2.token == token.token);
 
 
 
@@ -69,7 +69,7 @@ public class SerializationTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testPerformance() throws IOException
+    public void testPerformance() throws EntityException
     {
 
 
@@ -98,7 +98,7 @@ public class SerializationTest extends RemoteBaseTest {
                 entities.add(entity);
             }
 
-            RequestToken token = new RequestToken(RequestEndpoint.PERSISTENCE, RequestTokenType.DELETE, entities);
+            RequestToken token = new RequestToken(Short.MAX_VALUE, (Serializable)entities);
 
             ByteBuffer buffer = BufferStream.toBuffer(token);
             buffer.rewind();

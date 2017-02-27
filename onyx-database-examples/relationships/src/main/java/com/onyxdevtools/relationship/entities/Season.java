@@ -6,10 +6,8 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 3/27/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Season extends ManagedEntity implements IManagedEntity
 {
     public Season()
@@ -25,31 +23,79 @@ public class Season extends ManagedEntity implements IManagedEntity
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    public long seasonId;
+    private long seasonId;
 
     @Attribute
-    public int seasonNumber;
+    private int seasonNumber;
 
     @Attribute
-    public int seasonYear;
+    private int seasonYear;
 
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             cascadePolicy = CascadePolicy.NONE,
             inverseClass = Series.class,
             inverse = "availableSeasons")
-    public Series downloadableSeries;
+    private Series downloadableSeries;
 
 
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             cascadePolicy = CascadePolicy.NONE,
             inverseClass = Series.class,
             inverse = "seasons")
-    public Series series;
+    private Series series;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
                   cascadePolicy = CascadePolicy.SAVE,
                   inverse = "season",
                   inverseClass = Episode.class,
                   fetchPolicy = FetchPolicy.LAZY)
-    public List<Episode> episodes;
+    private List<Episode> episodes;
+
+    public long getSeasonId() {
+        return seasonId;
+    }
+
+    public void setSeasonId(long seasonId) {
+        this.seasonId = seasonId;
+    }
+
+    public int getSeasonNumber() {
+        return seasonNumber;
+    }
+
+    public void setSeasonNumber(int seasonNumber) {
+        this.seasonNumber = seasonNumber;
+    }
+
+    public int getSeasonYear() {
+        return seasonYear;
+    }
+
+    public void setSeasonYear(int seasonYear) {
+        this.seasonYear = seasonYear;
+    }
+
+    public Series getDownloadableSeries() {
+        return downloadableSeries;
+    }
+
+    public void setDownloadableSeries(Series downloadableSeries) {
+        this.downloadableSeries = downloadableSeries;
+    }
+
+    public Series getSeries() {
+        return series;
+    }
+
+    public void setSeries(Series series) {
+        this.series = series;
+    }
+
+    public List<Episode> getEpisodes() {
+        return episodes;
+    }
+
+    public void setEpisodes(List<Episode> episodes) {
+        this.episodes = episodes;
+    }
 }

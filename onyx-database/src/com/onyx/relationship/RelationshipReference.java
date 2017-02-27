@@ -2,18 +2,21 @@ package com.onyx.relationship;
 
 import com.onyx.exception.InvalidDataTypeForOperator;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.util.CompareUtil;
 
 import java.io.IOException;
 
 /**
  * Created by timothy.osborn on 3/19/15.
+ *
+ * Reference of a relationship
  */
 public class RelationshipReference implements ObjectSerializable, Comparable
 {
 
+    @SuppressWarnings("unused")
     public RelationshipReference()
     {
 
@@ -72,13 +75,12 @@ public class RelationshipReference implements ObjectSerializable, Comparable
     }
 
     @Override
-    public void readObject(ObjectBuffer buffer, long position) throws IOException
-    {
-        this.readObject(buffer, position);
+    public void readObject(ObjectBuffer buffer, long position) throws IOException {
+
     }
 
     @Override
-    public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException {
+    public void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException {
 
     }
 
@@ -89,6 +91,7 @@ public class RelationshipReference implements ObjectSerializable, Comparable
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public int compareTo(Object o) {
 
         if(o instanceof RelationshipReference)

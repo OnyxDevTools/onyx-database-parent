@@ -5,9 +5,10 @@ import com.onyx.exception.TransactionException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
-import com.onyx.structure.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.transaction.*;
 import com.onyx.util.FileUtil;
 
@@ -21,26 +22,30 @@ import java.util.function.Function;
 
 /**
  * Created by tosborn1 on 3/25/16.
+ *
+ * Handles logging of a transaction
  */
 public class TransactionControllerImpl implements TransactionController
 {
 
+    @SuppressWarnings("WeakerAccess")
     protected static final byte SAVE = 1;
+    @SuppressWarnings("WeakerAccess")
     protected static final byte DELETE = 2;
-    protected static final byte DELETE_QUERY = 3;
-    protected static final byte UPDATE_QUERY = 4;
+    private static final byte DELETE_QUERY = 3;
+    private static final byte UPDATE_QUERY = 4;
 
-    private final SchemaContext context;
+    private final String contextId;
     private final PersistenceManager persistenceManager;
 
-    protected ReentrantLock transactionLock = new ReentrantLock(true);
+    private final ReentrantLock transactionLock = new ReentrantLock(true);
 
     /**
      * Constructor with schema Context
      */
     public TransactionControllerImpl(SchemaContext context, PersistenceManager persistenceManager)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
         this.persistenceManager = persistenceManager;
     }
 
@@ -51,7 +56,7 @@ public class TransactionControllerImpl implements TransactionController
      */
     public void writeSave(IManagedEntity entity) throws TransactionException
     {
-        final FileChannel file = context.getTransactionFile();
+        final FileChannel file = getContext().getTransactionFile();
 
         transactionLock.lock();
         try {
@@ -63,7 +68,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -79,7 +84,7 @@ public class TransactionControllerImpl implements TransactionController
     public void writeQueryUpdate(Query query) throws TransactionException
     {
 
-        final FileChannel file = context.getTransactionFile();
+        final FileChannel file = getContext().getTransactionFile();
 
         transactionLock.lock();
         try {
@@ -91,7 +96,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -107,7 +112,7 @@ public class TransactionControllerImpl implements TransactionController
     public void writeDelete(IManagedEntity entity) throws TransactionException
     {
 
-        final FileChannel file = context.getTransactionFile();
+        final FileChannel file = getContext().getTransactionFile();
 
         transactionLock.lock();
         try {
@@ -119,7 +124,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -129,11 +134,11 @@ public class TransactionControllerImpl implements TransactionController
 
     /**
      * Write a delete query to a WAL file
-     * @param query
+     * @param query Query to write transaction of
      */
     public void writeDeleteQuery(Query query) throws TransactionException
     {
-        final FileChannel file = context.getTransactionFile();
+        final FileChannel file = getContext().getTransactionFile();
 
         transactionLock.lock();
 
@@ -146,7 +151,7 @@ public class TransactionControllerImpl implements TransactionController
             totalBuffer.rewind();
 
             file.write(totalBuffer);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE);
         }
         finally {
@@ -178,15 +183,12 @@ public class TransactionControllerImpl implements TransactionController
         String[] filePaths = walDirectory.list();
         Arrays.sort(filePaths);
 
-        String transactionFilePath = null;
-        for(int i = 0; i < filePaths.length; i++)
-        {
-            transactionFilePath = filePaths[i];
+        String transactionFilePath;
+        for (String filePath : filePaths) {
+            transactionFilePath = filePath;
             try {
                 applyTransactionLog(fromDirectoryPath + File.separator + transactionFilePath, executeTransaction);
-            }
-            catch (TransactionException e)
-            {
+            } catch (TransactionException e) {
                 e.printStackTrace();
             }
         }
@@ -233,7 +235,7 @@ public class TransactionControllerImpl implements TransactionController
                     if (transactionType == SAVE) {
                         IManagedEntity entity = (IManagedEntity) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new SaveTransaction(entity);
-                        if(executeTransaction.apply(transaction) == true)
+                        if(executeTransaction.apply(transaction))
                         {
                             ((ManagedEntity)entity).ignoreListeners = true;
                             this.persistenceManager.saveEntity(entity);
@@ -242,7 +244,7 @@ public class TransactionControllerImpl implements TransactionController
                     } else if (transactionType == DELETE) {
                         IManagedEntity entity = (IManagedEntity) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new DeleteTransaction(entity);
-                        if(executeTransaction.apply(transaction) == true)
+                        if(executeTransaction.apply(transaction))
                         {
                             ((ManagedEntity)entity).ignoreListeners = true;
                             this.persistenceManager.deleteEntity(entity);
@@ -251,14 +253,14 @@ public class TransactionControllerImpl implements TransactionController
                     } else if (transactionType == UPDATE_QUERY) {
                         Query query = (Query) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new UpdateQueryTransaction(query);
-                        if(executeTransaction.apply(transaction) == true)
+                        if(executeTransaction.apply(transaction))
                         {
                             this.persistenceManager.executeUpdate(query);
                         }
                     } else if (transactionType == DELETE_QUERY) {
                         Query query = (Query) BufferStream.fromBuffer(transactionBuffer);
                         transaction = new DeleteQueryTransaction(query);
-                        if(executeTransaction.apply(transaction) == true)
+                        if(executeTransaction.apply(transaction))
                         {
                             this.persistenceManager.executeDelete(query);
                         }
@@ -280,4 +282,9 @@ public class TransactionControllerImpl implements TransactionController
         return true;
     }
 
+    @SuppressWarnings("WeakerAccess")
+    protected SchemaContext getContext()
+    {
+        return DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+    }
 }

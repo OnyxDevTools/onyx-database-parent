@@ -1,8 +1,8 @@
 package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.structure.DefaultMapBuilder;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DefaultMapBuilder;
+import com.onyx.diskmap.MapBuilder;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -31,25 +31,5 @@ public class AbstractTest
             testDataBase.delete();
         }
     }
-
-    @Test
-    @Ignore
-    public void testInit()
-    {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
-        Map<String, Externalizable> myMap = store.getHashMap("first");
-        store.close();
-    }
-
-    @Test
-    @Ignore
-    public void testInitMultiple()
-    {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
-        Map<String, Externalizable> myMap = store.getHashMap("first");
-        Map<String, Externalizable> myMap2 = store.getHashMap("second");
-        store.close();
-    }
-
 
 }

@@ -1,6 +1,5 @@
 package com.onyx.persistence.context.impl;
 
-import com.onyx.exception.SingletonException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 
@@ -33,11 +32,7 @@ import java.nio.file.Files;
  */
 public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaContext
 {
-    private String remoteEndpoint;
-
-    protected PersistenceManager defaultRemotePersistenceManager = null;
-
-    protected PersistenceManager socketPersistenceManager = null;
+    private PersistenceManager defaultRemotePersistenceManager = null;
 
     /**
      * Default Constructor
@@ -94,34 +89,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
     }
 
     /**
-     * Set Default Socket Persistence Manager
-     * This is not meant to be a public API and is set by the factory.  This is used when de-serializing the Lazy Collections
-     * so that the lazy collection can use it to hydrate items within it.
-     * @since 1.0.0
-     * @param socketPersistenceManager Default Persistence manager for System Entities
-     */
-    public void setSocketPersistenceManager(PersistenceManager socketPersistenceManager)
-    {
-        this.socketPersistenceManager = socketPersistenceManager;
-    }
-
-    /**
-     * Used in order to keep fluidity within the following classes on api calls.
-     * If one of the collections were instantiated using the RMI socket externalizing.
-     * This is used by the externalize to keep consistency on how the collection was initiated.
-     *
-     * @see com.onyx.persistence.collections.LazyRelationshipCollection
-     * @see com.onyx.persistence.collections.LazyQueryCollection
-     *
-     * @since 1.0.0
-     * @return Socket entity persistence manager
-     */
-    public PersistenceManager getSocketPersistenceManager()
-    {
-        return socketPersistenceManager;
-    }
-
-    /**
      * Start the context and initiate the local cache information
      * @since 1.0.0
      */
@@ -141,42 +108,4 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
         super.start();
     }
 
-    /**
-     * Close the local database cache store
-     * @since 1.0.0
-     */
-    public void shutdown() throws SingletonException
-    {
-        super.shutdown();
-    }
-
-    /**
-     * Get Remote Endpoint
-     * @since 1.0.0
-     * @return Remote Endpoint URI String
-     */
-    public String getRemoteEndpoint()
-    {
-        return remoteEndpoint;
-    }
-
-    /**
-     * Set Remote Endpoint.  This should be done by the database connection factory.  Also it should be formatted onx://...
-     * @since 1.0.0
-     * @param remoteEndpoint Remote Endpoint
-     */
-    public void setRemoteEndpoint(String remoteEndpoint)
-    {
-        this.remoteEndpoint = remoteEndpoint;
-    }
-
-    /**
-     * Get Remote File Base
-     * @since 1.0.0
-     * @return Remote File Location
-     */
-    public String getRemoteFileBase()
-    {
-        return location.replaceFirst("ws://", "http://");
-    }
 }

@@ -3,9 +3,7 @@ package com.onyx.persistence.manager;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryOrder;
+import com.onyx.persistence.query.*;
 import com.onyx.stream.QueryStream;
 
 import java.util.List;
@@ -44,6 +42,7 @@ public interface PersistenceManager {
      * @since 1.0.0
      * @param context Schema Context implementation
      */
+    @SuppressWarnings("unused")
     void setContext(SchemaContext context);
 
     /**
@@ -52,6 +51,7 @@ public interface PersistenceManager {
      * @since 1.0.0
      * @return context Schema Context Implementation
      */
+    @SuppressWarnings("unused")
     SchemaContext getContext();
 
     /**
@@ -65,6 +65,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occured while persisting an entity
      */
+    @SuppressWarnings("unused")
     IManagedEntity saveEntity(IManagedEntity entity) throws EntityException;
 
     /**
@@ -76,6 +77,7 @@ public interface PersistenceManager {
      * @param entities List of entities
      * @throws EntityException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
      */
+    @SuppressWarnings("unused")
     void saveEntities(List<? extends IManagedEntity> entities) throws EntityException;
 
     /**
@@ -101,6 +103,7 @@ public interface PersistenceManager {
      * @param entities List of entities
      * @throws EntityException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      */
+    @SuppressWarnings("unused")
     void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException;
 
     /**
@@ -115,6 +118,16 @@ public interface PersistenceManager {
      * @return Number of entities deleted
      */
     int executeDelete(Query query) throws EntityException;
+
+    /**
+     * Execute a delete query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException Exception when deleting entities
+     */
+    @SuppressWarnings("unused")
+    QueryResult executeDeleteForResult(Query query) throws EntityException;
 
     /**
      * Updates all rows returned by a given query
@@ -132,6 +145,16 @@ public interface PersistenceManager {
     int executeUpdate(Query query) throws EntityException;
 
     /**
+     * Execute an update query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException when an update query failed
+     */
+    @SuppressWarnings("unused")
+    QueryResult executeUpdateForResult(Query query) throws EntityException;
+
+    /**
      * Execute query with criteria and optional row limitations
      *
      * @since 1.0.0
@@ -143,6 +166,16 @@ public interface PersistenceManager {
      * @throws EntityException Error while executing query
      */
     List executeQuery(Query query) throws EntityException;
+
+    /**
+     * Execute a query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException when the query is mal formed or general exception
+     */
+    @SuppressWarnings("unused")
+    QueryResult executeQueryForResult(Query query) throws EntityException;
 
     /**
      * Execute query with criteria and optional row limitations.  Specify lazy instantiation of query results.
@@ -158,6 +191,16 @@ public interface PersistenceManager {
     List executeLazyQuery(Query query) throws EntityException;
 
     /**
+     * Execute a lazy query and return a result object.  This is so that it will play nicely as a proxy object
+     * @param query Query used to filter entities with criteria
+     * @since 1.2.0
+     * @return The results including the original result from the query execute and the updated query object
+     * @throws EntityException General exception happened when the query.
+     */
+    @SuppressWarnings("unused")
+    QueryResult executeLazyQueryForResult(Query query) throws EntityException;
+
+    /**
      * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition key if the data is partitioned.
      * All relationships are hydrated based on their fetch policy.
      * The entity must also not be null.
@@ -170,6 +213,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Error when hydrating entity
      */
+    @SuppressWarnings("unused")
     IManagedEntity find(IManagedEntity entity) throws EntityException;
 
     /**
@@ -184,6 +228,7 @@ public interface PersistenceManager {
      * @return Managed Entity
      * @throws EntityException Error when finding entity
      */
+    @SuppressWarnings("unused")
     IManagedEntity findById(Class clazz, Object id) throws EntityException;
 
     /**
@@ -199,6 +244,7 @@ public interface PersistenceManager {
      * @return Managed Entity
      * @throws EntityException Error when finding entity within partition specified
      */
+    @SuppressWarnings("unused")
     IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException;
 
     /**
@@ -214,6 +260,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Error when finding entity within partition specified
      */
+    @SuppressWarnings("unused")
     boolean exists(IManagedEntity entity) throws EntityException;
 
     /**
@@ -231,6 +278,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Error when finding entity within partition specified
      */
+    @SuppressWarnings("unused")
     boolean exists(IManagedEntity entity, Object partitionId) throws EntityException;
 
     /**
@@ -247,6 +295,19 @@ public interface PersistenceManager {
     void initialize(IManagedEntity entity, String attribute) throws EntityException;
 
     /**
+     * Get relationship for an entity
+     *
+     * @param entity The entity to load
+     * @param attribute Attribute that represents the relationship
+     * @return The relationship Value
+     * @throws EntityException Error when hydrating relationship.  The attribute must exist and must be a annotated with a relationship
+     * @since 1.2.0
+     */
+    @SuppressWarnings("unused")
+    Object getRelationship(IManagedEntity entity, String attribute) throws EntityException;
+
+
+    /**
      * Provides a list of all entities with a given type
      *
      * @param clazz  Type of managed entity to retrieve
@@ -255,6 +316,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while fetching results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz) throws EntityException;
 
     /**
@@ -270,6 +332,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz, QueryCriteria criteria) throws EntityException;
 
     /**
@@ -304,6 +367,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException;
 
     /**
@@ -321,6 +385,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException;
 
     /**
@@ -340,6 +405,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException;
 
     /**
@@ -359,7 +425,10 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException;
+
+
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -407,6 +476,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
+    @SuppressWarnings("unused")
     List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException;
 
     /**
@@ -420,6 +490,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Error occurred while saving relationship.
      */
+    @SuppressWarnings("unused")
     void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException;
 
     /**
@@ -431,6 +502,7 @@ public interface PersistenceManager {
      * @return Managed Entity
      * @throws EntityException The reference does not exist for that type
      */
+    @SuppressWarnings("unused")
     IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException;
 
     /**
@@ -447,6 +519,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException error occurred while attempting to retrieve entity.
      */
+    @SuppressWarnings("unused")
     IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException;
 
     /**
@@ -459,6 +532,7 @@ public interface PersistenceManager {
      * @param streamer Instance of the streamer to use to stream the data
      *
      */
+    @SuppressWarnings("unused")
     void stream(Query query, QueryStream streamer) throws EntityException;
 
     /**
@@ -471,6 +545,7 @@ public interface PersistenceManager {
      * @param queryStreamClass Class instance of the database stream
      *
      */
+    @SuppressWarnings("unused")
     void stream(Query query, Class queryStreamClass) throws EntityException;
 
     /**

@@ -22,6 +22,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -115,15 +117,19 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 
         System.out.println("Took "+(after-time)+" milliseconds");
 
-        for(OneToOneParent entity : entitiesToValidate)
-        {
+        entitiesToValidate.parallelStream().forEach(entity -> {
             OneToOneParent newEntity = new OneToOneParent();
             newEntity.identifier = entity.identifier;
-            manager.find(newEntity);
+            try {
+                manager.find(newEntity);
+            } catch (EntityException e) {
+                Assert.assertTrue(false);
+            }
             Assert.assertTrue(newEntity.identifier.equals(entity.identifier));
             Assert.assertTrue(newEntity.cascadeChild != null);
             Assert.assertTrue(newEntity.child != null);
-        }
+        });
+
     }
 
 
@@ -161,20 +167,16 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 
                 List<ManyToManyParent> tmpList = new ArrayList<>(entities);
                 entities.removeAll(entities);
-                Runnable runnable = new Runnable() {
-                    @Override
-                    public void run()
+                Runnable runnable = () -> {
+                    try
                     {
-                        try
+                        for(ManyToManyParent entity1 : tmpList)
                         {
-                            for(ManyToManyParent entity1 : tmpList)
-                            {
-                                manager.saveEntity(entity1);
-                            }
-                        } catch (EntityException e)
-                        {
-                            e.printStackTrace();
+                            manager.saveEntity(entity1);
                         }
+                    } catch (EntityException e)
+                    {
+                        e.printStackTrace();
                     }
                 };
                 threads.add(pool.submit(runnable));
@@ -187,10 +189,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
             try
             {
                 future.get();
-            } catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            } catch (ExecutionException e)
+            } catch (InterruptedException | ExecutionException e)
             {
                 e.printStackTrace();
             }
@@ -202,15 +201,19 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 
         System.out.println("Took "+(after-time)+" milliseconds");
 
-        for(ManyToManyParent entity : entitiesToValidate)
-        {
+        entitiesToValidate.parallelStream().forEach(manyToManyParent -> {
             ManyToManyParent newEntity = new ManyToManyParent();
-            newEntity.identifier = entity.identifier;
-            manager.find(newEntity);
-            Assert.assertTrue(newEntity.identifier.equals(entity.identifier));
+            newEntity.identifier = manyToManyParent.identifier;
+            try {
+                manager.find(newEntity);
+            } catch (EntityException e) {
+                Assert.assertTrue(false);
+            }
+            Assert.assertTrue(newEntity.identifier.equals(manyToManyParent.identifier));
             Assert.assertTrue(newEntity.childCascade.get(0) != null);
-            Assert.assertTrue(newEntity.childCascade.get(0).identifier.equals(entity.childCascade.get(0).identifier));
-        }
+            Assert.assertTrue(newEntity.childCascade.get(0).identifier.equals(manyToManyParent.childCascade.get(0).identifier));
+        });
+
     }
 
     @Test
@@ -276,20 +279,16 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 
                 List<ManyToManyParent> tmpList2 = new ArrayList<>(entities2);
                 entities2.removeAll(entities2);
-                Runnable runnable2 = new Runnable() {
-                    @Override
-                    public void run()
+                Runnable runnable2 = () -> {
+                    try
                     {
-                        try
+                        for(ManyToManyParent entity1 : tmpList2)
                         {
-                            for(ManyToManyParent entity1 : tmpList2)
-                            {
-                                manager.saveEntity(entity1);
-                            }
-                        } catch (EntityException e)
-                        {
-                            e.printStackTrace();
+                            manager.saveEntity(entity1);
                         }
+                    } catch (EntityException e)
+                    {
+                        e.printStackTrace();
                     }
                 };
 
@@ -304,10 +303,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
             try
             {
                 future.get();
-            } catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            } catch (ExecutionException e)
+            } catch (InterruptedException | ExecutionException e)
             {
                 e.printStackTrace();
             }
@@ -319,21 +315,25 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 
         System.out.println("Took "+(after-time)+" milliseconds");
 
-        int failures = 0;
+        final AtomicInteger failures = new AtomicInteger(0);
 
-        for(ManyToManyParent entity : entitiesToValidate)
-        {
+        entitiesToValidate.parallelStream().forEach(manyToManyParent -> {
             ManyToManyParent newEntity = new ManyToManyParent();
-            newEntity.identifier = entity.identifier;
-            manager.find(newEntity);
-            Assert.assertTrue(newEntity.identifier.equals(entity.identifier));
+            newEntity.identifier = manyToManyParent.identifier;
+            try {
+                manager.find(newEntity);
+            } catch (EntityException e) {
+                failures.addAndGet(1);
+            }
+            Assert.assertTrue(newEntity.identifier.equals(manyToManyParent.identifier));
             if(newEntity.childCascadeSave.size() != 2)
             {
-                failures++;
+                failures.addAndGet(1);
             }
-        }
+        });
 
-        Assert.assertTrue(failures == 0);
+
+        Assert.assertTrue("There were " + failures.get(), failures.get() == 0);
 
     }
 

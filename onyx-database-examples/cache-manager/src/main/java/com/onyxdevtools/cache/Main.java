@@ -14,6 +14,7 @@ import java.util.List;
 public class Main
 {
 
+    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws EntityException {
 
         PersistenceManagerFactory factory = new CacheManagerFactory(); //1

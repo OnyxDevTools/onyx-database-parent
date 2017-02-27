@@ -57,6 +57,7 @@ enum PropertyType {
      *
      * @param type Class type
      */
+    @SuppressWarnings("unused")
     PropertyType(Class type) {
         this.type = type;
     }
@@ -155,6 +156,7 @@ enum PropertyType {
      *
      * @return Class type
      */
+    @SuppressWarnings("unused")
     public Class getType() {
         return type;
     }

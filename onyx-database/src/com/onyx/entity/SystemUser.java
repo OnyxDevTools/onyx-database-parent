@@ -10,69 +10,83 @@ import java.security.Principal;
 
 /**
  * Created by cosbor11 on 3/2/2015.
+ *
+ * User for the database
  */
 @Entity
 public class SystemUser extends AbstractSystemEntity implements IManagedEntity, Principal
 {
 
+    @SuppressWarnings("unused")
     public SystemUser()
     {
 
     }
 
-    @Identifier(loadFactor = 1)
+    @SuppressWarnings("WeakerAccess")
+    @Identifier(loadFactor = 3)
     @Attribute
     protected String username;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute(size = 255)
     protected String password;
 
     @Attribute
-    protected int roleOrdinal;
+    private int roleOrdinal;
 
-    protected SystemUserRole role;
+    private SystemUserRole role;
 
+    @SuppressWarnings("unused")
     public String getId() {
         return username;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id) {
         this.username = id;
     }
 
+    @SuppressWarnings("unused")
     public String getUsername() {
         return username;
     }
 
+    @SuppressWarnings("unused")
     public void setUsername(String username) {
         this.username = username;
     }
 
+    @SuppressWarnings("unused")
     public String getPassword() {
         return password;
     }
 
+    @SuppressWarnings("unused")
     public void setPassword(String password) {
         this.password = password;
     }
 
-
+    @SuppressWarnings("unused")
     public int getRoleOrdinal()
     {
         return roleOrdinal;
     }
 
+    @SuppressWarnings("unused")
     public void setRoleOrdinal(int roleOrdinal)
     {
         this.roleOrdinal = roleOrdinal;
     }
 
+    @SuppressWarnings("unused")
     public SystemUserRole getRole()
     {
         role = SystemUserRole.values()[roleOrdinal];
         return role;
     }
 
+    @SuppressWarnings("unused")
     public void setRole(SystemUserRole role)
     {
         this.role = role;
@@ -86,8 +100,8 @@ public class SystemUser extends AbstractSystemEntity implements IManagedEntity, 
 
         SystemUser that = (SystemUser) o;
 
-        if (username != null ? !username.equals(that.username) : that.username != null) return false;
-        return password != null ? password.equals(that.password) : that.password == null;
+        return username != null ? username.equals(that.username) : that.username == null
+                && (password != null ? password.equals(that.password) : that.password == null);
 
     }
 

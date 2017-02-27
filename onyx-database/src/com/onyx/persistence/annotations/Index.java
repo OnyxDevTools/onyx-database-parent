@@ -42,6 +42,6 @@ public @interface Index
      *
      * @since 1.2.0
      */
-    byte loadFactor() default 5;
+    @SuppressWarnings("unused") byte loadFactor() default 5;
 
 }

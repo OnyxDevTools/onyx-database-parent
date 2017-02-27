@@ -21,24 +21,25 @@ public class JPAPersistenceManager implements ProviderPersistenceManager {
 
     private static final int CONCURRENT_ENTITY_MANAGERS = 8;
     // Database type
-    final DatabaseProvider databaseProvider;
+    private final DatabaseProvider databaseProvider;
 
     // Available entity managers to use
-    BlockingQueue<EntityManager> entityManagers;
+    private final BlockingQueue<EntityManager> entityManagers;
 
     // We must use a single entity manager for reading data while performing insertions with the remainder of the pool
-    EntityManager entityManagerForRead = null;
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final EntityManager entityManagerForRead;
 
     /**
      * Constructor with factory and type
      *
      * @param entityManagerFactory The factory for instantiating the entity managers
-     * @param databaseProvider
+     * @param databaseProvider What type of database
      */
     public JPAPersistenceManager(EntityManagerFactory entityManagerFactory, DatabaseProvider databaseProvider) {
         this.databaseProvider = databaseProvider;
         this.entityManagerForRead = entityManagerFactory.createEntityManager();
-        this.entityManagers = new LinkedBlockingQueue(CONCURRENT_ENTITY_MANAGERS);
+        this.entityManagers = new LinkedBlockingQueue<>(CONCURRENT_ENTITY_MANAGERS);
         for(int i = 0; i < CONCURRENT_ENTITY_MANAGERS; i++)
             this.entityManagers.add(entityManagerFactory.createEntityManager());
     }

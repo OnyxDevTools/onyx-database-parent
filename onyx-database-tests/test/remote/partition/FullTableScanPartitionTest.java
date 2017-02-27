@@ -20,13 +20,11 @@ import java.util.List;
  * Created by timothy.osborn on 2/12/15.
  */
 
-@Category({ RemoteServerTests.class })
+@Category({RemoteServerTests.class})
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class FullTableScanPartitionTest extends BasePartitionTest
-{
+public class FullTableScanPartitionTest extends BasePartitionTest {
     @Test
-    public void aTestSavePartitionEntityWithIndex()
-    {
+    public void aTestSavePartitionEntityWithIndex() {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -36,8 +34,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndex() throws EntityException
-    {
+    public void bTestQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -60,8 +57,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
-    {
+    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -83,8 +79,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void cTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
-    {
+    public void dTestQueryFindQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -106,31 +101,29 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-         public void dTestDeleteQueryPartitionEntity() throws EntityException
-{
-    FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
-    FullTablePartitionEntity.id = 1l;
-    FullTablePartitionEntity.partitionId = 3l;
-    FullTablePartitionEntity.indexVal = 5l;
+    public void eTestDeleteQueryPartitionEntity() throws EntityException {
+        FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
+        FullTablePartitionEntity.id = 1l;
+        FullTablePartitionEntity.partitionId = 3l;
+        FullTablePartitionEntity.indexVal = 5l;
 
-    save(FullTablePartitionEntity);
+        save(FullTablePartitionEntity);
 
-    entities.partition.FullTablePartitionEntity FullTablePartitionEntity2 = new FullTablePartitionEntity();
-    FullTablePartitionEntity2.id = 2l;
-    FullTablePartitionEntity2.partitionId = 2l;
-    FullTablePartitionEntity2.indexVal = 5l;
+        entities.partition.FullTablePartitionEntity FullTablePartitionEntity2 = new FullTablePartitionEntity();
+        FullTablePartitionEntity2.id = 2l;
+        FullTablePartitionEntity2.partitionId = 2l;
+        FullTablePartitionEntity2.indexVal = 5l;
 
-    save(FullTablePartitionEntity2);
+        save(FullTablePartitionEntity2);
 
-    Query query = new Query(entities.partition.FullTablePartitionEntity.class, new QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5l).and("partitionId", QueryCriteriaOperator.EQUAL, 2l));
+        Query query = new Query(entities.partition.FullTablePartitionEntity.class, new QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5l).and("partitionId", QueryCriteriaOperator.EQUAL, 2l));
 
-    int results = manager.executeDelete(query);
-    Assert.assertTrue(results == 1);
-}
+        int results = manager.executeDelete(query);
+        Assert.assertTrue(results == 1);
+    }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndex() throws EntityException
-    {
+    public void fTestDeleteQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -153,8 +146,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
-    {
+    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
         FullTablePartitionEntity entity = new FullTablePartitionEntity();
         entity.id = 1l;
         entity.partitionId = 3l;
@@ -177,8 +169,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
 
 
     @Test
-    public void dTestUpdateQueryPartitionEntity() throws EntityException
-    {
+    public void hTestUpdateQueryPartitionEntity() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -201,8 +192,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndex() throws EntityException
-    {
+    public void iTestUpdateQueryPartitionEntityWithIndex() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -226,8 +216,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
-    {
+    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -250,8 +239,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestUpdatePartitionField() throws EntityException
-    {
+    public void kTestUpdatePartitionField() throws EntityException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;

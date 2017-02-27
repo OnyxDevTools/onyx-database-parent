@@ -4,6 +4,8 @@ import com.onyx.exception.BufferingException;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
+import java.lang.reflect.Array;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
@@ -15,11 +17,13 @@ import java.util.*;
  * and how it interacts with the Externalizable interface.  An exception to that is that the underlying io is to
  * a ByteBuffer.
  */
+@SuppressWarnings("unchecked")
 public class BufferStream {
 
     /**
      * Default constructor with no buffer
      */
+    @SuppressWarnings("WeakerAccess")
     public BufferStream()
     {
         this(allocate(ExpandableByteBuffer.BUFFER_ALLOCATION));
@@ -44,13 +48,13 @@ public class BufferStream {
     private boolean isComingFromBuffer = false;
 
     // Buffer pool to pick from existing so that we can avoid re-allocation
-    private static TreeSet<RecycledBuffer> buffers = new TreeSet<>();
+    private final static TreeSet<RecycledBuffer> buffers = new TreeSet<>();
 
     // References by class and object hash.
-    private Map<Class, Map<Object, Integer>> references = new HashMap();
+    private final Map<Class, Map<Object, Integer>> references = new HashMap<>();
 
     // References by index number ordered by first used
-    private Map<Integer, Object> referencesByIndex = new HashMap();
+    private final Map<Integer, Object> referencesByIndex = new HashMap();
 
     // 5 Megabytes of allocated memory max that can be sitting in stale unused buffers waiting to be used
     private static final int MAX_MEMORY_USE = 1024 * 1024 * 5;
@@ -60,7 +64,7 @@ public class BufferStream {
      *
      * @param reference Object reference
      */
-    protected void addReference(Object reference) {
+    private void addReference(Object reference) {
         // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the object references
         // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
@@ -91,7 +95,7 @@ public class BufferStream {
      * @param reference Reference of an object
      * @return if it exists it will return the index number otherwise -1
      */
-    protected int referenceIndex(Object reference) {
+    private int referenceIndex(Object reference) {
         if (reference == null)
             return -1;
 
@@ -104,7 +108,7 @@ public class BufferStream {
         if (index == null) {
             return -1;
         }
-        return index.intValue();
+        return index;
     }
 
     /**
@@ -112,9 +116,8 @@ public class BufferStream {
      * @param index Index to seek to
      * @return The actual object referenced
      */
-    protected Object referenceOf(int index) {
-        Object object = referencesByIndex.get(index);
-        return object;
+    private Object referenceOf(int index) {
+        return referencesByIndex.get(index);
     }
 
     /**
@@ -160,7 +163,7 @@ public class BufferStream {
         bufferStream.expandableByteBuffer = new ExpandableByteBuffer(buffer, bufferStartingPosition, maxBufferSize);
         bufferStream.isComingFromBuffer = true;
 
-        Object returnValue = null;
+        Object returnValue;
 
         try {
             returnValue = bufferStream.getObject();
@@ -169,7 +172,12 @@ public class BufferStream {
             throw e;
         } catch (Exception e) {
             buffer.position(maxBufferSize + bufferStartingPosition);
-            throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE);
+            if(e instanceof BufferUnderflowException)
+                throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW);
+            else if(e instanceof BufferingException)
+                throw (BufferingException)e;
+            else
+                throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE);
         }
 
         if (buffer.position() - bufferStartingPosition != maxBufferSize) {
@@ -198,7 +206,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putEnum(Enum enumVal) throws BufferingException {
+    @SuppressWarnings("unused")
+    private void putEnum(Enum enumVal) throws BufferingException {
         putObject(enumVal.getClass());
         putByte((byte) enumVal.ordinal());
     }
@@ -211,61 +220,58 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putArray(Object array) throws BufferingException {
+    private void putArray(Object array) throws BufferingException {
 
         if (array.getClass() == long[].class) {
             final long[] arr = (long[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Long.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.putLong(arr[i]);
+            for (long anArr : arr) expandableByteBuffer.buffer.putLong(anArr);
         } else if (array.getClass() == int[].class) {
             final int[] arr = (int[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Integer.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.putInt(arr[i]);
+            for (int anArr : arr) expandableByteBuffer.buffer.putInt(anArr);
         } else if (array.getClass() == float[].class) {
             final float[] arr = (float[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Float.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.putFloat(arr[i]);
+            for (float anArr : arr) expandableByteBuffer.buffer.putFloat(anArr);
         } else if (array.getClass() == byte[].class) {
             final byte[] arr = (byte[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Byte.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.put(arr[i]);
+            for (byte anArr : arr) expandableByteBuffer.buffer.put(anArr);
         } else if (array.getClass() == char[].class) {
             final char[] arr = (char[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Character.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.putChar(arr[i]);
+            for (char anArr : arr) expandableByteBuffer.buffer.putChar(anArr);
         } else if (array.getClass() == short[].class) {
             final short[] arr = (short[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Short.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.putShort(arr[i]);
+            for (short anArr : arr) expandableByteBuffer.buffer.putShort(anArr);
         } else if (array.getClass() == boolean[].class) {
             final boolean[] arr = (boolean[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Byte.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.put((byte) ((arr[i] == true) ? 1 : 0));
+            for (boolean anArr : arr) expandableByteBuffer.buffer.put((byte) ((anArr) ? 1 : 0));
         } else if (array.getClass() == double[].class) {
             final double[] arr = (double[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Double.BYTES * arr.length);
-            for (int i = 0; i < arr.length; i++)
-                expandableByteBuffer.buffer.putDouble(arr[i]);
-        } else {
+            for (double anArr : arr) expandableByteBuffer.buffer.putDouble(anArr);
+        } else if(array.getClass() == Object[].class){
             final Object[] arr = (Object[]) array;
             putInt(arr.length);
-            for (int i = 0; i < arr.length; i++)
-                putObject(arr[i]);
+            for (Object anArr : arr) putObject(anArr);
+        } else
+        {
+            putObjectClass(array.getClass().getComponentType());
+            final Object[] arr = (Object[]) array;
+            putInt(arr.length);
+            for (Object anArr : arr) putObject(anArr);
         }
     }
 
@@ -293,7 +299,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putDate(Date value) throws BufferingException {
+    private void putDate(Date value) throws BufferingException {
         putLong(value.getTime());
     }
 
@@ -301,11 +307,11 @@ public class BufferStream {
      * Put a Class to the buffer
      *
      * @since 1.1.0
-     * @param value Class to write
+     * @param type Class to write
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putObjectClass(Class type) throws BufferingException {
+    private void putObjectClass(Class type) throws BufferingException {
 
         addReference(type);
 
@@ -322,7 +328,7 @@ public class BufferStream {
      * Put a Collection to a buffer.  If the Collection class is un-accessible it will default to an ArrayCollection
      *
      * @since 1.1.0
-     * @param value Collection to write
+     * @param collection Collection to write
      *
      * @throws BufferingException Generic Buffer Exception
      */
@@ -337,9 +343,8 @@ public class BufferStream {
 
         putInt(collection.size());
 
-        Iterator iterator = collection.iterator();
-        while (iterator.hasNext()) {
-            putObject(iterator.next());
+        for (Object aCollection : collection) {
+            putObject(aCollection);
         }
 
     }
@@ -348,11 +353,11 @@ public class BufferStream {
      * Put a Map to the buffer.  If the structure instance class is un-accessible it will chose to use a HashMap
      *
      * @since 1.1.0
-     * @param value Map to write
+     * @param map Map to write
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putMap(Map map) throws BufferingException {
+    private void putMap(Map map) throws BufferingException {
 
         try {
             Class clazz = Class.forName(map.getClass().getName());
@@ -387,7 +392,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putBuffered(BufferStreamable bufferStreamable) throws BufferingException {
+    private void putBuffered(BufferStreamable bufferStreamable) throws BufferingException {
         putObject(bufferStreamable.getClass());
         bufferStreamable.write(this);
     }
@@ -411,7 +416,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putOther(Object object) throws BufferingException {
+    private void putOther(Object object) throws BufferingException {
 
         putObject(object.getClass());
         addReference(object);
@@ -459,7 +464,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putByte(byte value) throws BufferingException {
+    @SuppressWarnings("RedundantThrows")
+    private void putByte(byte value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put(value);
     }
@@ -472,6 +478,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public void putInt(int value) throws BufferingException {
         expandableByteBuffer.ensureSize(Integer.BYTES);
         expandableByteBuffer.buffer.putInt(value);
@@ -485,7 +492,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putLong(long value) throws BufferingException {
+    @SuppressWarnings("RedundantThrows")
+    private void putLong(long value) throws BufferingException {
         expandableByteBuffer.ensureSize(Long.BYTES);
         expandableByteBuffer.buffer.putLong(value);
     }
@@ -498,6 +506,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public void putShort(short value) throws BufferingException {
         expandableByteBuffer.ensureSize(Short.BYTES);
         expandableByteBuffer.buffer.putShort(value);
@@ -511,7 +520,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putFloat(float value) throws BufferingException {
+    @SuppressWarnings("RedundantThrows")
+    private void putFloat(float value) throws BufferingException {
         expandableByteBuffer.ensureSize(Float.BYTES);
         expandableByteBuffer.buffer.putFloat(value);
     }
@@ -524,7 +534,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putDouble(double value) throws BufferingException {
+    @SuppressWarnings("RedundantThrows")
+    private void putDouble(double value) throws BufferingException {
         expandableByteBuffer.ensureSize(Double.BYTES);
         expandableByteBuffer.buffer.putDouble(value);
     }
@@ -537,7 +548,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putBoolean(boolean value) throws BufferingException {
+    @SuppressWarnings("RedundantThrows")
+    private void putBoolean(boolean value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put((value) ? (byte) 1 : (byte) 0);
     }
@@ -550,7 +562,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putChar(char value) throws BufferingException {
+    @SuppressWarnings("RedundantThrows")
+    private void putChar(char value) throws BufferingException {
         expandableByteBuffer.ensureSize(Character.BYTES);
         expandableByteBuffer.buffer.putChar(value);
     }
@@ -560,7 +573,7 @@ public class BufferStream {
      * the packet.  For primitives, I recommend using the primitive put methods.
      *
      * @since 1.1.0
-     * @param value object to write
+     * @param object object to write
      *
      * @throws BufferingException Generic Buffer Exception
      */
@@ -625,6 +638,7 @@ public class BufferStream {
                 case BOOLEAN_ARRAY:
                 case CHAR_ARRAY:
                 case OBJECT_ARRAY:
+                case OTHER_ARRAY:
                     putArray(object);
                     break;
                 case BUFFERED:
@@ -650,7 +664,12 @@ public class BufferStream {
                     break;
             }
         } catch (Exception e) {
-            throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, (object != null) ? object.getClass() : null);
+            if(e instanceof BufferUnderflowException)
+                throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, (object != null) ? object.getClass() : null);
+            else if(e instanceof BufferingException)
+                throw (BufferingException)e;
+            else
+                throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, (object != null) ? object.getClass() : null);
         }
     }
 
@@ -667,12 +686,11 @@ public class BufferStream {
      * @return The instantiated object.
      * @throws BufferingException Instantiation failure
      */
+    @SuppressWarnings("WeakerAccess")
     public Object instantiate(Class type) throws BufferingException {
         try {
             return ReflectionUtil.instantiate(type);
-        } catch (InstantiationException e) {
-            throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, type);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, type);
         }
     }
@@ -690,6 +708,7 @@ public class BufferStream {
      * @return long read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public long getLong() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Long.BYTES);
         return expandableByteBuffer.buffer.getLong();
@@ -702,6 +721,7 @@ public class BufferStream {
      * @return int read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public int getInt() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
         return expandableByteBuffer.buffer.getInt();
@@ -714,6 +734,7 @@ public class BufferStream {
      * @return float read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public float getFloat() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Float.BYTES);
         return expandableByteBuffer.buffer.getFloat();
@@ -726,6 +747,7 @@ public class BufferStream {
      * @return double read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public double getDouble() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Double.BYTES);
         return expandableByteBuffer.buffer.getDouble();
@@ -738,6 +760,7 @@ public class BufferStream {
      * @return byte read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public byte getByte() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
         return expandableByteBuffer.buffer.get();
@@ -750,6 +773,7 @@ public class BufferStream {
      * @return short read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public short getShort() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Short.BYTES);
         return expandableByteBuffer.buffer.getShort();
@@ -762,6 +786,7 @@ public class BufferStream {
      * @return boolean read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public boolean getBoolean() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
         return (expandableByteBuffer.buffer.get() == 1);
@@ -774,6 +799,7 @@ public class BufferStream {
      * @return char read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public char getChar() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Character.BYTES);
         return expandableByteBuffer.buffer.getChar();
@@ -838,6 +864,7 @@ public class BufferStream {
             case BOOLEAN_ARRAY:
             case CHAR_ARRAY:
             case OBJECT_ARRAY:
+            case OTHER_ARRAY:
                 return getArray(bufferObjectType);
             case BUFFERED:
                 return getBuffered();
@@ -865,9 +892,10 @@ public class BufferStream {
      * @return The Object read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public Object getOther() throws BufferingException {
         Class objectType = (Class) getObject();
-        Object instance = null;
+        Object instance;
         try {
             instance = instantiate(objectType);
             addReference(instance);
@@ -893,8 +921,15 @@ public class BufferStream {
                 else
                     ReflectionUtil.setObject(instance, offsetField, getObject());
             }
-        } catch (Exception e) {
-            throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, objectType);
+        }
+        catch (Exception e)
+        {
+            if(e instanceof BufferUnderflowException)
+                throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, objectType);
+            else if(e instanceof BufferingException)
+                throw (BufferingException)e;
+            else
+                throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, objectType);
         }
 
         return instance;
@@ -907,7 +942,7 @@ public class BufferStream {
      * @return class type read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
-    public Class getObjectClass() throws BufferingException {
+    private Class getObjectClass() throws BufferingException {
 
         final int stringSize = expandableByteBuffer.buffer.getInt();
         byte[] stringBytes = new byte[stringSize];
@@ -930,12 +965,12 @@ public class BufferStream {
      * @return string read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("RedundantThrows")
     public String getString() throws BufferingException {
         final int stringSize = expandableByteBuffer.buffer.getInt();
         byte[] stringBytes = new byte[stringSize];
         expandableByteBuffer.buffer.get(stringBytes);
-        final String result = new String(stringBytes);
-        return result;
+        return new String(stringBytes);
     }
 
     /**
@@ -945,10 +980,10 @@ public class BufferStream {
      * @return Date read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public Date getDate() throws BufferingException {
         final long epoch = expandableByteBuffer.buffer.getLong();
-        Date returnValue = new Date(epoch);
-        return returnValue;
+        return new Date(epoch);
     }
 
     /**
@@ -965,11 +1000,11 @@ public class BufferStream {
         Class collectionClass = (Class) getObject();
         int size = expandableByteBuffer.buffer.getInt();
 
-        Collection collection = null;
+        Collection collection;
         try {
             collection = (Collection) collectionClass.newInstance();
         } catch (InstantiationException e) {
-            throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, collectionClass);
+            collection = new ArrayList();
         } catch (IllegalAccessException e) {
             throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, collectionClass);
         }
@@ -990,14 +1025,13 @@ public class BufferStream {
      * @return Map read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public Map getMap() throws BufferingException {
         Class mapClass = (Class) getObject();
-        Map map = null;
+        Map map;
         try {
             map = (Map) mapClass.newInstance();
-        } catch (InstantiationException e) {
-            throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass);
         }
 
@@ -1017,7 +1051,7 @@ public class BufferStream {
      * @return An Array
      * @throws BufferingException Generic Buffer Exception
      */
-    public Object getArray(BufferObjectType type) throws BufferingException {
+    private Object getArray(BufferObjectType type) throws BufferingException {
         if (type == BufferObjectType.LONG_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
             final long[] arr = new long[expandableByteBuffer.buffer.getInt()];
@@ -1074,6 +1108,14 @@ public class BufferStream {
             for (int i = 0; i < arr.length; i++)
                 arr[i] = expandableByteBuffer.buffer.getDouble();
             return arr;
+        }
+        else if (type == BufferObjectType.OTHER_ARRAY) {
+            Object arr = Array.newInstance(getObjectClass(), getInt());
+            for (int i = 0; i < Array.getLength(arr); i++) {
+                Object value = getObject();
+                Array.set(arr, i, value);
+            }
+            return arr;
         } else {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
             final Object[] arr = new Object[expandableByteBuffer.buffer.getInt()];
@@ -1091,12 +1133,12 @@ public class BufferStream {
      * @return The enum from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public Enum getEnum() throws BufferingException {
         Class enumClass = (Class) getObject();
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
 
-        Enum value = (Enum) enumClass.getEnumConstants()[getByte()];
-        return value;
+        return (Enum) enumClass.getEnumConstants()[getByte()];
     }
 
     /**
@@ -1107,7 +1149,7 @@ public class BufferStream {
      * @return An instantiated BufferStreamable object
      * @throws BufferingException Generic Buffer Exception
      */
-    public BufferStreamable getBuffered() throws BufferingException {
+    private BufferStreamable getBuffered() throws BufferingException {
         final BufferStreamable bufferStreamable;
         Class classToInstantiate = (Class) getObject();
         bufferStreamable = (BufferStreamable) instantiate(classToInstantiate);
@@ -1170,6 +1212,7 @@ public class BufferStream {
     /**
      * Recycle a byte buffer to be reused
      */
+    @SuppressWarnings("unused")
     public void recycle() {
         recycle(expandableByteBuffer.buffer);
     }
@@ -1178,6 +1221,7 @@ public class BufferStream {
      * Getter for underlying byte buffer
      * @return The underlying byte buffer with the goods
      */
+    @SuppressWarnings("unused")
     public ByteBuffer getByteBuffer()
     {
         return expandableByteBuffer.buffer;
@@ -1186,6 +1230,7 @@ public class BufferStream {
     /**
      * Flip the underlying byte buffer
      */
+    @SuppressWarnings("unused")
     public void flip()
     {
         this.expandableByteBuffer.buffer.flip();

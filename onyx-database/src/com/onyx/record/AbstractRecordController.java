@@ -9,45 +9,50 @@ import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.ScaledDiskMap;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.OrderedDiskMap;
+import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
-import java.lang.reflect.Field;
-import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/5/15.
+ *
+ * Base implementation of the record controller
  */
+@SuppressWarnings("unchecked")
 public abstract class AbstractRecordController
 {
     protected DiskMap<Object, IManagedEntity> records = null;
-    protected EntityDescriptor entityDescriptor;
-    protected MapBuilder dataFile;
-    protected SchemaContext context;
+    protected final EntityDescriptor entityDescriptor;
+    @SuppressWarnings("unused")
+    protected final String contextId;
 
     /**
      * Constructor
      *
-     * @param descriptor
+     * @param descriptor Entity Descriptor
+     * @param context Schema context
      */
+    @SuppressWarnings("WeakerAccess")
     public AbstractRecordController(EntityDescriptor descriptor, SchemaContext context)
     {
-        this.context = context;
+        this.contextId = context.getContextId();
         this.entityDescriptor = descriptor;
-        dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getScalableMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
+        MapBuilder dataFile = context.getDataFile(entityDescriptor);
+        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
     }
 
     /**
      * Get an entity by primary key
      *
-     * @param primaryKey
-     * @return
+     * @param primaryKey Identifier of an entity
+     * @return Entity if it exist
      */
+    @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public IManagedEntity getWithId(Object primaryKey) throws EntityException
     {
         return records.get(primaryKey);
@@ -56,9 +61,10 @@ public abstract class AbstractRecordController
     /**
      * Returns true if the record exists in database
      *
-     * @param entity
-     * @return
+     * @param entity Entity to check
+     * @return Whether it exists
      */
+    @SuppressWarnings("unused")
     public boolean exists(IManagedEntity entity) throws EntityException
     {
         // Get the Identifier key
@@ -70,9 +76,10 @@ public abstract class AbstractRecordController
     /**
      * Returns true if the records contain a primary key
      *
-     * @param primaryKey
-     * @return
+     * @param primaryKey Idnetifier of entity
+     * @return Whether that id is taken
      */
+    @SuppressWarnings("unused")
     public boolean existsWithId(Object primaryKey) throws EntityException
     {
         return records.containsKey(primaryKey);
@@ -81,9 +88,10 @@ public abstract class AbstractRecordController
     /**
      * Delete
      *
-     * @param entity
-     * @throws EntityException
+     * @param entity Entity to delete
+     * @throws EntityException Error deleting an entity
      */
+    @SuppressWarnings("unused")
     public void delete(IManagedEntity entity) throws EntityException
     {
         // Get the Identifier key
@@ -99,8 +107,9 @@ public abstract class AbstractRecordController
     /**
      * Delete with ID
      *
-     * @param primaryKey
+     * @param primaryKey Identifier of an entity
      */
+    @SuppressWarnings("WeakerAccess")
     public void deleteWithId(Object primaryKey)
     {
         records.remove(primaryKey);
@@ -109,9 +118,10 @@ public abstract class AbstractRecordController
     /**
      * Get an entity by the entity with populated primary key
      *
-     * @param entity
-     * @return
+     * @param entity Entity to get.  Its id must be defined
+     * @return Hydrated entity
      */
+    @SuppressWarnings("unused")
     public IManagedEntity get(IManagedEntity entity) throws EntityException
     {
         // Get the Identifier key
@@ -123,9 +133,9 @@ public abstract class AbstractRecordController
     /**
      * Retrieves the index key from the entity using reflection
      *
-     * @param entity
-     * @return
-     * @throws com.onyx.exception.AttributeMissingException
+     * @param entity Entity to retrieve index value of
+     * @return Index value of entity
+     * @throws com.onyx.exception.AttributeMissingException Attribute does not exist
      */
     public static Object getIndexValueFromEntity(IManagedEntity entity, BaseDescriptor indexDescriptor) throws AttributeMissingException
     {
@@ -139,10 +149,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Pre Insert callback
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke pre insert callback upon
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePreInsertCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePreInsertCallback(IManagedEntity entity) throws EntityCallbackException
     {
         this.invokePrePersistCallback(entity);
         if(this.entityDescriptor.getPreInsertCallback() != null
@@ -161,10 +171,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Pre Update Callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePreUpdateCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePreUpdateCallback(IManagedEntity entity) throws EntityCallbackException
     {
         this.invokePrePersistCallback(entity);
         if(this.entityDescriptor.getPreUpdateCallback() != null
@@ -183,10 +193,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Pre Remove callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePreRemoveCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePreRemoveCallback(IManagedEntity entity) throws EntityCallbackException
     {
         if(this.entityDescriptor.getPreRemoveCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
@@ -204,10 +214,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Pre Persist callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePrePersistCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePrePersistCallback(IManagedEntity entity) throws EntityCallbackException
     {
         if(this.entityDescriptor.getPrePersistCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
@@ -225,10 +235,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Post insert callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePostInsertCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePostInsertCallback(IManagedEntity entity) throws EntityCallbackException
     {
         if(this.entityDescriptor.getPostInsertCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
@@ -246,10 +256,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Post Update callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePostUpdateCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePostUpdateCallback(IManagedEntity entity) throws EntityCallbackException
     {
         if(this.entityDescriptor.getPostUpdateCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
@@ -267,10 +277,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Post Remove Callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePostRemoveCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePostRemoveCallback(IManagedEntity entity) throws EntityCallbackException
     {
         if(this.entityDescriptor.getPostRemoveCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
@@ -288,10 +298,10 @@ public abstract class AbstractRecordController
     /**
      * Invoke Post Persist callback on entity
      *
-     * @param entity
-     * @throws EntityCallbackException
+     * @param entity Entity to invoke callback on
+     * @throws EntityCallbackException Error happened during callback
      */
-    public void invokePostPersistCallback(IManagedEntity entity) throws EntityCallbackException
+    protected void invokePostPersistCallback(IManagedEntity entity) throws EntityCallbackException
     {
         if(this.entityDescriptor.getPostPersistCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
@@ -309,136 +319,56 @@ public abstract class AbstractRecordController
     /**
      * Retrieves the index key from the entity using reflection
      *
-     * @param entity
-     * @return
-     * @throws AttributeMissingException
+     * @param entity Entity to set index value for
+     * @throws AttributeMissingException Attribute does not exist
      */
-    public void setIndexValueForEntity(IManagedEntity entity, Object value) throws AttributeMissingException
+    protected void setIndexValueForEntity(IManagedEntity entity, Object value) throws AttributeMissingException
     {
+        final OffsetField field = ReflectionUtil.getOffsetField(entity.getClass(), entityDescriptor.getIdentifier().getName());
+        if(field == null)
+        {
+            // Hmmm, setting accessable didnt work, must not have permission
+            throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE);
+        }
         try
         {
-            // Use reflection to get the key
-            final Field field = ReflectionUtil.getField(entity.getClass(), entityDescriptor.getIdentifier().getName());
-            // If it is a private field, lets set it accessible
-            if (!field.isAccessible())
-                field.setAccessible(true);
-
-            if(field.getType() == long.class)
-                field.set(entity, value);
-            else if(field.getType() == int.class && value != null && value.getClass() == Long.class)
-                field.set(entity, ((Long)value).intValue());
-            else if(field.getType() == int.class)
-                field.set(entity, value);
-            else if(field.getType() == Long.class && value instanceof Integer)
-                field.set(entity, ((Integer)value).longValue());
-            else if(field.getType() == Long.class)
-                field.set(entity, value);
-            else if(field.getType() == Integer.class && value != null && value.getClass() == Long.class )
-                field.set(entity, ((Long)value).intValue());
-            else if(field.getType() == Integer.class)
-                field.set(entity, value);
-            else if(field.getType() == Double.class)
-                field.set(entity, value);
-            else if(field.getType() == double.class)
-                field.set(entity, value);
-            else if(field.getType() == Date.class)
-                field.set(entity, value);
-            else
-                field.set(entity, field.getType().cast(value));
-
-        } catch (IllegalAccessException e)
+            ReflectionUtil.setAny(entity, value, field);
+        } catch (AttributeTypeMismatchException e)
         {
             // Hmmm, setting accessable didnt work, must not have permission
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e);
         }
     }
 
-
-    /**
-     * Converts a key from a String to a type casted object
-     *
-     * @param type
-     * @param value
-     * @return casted object
-     */
-    public static Object convertValueTo(Class type, Object value)
-    {
-        if(value == null)
-            return value;
-        if (type == long.class || type == Long.class)
-            return Long.valueOf((String)value);
-        else if(type == int.class || type == Integer.class)
-            return Integer.valueOf((String) value);
-        else if(type == double.class || type == Double.class)
-            return Double.valueOf((String) value);
-        else if(type == Date.class)
-            return new Date(Long.valueOf((String) value));
-
-        return null;
-    }
-
     /**
      * Retrieves the index key from the entity using reflection
      *
-     * @param entity
-     * @return
-     * @throws AttributeMissingException
+     * @param entity Entity to set attribute
+     * @throws AttributeMissingException Attribute does not exist
      */
+    @SuppressWarnings("unused")
     public static void setIndexValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
     {
 
         // Use reflection to get the key
-        final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
+        final OffsetField field = ReflectionUtil.getOffsetField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
 
         try
         {
-            if(value instanceof String && field.getType() != String.class)
-                value = convertValueTo(field.getType(), value);
-
-            // If it is a private field, lets set it accessible
-            if (!field.isAccessible())
-                field.setAccessible(true);
-
-            if(field.getType() == long.class)
-                field.set(entity, value);
-            else if(field.getType() == int.class && value != null && value.getClass() == Long.class)
-                field.set(entity, ((Long)value).intValue());
-            else if(field.getType() == int.class)
-                field.set(entity, value);
-            else if(field.getType() == Long.class && value instanceof Integer)
-                field.set(entity, ((Integer)value).longValue());
-            else if(field.getType() == Long.class)
-                field.set(entity, value);
-            else if(field.getType() == Integer.class && value != null && value.getClass() == Long.class )
-                field.set(entity, ((Long)value).intValue());
-            else if(field.getType() == Integer.class)
-                field.set(entity, value);
-            else if(field.getType() == Double.class)
-                field.set(entity, value);
-            else if(field.getType() == double.class)
-                field.set(entity, value);
-            else if(field.getType() == Date.class)
-                field.set(entity, value);
-            else
-                field.set(entity, field.getType().cast(value));
-
-        } catch (IllegalAccessException e)
+            ReflectionUtil.setAny(entity, value, field);
+        }  catch (ClassCastException e)
         {
-            // Hmmm, setting accessable didnt work, must not have permission
-            throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e);
-        } catch (ClassCastException e)
-        {
-            throw new AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, field.getType(), value.getClass(), field.getName());
+            throw new AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, field.type, value.getClass(), field.name);
         }
     }
 
     /**
      * Returns the record reference ID
      *
-     * @param primaryKey
-     * @return
-     * @throws EntityException
+     * @param primaryKey Identifier for entity
+     * @return Entity reference id
      */
+    @SuppressWarnings("unused")
     public long getReferenceId(Object primaryKey) throws EntityException
     {
         return records.getRecID(primaryKey);
@@ -448,9 +378,10 @@ public abstract class AbstractRecordController
     /**
      * Returns the object using the reference ID
      *
-     * @param referenceId
-     * @return
+     * @param referenceId Entity reference id
+     * @return Hydrated entity
      */
+    @SuppressWarnings("unused")
     public IManagedEntity getWithReferenceId(long referenceId) throws EntityException
     {
         return records.getWithRecID(referenceId);
@@ -459,10 +390,10 @@ public abstract class AbstractRecordController
     /**
      * Returns a structure of the entity with a reference id
      *
-     * @param referenceId
-     * @return
-     * @throws EntityException
+     * @param referenceId Entity reference id
+     * @return Entity as a map
      */
+    @SuppressWarnings("unused")
     public Map getMapWithReferenceId(long referenceId) throws EntityException
     {
         return records.getMapWithRecID(referenceId);
@@ -475,6 +406,7 @@ public abstract class AbstractRecordController
      * @param referenceId location of record within storage
      * @return Attribute key
      */
+    @SuppressWarnings("unused")
     public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
         return records.getAttributeWithRecID(attribute, referenceId);
     }
@@ -488,9 +420,10 @@ public abstract class AbstractRecordController
      * @return A set of REFERENCES not the actual values
      * @throws EntityException Error when reading the store
      */
+    @SuppressWarnings("unused")
     public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
     {
-        return ((ScaledDiskMap)records).above(indexValue, includeValue);
+        return ((OrderedDiskMap)records).above(indexValue, includeValue);
     }
 
     /**
@@ -502,8 +435,9 @@ public abstract class AbstractRecordController
      * @return A set of REFERENCES not the actual values
      * @throws EntityException Error when reading the store
      */
+    @SuppressWarnings("unused")
     public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
     {
-        return ((ScaledDiskMap)records).below(indexValue, includeValue);
+        return ((OrderedDiskMap)records).below(indexValue, includeValue);
     }
 }

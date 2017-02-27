@@ -1,9 +1,9 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.structure.DefaultMapBuilder;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.store.StoreType;
+import com.onyx.diskmap.DefaultMapBuilder;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.store.StoreType;
 
 import java.util.function.Function;
 
@@ -46,7 +46,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
      * Method for creating a new data storage factory
      * @since 1.0.0
      */
-    protected Function createDataFile = new Function<String, MapBuilder>() {
+    private final Function createDataFile = new Function<String, MapBuilder>() {
         @Override
         public MapBuilder apply(String path)
         {
@@ -62,6 +62,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
      *
      * @return Data storage mechanism factory
      */
+    @SuppressWarnings("unchecked")
     public synchronized MapBuilder getDataFile(EntityDescriptor descriptor)
     {
         return dataFiles.computeIfAbsent(descriptor.getFileName() + ((descriptor.getPartition() == null) ? "" : descriptor.getPartition().getPartitionValue()), createDataFile);

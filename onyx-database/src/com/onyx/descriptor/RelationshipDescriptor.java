@@ -6,6 +6,8 @@ import com.onyx.persistence.annotations.RelationshipType;
 
 /**
  * Created by timothy.osborn on 12/11/14.
+ *
+ * Details on an entity relationship
  */
 public class RelationshipDescriptor extends AbstractBaseDescriptor
 {
@@ -13,14 +15,20 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
         super();
     }
 
-    protected RelationshipType relationshipType;
+    private RelationshipType relationshipType;
+    @SuppressWarnings("WeakerAccess")
     protected String inverse;
+    @SuppressWarnings("WeakerAccess")
     protected Class inverseClass;
-    protected Class parentClass;
+    private Class parentClass;
+    @SuppressWarnings("WeakerAccess")
     protected FetchPolicy fetchPolicy;
+    @SuppressWarnings("WeakerAccess")
     protected CascadePolicy cascadePolicy;
+    @SuppressWarnings("WeakerAccess")
     protected EntityDescriptor entityDescriptor;
 
+    @SuppressWarnings("WeakerAccess")
     protected byte loadFactor = 1;
 
     /**
@@ -55,7 +63,7 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
         return relationshipType;
     }
 
-    public void setRelationshipType(RelationshipType relationshipType)
+    void setRelationshipType(RelationshipType relationshipType)
     {
         this.relationshipType = relationshipType;
     }
@@ -85,7 +93,7 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
         return parentClass;
     }
 
-    public void setParentClass(Class parentClass)
+    void setParentClass(Class parentClass)
     {
         this.parentClass = parentClass;
     }
@@ -128,7 +136,7 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
     /**
      * Used for calculating hash structure
      *
-     * @return
+     * @return Hash Code of a relationship
      */
     @Override
     public int hashCode()
@@ -142,8 +150,8 @@ public class RelationshipDescriptor extends AbstractBaseDescriptor
 
     /**
      * Used for usage within a hashmap
-     * @param val
-     * @return
+     * @param val Value to compare
+     * @return Whether the parameter is equal to this
      */
     @Override
     public boolean equals(Object val)

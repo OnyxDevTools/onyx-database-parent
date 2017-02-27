@@ -16,7 +16,7 @@ public enum  DatabaseProvider {
     HSQL("hsqldb"),
     DERBY("derby");
 
-    private String persistenceProviderName;
+    private final String persistenceProviderName;
 
     public static final String DATABASE_LOCATION = System.getProperty("user.home") + File.separator + "OnyxBenchmark";
 

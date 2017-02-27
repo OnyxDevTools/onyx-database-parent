@@ -24,18 +24,18 @@ import java.io.UnsupportedEncodingException;
  * href="http://www.ietf.org/rfc/rfc2045.txt">2045</a> and <a
  * href="http://www.ietf.org/rfc/rfc3548.txt">3548</a>.
  */
-public class Base64 {
+class Base64 {
 
     /**
      * Default values for encoder/decoder flags.
      */
-    public static final int DEFAULT = 0;
+    static final int DEFAULT = 0;
 
     /**
      * Encoder flag bit to omit the padding '=' characters at the end
      * of the output (if any).
      */
-    public static final int NO_PADDING = 1;
+    static final int NO_PADDING = 1;
 
     /**
      * Encoder flag bit to omit all line terminators (i.e., the output
@@ -87,7 +87,7 @@ public class Base64 {
      * @throws IllegalArgumentException if the input contains
      * incorrect padding
      */
-    public static byte[] decode(String str, int flags) {
+    static byte[] decode(String str, int flags) {
         return decode(str.getBytes(), flags);
     }
 
@@ -125,7 +125,7 @@ public class Base64 {
      * @throws IllegalArgumentException if the input contains
      * incorrect padding
      */
-    private static byte[] decode(byte[] input, int offset, int len, int flags) {
+    private static byte[] decode(byte[] input, @SuppressWarnings("SameParameterValue") int offset, int len, int flags) {
         // Allocate space for the most data the input could represent.
         // (It could contain less if it contains whitespace, etc.)
         Decoder decoder = new Decoder(flags, new byte[len*3/4]);
@@ -225,7 +225,7 @@ public class Base64 {
          * @return true if the state machine is still healthy.  false if
          *         bad base-64 data has been detected in the input stream.
          */
-        boolean process(byte[] input, int offset, int len, boolean finish) {
+        boolean process(byte[] input, int offset, int len, @SuppressWarnings("SameParameterValue") boolean finish) {
             if (this.state == 6) return false;
 
             int p = offset;
@@ -416,7 +416,7 @@ public class Base64 {
      *               Passing {@code DEFAULT} results in output that
      *               adheres to RFC 2045.
      */
-    public static String encodeToString(byte[] input, int flags) {
+    static String encodeToString(byte[] input, int flags) {
         try {
             return new String(encode(input, flags), "US-ASCII");
         } catch (UnsupportedEncodingException e) {
@@ -450,7 +450,7 @@ public class Base64 {
      *               Passing {@code DEFAULT} results in output that
      *               adheres to RFC 2045.
      */
-    private static byte[] encode(byte[] input, int offset, int len, int flags) {
+    private static byte[] encode(byte[] input, @SuppressWarnings("SameParameterValue") int offset, int len, int flags) {
         Encoder encoder = new Encoder(flags, null);
 
         // Compute the exact length of the array we will produce.
@@ -522,7 +522,7 @@ public class Base64 {
         final boolean do_cr;
         final private byte[] alphabet;
 
-        Encoder(int flags, byte[] output) {
+        Encoder(int flags, @SuppressWarnings("SameParameterValue") byte[] output) {
             this.output = output;
 
             do_padding = (flags & NO_PADDING) == 0;
@@ -536,7 +536,7 @@ public class Base64 {
             count = do_newline ? LINE_GROUPS : -1;
         }
 
-        void process(byte[] input, int offset, int len, boolean finish) {
+        void process(byte[] input, int offset, int len, @SuppressWarnings("SameParameterValue") boolean finish) {
             // Using local variables makes the encoder about 9% faster.
             final byte[] alphabet = this.alphabet;
             final byte[] output = this.output;

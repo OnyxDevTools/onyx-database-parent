@@ -14,6 +14,8 @@ import com.onyx.relationship.RelationshipReference;
 
 /**
  * Created by timothy.osborn on 12/23/14.
+ *
+ * Helper methds for a relationship
  */
 public class RelationshipHelper
 {
@@ -21,9 +23,8 @@ public class RelationshipHelper
     /**
      * Save all relationships for an entity
      *
-     * @param entity
-     * @param manager
-     * @throws EntityException
+     * @param entity Entity to save relationships for
+     * @param manager Relationship manager keeping track of what was already done
      */
     public static void saveAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager manager, SchemaContext context) throws EntityException
     {
@@ -53,18 +54,18 @@ public class RelationshipHelper
     /**
      * Delete all relationships for an entity
      *
-     * @param entity
-     * @param relationshipManager
-     * @throws EntityException
+     * @param entity Entity to save relationships for
+     * @param relationshipManager Relationship manager keeping track of what was already done
+     * @param context Schema context
      */
     public static void deleteAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws EntityException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
 
-        RelationshipReference entityId = null;
+        RelationshipReference entityId;
 
-        if (partitionValue != PartitionHelper.NULL_PARTITION && partitionValue != null)
+        if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
         {
             final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getClazz(), partitionValue);
             entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
@@ -83,18 +84,17 @@ public class RelationshipHelper
     /**
      * Hydrate all relationships for an entity
      *
-     * @param entity
-     * @param relationshipManager
-     * @throws EntityException
+     * @param entity Entity to save relationships for
+     * @param relationshipManager Relationship manager keeping track of what was already done
      */
     public static void hydrateAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws EntityException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
 
-        RelationshipReference entityId = null;
+        RelationshipReference entityId;
 
-        if (partitionValue != PartitionHelper.NULL_PARTITION && partitionValue != null)
+        if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
         {
             final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getClazz(), partitionValue);
             entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());

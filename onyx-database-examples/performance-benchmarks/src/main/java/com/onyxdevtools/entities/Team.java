@@ -22,7 +22,7 @@ public class Team extends ManagedEntity implements IManagedEntity
     @Attribute
     @Identifier(loadFactor = 1)
     @Id
-    protected String teamName;
+    private String teamName;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -33,7 +33,7 @@ public class Team extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "team") // Hack, I cannot fetch multiple bags so, I had to change the fetch policy
-    protected List<Player> players;
+    private List<Player> players;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
@@ -42,7 +42,7 @@ public class Team extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @ManyToOne(targetEntity = Division.class)
-    protected Division division;
+    private Division division;
 
     public Team()
     {
@@ -75,4 +75,9 @@ public class Team extends ManagedEntity implements IManagedEntity
         this.division = division;
     }
 
+    @SuppressWarnings("unused")
+    public Division getDivision()
+    {
+        return this.division;
+    }
 }

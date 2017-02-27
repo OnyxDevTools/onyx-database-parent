@@ -8,7 +8,6 @@ package com.onyx.exception;
 public class BufferingException extends EntityException {
 
     public static final String UNKNOWN_DESERIALIZE = "Unknown exception occurred while de-serializing ";
-    public static final String UNKNOWN_SERIALIZE = "Unknown exception occurred while serializing ";
     public static final String CANNOT_INSTANTIATE = "Cannot instantiate class ";
     public static final String UNKNOWN_CLASS = "Unknown class ";
     public static final String ILLEGAL_ACCESS_EXCEPTION = "Illegal Access Exception ";

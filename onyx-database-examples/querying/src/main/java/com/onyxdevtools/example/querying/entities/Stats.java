@@ -10,58 +10,59 @@ import com.onyx.persistence.annotations.*;
  */
 //J-
 @Entity
+@SuppressWarnings("unused")
 public class Stats extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    protected long statId;
+    private long statId;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "stats",
             inverseClass = Player.class
     )
-    protected Player player;
+    private Player player;
 
     @Relationship(
             type = RelationshipType.ONE_TO_ONE,
             inverseClass = Season.class
     )
-    protected Season season;
+    private Season season;
 
     @Attribute
-    protected int rushingYards;
+    private int rushingYards;
 
     @Attribute
-    protected int receivingYards;
+    private int receivingYards;
 
     @Attribute
-    protected int passingYards;
+    private int passingYards;
 
     @Attribute
-    protected int rushingTouchdowns;
+    private int rushingTouchdowns;
 
     @Attribute
-    protected int receivingTouchdowns;
+    private int receivingTouchdowns;
 
     @Attribute
-    protected int passingTouchdowns;
+    private int passingTouchdowns;
 
     @Attribute
-    protected int receptions;
+    private int receptions;
 
     @Attribute
-    protected int rushingAttempts;
+    private int rushingAttempts;
 
     @Attribute
-    protected int passAttempts;
+    private int passAttempts;
 
     @Attribute
-    protected int passCompletions;
+    private int passCompletions;
 
     @Attribute
-    protected int fantasyPoints;
+    private int fantasyPoints;
 
     public long getStatId()
     {

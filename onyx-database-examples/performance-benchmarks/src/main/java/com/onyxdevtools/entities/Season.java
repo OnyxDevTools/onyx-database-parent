@@ -18,7 +18,7 @@ public class Season extends ManagedEntity implements IManagedEntity
     @Identifier(loadFactor = 1)
     @Id
     @Column
-    protected Integer seasonYear;
+    private Integer seasonYear;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -29,7 +29,7 @@ public class Season extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    protected List<Conference> conferences = new ArrayList();
+    private List<Conference> conferences = new ArrayList<>();
 
     public Season()
     {

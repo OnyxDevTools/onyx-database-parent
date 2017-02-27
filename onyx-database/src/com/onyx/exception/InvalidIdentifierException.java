@@ -2,6 +2,7 @@ package com.onyx.exception;
 
 /**
  * Created by timothy.osborn on 12/12/14.
+ *
  */
 public class InvalidIdentifierException extends EntityException
 {
@@ -13,13 +14,14 @@ public class InvalidIdentifierException extends EntityException
     /**
      * Constructor with message
      *
-     * @param message
+     * @param message Error message
      */
     public InvalidIdentifierException(String message)
     {
         super(message);
     }
 
+    @SuppressWarnings("unused")
     public InvalidIdentifierException()
     {
         super();

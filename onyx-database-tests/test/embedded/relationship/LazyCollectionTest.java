@@ -6,10 +6,7 @@ import com.onyx.persistence.collections.LazyRelationshipCollection;
 import embedded.base.BaseTest;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
@@ -84,7 +81,7 @@ public class LazyCollectionTest extends BaseTest
         Assert.assertTrue(parent.childCascade.size() == 1);
     }
 
-    @Test
+    @Test(expected = RuntimeException.class)
     public void testAdd()
     {
         ManyToManyParent parent = new ManyToManyParent();
@@ -166,7 +163,7 @@ public class LazyCollectionTest extends BaseTest
         Assert.assertTrue(parent.childCascade.isEmpty());
     }
 
-    @Test
+    @Test(expected = RuntimeException.class)
     public void testSet()
     {
         ManyToManyParent parent = new ManyToManyParent();
@@ -225,7 +222,7 @@ public class LazyCollectionTest extends BaseTest
         Assert.assertTrue(parent.childCascade.size() == 0);
     }
 
-    @Test
+    @Test(expected = RuntimeException.class)
     public void testRemoveByObject()
     {
         ManyToManyParent parent = new ManyToManyParent();

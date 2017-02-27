@@ -2,6 +2,7 @@ package com.onyx.exception;
 
 /**
  * Created by timothy.osborn on 12/12/14.
+ *
  */
 public class InvalidRelationshipTypeException extends EntityException
 {
@@ -12,7 +13,7 @@ public class InvalidRelationshipTypeException extends EntityException
     /**
      * Constructor with message
      *
-     * @param message
+     * @param message Error message
      */
     public InvalidRelationshipTypeException(String message)
     {
@@ -22,14 +23,15 @@ public class InvalidRelationshipTypeException extends EntityException
     /**
      * Constructor with message and cause
      *
-     * @param message
-     * @param cause
+     * @param message Error message
+     * @param cause Root cause
      */
     public InvalidRelationshipTypeException(String message, Throwable cause)
     {
         super(message, cause);
     }
 
+    @SuppressWarnings("unused")
     public InvalidRelationshipTypeException()
     {
         super();

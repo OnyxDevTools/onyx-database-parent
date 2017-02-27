@@ -9,6 +9,7 @@ package com.onyx.persistence.query;
  *
  *
  */
+@SuppressWarnings("unused")
 public enum QueryPartitionMode {
     ALL
 }

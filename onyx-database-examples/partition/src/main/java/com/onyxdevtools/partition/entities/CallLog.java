@@ -6,40 +6,38 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.Date;
 
-/**
- * Created by tosborn1 on 3/31/16.
- */
+@SuppressWarnings("unused")
 @Entity
 public class CallLog extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    protected long callLogId;
+    private long callLogId;
 
     @Attribute
-    protected String destinationNumber;
+    private String destinationNumber;
 
     @Attribute
-    protected Date timeDateStarted;
+    private Date timeDateStarted;
 
     @Index
     @Attribute
-    protected boolean isNSAListening;
+    private boolean isNSAListening;
 
     @Relationship(type = RelationshipType.MANY_TO_ONE,
             inverseClass = CellPhone.class,
             inverse = "callLogs",
             cascadePolicy = CascadePolicy.NONE,
             fetchPolicy = FetchPolicy.NONE)
-    protected CellPhone callFrom;
+    private CellPhone callFrom;
 
     @Attribute
     @Partition
-    protected int callFromAreaCode;
+    private int callFromAreaCode;
 
     @PreInsert
-    protected void onInsertCallLog() throws Exception
+    private void onInsertCallLog() throws Exception
     {
         this.timeDateStarted = new Date();
     }

@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * This Enum indicates all of the different types of objects that can be serialized
  */
-public enum BufferObjectType {
+enum BufferObjectType {
 
     NULL(null),
     REFERENCE(null),
@@ -33,6 +33,7 @@ public enum BufferObjectType {
     BOOLEAN_ARRAY(boolean[].class),
     CHAR_ARRAY(char[].class),
     OBJECT_ARRAY(Object[].class),
+    OTHER_ARRAY(Object[].class),
 
     // Mutable
     MUTABLE_BYTE(Byte.class),
@@ -56,12 +57,13 @@ public enum BufferObjectType {
 
     OTHER(null);
 
-    private Class type;
+    private final Class type;
 
     /**
      * Constructor
      * @param type Class type
      */
+    @SuppressWarnings("unused")
     BufferObjectType(Class type) {
         this.type = type;
     }
@@ -70,6 +72,7 @@ public enum BufferObjectType {
      * Indicates whether the serializer type is an array
      * @return Whether the enum indicates an array
      */
+    @SuppressWarnings("unused")
     public boolean isArray()
     {
         return (this.ordinal() >= BufferObjectType.BYTE_ARRAY.ordinal()
@@ -82,6 +85,7 @@ public enum BufferObjectType {
      * @param object Object in Question
      * @return The serializer type that correlates to that class.
      */
+    @SuppressWarnings("unchecked")
     public static BufferObjectType getTypeCodeForClass(Object object) {
 
         if(object == null)
@@ -94,6 +98,11 @@ public enum BufferObjectType {
 
         for (BufferObjectType bufferObjectType : BufferObjectType.values()) {
             if (bufferObjectType.type != null && bufferObjectType.type.isAssignableFrom(type)) {
+                if(bufferObjectType.equals(BufferObjectType.OBJECT_ARRAY)
+                        && type != Object[].class)
+                {
+                    return OTHER_ARRAY;
+                }
                 return bufferObjectType;
             }
         }

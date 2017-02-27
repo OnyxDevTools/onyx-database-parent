@@ -4,27 +4,25 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
-/**
- * Created by tosborn1 on 5/6/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Payment extends ManagedEntity implements IManagedEntity
 {
     @Attribute
     @Identifier
-    protected long paymentId;
+    private long paymentId;
 
     @Relationship(type = RelationshipType.ONE_TO_ONE,
             inverse = "payments",
             inverseClass = Invoice.class)
-    protected Invoice invoice;
+    private Invoice invoice;
 
     @Index
     @Attribute
-    protected double amount;
+    private double amount;
 
     @Attribute
-    protected String notes;
+    private String notes;
 
     public long getPaymentId() {
         return paymentId;

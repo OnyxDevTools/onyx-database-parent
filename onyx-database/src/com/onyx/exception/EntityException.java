@@ -1,26 +1,24 @@
 package com.onyx.exception;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import java.rmi.RemoteException;
-
 /**
  * Created by timothy.osborn on 11/3/14.
  * <p>
  * Base exception for an entity
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class EntityException extends RemoteException {
+public class EntityException extends Exception {
 
     public static final String UNKNOWN_EXCEPTION = "Unknown exception occurred";
+    public static final String CONNECTION_TIMEOUT = "Connection Timeout Ocurred";
 
-    transient public Throwable rootCause = null;
+    @SuppressWarnings("unused")
+    transient Throwable rootCause = null;
 
     /**
      * Constructor with cause
      *
-     * @param cause
+     * @param cause Root cause
      */
+    @SuppressWarnings("WeakerAccess")
     public EntityException(Throwable cause)
     {
         super(cause.getLocalizedMessage());
@@ -30,6 +28,7 @@ public class EntityException extends RemoteException {
     /**
      * Constructor
      */
+    @SuppressWarnings("WeakerAccess")
     public EntityException()
     {
         super();
@@ -38,8 +37,9 @@ public class EntityException extends RemoteException {
     /**
      * Constructor with error message
      *
-     * @param message
+     * @param message Exception message
      */
+    @SuppressWarnings("WeakerAccess")
     public EntityException(String message)
     {
         super(message);
@@ -48,8 +48,8 @@ public class EntityException extends RemoteException {
     /**
      * Constructor with message and cause
      *
-     * @param message
-     * @param cause
+     * @param message Exception message
+     * @param cause Root cause
      */
     public EntityException(String message, Throwable cause)
     {

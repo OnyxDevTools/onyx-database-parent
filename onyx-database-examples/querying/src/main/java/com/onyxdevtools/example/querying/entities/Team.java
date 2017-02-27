@@ -11,12 +11,13 @@ import java.util.List;
  */
 //J-
 @Entity
+@SuppressWarnings("unused")
 public class Team extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier
-    protected String teamName;
+    private String teamName;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -25,14 +26,14 @@ public class Team extends ManagedEntity implements IManagedEntity
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.EAGER
     )
-    protected List<Player> players;
+    private List<Player> players;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
             inverse = "teams",
             inverseClass = Division.class
     )
-    protected Division division;
+    private Division division;
 
     public Team()
     {
@@ -63,4 +64,8 @@ public class Team extends ManagedEntity implements IManagedEntity
         this.division = division;
     }
 
+    public Division getDivision()
+    {
+        return this.division;
+    }
 }

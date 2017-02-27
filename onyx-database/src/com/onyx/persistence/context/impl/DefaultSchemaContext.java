@@ -3,10 +3,12 @@ package com.onyx.persistence.context.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.diskmap.DefaultMapBuilder;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.store.StoreType;
 import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.SingletonException;
 import com.onyx.exception.TransactionException;
 import com.onyx.fetch.ScannerFactory;
 import com.onyx.helpers.PartitionHelper;
@@ -27,25 +29,22 @@ import com.onyx.record.impl.SequenceRecordControllerImpl;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
-import com.onyx.structure.DefaultMapBuilder;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.store.StoreType;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
+import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -75,24 +74,34 @@ import java.util.function.Function;
  * </code>
  * </pre>
  */
+@SuppressWarnings("unchecked")
 public class DefaultSchemaContext implements SchemaContext {
 
+    // Random generator for generating random temporary file names
+    private static final SecureRandom random = new SecureRandom();
+
     // Reference to self
-    protected SchemaContext context;
+    @SuppressWarnings("WeakerAccess")
+    protected final SchemaContext context;
 
     // Context id that maps back to the database instance name
-    protected String contextId;
+    @SuppressWarnings("WeakerAccess")
+    protected final String contextId;
 
     // The purpose of this is to gather the registed instances of SchemaContexts so that we may structure a context to a database instance in
     // event of multiple instances
-    public static final ConcurrentMap<String, SchemaContext> registeredSchemaContexts = new ConcurrentHashMap<String, SchemaContext>();
+    public static final ConcurrentMap<String, SchemaContext> registeredSchemaContexts = new ConcurrentHashMap<>();
+
+    // Directory location for temporary files
+    private String temporaryFileLocation;
 
     /**
      * Constructor.
      *
-     * @param contextId
+     * @param contextId Database identifier that must be unique and tied to its process
      */
     public DefaultSchemaContext(final String contextId) {
+        Runnable commitThread = () -> dataFiles.forEach((s, db) -> db.commit());
         scheduler.scheduleWithFixedDelay(commitThread, 10, 10, TimeUnit.SECONDS);
         context = this;
         this.contextId = contextId;
@@ -133,7 +142,7 @@ public class DefaultSchemaContext implements SchemaContext {
     // Startup and Shutdown
     //
     /////////////////////////////////////////////////////////////////////
-    protected volatile boolean killSwitch = false;
+    private volatile boolean killSwitch = false;
 
     /**
      * Get Database kill switch.
@@ -151,7 +160,10 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void start() {
+        temporaryFileLocation = this.location + File.separator + "temporary";
+        new File(temporaryFileLocation).mkdirs();
         killSwitch = false;
         initializeSystemEntities();
         initializePartitionSequence();
@@ -161,7 +173,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * The purpose of this is to auto number the partition ids
      */
-    protected void initializePartitionSequence() {
+    private void initializePartitionSequence() {
 
         try {
             // Get the max partition index
@@ -190,14 +202,14 @@ public class DefaultSchemaContext implements SchemaContext {
      * The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
      * So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
      */
-    protected void initializeEntityDescriptors() {
+    private void initializeEntityDescriptors() {
 
         try {
             // Added criteria for greater than 7 so that we do not disturb the system entities
             QueryCriteria nonSystemEntities = new QueryCriteria("name", QueryCriteriaOperator.NOT_STARTS_WITH, "com.onyx.entity.System");
 
             Query query = new Query(SystemEntity.class, nonSystemEntities);
-            query.setSelections(Arrays.asList("name"));
+            query.setSelections(Collections.singletonList("name"));
             List<Map> results = systemPersistenceManager.executeQuery(query);
 
             for (Map obj : results) {
@@ -213,16 +225,16 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
-    protected void initializeSystemEntities() {
+    private void initializeSystemEntities() {
         try {
 
-            descriptors.put(SystemEntity.class.getName(), new EntityDescriptor(SystemEntity.class, context));
-            descriptors.put(SystemAttribute.class.getName(), new EntityDescriptor(SystemAttribute.class, context));
-            descriptors.put(SystemRelationship.class.getName(), new EntityDescriptor(SystemRelationship.class, context));
-            descriptors.put(SystemIndex.class.getName(), new EntityDescriptor(SystemIndex.class, context));
-            descriptors.put(SystemIdentifier.class.getName(), new EntityDescriptor(SystemIdentifier.class, context));
-            descriptors.put(SystemPartition.class.getName(), new EntityDescriptor(SystemPartition.class, context));
-            descriptors.put(SystemPartitionEntry.class.getName(), new EntityDescriptor(SystemPartitionEntry.class, context));
+            descriptors.put(SystemEntity.class.getName(), new EntityDescriptor(SystemEntity.class));
+            descriptors.put(SystemAttribute.class.getName(), new EntityDescriptor(SystemAttribute.class));
+            descriptors.put(SystemRelationship.class.getName(), new EntityDescriptor(SystemRelationship.class));
+            descriptors.put(SystemIndex.class.getName(), new EntityDescriptor(SystemIndex.class));
+            descriptors.put(SystemIdentifier.class.getName(), new EntityDescriptor(SystemIdentifier.class));
+            descriptors.put(SystemPartition.class.getName(), new EntityDescriptor(SystemPartition.class));
+            descriptors.put(SystemPartitionEntry.class.getName(), new EntityDescriptor(SystemPartitionEntry.class));
 
             SystemEntity systemEntity = new SystemEntity(descriptors.get(SystemEntity.class.getName()));
             SystemEntity systemAttributeEntity = new SystemEntity(descriptors.get(SystemAttribute.class.getName()));
@@ -265,7 +277,7 @@ public class DefaultSchemaContext implements SchemaContext {
         }
     }
 
-    protected PersistenceManager systemPersistenceManager = null;
+    PersistenceManager systemPersistenceManager = null;
 
     /**
      * Setter for default persistence manager.
@@ -317,86 +329,85 @@ public class DefaultSchemaContext implements SchemaContext {
     //
     //////////////////////////////////////////////////////////////////////////////////////////
     // Maximum WAL File longSize
-    protected static final int MAX_JOURNAL_SIZE = 1024 * 1024 * 20;
+    private static final int MAX_JOURNAL_SIZE = 1024 * 1024 * 20;
 
     // Journal File index in directory
-    protected AtomicLong journalFileIndex = new AtomicLong(0L);
+    private final AtomicLong journalFileIndex = new AtomicLong(0L);
 
     // Last Wal File Channel
-    protected FileChannel lastWalFileChannel = null;
+    private FileChannel lastWalFileChannel = null;
 
     // Re-entrant lock for creation of WAL File
-    protected ReentrantLock transactionFileLock = new ReentrantLock();
+    private final Boolean transactionFileLock = Boolean.TRUE;
 
     /**
      * Get WAL Transaction File. This will get the appropriate file channel and return it
      *
      * @return Open File Channel
-     * @throws TransactionException
+     * @throws TransactionException Cannot write transaction
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Override
     public FileChannel getTransactionFile() throws TransactionException {
-        transactionFileLock.lock();
+        synchronized (transactionFileLock) {
 
-        try {
+            try {
+                if (lastWalFileChannel == null) {
 
-            if (lastWalFileChannel == null) {
+                    // Create the journaling directory if it does'nt exist
+                    final String directory = getWALDirectory();
 
-                // Create the journaling directory if it does'nt exist
-                final String directory = getWALDirectory();
-                final Path journalingPath = Paths.get(directory);
+                    File journalingDirector = new File(directory);
+                    if (!journalingDirector.exists()) {
+                        journalingDirector.mkdirs();
+                    }
 
-                if (!Files.exists(journalingPath)) {
-                    Files.createDirectories(journalingPath);
+                    // Grab the last used WAL File
+                    final String[] directoryListing = new File(directory).list();
+                    Arrays.sort(directoryListing);
+
+                    File lastWalFile;
+
+                    if (directoryListing.length > 0) {
+                        String fileName = directoryListing[directoryListing.length - 1];
+                        fileName = fileName.replace(".wal", "");
+
+                        journalFileIndex.addAndGet(Integer.valueOf(fileName));
+                    }
+
+                    lastWalFile = new File(directory + journalFileIndex.get() + ".wal");
+
+                    if (!lastWalFile.exists()) {
+                        lastWalFile.createNewFile();
+                    }
+
+                    // Open file channel
+                    lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
                 }
 
-                // Grab the last used WAL File
-                final String[] directoryListing = new File(directory).list();
-                Arrays.sort(directoryListing);
+                // If the last wal file exceeds longSize limit threshold, create a new one
+                if (lastWalFileChannel.size() > MAX_JOURNAL_SIZE) {
 
-                File lastWalFile = null;
+                    // Close the previous
+                    lastWalFileChannel.force(true);
+                    lastWalFileChannel.close();
 
-                if (directoryListing.length > 0) {
-                    String fileName = directoryListing[directoryListing.length - 1];
-                    fileName = fileName.replace(".wal", "");
-
-                    journalFileIndex.addAndGet(Integer.valueOf(fileName));
-                }
-
-                lastWalFile = new File(directory + journalFileIndex.get() + ".wal");
-
-                if (!lastWalFile.exists()) {
+                    final String directory = getWALDirectory();
+                    final File lastWalFile = new File(directory + journalFileIndex.addAndGet(1) + ".wal");
                     lastWalFile.createNewFile();
+
+                    lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
                 }
 
-                // Open file channel
-                lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
+                return lastWalFileChannel;
+
+            } catch (IOException e) {
+                throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE);
             }
-
-            // If the last wal file exceeds longSize limit threshold, create a new one
-            if (lastWalFileChannel.size() > MAX_JOURNAL_SIZE) {
-
-                // Close the previous
-                lastWalFileChannel.force(true);
-                lastWalFileChannel.close();
-
-                final String directory = getWALDirectory();
-                final File lastWalFile = new File(directory + journalFileIndex.addAndGet(1) + ".wal");
-                lastWalFile.createNewFile();
-
-                lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.getPath());
-            }
-
-            return lastWalFileChannel;
-
-        } catch (IOException e) {
-            throw new TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE);
-        } finally {
-            transactionFileLock.unlock();
         }
     }
 
-    protected TransactionController transactionController = null;
+    private TransactionController transactionController = null;
 
     /**
      * Get Controller that handles transactions. This creates a log of persistence within the database.
@@ -412,17 +423,16 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @return get Directory where wal files are located.
      */
-    public String getWALDirectory() {
+    private String getWALDirectory() {
         return this.location + File.separator + "wal" + File.separator;
     }
 
     /**
      * Shutdown schema context. Close files, connections or any other IO mechanisms used within the context
      *
-     * @throws SingletonException Only one instance of the record and index factories must exist
      * @since 1.0.0
      */
-    public void shutdown() throws SingletonException {
+    public void shutdown()  {
         killSwitch = true;
 
         // Shutdown all databases
@@ -431,7 +441,7 @@ public class DefaultSchemaContext implements SchemaContext {
             try {
                 db.commit();
                 db.close();
-            } catch (Exception e) {
+            } catch (Exception ignore) {
             }
 
         }
@@ -462,27 +472,19 @@ public class DefaultSchemaContext implements SchemaContext {
     // Data File collection
     //
     ///////////////////////////////////////////////////////////////
-    final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-    // This is in order to cleanup memory
-    final Runnable commitThread = new Runnable() {
-        @Override
-        public void run() {
-            dataFiles.forEach((s, db) -> db.commit());
-        }
-    };
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     /**
      * Map of data files.
      *
      * @since 1.0.0
      */
-    protected Map<String, MapBuilder> dataFiles = new ConcurrentHashMap<>();
+    final Map<String, MapBuilder> dataFiles = new ConcurrentHashMap<>();
 
     /**
      * @since 1.0.0 Method for creating a new data file
      */
-    protected Function createDataFile = new Function<String, MapBuilder>() {
+    private final Function createDataFile = new Function<String, MapBuilder>() {
         @Override
         public MapBuilder apply(final String path) {
             return new DefaultMapBuilder(location + "/" + path, context);
@@ -558,13 +560,12 @@ public class DefaultSchemaContext implements SchemaContext {
      * <p>
      * <p>This is not meant to be a public API.</p>
      *
-     * @param classToGet  Entity type of record
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
      * @throws EntityException Generic Exception
      * @since 1.0.0
      */
-    public SystemPartitionEntry getPartitionWithId(final Class classToGet, final long partitionId) throws EntityException {
+    public SystemPartitionEntry getPartitionWithId(final long partitionId) throws EntityException {
         final Query query = new Query(SystemPartitionEntry.class, new QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId));
         final List<SystemPartitionEntry> partitions = systemPersistenceManager.executeQuery(query);
 
@@ -585,14 +586,14 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
-    private Map<EntityDescriptor, RecordController> recordControllers = new ConcurrentHashMap();
+    private final Map<EntityDescriptor, RecordController> recordControllers = new ConcurrentHashMap();
 
     /**
      * Method for creating a new record controller.
      *
      * @since 1.0.0
      */
-    private Function createRecordController = new Function<EntityDescriptor, RecordController>() {
+    private final Function createRecordController = new Function<EntityDescriptor, RecordController>() {
         @Override
         public RecordController apply(final EntityDescriptor descriptor) {
             if (descriptor.getIdentifier().getGenerator() == IdentifierGenerator.SEQUENCE) {
@@ -622,11 +623,11 @@ public class DefaultSchemaContext implements SchemaContext {
     //
     //////////////////////////////////////////////////////////////////
     // Contains the initialized entity descriptors
-    protected Map<String, EntityDescriptor> descriptors = new HashMap();
+    private final Map<String, EntityDescriptor> descriptors = new HashMap();
 
-    protected AtomicLong partitions = new AtomicLong(0);
+    private final AtomicLong partitions = new AtomicLong(0);
 
-    protected ReadWriteLock entityDescriptorLock = new ReentrantReadWriteLock(true);
+    private final ReadWriteLock entityDescriptorLock = new ReentrantReadWriteLock(false);
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -651,12 +652,10 @@ public class DefaultSchemaContext implements SchemaContext {
         try {
             EntityDescriptor descriptor = descriptors.get(entityKey);
 
-            if(descriptor != null)
-            {
+            if (descriptor != null) {
                 return descriptor;
             }
-        }
-        finally {
+        } finally {
             entityDescriptorLock.readLock().unlock();
         }
 
@@ -664,7 +663,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
         try {
 
-            EntityDescriptor descriptor = new EntityDescriptor(entity.getClass(), context);
+            EntityDescriptor descriptor = new EntityDescriptor(entity.getClass());
 
             if (descriptor.getPartition() != null) {
                 descriptor.getPartition().setPartitionValue(String.valueOf(partitionId));
@@ -678,10 +677,12 @@ public class DefaultSchemaContext implements SchemaContext {
             // If it does not exist, lets create a new one
             if (systemEntity == null) {
                 systemEntity = new SystemEntity(descriptor);
+                systemPersistenceManager.saveEntity(systemEntity);
             }
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
+            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
 
             return descriptor;
         } finally {
@@ -699,18 +700,20 @@ public class DefaultSchemaContext implements SchemaContext {
      * @throws EntityException default exception
      * @since 1.1.0
      */
-    protected SystemEntity checkForEntityChanges(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
+    @SuppressWarnings("UnusedReturnValue")
+    private SystemEntity checkForEntityChanges(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
         // Re-Build indexes if necessary
         descriptor.checkIndexChanges(systemEntity, rebuildIndexConsumer);
 
         // Check to see if the relationships were not changed from a to many to a to one
         descriptor.checkValidRelationships(systemEntity);
 
+        //noinspection EqualsBetweenInconvertibleTypes
         if (!descriptor.equals(systemEntity)) {
             systemEntity = new SystemEntity(descriptor);
+            systemPersistenceManager.saveEntity(systemEntity);
         }
 
-        systemPersistenceManager.saveEntity(systemEntity);
         defaultSystemEntities.put(systemEntity.getName(), systemEntity);
         systemEntityByIDMap.put(systemEntity.getPrimaryKey(), systemEntity);
 
@@ -724,7 +727,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * @param systemEntity System entity to get from the database and compare partition on
      * @since 1.1.0
      */
-    protected void checkForValidDescriptorPartition(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
+    private void checkForValidDescriptorPartition(EntityDescriptor descriptor, SystemEntity systemEntity) throws EntityException {
         // Check to see if the partition already exists
         if ((systemEntity.getPartition() != null) && (descriptor.getPartition() != null)) {
             for (int i = 0; i < systemEntity.getPartition().getEntries().size(); i++) {
@@ -751,7 +754,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    protected Map<String, SystemEntity> defaultSystemEntities = new HashMap();
+    private final Map<String, SystemEntity> defaultSystemEntities = new HashMap();
 
     /**
      * Get System Entity By Name.
@@ -771,7 +774,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
                     final Query query = new Query(SystemEntity.class, new QueryCriteria("name", QueryCriteriaOperator.EQUAL, s));
                     query.setMaxResults(1);
-                    query.setQueryOrders(Arrays.asList(new QueryOrder("primaryKey", false)));
+                    query.setQueryOrders(Collections.singletonList(new QueryOrder("primaryKey", false)));
 
                     List<SystemEntity> results = null;
 
@@ -794,14 +797,13 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    protected Map<Integer, SystemEntity> systemEntityByIDMap = new HashMap();
+    private final Map<Integer, SystemEntity> systemEntityByIDMap = new HashMap();
 
     /**
      * Get System Entity By ID.
      *
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
-     * @throws EntityException Default Exception
      */
     public synchronized SystemEntity getSystemEntityById(final int systemEntityId) {
         return systemEntityByIDMap.compute(systemEntityId,
@@ -840,13 +842,58 @@ public class DefaultSchemaContext implements SchemaContext {
      * @since 1.0.0
      */
     public EntityDescriptor getDescriptorForEntity(final Class entityClass, Object partitionId) throws EntityException {
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(entityClass);
 
         if (partitionId == null) {
             partitionId = "";
         }
 
-        return getDescriptorForEntity(entity, String.valueOf(partitionId));
+        if (entityClass == null)
+            throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND);
+
+        final String entityKey = entityClass.getName() + String.valueOf(partitionId);
+
+        entityDescriptorLock.readLock().lock();
+
+        try {
+            EntityDescriptor descriptor = descriptors.get(entityKey);
+
+            if (descriptor != null) {
+                return descriptor;
+            }
+        } finally {
+            entityDescriptorLock.readLock().unlock();
+        }
+
+        entityDescriptorLock.writeLock().lock();
+
+        try {
+
+            EntityDescriptor descriptor = new EntityDescriptor(entityClass);
+
+            if (descriptor.getPartition() != null) {
+                descriptor.getPartition().setPartitionValue(String.valueOf(partitionId));
+            }
+
+            descriptors.put(entityKey, descriptor);
+
+            // Get the latest System Entity
+            SystemEntity systemEntity = this.getSystemEntityByName(descriptor.getClazz().getName());
+
+            // If it does not exist, lets create a new one
+            if (systemEntity == null) {
+                systemEntity = new SystemEntity(descriptor);
+                systemPersistenceManager.saveEntity(systemEntity);
+            }
+
+            checkForValidDescriptorPartition(descriptor, systemEntity);
+            checkForEntityChanges(descriptor, systemEntity);
+
+            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
+
+            return descriptor;
+        } finally {
+            entityDescriptorLock.writeLock().unlock();
+        }
     }
 
     /**
@@ -856,8 +903,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @param entity Entity Instance
      * @return Record's entity descriptor
-     * @throws EntityException              Generic Exception
-     * @throws EntityClassNotFoundException
+     * @throws EntityException Generic Exception
      * @since 1.0.0
      */
     public EntityDescriptor getDescriptorForEntity(final Object entity) throws EntityException {
@@ -879,9 +925,48 @@ public class DefaultSchemaContext implements SchemaContext {
      * @since 1.0.0
      */
     public EntityDescriptor getBaseDescriptorForEntity(final Class entityClass) throws EntityException {
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(entityClass);
 
-        return getDescriptorForEntity(entity, "");
+        if (entityClass == null)
+            return null;
+        final String entityKey = entityClass.getName();
+
+        entityDescriptorLock.readLock().lock();
+
+        try {
+            EntityDescriptor descriptor = descriptors.get(entityKey);
+
+            if (descriptor != null) {
+                return descriptor;
+            }
+        } finally {
+            entityDescriptorLock.readLock().unlock();
+        }
+
+        entityDescriptorLock.writeLock().lock();
+
+        try {
+
+            EntityDescriptor descriptor = new EntityDescriptor(entityClass);
+            descriptors.put(entityKey, descriptor);
+
+            // Get the latest System Entity
+            SystemEntity systemEntity = this.getSystemEntityByName(entityKey);
+
+            // If it does not exist, lets create a new one
+            if (systemEntity == null) {
+                systemEntity = new SystemEntity(descriptor);
+                systemPersistenceManager.saveEntity(systemEntity);
+            }
+
+            checkForValidDescriptorPartition(descriptor, systemEntity);
+            checkForEntityChanges(descriptor, systemEntity);
+
+            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
+
+            return descriptor;
+        } finally {
+            entityDescriptorLock.writeLock().unlock();
+        }
     }
 
     ///////////////////////////////////////////////////////////////
@@ -892,9 +977,10 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new HashMap<>();
+    private final Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
 
-    private ReadWriteLock relationshipControllerReadWriteLock = new ReentrantReadWriteLock(true);
+    private final StampedLock relationshipControllerReadWriteLock = new StampedLock();
+
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
      * <p>
@@ -908,17 +994,16 @@ public class DefaultSchemaContext implements SchemaContext {
     public RelationshipController getRelationshipController(final RelationshipDescriptor relationshipDescriptor)
             throws EntityException {
 
-        RelationshipController retVal = null;
+        RelationshipController retVal;
 
-        relationshipControllerReadWriteLock.readLock().lock();
+        long stamp = relationshipControllerReadWriteLock.readLock();
         try {
             retVal = relationshipControllers.get(relationshipDescriptor);
 
             if (retVal != null)
                 return retVal;
-        }
-        finally {
-            relationshipControllerReadWriteLock.readLock().unlock();
+        } finally {
+            relationshipControllerReadWriteLock.unlockRead(stamp);
         }
 
         if ((relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) ||
@@ -929,14 +1014,13 @@ public class DefaultSchemaContext implements SchemaContext {
             retVal = new ToOneRelationshipControllerImpl(relationshipDescriptor.getEntityDescriptor(), relationshipDescriptor, context);
         }
 
-        relationshipControllerReadWriteLock.writeLock().lock();
+        stamp = relationshipControllerReadWriteLock.writeLock();
         try {
 
             relationshipControllers.put(relationshipDescriptor, retVal);
             return retVal;
-        }
-        finally {
-            relationshipControllerReadWriteLock.writeLock().unlock();
+        } finally {
+            relationshipControllerReadWriteLock.unlockWrite(stamp);
         }
     }
 
@@ -948,12 +1032,12 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
+    private final Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
 
     /**
      * Method for creating a new index controller.
      */
-    private Function createIndexController = new Function<IndexDescriptor, IndexController>() {
+    private final Function createIndexController = new Function<IndexDescriptor, IndexController>() {
         @Override
         public IndexController apply(final IndexDescriptor descriptor) {
             try {
@@ -978,16 +1062,6 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     /**
-     * Get location of file base. Return null since this is an embedded schema context
-     *
-     * @return get location of file base.
-     * @since 1.0.0
-     */
-    public String getRemoteFileBase() {
-        return null;
-    }
-
-    /**
      * Create Temporary Map Builder.
      *
      * @return Create new storage mechanism factory
@@ -995,7 +1069,15 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     public MapBuilder createTemporaryMapBuilder() {
         try {
-            return new DefaultMapBuilder(File.createTempFile("query-temp", "db").getPath(), StoreType.MEMORY_MAPPED_FILE, this.context);
+            String stringBuilder = temporaryFileLocation +
+                    File.separator +
+                    String.valueOf(System.currentTimeMillis()) +
+                    new BigInteger(20, random).toString(32);
+
+            final File file = new File(stringBuilder);
+            //noinspection ResultOfMethodCallIgnored
+            file.createNewFile();
+            return new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, false);
         } catch (IOException e) {
             return null;
         }
@@ -1004,7 +1086,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Consumer that initiates a new index rebuild.
      */
-    protected Consumer<IndexDescriptor> rebuildIndexConsumer = indexDescriptor ->
+    private final Consumer<IndexDescriptor> rebuildIndexConsumer = indexDescriptor ->
     {
         try {
 
@@ -1014,8 +1096,8 @@ public class DefaultSchemaContext implements SchemaContext {
                 final List<SystemPartitionEntry> entries = systemEntity.getPartition().getEntries();
                 SystemPartitionEntry entry = null;
 
-                for (int i = 0; i < entries.size(); i++) {
-                    entry = entries.get(i);
+                for (SystemPartitionEntry entry1 : entries) {
+                    entry = entry1;
 
                     final EntityDescriptor partitionEntityDescriptor = getDescriptorForEntity(indexDescriptor.getEntityDescriptor()
                             .getClazz().getName(), entry.getValue());

@@ -43,8 +43,4 @@ public class PerformanceEntity extends AbstractEntity implements IManagedEntity
     @Relationship(type = RelationshipType.ONE_TO_ONE, inverseClass = PerformanceEntityChild.class, inverse = "parent", cascadePolicy = CascadePolicy.ALL)
     public PerformanceEntityChild child;
 
-    public boolean equals(Object o)
-    {
-        return (o instanceof PerformanceEntity && ((PerformanceEntity) o).id.equals(id));
-    }
 }
