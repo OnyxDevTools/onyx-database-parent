@@ -113,6 +113,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
             selector = SelectorProvider.provider().openSelector();
             serverSocketChannel = ServerSocketChannel.open();
+            serverSocketChannel.socket().setReuseAddress(true);
             serverSocketChannel.configureBlocking(false);
             serverSocketChannel.socket().bind(new InetSocketAddress("0.0.0.0", port));
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
@@ -172,11 +173,13 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                         // Read from the connectionProperties.  Notice it goes down on the readThread for the connectionProperties.
                         // That is a shared thread pool for multiple connections
                         final ConnectionProperties connectionProperties = (ConnectionProperties) key.attachment();
+                        if(!connectionProperties.isReading) {
                         connectionProperties.readThread.execute(() -> {
                             if (key.channel().isOpen()) {
                                 read((SocketChannel) key.channel(), (ConnectionProperties) key.attachment());
                             }
                         });
+                    }
                     }
                 } catch (CancelledKeyException ignore) {
                 } catch (Exception e) {
@@ -184,6 +187,11 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                 }
             }
         }
+
+        // Added wait so we dont spin valuable cpu cycles
+        try {
+            Thread.sleep(20);
+        } catch (InterruptedException ignore) {}
     }
 
     /**
@@ -288,6 +296,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
         daemonService.shutdown();
         try {
             selector.wakeup();
+            serverSocketChannel.socket().close();
             serverSocketChannel.close();
         } catch (IOException ignore) {
         }

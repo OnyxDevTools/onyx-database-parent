@@ -19,6 +19,7 @@ public class ConnectionProperties extends ConnectionBufferPool
     // PacketTransportEngine for wrapping and unwrapping connection
     public final PacketTransportEngine packetTransportEngine;
     public final ByteBuffer readOverflowData;
+    public volatile boolean isReading = false;
 
     /**
      * Constructor with packetTransportEngine

@@ -47,8 +47,8 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
     private static final byte MULTI_PACKET_MIDDLE = (byte) 2;
     private static final byte MULTI_PACKET_STOP = (byte) 3;
 
-    private static final int MULTI_PACKET_BUFFER_ALLOCATION = 1024 * 50; //50 KB
     private static final int MAX_PACKET_SIZE = 16000;
+    private static final int MULTI_PACKET_BUFFER_ALLOCATION = MAX_PACKET_SIZE * 3; //50 KB
 
     /**
      * Read from a socket channel.  This will read and interpret the packets in order to decipher a message.
@@ -60,100 +60,117 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * @since 1.2.0
      */
     protected void read(SocketChannel socketChannel, ConnectionProperties connectionProperties) {
-        boolean exitReadLoop = false;
+        connectionProperties.isReading = true;
+        try {
+            boolean exitReadLoop = false;
 
-        // If the data is in multiple packets, this is used to combine the values
-        ByteBuffer readMultiPacketData = null;
+            // If the data is in multiple packets, this is used to combine the values
+            ByteBuffer readMultiPacketData = null;
 
-        while (!exitReadLoop && active) {
-            connectionProperties.readNetworkData.clear();
+            while (!exitReadLoop && active) {
+                connectionProperties.readNetworkData.clear();
 
-            // Handle the remainder of the buffer.  This is to be used in the next cycle of reading for messages
-            connectionProperties.handleConnectionRemainder();
+                // Handle the remainder of the buffer.  This is to be used in the next cycle of reading for messages
+                connectionProperties.handleConnectionRemainder();
 
-            try {
-                // Read from the socket channel
-                int bytesRead;
                 try {
-                    if(socketChannel.socket() == null) {
-                        closeConnection(socketChannel, connectionProperties);
-                        return;
-                    }
-                    bytesRead = socketChannel.read(connectionProperties.readNetworkData);
-                    if (bytesRead > 0) {
-
-                        // Iterate through the network data
-                        connectionProperties.readNetworkData.flip();
-                        while (connectionProperties.readNetworkData.hasRemaining() && active) {
-
-                            // Attempt Unwrap the packet. This can be done via a SSLEngineImpl or an unsecured packetTransportEngine.
-                            // Don't let the SSLEngineResult fool you.  This was used as a convenience because SSL already had
-                            // this feature built out.
-                            connectionProperties.readApplicationData.clear();
-                            SSLEngineResult result = connectionProperties.packetTransportEngine.unwrap(connectionProperties.readNetworkData, connectionProperties.readApplicationData);
-                            switch (result.getStatus()) {
-                                // Packet was read successfully
-                                case OK:
-                                    connectionProperties.readApplicationData.flip();
-
-                                    // Handle a packet
-                                    byte packetType = connectionProperties.readApplicationData.get();
-
-                                    // It is a single packet.  Yay, we got what we were looking for and it was small enough to fit into a single pack
-                                    if (packetType == SINGLE_PACKET) {
-                                        handleMessage(packetType, socketChannel, connectionProperties, connectionProperties.readApplicationData);
-                                        exitReadLoop = true;
-                                    }
-                                    // This is the start of a larger packet that is too big to fit onto a single buffer
-                                    // Since that is the case, we will combine multiple reads onto a single buffer.
-                                    // This buffer is a throw away since we want to keep memory management sane.
-                                    else if (packetType == MULTI_PACKET_START) {
-                                        readMultiPacketData = BufferStream.allocate(MULTI_PACKET_BUFFER_ALLOCATION); // Allocate using the Buffer Stream since it encapsulates the endian and potential use of recycled buffers
-                                        readMultiPacketData.put(connectionProperties.readApplicationData);
-                                    }
-                                    // A Packet in the middle
-                                    else if (packetType == MULTI_PACKET_MIDDLE) {
-                                        // Check to see if the buffer is large enough
-                                        readMultiPacketData = ensureBufferCapacity(readMultiPacketData, connectionProperties.readApplicationData.limit());
-                                        readMultiPacketData.put(connectionProperties.readApplicationData);
-                                    } else if (packetType == MULTI_PACKET_STOP) {
-                                        readMultiPacketData = ensureBufferCapacity(readMultiPacketData, connectionProperties.readApplicationData.limit());
-
-                                        // Handle the message buffer and send process it
-                                        readMultiPacketData.put(connectionProperties.readApplicationData);
-                                        readMultiPacketData.flip();
-                                        handleMessage(packetType, socketChannel, connectionProperties, readMultiPacketData);
-                                        exitReadLoop = true;
-                                    }
-                                    break;
-                                case BUFFER_OVERFLOW:
-                                    throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
-                                case BUFFER_UNDERFLOW:
-                                    connectionProperties.readOverflowData.put(connectionProperties.readNetworkData);
-                                    break;
-                                case CLOSED:
-                                    try {
-                                        closeConnection(socketChannel, connectionProperties);
-                                    } catch (IOException ignore) {
-                                    }
-                                    return;
-                                default:
-                                    throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
-                            }
+                    // Read from the socket channel
+                    int bytesRead;
+                    try {
+                        if (socketChannel.socket() == null) {
+                            closeConnection(socketChannel, connectionProperties);
+                            return;
                         }
-                    } else if (bytesRead < 0) {
+                        bytesRead = socketChannel.read(connectionProperties.readNetworkData);
+                        if (bytesRead > 0) {
+
+                            // Iterate through the network data
+                            connectionProperties.readNetworkData.flip();
+                            while (connectionProperties.readNetworkData.hasRemaining() && active) {
+
+                                // Attempt Unwrap the packet. This can be done via a SSLEngineImpl or an unsecured packetTransportEngine.
+                                // Don't let the SSLEngineResult fool you.  This was used as a convenience because SSL already had
+                                // this feature built out.
+                                connectionProperties.readApplicationData.clear();
+                                SSLEngineResult result = connectionProperties.packetTransportEngine.unwrap(connectionProperties.readNetworkData, connectionProperties.readApplicationData);
+                                switch (result.getStatus()) {
+                                    // Packet was read successfully
+                                    case OK:
+                                        connectionProperties.readApplicationData.flip();
+
+                                        // Handle a packet
+                                        byte packetType = connectionProperties.readApplicationData.get();
+
+                                        // It is a single packet.  Yay, we got what we were looking for and it was small enough to fit into a single pack
+                                        if (packetType == SINGLE_PACKET) {
+                                            handleMessage(packetType, socketChannel, connectionProperties, connectionProperties.readApplicationData);
+                                            exitReadLoop = true;
+                                        }
+                                        // This is the start of a larger packet that is too big to fit onto a single buffer
+                                        // Since that is the case, we will combine multiple reads onto a single buffer.
+                                        // This buffer is a throw away since we want to keep memory management sane.
+                                        else if (packetType == MULTI_PACKET_START) {
+                                            readMultiPacketData = BufferStream.allocate(MULTI_PACKET_BUFFER_ALLOCATION); // Allocate using the Buffer Stream since it encapsulates the endian and potential use of recycled buffers
+                                            readMultiPacketData.put(connectionProperties.readApplicationData);
+                                        }
+                                        // A Packet in the middle
+                                        else if (packetType == MULTI_PACKET_MIDDLE) {
+                                            // Check to see if the buffer is large enough
+                                            readMultiPacketData = ensureBufferCapacity(readMultiPacketData, connectionProperties.readApplicationData.limit());
+                                            readMultiPacketData.put(connectionProperties.readApplicationData);
+                                        } else if (packetType == MULTI_PACKET_STOP) {
+                                            readMultiPacketData = ensureBufferCapacity(readMultiPacketData, connectionProperties.readApplicationData.limit());
+
+                                            // Handle the message buffer and send process it
+                                            readMultiPacketData.put(connectionProperties.readApplicationData);
+                                            readMultiPacketData.flip();
+                                            handleMessage(packetType, socketChannel, connectionProperties, readMultiPacketData);
+                                            exitReadLoop = true;
+                                            readMultiPacketData = null;
+                                        }
+                                        break;
+                                    case BUFFER_OVERFLOW:
+                                        throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
+                                    case BUFFER_UNDERFLOW:
+                                        connectionProperties.readOverflowData.put(connectionProperties.readNetworkData);
+                                        break;
+                                    case CLOSED:
+                                        try {
+                                            closeConnection(socketChannel, connectionProperties);
+                                        } catch (IOException ignore) {
+                                        }
+                                        return;
+                                    default:
+                                        throw new IllegalStateException("Invalid SSL status: " + result.getStatus());
+                                }
+                            }
+                        } else if (bytesRead < 0) {
+                            handleEndOfStream(socketChannel, connectionProperties);
+                            return;
+                        }
+                    } catch (ClosedChannelException closed) {
                         handleEndOfStream(socketChannel, connectionProperties);
-                        return;
                     }
-                } catch (ClosedChannelException closed) {
-                    handleEndOfStream(socketChannel, connectionProperties);
+
+                    // Added a wait so that we can hold off to see the rest
+                    // of the packet loaded
+                    if (!exitReadLoop) {
+                        try {
+                            Thread.sleep(5);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                    // Write the exception back to the client
+                    final ServerReadException readException = new ServerReadException(exception);
+                    write(socketChannel, connectionProperties, new RequestToken(Short.MAX_VALUE, readException));  // Create a new token and use Short.MAX_VALUE as a placeholder
                 }
-            } catch (IOException exception) {
-                exception.printStackTrace();
-                // Write the exception back to the client
-                final ServerReadException readException = new ServerReadException(exception);
-                write(socketChannel, connectionProperties, new RequestToken(Short.MAX_VALUE, readException));  // Create a new token and use Short.MAX_VALUE as a placeholder
             }
+        } finally {
+            connectionProperties.isReading = false;
         }
     }
 
@@ -167,6 +184,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * @throws IOException Issue writing to the channel.
      * @since 1.2.0
      */
+
     private void writePacket(SocketChannel socketChannel, ConnectionProperties connectionProperties) throws IOException {
 
         while (connectionProperties.writeApplicationData.hasRemaining()) {
@@ -210,7 +228,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      */
     private ByteBuffer ensureBufferCapacity(ByteBuffer buffer, int additional) {
         if (buffer.capacity() < buffer.position() + additional) {
-            ByteBuffer temporaryBuffer = BufferStream.allocate(buffer.capacity() + MULTI_PACKET_BUFFER_ALLOCATION);
+            ByteBuffer temporaryBuffer = BufferStream.allocate(buffer.capacity() + additional);
             buffer.flip();
             temporaryBuffer.put(buffer);
             BufferStream.recycle(buffer); // Be sure to recycle so we can use another time
@@ -258,7 +276,8 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                 // Check to see if the message buffer is the write application buffer.  If it is not,
                 // it indicates the original buffer was resized.  If that is the case, it is too large
                 // to fit onto a single packet
-                if (messageBuffer.limit() >= connectionProperties.writeApplicationData.capacity()) {
+                if (messageBuffer.limit() >= MAX_PACKET_SIZE) {
+
                     boolean firstPacket = true;
                     byte packetType = MULTI_PACKET_START;
 
@@ -268,7 +287,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                         connectionProperties.writeApplicationData.clear();
 
                         // Identify if it is a leading or trailing packet
-                        if (!firstPacket && messageBuffer.remaining() >= MAX_PACKET_SIZE)
+                        if (!firstPacket && messageBuffer.remaining() > MAX_PACKET_SIZE)
                             packetType = MULTI_PACKET_MIDDLE;
                         else if (!firstPacket)
                             packetType = MULTI_PACKET_STOP;
@@ -435,8 +454,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                         throw new IllegalStateException("Invalid SSL status: " + handshakeStatus);
                 }
             }
-        }
-        finally {
+        } finally {
             BufferStream.recycle(readHandshakeData);
             BufferStream.recycle(readHandshakeApplicationData);
             BufferStream.recycle(writeHandshakeBuffer);
