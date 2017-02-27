@@ -4,6 +4,8 @@ import com.onyx.exception.InvalidDataTypeForOperator;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
 
@@ -33,17 +35,72 @@ public class CompareUtil
     }
 
     /**
+     * This method runs a compare but, swallows the errors.
+     *
+     * @param object First object
+     * @param object2 Second object to compare
+     * @return Whether they are equal or not
+     */
+    public static boolean forceCompare(Object object, Object object2)
+    {
+        try {
+            return compare(object ,object2);
+        } catch (InvalidDataTypeForOperator invalidDataTypeForOperator) {
+            return false;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object castObject(Class clazz, Object object) {
+
+        Method method = null;
+
+        try {
+            if (clazz == Integer.class)
+                method = object.getClass().getMethod("intValue");
+            else if (clazz == Long.class)
+                method = object.getClass().getMethod("longValue");
+            else if (clazz == Short.class)
+                method = object.getClass().getMethod("shortValue");
+            else if (clazz == Byte.class)
+                method = object.getClass().getMethod("byteValue");
+            else if (clazz == Boolean.class)
+                method = object.getClass().getMethod("booleanValue");
+            else if (clazz == Float.class)
+                method = object.getClass().getMethod("floatValue");
+            else if (clazz == Double.class)
+                method = object.getClass().getMethod("doubleValue");
+            else if (clazz == Character.class)
+                method = object.getClass().getMethod("toChar");
+            else if (clazz == String.class)
+                method = object.getClass().getMethod("toString");
+
+            return method.invoke(object);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
+        {
+            return object;
+        }
+    }
+
+    /**
      * Compare 2 objects, they can be any data type supported by the database
      *
      * @param object First object to compare
      * @param object2 second object to compare
      * @return Whether the values are equal
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "WeakerAccess"})
     public static boolean compare(Object object, Object object2) throws InvalidDataTypeForOperator
     {
-        if(object == null && object2 == null)
+
+        if(object == object2)
             return true;
+
+        // If the objects do not match, cast it to the correct object
+        if(object2 != null
+                && object != null
+                && object2.getClass() != object.getClass())
+            object2 = castObject(object.getClass(), object2);
 
         if(object instanceof Comparable
                 && object2 instanceof Comparable)

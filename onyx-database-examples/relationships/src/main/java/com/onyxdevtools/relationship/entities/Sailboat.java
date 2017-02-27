@@ -6,31 +6,29 @@ import com.onyx.persistence.annotations.*;
 
 import java.util.List;
 
-/**
- * Created by tosborn1 on 3/28/16.
- */
 @Entity
+@SuppressWarnings("unused")
 public class Sailboat extends ManagedEntity implements IManagedEntity
 {
     @Identifier
     @Attribute
-    protected String registrationCode;
+    private String registrationCode;
 
     @Attribute
-    protected String name;
+    private String name;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverseClass = CrewMember.class,
             inverse = "sailboat",
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.LAZY)
-    protected List<CrewMember> crew;
+    private List<CrewMember> crew;
 
     @Relationship(type = RelationshipType.ONE_TO_ONE,
             inverseClass = Skipper.class,
             inverse = "sailboat",
             cascadePolicy = CascadePolicy.ALL)
-    protected Skipper skipper;
+    private Skipper skipper;
 
     public String getRegistrationCode() {
         return registrationCode;

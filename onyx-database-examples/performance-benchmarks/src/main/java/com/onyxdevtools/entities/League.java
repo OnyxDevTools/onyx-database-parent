@@ -18,11 +18,11 @@ public class League extends ManagedEntity implements IManagedEntity
     @Attribute
     @Identifier(loadFactor = 1)
     @Id
-    protected String name;
+    private String name;
 
     @Attribute
     @Column
-    protected String description;
+    private String description;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -32,7 +32,7 @@ public class League extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    protected List<Season> seasons = new ArrayList();
+    private List<Season> seasons = new ArrayList<>();
 
     @SuppressWarnings("unused")
     public String getName()

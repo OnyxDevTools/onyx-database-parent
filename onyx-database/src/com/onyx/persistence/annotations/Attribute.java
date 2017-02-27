@@ -36,7 +36,7 @@ public @interface Attribute
      * @since 1.0.0
      * @return Boolean key indicating nullable or not
      */
-    boolean nullable() default true;
+    @SuppressWarnings("unused") boolean nullable() default true;
 
     /**
      * Size of an attribute.  Only applies if the attribute is type string
@@ -44,5 +44,5 @@ public @interface Attribute
      * @since 1.0.0
      * @return Attribute max size
      */
-    int size() default -1;
+    @SuppressWarnings("unused") int size() default -1;
 }

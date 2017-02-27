@@ -6,18 +6,21 @@ import com.onyx.persistence.annotations.*;
 
 /**
  * Created by timo
- * thy.osborn on 3/2/15.
+ * tim.osborn on 3/2/15.
+ *
+ * Relationship information for an entity
  */
 @Entity(fileName = "system")
 public class SystemRelationship extends AbstractSystemEntity implements IManagedEntity
 {
 
+    @SuppressWarnings("unused")
     public SystemRelationship()
     {
 
     }
 
-    public SystemRelationship(RelationshipDescriptor relationshipDescriptor, SystemEntity entity)
+    SystemRelationship(RelationshipDescriptor relationshipDescriptor, SystemEntity entity)
     {
         id = entity.getName() + relationshipDescriptor.getName() +  inverseClass + inverse;
         this.entity = entity;
@@ -31,54 +34,67 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         this.loadFactor = relationshipDescriptor.getLoadFactor();
     }
 
+    @SuppressWarnings("unused")
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
-    @Index(loadFactor = 1)
+    @Index(loadFactor = 3)
     protected String id;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String name;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "relationships", inverseClass = SystemEntity.class, loadFactor = 1)
+    @SuppressWarnings("WeakerAccess")
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "relationships", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String inverse;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String inverseClass;
 
     @Attribute
-    protected String parentClass;
+    private String parentClass;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected int fetchPolicy;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected int cascadePolicy;
 
     @Attribute
-    protected int relationshipType;
+    private int relationshipType;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected int loadFactor;
 
+    @SuppressWarnings("unused")
     public int getLoadFactor() {
         return loadFactor;
     }
 
+    @SuppressWarnings("unused")
     public void setLoadFactor(int loadFactor) {
         this.loadFactor = loadFactor;
     }
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id)
     {
         this.id = id;
@@ -89,16 +105,19 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return name;
     }
 
+    @SuppressWarnings("unused")
     public void setName(String name)
     {
         this.name = name;
     }
 
+    @SuppressWarnings("unused")
     public SystemEntity getEntity()
     {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(SystemEntity entity)
     {
         this.entity = entity;
@@ -109,6 +128,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return inverse;
     }
 
+    @SuppressWarnings("unused")
     public void setInverse(String inverse)
     {
         this.inverse = inverse;
@@ -119,6 +139,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return inverseClass;
     }
 
+    @SuppressWarnings("unused")
     public void setInverseClass(String inverseClass)
     {
         this.inverseClass = inverseClass;
@@ -129,6 +150,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return parentClass;
     }
 
+    @SuppressWarnings("unused")
     public void setParentClass(String parentClass)
     {
         this.parentClass = parentClass;
@@ -139,6 +161,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return fetchPolicy;
     }
 
+    @SuppressWarnings("unused")
     public void setFetchPolicy(int fetchPolicy)
     {
         this.fetchPolicy = fetchPolicy;
@@ -149,6 +172,7 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return cascadePolicy;
     }
 
+    @SuppressWarnings("unused")
     public void setCascadePolicy(int cascadePolicy)
     {
         this.cascadePolicy = cascadePolicy;
@@ -159,8 +183,19 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         return relationshipType;
     }
 
+    @SuppressWarnings("unused")
     public void setRelationshipType(int relationshipType)
     {
         this.relationshipType = relationshipType;
+    }
+
+    public int hashCode()
+    {
+        return (id != null) ? id.hashCode() : 0;
+    }
+
+    public boolean equals(Object o)
+    {
+        return (o != null && o instanceof SystemRelationship && ((SystemRelationship) o).id != null && ((SystemRelationship) o).id.equals(id));
     }
 }

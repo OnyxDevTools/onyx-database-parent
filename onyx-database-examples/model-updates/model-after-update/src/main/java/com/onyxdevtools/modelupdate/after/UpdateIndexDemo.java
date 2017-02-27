@@ -22,17 +22,18 @@ import java.util.List;
  * This will also display how new indexes also need to rebuild in order to become useful.  The rebuilding of an index
  * is done automatically at startup and should not need to be triggered manually.
  */
-public class UpdateIndexDemo {
+class UpdateIndexDemo {
 
 
     // Date formatter used to convert strings to dates
-    protected static SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy");
+    private static final SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy");
 
     /**
      * Main Method to demo the functionality
      * @param persistenceManager Open and valid persistence manager
      */
-    public static void demo(PersistenceManager persistenceManager)
+    @SuppressWarnings("unchecked")
+    static void demo(PersistenceManager persistenceManager)
     {
 
         try {
@@ -76,7 +77,7 @@ public class UpdateIndexDemo {
      * @param stringDate  String in format of MM-dd-yyyy
      * @return Date key
      */
-    protected static Date parseDate(String stringDate)
+    private static Date parseDate(@SuppressWarnings("SameParameterValue") String stringDate)
     {
         try {
             return formatter.parse(stringDate);

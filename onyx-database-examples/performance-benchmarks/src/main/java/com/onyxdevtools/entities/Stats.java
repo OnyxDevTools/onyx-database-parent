@@ -14,7 +14,7 @@ import javax.persistence.Index;
 //J-
 @com.onyx.persistence.annotations.Entity(fileName = "stats")
 @javax.persistence.Entity
-@Table(indexes = { @Index(name = "rushingYards", columnList = "rushingYards", unique = false) })
+@Table(indexes = { @Index(name = "rushingYards", columnList = "rushingYards") })
 public class Stats extends ManagedEntity implements IManagedEntity
 {
     public Stats()
@@ -30,7 +30,7 @@ public class Stats extends ManagedEntity implements IManagedEntity
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 2)
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    protected long statId;
+    private long statId;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
@@ -39,7 +39,7 @@ public class Stats extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @ManyToOne(targetEntity = Player.class)
-    protected Player player;
+    private Player player;
 
     @Relationship(
             type = RelationshipType.ONE_TO_ONE,
@@ -47,52 +47,52 @@ public class Stats extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToOne
-    protected Season season;
+    private Season season;
 
     @Attribute
     @Column
     @com.onyx.persistence.annotations.Index(loadFactor = 2)
-    protected int rushingYards;
+    private int rushingYards;
 
     @Attribute
     @Column
-    protected int receivingYards;
+    private int receivingYards;
 
     @Attribute
     @Column
-    protected int passingYards;
+    private int passingYards;
 
     @Attribute
     @Column
-    protected int rushingTouchdowns;
+    private int rushingTouchdowns;
 
     @Attribute
     @Column
-    protected int receivingTouchdowns;
+    private int receivingTouchdowns;
 
     @Attribute
     @Column
-    protected int passingTouchdowns;
+    private int passingTouchdowns;
 
     @Attribute
     @Column
-    protected int receptions;
+    private int receptions;
 
     @Attribute
     @Column
-    protected int rushingAttempts;
+    private int rushingAttempts;
 
     @Attribute
     @Column
-    protected int passAttempts;
+    private int passAttempts;
 
     @Attribute
     @Column
-    protected int passCompletions;
+    private int passCompletions;
 
     @Attribute
     @Column
-    protected int fantasyPoints;
+    private int fantasyPoints;
 
     public long getStatId()
     {

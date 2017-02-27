@@ -28,11 +28,12 @@ import java.util.Date;
  *
  * Instruction - First run this main class for Part 1, and then run the main class in Part 2
  */
+@SuppressWarnings("ResultOfMethodCallIgnored")
 public class Main
 {
 
     // Date formatter used to convert strings to dates
-    protected static SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy");
+    private static final SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy");
 
     public static void main(String[] args) throws EntityException
     {
@@ -69,7 +70,7 @@ public class Main
      * @param manager Persistence Manager used to save the entities
      * @throws EntityException Failure to persist entities
      */
-    public static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws EntityException
     {
         Account account = new Account();
         account.setAccountName("Timbob's Lawn Care");
@@ -79,7 +80,7 @@ public class Main
         marchLawnInvoice.setDueDate(parseDate("04-01-2016"));
         marchLawnInvoice.setInvoiceDate(parseDate("03-01-2016"));
         marchLawnInvoice.setNotes("Why did we need to mow your lawn.  Its basically a dirt field.");
-        marchLawnInvoice.setInvoiceId(1l);
+        marchLawnInvoice.setInvoiceId(1L);
         marchLawnInvoice.setAmount(44.32);
         marchLawnInvoice.setAccount(account);
 
@@ -87,7 +88,7 @@ public class Main
         aprilLawnInvoice.setDueDate(parseDate("04-01-2016"));
         aprilLawnInvoice.setInvoiceDate(parseDate("03-01-2016"));
         aprilLawnInvoice.setNotes("Its April, your lawn should be growing by now.");
-        aprilLawnInvoice.setInvoiceId(2l);
+        aprilLawnInvoice.setInvoiceId(2L);
         aprilLawnInvoice.setAmount(44.32);
         aprilLawnInvoice.setAccount(account);
 
@@ -96,13 +97,14 @@ public class Main
         manager.saveEntity(aprilLawnInvoice);
 
         Payment marchLawnCarePayment = new Payment();
-        marchLawnCarePayment.setPaymentId(1l);
+        marchLawnCarePayment.setPaymentId(1L);
         marchLawnCarePayment.setInvoice(marchLawnInvoice);
         marchLawnCarePayment.setAmount(44.32);
 
         manager.saveEntity(marchLawnCarePayment);
 
         Account account1 = (Account) manager.findById(Account.class, 1);
+        assert account1.getAccountId() == 1L;
     }
 
     /**
@@ -111,7 +113,7 @@ public class Main
      * @param stringDate  String in format of MM-dd-yyyy
      * @return Date key
      */
-    protected static Date parseDate(String stringDate)
+    private static Date parseDate(String stringDate)
     {
         try {
             return formatter.parse(stringDate);
@@ -126,7 +128,7 @@ public class Main
      *
      * @param pathToDb Path to onyx database
      */
-    public static void deleteDatabase(String pathToDb)
+    private static void deleteDatabase(String pathToDb)
     {
         File database = new File(pathToDb);
         if (database != null && database.exists()) {

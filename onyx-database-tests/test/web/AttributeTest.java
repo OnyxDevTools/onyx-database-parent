@@ -1,7 +1,7 @@
 package web;
 
 import category.WebServerTests;
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.WebDatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import entities.AllAttributeEntity;
@@ -29,8 +29,9 @@ public class AttributeTest extends BaseTest {
     @BeforeClass
     public static void beforeClass()
     {
-        testApplication = new DatabaseServer();
-        testApplication.setPort(8080);
+        testApplication = new WebDatabaseServer();
+        testApplication.setPort(4555);
+        testApplication.setWebServicePort(8080);
         testApplication.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         testApplication.setCredentials("admin", "admin");
         testApplication.start();

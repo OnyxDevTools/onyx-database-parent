@@ -5,20 +5,20 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.SingletonException;
 import com.onyx.fetch.impl.*;
 import com.onyx.helpers.PartitionHelper;
-import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryPartitionMode;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 
 /**
  * Created by timothy.osborn on 1/6/15.
+ *
+ * This class retrieves the correct scanner for the corresponding query criteria
  */
 public class ScannerFactory
 {
@@ -30,7 +30,7 @@ public class ScannerFactory
     /**
      * Constructor, must send in the context
      */
-    public ScannerFactory()
+    private ScannerFactory()
     {
 
     }
@@ -38,10 +38,9 @@ public class ScannerFactory
     /**
      * Get the instance
      *
-     * @return
-     * @throws com.onyx.exception.SingletonException
+     * @return Scanner Factory single instance
      */
-    public synchronized static ScannerFactory getInstance(SchemaContext _context) throws SingletonException
+    public synchronized static ScannerFactory getInstance(SchemaContext _context)
     {
         if (instance == null)
         {
@@ -53,23 +52,21 @@ public class ScannerFactory
 
     /**
      * Returns the proper
-     * @param criteria
-     * @param classToScan
-     * @return
-     * @throws EntityException
+     * @param criteria Query Criteria
+     * @param classToScan Entity class to scan
+     * @return Scanner implementation
      */
     public TableScanner getScannerForQueryCriteria(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws EntityException
     {
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(classToScan);
-        EntityDescriptor descriptor = null;
+        EntityDescriptor descriptor;
 
         if (query.getPartition() == QueryPartitionMode.ALL)
         {
-            descriptor = context.getDescriptorForEntity(entity, "");
+            descriptor = context.getDescriptorForEntity(classToScan, "");
         }
         else
         {
-            descriptor = context.getDescriptorForEntity(entity, query.getPartition());
+            descriptor = context.getDescriptorForEntity(classToScan, query.getPartition());
         }
 
         final String attributeToScan = criteria.getAttribute();
@@ -79,8 +76,7 @@ public class ScannerFactory
         // This has a dot in it, it must be a relationship or a typo
         if (segments.length > 1)
         {
-            final RelationshipScanner relationshipScanner = new RelationshipScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-            return relationshipScanner;
+            return new RelationshipScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
         }
 
         // Identifiers criteria must be either an equal or in so that it can make exact matches
@@ -93,13 +89,11 @@ public class ScannerFactory
         {
             if (PartitionHelper.hasPartitionField(query.getEntityType(), context))
             {
-                final PartitionIdentifierScanner indexScanner = new PartitionIdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-                return indexScanner;
+                return new PartitionIdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
             }
             else
             {
-                final IdentifierScanner indexScanner = new IdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-                return indexScanner;
+                return new IdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
             }
         }
 
@@ -114,13 +108,11 @@ public class ScannerFactory
         {
             if (PartitionHelper.hasPartitionField(query.getEntityType(), context))
             {
-                final PartitionIndexScanner indexScanner = new PartitionIndexScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-                return indexScanner;
+                return new PartitionIndexScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
             }
             else
             {
-                final IndexScanner indexScanner = new IndexScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-                return indexScanner;
+                return new IndexScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
             }
         }
 
@@ -129,14 +121,11 @@ public class ScannerFactory
         {
             if (PartitionHelper.hasPartitionField(query.getEntityType(), context))
             {
-                final PartitionFullTableScanner fullTableScanner = new PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-                return fullTableScanner;
-
+                return new PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
             }
             else
             {
-                final FullTableScanner fullTableScanner = new FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
-                return fullTableScanner;
+                return new FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
             }
         }
 

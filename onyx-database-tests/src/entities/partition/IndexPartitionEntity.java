@@ -11,6 +11,7 @@ import com.onyx.persistence.annotations.*;
 @Entity(fileName = "web/partition")
 public class IndexPartitionEntity extends ManagedEntity implements IManagedEntity
 {
+
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
     public Long id;

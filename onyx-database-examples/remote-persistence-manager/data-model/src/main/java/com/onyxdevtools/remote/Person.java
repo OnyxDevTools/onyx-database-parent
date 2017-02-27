@@ -1,4 +1,3 @@
-
 package com.onyxdevtools.remote;
 
 import com.onyx.persistence.ManagedEntity;
@@ -9,24 +8,25 @@ import com.onyx.persistence.annotations.Identifier;
 import java.util.Date;
 
 @Entity
+@SuppressWarnings("unused")
 public class Person extends ManagedEntity
 {
 
     @Identifier
     @Attribute
-    public String id;
+    private String id;
 
     @Attribute
-    public Date dateCreated;
+    private Date dateCreated;
 
     @Attribute
-    public Date dateUpdated;
+    private Date dateUpdated;
 
     @Attribute
-    public String firstName;
+    private String firstName;
 
     @Attribute
-    public String lastName;
+    private String lastName;
 
     public String getId()
     {

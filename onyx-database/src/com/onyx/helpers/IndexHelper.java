@@ -11,6 +11,8 @@ import com.onyx.record.RecordController;
 
 /**
  * Created by timothy.osborn on 12/23/14.
+ *
+ * Static helper methods for entity indexes
  */
 public class IndexHelper
 {
@@ -18,10 +20,9 @@ public class IndexHelper
     /**
      * Save all indexes for an entity
      *
-     * @param context
-     * @param descriptor
-     * @param entity
-     * @throws EntityException
+     * @param context Schema Context
+     * @param descriptor Entity Descriptor
+     * @param entity Entity to save indexes for
      */
     public static void saveAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, Object identifier, long oldReferenceId, IManagedEntity entity) throws EntityException
     {
@@ -43,10 +44,9 @@ public class IndexHelper
     /**
      * Delete all indexes for an entity
      *
-     * @param context
-     * @param descriptor
-     * @param referenceId
-     * @throws EntityException
+     * @param context Schema Context
+     * @param descriptor Entity Descriptor
+     * @param referenceId Entity reference
      */
     public static void deleteAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, long referenceId) throws EntityException
     {

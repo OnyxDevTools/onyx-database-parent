@@ -5,7 +5,7 @@ import com.onyxdevtools.entities.Player;
 import com.onyxdevtools.entities.Stats;
 import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,11 +17,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("unused")
 public class DeleteBenchmarkTest extends BenchmarkTest {
 
-    protected static AtomicInteger playerIdCounter = new AtomicInteger(0);
-    protected static AtomicInteger statIdCounter = new AtomicInteger(0);
+    private static AtomicInteger playerIdCounter = new AtomicInteger(0);
+    private static AtomicInteger statIdCounter = new AtomicInteger(0);
 
-    protected int NUMBER_OF_DELETIONS = 20000;
-    protected int NUMBER_OF_WARM_UP_INSERTIONS = 20000;
+    @SuppressWarnings("FieldCanBeLocal")
+    private int NUMBER_OF_DELETIONS = 20000;
+    @SuppressWarnings("FieldCanBeLocal")
+    private int NUMBER_OF_WARM_UP_INSERTIONS = 20000;
 
     /**
      * Default Constructor
@@ -82,17 +84,13 @@ public class DeleteBenchmarkTest extends BenchmarkTest {
      * @return A runnable thread
      */
     public Runnable getTestingUnitRunnable() {
-        final Runnable runnable = new Runnable() {
-            public void run() {
+        return () -> {
 
-                // For JPA, we have to "attach" the object.  For Onyx this is not needed but, for comparison sake, we
-                // are going to follow suit
-                providerPersistenceManager.delete(Player.class, playerIdCounter.addAndGet(1));
-                completionLatch.countDown();
-            }
+            // For JPA, we have to "attach" the object.  For Onyx this is not needed but, for comparison sake, we
+            // are going to follow suit
+            providerPersistenceManager.delete(Player.class, playerIdCounter.addAndGet(1));
+            completionLatch.countDown();
         };
-
-        return runnable;
     }
 
     /**
@@ -100,34 +98,31 @@ public class DeleteBenchmarkTest extends BenchmarkTest {
      *
      * @return A runnable thread
      */
-    public Runnable getWarmUpTestingUnitRunnable() {
-        final Runnable runnable = new Runnable() {
-            public void run() {
+    private Runnable getWarmUpTestingUnitRunnable() {
+        return () -> {
 
-                // I had to generate the id myself for JPA databases.  Apparently they don't like if you try to build an entire
-                // graph and save it.  That is a limitation that Onyx does not need.
-                Player player = new Player(playerIdCounter.addAndGet(1));
-                player.setFirstName(generateRandomString());
-                player.setLastName(generateRandomString());
-                player.setActive(true);
-                player.setPosition(generateRandomString());
+            // I had to generate the id myself for JPA databases.  Apparently they don't like if you try to build an entire
+            // graph and save it.  That is a limitation that Onyx does not need.
+            Player player = new Player(playerIdCounter.addAndGet(1));
+            player.setFirstName(generateRandomString());
+            player.setLastName(generateRandomString());
+            player.setActive(true);
+            player.setPosition(generateRandomString());
 
-                Stats stats = new Stats();
-                stats.setFantasyPoints(generateRandomInt());
-                stats.setPassAttempts(generateRandomInt());
-                stats.setPassingYards(generateRandomInt());
-                stats.setReceptions(generateRandomInt());
-                stats.setRushingTouchdowns(generateRandomInt());
-                stats.setRushingAttempts(generateRandomInt());
+            Stats stats = new Stats();
+            stats.setFantasyPoints(generateRandomInt());
+            stats.setPassAttempts(generateRandomInt());
+            stats.setPassingYards(generateRandomInt());
+            stats.setReceptions(generateRandomInt());
+            stats.setRushingTouchdowns(generateRandomInt());
+            stats.setRushingAttempts(generateRandomInt());
 
-                player.setStats(Arrays.asList(stats));
+            player.setStats(Collections.singletonList(stats));
 
-                providerPersistenceManager.insert(player);
+            providerPersistenceManager.insert(player);
 
-                completionLatch.countDown();
-            }
+            completionLatch.countDown();
         };
 
-        return runnable;
     }
 }

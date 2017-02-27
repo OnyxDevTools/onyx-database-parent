@@ -16,13 +16,13 @@ import java.util.List;
 //J-
 @Entity
 @javax.persistence.Entity
-public class Division extends ManagedEntity implements IManagedEntity
+class Division extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Id
     @Identifier(loadFactor = 1)
-    protected String divisionName;
+    private String divisionName;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -32,7 +32,7 @@ public class Division extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @OneToMany(cascade = CascadeType.ALL, targetEntity = Team.class, mappedBy = "division")
-    protected List<Team> teams;
+    private List<Team> teams;
 
     @Relationship(
             type = RelationshipType.MANY_TO_ONE,
@@ -41,7 +41,7 @@ public class Division extends ManagedEntity implements IManagedEntity
             loadFactor = 1
     )
     @ManyToOne(targetEntity = Conference.class)
-    protected Conference conference;
+    private Conference conference;
 
     public Division()
     {
@@ -77,4 +77,9 @@ public class Division extends ManagedEntity implements IManagedEntity
         this.conference = conference;
     }
 
+    @SuppressWarnings("unused")
+    public Conference getConference()
+    {
+        return this.conference;
+    }
 }

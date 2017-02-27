@@ -8,13 +8,13 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.structure.base.ScaledDiskMap;
 
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by timothy.osborn on 2/5/15.
+ *
+ * This controls the crud for a record
  */
 public class RecordControllerImpl extends AbstractRecordController implements RecordController
 {
@@ -22,7 +22,8 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
     /**
      * Constructor including the entity descriptor
      *
-     * @param entityDescriptor
+     * @param entityDescriptor Entity descriptor for record set
+     * @param context Schema context
      */
     public RecordControllerImpl(EntityDescriptor entityDescriptor, SchemaContext context)
     {
@@ -32,9 +33,9 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
     /**
      * Save an entity
      *
-     * @param entity
-     * @return
-     * @throws EntityException
+     * @param entity Entity to save
+     * @return The identifier value
+     * @throws EntityException Error saving entity
      */
     @Override
     public Object save(IManagedEntity entity) throws EntityException
@@ -58,7 +59,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
                 {
                     invokePreUpdateCallback(entity);
                 }
-            } catch (EntityCallbackException e)
+            } catch (EntityCallbackException ignore)
             { }
             return entity;
         });

@@ -1,5 +1,6 @@
 package com.onyxdevtools.example.querying;
 
+import com.onyx.exception.EntityException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -7,20 +8,17 @@ import com.onyx.persistence.query.Query;
 import com.onyxdevtools.example.querying.entities.Player;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 
 /**
  @author  cosborn
  */
-public class LazyQueryExample
+class LazyQueryExample
 {
-    public LazyQueryExample()
-    {
-    }
 
-    public static void demo() throws IOException
+    @SuppressWarnings("unchecked")
+    public static void demo() throws EntityException
     {
         // get an instance of the persistenceManager
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
@@ -40,9 +38,7 @@ public class LazyQueryExample
         final List<Player> allPlayers = manager.executeLazyQuery(query); // returns LazyQueryCollection
 
         // Get and print out all of the entites in the LazyQueryCollection
-        for (int i = 0; i < allPlayers.size(); i++)
-        {
-            final Player player = allPlayers.get(i); // retreives the Player when invoked
+        for (final Player player : allPlayers) {
             System.out.println(player.getFirstName() + " " + player.getLastName());
         }
 

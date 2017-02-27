@@ -1,18 +1,17 @@
 package remote.base;
 
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
+import com.onyx.application.DatabaseServer;
 import org.junit.AfterClass;
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.rmi.registry.Registry;
 import java.security.SecureRandom;
 
 import static org.junit.Assert.fail;
@@ -24,7 +23,6 @@ public class RemoteBaseTest {
 
     static public DatabaseServer databaseServer = null;
 
-    public static final boolean USE_SOCKET_PROTOCOL = true;
     protected PersistenceManager manager;
     protected RemoteSchemaContext context;
 
@@ -43,23 +41,10 @@ public class RemoteBaseTest {
 
             factory.setDatabaseLocation(DATABASE_LOCATION);
             factory.setCredentials("admin", "admin");
-            factory.setSocketPort(Registry.REGISTRY_PORT);
             factory.initialize();
 
             context = (RemoteSchemaContext)factory.getSchemaContext();
-
-
-            if(USE_SOCKET_PROTOCOL) {
-                try {
-                    manager = factory.getSocketPersistenceManager();
-                } catch (EntityException e) {
-                    e.printStackTrace();
-                }
-            }
-            else
-            {
-                manager = factory.getPersistenceManager();
-            }
+            manager = factory.getPersistenceManager();
         }
     }
 

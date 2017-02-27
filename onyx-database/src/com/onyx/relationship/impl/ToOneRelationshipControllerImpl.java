@@ -15,7 +15,8 @@ import com.onyx.record.impl.SequenceRecordControllerImpl;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.structure.DiskMap;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,33 +24,35 @@ import java.util.Set;
 
 /**
  * Created by timothy.osborn on 2/5/15.
+ *
+ * Handles actions on a to one relationship
  */
+@SuppressWarnings("unchecked")
 public class ToOneRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController {
 
-    protected DiskMap<RelationshipReference, RelationshipReference> toOneMap = null;
+    private DiskMap<RelationshipReference, RelationshipReference> toOneMap = null;
 
     /**
      * Constructor
      *
-     * @param entityDescriptor
-     * @param relationshipDescriptor
-     * @throws EntityException
+     * @param entityDescriptor Entity descriptor
+     * @param relationshipDescriptor relationship descriptor
      */
     public ToOneRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {
         super(entityDescriptor, relationshipDescriptor, context);
 
+        MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
         // Get the correct data file
-        toOneMap = (DiskMap)dataFile.getSkipListMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName());
+        toOneMap = (DiskMap)mapBuilder.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName(), RELATIONSHIP_MAP_LOAD_FACTOR);
     }
 
 
     /**
      * Save Relationship for entity
      *
-     * @param entity
-     * @param manager
-     * @throws EntityException
+     * @param entity Entity to save relationships for
+     * @param manager Prevents recursion
      */
     public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException
     {
@@ -65,7 +68,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             long partitionID = getPartitionId(relationshipObject);
             Object id = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
             boolean exists = getRecordControllerForEntity(relationshipObject).existsWithId(id);
-            if(exists == true)
+            if(exists)
             {
                 currentInverseIdentifier = new RelationshipReference(id, partitionID);
             }
@@ -91,8 +94,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             EntityRelationshipManager newManager = new EntityRelationshipManager();
             newManager.add(entity, entityDescriptor.getIdentifier());
 
-            IndexHelper.saveAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), newReference.identifier, oldReference, relationshipObject);
-            RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, new EntityRelationshipManager(), context);
+            IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), newReference.identifier, oldReference, relationshipObject);
+            RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, new EntityRelationshipManager(), getContext());
         }
 
         // Cascade Delete. Make sure it is either ALL, or DELETE.
@@ -114,13 +117,12 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
                 if (relationshipObject != null && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
                 {
-                    IndexHelper.deleteAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(existingReference.identifier));
-                    RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, context);
+                    IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(existingReference.identifier));
+                    RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
                     getRecordControllerForEntity(relationshipObject).deleteWithId(existingReference.identifier);
                 }
 
                 // Make sure we do not save the relationship again
-                existingReference = null;
                 currentInverseIdentifier = null;
 
             }
@@ -158,9 +160,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     /**
      * Delete Relationship entity
      *
-     * @param entityIdentifier
-     * @param manager
-     * @throws EntityException
+     * @param entityIdentifier Entity relationship reference
+     * @param manager Prevents recursion
      */
     public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws EntityException
     {
@@ -180,8 +181,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             {
                 manager.add(relationshipObject, inverseDescriptor.getIdentifier());
 
-                IndexHelper.deleteAllIndexesForEntity(context, getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(inverseIdentifier.identifier));
-                RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, context);
+                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(inverseIdentifier.identifier));
+                RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
 
                 inverseRecordController.deleteWithId(inverseIdentifier.identifier);
             }
@@ -197,7 +198,13 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
     }
 
-    protected boolean isSequenceIdentifier(RelationshipReference identifier) throws EntityException
+    /**
+     * Determines whether the record controller for the relationship entity is a sequence or not
+     *
+     * @param identifier Relationship reference
+     * @return Whether the record controller is an implementation of a Sequence
+     */
+    private boolean isSequenceIdentifier(RelationshipReference identifier) throws EntityException
     {
         return (getRecordControllerForPartition(identifier.partitionId) instanceof SequenceRecordControllerImpl);
     }
@@ -205,11 +212,10 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     /**
      * Hydrate a to one relationship
      *
-     * @param entityIdentifier
-     * @param entity
-     * @param manager
-     * @param force
-     * @throws EntityException
+     * @param entityIdentifier Relationship reference
+     * @param entity Parent entity
+     * @param manager Prevents recursion
+     * @param force Force hydrate
      */
     @Override
     public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws EntityException
@@ -243,7 +249,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
                 setRelationshipValue(relationshipDescriptor, entity, relationshipObject);
             }
 
-            RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, context);
+            RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, getContext());
         }
         else
         {
@@ -255,9 +261,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     /**
      * Get Relationship Identifiers
      *
-     * @param referenceId
-     * @return
-     * @throws EntityException
+     * @param referenceId Relationship reference
+     * @return List of relationship references
      */
     @Override
     public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws EntityException
@@ -282,7 +287,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     /**
      * Retrieves the identifiers for a given entity
      *
-     * @return
+     * @return List of relationship references
      */
     @Override
     public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws EntityException
@@ -307,12 +312,11 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     /**
      * Batch Save all relationship ids
      *
-     * @param entity
-     * @param relationshipIdentifiers
+     * @param entity Entity to update
+     * @param relationshipIdentifiers Relationship references
      */
     public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
     {
-        return;
     }
 
 }

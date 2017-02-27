@@ -6,13 +6,12 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.SingletonException;
 import com.onyx.exception.TransactionException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.transaction.TransactionController;
 
 import java.nio.channels.FileChannel;
@@ -65,6 +64,7 @@ public interface SchemaContext
      *
      * @param defaultPersistenceManager Default Persistence Manager used to access system level entities
      */
+    @SuppressWarnings("unused")
     void setSystemPersistenceManager(PersistenceManager defaultPersistenceManager);
 
     /**
@@ -72,6 +72,7 @@ public interface SchemaContext
      * @return System Persistence Manager
      *
      */
+    @SuppressWarnings("unused")
     PersistenceManager getSystemPersistenceManager();
 
     /**
@@ -134,6 +135,7 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
+    @SuppressWarnings("unused")
     EntityDescriptor getDescriptorForEntity(Object entity) throws EntityException;
 
     /**
@@ -153,19 +155,21 @@ public interface SchemaContext
      * @since 1.0.0
      * @return Volatile indicator the database is shutting down
      */
-     boolean getKillSwitch();
+    @SuppressWarnings("unused")
+    boolean getKillSwitch();
 
     /**
      * Shutdown schema context.  Close files, connections or any other IO mechanisms used within the context
      *
      * @since 1.0.0
-     * @throws SingletonException Only one instance of the record and index factories must exist
      */
-    void shutdown() throws SingletonException;
+    @SuppressWarnings("unused")
+    void shutdown();
 
     /**
      * Start the context and initialize storage, connection, or any other IO mechanisms used within the schema context
      */
+    @SuppressWarnings("unused")
     void start();
 
     /**
@@ -215,13 +219,12 @@ public interface SchemaContext
      * This is not meant to be a public API.
      *
      * @since 1.0.0
-     * @param classToGet Record Entity type
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
      *
      * @throws EntityException Generic Exception
      */
-    SystemPartitionEntry getPartitionWithId(Class classToGet, long partitionId) throws EntityException;
+    SystemPartitionEntry getPartitionWithId(long partitionId) throws EntityException;
 
     /**
      * Get Record Controller
@@ -266,14 +269,6 @@ public interface SchemaContext
     String getLocation();
 
     /**
-     * Get location of file base
-     *
-     * @since 1.0.0
-     * @return Remote file path for file server
-     */
-    String getRemoteFileBase();
-
-    /**
      * Create Temporary Map Builder
      * @since 1.0.0
      *
@@ -288,6 +283,7 @@ public interface SchemaContext
      * @throws EntityException Default Exception
      * @return Latest System Entity version with matching name
      */
+    @SuppressWarnings("RedundantThrows")
     SystemEntity getSystemEntityByName(String name) throws EntityException;
 
     /**
@@ -295,7 +291,6 @@ public interface SchemaContext
      *
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
-     * @throws EntityException Default Exception
      */
     SystemEntity getSystemEntityById(int systemEntityId);
 
@@ -318,6 +313,7 @@ public interface SchemaContext
      *
      * @return Transaction Controller implementation.
      */
+    @SuppressWarnings("unused")
     TransactionController getTransactionController();
 
 }

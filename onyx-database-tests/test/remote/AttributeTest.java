@@ -1,9 +1,9 @@
 package remote;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import com.onyx.application.DatabaseServer;
 import entities.AllAttributeEntity;
 import entities.InheritedAttributeEntity;
 import entities.SimpleEntity;
@@ -13,7 +13,6 @@ import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
 
 import java.io.IOException;
-import java.rmi.registry.Registry;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -34,10 +33,8 @@ public class AttributeTest extends RemoteBaseTest {
         databaseServer = new DatabaseServer();
         databaseServer.setPort(8080);
         databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
-        databaseServer.setEnableSocketSupport(true);
-        databaseServer.setSocketPort(Registry.REGISTRY_PORT);
         databaseServer.start();
-        Thread.sleep(2000);
+        Thread.sleep(500);
     }
 
     @AfterClass
@@ -226,7 +223,5 @@ public class AttributeTest extends RemoteBaseTest {
         Assert.assertTrue(entity.getSimpleId().equals(savedEntity.getSimpleId()));
         Assert.assertTrue(entity.getName().equals(savedEntity.getName()));
     }
-
-
 
 }

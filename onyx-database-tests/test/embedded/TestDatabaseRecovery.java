@@ -18,7 +18,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -28,7 +27,6 @@ import java.util.List;
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ EmbeddedDatabaseTests.class })
-@Ignore
 public class TestDatabaseRecovery extends BaseTest
 {
 
@@ -66,8 +64,11 @@ public class TestDatabaseRecovery extends BaseTest
         }
     }
 
+    static int expectedEntitiesAfterRecovery;
+    static int expectedUpdatedEntitiesAfterRecovery;
+
     @Test
-    public void atestDatabaseRecovery() throws IOException
+    public void atestDatabaseRecovery() throws EntityException
     {
         this.populateTransactionData();
 
@@ -90,17 +91,18 @@ public class TestDatabaseRecovery extends BaseTest
         Query updateQuery = new Query(AllAttributeEntity.class, new QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 90000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 80000)
         .and("doubleValue", QueryCriteriaOperator.EQUAL, 99.0d));
         results = newManager.executeQuery(updateQuery);
+        expectedUpdatedEntitiesAfterRecovery = results.size();
         Assert.assertTrue(results.size() == 9999);
 
         Query existsQuery = new Query();
         existsQuery.setEntityType(AllAttributeEntity.class);
         results = manager.executeQuery(existsQuery);
 
-        int res = results.size();
+        expectedEntitiesAfterRecovery = results.size();
 
         results = newManager.executeQuery(existsQuery);
 
-        Assert.assertTrue(res == results.size());
+        Assert.assertTrue(expectedEntitiesAfterRecovery == results.size());
 
         factory.close();
         newFactory.close();
@@ -108,7 +110,7 @@ public class TestDatabaseRecovery extends BaseTest
     }
 
     @Test
-    public void btestDatabaseApplyTransactions() throws IOException
+    public void btestDatabaseApplyTransactions() throws EntityException
     {
 
         EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory();
@@ -125,9 +127,9 @@ public class TestDatabaseRecovery extends BaseTest
 
         Query existsQuery = new Query();
         existsQuery.setEntityType(AllAttributeEntity.class);
-        List results = newManager.executeQuery(existsQuery);
+        List results = newManager.executeLazyQuery(existsQuery);
 
-        Assert.assertTrue(results.size() == 191557);
+        Assert.assertTrue(results.size() == 101000);
 
         newFactory.close();
     }
@@ -137,7 +139,7 @@ public class TestDatabaseRecovery extends BaseTest
 
         AllAttributeEntity allAttributeEntity = null;
 
-        for(int i = 0; i < 1000000; i++)
+        for(int i = 0; i < 100000; i++)
         {
             allAttributeEntity = new AllAttributeEntity();
             allAttributeEntity.doubleValue = 23d;
@@ -152,7 +154,7 @@ public class TestDatabaseRecovery extends BaseTest
 
         manager.deleteEntity(allAttributeEntity);
 
-        for(int i = 1000000; i < 1010000; i++)
+        for(int i = 100000; i < 101000; i++)
         {
             allAttributeEntity = new AllAttributeEntity();
             allAttributeEntity.doubleValue = 23d;

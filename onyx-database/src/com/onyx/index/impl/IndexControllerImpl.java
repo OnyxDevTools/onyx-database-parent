@@ -6,31 +6,38 @@ import com.onyx.exception.EntityException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.structure.DefaultDiskSet;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
-import com.onyx.structure.base.ScaledDiskMap;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.base.DiskMultiMatrixHashMap;
+import com.onyx.diskmap.node.Header;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
+import java.util.*;
 
 /**
  * Created by timothy.osborn on 1/29/15.
+ *
+ * Controls actions of an index
  */
+@SuppressWarnings("unchecked")
 public class IndexControllerImpl implements IndexController {
 
-    protected SchemaContext context;
+    @SuppressWarnings("WeakerAccess")
+    protected final String contextId;
 
-    protected Map<Object, Set<Long>> references = null; // Stores the references for an index key
-    protected Map<Long, Object> indexValues = null;
+    @SuppressWarnings("WeakerAccess")
+    protected Map<Object, Header> references = null; // Stores the references for an index key
+    private Map<Long, Object> indexValues = null;
+    @SuppressWarnings("unused")
     protected RecordController recordController = null;
-    protected MapBuilder dataFile = null;
+    @SuppressWarnings("WeakerAccess")
     protected IndexDescriptor indexDescriptor = null;
+    @SuppressWarnings("WeakerAccess")
+    protected final EntityDescriptor descriptor;
+
+    private static final int INDEX_VALUE_MAP_LOAD_FACTOR = 1;
 
     public IndexDescriptor getIndexDescriptor()
     {
@@ -40,28 +47,29 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Constructor with entity descriptor and index descriptor
      *
-     * @param descriptor
-     * @param indexDescriptor
-     * @throws EntityException
+     * @param descriptor Entity Descriptor
+     * @param indexDescriptor Index Descriptor
      */
+    @SuppressWarnings("RedundantThrows")
     public IndexControllerImpl(EntityDescriptor descriptor, IndexDescriptor indexDescriptor, SchemaContext context) throws EntityException
     {
-        this.context = context;
-        dataFile = context.getDataFile(descriptor);
+        this.contextId = context.getContextId();
+
         this.indexDescriptor = indexDescriptor;
         this.recordController = context.getRecordController(descriptor);
+        this.descriptor = descriptor;
+        final MapBuilder dataFile = context.getDataFile(descriptor);
 
-        references = dataFile.getScalableMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
-        indexValues = dataFile.getScalableMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
+        references = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
+        indexValues = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
     }
 
     /**
      * Save an index key with the record reference
      *
-     * @param indexValue
-     * @param oldReference
-     * @param reference
-     * @throws EntityException
+     * @param indexValue Index value to save
+     * @param oldReference Old entity reference for the index
+     * @param reference New entity reference for the index
      */
     public void save(Object indexValue, long oldReference, long reference) throws EntityException
     {
@@ -72,13 +80,19 @@ public class IndexControllerImpl implements IndexController {
         }
 
         if(indexValue != null) {
-            references.compute(indexValue, (o, longs) -> {
-                if(longs == null)
-                    longs = dataFile.newHashSet();
-                else
-                    ((DefaultDiskSet)longs).attachStorage(dataFile);
-                longs.add(reference);
-                return longs;
+            final MapBuilder dataFile = getContext().getDataFile(descriptor);
+
+            references.compute(indexValue, (o, header) -> {
+                if(header == null) {
+                    header = dataFile.newMapHeader();
+                }
+                DiskMap indexes = dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
+                indexes.put(reference, null);
+                header.firstNode = indexes.getReference().firstNode;
+                header.position = indexes.getReference().position;
+                header.recordCount.set(indexes.getReference().recordCount.get());
+                indexes = null;
+                return header;
             });
             indexValues.compute(reference, (aLong, o) -> indexValue);
         }
@@ -87,8 +101,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Delete an index key with a record reference
      *
-     * @param reference
-     * @throws EntityException
+     * @param reference Entity reference
      */
     public void delete(long reference) throws EntityException
     {
@@ -97,10 +110,16 @@ public class IndexControllerImpl implements IndexController {
             Object indexValue = indexValues.remove(reference);
             if (indexValue != null)
             {
-                references.computeIfPresent(indexValue, (o, longs) -> {
-                    ((DefaultDiskSet)longs).attachStorage(dataFile);
-                    longs.remove(reference);
-                    return longs;
+                final MapBuilder dataFile = getContext().getDataFile(descriptor);
+
+                references.computeIfPresent(indexValue, (o, header) -> {
+                    DiskMap indexes = dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
+                    indexes.remove(reference);
+                    header.firstNode = indexes.getReference().firstNode;
+                    header.position = indexes.getReference().position;
+                    header.recordCount.set(indexes.getReference().recordCount.get());
+                    indexes = null;
+                    return header;
                 });
             }
         }
@@ -109,26 +128,23 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all index references
      *
-     * @param indexValue
-     * @return
-     * @throws EntityException
+     * @param indexValue Index value to find values for
+     * @return References matching that index value
      */
-    public Set<Long> findAll(Object indexValue) throws EntityException
+    public Map findAll(Object indexValue) throws EntityException
     {
-        final Set<Long> refs = references.get(indexValue);
-        if(refs == null)
-            return new HashSet();
-        else
-            ((DefaultDiskSet)refs).attachStorage(dataFile);
+        final Header header = references.get(indexValue);
+        if(header == null)
+            return new HashMap();
+        final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
-        return refs;
+        return dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
     }
 
     /**
      * Find all index references
      *
-     * @return
-     * @throws EntityException
+     * @return All index references
      */
     public Set<Object> findAllValues() throws EntityException
     {
@@ -139,7 +155,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all the references above and perhaps equal to the key parameter
      *
-     * This has one prerequisite.  You must be using a ScaledDiskMap as the storage mechanism.  Otherwise it will not be
+     * This has one prerequisite.  You must be using a DiskMultiMatrixHashMap as the storage mechanism.  Otherwise it will not be
      * sorted.
      *
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
@@ -153,11 +169,14 @@ public class IndexControllerImpl implements IndexController {
     public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
     {
         final Set<Long> allReferences = new HashSet();
-        final Set<Long> diskReferences = ((ScaledDiskMap)references).above(indexValue, includeValue);
+        final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).above(indexValue, includeValue);
+
+        final MapBuilder dataFile = getContext().getDataFile(descriptor);
+
         diskReferences.forEach(aLong -> {
-            Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
-            ((DefaultDiskSet)subSet).attachStorage(dataFile);
-            allReferences.addAll(subSet);
+            Header header = (Header)((DiskMultiMatrixHashMap) references).getWithRecID(aLong);
+            DiskMap map = (DiskMap)dataFile.getHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
+            map.keySet().forEach(o -> allReferences.add((long)o));
         });
 
         return allReferences;
@@ -166,7 +185,7 @@ public class IndexControllerImpl implements IndexController {
     /**
      * Find all the references blow and perhaps equal to the key parameter
      *
-     * This has one prerequisite.  You must be using a ScaledDiskMap as the storage mechanism.  Otherwise it will not be
+     * This has one prerequisite.  You must be using a DiskMultiMatrixHashMap as the storage mechanism.  Otherwise it will not be
      * sorted.
      *
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
@@ -180,11 +199,12 @@ public class IndexControllerImpl implements IndexController {
     public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
     {
         final Set<Long> allReferences = new HashSet();
-        final Set<Long> diskReferences = ((ScaledDiskMap)references).below(indexValue, includeValue);
+        final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).below(indexValue, includeValue);
+        final MapBuilder dataFile = getContext().getDataFile(descriptor);
         diskReferences.forEach(aLong -> {
-            Set subSet = (Set)((ScaledDiskMap) references).getWithRecID(aLong);
-            ((DefaultDiskSet)subSet).attachStorage(dataFile);
-            allReferences.addAll(subSet);
+            Header header = (Header)((DiskMultiMatrixHashMap) references).getWithRecID(aLong);
+            DiskMap map = (DiskMap)dataFile.getHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
+            map.keySet().forEach(o -> allReferences.add((long)o));
         });
 
         return allReferences;
@@ -193,15 +213,16 @@ public class IndexControllerImpl implements IndexController {
     /**
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *
-     * @throws EntityException
      */
     public void rebuild() throws EntityException
     {
-        final DiskMap records = (DiskMap)dataFile.getScalableMap(indexDescriptor.getEntityDescriptor().getClazz().getName(), indexDescriptor.getLoadFactor());
+        final MapBuilder dataFile = getContext().getDataFile(descriptor);
+
+        final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getName(), indexDescriptor.getLoadFactor());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
             // Iterate Through all of the values and re-structure the key key for the record id
-            Map.Entry entry = null;
+            Map.Entry entry;
             while (iterator.hasNext()) {
                 try {
                     entry = iterator.next();
@@ -215,5 +236,11 @@ public class IndexControllerImpl implements IndexController {
                 // Catch an exception so it may continue the routine
             catch (Exception ignore){}
         }
+    }
+
+    @SuppressWarnings("WeakerAccess")
+    protected SchemaContext getContext()
+    {
+        return DefaultSchemaContext.registeredSchemaContexts.get(contextId);
     }
 }

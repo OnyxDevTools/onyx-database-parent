@@ -6,6 +6,7 @@
     <artifactId>onyx-database</artifactId>
     <name>${project.groupId}:${project.artifactId}</name>
     <description>Onyx Database</description>
+    <url>https://onyxdevtools.com</url>
 
     <packaging>jar</packaging>
 
@@ -31,15 +32,6 @@
     <build>
 
         <sourceDirectory>src</sourceDirectory>
-
-        <resources>
-            <resource>
-                <directory>resources</directory>
-            </resource>
-            <resource>
-                <directory>../onyx-database/resources</directory>
-            </resource>
-        </resources>
 
         <plugins>
 
@@ -99,22 +91,6 @@
 
     <dependencies>
 
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.spullara.mustache.java</groupId>
-            <artifactId>compiler</artifactId>
-            <version>${mustache.version}</version>
-        </dependency>
-        
     </dependencies>
     
 </project>

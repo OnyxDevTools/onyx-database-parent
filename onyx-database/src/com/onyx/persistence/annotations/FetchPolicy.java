@@ -33,6 +33,7 @@ public enum FetchPolicy
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     FetchPolicy()
     {
 

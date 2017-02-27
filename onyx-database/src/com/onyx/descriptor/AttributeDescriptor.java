@@ -7,10 +7,14 @@ import java.lang.reflect.Field;
 
 /**
  * Created by timothy.osborn on 12/11/14.
+ *
+ * This is a base descriptor for an attribute.  It defines the properties based on annotation scanning
  */
 public class AttributeDescriptor extends AbstractBaseDescriptor
 {
+    @SuppressWarnings("WeakerAccess")
     protected boolean nullable;
+    @SuppressWarnings("WeakerAccess")
     protected int size;
     public OffsetField field;
 

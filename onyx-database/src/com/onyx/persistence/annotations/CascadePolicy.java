@@ -39,6 +39,7 @@ public enum CascadePolicy
     /**
      * Constructor
      */
+    @SuppressWarnings("unused")
     CascadePolicy()
     {
 

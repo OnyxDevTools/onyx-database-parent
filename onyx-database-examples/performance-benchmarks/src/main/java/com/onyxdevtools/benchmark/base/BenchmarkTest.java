@@ -19,16 +19,16 @@ public abstract class BenchmarkTest {
     protected ThreadPoolExecutor testThreadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(8);
 
     // Marks the start time of the test
-    protected long startTime;
+    private long startTime;
 
     // Marks the end time of the test
-    protected long endTime;
+    private long endTime;
 
     // The underlying persistence manager
-    protected ProviderPersistenceManager providerPersistenceManager;
+    protected final ProviderPersistenceManager providerPersistenceManager;
 
     // Random generator
-    private static SecureRandom random = new SecureRandom();
+    private static final SecureRandom random = new SecureRandom();
 
     // Count down to completion of the test
     protected CountDownLatch completionLatch;
@@ -38,7 +38,7 @@ public abstract class BenchmarkTest {
      *
      * @param providerPersistenceManager The underlying persistence manager
      */
-    public BenchmarkTest(ProviderPersistenceManager providerPersistenceManager)
+    protected BenchmarkTest(ProviderPersistenceManager providerPersistenceManager)
     {
         this.providerPersistenceManager = providerPersistenceManager;
     }
@@ -63,7 +63,7 @@ public abstract class BenchmarkTest {
      * Get the total execution runtime of the test
      * @return end time - start time in milliseconds
      */
-    public long getExecutionTime()
+    private long getExecutionTime()
     {
         return this.endTime - this.startTime;
     }
@@ -108,16 +108,17 @@ public abstract class BenchmarkTest {
     /**
      * Number of executions to be ran
      */
-    public abstract int getNumberOfWarmupExecutions();
+    protected abstract int getNumberOfWarmupExecutions();
 
     /**
      * Get Thread to be executed
      */
-    public abstract Runnable getTestingUnitRunnable();
+    protected abstract Runnable getTestingUnitRunnable();
 
     /**
      * Cleanup after test
      */
+    @SuppressWarnings("EmptyMethod")
     public void cleanup()
     {
 
@@ -127,23 +128,15 @@ public abstract class BenchmarkTest {
      * Generate a random string
      * @return random string
      */
-    public static String generateRandomString() {
+    protected static String generateRandomString() {
         return new BigInteger(130, random).toString(32);
     }
 
     /**
      * Generate a random integer
-     * @return
+     * @return Random integer
      */
-    public static int generateRandomInt() {
+    protected static int generateRandomInt() {
         return new BigInteger(130, random).intValue();
-    }
-
-    /**
-     * Generate a random integer
-     * @return An integer with a precision of 8 bits
-     */
-    public static int generateSmallRandomInt() {
-        return new BigInteger(8, random).intValue();
     }
 }

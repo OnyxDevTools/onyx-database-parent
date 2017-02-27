@@ -4,9 +4,12 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 
 /**
  * Created by timothy.osborn on 12/11/14.
+ *
+ * General information about a key identifier for an entity
  */
 public class IdentifierDescriptor extends IndexDescriptor
 {
+    @SuppressWarnings("WeakerAccess")
     protected IdentifierGenerator generator;
 
     public IdentifierGenerator getGenerator()
@@ -19,6 +22,7 @@ public class IdentifierDescriptor extends IndexDescriptor
         this.generator = generator;
     }
 
+    @SuppressWarnings("WeakerAccess")
     protected byte loadFactor = 1;
 
     /**

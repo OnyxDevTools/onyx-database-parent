@@ -38,25 +38,25 @@ public class TestRelationshipExceptions extends BaseTest
     @Test(expected = InvalidRelationshipTypeException.class)
     public void testInvalidInverse() throws EntityException
     {
-        EntityDescriptor descriptor = new EntityDescriptor(NoInverseEntity.class, context);
+        EntityDescriptor descriptor = new EntityDescriptor(NoInverseEntity.class);
     }
 
     @Test(expected = InvalidRelationshipTypeException.class)
     public void testInvalidType() throws EntityException
     {
-        EntityDescriptor descriptor = new EntityDescriptor(OTMNoListEntity.class, context);
+        EntityDescriptor descriptor = new EntityDescriptor(OTMNoListEntity.class);
     }
 
     @Test(expected = EntityClassNotFoundException.class)
     public void testInvalidTypeInverse() throws EntityException
     {
-        EntityDescriptor descriptor = new EntityDescriptor(RelationshipNoEntityType.class, context);
+        EntityDescriptor descriptor = new EntityDescriptor(RelationshipNoEntityType.class);
     }
 
     @Test(expected = InvalidRelationshipTypeException.class)
     public void testInvalidTypeInverseNoMatch() throws EntityException
     {
-        EntityDescriptor descriptor = new EntityDescriptor(EntityToOneDoesntMatch.class, context);
+        EntityDescriptor descriptor = new EntityDescriptor(EntityToOneDoesntMatch.class);
     }
 
 

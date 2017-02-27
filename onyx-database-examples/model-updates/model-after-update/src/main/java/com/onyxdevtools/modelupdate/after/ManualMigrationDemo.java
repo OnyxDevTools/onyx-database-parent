@@ -12,7 +12,7 @@ import com.onyxdevtools.modelupdate.entities.Account;
 import com.onyxdevtools.modelupdate.entities.Invoice;
 import com.onyxdevtools.modelupdate.entities.Payment;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -25,13 +25,14 @@ import java.util.Map;
  * This example will use it to convert data from an old format to a new format.  Also, there is an example where it is used to
  * update data based on very specific criteria.
  */
-public class ManualMigrationDemo {
+class ManualMigrationDemo {
 
     /**
      * Main Method to demo the functionality
      * @param persistenceManager Open and valid persistence manager
      */
-    public static void demo(PersistenceManager persistenceManager) throws EntityException
+    @SuppressWarnings("unchecked")
+    static void demo(PersistenceManager persistenceManager) throws EntityException
     {
 
         // This is a simple example of how to use the stream() api to iterate through payment records and dynamically update the payment record
@@ -42,6 +43,7 @@ public class ManualMigrationDemo {
         //
         // Notice the stream interface we are using is QueryStream.  This is specifically for iterating through the data in its entity format as opposed to
         // a generic structure.
+        //noinspection RedundantCast
         persistenceManager.stream(paymentQuery, (QueryStream<Payment>) (payment, internalPersistenceManager) -> {
             payment.setNotes("The Deadbeat with account number: " + payment.getInvoice().getAccount().getAccountId() + " didn't pay anything cause he/she is broke!!!");
             try {
@@ -75,7 +77,7 @@ public class ManualMigrationDemo {
                     // Get the latest invoice
                     final QueryCriteria fetchInvoiceCriteria = new QueryCriteria("invoiceId", QueryCriteriaOperator.NOT_NULL).and("account.accountId", QueryCriteriaOperator.EQUAL, accountId);
                     final Query invoiceQuery = new Query(Invoice.class, fetchInvoiceCriteria);
-                    invoiceQuery.setQueryOrders(Arrays.asList(new QueryOrder("invoiceDate", false)));
+                    invoiceQuery.setQueryOrders(Collections.singletonList(new QueryOrder("invoiceDate", false)));
                     invoiceQuery.setMaxResults(1);
 
                     final List<Invoice> invoices = internalPersistenceManager.executeQuery(invoiceQuery);

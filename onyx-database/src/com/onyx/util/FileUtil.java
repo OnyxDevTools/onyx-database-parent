@@ -8,18 +8,21 @@ import java.nio.channels.FileChannel;
 
 /**
  * Created by tosborn1 on 3/25/16.
+ *
+ * This class handles the opening and closing of a file channel
  */
 public class FileUtil
 {
     /**
      * Open the data file
      *
-     * @param filePath
-     * @return
+     * @param filePath File path to open
+     * @return File channel
      */
-    public static final FileChannel openFileChannel(String filePath)
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public static FileChannel openFileChannel(String filePath)
     {
-        FileChannel channel = null;
+        FileChannel channel;
         final File file = new File(filePath);
         try
         {
@@ -51,7 +54,7 @@ public class FileUtil
      * @param channel File Channel intended to close
      * @throws IOException Basic IO Exception.  Nothing special
      */
-    public static final void closeFileChannel(FileChannel channel) throws IOException
+    public static void closeFileChannel(FileChannel channel) throws IOException
     {
         channel.force(true);
         channel.close();

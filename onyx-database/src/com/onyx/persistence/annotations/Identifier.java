@@ -38,7 +38,7 @@ public @interface Identifier
      * @since 1.0.0
      * @return Generator Type
      */
-    IdentifierGenerator generator() default IdentifierGenerator.NONE;
+    @SuppressWarnings("unused") IdentifierGenerator generator() default IdentifierGenerator.NONE;
 
     /**
      * This method is to determine what scale the underlying structure should be.  The values are from 1-10.
@@ -50,5 +50,5 @@ public @interface Identifier
      *
      * @since 1.2.0
      */
-    int loadFactor() default 5;
+    @SuppressWarnings("unused") int loadFactor() default 5;
 }

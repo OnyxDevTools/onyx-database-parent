@@ -19,6 +19,8 @@ import java.util.Locale;
 
 /**
  * Created by timothy.osborn on 3/5/15.
+ *
+ * Helper containing methods useful for identifying partition functioanlity
  */
 public class PartitionHelper
 {
@@ -27,24 +29,22 @@ public class PartitionHelper
 
     /**
      * Helper for identifiying whether the field is a partition field
-     * @param fieldName
-     * @param entity
-     * @param baseDescriptor
-     * @return
+     * @param fieldName Attribute name
+     * @param baseDescriptor Base descriptor for entity
+     * @return Whether that field is annotated with partition
      */
-    public static boolean isPartitionField(String fieldName, IManagedEntity entity, EntityDescriptor baseDescriptor)
+    public static boolean isPartitionField(String fieldName, EntityDescriptor baseDescriptor)
     {
         return (baseDescriptor.getPartition() != null && baseDescriptor.getPartition().getName().equals(fieldName));
     }
 
     /**
      * Helper for detecting whether an entity is partitionable
-     * @param entity
-     * @param context
-     * @return
-     * @throws EntityException
+     * @param entity Entity to check
+     * @param context Schema context
+     * @return Whether that entity has a partition
      */
-    public static boolean hasPartitionField(IManagedEntity entity, SchemaContext context) throws EntityException
+    static boolean hasPartitionField(IManagedEntity entity, SchemaContext context) throws EntityException
     {
         final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
         return (baseDescriptor.getPartition() != null);
@@ -52,24 +52,22 @@ public class PartitionHelper
 
     /**
      * Helper for detecting whether an entity is partition-able
-     * @param type
-     * @param context
-     * @return
-     * @throws EntityException
+     * @param type Type of entity
+     * @param context Schema context
+     * @return whether that entity type is partitioned
      */
     public static boolean hasPartitionField(Class type, SchemaContext context) throws EntityException
     {
         final EntityDescriptor baseDescriptor = context.getBaseDescriptorForEntity(type);
-        return (baseDescriptor.getPartition() != null);
+        return (baseDescriptor != null && baseDescriptor.getPartition() != null);
     }
 
     /**
      * Helper for getting the partition key from an entity
      *
-     * @param entity
-     * @param context
-     * @return
-     * @throws EntityException
+     * @param entity Entity to check
+     * @param context Schema context
+     * @return Get the value of the partition identifier
      */
     public static Object getPartitionFieldValue(IManagedEntity entity, SchemaContext context) throws EntityException
     {
@@ -90,9 +88,8 @@ public class PartitionHelper
 
     /**
      * Set the partition field on a query based on the query criteria
-     * @param query
-     * @param context
-     * @throws EntityException
+     * @param query Query object
+     * @param context Schema context
      */
     public static void setPartitionIdForQuery(Query query, SchemaContext context) throws EntityException
     {
@@ -110,12 +107,12 @@ public class PartitionHelper
     /**
      * Recursive call to get and set the partition key from the query criteria
      *
-     * @param criteria
-     * @param query
-     * @param baseDescriptor
-     * @return
+     * @param criteria Query criteria
+     * @param query Query object
+     * @param baseDescriptor Entity descriptor
+     * @return whether the partition id was set in the query
      */
-    protected static boolean setPartitionIdFromCriteria(QueryCriteria criteria, Query query, EntityDescriptor baseDescriptor)
+    private static boolean setPartitionIdFromCriteria(QueryCriteria criteria, Query query, EntityDescriptor baseDescriptor)
     {
         if(baseDescriptor.getPartition() != null || query.getPartition().equals(""))
         {
@@ -151,10 +148,9 @@ public class PartitionHelper
     /**
      * Retrieves the index key from the entity using reflection
      *
-     * @param entity
-     * @return
-     * @throws com.onyx.exception.AttributeMissingException
+     * @param entity Entity to set partition value
      */
+    @SuppressWarnings("unused")
     public static void setPartitionValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
     {
         try

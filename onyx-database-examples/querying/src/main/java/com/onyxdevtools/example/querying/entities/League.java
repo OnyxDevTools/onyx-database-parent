@@ -9,15 +9,16 @@ import java.util.List;
 
 //J-
 @Entity
+@SuppressWarnings("unused")
 public class League extends ManagedEntity implements IManagedEntity
 {
 
     @Attribute
     @Identifier
-    protected String name;
+    private String name;
 
     @Attribute
-    protected String description;
+    private String description;
 
     @Relationship(
             type = RelationshipType.ONE_TO_MANY,
@@ -25,7 +26,7 @@ public class League extends ManagedEntity implements IManagedEntity
             cascadePolicy = CascadePolicy.ALL,
             fetchPolicy = FetchPolicy.LAZY
     )
-    protected List<Season> seasons = new ArrayList<>();
+    private List<Season> seasons = new ArrayList<>();
 
     public String getName()
     {

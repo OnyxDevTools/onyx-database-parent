@@ -15,12 +15,12 @@ public class EntityClassNotFoundException extends EntityException {
     public static final String EXTENSION_NOT_FOUND = "Entity is not able to persist because entity does not extend from ManagedEntity";
     public static final String TO_MANY_INVALID_TYPE = "To Many relationship must by type List.class";
 
-    protected String entityClassName = null;
+    private String entityClassName = null;
 
     /**
      * Constructor with message
      *
-     * @param message
+     * @param message Error message
      */
     public EntityClassNotFoundException(String message, Class entityType)
     {
@@ -31,10 +31,15 @@ public class EntityClassNotFoundException extends EntityException {
     /**
      * Constructor with message
      *
-     * @param message
+     * @param message Error message
      */
     public EntityClassNotFoundException(String message)
     {
         super(message);
+    }
+
+    @SuppressWarnings("unused")
+    public String getEntityClassName() {
+        return entityClassName;
     }
 }

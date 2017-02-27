@@ -1,8 +1,8 @@
 package com.onyx.persistence.query;
 
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -39,14 +39,15 @@ public class QueryOrder implements ObjectSerializable, Serializable
      * Default Constructor
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public QueryOrder()
     {
 
     }
 
-    boolean ascending = true;
+    private boolean ascending = true;
 
-    String attribute = "";
+    private String attribute = "";
 
     /**
      * Constructor with default ascending order
@@ -54,6 +55,7 @@ public class QueryOrder implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param attribute Entity attribute name
      */
+    @SuppressWarnings("unused")
     public QueryOrder(String attribute)
     {
         this.attribute = attribute;

@@ -6,17 +6,19 @@ import com.onyx.persistence.annotations.*;
 
 /**
  * Created by timothy.osborn on 3/2/15.
+ *
+ * Index information for entity
  */
 @Entity(fileName = "system")
 public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
 {
-
+    @SuppressWarnings("unused")
     public SystemIndex()
     {
 
     }
 
-    public SystemIndex(IndexDescriptor descriptor, SystemEntity entity)
+    SystemIndex(IndexDescriptor descriptor, SystemEntity entity)
     {
         this.entity = entity;
         this.name = descriptor.getName();
@@ -25,39 +27,49 @@ public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
         this.loadFactor = descriptor.getLoadFactor();
     }
 
+    @SuppressWarnings("unused")
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     protected int primaryKey;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
-    @Index(loadFactor = 1)
+    @Index(loadFactor = 3)
     protected String id;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String name;
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "indexes", inverseClass = SystemEntity.class, loadFactor = 1)
+    @SuppressWarnings("WeakerAccess")
+    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "indexes", inverseClass = SystemEntity.class, loadFactor = 3)
     protected SystemEntity entity;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected String type;
 
+    @SuppressWarnings("WeakerAccess")
     @Attribute
     protected int loadFactor;
 
+    @SuppressWarnings("unused")
     public int getLoadFactor() {
         return loadFactor;
     }
 
+    @SuppressWarnings("unused")
     public void setLoadFactor(int loadFactor) {
         this.loadFactor = loadFactor;
     }
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(String id)
     {
         this.id = id;
@@ -68,16 +80,19 @@ public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
         return name;
     }
 
+    @SuppressWarnings("unused")
     public void setName(String name)
     {
         this.name = name;
     }
 
+    @SuppressWarnings("unused")
     public SystemEntity getEntity()
     {
         return entity;
     }
 
+    @SuppressWarnings("unused")
     public void setEntity(SystemEntity entity)
     {
         this.entity = entity;
@@ -87,6 +102,7 @@ public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
         return type;
     }
 
+    @SuppressWarnings("unused")
     public void setType(String type) {
         this.type = type;
     }

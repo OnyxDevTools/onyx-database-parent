@@ -1,16 +1,14 @@
 package com.onyx.persistence.query;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.update.AttributeUpdate;
-import com.onyx.structure.serializer.ObjectBuffer;
-import com.onyx.structure.serializer.ObjectSerializable;
+import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,33 +45,36 @@ import java.util.List;
  * @see PersistenceManager#executeDelete(Query)
  * @see PersistenceManager#executeQuery(Query)
  */
-@JsonIdentityInfo(generator = ObjectIdGenerators.IntSequenceGenerator.class, property = "@id")
 public class Query implements ObjectSerializable, Serializable
 {
 
-    protected List<String> selections;
+    private List<String> selections;
+    @SuppressWarnings("WeakerAccess")
     protected List<AttributeUpdate> updates;
+    @SuppressWarnings("WeakerAccess")
     protected QueryCriteria criteria;
-    protected List<QueryOrder> queryOrders;
+    private List<QueryOrder> queryOrders;
 
-    protected Class entityType;
-    protected int firstRow = 0;
+    private Class entityType;
+    private int firstRow = 0;
+    @SuppressWarnings("WeakerAccess")
     protected int maxResults = -1;
-    protected int resultsCount;
+    private int resultsCount;
 
     /**
      * Stop query before it finishes
      * @since 1.0.0
      */
-    @JsonIgnore
-    protected volatile boolean kill;
+    private volatile boolean kill;
 
+    @SuppressWarnings("WeakerAccess")
     protected Object partition = "";
 
     /**
      * Constructor creates an empty Query object
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     public Query()
     {
 
@@ -119,11 +120,12 @@ public class Query implements ObjectSerializable, Serializable
      * </code>
      * </pre>
      * */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryCriteria criteria, QueryOrder queryOrder)
     {
         this.entityType = entityType;
         this.criteria = criteria;
-        this.queryOrders = Arrays.asList(queryOrder);
+        this.queryOrders = Collections.singletonList(queryOrder);
     }
 
     /**
@@ -143,10 +145,11 @@ public class Query implements ObjectSerializable, Serializable
      * </code>
      * </pre>
      * */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryOrder queryOrder)
     {
         this.entityType = entityType;
-        this.queryOrders = Arrays.asList(queryOrder);
+        this.queryOrders = Collections.singletonList(queryOrder);
     }
 
     /**
@@ -166,6 +169,7 @@ public class Query implements ObjectSerializable, Serializable
      * </code>
      * </pre>
      * */
+    @SuppressWarnings("unused")
     public Query(Class entityType, List<QueryOrder> queryOrders)
     {
         this.entityType = entityType;
@@ -189,6 +193,7 @@ public class Query implements ObjectSerializable, Serializable
      * </code>
      * </pre>
      * */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryOrder... queryOrders)
     {
         this.entityType = entityType;
@@ -214,6 +219,7 @@ public class Query implements ObjectSerializable, Serializable
      * </code>
      * </pre>
      * */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryCriteria criteria, QueryOrder... queryOrders)
     {
         this.entityType = entityType;
@@ -233,6 +239,7 @@ public class Query implements ObjectSerializable, Serializable
      *   List results = manager.executeQuery(query);
      * </code>
      */
+    @SuppressWarnings("unused")
     public Query(Class entityType, List<String> selections, QueryCriteria criteria)
     {
         this.entityType = entityType;
@@ -252,6 +259,7 @@ public class Query implements ObjectSerializable, Serializable
      *   List results = manager.executeUpdate(query);
      * </code>
      */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryCriteria criteria, AttributeUpdate... updates)
     {
         this.entityType = entityType;
@@ -272,6 +280,7 @@ public class Query implements ObjectSerializable, Serializable
      * @param criteria   Query filter criteria
      * @param updates    List of attribute update instructions
      */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryCriteria criteria, List<AttributeUpdate> updates)
     {
         this.entityType = entityType;
@@ -296,6 +305,7 @@ public class Query implements ObjectSerializable, Serializable
      *   List results = manager.executeQuery(query);
      * </code>
      */
+    @SuppressWarnings("unused")
     public Query(Class entityType, List<String> selections, QueryCriteria criteria, List<QueryOrder> queryOrders)
     {
         this.entityType = entityType;
@@ -320,6 +330,7 @@ public class Query implements ObjectSerializable, Serializable
      *   List results = manager.executeQuery(query);
      * </code>
      */
+    @SuppressWarnings("unused")
     public Query(Class entityType, QueryCriteria criteria, String... selections)
     {
         this.entityType = entityType;
@@ -342,6 +353,7 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param entityType Entity Type
      */
+    @SuppressWarnings("unused")
     public void setEntityType(Class entityType)
     {
         this.entityType = entityType;
@@ -362,6 +374,7 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param updates List of Attribute Updates
      */
+    @SuppressWarnings("unused")
     public void setUpdates(List<AttributeUpdate> updates)
     {
         this.updates = updates;
@@ -401,6 +414,7 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @param criteria Query Filter Criteria
      */
+    @SuppressWarnings("unused")
     public void setCriteria(QueryCriteria criteria)
     {
         this.criteria = criteria;
@@ -472,6 +486,7 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @return Results count of executed query
      */
+    @SuppressWarnings("unused")
     public int getResultsCount()
     {
         return resultsCount;
@@ -503,7 +518,6 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.0.0
      * @return Boolean flag to terminate query
      */
-    @JsonIgnore
     public boolean isTerminated()
     {
         return kill;
@@ -558,6 +572,7 @@ public class Query implements ObjectSerializable, Serializable
      * @throws IOException failure to deserialize query
      */
     @Override
+    @SuppressWarnings("unchecked")
     public void readObject(ObjectBuffer buffer) throws IOException
     {
         selections = (List<String>) buffer.readObject();

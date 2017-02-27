@@ -4,26 +4,24 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
-/**
- * Created by tosborn1 on 3/31/16.
- */
+@SuppressWarnings("unused")
 @Entity
 public class Book extends ManagedEntity implements IManagedEntity
 {
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
-    protected long bookId;
+    private long bookId;
 
     @Attribute
-    protected String title;
+    private String title;
 
     @Index
     @Attribute
-    protected String genre;
+    private String genre;
 
     @Attribute
-    protected String description;
+    private String description;
 
     public long getBookId() {
         return bookId;

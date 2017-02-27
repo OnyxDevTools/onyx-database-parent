@@ -48,6 +48,7 @@ public interface PersistenceManagerFactory
      * @since 1.0.0
      * @param location Database Location
      */
+    @SuppressWarnings("unused")
     void setDatabaseLocation(String location);
 
     /**
@@ -56,6 +57,7 @@ public interface PersistenceManagerFactory
      * @since 1.0.0
      * @return Local database location on disk
      */
+    @SuppressWarnings("unused")
     String getDatabaseLocation();
 
     /**
@@ -68,6 +70,7 @@ public interface PersistenceManagerFactory
      *
      * @param context Schema Context implementation
      */
+    @SuppressWarnings("unused")
     void setSchemaContext(SchemaContext context);
 
     /**
@@ -77,6 +80,7 @@ public interface PersistenceManagerFactory
      * @return Schema Context
      */
 
+    @SuppressWarnings("unused")
     SchemaContext getSchemaContext();
 
     /**
@@ -85,14 +89,14 @@ public interface PersistenceManagerFactory
      * @since 1.0.0
      * @throws InitializationException Failure to start database due to either invalid credentials or a lock on the database already exists.
      */
+    @SuppressWarnings("unused")
     void initialize() throws InitializationException;
 
     /**
      * Safe shutdown of database
      * @since 1.0.0
-     * @throws java.io.IOException Failure to write checksum to database storage
-     * @throws com.onyx.exception.SingletonException Accessing singletons that cannot have more than one instance
      */
+    @SuppressWarnings("unused")
     void close();
 
     /**
@@ -102,6 +106,7 @@ public interface PersistenceManagerFactory
      * @param user Set username
      * @param password Set Password
      */
+    @SuppressWarnings("unused")
     void setCredentials(String user, String password);
 
     /**
@@ -110,6 +115,7 @@ public interface PersistenceManagerFactory
      *
      * @return Formatted Credentials
      */
+    @SuppressWarnings("unused")
     String getCredentials();
 
     /**
@@ -121,5 +127,6 @@ public interface PersistenceManagerFactory
      * @see com.onyx.persistence.manager.PersistenceManager
      * @see com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
      */
+    @SuppressWarnings("unused")
     PersistenceManager getPersistenceManager();
 }

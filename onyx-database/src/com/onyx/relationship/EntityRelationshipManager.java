@@ -20,41 +20,35 @@ import java.util.Map;
  */
 public class EntityRelationshipManager
 {
-    private Map<String, Map<Object, IManagedEntity>> entities = new HashMap();
+    private final Map<String, Map<Object, IManagedEntity>> entities = new HashMap<>();
 
     /**
      *
      * Checks to see whether it exists in the entities structure
-     * @param entity
-     * @param indexDescriptor
-     * @return
-     * @throws AttributeMissingException
+     * @param entity Entity to check to see if action has already been taken
+     * @param indexDescriptor Entity's index descriptor
+     * @throws AttributeMissingException Attribute does not exist
+     * @return Whether the entity is already there
      */
-    public boolean contains(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException
-    {
+    public boolean contains(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException {
         final String className = entity.getClass().getName();
 
-        if(!entities.containsKey(className))
-        {
-            entities.put(className, new HashMap());
+        if (!entities.containsKey(className)) {
+            entities.put(className, new HashMap<>());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
         final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, indexDescriptor);
 
-        if(indexValue == null)
-        {
-            return false;
-        }
-        return entityMap.containsKey(indexValue);
+        return indexValue != null && entityMap.containsKey(indexValue);
     }
 
     /**
      * Adds a new key to the 2 dimensional structure
      *
-     * @param entity
-     * @param indexDescriptor
-     * @throws AttributeMissingException
+     * @param entity Entity to add to controller
+     * @param indexDescriptor Entity's index controller
+     * @throws AttributeMissingException Attribute does not exist
      */
     public void add(IManagedEntity entity, IndexDescriptor indexDescriptor) throws AttributeMissingException
     {
@@ -62,7 +56,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new HashMap());
+            entities.put(className, new HashMap<>());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
@@ -73,8 +67,8 @@ public class EntityRelationshipManager
     /**
      * Gets the element, from the 2 dimensional structure
      *
-     * @param entity
-     * @return
+     * @param entity Entity to check
+     * @return Entity reference
      */
     public IManagedEntity get(IManagedEntity entity, IndexDescriptor descriptor) throws AttributeMissingException
     {
@@ -82,7 +76,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new HashMap());
+            entities.put(className, new HashMap<>());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);

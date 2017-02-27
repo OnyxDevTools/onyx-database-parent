@@ -8,8 +8,8 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.structure.DiskMap;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -19,42 +19,49 @@ import java.util.concurrent.Executors;
 
 /**
  * Created by timothy.osborn on 1/3/15.
+ *
+ * This contains the abstract inforamtion for a table scanner.
  */
-public abstract class AbstractTableScanner extends PartitionContext
+abstract class AbstractTableScanner extends PartitionContext
 {
-    protected ExecutorService executorService = Executors.newFixedThreadPool(8);
+    final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
-    protected QueryCriteria criteria;
-    protected SchemaContext context;
-    protected Class classToScan;
-    protected EntityDescriptor descriptor;
-    protected OffsetField fieldToGrab = null;
+    @SuppressWarnings("WeakerAccess")
+    protected final QueryCriteria criteria;
+    @SuppressWarnings("unused")
+    protected final Class classToScan;
+    @SuppressWarnings("WeakerAccess")
+    protected final EntityDescriptor descriptor;
+    OffsetField fieldToGrab = null;
 
+    @SuppressWarnings("WeakerAccess")
     protected DiskMap<Object, IManagedEntity> records = null;
+    @SuppressWarnings("WeakerAccess")
     protected MapBuilder temporaryDataFile = null;
-    protected Query query;
+    @SuppressWarnings("WeakerAccess")
+    protected final Query query;
+    @SuppressWarnings("WeakerAccess")
     protected PersistenceManager persistenceManager;
 
     /**
      * Constructor
      *
-     * @param criteria
-     * @param classToScan
-     * @param descriptor
+     * @param criteria Query Criteria
+     * @param classToScan Class type to scan
+     * @param descriptor Entity descriptor of entity type to scan
      */
-    public AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    @SuppressWarnings("unchecked")
+    AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(context, descriptor);
         this.criteria = criteria;
         this.classToScan = classToScan;
         this.descriptor = descriptor;
-        this.context = context;
         this.query = query;
-        this.context = context;
 
         // Get the data file
         final MapBuilder dataFile = context.getDataFile(descriptor);
-        records = (DiskMap)dataFile.getScalableMap(descriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
+        records = (DiskMap)dataFile.getHashMap(descriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
 
         this.temporaryDataFile = temporaryDataFile;
 

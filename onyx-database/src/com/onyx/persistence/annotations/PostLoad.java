@@ -26,6 +26,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * @see com.onyx.persistence.ManagedEntity
  *
  */
+@SuppressWarnings("unused")
 @Deprecated
 @Target({METHOD})
 @Retention(RUNTIME)

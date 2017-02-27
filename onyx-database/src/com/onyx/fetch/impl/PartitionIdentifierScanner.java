@@ -12,7 +12,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.record.RecordController;
-import com.onyx.structure.MapBuilder;
+import com.onyx.diskmap.MapBuilder;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,19 +22,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by timothy.osborn on 1/3/15.
+ *
+ * This scans a parition for matching identifiers
  */
 public class PartitionIdentifierScanner extends IdentifierScanner implements TableScanner
 {
 
-    protected SystemEntity systemEntity = null;
+    private SystemEntity systemEntity = null;
 
     /**
      * Constructor
      *
-     * @param criteria
-     * @param classToScan
-     * @param descriptor
-     * @throws EntityException
+     * @param criteria Query Criteria
+     * @param classToScan Class type to scan
+     * @param descriptor Entity descriptor of entity type to scan
      */
     public PartitionIdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
@@ -45,10 +46,11 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     /**
      * Full scan with ids
      *
-     * @return
-     * @throws EntityException
+     * @return References matching criteria
+     * @throws EntityException Cannot scan partition
      */
-    public Map<Long, Long> scanPartition(RecordController recordController, long partitionId) throws EntityException
+    @SuppressWarnings("unchecked")
+    private Map<Long, Long> scanPartition(RecordController recordController, long partitionId) throws EntityException
     {
         final Map returnValue = new HashMap();
 
@@ -70,7 +72,6 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
             }
         }
 
-
         // Its an equals, if the object exists, add it to the results
         else
         {
@@ -88,27 +89,26 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     /**
      * Scan existing values for identifiers
      *
-     * @return
-     * @throws EntityException
+     * @return Matching identifiers within partition
+     * @throws EntityException Cannot scan partition
      */
     @Override
+    @SuppressWarnings("unchecked")
     public Map scan() throws EntityException
     {
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
-        Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap();
+        Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap<>();
 
         if(query.getPartition() == QueryPartitionMode.ALL)
         {
-            systemEntity.getPartition().getEntries().stream().forEach(partition ->
+            systemEntity.getPartition().getEntries().forEach(partition ->
             {
-                try
-                {
-                    final EntityDescriptor partitionDescriptor = context.getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                    final RecordController recordController = context.getRecordController(partitionDescriptor);
+                try {
+                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                    final RecordController recordController = getContext().getRecordController(partitionDescriptor);
                     Map partitionResults = scanPartition(recordController, partition.getIndex());
                     results.putAll(partitionResults);
-                } catch (EntityException e)
-                {
+                } catch (EntityException e) {
                     wrapper.exception = e;
                 }
             });
@@ -130,20 +130,21 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     /**
      * Scan existing values for identifiers
      *
-     * @param existingValues
-     * @return
-     * @throws EntityException
+     * @param existingValues Existing values to match with criteria
+     * @return Values matching criteria
+     * @throws EntityException Cannot scan partition
      */
     @Override
+    @SuppressWarnings("unchecked")
     public Map scan(Map existingValues) throws EntityException
     {
         final Map returnValue = new HashMap();
 
-        final RecordController recordController = context.getRecordController(descriptor);
+        final RecordController recordController = getContext().getRecordController(descriptor);
 
         Iterator iterator = existingValues.keySet().iterator();
 
-        Object key = null;
+        Object key;
 
         while (iterator.hasNext())
         {
