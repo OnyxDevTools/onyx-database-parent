@@ -1,10 +1,10 @@
 package com.onyx.diskmap.store;
 
-import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.diskmap.serializer.Serializers;
+import com.onyx.persistence.context.SchemaContext;
+import com.onyx.persistence.context.impl.DefaultSchemaContext;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -32,8 +32,10 @@ public class FileChannelStore implements Store {
     @SuppressWarnings("WeakerAccess")
     protected String contextId = "";
     @SuppressWarnings("WeakerAccess")
-    protected boolean force = true;
+    protected boolean deleteOnClose = false;
     String filePath;
+
+    int SLICE_SIZE = ((1024 * 1024) * 3);
 
     final AtomicLong fileSize = new AtomicLong(0);
 
@@ -45,9 +47,12 @@ public class FileChannelStore implements Store {
      *
      * @param filePath Location of the store
      */
-    public FileChannelStore(String filePath, SchemaContext context, boolean force) {
+    public FileChannelStore(String filePath, SchemaContext context, boolean deleteOnClose) {
+        if (deleteOnClose) {
+            SLICE_SIZE = (1024 * 512);
+        }
         this.filePath = filePath;
-        this.force = force;
+        this.deleteOnClose = deleteOnClose;
         open(filePath);
         this.setSize();
         if (context != null)
@@ -125,8 +130,13 @@ public class FileChannelStore implements Store {
      */
     public boolean close() {
         try {
-            this.channel.force(force);
+            if (!deleteOnClose) {
+                this.channel.force(true);
+            }
             this.channel.close();
+            if (deleteOnClose) {
+                delete();
+            }
             return !this.channel.isOpen();
         } catch (IOException e) {
             return false;

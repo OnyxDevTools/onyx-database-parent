@@ -1077,7 +1077,7 @@ public class DefaultSchemaContext implements SchemaContext {
             final File file = new File(stringBuilder);
             //noinspection ResultOfMethodCallIgnored
             file.createNewFile();
-            return new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, false);
+            return new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, true);
         } catch (IOException e) {
             return null;
         }
