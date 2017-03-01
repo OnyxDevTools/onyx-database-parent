@@ -1,19 +1,21 @@
 package com.onyx.diskmap.store;
 
 import com.onyx.buffer.BufferStream;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
+import sun.nio.ch.DirectBuffer;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by tosborn on 3/27/15.
@@ -21,8 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * This class uses buffers that are mapped to memory rather than a direct file channel
  */
 public class MemoryMappedStore extends FileChannelStore implements Store {
-
-    static final int SLICE_SIZE = ((1024 * 1024) * 3);
 
     Map<Integer, FileSlice> slices;
 
@@ -35,8 +35,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      *
      * @param filePath File location for the store
      */
-    public MemoryMappedStore(String filePath, SchemaContext context, boolean force) {
-        super(filePath, context, force);
+    public MemoryMappedStore(String filePath, SchemaContext context, boolean deleteOnClose) {
+        super(filePath, context, deleteOnClose);
     }
 
     /**
@@ -65,6 +65,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         return channel.isOpen();
     }
 
+    private static final ExecutorService cleanupService = Executors.newSingleThreadExecutor();
+
     /**
      * Close the data file
      *
@@ -74,15 +76,24 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     public synchronized boolean close() {
         try {
 
-            this.slices.values().forEach(FileSlice::flush);
-
-            if (force) {
+            if (!deleteOnClose) {
                 try {
                     channel.truncate(fileSize.get());
                 } catch (IOException ignore) {}
             }
 
-            this.channel.close();
+            final Runnable runnable = () -> {
+                try {
+                    this.slices.values().forEach(FileSlice::flush);
+                    this.slices.clear();
+                    channel.close();
+                    if (deleteOnClose) {
+                        delete();
+                    }
+                } catch (IOException ignore) {
+                }
+            };
+            cleanupService.execute(runnable);
             return !this.channel.isOpen();
         } catch (Exception e) {
             return false;
@@ -379,24 +390,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         */
         void flush() {
             if (buffer instanceof MappedByteBuffer) {
-                if(force) {
-                    ((MappedByteBuffer) buffer).force(); // Flush the contents of the buffer
-                }
-                try {
-                    Method cleanerMethod = buffer.getClass().getMethod("cleaner");
-                    if (cleanerMethod != null) {
-                        cleanerMethod.setAccessible(true);
-                        Object cleaner = cleanerMethod.invoke(buffer);
-                        if (cleaner != null) {
-                            Method clearMethod = cleaner.getClass().getMethod("clean");
-                            if (clearMethod != null) {
-                                clearMethod.invoke(cleaner);
-                            }
-                        }
-                    }
-
-                } catch (Exception ignore) {
-                }
+                ((DirectBuffer) buffer).cleaner().clean();
             }
         }
     }
@@ -406,7 +400,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      */
     @Override
     public void commit() {
-        if (force) {
+        if (!deleteOnClose) {
             slices.values().forEach(fileSlice -> {
                 if (fileSlice.buffer instanceof MappedByteBuffer) {
                     ((MappedByteBuffer) fileSlice.buffer).force();

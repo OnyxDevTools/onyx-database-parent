@@ -1,12 +1,12 @@
 package com.onyx.diskmap;
 
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.diskmap.base.DiskMultiHashMap;
 import com.onyx.diskmap.base.DiskMultiMatrixHashMap;
 import com.onyx.diskmap.base.DiskSkipListMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.serializer.Serializers;
 import com.onyx.diskmap.store.*;
+import com.onyx.persistence.context.SchemaContext;
 
 import java.io.File;
 import java.util.Collections;
@@ -81,7 +81,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @since 1.0.0
      */
     public DefaultMapBuilder(String filePath, StoreType type, SchemaContext context) {
-        this("", filePath, type, context, true);
+        this("", filePath, type, context, false);
     }
 
     /**
@@ -90,13 +90,12 @@ public class DefaultMapBuilder implements MapBuilder {
      * @param filePath File path to hold the disk structure data
      * @param type     Storage type
      * @param context  Database Schema context
-     * @param force Whether to commit the storage volumes.  This could be false if you wanted to bypass since it is
-     *              not volatile and will not be re-used.  An example would be when creating a temporary file
+     * @param deleteOnClose Whether to delete storage volumes upon close.  This is used for temporary maps
      *
      * @since 1.2.0
      */
-    public DefaultMapBuilder(String filePath, @SuppressWarnings("SameParameterValue") StoreType type, SchemaContext context, @SuppressWarnings("SameParameterValue") boolean force) {
-        this("", filePath, type, context, force);
+    public DefaultMapBuilder(String filePath, @SuppressWarnings("SameParameterValue") StoreType type, SchemaContext context, @SuppressWarnings("SameParameterValue") boolean deleteOnClose) {
+        this("", filePath, type, context, deleteOnClose);
     }
 
     /**
@@ -106,7 +105,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @since 1.0.0
      */
     @SuppressWarnings("WeakerAccess")
-    public DefaultMapBuilder(@SuppressWarnings("SameParameterValue") String fileSystemPath, String filePath, StoreType type, SchemaContext context, boolean force) {
+    public DefaultMapBuilder(@SuppressWarnings("SameParameterValue") String fileSystemPath, String filePath, StoreType type, SchemaContext context, boolean deleteOnClose) {
         String path;
 
         if (fileSystemPath == null || fileSystemPath.equals(""))
@@ -115,10 +114,10 @@ public class DefaultMapBuilder implements MapBuilder {
             path = fileSystemPath + File.separator + filePath;
 
         if (type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported()) {
-            this.storage = new MemoryMappedStore(path, context, force);
+            this.storage = new MemoryMappedStore(path, context, deleteOnClose);
         }
         else if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
-            this.storage = new FileChannelStore(path, context, force);
+            this.storage = new FileChannelStore(path, context, deleteOnClose);
         } else if (type == StoreType.IN_MEMORY) {
             String storeId = String.valueOf(storeIdCounter.addAndGet(1));
             this.storage = new InMemoryStore(context, storeId);

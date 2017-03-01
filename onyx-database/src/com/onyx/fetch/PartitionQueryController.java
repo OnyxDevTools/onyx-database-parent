@@ -1,6 +1,7 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.PartitionContext;
@@ -15,7 +16,6 @@ import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -559,8 +559,7 @@ public class PartitionQueryController extends PartitionContext
     {
         this.contextId = null;
         if(this.temporaryDataFile != null) {
-            this.temporaryDataFile.delete();
-            this.temporaryDataFile = null;
+            this.temporaryDataFile.close();
         }
         this.criteria = null;
         this.classToScan = null;
