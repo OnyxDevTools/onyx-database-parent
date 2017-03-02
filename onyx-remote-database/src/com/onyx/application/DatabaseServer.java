@@ -10,8 +10,8 @@ import com.onyx.server.auth.DefaultAuthenticationManager;
 import com.onyx.server.base.AbstractDatabaseServer;
 import com.onyx.server.base.ServerState;
 import com.onyx.server.cli.CommandLineParser;
-import com.onyx.util.EncryptionUtil;
 import com.onyx.server.rmi.OnyxRMIServer;
+import com.onyx.util.EncryptionUtil;
 
 
 /**
@@ -44,9 +44,11 @@ import com.onyx.server.rmi.OnyxRMIServer;
 public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer {
 
     // RMI Server.  This is the underlying network io server
-    private OnyxRMIServer rmiServer;
+    @SuppressWarnings("WeakerAccess")
+    protected OnyxRMIServer rmiServer;
 
-    PersistenceManagerFactory persistenceManagerFactory;
+    @SuppressWarnings("WeakerAccess")
+    protected PersistenceManagerFactory persistenceManagerFactory;
 
     private AuthenticationManager authenticationManager = null;
 
@@ -130,7 +132,8 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
     /**
      * Register services.  This method registers all of the proxy objects and makes them public
      */
-    private void registerServices()
+    @SuppressWarnings("WeakerAccess")
+    protected void registerServices()
     {
         // Register the Persistence Manager
         rmiServer.register((short) 1, this.persistenceManagerFactory.getPersistenceManager(), PersistenceManager.class);
