@@ -34,6 +34,17 @@ public class Header implements ObjectSerializable
     }
 
     /**
+     * Add hash code for use within maps to help identify
+     *
+     * @return hash code of the header position
+     */
+    @Override
+    public int hashCode() {
+        return Long.hashCode(position);
+    }
+
+
+    /**
      * ObjectSerializable Interface
      *
      * Write to an Object Output Stream

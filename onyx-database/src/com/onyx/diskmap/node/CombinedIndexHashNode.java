@@ -7,19 +7,16 @@ package com.onyx.diskmap.node;
  */
 public class CombinedIndexHashNode {
 
-    public final int hashDigit;
     public SkipListHeadNode head;
     public final int mapId;
 
-    public CombinedIndexHashNode(final SkipListHeadNode base, final int mapId, int hashDigit) {
+    public CombinedIndexHashNode(final SkipListHeadNode base, final int mapId) {
         this.head = base;
         this.mapId = mapId;
-        this.hashDigit = hashDigit;
     }
 
     @Override
     public int hashCode() {
         return mapId;
     }
-
 }

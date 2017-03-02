@@ -115,6 +115,7 @@ public interface MapBuilder {
      * Delete file
      * @since 1.0.0
      */
+    @SuppressWarnings("unused")
     void delete();
 
     /**
