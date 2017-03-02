@@ -93,7 +93,8 @@ public class DefaultSchemaContext implements SchemaContext {
     public static final ConcurrentMap<String, SchemaContext> registeredSchemaContexts = new ConcurrentHashMap<>();
 
     // Directory location for temporary files
-    private String temporaryFileLocation;
+    @SuppressWarnings("WeakerAccess")
+    protected String temporaryFileLocation;
 
     /**
      * Constructor.

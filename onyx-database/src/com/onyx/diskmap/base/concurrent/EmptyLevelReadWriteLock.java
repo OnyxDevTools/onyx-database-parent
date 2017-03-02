@@ -1,5 +1,7 @@
 package com.onyx.diskmap.base.concurrent;
 
+import java.util.function.Function;
+
 /**
  * Created by tosborn1 on 2/20/17.
  *
@@ -9,19 +11,16 @@ package com.onyx.diskmap.base.concurrent;
  */
 public class EmptyLevelReadWriteLock implements LevelReadWriteLock {
 
+    /**
+     * This method does not perform any blocking it is an empty implemented method that invokes the consumer
+     *
+     * @param lock     The Object you want to block on
+     * @param consumer Function to invoke
+     * @return The result from the function
+     */
     @Override
-    public long lockReadLevel(int level) {
-        return 0;
+    @SuppressWarnings("unchecked")
+    public Object performWithLock(Object lock, Function consumer) {
+        return consumer.apply(lock);
     }
-
-    @Override
-    public void unlockReadLevel(int level, long stamp) {}
-
-    @Override
-    public long lockWriteLevel(int level) {
-        return 0;
-    }
-
-    @Override
-    public void unlockWriteLevel(int level, long stamp) {}
 }

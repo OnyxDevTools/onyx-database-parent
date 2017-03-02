@@ -1,5 +1,7 @@
 package com.onyx.diskmap.base.concurrent;
 
+import java.util.function.Function;
+
 /**
  * Created by timothy.osborn on 4/7/15.
  *
@@ -11,31 +13,13 @@ package com.onyx.diskmap.base.concurrent;
  */
 public interface LevelReadWriteLock
 {
-    /**
-     * Read Lock for level.
-     * @param level level in which you want to lock
-     * @return Stamp of the lock
-     */
-    long lockReadLevel(int level);
 
     /**
-     * Read Un-Lock for level
-     * @param level level in which you want to un-lock
-     * @param stamp Stamp of the lock
+     * This method performs a lambda function by locking on whatever object you pass in.
+     *
+     * @param lock The Object you want to block on
+     * @param consumer Function to invoke
+     * @return The result from the function
      */
-    void unlockReadLevel(int level, long stamp);
-
-    /**
-     * Write Lock for level
-     * @param level level in which you want to lock
-     * @return Stamp of the lock
-     */
-    long lockWriteLevel(int level);
-
-    /**
-     * Write Un-Lock for level
-     * @param level level in which you want to un-lock
-     * @param stamp Stamp of the lock
-     */
-    void unlockWriteLevel(int level, long stamp);
+    Object performWithLock(Object lock, Function consumer);
 }

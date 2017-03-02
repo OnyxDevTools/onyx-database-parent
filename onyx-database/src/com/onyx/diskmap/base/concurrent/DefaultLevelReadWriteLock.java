@@ -1,53 +1,48 @@
 package com.onyx.diskmap.base.concurrent;
 
-import java.util.concurrent.locks.StampedLock;
+import java.util.function.Function;
+
 
 /**
  * Created by tosborn1 on 8/4/15.
- *
+ * <p>
  * This is the default implementation of the LevelReadWriteLock that implements it using 10 different StampLocks
  */
-public class DefaultLevelReadWriteLock implements LevelReadWriteLock
-{
-    // Lock for each level
-    private final StampedLock[] locks;
+public class DefaultLevelReadWriteLock implements LevelReadWriteLock {
+
+    //private final Map<Object, Object> references = new ConcurrentWeakHashMap<>();
 
     /**
      * Constructor.  Instantiate the level locks
      */
-    public DefaultLevelReadWriteLock()
-    {
-        locks = new StampedLock[10];
-        locks[0] = new StampedLock();
-        locks[1] = new StampedLock();
-        locks[2] = new StampedLock();
-        locks[3] = new StampedLock();
-        locks[4] = new StampedLock();
-        locks[5] = new StampedLock();
-        locks[6] = new StampedLock();
-        locks[7] = new StampedLock();
-        locks[8] = new StampedLock();
-        locks[9] = new StampedLock();
+    public DefaultLevelReadWriteLock() {
+
     }
 
+    /**
+     * This method performs a lambda function by locking on whatever object you pass in.  In this case it has
+     * to be the exact reference.
+     *
+     * @param lock     The Object you want to block on
+     * @param consumer Function to invoke
+     * @return The result from the function
+     */
+    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter unchecked")
+    public Object performWithLock(Object lock, Function consumer) {
+        /*
+        The commented out code referes to a methodology that would not use the exact reference but, utalizes a map
+        to check to see if the values are equal and uses the tracked reference rather than the actual object that
+        is passed in.
+        final Object lock = references.compute(lockId, (o, reference) -> {
+            if(reference == null)
+                return lockId;
 
-    public long lockReadLevel(int level)
-    {
-        return locks[level].readLock();
+            return reference;
+        });*/
+
+        synchronized (lock) {
+            return consumer.apply(lock);
+        }
     }
 
-    public void unlockReadLevel(int level, long stamp)
-    {
-        locks[level].unlockRead(stamp);
-    }
-
-    public long lockWriteLevel(int level)
-    {
-        return locks[level].writeLock();
-    }
-
-    public void unlockWriteLevel(int level, long stamp)
-    {
-        locks[level].unlockWrite(stamp);
-    }
 }
