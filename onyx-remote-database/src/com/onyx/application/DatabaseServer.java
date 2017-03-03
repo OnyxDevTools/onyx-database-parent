@@ -43,6 +43,11 @@ import com.onyx.util.EncryptionUtil;
  */
 public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer {
 
+    @SuppressWarnings("WeakerAccess")
+    public static final String PERSISTENCE_MANAGER_SERVICE = "1";
+    @SuppressWarnings("WeakerAccess")
+    public static final String AUTHENTICATION_MANAGER_SERVICE = "2";
+
     // RMI Server.  This is the underlying network io server
     @SuppressWarnings("WeakerAccess")
     protected OnyxRMIServer rmiServer;
@@ -50,7 +55,8 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
     @SuppressWarnings("WeakerAccess")
     protected PersistenceManagerFactory persistenceManagerFactory;
 
-    private AuthenticationManager authenticationManager = null;
+    @SuppressWarnings("WeakerAccess")
+    protected AuthenticationManager authenticationManager = null;
 
     /**
      * Constructor
@@ -136,8 +142,8 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
     protected void registerServices()
     {
         // Register the Persistence Manager
-        rmiServer.register((short) 1, this.persistenceManagerFactory.getPersistenceManager(), PersistenceManager.class);
-        rmiServer.register((short) 2, this.authenticationManager, AuthenticationManager.class);
+        rmiServer.register(PERSISTENCE_MANAGER_SERVICE, this.persistenceManagerFactory.getPersistenceManager(), PersistenceManager.class);
+        rmiServer.register(AUTHENTICATION_MANAGER_SERVICE, this.authenticationManager, AuthenticationManager.class);
     }
 
     /**

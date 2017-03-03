@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("unchecked")
 public class DefaultMapBuilder implements MapBuilder {
 
-    private Store storage = null;
+    @SuppressWarnings("WeakerAccess")
+    protected Store storage = null;
 
     private static final AtomicInteger storeIdCounter = new AtomicInteger(0);
 
@@ -35,7 +36,15 @@ public class DefaultMapBuilder implements MapBuilder {
     private final Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
 
     // Internal map that runs on storage
-    private Map<String, Long> internalMaps = null;
+    @SuppressWarnings("WeakerAccess")
+    protected Map<String, Long> internalMaps = null;
+
+    /**
+     * Default Constructor
+     */
+    @SuppressWarnings("unused")
+    public DefaultMapBuilder() {
+    }
 
     /**
      * Constructor
@@ -338,7 +347,8 @@ public class DefaultMapBuilder implements MapBuilder {
      *                   to change.  Always plan for scale when designing your data model.
      * @return Instantiated disk map
      */
-    private DiskMap newScalableMap(Store store, Header header, int loadFactor) {
+    @SuppressWarnings("WeakerAccess")
+    protected DiskMap newScalableMap(Store store, Header header, int loadFactor) {
         if(loadFactor < 5)
             return new DiskMultiHashMap(store, header, loadFactor);
         return new DiskMultiMatrixHashMap(store, header, loadFactor);

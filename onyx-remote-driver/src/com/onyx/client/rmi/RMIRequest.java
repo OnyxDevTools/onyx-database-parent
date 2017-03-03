@@ -11,7 +11,7 @@ import java.io.*;
 public class RMIRequest implements Serializable, Externalizable
 {
 
-    private short instance;
+    private String instance;
     private String method;
     private Object[] params;
 
@@ -23,7 +23,7 @@ public class RMIRequest implements Serializable, Externalizable
      * @param params Parameters to include in the method invocation
      * @since 1.2.0
      */
-    RMIRequest(short instance, String method, Object[] params)
+    RMIRequest(String instance, String method, Object[] params)
     {
         this.instance = instance;
         this.method = method;
@@ -48,7 +48,7 @@ public class RMIRequest implements Serializable, Externalizable
      */
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeShort(instance);
+        out.writeUTF(instance);
         out.writeObject(method);
 
         // Iterate through all the parameters
@@ -69,7 +69,7 @@ public class RMIRequest implements Serializable, Externalizable
      */
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        instance = in.readShort();
+        instance = in.readUTF();
         method = (String)in.readObject();
         if(in.available() > 0) {
             params = new Object[in.readByte()];
@@ -86,12 +86,12 @@ public class RMIRequest implements Serializable, Externalizable
         }
     }
 
-    public short getInstance() {
+    public String getInstance() {
         return instance;
     }
 
     @SuppressWarnings("unused")
-    public void setInstance(short instance) {
+    public void setInstance(String instance) {
         this.instance = instance;
     }
 

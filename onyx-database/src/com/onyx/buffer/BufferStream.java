@@ -465,7 +465,7 @@ public class BufferStream {
      * @throws BufferingException Generic Buffer Exception
      */
     @SuppressWarnings("RedundantThrows")
-    private void putByte(byte value) throws BufferingException {
+    public void putByte(byte value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put(value);
     }
@@ -493,7 +493,7 @@ public class BufferStream {
      * @throws BufferingException Generic Buffer Exception
      */
     @SuppressWarnings("RedundantThrows")
-    private void putLong(long value) throws BufferingException {
+    public void putLong(long value) throws BufferingException {
         expandableByteBuffer.ensureSize(Long.BYTES);
         expandableByteBuffer.buffer.putLong(value);
     }

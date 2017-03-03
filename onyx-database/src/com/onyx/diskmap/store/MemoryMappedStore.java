@@ -199,7 +199,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return Object buffer that was read
      */
     public ObjectBuffer read(long position, int size) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
@@ -218,7 +218,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return the object you sent in
      */
     public Object read(long position, int size, ObjectSerializable object) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ObjectBuffer buffer = read(position, size);
@@ -294,7 +294,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return instantiated serialized object read from store
      */
     public Object read(long position, int size, Class type, int serializerId) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = BufferStream.allocate(size);
@@ -331,7 +331,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return Instantiated object of type
      */
     public Object read(long position, int size, Class type) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = BufferStream.allocate(size);

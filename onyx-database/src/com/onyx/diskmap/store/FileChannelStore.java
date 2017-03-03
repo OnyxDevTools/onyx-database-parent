@@ -1,5 +1,7 @@
 package com.onyx.diskmap.store;
 
+import com.onyx.diskmap.base.concurrent.AtomicCounter;
+import com.onyx.diskmap.base.concurrent.DefaultAtomicCounter;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.diskmap.serializer.Serializers;
@@ -13,7 +15,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -37,7 +38,8 @@ public class FileChannelStore implements Store {
 
     int SLICE_SIZE = ((1024 * 1024) * 3);
 
-    final AtomicLong fileSize = new AtomicLong(0);
+    @SuppressWarnings({"WeakerAccess", "CanBeFinal"})
+    protected AtomicCounter fileSize = new DefaultAtomicCounter(0);
 
     // This is an internal structure only used to store serializers
     Serializers serializers = null;
@@ -110,7 +112,8 @@ public class FileChannelStore implements Store {
      * outside of relying of the fileChannel is because it may not be accurate.  In order to force it's accuracy
      * we have to configure the file channel to do so.  That causes the store to be severly slowed down.
      */
-    void setSize() {
+    @SuppressWarnings("WeakerAccess")
+    protected void setSize() {
         final ObjectBuffer buffer = this.read(0, 8);
 
         try {
@@ -206,7 +209,7 @@ public class FileChannelStore implements Store {
      * @return The object that was read from the store
      */
     public Object read(long position, int size, Class type) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
@@ -243,7 +246,7 @@ public class FileChannelStore implements Store {
      * @return same object instance that was sent in.
      */
     public Object read(long position, int size, ObjectSerializable object) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
@@ -269,7 +272,7 @@ public class FileChannelStore implements Store {
      * @return Object read from the store
      */
     public Object read(long position, int size, Class type, int serializerId) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
@@ -307,7 +310,7 @@ public class FileChannelStore implements Store {
      * @return Object Buffer contains bytes read
      */
     public ObjectBuffer read(long position, int size) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
@@ -337,6 +340,16 @@ public class FileChannelStore implements Store {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Validate we are not going to read beyond the allocated file storage.  This would be bad
+     * @param position Position to validate
+     * @return whether the object you seek is in a valid position
+     */
+    @SuppressWarnings({"BooleanMethodIsAlwaysInverted", "WeakerAccess"})
+    protected boolean validateFileSize(long position) {
+        return position < fileSize.get();
     }
 
     /**
@@ -375,5 +388,15 @@ public class FileChannelStore implements Store {
     public void delete() {
         final File dataFile = new File(filePath);
         dataFile.delete();
+    }
+
+    /**
+     * Get file path for the store
+     *
+     * @return Local path
+     */
+    @Override
+    public String getFilePath() {
+        return filePath;
     }
 }

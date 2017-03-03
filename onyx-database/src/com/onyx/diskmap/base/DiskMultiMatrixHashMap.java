@@ -108,7 +108,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         if (head != null) {
 
-            return (V) this.getReadWriteLock().performWithLock(combinedNode, o -> {
+            return (V) this.getReadWriteLock().performWithLock(combinedNode.head, o -> {
                 Object returnValue = DiskMultiMatrixHashMap.super.put(key, value);
                 final SkipListHeadNode newHead = getHead();
 
@@ -140,7 +140,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         if (head != null) {
 
-            return (V) this.getReadWriteLock().performWithLock(combinedNode, o -> {
+            return (V) this.getReadWriteLock().performWithLock(combinedNode.head, o -> {
                 Object returnValue = DiskMultiMatrixHashMap.super.remove(key);
                 final SkipListHeadNode newHead = getHead();
 

@@ -1,8 +1,11 @@
 package com.onyx.diskmap.node;
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
 import com.onyx.diskmap.exception.SerializationException;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
+import com.onyx.exception.BufferingException;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -13,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * This class is to represent the starting place for a structure implementation.  This is serialized first
  *
  */
-public class Header implements ObjectSerializable
+public class Header implements ObjectSerializable, BufferStreamable
 {
     public static final int HEADER_SIZE = (Long.BYTES * 3);
 
@@ -88,5 +91,24 @@ public class Header implements ObjectSerializable
     @Override
     public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException {
 
+    }
+
+    @Override
+    public void read(BufferStream buffer) throws BufferingException {
+        firstNode = buffer.getLong();
+
+        if (recordCount == null)
+            recordCount = new AtomicLong(buffer.getLong());
+        else
+            recordCount.set(buffer.getLong());
+
+        position = buffer.getLong();
+    }
+
+    @Override
+    public void write(BufferStream buffer) throws BufferingException {
+        buffer.putLong(firstNode);
+        buffer.putLong(recordCount.get());
+        buffer.putLong(position);
     }
 }

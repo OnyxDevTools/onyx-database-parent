@@ -2,12 +2,12 @@ package com.onyx.server.rmi;
 
 import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.exception.MethodInvocationException;
+import com.onyx.client.handlers.RequestHandler;
+import com.onyx.client.rmi.RMIRequest;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.server.base.CommunicationServer;
-import com.onyx.client.exception.MethodInvocationException;
-import com.onyx.client.rmi.RMIRequest;
-import com.onyx.client.handlers.RequestHandler;
 
 import javax.net.ssl.SSLException;
 import java.lang.reflect.Method;
@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class OnyxRMIServer extends CommunicationServer {
     // Local Cache of the registered objects
-    private final Map<Short, Object> registeredObjects = new ConcurrentHashMap<>();
-    private final Map<Short, Class> registeredInterfaces = new ConcurrentHashMap<>();
+    private final Map<String, Object> registeredObjects = new ConcurrentHashMap<>();
+    private final Map<String, Class> registeredInterfaces = new ConcurrentHashMap<>();
 
     /**
      * Constructor
@@ -161,7 +161,7 @@ public class OnyxRMIServer extends CommunicationServer {
      * @param object   instance
      * @since 1.2.0
      */
-    public void register(short remoteId, Object object, Class interfaceToRegister) {
+    public void register(String remoteId, Object object, Class interfaceToRegister) {
         registeredObjects.put(remoteId, object);
         registeredInterfaces.put(remoteId, interfaceToRegister);
     }
@@ -173,9 +173,20 @@ public class OnyxRMIServer extends CommunicationServer {
      * @since 1.2.0
      */
     @SuppressWarnings("unused")
-    public void deregister(short name) {
+    public void deregister(String name) {
         registeredObjects.remove(name);
         registeredInterfaces.remove(name);
+    }
+
+    /**
+     * Get registered instance by key
+     *
+     * @param name key
+     * @return The registered instance
+     */
+    @SuppressWarnings("unused")
+    public Object getRegisteredInstance(String name) {
+        return registeredObjects.get(name);
     }
 
 }
