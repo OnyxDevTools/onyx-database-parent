@@ -9,7 +9,7 @@ import java.util.function.Function;
  *
  * The purpose is so that it can be injected into a stateless implementation of a map.
  */
-public class EmptyLevelReadWriteLock implements LevelReadWriteLock {
+public class EmptyDispatchLock implements DispatchLock {
 
     /**
      * This method does not perform any blocking it is an empty implemented method that invokes the consumer

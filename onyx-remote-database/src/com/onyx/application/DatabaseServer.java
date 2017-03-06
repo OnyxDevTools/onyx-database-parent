@@ -65,6 +65,10 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
         this.persistenceManagerFactory = new EmbeddedPersistenceManagerFactory();
     }
 
+    public DatabaseServer(boolean avoidDefaultConstructor) {
+
+    }
+
     /**
      * Run Database Server Main Method
      * <p>
@@ -154,7 +158,9 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
     public void stop()
     {
         rmiServer.stop();
-        persistenceManagerFactory.close();
+        if (persistenceManagerFactory != null) {
+            persistenceManagerFactory.close();
+        }
         super.stop();
     }
 }

@@ -1,7 +1,7 @@
 package com.onyx.entity;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  * Contains entity information
  */
 @Entity(fileName = "system")
-public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
+public class SystemEntity extends ManagedEntity
 {
     public SystemEntity()
     {

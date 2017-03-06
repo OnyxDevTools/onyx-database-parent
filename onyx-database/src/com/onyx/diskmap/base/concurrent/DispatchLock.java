@@ -11,7 +11,7 @@ import java.util.function.Function;
  *
  * @since 1.2.0 This was changed to use a stamp lock for additional performance gains.  Since it cannot be used recursively.
  */
-public interface LevelReadWriteLock
+public interface DispatchLock
 {
 
     /**

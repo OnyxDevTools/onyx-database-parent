@@ -213,6 +213,7 @@ public class EntityClassLoader
             idType.set(attribute.getDataType());
             idName.set(attribute.getName());
         });
+
         String idLoadFactor = String.valueOf(systemEntity.getIdentifier().getLoadFactor());
 
 

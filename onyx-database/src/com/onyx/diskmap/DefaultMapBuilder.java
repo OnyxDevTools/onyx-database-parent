@@ -96,9 +96,9 @@ public class DefaultMapBuilder implements MapBuilder {
     /**
      * Constructor with option to force or not
      *
-     * @param filePath File path to hold the disk structure data
-     * @param type     Storage type
-     * @param context  Database Schema context
+     * @param filePath      File path to hold the disk structure data
+     * @param type          Storage type
+     * @param context       Database Schema context
      * @param deleteOnClose Whether to delete storage volumes upon close.  This is used for temporary maps
      *
      * @since 1.2.0
@@ -124,8 +124,7 @@ public class DefaultMapBuilder implements MapBuilder {
 
         if (type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported()) {
             this.storage = new MemoryMappedStore(path, context, deleteOnClose);
-        }
-        else if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
+        } else if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
             this.storage = new FileChannelStore(path, context, deleteOnClose);
         } else if (type == StoreType.IN_MEMORY) {
             String storeId = String.valueOf(storeIdCounter.addAndGet(1));
@@ -160,15 +159,15 @@ public class DefaultMapBuilder implements MapBuilder {
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
-     * @param header reference within storage
+     * @param header     reference within storage
      *
      *
      * @param loadFactor Value from 1-10.
      *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
+     *                   The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     *                   1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     *                   to change.  Always plan for scale when designing your data model.
      *
      * @return Instantiated disk structure
      *
@@ -179,7 +178,6 @@ public class DefaultMapBuilder implements MapBuilder {
         return mapsByHeader.compute(header, (header1, map) -> {
             if (map != null)
                 return map;
-
             return newScalableMap(storage, header, loadFactor);
         });
     }
@@ -242,14 +240,14 @@ public class DefaultMapBuilder implements MapBuilder {
      * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
      * or a multi map with a hash matrix followed by a skip list.
      *
-     * @param name Name of the map to uniquely identify it
+     * @param name       Name of the map to uniquely identify it
      *
      * @param loadFactor Value from 1-10.
      *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
+     *                   The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     *                   1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     *                   to change.  Always plan for scale when designing your data model.
      *
      * @return Instantiated map with storage
      * @since 1.1.0
@@ -294,7 +292,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * so for 32bit JVM this function returns false.
      */
     private static boolean isMemmapSupported() {
-        if(memMapIsSupprted != null)
+        if (memMapIsSupprted != null)
             return memMapIsSupprted;
         String prop = System.getProperty("os.arch");
         memMapIsSupprted = prop != null && prop.contains("64");
@@ -349,7 +347,7 @@ public class DefaultMapBuilder implements MapBuilder {
      */
     @SuppressWarnings("WeakerAccess")
     protected DiskMap newScalableMap(Store store, Header header, int loadFactor) {
-        if(loadFactor < 5)
+        if (loadFactor < 5)
             return new DiskMultiHashMap(store, header, loadFactor);
         return new DiskMultiMatrixHashMap(store, header, loadFactor);
     }
@@ -373,7 +371,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * Since this implementation is stateless, it does not provide caching nor thread safety.
      *
-     * @param header Head of the disk map
+     * @param header     Head of the disk map
      * @param loadFactor Load factor in which the map was instantiated with.
      * @return Stateless instance of a disk map
      *
@@ -391,8 +389,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @return Disk Map implementation
      * @since 1.2.0
      */
-    public Map getHashMap(String name)
-    {
+    public Map getHashMap(String name) {
         return getHashMap(name, 10);
     }
 

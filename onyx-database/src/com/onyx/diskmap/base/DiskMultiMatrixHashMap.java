@@ -3,8 +3,8 @@ package com.onyx.diskmap.base;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.OrderedDiskMap;
 import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
-import com.onyx.diskmap.base.concurrent.DefaultLevelReadWriteLock;
-import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
+import com.onyx.diskmap.base.concurrent.DefaultDispatchLock;
+import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
 import com.onyx.diskmap.node.CombinedIndexHashMatrixNode;
 import com.onyx.diskmap.node.HashMatrixNode;
@@ -39,7 +39,7 @@ import java.util.Set;
 @SuppressWarnings("unchecked")
 public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K,V> {
 
-    private LevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
+    private DispatchLock dispatchLock = new DefaultDispatchLock();
 
     // Cache of skip lists
     private final Map<Integer, CombinedIndexHashMatrixNode> skipListMapCache = new ConcurrentWeakHashMap();
@@ -64,9 +64,9 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      * @since 1.2.1 Added constructor in the event you wanted a different locking implementation
      */
     @SuppressWarnings("unused")
-    public DiskMultiMatrixHashMap(Store fileStore, Header header, int loadFactor, LevelReadWriteLock levelReadWriteLock) {
+    public DiskMultiMatrixHashMap(Store fileStore, Header header, int loadFactor, DispatchLock dispatchLock) {
         super(fileStore, header, true);
-        this.levelReadWriteLock = levelReadWriteLock;
+        this.dispatchLock = dispatchLock;
         this.loadFactor = (byte) loadFactor;
     }
 
@@ -216,7 +216,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      */
     @Override
     public void clear() {
-        levelReadWriteLock.performWithLock(header, o -> {
+        dispatchLock.performWithLock(header, o -> {
             DiskMultiMatrixHashMap.super.clear();
             return null;
         });
@@ -404,8 +404,8 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      *
      * @return Implementation of a level read write lock
      */
-    public LevelReadWriteLock getReadWriteLock()
+    public DispatchLock getReadWriteLock()
     {
-        return levelReadWriteLock;
+        return dispatchLock;
     }
 }

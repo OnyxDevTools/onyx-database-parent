@@ -357,7 +357,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    private void putMap(Map map) throws BufferingException {
+    public void putMap(Map map) throws BufferingException {
 
         try {
             Class clazz = Class.forName(map.getClass().getName());

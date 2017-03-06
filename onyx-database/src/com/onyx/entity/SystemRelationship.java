@@ -1,7 +1,7 @@
 package com.onyx.entity;
 
 import com.onyx.descriptor.RelationshipDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 /**
@@ -11,7 +11,7 @@ import com.onyx.persistence.annotations.*;
  * Relationship information for an entity
  */
 @Entity(fileName = "system")
-public class SystemRelationship extends AbstractSystemEntity implements IManagedEntity
+public class SystemRelationship extends ManagedEntity
 {
 
     @SuppressWarnings("unused")
@@ -22,7 +22,6 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
 
     SystemRelationship(RelationshipDescriptor relationshipDescriptor, SystemEntity entity)
     {
-        id = entity.getName() + relationshipDescriptor.getName() +  inverseClass + inverse;
         this.entity = entity;
         this.cascadePolicy = relationshipDescriptor.getCascadePolicy().ordinal();
         this.fetchPolicy = relationshipDescriptor.getFetchPolicy().ordinal();
@@ -32,16 +31,12 @@ public class SystemRelationship extends AbstractSystemEntity implements IManaged
         this.name = relationshipDescriptor.getName();
         this.parentClass = relationshipDescriptor.getParentClass().getName();
         this.loadFactor = relationshipDescriptor.getLoadFactor();
+        id = entity.getName() + relationshipDescriptor.getName() + inverseClass + inverse + relationshipType;
     }
 
     @SuppressWarnings("unused")
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
-    protected int primaryKey;
-
-    @SuppressWarnings("WeakerAccess")
-    @Attribute
-    @Index(loadFactor = 3)
+    @Identifier(loadFactor = 3)
     protected String id;
 
     @SuppressWarnings("WeakerAccess")

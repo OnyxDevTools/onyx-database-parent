@@ -2,13 +2,15 @@ package com.onyx.buffer;
 
 import com.onyx.exception.BufferingException;
 
+import java.io.Serializable;
+
 /**
  * Created by tosborn1 on 7/30/16.
  *
  * This interface is intended to enable an object for expandableByteBuffer io.  It works much like the Externalizable interface
  * except without using input and output streams it uses a ByteBuffer.  The IO is wrapped within the BufferStream.
  */
-public interface BufferStreamable {
+public interface BufferStreamable extends Serializable {
 
     /**
      * Read from the expandableByteBuffer expandableByteBuffer to get the objects.

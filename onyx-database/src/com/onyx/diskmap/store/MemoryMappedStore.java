@@ -65,7 +65,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         return channel.isOpen();
     }
 
-    private static final ExecutorService cleanupService = Executors.newSingleThreadExecutor();
+    protected static final ExecutorService cleanupService = Executors.newSingleThreadExecutor();
 
     /**
      * Close the data file

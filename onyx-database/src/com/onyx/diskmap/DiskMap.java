@@ -1,10 +1,10 @@
 package com.onyx.diskmap;
 
-import com.onyx.exception.AttributeTypeMismatchException;
-import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
+import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
+import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.util.OffsetField;
 
 import java.util.Map;
@@ -90,6 +90,6 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @return Null if it does not apply.
      */
     @SuppressWarnings("unused")
-    LevelReadWriteLock getReadWriteLock();
+    DispatchLock getReadWriteLock();
 
 }

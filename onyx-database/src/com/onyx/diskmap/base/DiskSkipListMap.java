@@ -1,13 +1,15 @@
 package com.onyx.diskmap.base;
 
-import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
-import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.base.concurrent.EmptyReadWriteLock;
 import com.onyx.diskmap.base.skiplist.AbstractIterableSkipList;
-import com.onyx.diskmap.node.*;
+import com.onyx.diskmap.node.Header;
+import com.onyx.diskmap.node.SkipListHeadNode;
+import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
+import com.onyx.exception.AttributeMissingException;
+import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -285,7 +287,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
     }
 
     @Override
-    public LevelReadWriteLock getReadWriteLock() {
+    public DispatchLock getReadWriteLock() {
         return null;
     }
 

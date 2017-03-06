@@ -1,12 +1,16 @@
 package com.onyx.client.exception;
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
+import com.onyx.exception.BufferingException;
+
 /**
  * Created by tosborn1 on 7/1/16.
  * 
  * This indicates a problem when invoking a remote method.
  * @since 1.2.0
  */
-public class MethodInvocationException extends OnyxServerException {
+public class MethodInvocationException extends OnyxServerException implements BufferStreamable {
 
     public static final String NO_SUCH_METHOD = "No Such Method";
     private static final String NO_REGISTERED_OBJECT = "The remote object you are request does not exist!";
@@ -30,5 +34,20 @@ public class MethodInvocationException extends OnyxServerException {
     public MethodInvocationException(String message, Throwable cause)
     {
         super(message, cause);
+
+    }
+
+    @Override
+    public void read(BufferStream buffer) throws BufferingException {
+        this.cause = (Throwable) buffer.getObject();
+        this.message = buffer.getString();
+        this.stackTrace = buffer.getString();
+    }
+
+    @Override
+    public void write(BufferStream buffer) throws BufferingException {
+        buffer.putObject(getCause());
+        buffer.putString(message);
+        buffer.putString(this.stackTrace);
     }
 }

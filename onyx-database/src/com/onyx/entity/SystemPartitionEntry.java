@@ -115,6 +115,19 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
         this.index = index;
     }
 
+    public int getPrimaryKey() {
+        return primaryKey;
+    }
+
+    @SuppressWarnings("unused")
+    public void setPrimaryKey(int primaryKey) {
+        this.primaryKey = primaryKey;
+    }
+
+    @SuppressWarnings("unused")
+    public void setIndex(long index) {
+        this.index = index;
+    }
 
     @Override
     public int hashCode()

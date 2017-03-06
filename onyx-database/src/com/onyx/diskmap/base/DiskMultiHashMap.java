@@ -2,10 +2,10 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.OrderedDiskMap;
-import com.onyx.diskmap.base.concurrent.DefaultLevelReadWriteLock;
-import com.onyx.diskmap.base.concurrent.EmptyLevelReadWriteLock;
+import com.onyx.diskmap.base.concurrent.DefaultDispatchLock;
+import com.onyx.diskmap.base.concurrent.DispatchLock;
+import com.onyx.diskmap.base.concurrent.EmptyDispatchLock;
 import com.onyx.diskmap.base.concurrent.EmptyMap;
-import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
 import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
 import com.onyx.diskmap.node.CombinedIndexHashNode;
 import com.onyx.diskmap.node.Header;
@@ -39,7 +39,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K, V> {
 
-    private LevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
+    private DispatchLock dispatchLock = new DefaultDispatchLock();
 
     /**
      * Constructor
@@ -59,9 +59,9 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @param header    Pointer to the DiskMap
      * @since 1.2.0
      */
-    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, LevelReadWriteLock levelReadWriteLock) {
+    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, DispatchLock dispatchLock) {
         super(fileStore, header, true, loadFactor);
-        this.levelReadWriteLock = levelReadWriteLock;
+        this.dispatchLock = dispatchLock;
     }
 
     /**
@@ -84,7 +84,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
             keyCache = new EmptyMap();
             valueByPositionCache = new EmptyMap();
             nodeCache = new EmptyMap();
-            levelReadWriteLock = new EmptyLevelReadWriteLock();
+            dispatchLock = new EmptyDispatchLock();
         }
     }
 
@@ -125,7 +125,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         if (head != null) {
             final long headPosition = head.position;
 
-            return (V) levelReadWriteLock.performWithLock(combinedNode, o -> {
+            return (V) dispatchLock.performWithLock(combinedNode, o -> {
 
                 V returnValue = DiskMultiHashMap.super.put(key, value);
                 SkipListHeadNode newHead = getHead();
@@ -156,7 +156,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
 
         if (head != null) {
             final long headPosition = head.position;
-            return (V) levelReadWriteLock.performWithLock(combinedNode, o -> {
+            return (V) dispatchLock.performWithLock(combinedNode, o -> {
                 V returnValue = DiskMultiHashMap.super.remove(key);
                 SkipListHeadNode newHead = getHead();
                 combinedNode.head = newHead;
@@ -250,7 +250,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      */
     @Override
     public void clear() {
-        levelReadWriteLock.performWithLock(header, o -> {
+        dispatchLock.performWithLock(header, o -> {
             DiskMultiHashMap.super.clear();
             return null;
         });
@@ -351,8 +351,8 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * Return the Level read write lock implementation
      */
     @Override
-    public LevelReadWriteLock getReadWriteLock() {
-        return this.levelReadWriteLock;
+    public DispatchLock getReadWriteLock() {
+        return this.dispatchLock;
     }
 
 }
