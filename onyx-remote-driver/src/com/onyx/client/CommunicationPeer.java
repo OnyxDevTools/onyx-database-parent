@@ -43,7 +43,6 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
 
     // Heartbeat and timeout
     private int requestTimeout = 60; // 60 second timeout
-    private int connectTimeout = 5; // 5 second timeout
     private volatile boolean needsToRunHeartbeat = true; // If there was a response recently, there is no need to send a heartbeat
     private Timer heartBeatTimer;
 
@@ -154,6 +153,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         try {
 
             socketChannel.configureBlocking(true);
+            int connectTimeout = 5;
             socketChannel.socket().connect(new InetSocketAddress(host, port), connectTimeout);
             while (!socketChannel.finishConnect()) {
                 LockSupport.parkNanos(100);

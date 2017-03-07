@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
 
+    @SuppressWarnings("WeakerAccess")
     final AtomicInteger mapCount; // Count of allocated hash table used
     private final int referenceOffset; // Offest of the references
     private final int listReferenceOffset; // Offest of the iteration list reference
@@ -164,6 +165,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      *
      * @return atomic value of map count
      */
+    @SuppressWarnings("WeakerAccess")
     protected int getMapCount() {
         return mapCount.get();
     }
@@ -173,6 +175,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      *
      * @return Map count value after incrementing
      */
+    @SuppressWarnings("WeakerAccess")
     protected int incrementMapCount() {
         return mapCount.addAndGet(1);
     }

@@ -357,6 +357,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @SuppressWarnings("WeakerAccess")
     public void putMap(Map map) throws BufferingException {
 
         try {

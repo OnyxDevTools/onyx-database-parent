@@ -47,6 +47,7 @@ public abstract class OnyxServerException extends EntityException implements Ser
      * @param message Error message
      * @param cause Root cause exception
      */
+    @SuppressWarnings("WeakerAccess")
     public OnyxServerException(String message, Throwable cause)
     {
         this.message = message;

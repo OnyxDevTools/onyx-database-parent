@@ -110,11 +110,6 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     }
 
     @SuppressWarnings("unused")
-    public void setIndex(int index)
-    {
-        this.index = index;
-    }
-
     public int getPrimaryKey() {
         return primaryKey;
     }

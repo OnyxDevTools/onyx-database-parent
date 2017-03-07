@@ -30,6 +30,7 @@ public class DefaultMapBuilder implements MapBuilder {
     private static volatile Boolean memMapIsSupprted = null;
 
     // Contains all initialized maps
+    @SuppressWarnings("WeakerAccess")
     protected final Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
@@ -191,6 +192,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @since 1.2.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected Map getMapWithType(String name, MapType type, int loadFactor) {
 
         return maps.compute(name, (s, map) -> {

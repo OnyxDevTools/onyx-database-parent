@@ -65,6 +65,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         return channel.isOpen();
     }
 
+    @SuppressWarnings("WeakerAccess")
     protected static final ExecutorService cleanupService = Executors.newSingleThreadExecutor();
 
     /**
