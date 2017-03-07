@@ -79,7 +79,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
         ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
 
         // Update count
-        int count = mapCount.addAndGet(1);
+        int count = incrementMapCount();
         buffer.putInt(count);
         fileStore.write(new ObjectBuffer(buffer, null), header.firstNode);
 
@@ -157,5 +157,23 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
         long position = (hash*8) + referenceOffset + header.firstNode;
         final ObjectBuffer objectBuffer = fileStore.read(position, Long.BYTES);
         return objectBuffer.readLong();
+    }
+
+    /**
+     * Used to retrieve the amount of sub data structures
+     *
+     * @return atomic value of map count
+     */
+    protected int getMapCount() {
+        return mapCount.get();
+    }
+
+    /**
+     * Used to increment map count
+     *
+     * @return Map count value after incrementing
+     */
+    protected int incrementMapCount() {
+        return mapCount.addAndGet(1);
     }
 }

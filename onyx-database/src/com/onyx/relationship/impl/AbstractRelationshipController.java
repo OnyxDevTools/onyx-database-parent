@@ -36,7 +36,7 @@ class AbstractRelationshipController extends PartitionContext
 
     private RelationshipDescriptor defaultInverseRelationshipDescriptor;
 
-    static final int RELATIONSHIP_MAP_LOAD_FACTOR = 1;
+    static final int RELATIONSHIP_MAP_LOAD_FACTOR = 2;
 
     AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
     {

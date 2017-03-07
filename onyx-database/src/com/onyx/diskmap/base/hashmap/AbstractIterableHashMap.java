@@ -3,7 +3,9 @@ package com.onyx.diskmap.base.hashmap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.store.Store;
 
-import java.util.*;
+import java.util.AbstractCollection;
+import java.util.Collection;
+import java.util.Iterator;
 
 /**
  * This class maintains the iterator capablities for the hash table.
@@ -43,7 +45,7 @@ abstract class AbstractIterableHashMap<K, V> extends AbstractCachedHashMap<K, V>
 
         @Override
         public boolean hasNext() {
-            return index < mapCount.get();
+            return index < getMapCount();
         }
 
         @Override
@@ -67,7 +69,7 @@ abstract class AbstractIterableHashMap<K, V> extends AbstractCachedHashMap<K, V>
 
         @Override
         public int size() {
-            return mapCount.get();
+            return getMapCount();
         }
     }
 }

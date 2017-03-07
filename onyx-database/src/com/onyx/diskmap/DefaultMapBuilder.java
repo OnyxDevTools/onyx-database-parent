@@ -30,7 +30,7 @@ public class DefaultMapBuilder implements MapBuilder {
     private static volatile Boolean memMapIsSupprted = null;
 
     // Contains all initialized maps
-    private final Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
+    protected final Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
 
     // Contains all initialized maps
     private final Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
@@ -191,7 +191,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @since 1.2.0
      */
-    private Map getMapWithType(String name, MapType type, int loadFactor) {
+    protected Map getMapWithType(String name, MapType type, int loadFactor) {
 
         return maps.compute(name, (s, map) -> {
             if (map != null)

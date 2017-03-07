@@ -1,5 +1,9 @@
 package com.onyx.client.rmi;
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
+import com.onyx.exception.BufferingException;
+
 import java.io.*;
 
 /**
@@ -8,7 +12,7 @@ import java.io.*;
  * This is the main packet to send to the server for remote method invocation.
  * @since 1.2.0
  */
-public class RMIRequest implements Serializable, Externalizable
+public class RMIRequest implements Serializable, Externalizable, BufferStreamable
 {
 
     private String instance;
@@ -108,4 +112,17 @@ public class RMIRequest implements Serializable, Externalizable
         return params;
     }
 
+    @Override
+    public void read(BufferStream buffer) throws BufferingException {
+        instance = buffer.getString();
+        method = buffer.getString();
+        params = (Object[]) buffer.getObject();
+    }
+
+    @Override
+    public void write(BufferStream buffer) throws BufferingException {
+        buffer.putString(instance);
+        buffer.putString(method);
+        buffer.putObject(params);
+    }
 }

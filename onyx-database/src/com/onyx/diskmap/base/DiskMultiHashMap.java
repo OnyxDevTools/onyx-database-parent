@@ -12,7 +12,10 @@ import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.store.Store;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by tosborn1 on 2/20/17.
@@ -59,9 +62,15 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @param header    Pointer to the DiskMap
      * @since 1.2.0
      */
+    @SuppressWarnings("unused")
     public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, DispatchLock dispatchLock) {
         super(fileStore, header, true, loadFactor);
         this.dispatchLock = dispatchLock;
+        this.nodeCache = new EmptyMap();
+        this.mapCache = new EmptyMap();
+        this.cache = new EmptyMap();
+        this.valueByPositionCache = new EmptyMap();
+        this.keyCache = new EmptyMap();
     }
 
     /**
@@ -256,8 +265,6 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         });
     }
 
-    private final Map<Integer, CombinedIndexHashNode> hashIndexNodeCache = Collections.synchronizedMap(new WeakHashMap<>());
-
     /**
      * The nuts and bolts of the map lie here.  This finds the head of the skip list based on the key
      * It uses the bitmap index on the disk map.
@@ -270,23 +277,35 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     private CombinedIndexHashNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
         int skipListMapId = getSkipListKey(key);
 
-        return hashIndexNodeCache.compute(skipListMapId, (integer, combinedHashIndexNode) -> {
-            if (combinedHashIndexNode != null)
-                return combinedHashIndexNode;
+        if (forInsert) {
+            long existingReference = getReference(skipListMapId);
 
-            if (forInsert) {
-                SkipListHeadNode headNode1;
-                long reference = super.getReference(skipListMapId);
-                if (reference == 0) {
-                    headNode1 = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
-                    insertReference(skipListMapId, headNode1.position);
-                    return new CombinedIndexHashNode(headNode1, skipListMapId);
-                } else {
-                    return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
-                }
+            if (existingReference == 0) {
+                return (CombinedIndexHashNode) dispatchLock.performWithLock(header, o -> {
+                    SkipListHeadNode headNode1;
+                    long reference = getReference(skipListMapId);
+                    if (reference == 0) {
+                        if (forInsert) {
+                            headNode1 = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
+                            insertReference(skipListMapId, headNode1.position);
+                            return new CombinedIndexHashNode(headNode1, skipListMapId);
+                        }
+                        return null;
+                    } else {
+                        return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
+                    }
+                });
+            } else {
+                return new CombinedIndexHashNode(findNodeAtPosition(existingReference), skipListMapId);
             }
-            return null;
-        });
+        } else {
+            long reference = getReference(skipListMapId);
+            if (reference == 0) {
+                return null;
+            } else {
+                return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
+            }
+        }
     }
 
     /**

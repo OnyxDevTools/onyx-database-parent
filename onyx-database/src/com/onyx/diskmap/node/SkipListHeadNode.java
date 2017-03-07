@@ -73,4 +73,14 @@ public class SkipListHeadNode implements ObjectSerializable, BufferStreamable {
         buffer.putByte(level);
         buffer.putLong(position);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        return (o instanceof SkipListHeadNode && ((SkipListHeadNode) o).position == position);
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(position);
+    }
 }

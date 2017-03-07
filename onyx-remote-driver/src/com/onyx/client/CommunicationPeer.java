@@ -6,23 +6,28 @@ import com.onyx.client.base.RequestToken;
 import com.onyx.client.base.engine.PacketTransportEngine;
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine;
 import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine;
-import com.onyx.client.exception.*;
+import com.onyx.client.exception.ConnectionFailedException;
+import com.onyx.client.exception.OnyxServerException;
+import com.onyx.client.exception.RequestTimeoutException;
 import com.onyx.exception.InitializationException;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
-import javax.net.ssl.*;
 
 /**
  * Tim Osborn 02/13/2017
@@ -38,6 +43,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
 
     // Heartbeat and timeout
     private int requestTimeout = 60; // 60 second timeout
+    private int connectTimeout = 5; // 5 second timeout
     private volatile boolean needsToRunHeartbeat = true; // If there was a response recently, there is no need to send a heartbeat
     private Timer heartBeatTimer;
 
@@ -132,6 +138,9 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         // Try to open the connection
         try {
             socketChannel = SocketChannel.open();
+            socketChannel.socket().setKeepAlive(true);
+            socketChannel.socket().setTcpNoDelay(true);
+            socketChannel.socket().setReuseAddress(true);
         } catch (IOException e) {
             throw new ConnectionFailedException();
         }
@@ -145,7 +154,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         try {
 
             socketChannel.configureBlocking(true);
-            socketChannel.socket().connect(new InetSocketAddress(host, port), requestTimeout);
+            socketChannel.socket().connect(new InetSocketAddress(host, port), connectTimeout);
             while (!socketChannel.finishConnect()) {
                 LockSupport.parkNanos(100);
             }

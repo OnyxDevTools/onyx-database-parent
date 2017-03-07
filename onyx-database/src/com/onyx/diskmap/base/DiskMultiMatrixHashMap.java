@@ -5,6 +5,7 @@ import com.onyx.diskmap.OrderedDiskMap;
 import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
 import com.onyx.diskmap.base.concurrent.DefaultDispatchLock;
 import com.onyx.diskmap.base.concurrent.DispatchLock;
+import com.onyx.diskmap.base.concurrent.EmptyMap;
 import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
 import com.onyx.diskmap.node.CombinedIndexHashMatrixNode;
 import com.onyx.diskmap.node.HashMatrixNode;
@@ -68,6 +69,9 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
         super(fileStore, header, true);
         this.dispatchLock = dispatchLock;
         this.loadFactor = (byte) loadFactor;
+        this.nodeCache = new EmptyMap();
+        this.valueByPositionCache = new EmptyMap();
+        this.keyCache = new EmptyMap();
     }
 
     /**
@@ -264,7 +268,10 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
                 return retVal;
             return (CombinedIndexHashMatrixNode) this.getReadWriteLock().performWithLock(header, o -> skipListMapCache.computeIfAbsent(skipListMapId, integer -> seek(forInsert, hashDigits)));
         } else {
-            return skipListMapCache.get(skipListMapId);
+            CombinedIndexHashMatrixNode node = skipListMapCache.get(skipListMapId);
+            if (node != null)
+                return node;
+            return seek(false, hashDigits);
         }
     }
 
