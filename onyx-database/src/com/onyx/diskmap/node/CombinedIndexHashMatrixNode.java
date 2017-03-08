@@ -22,7 +22,7 @@ public class CombinedIndexHashMatrixNode {
     @Override
     public int hashCode()
     {
-        return Long.hashCode(this.bitMapNode.position);
+        return (int)(this.bitMapNode.position ^ (this.bitMapNode.position >>> 32));
     }
 
     @Override

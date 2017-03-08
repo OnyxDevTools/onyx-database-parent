@@ -2,6 +2,7 @@ package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
@@ -50,7 +51,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     @SuppressWarnings("unchecked")
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> returnValue = new HashMap<>();
+        final Map<Long, Long> returnValue = new CompatHashMap<>();
         final List<Long> references = new ArrayList<>();
 
         if(criteria.getValue() instanceof List)
@@ -60,35 +61,45 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 if(query.isTerminated())
                     return returnValue;
 
-                if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                    indexController.findAllAbove(idValue, false).forEach(references::add);
-                else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                    indexController.findAllAbove(idValue, true).forEach(references::add);
-                else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                    indexController.findAllBelow(idValue, false).forEach(references::add);
-                else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                    indexController.findAllBelow(idValue, true).forEach(references::add);
+                Set<Long> values;
+
+                if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                    values = indexController.findAllAbove(idValue, false);
+                else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                    values = indexController.findAllAbove(idValue, true);
+                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                    values = indexController.findAllBelow(idValue, false);
+                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                    values = indexController.findAllBelow(idValue, true);
                 else
-                    indexController.findAll(idValue).keySet().forEach(o -> references.add((long)o));
+                    values = indexController.findAll(idValue).keySet();
+
+                references.addAll(values);
+
             }
         }
         else
         {
 
-            if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                indexController.findAllAbove(criteria.getValue(), false).forEach(references::add);
-            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                indexController.findAllAbove(criteria.getValue(), true).forEach(references::add);
-            else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                indexController.findAllBelow(criteria.getValue(), false).forEach(references::add);
-            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                indexController.findAllBelow(criteria.getValue(), true).forEach(references::add);
+            Set<Long> values;
+
+            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                values = indexController.findAllAbove(criteria.getValue(), false);
+            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                values = indexController.findAllAbove(criteria.getValue(), true);
+            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                values = indexController.findAllBelow(criteria.getValue(), false);
+            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                values = indexController.findAllBelow(criteria.getValue(), true);
             else
-                indexController.findAll(criteria.getValue()).keySet().forEach(o -> references.add((long)o));
+                values = indexController.findAll(criteria.getValue()).keySet();
+
+            references.addAll(values);
 
         }
 
-        references.forEach(val -> returnValue.put(val, val));
+        for(Long val : references)
+            returnValue.put(val, val);
 
         return returnValue;
     }
@@ -104,7 +115,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     @SuppressWarnings("unchecked")
     public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
     {
-        final Map<Long, Long> returnValue = new HashMap<>();
+        final Map<Long, Long> returnValue = new CompatHashMap<>();
 
         if(criteria.getValue() instanceof List)
         {
@@ -127,12 +138,13 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                     results = indexController.findAll(idValue).keySet();
 
 
-                results.forEach(reference ->
+                //noinspection Convert2streamapi
+                for(Long reference : results)
                 {
                     if (existingValues.containsKey(reference)) {
                         returnValue.put(reference, reference);
                     }
-                });
+                }
             }
         }
         else
@@ -151,13 +163,14 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 results = indexController.findAll(criteria.getValue()).keySet();
 
 
-
-            results.forEach(reference ->
+            //noinspection Convert2streamapi
+            for(Long reference : results)
             {
                 if (existingValues.containsKey(reference)) {
                     returnValue.put(reference, reference);
                 }
-            });
+            }
+
         }
 
         return returnValue;

@@ -209,11 +209,17 @@ public class EntityClassLoader
         String fileName = systemEntity.getFileName();
         AtomicReference<String> idType = new AtomicReference<>();
         AtomicReference<String> idName = new AtomicReference<>();
-        systemEntity.getAttributes().stream().filter(attribute -> attribute.getName().equals(systemEntity.getIdentifier().getName())).forEach(attribute ->
+
+        for(SystemAttribute attribute : systemEntity.getAttributes())
         {
-            idType.set(attribute.getDataType());
-            idName.set(attribute.getName());
-        });
+            if( attribute.getName().equals(systemEntity.getIdentifier().getName()))
+            {
+                idType.set(attribute.getDataType());
+                idName.set(attribute.getName());
+                break;
+            }
+        }
+
 
         String idLoadFactor = String.valueOf(systemEntity.getIdentifier().getLoadFactor());
 

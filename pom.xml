@@ -87,6 +87,7 @@
 
     <modules>
         <module>onyx-database</module>
+        <module>onyx-android</module>
         <module>onyx-remote-database</module>
         <module>onyx-web-database</module>
         <module>onyx-remote-driver</module>

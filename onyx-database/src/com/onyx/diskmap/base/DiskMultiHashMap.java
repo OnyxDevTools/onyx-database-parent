@@ -262,8 +262,6 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         });
     }
 
-    private final Map<Integer, CombinedIndexHashNode> hashIndexNodeCache = Collections.synchronizedMap(new WeakHashMap<>());
-
     /**
      * The nuts and bolts of the map lie here.  This finds the head of the skip list based on the key
      * It uses the bitmap index on the disk map.
@@ -272,6 +270,11 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @param forInsert Whether we should insert the bitmap index.
      * @return The Combined Index node of the skip list and it contains the bitmap node information.
      * @since 1.2.0
+     *
+     * @since 1.2.2 There is no use for the caching map so it was removed.  This should be
+     * inexpensive since it only requires a single i/o read.  Also, refactored the
+     * locking to lock on the head and pass thru for the rest of the data structure since it
+     * does not impact any sub maps
      */
     private CombinedIndexHashNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
         int skipListMapId = getSkipListKey(key);

@@ -2,12 +2,16 @@ package com.onyx.util;
 
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Relationship;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -19,26 +23,17 @@ import java.util.*;
  * <p>
  * The purpose of this class is to encapsulate how we are performing reflection.  The default way is to use the unsafe api
  * but if it is not available, we default to generic reflection.
+ *
+ * @since 1.2.2 This class has been refactored to remove theUnsafe.  That is unavailable and it did not prooove to provide
+ * performance benefit.
  */
 @SuppressWarnings("unchecked")
 public class ReflectionUtil {
 
 
-    @SuppressWarnings("CanBeFinal")
-    private static sun.misc.Unsafe theUnsafe;
-
     // Cache of class' fields
-    private static final Map<Class, List<OffsetField>> classFields = Collections.synchronizedMap(new WeakHashMap());
+    private static final CompatMap<Class, List<OffsetField>> classFields = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
-    // Get Unsafe instance
-    static {
-        try {
-            final Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            theUnsafe = (sun.misc.Unsafe) field.get(null);
-        } catch (Exception ignored) {
-        }
-    }
 
     /**
      * Get all the fields to serialize
@@ -63,25 +58,17 @@ public class ReflectionUtil {
                                 && f.getType() != Exception.class
                                 && f.getType() != Throwable.class) {
                             if (!isManagedEntity) {
-                                if (theUnsafe != null) {
-                                    fields.add(new OffsetField(theUnsafe.objectFieldOffset(f), f.getName(), f));
-                                } else {
                                     fields.add(new OffsetField(-1, f.getName(), f));
-                                }
                             } else if (f.isAnnotationPresent(Attribute.class)
                                     || f.isAnnotationPresent(Relationship.class)) {
-                                if (theUnsafe != null) {
-                                    fields.add(new OffsetField(theUnsafe.objectFieldOffset(f), f.getName(), f));
-                                } else {
                                     fields.add(new OffsetField(-1, f.getName(), f));
-                                }
                             }
                         }
                     }
                     aClass = aClass.getSuperclass();
                 }
 
-                fields.sort((o1, o2) -> o1.name.compareTo(o2.name));
+                Collections.sort(fields, (o1, o2) -> o1.name.compareTo(o2.name));
             }
             return fields;
         });
@@ -107,9 +94,6 @@ public class ReflectionUtil {
      * @return The offset field
      */
     public static OffsetField getOffsetField(Field field) {
-        if (theUnsafe != null)
-            return new OffsetField(theUnsafe.objectFieldOffset(field), field.getName(), field);
-
         return new OffsetField(-1, field.getName(), field);
     }
 
@@ -150,9 +134,6 @@ public class ReflectionUtil {
      * @throws IllegalAccessException Exception thrown when using regular reflection
      */
     public static Object instantiate(Class type) throws InstantiationException, IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.allocateInstance(type);
-
         return type.newInstance();
     }
 
@@ -170,9 +151,6 @@ public class ReflectionUtil {
      * @return a primitive int
      */
     public static int getInt(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getInt(parent, offsetField.offset);
-
         return offsetField.field.getInt(parent);
     }
 
@@ -184,9 +162,6 @@ public class ReflectionUtil {
      * @return a primitive byte
      */
     public static byte getByte(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getByte(parent, offsetField.offset);
-
         return offsetField.field.getByte(parent);
     }
 
@@ -198,9 +173,6 @@ public class ReflectionUtil {
      * @return a primitive long
      */
     public static long getLong(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getLong(parent, offsetField.offset);
-
         return offsetField.field.getLong(parent);
     }
 
@@ -212,9 +184,6 @@ public class ReflectionUtil {
      * @return a primitive float
      */
     public static float getFloat(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getFloat(parent, offsetField.offset);
-
         return offsetField.field.getFloat(parent);
     }
 
@@ -226,9 +195,6 @@ public class ReflectionUtil {
      * @return a primitive double
      */
     public static double getDouble(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getDouble(parent, offsetField.offset);
-
         return offsetField.field.getDouble(parent);
     }
 
@@ -240,9 +206,6 @@ public class ReflectionUtil {
      * @return a primitive boolean
      */
     public static boolean getBoolean(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getBoolean(parent, offsetField.offset);
-
         return offsetField.field.getBoolean(parent);
     }
 
@@ -254,9 +217,6 @@ public class ReflectionUtil {
      * @return a primitive short
      */
     public static short getShort(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getShort(parent, offsetField.offset);
-
         return offsetField.field.getShort(parent);
     }
 
@@ -268,9 +228,6 @@ public class ReflectionUtil {
      * @return a primitive char
      */
     public static char getChar(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getChar(parent, offsetField.offset);
-
         return offsetField.field.getChar(parent);
     }
 
@@ -282,9 +239,6 @@ public class ReflectionUtil {
      * @return a mutable object of any kind
      */
     public static Object getObject(Object parent, OffsetField offsetField) throws IllegalAccessException {
-        if (theUnsafe != null)
-            return theUnsafe.getObject(parent, offsetField.offset);
-
         return offsetField.field.get(parent);
     }
 
@@ -343,11 +297,6 @@ public class ReflectionUtil {
      * @param value       int key to set
      */
     public static void setInt(Object parent, OffsetField offsetField, int value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putInt(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setInt(parent, value);
     }
 
@@ -359,11 +308,6 @@ public class ReflectionUtil {
      * @param value       long key to set
      */
     public static void setLong(Object parent, OffsetField offsetField, long value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putLong(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setLong(parent, value);
     }
 
@@ -375,11 +319,6 @@ public class ReflectionUtil {
      * @param value       byte key to set
      */
     public static void setByte(Object parent, OffsetField offsetField, byte value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putByte(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setByte(parent, value);
     }
 
@@ -391,11 +330,6 @@ public class ReflectionUtil {
      * @param value       float key to set
      */
     public static void setFloat(Object parent, OffsetField offsetField, float value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putFloat(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setFloat(parent, value);
     }
 
@@ -407,11 +341,6 @@ public class ReflectionUtil {
      * @param value       double key to set
      */
     public static void setDouble(Object parent, OffsetField offsetField, double value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putDouble(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setDouble(parent, value);
     }
 
@@ -423,11 +352,6 @@ public class ReflectionUtil {
      * @param value       short key to set
      */
     public static void setShort(Object parent, OffsetField offsetField, short value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putShort(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setShort(parent, value);
     }
 
@@ -439,11 +363,6 @@ public class ReflectionUtil {
      * @param value       boolean key to set
      */
     public static void setBoolean(Object parent, OffsetField offsetField, boolean value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putBoolean(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setBoolean(parent, value);
     }
 
@@ -455,11 +374,6 @@ public class ReflectionUtil {
      * @param value       char key to set
      */
     public static void setChar(Object parent, OffsetField offsetField, char value) throws IllegalAccessException {
-        if (theUnsafe != null) {
-            theUnsafe.putChar(parent, offsetField.offset, value);
-            return;
-        }
-
         offsetField.field.setChar(parent, value);
     }
 
@@ -470,16 +384,7 @@ public class ReflectionUtil {
      * @param offsetField The field to reflect on
      * @param value       object key to set
      */
-    public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException, AttributeTypeMismatchException {
-        if (theUnsafe != null) {
-            if (value == null || offsetField.field.getType().isAssignableFrom(value.getClass())
-                    || value.getClass().isArray() && offsetField.field.getType().isArray())
-                theUnsafe.putObject(parent, offsetField.offset, value);
-            else
-                throw new AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, value.getClass(), offsetField.field.getType(), offsetField.name);
-            return;
-        }
-
+    public static void setObject(Object parent, OffsetField offsetField, Object value) throws IllegalAccessException {
         offsetField.field.set(parent, value);
     }
 
@@ -492,7 +397,7 @@ public class ReflectionUtil {
      * @param field Field to set on the parent
      */
     @SuppressWarnings({"ConstantConditions", "RedundantThrows"})
-    public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException, AttributeTypeMismatchException {
+    public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException {
 
 
         try {
@@ -912,9 +817,9 @@ public class ReflectionUtil {
             }
         }
 
-        descriptor.getRelationships().values().forEach(attribute ->
+        for(RelationshipDescriptor attribute : descriptor.getRelationships().values())
         {
-            OffsetField field = null;
+            OffsetField field;
             try {
                 field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
                 ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
@@ -925,6 +830,6 @@ public class ReflectionUtil {
                 } catch (Exception ignore) {
                 }
             }
-        });
+        }
     }
 }

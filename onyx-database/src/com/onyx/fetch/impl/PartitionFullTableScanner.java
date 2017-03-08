@@ -1,6 +1,9 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
@@ -19,7 +22,6 @@ import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -53,7 +55,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
      */
     @SuppressWarnings("unchecked")
     private Map scanPartition(DiskMap existingValues, long partitionId) throws EntityException {
-        final Map allResults = new HashMap();
+        final CompatMap allResults = new CompatHashMap();
 
         final Iterator iterator = existingValues.keySet().iterator();
         IManagedEntity entity;
@@ -97,7 +99,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
     public Map scan() throws EntityException {
 
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
-        Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap<>();
+        CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
         if (query.getPartition() == QueryPartitionMode.ALL) {
 

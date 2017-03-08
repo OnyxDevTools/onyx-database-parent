@@ -81,6 +81,6 @@ public class SkipListHeadNode implements ObjectSerializable, BufferStreamable {
 
     @Override
     public int hashCode() {
-        return Long.hashCode(position);
+        return (int)(position ^ (position >>> 32));
     }
 }

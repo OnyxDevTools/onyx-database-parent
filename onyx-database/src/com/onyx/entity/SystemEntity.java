@@ -8,6 +8,7 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -32,12 +33,15 @@ public class SystemEntity extends ManagedEntity
         this.identifier = new SystemIdentifier(descriptor.getIdentifier(), this);
         this.fileName = descriptor.getFileName();
 
+        //noinspection Convert2streamapi
         for (AttributeDescriptor attributeDescriptor : descriptor.getAttributes().values()) {
             this.attributes.add(new SystemAttribute(attributeDescriptor, this));
         }
+        //noinspection Convert2streamapi
         for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values()) {
             this.relationships.add(new SystemRelationship(relationshipDescriptor, this));
         }
+        //noinspection Convert2streamapi
         for (IndexDescriptor indexDescriptor : descriptor.getIndexes().values()) {
             this.indexes.add(new SystemIndex(indexDescriptor, this));
         }
@@ -47,9 +51,9 @@ public class SystemEntity extends ManagedEntity
             this.partition = new SystemPartition(descriptor.getPartition(), this);
         }
 
-        this.getAttributes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-        this.getRelationships().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-        this.getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(this.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(this.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(this.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
     }
 
     @SuppressWarnings("WeakerAccess")

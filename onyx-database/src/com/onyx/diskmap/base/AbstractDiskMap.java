@@ -5,6 +5,7 @@ import com.onyx.diskmap.node.HashMatrixNode;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
+import com.onyx.util.map.AbstractCompatMap;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
@@ -21,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 1.2.0
  *
  */
-public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
+public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> implements DiskMap<K, V> {
 
     protected AbstractDiskMap()
     {

@@ -1,6 +1,8 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InvalidDataTypeForOperator;
 import com.onyx.helpers.PartitionContext;
@@ -27,8 +29,8 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
     private QueryOrder[] orderBy = null;
     private final Map<Object, Object> indexValues;
 
-    private final List<Map<Object, Object>> parentObjects = new ArrayList<>();
-    private final List<Map<Object, Object>> childrenObjects = new ArrayList<>();
+    private final List<CompatMap<Object, Object>> parentObjects = new ArrayList<>();
+    private final List<CompatMap<Object, Object>> childrenObjects = new ArrayList<>();
 
     /**
      * Constructor
@@ -51,8 +53,8 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         for (QueryOrder order : orderBy)
         {
             attributes[i] = order.getAttribute();
-            parentObjects.add(new WeakHashMap<>());
-            childrenObjects.add(new WeakHashMap<>());
+            parentObjects.add(new CompatWeakHashMap<>());
+            childrenObjects.add(new CompatWeakHashMap<>());
             i++;
         }
 
@@ -87,8 +89,8 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
 
             try
             {
-                Map kiddos = childrenObjects.get(i);
-                Map papas = parentObjects.get(i);
+                CompatMap kiddos = childrenObjects.get(i);
+                CompatMap papas = parentObjects.get(i);
 
                 if (scannerProperties.useParentDescriptor)
                 {

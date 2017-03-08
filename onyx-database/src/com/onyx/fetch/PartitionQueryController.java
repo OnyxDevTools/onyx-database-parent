@@ -2,6 +2,7 @@ package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.MapBuilder;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.PartitionContext;
@@ -130,7 +131,7 @@ public class PartitionQueryController extends PartitionContext
 
         if(query.isTerminated())
         {
-            return new HashMap();
+            return new CompatHashMap();
         }
 
         return results;
@@ -280,7 +281,7 @@ public class PartitionQueryController extends PartitionContext
                 break;
 
 
-            record = new HashMap();
+            record = new CompatHashMap();
             entry = iterator.next();
             for (ScannerProperties properties : scanObjects)
             {

@@ -1,12 +1,14 @@
 package remote.exception;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.*;
 import entities.SimpleEntity;
 import entities.exception.*;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;

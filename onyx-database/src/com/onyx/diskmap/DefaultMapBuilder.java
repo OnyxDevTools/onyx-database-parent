@@ -1,17 +1,16 @@
 package com.onyx.diskmap;
 
-import com.onyx.diskmap.base.DiskMultiHashMap;
-import com.onyx.diskmap.base.DiskMultiMatrixHashMap;
-import com.onyx.diskmap.base.DiskSkipListMap;
+import com.onyx.diskmap.base.*;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.serializer.Serializers;
 import com.onyx.diskmap.store.*;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -31,14 +30,14 @@ public class DefaultMapBuilder implements MapBuilder {
 
     // Contains all initialized maps
     @SuppressWarnings("WeakerAccess")
-    protected final Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
+    protected final CompatMap<String, CompatMap> maps = new SynchronizedMap(new CompatWeakHashMap<>());
 
     // Contains all initialized maps
-    private final Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
+    private final CompatMap<Header, CompatMap> mapsByHeader = new SynchronizedMap(new CompatWeakHashMap());
 
     // Internal map that runs on storage
     @SuppressWarnings("WeakerAccess")
-    protected Map<String, Long> internalMaps = null;
+    protected CompatMap<String, Long> internalMaps = null;
 
     /**
      * Default Constructor
@@ -175,7 +174,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @since 1.0.0
      */
     @Override
-    public Map getHashMap(Header header, int loadFactor) {
+    public CompatMap getHashMap(Header header, int loadFactor) {
         return mapsByHeader.compute(header, (header1, map) -> {
             if (map != null)
                 return map;
@@ -193,7 +192,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @since 1.2.0
      */
     @SuppressWarnings("WeakerAccess")
-    protected Map getMapWithType(String name, MapType type, int loadFactor) {
+    protected CompatMap getMapWithType(String name, MapType type, int loadFactor) {
 
         return maps.compute(name, (s, map) -> {
             if (map != null)
@@ -212,7 +211,7 @@ public class DefaultMapBuilder implements MapBuilder {
                 internalMaps.put(name, header.position);
             }
 
-            Map retVal = null;
+            CompatMap retVal = null;
             switch (type) {
                 case SKIPLIST:
                     retVal = newSkipListMap(storage, header);
@@ -292,12 +291,19 @@ public class DefaultMapBuilder implements MapBuilder {
      * Check if large files can be mapped into memory.
      * For example 32bit JVM can only address 2GB and large files can not be mapped,
      * so for 32bit JVM this function returns false.
+     *
+     * @since 1.2.2 Add additional check to ensure DirectBuffers exist
      */
     private static boolean isMemmapSupported() {
         if (memMapIsSupprted != null)
             return memMapIsSupprted;
+        memMapIsSupprted = false;
         String prop = System.getProperty("os.arch");
-        memMapIsSupprted = prop != null && prop.contains("64");
+        try {
+            memMapIsSupprted = prop != null && prop.contains("64") && Class.forName("sun.nio.ch.DirectBuffer") != null;
+        } catch (ClassNotFoundException e) {
+            memMapIsSupprted = false;
+        }
         return memMapIsSupprted;
     }
 

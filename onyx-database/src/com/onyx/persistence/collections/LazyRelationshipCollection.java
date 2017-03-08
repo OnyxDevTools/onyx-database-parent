@@ -3,6 +3,8 @@ package com.onyx.persistence.collections;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
@@ -57,7 +59,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     transient protected EntityDescriptor entityDescriptor = null;
 
     @SuppressWarnings("WeakerAccess")
-    transient protected Map<Object, IManagedEntity> values = new WeakHashMap<>();
+    transient protected CompatMap<Object, IManagedEntity> values = new CompatWeakHashMap<>();
     @SuppressWarnings("WeakerAccess")
     transient protected PersistenceManager persistenceManager;
     private String contextId;
@@ -289,7 +291,7 @@ public class LazyRelationshipCollection<E> extends ArrayList<E> implements List<
     @Override
     @SuppressWarnings("unchecked")
     public void read(BufferStream bufferStream) throws BufferingException {
-        this.values = new WeakHashMap<>();
+        this.values = new CompatWeakHashMap<>();
         this.identifiers = (List) bufferStream.getCollection();
         String className = bufferStream.getString();
         this.contextId = bufferStream.getString();

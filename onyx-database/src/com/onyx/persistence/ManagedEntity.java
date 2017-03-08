@@ -1,5 +1,6 @@
 package com.onyx.persistence;
 
+import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
@@ -33,14 +34,14 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 descriptor = buffer.serializers.context.getDescriptorForEntity(this, "");
             }
 
-            descriptor.getAttributes().values().forEach(attribute ->
+            for(AttributeDescriptor attribute : descriptor.getAttributes().values())
             {
                 try {
                     final Object obj = ReflectionUtil.getAny(this, attribute.field);
                     buffer.writeObject(obj);
                 } catch (Exception ignore) {
                 }
-            });
+            }
         } catch (EntityException ignore) {
         }
     }
@@ -67,13 +68,13 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 } catch (EntityException ignore) {}
             }
 
-            descriptor.getAttributes().values().forEach(attribute ->
+            for(AttributeDescriptor attribute : descriptor.getAttributes().values())
             {
                 try {
                     ReflectionUtil.setAny(this, buffer.readObject(), attribute.field);
                 } catch (Exception ignore) {
                 }
-            });
+            }
         }
         // System Entity is used to de-serialize since we have them versioned
         else
@@ -108,7 +109,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 } catch (EntityException ignore) {}
             }
 
-            descriptor.getAttributes().values().forEach(attribute ->
+            for(AttributeDescriptor attribute : descriptor.getAttributes().values())
             {
                 try {
                     if (mapObj.containsKey(attribute.field.field.getName())) {
@@ -117,7 +118,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                     }
                 } catch (Exception ignore) {
                 }
-            });
+            }
         }
         catch (Exception ignore){}
     }

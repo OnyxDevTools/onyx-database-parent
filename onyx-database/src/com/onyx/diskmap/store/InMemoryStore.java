@@ -1,11 +1,11 @@
 package com.onyx.diskmap.store;
 
 import com.onyx.buffer.BufferStream;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by tosborn on 3/27/15.
@@ -33,7 +33,7 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
     public synchronized boolean open(String filePath) {
 
         this.filePath = filePath;
-        slices = new ConcurrentHashMap<>();
+        slices = new SynchronizedMap<>();
 
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
         // using an int for position.  We are gonna bust that.
@@ -79,11 +79,11 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
      * @return Whether the in memory buffers were cleared
      */
     public synchronized boolean close() {
-        this.slices.values().forEach(file ->
+        for(FileSlice file : this.slices.values())
         {
             file.buffer.clear();
             file.buffer = null;
-        });
+        }
 
         this.slices.clear();
         return true;

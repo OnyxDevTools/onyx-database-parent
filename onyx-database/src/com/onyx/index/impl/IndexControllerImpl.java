@@ -2,6 +2,8 @@ package com.onyx.index.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
 import com.onyx.exception.EntityException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
@@ -28,8 +30,8 @@ public class IndexControllerImpl implements IndexController {
     protected final String contextId;
 
     @SuppressWarnings("WeakerAccess")
-    protected Map<Object, Header> references = null; // Stores the references for an index key
-    private Map<Long, Object> indexValues = null;
+    protected CompatMap<Object, Header> references = null; // Stores the references for an index key
+    private CompatMap<Long, Object> indexValues = null;
     @SuppressWarnings("unused")
     protected RecordController recordController = null;
     @SuppressWarnings("WeakerAccess")
@@ -60,8 +62,8 @@ public class IndexControllerImpl implements IndexController {
         this.descriptor = descriptor;
         final MapBuilder dataFile = context.getDataFile(descriptor);
 
-        references = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
-        indexValues = dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
+        references = (CompatMap)dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
+        indexValues = (CompatMap)dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
     }
 
     /**
@@ -135,7 +137,7 @@ public class IndexControllerImpl implements IndexController {
     {
         final Header header = references.get(indexValue);
         if(header == null)
-            return new HashMap();
+            return new CompatHashMap();
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
         return dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
@@ -173,11 +175,12 @@ public class IndexControllerImpl implements IndexController {
 
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
-        diskReferences.forEach(aLong -> {
+        for(Long aLong : diskReferences)
+        {
             Header header = (Header)((DiskMultiMatrixHashMap) references).getWithRecID(aLong);
             DiskMap map = (DiskMap)dataFile.getHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
-            map.keySet().forEach(o -> allReferences.add((long)o));
-        });
+            allReferences.addAll(map.keySet());
+        }
 
         return allReferences;
     }
@@ -201,11 +204,12 @@ public class IndexControllerImpl implements IndexController {
         final Set<Long> allReferences = new HashSet();
         final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).below(indexValue, includeValue);
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
-        diskReferences.forEach(aLong -> {
+        for(Long aLong : diskReferences)
+        {
             Header header = (Header)((DiskMultiMatrixHashMap) references).getWithRecID(aLong);
             DiskMap map = (DiskMap)dataFile.getHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR);
-            map.keySet().forEach(o -> allReferences.add((long)o));
-        });
+            allReferences.addAll(map.keySet());
+        }
 
         return allReferences;
     }

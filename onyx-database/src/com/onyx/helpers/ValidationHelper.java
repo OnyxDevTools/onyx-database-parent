@@ -35,7 +35,7 @@ public class ValidationHelper {
 
         final List<Throwable> exceptionsThrown = new ArrayList<>();
 
-        descriptor.getAttributes().values().forEach(attribute ->
+        for(AttributeDescriptor attribute : descriptor.getAttributes().values())
         {
             OffsetField field = null;
             Object value = null;
@@ -64,7 +64,7 @@ public class ValidationHelper {
             } catch (Exception e) {
                 exceptionsThrown.add(e);
             }
-        });
+        }
 
 
         try {

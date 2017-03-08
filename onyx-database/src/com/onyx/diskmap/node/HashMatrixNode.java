@@ -68,7 +68,7 @@ public class HashMatrixNode implements ObjectSerializable, BufferStreamable, Ser
     @Override
     public int hashCode()
     {
-        return Long.hashCode(position);
+        return (int)(position ^ (position >>> 32));
     }
 
     @Override

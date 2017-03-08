@@ -3,7 +3,6 @@ package com.onyx.relationship.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
@@ -189,7 +188,7 @@ class AbstractRelationshipController extends PartitionContext
      * @param entity Entity to set relationship value on
      * @throws com.onyx.exception.AttributeMissingException property does not exsit
      */
-    static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException, AttributeTypeMismatchException
+    static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException
     {
         final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
         ReflectionUtil.setAny(entity, child, relationshipField);

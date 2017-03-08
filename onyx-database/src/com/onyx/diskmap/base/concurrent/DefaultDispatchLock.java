@@ -1,7 +1,8 @@
 package com.onyx.diskmap.base.concurrent;
 
+import com.onyx.util.map.CompatWeakHashMap;
+
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.function.Function;
 
 
@@ -12,7 +13,7 @@ import java.util.function.Function;
  */
 public class DefaultDispatchLock implements DispatchLock {
 
-    final private Map<Object, Object> references = new WeakHashMap<>();
+    final private Map<Object, Object> references = new CompatWeakHashMap<>();
 
     /**
      * Constructor.  Instantiate the level locks

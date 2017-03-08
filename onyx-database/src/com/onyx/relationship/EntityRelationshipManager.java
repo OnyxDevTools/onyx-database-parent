@@ -1,11 +1,12 @@
 package com.onyx.relationship;
 
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.record.AbstractRecordController;
+import com.onyx.util.map.CompatMap;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -20,7 +21,7 @@ import java.util.Map;
  */
 public class EntityRelationshipManager
 {
-    private final Map<String, Map<Object, IManagedEntity>> entities = new HashMap<>();
+    private final CompatMap<String, CompatMap<Object, IManagedEntity>> entities = new CompatHashMap<>();
 
     /**
      *
@@ -34,7 +35,7 @@ public class EntityRelationshipManager
         final String className = entity.getClass().getName();
 
         if (!entities.containsKey(className)) {
-            entities.put(className, new HashMap<>());
+            entities.put(className, new CompatHashMap<>());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
@@ -56,7 +57,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new HashMap<>());
+            entities.put(className, new CompatHashMap<>());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
@@ -76,7 +77,7 @@ public class EntityRelationshipManager
 
         if(!entities.containsKey(className))
         {
-            entities.put(className, new HashMap<>());
+            entities.put(className, new CompatHashMap<>());
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
