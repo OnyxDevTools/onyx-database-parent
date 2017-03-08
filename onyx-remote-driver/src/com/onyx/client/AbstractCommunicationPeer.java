@@ -3,22 +3,23 @@ package com.onyx.client;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.base.RequestToken;
 import com.onyx.client.exception.ServerReadException;
 import com.onyx.client.exception.ServerWriteException;
-import com.onyx.client.base.RequestToken;
 import com.onyx.client.serialization.DefaultServerSerializer;
 import com.onyx.client.serialization.ServerSerializer;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.InitializationException;
 
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
-
-import javax.net.ssl.*;
-import javax.net.ssl.SSLEngineResult.HandshakeStatus;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Created by Tim Osborn 02/13/2017
@@ -154,12 +155,9 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
 
                     // Added a wait so that we can hold off to see the rest
                     // of the packet loaded
+
                     if (!exitReadLoop) {
-                        try {
-                            Thread.sleep(5);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                        LockSupport.parkNanos(100);
                     }
 
                 } catch (IOException exception) {

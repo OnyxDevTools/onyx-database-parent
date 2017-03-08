@@ -25,6 +25,7 @@ public class SystemIdentifier extends ManagedEntity
         this.name = descriptor.getName();
         id = entity.getName() + descriptor.getName();
         this.loadFactor = descriptor.getLoadFactor();
+        this.generator = descriptor.getGenerator().ordinal();
     }
 
 

@@ -44,7 +44,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -980,7 +979,7 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     private final Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
 
-    private final StampedLock relationshipControllerReadWriteLock = new StampedLock();
+    private final ReadWriteLock relationshipControllerReadWriteLock = new ReentrantReadWriteLock();
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -997,14 +996,14 @@ public class DefaultSchemaContext implements SchemaContext {
 
         RelationshipController retVal;
 
-        long stamp = relationshipControllerReadWriteLock.readLock();
+        relationshipControllerReadWriteLock.readLock().lock();
         try {
             retVal = relationshipControllers.get(relationshipDescriptor);
 
             if (retVal != null)
                 return retVal;
         } finally {
-            relationshipControllerReadWriteLock.unlockRead(stamp);
+            relationshipControllerReadWriteLock.readLock().unlock();
         }
 
         if ((relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) ||
@@ -1015,13 +1014,13 @@ public class DefaultSchemaContext implements SchemaContext {
             retVal = new ToOneRelationshipControllerImpl(relationshipDescriptor.getEntityDescriptor(), relationshipDescriptor, context);
         }
 
-        stamp = relationshipControllerReadWriteLock.writeLock();
+        relationshipControllerReadWriteLock.writeLock().lock();
         try {
 
             relationshipControllers.put(relationshipDescriptor, retVal);
             return retVal;
         } finally {
-            relationshipControllerReadWriteLock.unlockWrite(stamp);
+            relationshipControllerReadWriteLock.writeLock().unlock();
         }
     }
 

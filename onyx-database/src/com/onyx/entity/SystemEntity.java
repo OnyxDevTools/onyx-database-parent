@@ -1,12 +1,14 @@
 package com.onyx.entity;
 
+import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Created by timothy.osborn on 3/2/15.
@@ -29,9 +31,16 @@ public class SystemEntity extends ManagedEntity
         this.attributes = new ArrayList<>();
         this.identifier = new SystemIdentifier(descriptor.getIdentifier(), this);
         this.fileName = descriptor.getFileName();
-        this.attributes.addAll(descriptor.getAttributes().values().stream().map(attributeDescriptor -> new SystemAttribute(attributeDescriptor, this)).collect(Collectors.toList()));
-        this.relationships.addAll(descriptor.getRelationships().values().stream().map(relationshipDescriptor -> new SystemRelationship(relationshipDescriptor, this)).collect(Collectors.toList()));
-        this.indexes.addAll(descriptor.getIndexes().values().stream().map(indexDescriptor -> new SystemIndex(indexDescriptor, this)).collect(Collectors.toList()));
+
+        for (AttributeDescriptor attributeDescriptor : descriptor.getAttributes().values()) {
+            this.attributes.add(new SystemAttribute(attributeDescriptor, this));
+        }
+        for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values()) {
+            this.relationships.add(new SystemRelationship(relationshipDescriptor, this));
+        }
+        for (IndexDescriptor indexDescriptor : descriptor.getIndexes().values()) {
+            this.indexes.add(new SystemIndex(indexDescriptor, this));
+        }
 
         if(descriptor.getPartition() != null)
         {

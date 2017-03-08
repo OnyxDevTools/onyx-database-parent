@@ -97,8 +97,9 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      */
     private void createPersistenceManager()
     {
-        this.context = new RemoteSchemaContext(instance);
-
+        if (this.context == null) {
+            this.context = new RemoteSchemaContext(instance);
+        }
         PersistenceManager proxy = (PersistenceManager) onyxRMIClient.getRemoteObject(PERSISTENCE_MANAGER_SERVICE, PersistenceManager.class);
         this.persistenceManager = new RemotePersistenceManager(proxy);
         this.persistenceManager.setContext(context);
