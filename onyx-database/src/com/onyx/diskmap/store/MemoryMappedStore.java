@@ -405,11 +405,13 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     @Override
     public void commit() {
         if (!deleteOnClose) {
-            this.slices.values().forEach(fileSlice -> {
-                if (fileSlice.buffer instanceof MappedByteBuffer) {
-                    ((MappedByteBuffer) fileSlice.buffer).force();
+            //noinspection Convert2streamapi
+            for(FileSlice slice : this.slices.values())
+            {
+                if (slice.buffer instanceof MappedByteBuffer) {
+                    ((MappedByteBuffer) slice.buffer).force();
                 }
-            });
+            }
         }
     }
 }

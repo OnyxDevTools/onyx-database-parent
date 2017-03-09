@@ -55,7 +55,7 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
         } catch (IOException e) {
             e.printStackTrace();
         }
-        this.setDatabaseLocation(tempDirectory.toPath().toString());
+        this.setDatabaseLocation(tempDirectory.getPath());
     }
 
     /**
