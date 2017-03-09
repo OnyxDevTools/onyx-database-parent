@@ -1,6 +1,7 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
@@ -13,7 +14,6 @@ import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.util.CompareUtil;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -47,7 +47,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
     @SuppressWarnings("unckecked")
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> allResults = new HashMap<>();
+        final Map<Long, Long> allResults = new CompatHashMap<>();
 
         // We need to do a full scan
         final Iterator iterator = records.referenceSet().iterator();
@@ -84,7 +84,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
     @SuppressWarnings("unchecked")
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map allResults = new HashMap();
+        final Map allResults = new CompatHashMap();
 
         final Iterator iterator = existingValues.keySet().iterator();
         Object entityAttribute;

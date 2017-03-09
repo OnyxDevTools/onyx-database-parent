@@ -4,7 +4,7 @@
 
   <groupId>com.onyxdevtools</groupId>
   <artifactId>remote-persistence-manager</artifactId>
-  <version>1.2.0</version>
+    <version>1.2.2</version>
   <packaging>pom</packaging>
   <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
 
@@ -20,7 +20,7 @@
         <dependency>
             <groupId>com.onyxdevtools</groupId>
             <artifactId>onyx-remote-database</artifactId>
-            <version>1.2.0</version>
+            <version>1.2.2</version>
             <type>jar</type>
         </dependency>
     </dependencies>

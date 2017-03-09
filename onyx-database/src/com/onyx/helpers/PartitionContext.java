@@ -1,6 +1,9 @@
 package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
@@ -9,10 +12,6 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.RecordController;
 import com.onyx.diskmap.MapBuilder;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 /**
  * Created by timothy.osborn on 3/19/15.
@@ -44,7 +43,7 @@ public class PartitionContext
     /**
      * Cached Partition Files
      */
-    private final Map<Long, MapBuilder> cachedPartitionFiles = Collections.synchronizedMap(new WeakHashMap<Long, MapBuilder>());
+    private final CompatMap<Long, MapBuilder> cachedPartitionFiles = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     /**
      * Cached Data Files for partition ids, return default if there is no partition.  Otherwise insert into cache.
@@ -113,7 +112,7 @@ public class PartitionContext
         String partitionVal;
     }
 
-    private final Map<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, EntityDescriptor>());
+    private final CompatMap<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     @SuppressWarnings("WeakerAccess")
     public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws EntityException
@@ -150,7 +149,7 @@ public class PartitionContext
 
 
 
-    private final Map<Long, EntityDescriptor> cachedDescriptorsPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, EntityDescriptor>());
+    private final CompatMap<Long, EntityDescriptor> cachedDescriptorsPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     protected EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws EntityException
     {
@@ -190,7 +189,7 @@ public class PartitionContext
         return defaultDescriptor;
     }
 
-    private final Map<PartitionKey, RecordController> cachedControllersPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, RecordController>());
+    private final CompatMap<PartitionKey, RecordController> cachedControllersPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws EntityException
     {
@@ -225,7 +224,7 @@ public class PartitionContext
     }
 
 
-    private final Map<Long, RecordController> cachedControllersPerPartition = Collections.synchronizedMap(new WeakHashMap<Long, RecordController>());
+    private final CompatMap<Long, RecordController> cachedControllersPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     public RecordController getRecordControllerForPartition(long partitionId) throws EntityException
     {
@@ -260,7 +259,7 @@ public class PartitionContext
     }
 
 
-    private final Map<PartitionKey, MapBuilder> cachedDataFilesPerEntity = Collections.synchronizedMap(new WeakHashMap<PartitionKey, MapBuilder>());
+    private final CompatMap<PartitionKey, MapBuilder> cachedDataFilesPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     protected MapBuilder getDataFileForEntity(IManagedEntity entity) throws EntityException
     {
@@ -298,7 +297,7 @@ public class PartitionContext
         }
     }
 
-    private final Map<PartitionKey, Long> cachedPartitionIds = Collections.synchronizedMap(new WeakHashMap<PartitionKey, Long>());
+    private final CompatMap<PartitionKey, Long> cachedPartitionIds = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     protected long getPartitionId(IManagedEntity entity) throws EntityException
     {

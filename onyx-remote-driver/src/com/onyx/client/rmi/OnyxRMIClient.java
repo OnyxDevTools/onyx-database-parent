@@ -1,7 +1,7 @@
 package com.onyx.client.rmi;
 
-import com.onyx.client.OnyxClient;
 import com.onyx.client.CommunicationPeer;
+import com.onyx.client.OnyxClient;
 
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class OnyxRMIClient extends CommunicationPeer implements OnyxClient {
 
     // Local Cache of Remote Objects
-    private final Map<Short, Object> registeredObjects = new HashMap<>();
+    private final Map<String, Object> registeredObjects = new HashMap<>();
 
     /**
      * Get a Remote Proxy Object
@@ -27,7 +27,7 @@ public class OnyxRMIClient extends CommunicationPeer implements OnyxClient {
      * @return Instance of the remote proxy object
      * @since 1.2.0
      */
-    public Object getRemoteObject(final short remoteId, Class type) {
+    public Object getRemoteObject(final String remoteId, Class type) {
 
         // Return the registered Object
         if (registeredObjects.containsKey(remoteId))

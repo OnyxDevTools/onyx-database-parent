@@ -330,14 +330,7 @@ public abstract class AbstractRecordController
             // Hmmm, setting accessable didnt work, must not have permission
             throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE);
         }
-        try
-        {
-            ReflectionUtil.setAny(entity, value, field);
-        } catch (AttributeTypeMismatchException e)
-        {
-            // Hmmm, setting accessable didnt work, must not have permission
-            throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e);
-        }
+        ReflectionUtil.setAny(entity, value, field);
     }
 
     /**

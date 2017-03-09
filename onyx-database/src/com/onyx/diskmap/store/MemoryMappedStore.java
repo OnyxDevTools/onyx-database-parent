@@ -1,19 +1,18 @@
 package com.onyx.diskmap.store;
 
 import com.onyx.buffer.BufferStream;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -24,7 +23,7 @@ import java.util.concurrent.Executors;
  */
 public class MemoryMappedStore extends FileChannelStore implements Store {
 
-    Map<Integer, FileSlice> slices;
+    CompatMap<Integer, FileSlice> slices;
 
     MemoryMappedStore()
     {
@@ -52,7 +51,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             super.open(filePath);
 
             // Load the first chunk into memory
-            slices = new ConcurrentHashMap<>();
+            slices = new SynchronizedMap<>();
             MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_WRITE, 0, SLICE_SIZE);
             slices.put(0, new FileSlice(buffer));
 
@@ -65,7 +64,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         return channel.isOpen();
     }
 
-    private static final ExecutorService cleanupService = Executors.newSingleThreadExecutor();
+    @SuppressWarnings("WeakerAccess")
+    protected static final ExecutorService cleanupService = Executors.newSingleThreadExecutor();
 
     /**
      * Close the data file
@@ -84,7 +84,11 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
 
             final Runnable runnable = () -> {
                 try {
-                    this.slices.values().forEach(FileSlice::flush);
+                    //noinspection Convert2streamapi
+                    for(FileSlice file : this.slices.values())
+                    {
+                        file.flush();
+                    }
                     this.slices.clear();
                     channel.close();
                     if (deleteOnClose) {
@@ -199,7 +203,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return Object buffer that was read
      */
     public ObjectBuffer read(long position, int size) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = ObjectBuffer.allocate(size);
@@ -218,7 +222,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return the object you sent in
      */
     public Object read(long position, int size, ObjectSerializable object) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ObjectBuffer buffer = read(position, size);
@@ -294,7 +298,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return instantiated serialized object read from store
      */
     public Object read(long position, int size, Class type, int serializerId) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = BufferStream.allocate(size);
@@ -331,7 +335,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
      * @return Instantiated object of type
      */
     public Object read(long position, int size, Class type) {
-        if (position >= fileSize.get())
+        if (!validateFileSize(position))
             return null;
 
         final ByteBuffer buffer = BufferStream.allocate(size);
@@ -390,7 +394,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
         */
         void flush() {
             if (buffer instanceof MappedByteBuffer) {
-                ((DirectBuffer) buffer).cleaner().clean();
+                ((sun.nio.ch.DirectBuffer) buffer).cleaner().clean();
             }
         }
     }
@@ -401,11 +405,13 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     @Override
     public void commit() {
         if (!deleteOnClose) {
-            slices.values().forEach(fileSlice -> {
-                if (fileSlice.buffer instanceof MappedByteBuffer) {
-                    ((MappedByteBuffer) fileSlice.buffer).force();
+            //noinspection Convert2streamapi
+            for(FileSlice slice : this.slices.values())
+            {
+                if (slice.buffer instanceof MappedByteBuffer) {
+                    ((MappedByteBuffer) slice.buffer).force();
                 }
-            });
+            }
         }
     }
 }

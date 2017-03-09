@@ -1,5 +1,9 @@
 package com.onyx.client.rmi;
 
+import com.onyx.buffer.BufferStream;
+import com.onyx.buffer.BufferStreamable;
+import com.onyx.exception.BufferingException;
+
 import java.io.*;
 
 /**
@@ -8,10 +12,10 @@ import java.io.*;
  * This is the main packet to send to the server for remote method invocation.
  * @since 1.2.0
  */
-public class RMIRequest implements Serializable, Externalizable
+public class RMIRequest implements Serializable, Externalizable, BufferStreamable
 {
 
-    private short instance;
+    private String instance;
     private String method;
     private Object[] params;
 
@@ -23,7 +27,7 @@ public class RMIRequest implements Serializable, Externalizable
      * @param params Parameters to include in the method invocation
      * @since 1.2.0
      */
-    RMIRequest(short instance, String method, Object[] params)
+    RMIRequest(String instance, String method, Object[] params)
     {
         this.instance = instance;
         this.method = method;
@@ -48,7 +52,7 @@ public class RMIRequest implements Serializable, Externalizable
      */
     @Override
     public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeShort(instance);
+        out.writeUTF(instance);
         out.writeObject(method);
 
         // Iterate through all the parameters
@@ -69,7 +73,7 @@ public class RMIRequest implements Serializable, Externalizable
      */
     @Override
     public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        instance = in.readShort();
+        instance = in.readUTF();
         method = (String)in.readObject();
         if(in.available() > 0) {
             params = new Object[in.readByte()];
@@ -86,12 +90,12 @@ public class RMIRequest implements Serializable, Externalizable
         }
     }
 
-    public short getInstance() {
+    public String getInstance() {
         return instance;
     }
 
     @SuppressWarnings("unused")
-    public void setInstance(short instance) {
+    public void setInstance(String instance) {
         this.instance = instance;
     }
 
@@ -108,4 +112,17 @@ public class RMIRequest implements Serializable, Externalizable
         return params;
     }
 
+    @Override
+    public void read(BufferStream buffer) throws BufferingException {
+        instance = buffer.getString();
+        method = buffer.getString();
+        params = (Object[]) buffer.getObject();
+    }
+
+    @Override
+    public void write(BufferStream buffer) throws BufferingException {
+        buffer.putString(instance);
+        buffer.putString(method);
+        buffer.putObject(params);
+    }
 }

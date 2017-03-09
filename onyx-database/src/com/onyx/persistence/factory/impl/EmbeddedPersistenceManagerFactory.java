@@ -316,7 +316,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @since 1.0.0
      * @return Indicator to see if the factory's credentials are valid
      */
-    private boolean checkCredentials() throws InitializationException
+    protected boolean checkCredentials() throws InitializationException
     {
         final File databaseFile = new File(location);
         if (!databaseFile.exists())
@@ -378,7 +378,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @since 1.0.0
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void createCredentialsFile() throws InitializationException
+    protected void createCredentialsFile() throws InitializationException
     {
         FileOutputStream fileStream = null;
         try

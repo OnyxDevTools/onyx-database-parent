@@ -28,6 +28,7 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
         this.value = descriptor.getPartitionValue();
         this.fileName = entityDescriptor.getFileName() + descriptor.getPartitionValue();
         this.index = index;
+        this.primaryKey = 0;
     }
 
     @SuppressWarnings("unused")
@@ -110,11 +111,19 @@ public class SystemPartitionEntry extends AbstractSystemEntity implements IManag
     }
 
     @SuppressWarnings("unused")
-    public void setIndex(int index)
-    {
-        this.index = index;
+    public int getPrimaryKey() {
+        return primaryKey;
     }
 
+    @SuppressWarnings("unused")
+    public void setPrimaryKey(int primaryKey) {
+        this.primaryKey = primaryKey;
+    }
+
+    @SuppressWarnings("unused")
+    public void setIndex(long index) {
+        this.index = index;
+    }
 
     @Override
     public int hashCode()

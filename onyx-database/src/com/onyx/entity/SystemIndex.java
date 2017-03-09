@@ -1,7 +1,7 @@
 package com.onyx.entity;
 
 import com.onyx.descriptor.IndexDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 /**
@@ -10,7 +10,7 @@ import com.onyx.persistence.annotations.*;
  * Index information for entity
  */
 @Entity(fileName = "system")
-public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
+public class SystemIndex extends ManagedEntity
 {
     @SuppressWarnings("unused")
     public SystemIndex()
@@ -25,12 +25,13 @@ public class SystemIndex extends AbstractSystemEntity implements IManagedEntity
         id = entity.getName() + descriptor.getName();
         type = descriptor.getType().getName();
         this.loadFactor = descriptor.getLoadFactor();
+        this.primaryKey = this.type + this.id;
     }
 
     @SuppressWarnings("unused")
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
-    protected int primaryKey;
+    @Identifier(loadFactor = 3)
+    protected String primaryKey;
 
     @SuppressWarnings("WeakerAccess")
     @Attribute

@@ -1,6 +1,7 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.persistence.context.SchemaContext;
@@ -11,10 +12,10 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.record.RecordController;
 import com.onyx.diskmap.MapBuilder;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -47,7 +48,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     @Override
     public Map<Long, Long> scan() throws EntityException
     {
-        final Map<Long, Long> returnValue = new HashMap<>();
+        final Map<Long, Long> returnValue = new CompatHashMap<>();
 
         final RecordController recordController = getContext().getRecordController(descriptor);
 
@@ -73,15 +74,16 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
         else
         {
 
+            Set<Long> values = null;
 
             if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                recordController.findAllAbove(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+                values = recordController.findAllAbove(criteria.getValue(), false);
             else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                recordController.findAllAbove(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+                values = recordController.findAllAbove(criteria.getValue(), true);
             else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                recordController.findAllBelow(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+                values = recordController.findAllBelow(criteria.getValue(), false);
             else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                recordController.findAllBelow(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+                values = recordController.findAllBelow(criteria.getValue(), true);
             else
             {
                 long referenceId = recordController.getReferenceId(criteria.getValue());
@@ -89,6 +91,11 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
                 {
                     returnValue.put(referenceId, referenceId);
                 }
+            }
+
+            if(values != null) {
+                for (Long aLong : values)
+                    returnValue.put(aLong, aLong);
             }
 
         }
@@ -106,7 +113,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     @Override
     public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
     {
-        final Map<Long, Long> returnValue = new HashMap<>();
+        final Map<Long, Long> returnValue = new CompatHashMap<>();
 
         final RecordController recordController = getContext().getRecordController(descriptor);
 
@@ -137,14 +144,17 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
             // Its an equals, if the object exists, add it to the results
             else
             {
+
+                Set<Long> values = null;
+
                 if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                    recordController.findAllAbove(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+                    values = recordController.findAllAbove(criteria.getValue(), false);
                 else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                    recordController.findAllAbove(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+                    values = recordController.findAllAbove(criteria.getValue(), true);
                 else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                    recordController.findAllBelow(criteria.getValue(), false).forEach(aLong -> returnValue.put(aLong, aLong));
+                    values = recordController.findAllBelow(criteria.getValue(), false);
                 else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                    recordController.findAllBelow(criteria.getValue(), true).forEach(aLong -> returnValue.put(aLong, aLong));
+                    values = recordController.findAllBelow(criteria.getValue(), true);
                 else
                 {
                     long referenceId = recordController.getReferenceId(criteria.getValue());
@@ -152,6 +162,11 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
                     {
                         returnValue.put(referenceId, referenceId);
                     }
+                }
+
+                if(values != null) {
+                    for (Long aLong : values)
+                        returnValue.put(aLong, aLong);
                 }
             }
         }

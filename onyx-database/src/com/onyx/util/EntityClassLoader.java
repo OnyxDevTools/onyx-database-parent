@@ -61,12 +61,13 @@ public class EntityClassLoader
         if(context instanceof CacheSchemaContext)
             return;
 
+        String packageName = descriptor.getClazz().getPackage().getName();
+
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
         //noinspection ResultOfMethodCallIgnored
         new File(outputDirectory).mkdirs();
 
-        String packageName = descriptor.getClazz().getPackage().getName();
         String fileName = descriptor.getFileName();
         String className = descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", "");
         String generatorType = descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
@@ -198,21 +199,28 @@ public class EntityClassLoader
     @SuppressWarnings({"unused", "ResultOfMethodCallIgnored"})
     public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext context)
     {
+        String packageName = systemEntity.getName().replace("." + systemEntity.getClassName(), "");
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
         new File(outputDirectory).mkdirs();
 
-        String packageName = systemEntity.getName().replace("."+systemEntity.getClassName(), "");
         String className = systemEntity.getClassName();
         String generatorType = IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString();
         String fileName = systemEntity.getFileName();
         AtomicReference<String> idType = new AtomicReference<>();
         AtomicReference<String> idName = new AtomicReference<>();
-        systemEntity.getAttributes().stream().filter(attribute -> attribute.getName().equals(systemEntity.getIdentifier().getName())).forEach(attribute ->
+
+        for(SystemAttribute attribute : systemEntity.getAttributes())
         {
-            idType.set(attribute.getDataType());
-            idName.set(attribute.getName());
-        });
+            if( attribute.getName().equals(systemEntity.getIdentifier().getName()))
+            {
+                idType.set(attribute.getDataType());
+                idName.set(attribute.getName());
+                break;
+            }
+        }
+
+
         String idLoadFactor = String.valueOf(systemEntity.getIdentifier().getLoadFactor());
 
 
@@ -226,6 +234,7 @@ public class EntityClassLoader
                 "\n" +
                 "@Entity(fileName = \"");
         builder.append(fileName).append("\")\n").append( "public class ");
+        builder.append(className);
         builder.append(" extends ManagedEntity implements IManagedEntity\n" +
                 "{\n" +
                 "    public ");
@@ -296,7 +305,7 @@ public class EntityClassLoader
 
 
             builder.append("@Relationship(type = ");
-            builder.append(type);
+            builder.append(RelationshipType.values()[relationship.getRelationshipType()].getDeclaringClass().getName()).append(".").append(RelationshipType.values()[relationship.getRelationshipType()].name());
             builder.append(", inverseClass = ");
             builder.append(relationship.getInverseClass());
             builder.append(".class, inverse = \"");

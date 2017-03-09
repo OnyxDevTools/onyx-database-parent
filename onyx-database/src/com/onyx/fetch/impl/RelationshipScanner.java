@@ -2,6 +2,7 @@ package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.ScannerFactory;
@@ -15,7 +16,6 @@ import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.diskmap.MapBuilder;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +73,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
 
         // Map <ChildIndex, ParentIndex> // Inverted list so we can use it to scan using an normal full table scanner or index scanner
         final Map relationshipIndexes = getRelationshipIndexes(segments[0], existingValues);
-        final Map returnValue = new HashMap();
+        final Map returnValue = new CompatHashMap();
 
         // We are going to set the attribute name so we can continue going down the chain.  We are going to remove the
         // processed token through
@@ -108,7 +108,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     @SuppressWarnings("unchecked")
     private Map getRelationshipIndexes(String attribute, Map existingValues) throws EntityException
     {
-        final Map allResults = new HashMap();
+        final Map allResults = new CompatHashMap();
 
         final Iterator iterator = existingValues.keySet().iterator();
 

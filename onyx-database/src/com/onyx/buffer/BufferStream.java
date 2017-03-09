@@ -1,5 +1,7 @@
 package com.onyx.buffer;
 
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
 import com.onyx.exception.BufferingException;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
@@ -51,10 +53,10 @@ public class BufferStream {
     private final static TreeSet<RecycledBuffer> buffers = new TreeSet<>();
 
     // References by class and object hash.
-    private final Map<Class, Map<Object, Integer>> references = new HashMap<>();
+    private final CompatMap<Class, CompatMap<Object, Integer>> references = new CompatHashMap<>();
 
     // References by index number ordered by first used
-    private final Map<Integer, Object> referencesByIndex = new HashMap();
+    private final CompatMap<Integer, Object> referencesByIndex = new CompatHashMap<>();
 
     // 5 Megabytes of allocated memory max that can be sitting in stale unused buffers waiting to be used
     private static final int MAX_MEMORY_USE = 1024 * 1024 * 5;
@@ -73,7 +75,7 @@ public class BufferStream {
         } else {
             references.compute(reference.getClass(), (aClass, objectIntegerMap) -> {
                 if (objectIntegerMap == null) {
-                    objectIntegerMap = new HashMap<>();
+                    objectIntegerMap = new CompatHashMap<>();
                 }
 
                 objectIntegerMap.compute(reference, (object, integer) -> {
@@ -357,7 +359,8 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    private void putMap(Map map) throws BufferingException {
+    @SuppressWarnings("WeakerAccess")
+    public void putMap(Map map) throws BufferingException {
 
         try {
             Class clazz = Class.forName(map.getClass().getName());
@@ -465,7 +468,7 @@ public class BufferStream {
      * @throws BufferingException Generic Buffer Exception
      */
     @SuppressWarnings("RedundantThrows")
-    private void putByte(byte value) throws BufferingException {
+    public void putByte(byte value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put(value);
     }
@@ -493,7 +496,7 @@ public class BufferStream {
      * @throws BufferingException Generic Buffer Exception
      */
     @SuppressWarnings("RedundantThrows")
-    private void putLong(long value) throws BufferingException {
+    public void putLong(long value) throws BufferingException {
         expandableByteBuffer.ensureSize(Long.BYTES);
         expandableByteBuffer.buffer.putLong(value);
     }

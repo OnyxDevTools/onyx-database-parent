@@ -7,7 +7,7 @@
 
     <groupId>com.onyxdevtools</groupId>
     <artifactId>onyx-database-parent</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.2</version>
     
     <name>${project.groupId}:${project.artifactId}</name>
     <description>onyx-database-parent</description>
@@ -87,6 +87,7 @@
 
     <modules>
         <module>onyx-database</module>
+        <module>onyx-android</module>
         <module>onyx-remote-database</module>
         <module>onyx-web-database</module>
         <module>onyx-remote-driver</module>

@@ -1,10 +1,11 @@
 package com.onyx.diskmap;
 
-import com.onyx.exception.AttributeTypeMismatchException;
-import com.onyx.diskmap.base.concurrent.LevelReadWriteLock;
+import com.onyx.util.map.CompatMap;
+import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
+import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.util.OffsetField;
 
 import java.util.Map;
@@ -16,7 +17,7 @@ import java.util.Set;
  * This is the an interface that extends the functionality of a Map.  It also contains methods that assist in finding
  * records by references within a store / volume.
  */
-public interface DiskMap<K,V> extends Map<K,V> {
+public interface DiskMap<K,V> extends CompatMap<K,V> {
 
     /**
      * Get the record id for a key
@@ -90,6 +91,6 @@ public interface DiskMap<K,V> extends Map<K,V> {
      * @return Null if it does not apply.
      */
     @SuppressWarnings("unused")
-    LevelReadWriteLock getReadWriteLock();
+    DispatchLock getReadWriteLock();
 
 }

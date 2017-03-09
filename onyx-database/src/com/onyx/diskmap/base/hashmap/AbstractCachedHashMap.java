@@ -1,11 +1,11 @@
 package com.onyx.diskmap.base.hashmap;
 
+import com.onyx.util.map.CompatMap;
 import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.store.Store;
 
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 /**
  * Created by tosborn1 on 2/15/17.
@@ -16,8 +16,8 @@ import java.util.Map;
  */
 abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
 
-    protected Map<Integer, Long> cache;
-    protected Map<Integer, Integer> mapCache;
+    protected CompatMap<Integer, Long> cache;
+    protected CompatMap<Integer, Integer> mapCache;
 
     /**
      * Constructor

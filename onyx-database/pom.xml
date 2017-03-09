@@ -13,9 +13,9 @@
     <parent>
         <groupId>com.onyxdevtools</groupId>
         <artifactId>onyx-database-parent</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.2</version>
     </parent>
-    
+
     <licenses>
         <license>
             <name>The GNU Affero General Public License, Version 3.0</name>
@@ -87,10 +87,7 @@
             </plugin>
         </plugins>
 
+
     </build>
 
-    <dependencies>
-
-    </dependencies>
-    
 </project>

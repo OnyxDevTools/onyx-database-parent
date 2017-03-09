@@ -1,6 +1,7 @@
 package com.onyx.diskmap.base.concurrent;
 
-import java.util.WeakHashMap;
+import com.onyx.util.map.CompatWeakHashMap;
+
 
 /**
  * Created by tosborn1 on 1/12/17.
@@ -9,7 +10,7 @@ import java.util.WeakHashMap;
  * locking mechanism and updates are typically done on other areas of the cache, there is no need to
  * block upon reads.
  */
-public class ConcurrentWeakHashMap<K,V> extends WeakHashMap<K,V> {
+public class ConcurrentWeakHashMap<K,V> extends CompatWeakHashMap<K,V> {
 
     @Override
     public V put(K key, V value) {

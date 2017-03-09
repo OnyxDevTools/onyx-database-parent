@@ -1,7 +1,5 @@
 package com.onyx.entity;
 
-import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.IdentifierGenerator;
@@ -15,7 +13,7 @@ import java.io.StringWriter;
  * System error.  To be logged when logging gets to be implemented
  */
 @com.onyx.persistence.annotations.Entity
-public class SystemError extends ManagedEntity implements IManagedEntity {
+public class SystemError extends AbstractSystemEntity {
 
     @SuppressWarnings("unused")
     public SystemError()

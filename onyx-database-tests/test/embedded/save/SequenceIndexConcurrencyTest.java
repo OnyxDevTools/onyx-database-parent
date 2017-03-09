@@ -558,17 +558,13 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
 
                 List<IManagedEntity> tmpList = new ArrayList<>(entities);
                 entities.removeAll(entities);
-                Runnable runnable = new Runnable() {
-                    @Override
-                    public void run()
+                Runnable runnable = () -> {
+                    try
                     {
-                        try
-                        {
-                            manager.saveEntities(tmpList);
-                        } catch (EntityException e)
-                        {
-                            e.printStackTrace();
-                        }
+                        manager.saveEntities(tmpList);
+                    } catch (EntityException e)
+                    {
+                        e.printStackTrace();
                     }
                 };
                 threads.add(pool.submit(runnable));

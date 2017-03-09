@@ -1,5 +1,7 @@
 package com.onyx.descriptor;
 
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
@@ -489,7 +491,7 @@ public class EntityDescriptor implements Serializable {
         IndexDescriptor indexDescriptor;
         SystemIndex systemIndex;
 
-        final Map<String, SystemIndex> indexMap = new HashMap<>();
+        final CompatMap<String, SystemIndex> indexMap = new CompatHashMap<>();
 
         for (int i = 0; i < systemEntity.getIndexes().size(); i++) {
             systemIndex = systemEntity.getIndexes().get(i);
@@ -516,7 +518,7 @@ public class EntityDescriptor implements Serializable {
      */
     public void checkValidRelationships(final SystemEntity systemEntity) throws InvalidRelationshipTypeException {
         // Build Relationship Map
-        final Map<String, SystemRelationship> relationshipMap = new HashMap<>();
+        final CompatMap<String, SystemRelationship> relationshipMap = new CompatHashMap<>();
         SystemRelationship systemRelationship;
 
         for (int i = 0; i < systemEntity.getRelationships().size(); i++) {

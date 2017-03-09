@@ -2,7 +2,9 @@ package com.onyx.client.exception;
 
 import com.onyx.exception.EntityException;
 
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 
 /**
  * Created by tosborn1 on 6/25/16.
@@ -16,7 +18,10 @@ public abstract class OnyxServerException extends EntityException implements Ser
     @SuppressWarnings("unused")
     String message;
 
-    private Throwable cause;
+    @SuppressWarnings("WeakerAccess")
+    protected String stackTrace;
+    @SuppressWarnings("WeakerAccess")
+    protected Throwable cause;
 
     /**
      * Default Constructor
@@ -42,10 +47,15 @@ public abstract class OnyxServerException extends EntityException implements Ser
      * @param message Error message
      * @param cause Root cause exception
      */
-    OnyxServerException(String message, Throwable cause)
+    @SuppressWarnings("WeakerAccess")
+    public OnyxServerException(String message, Throwable cause)
     {
         this.message = message;
         this.cause = cause;
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        cause.printStackTrace(pw);
+        this.stackTrace = sw.toString();
     }
 
     /**

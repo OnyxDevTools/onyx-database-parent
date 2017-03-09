@@ -2,7 +2,10 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.OrderedDiskMap;
-import com.onyx.diskmap.base.concurrent.*;
+import com.onyx.diskmap.base.concurrent.DefaultDispatchLock;
+import com.onyx.diskmap.base.concurrent.DispatchLock;
+import com.onyx.diskmap.base.concurrent.EmptyDispatchLock;
+import com.onyx.diskmap.base.concurrent.EmptyMap;
 import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
 import com.onyx.diskmap.node.CombinedIndexHashNode;
 import com.onyx.diskmap.node.Header;
@@ -36,7 +39,7 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K, V> {
 
-    private LevelReadWriteLock levelReadWriteLock = new DefaultLevelReadWriteLock();
+    private DispatchLock dispatchLock = new DefaultDispatchLock();
 
     /**
      * Constructor
@@ -54,24 +57,40 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      *
      * @param fileStore File storage mechanism
      * @param header    Pointer to the DiskMap
-     * @param loadFactor The max size of the hash that is generated
-     * @param stateless If designated as true, this map does not retain state.  The state is handled elsewhere.  Without a state
-     *                  there can not be a meaningful cache nor a meaningful lock.  In that case, in this constructor,
-     *                  we set the cache elements and lock to empty implmementations.
+     * @since 1.2.0
+     */
+    @SuppressWarnings("unused")
+    public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, DispatchLock dispatchLock) {
+        super(fileStore, header, true, loadFactor);
+        this.dispatchLock = dispatchLock;
+        this.nodeCache = new EmptyMap();
+        this.mapCache = new EmptyMap();
+        this.cache = new EmptyMap();
+        this.valueByPositionCache = new EmptyMap();
+        this.keyCache = new EmptyMap();
+    }
+
+    /**
+     * Constructor
      *
+     * @param fileStore  File storage mechanism
+     * @param header     Pointer to the DiskMap
+     * @param loadFactor The max size of the hash that is generated
+     * @param stateless  If designated as true, this map does not retain state.  The state is handled elsewhere.  Without a state
+     *                   there can not be a meaningful cache nor a meaningful lock.  In that case, in this constructor,
+     *                   we set the cache elements and lock to empty implmementations.
      * @since 1.2.0
      */
     public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, @SuppressWarnings("SameParameterValue") boolean stateless) {
         super(fileStore, header, true, loadFactor);
 
-        if(!stateless)
-        {
+        if (!stateless) {
             cache = new EmptyMap();
             mapCache = new EmptyMap();
             keyCache = new EmptyMap();
             valueByPositionCache = new EmptyMap();
             nodeCache = new EmptyMap();
-            levelReadWriteLock = new EmptyLevelReadWriteLock();
+            dispatchLock = new EmptyDispatchLock();
         }
     }
 
@@ -89,13 +108,8 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         // Set the selected skip list
         setHead(combinedNode.head);
 
-        long stamp = levelReadWriteLock.lockReadLevel(combinedNode.hashDigit);
-        try {
-            if (combinedNode.head != null) {
-                return super.get(key);
-            }
-        } finally {
-            levelReadWriteLock.unlockReadLevel(combinedNode.hashDigit, stamp);
+        if (combinedNode.head != null) {
+            return super.get(key);
         }
         return null;
     }
@@ -110,32 +124,25 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      */
     @Override
     public V put(K key, V value) {
-
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
         setHead(combinedNode.head);
 
         SkipListHeadNode head = combinedNode.head;
-
         if (head != null) {
+            final long headPosition = head.position;
 
-            long stamp = levelReadWriteLock.lockWriteLevel(combinedNode.hashDigit);
+            return (V) dispatchLock.performWithLock(combinedNode.head, o -> {
 
-            try {
-                long headPosition = head.position;
-
-                value = super.put(key, value);
-                head = getHead();
-                combinedNode.head = head;
-                if (head.position != headPosition) {
-                    updateReference(combinedNode.mapId, head.position);
+                V returnValue = DiskMultiHashMap.super.put(key, value);
+                SkipListHeadNode newHead = getHead();
+                combinedNode.head = newHead;
+                if (newHead.position != headPosition) {
+                    updateReference(combinedNode.mapId, newHead.position);
                 }
-            } finally {
-                levelReadWriteLock.unlockWriteLevel(combinedNode.hashDigit, stamp);
-            }
+                return returnValue;
 
-            return value;
+            });
         }
-
         return null;
     }
 
@@ -150,26 +157,20 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     public V remove(Object key) {
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
         setHead(combinedNode.head);
-        SkipListHeadNode head = combinedNode.head;
+
+        final SkipListHeadNode head = combinedNode.head;
 
         if (head != null) {
-
-            long stamp = levelReadWriteLock.lockWriteLevel(combinedNode.hashDigit);
-
-            long headPosition = head.position;
-            try {
-
-                V value = super.remove(key);
-                head = getHead();
-                if (head.position != headPosition) {
-                    combinedNode.head = head;
-                    updateReference(combinedNode.mapId, head.position);
+            final long headPosition = head.position;
+            return (V) dispatchLock.performWithLock(combinedNode.head, o -> {
+                V returnValue = DiskMultiHashMap.super.remove(key);
+                SkipListHeadNode newHead = getHead();
+                combinedNode.head = newHead;
+                if (newHead.position != headPosition) {
+                    updateReference(combinedNode.mapId, newHead.position);
                 }
-
-                return value;
-            } finally {
-                levelReadWriteLock.unlockWriteLevel(combinedNode.hashDigit, stamp);
-            }
+                return returnValue;
+            });
         }
         return null;
     }
@@ -186,16 +187,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
         setHead(combinedNode.head);
 
-        long stamp = levelReadWriteLock.lockReadLevel(combinedNode.hashDigit);
-
-        try {
-            if (combinedNode.head != null) {
-                return super.containsKey(key);
-            }
-        } finally {
-            levelReadWriteLock.unlockReadLevel(combinedNode.hashDigit, stamp);
-        }
-        return false;
+        return combinedNode.head != null && super.containsKey(key);
     }
 
     /**
@@ -227,19 +219,13 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     @Override
     public long getRecID(Object key) {
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, false);
-        if(combinedNode == null)
+        if (combinedNode == null)
             return -1;
 
         setHead(combinedNode.head);
 
-        long stamp = this.getReadWriteLock().lockReadLevel(combinedNode.hashDigit);
-
-        try {
-            if (combinedNode.head != null) {
-                return super.getRecID(key);
-            }
-        } finally {
-            this.getReadWriteLock().unlockReadLevel(combinedNode.hashDigit, stamp);
+        if (combinedNode.head != null) {
+            return super.getRecID(key);
         }
 
         return 0;
@@ -270,15 +256,11 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      */
     @Override
     public void clear() {
-        long stamp = levelReadWriteLock.lockWriteLevel(0);
-        try {
-            super.clear();
-        } finally {
-            levelReadWriteLock.unlockWriteLevel(0, stamp);
-        }
+        dispatchLock.performWithLock(header, o -> {
+            DiskMultiHashMap.super.clear();
+            return null;
+        });
     }
-
-    private final Map<Integer, CombinedIndexHashNode> hashIndexNodeCache = Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
      * The nuts and bolts of the map lie here.  This finds the head of the skip list based on the key
@@ -288,31 +270,36 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @param forInsert Whether we should insert the bitmap index.
      * @return The Combined Index node of the skip list and it contains the bitmap node information.
      * @since 1.2.0
+     *
+     * @since 1.2.2 There is no use for the caching map so it was removed.  This should be
+     * inexpensive since it only requires a single i/o read.  Also, refactored the
+     * locking to lock on the head and pass thru for the rest of the data structure since it
+     * does not impact any sub maps
      */
     private CombinedIndexHashNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
-        int hash = Math.abs(hash(key));
-        int hashDigits[] = getHashDigits(hash);
-        int hashDigit = hashDigits[loadFactor - 1];
-
         int skipListMapId = getSkipListKey(key);
 
-        return hashIndexNodeCache.compute(skipListMapId, (integer, combinedHashIndexNode) -> {
-            if (combinedHashIndexNode != null)
-                return combinedHashIndexNode;
-
+        return (CombinedIndexHashNode) this.dispatchLock.performWithLock(this.header, o -> {
             if (forInsert) {
                 SkipListHeadNode headNode1;
-                long reference = super.getReference(skipListMapId);
+                long reference = DiskMultiHashMap.super.getReference(skipListMapId);
                 if (reference == 0) {
                     headNode1 = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
                     insertReference(skipListMapId, headNode1.position);
-                    return new CombinedIndexHashNode(headNode1, skipListMapId, hashDigit);
+                    return new CombinedIndexHashNode(headNode1, skipListMapId);
                 } else {
-                    return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId, hashDigit);
+                    return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
                 }
+            } else {
+                long reference = DiskMultiHashMap.super.getReference(skipListMapId);
+                if (reference > 0)
+                    return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
+                else
+                    return null;
             }
-            return null;
         });
+
+
     }
 
     /**
@@ -374,13 +361,11 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     }
 
     /**
-     *
      * Return the Level read write lock implementation
-     *
      */
     @Override
-    public LevelReadWriteLock getReadWriteLock()
-    {
-        return this.levelReadWriteLock;
+    public DispatchLock getReadWriteLock() {
+        return this.dispatchLock;
     }
+
 }

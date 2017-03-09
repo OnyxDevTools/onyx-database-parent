@@ -129,5 +129,12 @@ public interface Store {
      */
     void delete();
 
+    /**
+     * Getter for file path for store.  If this is in memory, this will be null
+     *
+     * @return File path
+     */
+    @SuppressWarnings("unused")
+    String getFilePath();
 }
 

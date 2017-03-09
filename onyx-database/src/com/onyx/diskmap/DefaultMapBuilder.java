@@ -1,17 +1,16 @@
 package com.onyx.diskmap;
 
-import com.onyx.diskmap.base.DiskMultiHashMap;
-import com.onyx.diskmap.base.DiskMultiMatrixHashMap;
-import com.onyx.diskmap.base.DiskSkipListMap;
+import com.onyx.diskmap.base.*;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.serializer.Serializers;
 import com.onyx.diskmap.store.*;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -22,20 +21,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("unchecked")
 public class DefaultMapBuilder implements MapBuilder {
 
-    private Store storage = null;
+    @SuppressWarnings("WeakerAccess")
+    protected Store storage = null;
 
     private static final AtomicInteger storeIdCounter = new AtomicInteger(0);
 
     private static volatile Boolean memMapIsSupprted = null;
 
     // Contains all initialized maps
-    private final Map<String, Map> maps = Collections.synchronizedMap(new WeakHashMap());
+    @SuppressWarnings("WeakerAccess")
+    protected final CompatMap<String, CompatMap> maps = new SynchronizedMap(new CompatWeakHashMap<>());
 
     // Contains all initialized maps
-    private final Map<Header, Map> mapsByHeader = Collections.synchronizedMap(new WeakHashMap());
+    private final CompatMap<Header, CompatMap> mapsByHeader = new SynchronizedMap(new CompatWeakHashMap());
 
     // Internal map that runs on storage
-    private Map<String, Long> internalMaps = null;
+    @SuppressWarnings("WeakerAccess")
+    protected CompatMap<String, Long> internalMaps = null;
+
+    /**
+     * Default Constructor
+     */
+    @SuppressWarnings("unused")
+    public DefaultMapBuilder() {
+    }
 
     /**
      * Constructor
@@ -87,9 +96,9 @@ public class DefaultMapBuilder implements MapBuilder {
     /**
      * Constructor with option to force or not
      *
-     * @param filePath File path to hold the disk structure data
-     * @param type     Storage type
-     * @param context  Database Schema context
+     * @param filePath      File path to hold the disk structure data
+     * @param type          Storage type
+     * @param context       Database Schema context
      * @param deleteOnClose Whether to delete storage volumes upon close.  This is used for temporary maps
      *
      * @since 1.2.0
@@ -115,8 +124,7 @@ public class DefaultMapBuilder implements MapBuilder {
 
         if (type == StoreType.MEMORY_MAPPED_FILE && isMemmapSupported()) {
             this.storage = new MemoryMappedStore(path, context, deleteOnClose);
-        }
-        else if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
+        } else if (type == StoreType.FILE || (type == StoreType.MEMORY_MAPPED_FILE && !isMemmapSupported())) {
             this.storage = new FileChannelStore(path, context, deleteOnClose);
         } else if (type == StoreType.IN_MEMORY) {
             String storeId = String.valueOf(storeIdCounter.addAndGet(1));
@@ -151,26 +159,25 @@ public class DefaultMapBuilder implements MapBuilder {
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
-     * @param header reference within storage
+     * @param header     reference within storage
      *
      *
      * @param loadFactor Value from 1-10.
      *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
+     *                   The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     *                   1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     *                   to change.  Always plan for scale when designing your data model.
      *
      * @return Instantiated disk structure
      *
      * @since 1.0.0
      */
     @Override
-    public Map getHashMap(Header header, int loadFactor) {
+    public CompatMap getHashMap(Header header, int loadFactor) {
         return mapsByHeader.compute(header, (header1, map) -> {
             if (map != null)
                 return map;
-
             return newScalableMap(storage, header, loadFactor);
         });
     }
@@ -184,7 +191,8 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * @since 1.2.0
      */
-    private Map getMapWithType(String name, MapType type, int loadFactor) {
+    @SuppressWarnings("WeakerAccess")
+    protected CompatMap getMapWithType(String name, MapType type, int loadFactor) {
 
         return maps.compute(name, (s, map) -> {
             if (map != null)
@@ -203,7 +211,7 @@ public class DefaultMapBuilder implements MapBuilder {
                 internalMaps.put(name, header.position);
             }
 
-            Map retVal = null;
+            CompatMap retVal = null;
             switch (type) {
                 case SKIPLIST:
                     retVal = newSkipListMap(storage, header);
@@ -233,14 +241,14 @@ public class DefaultMapBuilder implements MapBuilder {
      * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
      * or a multi map with a hash matrix followed by a skip list.
      *
-     * @param name Name of the map to uniquely identify it
+     * @param name       Name of the map to uniquely identify it
      *
      * @param loadFactor Value from 1-10.
      *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
+     *                   The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
+     *                   1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
+     *                   does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
+     *                   to change.  Always plan for scale when designing your data model.
      *
      * @return Instantiated map with storage
      * @since 1.1.0
@@ -283,12 +291,19 @@ public class DefaultMapBuilder implements MapBuilder {
      * Check if large files can be mapped into memory.
      * For example 32bit JVM can only address 2GB and large files can not be mapped,
      * so for 32bit JVM this function returns false.
+     *
+     * @since 1.2.2 Add additional check to ensure DirectBuffers exist
      */
     private static boolean isMemmapSupported() {
-        if(memMapIsSupprted != null)
+        if (memMapIsSupprted != null)
             return memMapIsSupprted;
+        memMapIsSupprted = false;
         String prop = System.getProperty("os.arch");
-        memMapIsSupprted = prop != null && prop.contains("64");
+        try {
+            memMapIsSupprted = prop != null && prop.contains("64") && Class.forName("sun.nio.ch.DirectBuffer") != null;
+        } catch (ClassNotFoundException e) {
+            memMapIsSupprted = false;
+        }
         return memMapIsSupprted;
     }
 
@@ -338,8 +353,9 @@ public class DefaultMapBuilder implements MapBuilder {
      *                   to change.  Always plan for scale when designing your data model.
      * @return Instantiated disk map
      */
-    private DiskMap newScalableMap(Store store, Header header, int loadFactor) {
-        if(loadFactor < 5)
+    @SuppressWarnings("WeakerAccess")
+    protected DiskMap newScalableMap(Store store, Header header, int loadFactor) {
+        if (loadFactor < 5)
             return new DiskMultiHashMap(store, header, loadFactor);
         return new DiskMultiMatrixHashMap(store, header, loadFactor);
     }
@@ -363,7 +379,7 @@ public class DefaultMapBuilder implements MapBuilder {
      *
      * Since this implementation is stateless, it does not provide caching nor thread safety.
      *
-     * @param header Head of the disk map
+     * @param header     Head of the disk map
      * @param loadFactor Load factor in which the map was instantiated with.
      * @return Stateless instance of a disk map
      *
@@ -381,8 +397,7 @@ public class DefaultMapBuilder implements MapBuilder {
      * @return Disk Map implementation
      * @since 1.2.0
      */
-    public Map getHashMap(String name)
-    {
+    public Map getHashMap(String name) {
         return getHashMap(name, 10);
     }
 

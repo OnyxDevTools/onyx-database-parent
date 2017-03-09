@@ -75,6 +75,9 @@ public class CompareUtil
             else if (clazz == String.class)
                 method = object.getClass().getMethod("toString");
 
+            if (method == null)
+                return object;
+
             return method.invoke(object);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
         {

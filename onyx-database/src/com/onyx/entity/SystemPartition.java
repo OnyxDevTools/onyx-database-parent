@@ -1,7 +1,7 @@
 package com.onyx.entity;
 
 import com.onyx.descriptor.PartitionDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.ArrayList;
@@ -13,7 +13,7 @@ import java.util.List;
  * Partition information for an entity
  */
 @Entity(fileName = "system")
-public class SystemPartition extends AbstractSystemEntity implements IManagedEntity
+public class SystemPartition extends ManagedEntity
 {
 
     @SuppressWarnings("unused")
@@ -31,12 +31,7 @@ public class SystemPartition extends AbstractSystemEntity implements IManagedEnt
 
     @SuppressWarnings("unused")
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
-    protected int primaryKey;
-
-    @SuppressWarnings("WeakerAccess")
-    @Attribute
-    @Index(loadFactor = 3)
+    @Identifier(loadFactor = 3)
     protected String id;
 
     @SuppressWarnings("WeakerAccess")

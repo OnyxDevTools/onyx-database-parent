@@ -1,7 +1,7 @@
 package com.onyx.entity;
 
 import com.onyx.descriptor.IdentifierDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 /**
@@ -10,7 +10,7 @@ import com.onyx.persistence.annotations.*;
  * System entity for entity identifier
  */
 @Entity(fileName = "system")
-public class SystemIdentifier extends AbstractSystemEntity implements IManagedEntity
+public class SystemIdentifier extends ManagedEntity
 {
 
     @SuppressWarnings("unused")
@@ -25,16 +25,13 @@ public class SystemIdentifier extends AbstractSystemEntity implements IManagedEn
         this.name = descriptor.getName();
         id = entity.getName() + descriptor.getName();
         this.loadFactor = descriptor.getLoadFactor();
+        this.generator = descriptor.getGenerator().ordinal();
     }
 
-    @SuppressWarnings("unused")
-    @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
-    protected int primaryKey;
 
     @SuppressWarnings("WeakerAccess")
     @Attribute
-    @Index(loadFactor = 3)
+    @Identifier(loadFactor = 3)
     protected String id;
 
     @SuppressWarnings("WeakerAccess")

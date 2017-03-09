@@ -17,6 +17,12 @@ public class EntityClassNotFoundException extends EntityException {
 
     private String entityClassName = null;
 
+    @SuppressWarnings("unused")
+    public EntityClassNotFoundException()
+    {
+
+    }
+
     /**
      * Constructor with message
      *

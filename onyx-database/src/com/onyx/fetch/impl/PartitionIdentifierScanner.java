@@ -1,7 +1,11 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.entity.SystemEntity;
+import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
@@ -14,11 +18,7 @@ import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.record.RecordController;
 import com.onyx.diskmap.MapBuilder;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -52,7 +52,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     @SuppressWarnings("unchecked")
     private Map<Long, Long> scanPartition(RecordController recordController, long partitionId) throws EntityException
     {
-        final Map returnValue = new HashMap();
+        final Map returnValue = new CompatHashMap();
 
         // If it is an in clause
         if(criteria.getValue() instanceof List)
@@ -97,11 +97,11 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     public Map scan() throws EntityException
     {
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
-        Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap<>();
+        CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
         if(query.getPartition() == QueryPartitionMode.ALL)
         {
-            systemEntity.getPartition().getEntries().forEach(partition ->
+            for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
             {
                 try {
                     final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
@@ -111,7 +111,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                 } catch (EntityException e) {
                     wrapper.exception = e;
                 }
-            });
+            }
 
             if (wrapper.exception != null)
             {
@@ -138,7 +138,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     @SuppressWarnings("unchecked")
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map returnValue = new HashMap();
+        final CompatMap returnValue = new CompatHashMap();
 
         final RecordController recordController = getContext().getRecordController(descriptor);
 

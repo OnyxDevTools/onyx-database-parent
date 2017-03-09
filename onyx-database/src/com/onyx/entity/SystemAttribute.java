@@ -1,7 +1,7 @@
 package com.onyx.entity;
 
 import com.onyx.descriptor.AttributeDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 import com.onyx.util.OffsetField;
 
@@ -11,7 +11,7 @@ import com.onyx.util.OffsetField;
  * Contains entity attribute inforamtion
  */
 @Entity(fileName = "system")
-public class SystemAttribute extends AbstractSystemEntity implements IManagedEntity
+public class SystemAttribute extends ManagedEntity
 {
     @SuppressWarnings("unused")
     public SystemAttribute()
@@ -25,14 +25,15 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
         this.id = entity.getName() + descriptor.getName();
         this.size = descriptor.getSize();
         this.dataType = descriptor.getType().getName();
+        this.primaryKey = dataType + id;
         this.nullable = descriptor.isNullable();
         this.key = descriptor.getName().equals(entity.getIdentifier().getName());
     }
 
     @SuppressWarnings("unused")
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
-    protected int primaryKey;
+    @Identifier(loadFactor = 3)
+    protected String primaryKey;
 
     @SuppressWarnings("WeakerAccess")
     @Attribute
@@ -142,4 +143,5 @@ public class SystemAttribute extends AbstractSystemEntity implements IManagedEnt
     public void setKey(boolean key) {
         this.key = key;
     }
+
 }

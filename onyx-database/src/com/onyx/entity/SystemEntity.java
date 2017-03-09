@@ -1,12 +1,15 @@
 package com.onyx.entity;
 
+import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Created by timothy.osborn on 3/2/15.
@@ -14,7 +17,7 @@ import java.util.stream.Collectors;
  * Contains entity information
  */
 @Entity(fileName = "system")
-public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
+public class SystemEntity extends ManagedEntity
 {
     public SystemEntity()
     {
@@ -29,18 +32,28 @@ public class SystemEntity extends AbstractSystemEntity implements IManagedEntity
         this.attributes = new ArrayList<>();
         this.identifier = new SystemIdentifier(descriptor.getIdentifier(), this);
         this.fileName = descriptor.getFileName();
-        this.attributes.addAll(descriptor.getAttributes().values().stream().map(attributeDescriptor -> new SystemAttribute(attributeDescriptor, this)).collect(Collectors.toList()));
-        this.relationships.addAll(descriptor.getRelationships().values().stream().map(relationshipDescriptor -> new SystemRelationship(relationshipDescriptor, this)).collect(Collectors.toList()));
-        this.indexes.addAll(descriptor.getIndexes().values().stream().map(indexDescriptor -> new SystemIndex(indexDescriptor, this)).collect(Collectors.toList()));
+
+        //noinspection Convert2streamapi
+        for (AttributeDescriptor attributeDescriptor : descriptor.getAttributes().values()) {
+            this.attributes.add(new SystemAttribute(attributeDescriptor, this));
+        }
+        //noinspection Convert2streamapi
+        for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values()) {
+            this.relationships.add(new SystemRelationship(relationshipDescriptor, this));
+        }
+        //noinspection Convert2streamapi
+        for (IndexDescriptor indexDescriptor : descriptor.getIndexes().values()) {
+            this.indexes.add(new SystemIndex(indexDescriptor, this));
+        }
 
         if(descriptor.getPartition() != null)
         {
             this.partition = new SystemPartition(descriptor.getPartition(), this);
         }
 
-        this.getAttributes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-        this.getRelationships().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-        this.getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(this.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(this.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(this.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
     }
 
     @SuppressWarnings("WeakerAccess")

@@ -5,6 +5,10 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.diskmap.store.StoreType;
 import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
@@ -44,7 +48,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -90,10 +93,11 @@ public class DefaultSchemaContext implements SchemaContext {
 
     // The purpose of this is to gather the registed instances of SchemaContexts so that we may structure a context to a database instance in
     // event of multiple instances
-    public static final ConcurrentMap<String, SchemaContext> registeredSchemaContexts = new ConcurrentHashMap<>();
+    public static final CompatMap<String, SchemaContext> registeredSchemaContexts = new SynchronizedMap<>();
 
     // Directory location for temporary files
-    private String temporaryFileLocation;
+    @SuppressWarnings("WeakerAccess")
+    protected String temporaryFileLocation;
 
     /**
      * Constructor.
@@ -479,7 +483,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
-    final Map<String, MapBuilder> dataFiles = new ConcurrentHashMap<>();
+    final CompatMap<String, MapBuilder> dataFiles = new SynchronizedMap<>();
 
     /**
      * @since 1.0.0 Method for creating a new data file
@@ -586,7 +590,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
-    private final Map<EntityDescriptor, RecordController> recordControllers = new ConcurrentHashMap();
+    private final CompatMap<EntityDescriptor, RecordController> recordControllers = new SynchronizedMap<>();
 
     /**
      * Method for creating a new record controller.
@@ -623,7 +627,7 @@ public class DefaultSchemaContext implements SchemaContext {
     //
     //////////////////////////////////////////////////////////////////
     // Contains the initialized entity descriptors
-    private final Map<String, EntityDescriptor> descriptors = new HashMap();
+    private final CompatMap<String, EntityDescriptor> descriptors = new CompatHashMap();
 
     private final AtomicLong partitions = new AtomicLong(0);
 
@@ -754,7 +758,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private final Map<String, SystemEntity> defaultSystemEntities = new HashMap();
+    private final CompatMap<String, SystemEntity> defaultSystemEntities = new CompatHashMap();
 
     /**
      * Get System Entity By Name.
@@ -785,9 +789,9 @@ public class DefaultSchemaContext implements SchemaContext {
                     }
 
                     if (results.size() > 0) {
-                        results.get(0).getAttributes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-                        results.get(0).getRelationships().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-                        results.get(0).getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(results.get(0).getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(results.get(0).getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(results.get(0).getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
 
                         return results.get(0);
                     }
@@ -797,7 +801,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private final Map<Integer, SystemEntity> systemEntityByIDMap = new HashMap();
+    private final CompatMap<Integer, SystemEntity> systemEntityByIDMap = new CompatHashMap();
 
     /**
      * Get System Entity By ID.
@@ -818,9 +822,9 @@ public class DefaultSchemaContext implements SchemaContext {
                         final SystemEntity entity = (SystemEntity) systemPersistenceManager.findById(SystemEntity.class, id);
 
                         if (entity != null) {
-                            entity.getAttributes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-                            entity.getRelationships().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
-                            entity.getIndexes().sort((o1, o2) -> o1.getName().compareTo(o2.getName()));
+                            Collections.sort(entity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                            Collections.sort(entity.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                            Collections.sort(entity.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
                         }
 
                         return entity;
@@ -977,9 +981,9 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private final Map<RelationshipDescriptor, RelationshipController> relationshipControllers = new WeakHashMap();
+    private final CompatMap<RelationshipDescriptor, RelationshipController> relationshipControllers = new CompatWeakHashMap();
 
-    private final StampedLock relationshipControllerReadWriteLock = new StampedLock();
+    private final ReadWriteLock relationshipControllerReadWriteLock = new ReentrantReadWriteLock();
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -996,14 +1000,14 @@ public class DefaultSchemaContext implements SchemaContext {
 
         RelationshipController retVal;
 
-        long stamp = relationshipControllerReadWriteLock.readLock();
+        relationshipControllerReadWriteLock.readLock().lock();
         try {
             retVal = relationshipControllers.get(relationshipDescriptor);
 
             if (retVal != null)
                 return retVal;
         } finally {
-            relationshipControllerReadWriteLock.unlockRead(stamp);
+            relationshipControllerReadWriteLock.readLock().unlock();
         }
 
         if ((relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) ||
@@ -1014,13 +1018,13 @@ public class DefaultSchemaContext implements SchemaContext {
             retVal = new ToOneRelationshipControllerImpl(relationshipDescriptor.getEntityDescriptor(), relationshipDescriptor, context);
         }
 
-        stamp = relationshipControllerReadWriteLock.writeLock();
+        relationshipControllerReadWriteLock.writeLock().lock();
         try {
 
             relationshipControllers.put(relationshipDescriptor, retVal);
             return retVal;
         } finally {
-            relationshipControllerReadWriteLock.unlockWrite(stamp);
+            relationshipControllerReadWriteLock.writeLock().unlock();
         }
     }
 
@@ -1032,7 +1036,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * Map of record controllers.
      */
-    private final Map<IndexDescriptor, IndexController> indexControllers = new ConcurrentHashMap<>();
+    private final CompatMap<IndexDescriptor, IndexController> indexControllers = new SynchronizedMap<>();
 
     /**
      * Method for creating a new index controller.

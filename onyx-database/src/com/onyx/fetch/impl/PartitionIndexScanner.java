@@ -1,6 +1,9 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
@@ -17,7 +20,6 @@ import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.diskmap.MapBuilder;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -55,7 +57,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
     {
 
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
-        Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap<>();
+        CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
         if(query.getPartition() == QueryPartitionMode.ALL)
         {
@@ -110,7 +112,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
     @SuppressWarnings("unchecked")
     private Map scanPartition(IndexController partitionIndexController, long partitionId) throws EntityException
     {
-        final Map returnValue = new HashMap();
+        final CompatMap returnValue = new CompatHashMap();
         final List<Long> references = new ArrayList<>();
 
         if(criteria.getValue() instanceof List)
@@ -120,26 +122,31 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 if(query.isTerminated())
                     return returnValue;
 
-                partitionIndexController.findAll(idValue).keySet().forEach(o -> references.add((long)o));
+                references.addAll(partitionIndexController.findAll(idValue).keySet());
             }
         }
         else
         {
+            Set values;
 
             if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                partitionIndexController.findAllAbove(criteria.getValue(), false).forEach(references::add);
+                values = partitionIndexController.findAllAbove(criteria.getValue(), false);
             else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                partitionIndexController.findAllAbove(criteria.getValue(), true).forEach(references::add);
+                values = partitionIndexController.findAllAbove(criteria.getValue(), true);
             else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                partitionIndexController.findAllBelow(criteria.getValue(), false).forEach(references::add);
+                values = partitionIndexController.findAllBelow(criteria.getValue(), false);
             else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                partitionIndexController.findAllBelow(criteria.getValue(), true).forEach(references::add);
+                values = partitionIndexController.findAllBelow(criteria.getValue(), true);
             else
-                partitionIndexController.findAll(criteria.getValue()).keySet().forEach(o -> references.add((long)o));
+                values =  partitionIndexController.findAll(criteria.getValue()).keySet();
 
+            references.addAll(values);
         }
 
-        references.forEach(val -> returnValue.put(new PartitionReference(partitionId, val), new PartitionReference(partitionId, val)));
+        for(Long val : references)
+        {
+            returnValue.put(new PartitionReference(partitionId, val), new PartitionReference(partitionId, val));
+        }
 
         return returnValue;
     }
@@ -155,10 +162,10 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
     @SuppressWarnings("unchecked")
     public Map scan(Map existingValues) throws EntityException
     {
-        final Map returnValue = new HashMap();
+        final CompatMap returnValue = new CompatHashMap<>();
 
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
-        Map<PartitionReference, PartitionReference> results = new ConcurrentHashMap<>();
+        CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap<>();
 
 
         if(criteria.getValue() instanceof List)
@@ -170,7 +177,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
                 if(query.getPartition() == QueryPartitionMode.ALL)
                 {
-                    systemEntity.getPartition().getEntries().forEach(partition ->
+                    for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
                     {
                         try {
                             final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
@@ -179,17 +186,18 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
                             results.putAll(partitionResults);
 
-                            results.keySet().forEach(reference ->
+                            //noinspection Convert2streamapi
+                            for(PartitionReference reference : results.keySet())
                             {
                                 if (existingValues.containsKey(reference)) {
                                     returnValue.put(reference, reference);
                                 }
-                            });
+                            }
 
                         } catch (EntityException e) {
                             wrapper.exception = e;
                         }
-                    });
+                    }
 
                     if (wrapper.exception != null)
                     {
@@ -207,7 +215,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
             if(query.getPartition() == QueryPartitionMode.ALL)
             {
-                systemEntity.getPartition().getEntries().forEach(partition ->
+                for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
                 {
                     try {
                         final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
@@ -216,17 +224,18 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
 
                         results.putAll(partitionResults);
 
-                        results.keySet().forEach(reference ->
+                        //noinspection Convert2streamapi
+                        for(PartitionReference reference : results.keySet())
                         {
                             if (existingValues.containsKey(reference)) {
                                 returnValue.put(reference, reference);
                             }
-                        });
+                        }
 
                     } catch (EntityException e) {
                         wrapper.exception = e;
                     }
-                });
+                }
 
                 if (wrapper.exception != null)
                 {

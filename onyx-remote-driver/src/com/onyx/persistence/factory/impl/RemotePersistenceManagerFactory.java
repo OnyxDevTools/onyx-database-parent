@@ -1,6 +1,9 @@
 package com.onyx.persistence.factory.impl;
 
+import com.onyx.client.SSLPeer;
 import com.onyx.client.auth.AuthenticationManager;
+import com.onyx.client.exception.ConnectionFailedException;
+import com.onyx.client.rmi.OnyxRMIClient;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
@@ -13,9 +16,6 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.client.SSLPeer;
-import com.onyx.client.exception.ConnectionFailedException;
-import com.onyx.client.rmi.OnyxRMIClient;
 
 /**
  * Persistence manager factory for an remote Onyx Database
@@ -45,6 +45,9 @@ import com.onyx.client.rmi.OnyxRMIClient;
  * Tim Osborn, 02/13/2017 - This was augmented to use the new RMI Socket Server.  It has since been optimized
  */
 public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerFactory implements PersistenceManagerFactory, SSLPeer {
+
+    private static final String PERSISTENCE_MANAGER_SERVICE = "1";
+    private static final String AUTHENTICATION_MANAGER_SERVICE = "2";
 
     private OnyxRMIClient onyxRMIClient = null;
 
@@ -94,9 +97,10 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      */
     private void createPersistenceManager()
     {
-        this.context = new RemoteSchemaContext(instance);
-
-        PersistenceManager proxy = (PersistenceManager)onyxRMIClient.getRemoteObject((short)1, PersistenceManager.class);
+        if (this.context == null) {
+            this.context = new RemoteSchemaContext(instance);
+        }
+        PersistenceManager proxy = (PersistenceManager) onyxRMIClient.getRemoteObject(PERSISTENCE_MANAGER_SERVICE, PersistenceManager.class);
         this.persistenceManager = new RemotePersistenceManager(proxy);
         this.persistenceManager.setContext(context);
 
@@ -135,7 +139,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         onyxRMIClient.setSslKeystorePassword(this.sslKeystorePassword);
         onyxRMIClient.setSslStorePassword(this.sslStorePassword);
         onyxRMIClient.setCredentials(this.user, this.password);
-        AuthenticationManager authenticationManager = (AuthenticationManager)onyxRMIClient.getRemoteObject((short)2, AuthenticationManager.class);
+        AuthenticationManager authenticationManager = (AuthenticationManager) onyxRMIClient.getRemoteObject(AUTHENTICATION_MANAGER_SERVICE, AuthenticationManager.class);
         onyxRMIClient.setAuthenticationManager(authenticationManager);
 
         try {

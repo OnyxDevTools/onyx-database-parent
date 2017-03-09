@@ -28,7 +28,9 @@ public class OffsetField
             field.setAccessible(true);
     }
 
-    final long offset;
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final long offset;
     public final Class type;
     public final String name;
     public final Field field;
