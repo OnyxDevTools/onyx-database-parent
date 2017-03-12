@@ -3,14 +3,21 @@ package com.onyx.server.base;
 import com.onyx.application.OnyxServer;
 import com.onyx.buffer.BufferStream;
 import com.onyx.client.AbstractCommunicationPeer;
-import com.onyx.client.base.*;
+import com.onyx.client.base.ConnectionBufferPool;
+import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.base.RequestToken;
 import com.onyx.client.base.engine.PacketTransportEngine;
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine;
 import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine;
-import com.onyx.client.exception.*;
+import com.onyx.client.exception.MethodInvocationException;
+import com.onyx.client.exception.SerializationException;
+import com.onyx.client.exception.ServerClosedException;
 import com.onyx.client.handlers.RequestHandler;
 import com.onyx.exception.InitializationException;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
@@ -22,8 +29,6 @@ import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.net.ssl.*;
 
 /**
  * Tim Osborn 02/13/2016
@@ -113,9 +118,10 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
             selector = SelectorProvider.provider().openSelector();
             serverSocketChannel = ServerSocketChannel.open();
-            serverSocketChannel.socket().setReuseAddress(true);
+            serverSocketChannel.socket().setReuseAddress(false);
             serverSocketChannel.configureBlocking(false);
-            serverSocketChannel.socket().bind(new InetSocketAddress("0.0.0.0", port));
+
+            serverSocketChannel.bind(new InetSocketAddress(port));
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
             // Create Buffer Pool for connections
