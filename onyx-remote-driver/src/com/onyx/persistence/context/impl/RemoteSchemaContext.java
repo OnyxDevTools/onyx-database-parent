@@ -46,6 +46,8 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
             location = Files.createTempDirectory("onx").toString();
         }
         catch (IOException ignore){}
+        createTemporaryDiskMapPool();
+
     }
 
     /**

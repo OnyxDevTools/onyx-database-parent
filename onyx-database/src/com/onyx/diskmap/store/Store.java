@@ -136,5 +136,13 @@ public interface Store {
      */
     @SuppressWarnings("unused")
     String getFilePath();
+
+    /**
+     * Reset the storage so that it has a clean slate
+     * and truncates all relative data.
+     *
+     * @since 1.3.0
+     */
+    void reset();
 }
 

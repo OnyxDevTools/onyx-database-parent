@@ -140,7 +140,7 @@ public abstract class AbstractRecordController
     public static Object getIndexValueFromEntity(IManagedEntity entity, BaseDescriptor indexDescriptor) throws AttributeMissingException
     {
         try {
-            return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), indexDescriptor.getName()));
+            return ReflectionUtil.getAny(entity, indexDescriptor.getField());
         } catch (AttributeTypeMismatchException e) {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e);
         }
@@ -324,7 +324,7 @@ public abstract class AbstractRecordController
      */
     protected void setIndexValueForEntity(IManagedEntity entity, Object value) throws AttributeMissingException
     {
-        final OffsetField field = ReflectionUtil.getOffsetField(entity.getClass(), entityDescriptor.getIdentifier().getName());
+        final OffsetField field = entityDescriptor.getIdentifier().getField();
         if(field == null)
         {
             // Hmmm, setting accessable didnt work, must not have permission
@@ -344,7 +344,7 @@ public abstract class AbstractRecordController
     {
 
         // Use reflection to get the key
-        final OffsetField field = ReflectionUtil.getOffsetField(entity.getClass(), context.getDescriptorForEntity(entity).getIdentifier().getName());
+        final OffsetField field = context.getDescriptorForEntity(entity).getIdentifier().getField();
 
         try
         {
@@ -400,7 +400,7 @@ public abstract class AbstractRecordController
      * @return Attribute key
      */
     @SuppressWarnings("unused")
-    public Object getAttributeWithReferenceId(String attribute, long referenceId) throws AttributeTypeMismatchException {
+    public Object getAttributeWithReferenceId(OffsetField attribute, long referenceId) throws AttributeTypeMismatchException {
         return records.getAttributeWithRecID(attribute, referenceId);
     }
 

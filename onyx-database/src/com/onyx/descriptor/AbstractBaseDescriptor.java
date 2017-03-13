@@ -1,6 +1,9 @@
 package com.onyx.descriptor;
 
 import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionUtil;
+
+import java.lang.reflect.Field;
 
 /**
  * Created by timothy.osborn on 12/12/14.
@@ -14,7 +17,9 @@ public abstract class AbstractBaseDescriptor
     protected String name;
     @SuppressWarnings("WeakerAccess")
     protected Class type;
-    private OffsetField partitionField = null;
+
+    // Field used for reflection
+    protected OffsetField field;
 
     public String getName()
     {
@@ -36,13 +41,23 @@ public abstract class AbstractBaseDescriptor
         this.type = type;
     }
 
-    public OffsetField getPartitionField()
-    {
-        return partitionField;
+    /**
+     * Get Reflection field
+     * @return Reflection field
+     * @since 1.3.0 - Effort to cleanup reflection
+     */
+    public OffsetField getField() {
+        return field;
     }
 
-    void setPartitionField(OffsetField partitionField)
+    /**
+     * Set field and derive a reflection field
+     * @param field Field based on property
+     *
+     * @since 1.3.0 - Effort to cleanup reflection
+     */
+    public void setField(Field field)
     {
-        this.partitionField = partitionField;
+        this.field = ReflectionUtil.getOffsetField(field);
     }
 }

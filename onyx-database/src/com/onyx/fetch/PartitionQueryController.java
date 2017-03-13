@@ -290,11 +290,11 @@ public class PartitionQueryController extends PartitionContext
                     if(entry.getKey() instanceof PartitionReference)
                     {
                         PartitionReference ref = (PartitionReference) entry.getKey();
-                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getName(), ref.reference);
+                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getField(), ref.reference);
                     }
                     else
                     {
-                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getName(), (long)entry.getKey());
+                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), (long)entry.getKey());
                     }
                 }
                 else
@@ -302,11 +302,11 @@ public class PartitionQueryController extends PartitionContext
                     if(entry.getKey() instanceof PartitionReference)
                     {
                         PartitionReference ref = (PartitionReference) entry.getValue();
-                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getName(), ref.reference);
+                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getField(), ref.reference);
                     }
                     else
                     {
-                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getName(), (long)entry.getValue());
+                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), (long)entry.getValue());
                     }
                 }
                 record.put(properties.attributeDescriptor.getName(), entityAttribute);
@@ -464,7 +464,7 @@ public class PartitionQueryController extends PartitionContext
                 }
 
 
-                ReflectionUtil.setAny(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().field);
+                ReflectionUtil.setAny(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().getField());
 
                 if(!updatedPartition && updateInstruction.getIndexController() != null)
                 {
@@ -558,10 +558,11 @@ public class PartitionQueryController extends PartitionContext
 
     public void cleanup()
     {
-        this.contextId = null;
+        // Changed to recycle map builders rather than destroy
         if(this.temporaryDataFile != null) {
-            this.temporaryDataFile.close();
+            getContext().releaseMapBuilder(this.temporaryDataFile);
         }
+        this.contextId = null;
         this.criteria = null;
         this.classToScan = null;
         this.descriptor = null;

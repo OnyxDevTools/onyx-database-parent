@@ -174,7 +174,7 @@ class AbstractRelationshipController extends PartitionContext
     {
         try
         {
-            final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
+            final OffsetField relationshipField = relationshipDescriptor.getField();
             return (IManagedEntity)ReflectionUtil.getAny(entity, relationshipField);
         } catch (EntityException e)
         {
@@ -190,7 +190,7 @@ class AbstractRelationshipController extends PartitionContext
      */
     static void setRelationshipValue(RelationshipDescriptor relationshipDescriptor, IManagedEntity entity, Object child) throws AttributeMissingException
     {
-        final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
+        final OffsetField relationshipField = relationshipDescriptor.getField();
         ReflectionUtil.setAny(entity, child, relationshipField);
     }
 
@@ -206,7 +206,7 @@ class AbstractRelationshipController extends PartitionContext
     {
         try
         {
-            final OffsetField relationshipField = ReflectionUtil.getOffsetField(entity.getClass(), relationshipDescriptor.getName());
+            final OffsetField relationshipField = relationshipDescriptor.getField();
             return (List)ReflectionUtil.getAny(entity, relationshipField);
         } catch (EntityException e)
         {

@@ -134,4 +134,12 @@ public interface MapBuilder {
      * @since 1.2.0
      */
     Header newMapHeader();
+
+    /**
+     * Clear storage and rest it to its original state.
+     * This is used to recycle and reuse.
+     *
+     * @since 1.3.0
+     */
+    void reset();
 }

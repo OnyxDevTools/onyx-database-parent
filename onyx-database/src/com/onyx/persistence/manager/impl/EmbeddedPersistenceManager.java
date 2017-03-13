@@ -664,8 +664,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      */
     @SuppressWarnings("unused")
     public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
-        this.initialize(entity, attribute);
-        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
+        return getRelationship(entity, attribute);
     }
 
     /**

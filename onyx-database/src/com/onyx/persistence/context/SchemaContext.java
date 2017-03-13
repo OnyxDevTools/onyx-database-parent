@@ -316,4 +316,15 @@ public interface SchemaContext
     @SuppressWarnings("unused")
     TransactionController getTransactionController();
 
+    /**
+     * Release a map builder and prepare it for re-use
+     * This was added to prevent direct buffers from being destroyed.
+     * That caused performance issues
+     *
+     * @param mapBuilder Map builder to recycle
+     *
+     * @since 1.3.0
+     */
+    void releaseMapBuilder(MapBuilder mapBuilder);
+
 }

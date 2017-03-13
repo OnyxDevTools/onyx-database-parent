@@ -401,4 +401,38 @@ public class DefaultMapBuilder implements MapBuilder {
         return getHashMap(name, 10);
     }
 
+    /**
+     * Reset the map builder.  This was added so that the map builders and
+     * storage can be recycled and re-used.  The reason for that is there
+     * was a large performance hit on destroying direct byte buffers.
+     * That is no longer the case since they do not get destroyed.
+     *
+     * @since 1.3.0
+     */
+    public void reset()
+    {
+        // Reset the file size
+        storage.reset();
+
+        // Re-create the internal maps
+        int initialSize = 8;
+        int mapByIdLocation = 156;
+        int internalMapLocation = 304;
+
+        Map mapByName;
+        Map mapById;
+        if (storage.getFileSize() == initialSize) {
+            mapByName = newScalableMap(this.storage, newMapHeader(), 1);
+            mapById = newScalableMap(this.storage, newMapHeader(), 1);
+            internalMaps = newScalableMap(this.storage, newMapHeader(), 1);
+        } else {
+            mapByName = getHashMap((Header) storage.read(initialSize, Header.HEADER_SIZE, Header.class), 1);
+            mapById = getHashMap((Header) storage.read(mapByIdLocation, Header.HEADER_SIZE, Header.class), 1);
+            internalMaps = getHashMap((Header) storage.read(internalMapLocation, Header.HEADER_SIZE, Header.class), 1);
+        }
+
+        // Re-initialize the storage
+        if (this.storage != null)
+            this.storage.init(mapById, mapByName);
+    }
 }

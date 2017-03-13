@@ -51,26 +51,26 @@ public class CompareUtil
     }
 
     @SuppressWarnings("unchecked")
-    private static Object castObject(Class clazz, Object object) {
+    public static Object castObject(Class clazz, Object object) {
 
         Method method = null;
 
         try {
-            if (clazz == Integer.class)
+            if (clazz == Integer.class ||  clazz == int.class)
                 method = object.getClass().getMethod("intValue");
-            else if (clazz == Long.class)
+            else if (clazz == Long.class ||  clazz == long.class)
                 method = object.getClass().getMethod("longValue");
-            else if (clazz == Short.class)
+            else if (clazz == Short.class ||  clazz == short.class)
                 method = object.getClass().getMethod("shortValue");
-            else if (clazz == Byte.class)
+            else if (clazz == Byte.class ||  clazz == byte.class)
                 method = object.getClass().getMethod("byteValue");
-            else if (clazz == Boolean.class)
+            else if (clazz == Boolean.class || clazz == boolean.class)
                 method = object.getClass().getMethod("booleanValue");
-            else if (clazz == Float.class)
+            else if (clazz == Float.class  || clazz == int.class)
                 method = object.getClass().getMethod("floatValue");
-            else if (clazz == Double.class)
+            else if (clazz == Double.class || clazz == double.class)
                 method = object.getClass().getMethod("doubleValue");
-            else if (clazz == Character.class)
+            else if (clazz == Character.class || clazz == char.class)
                 method = object.getClass().getMethod("toChar");
             else if (clazz == String.class)
                 method = object.getClass().getMethod("toString");
@@ -136,6 +136,24 @@ public class CompareUtil
     }
 
     /**
+     * Compare without throwing exception
+     *
+     * @param object First object to compare
+     * @param object2 Second object to compare
+     * @param operator Operator to compare against
+     *
+     * @return If the critieria meet return true
+     */
+    public static boolean forceCompare(Object object, Object object2, QueryCriteriaOperator operator)
+    {
+        try {
+            return compare(object, object2, operator);
+        } catch (InvalidDataTypeForOperator invalidDataTypeForOperator) {
+            return false;
+        }
+    }
+
+    /**
      * Generic method use to compare values with a given operator
      *
      * @param object First object to compare
@@ -147,6 +165,12 @@ public class CompareUtil
     @SuppressWarnings("unchecked")
     public static boolean compare(Object object, Object object2, QueryCriteriaOperator operator) throws InvalidDataTypeForOperator
     {
+
+        // If the objects do not match, cast it to the correct object
+        if(object2 != null
+                && object != null
+                && object2.getClass() != object.getClass())
+            object2 = castObject(object.getClass(), object2);
 
         if(operator == QueryCriteriaOperator.NOT_NULL)
             return (object2 != null);

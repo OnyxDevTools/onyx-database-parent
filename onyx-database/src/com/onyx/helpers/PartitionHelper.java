@@ -77,7 +77,7 @@ public class PartitionHelper
             return NULL_PARTITION;
         }
 
-        Object val = ReflectionUtil.getAny(entity, baseDescriptor.getPartition().getPartitionField());
+        final Object val = ReflectionUtil.getAny(entity, baseDescriptor.getPartition().getField());
 
         if(val == null)
         {

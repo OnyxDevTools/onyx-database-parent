@@ -351,7 +351,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
     public void initialize(IManagedEntity entity, String attribute) throws EntityException
     {
         Object relationship = proxy.getRelationship(entity, attribute);
-        ReflectionUtil.setAny(entity, relationship, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
+        ReflectionUtil.setAny(entity, relationship, context.getDescriptorForEntity(entity).getRelationships().get(attribute).getField());
     }
 
     /**

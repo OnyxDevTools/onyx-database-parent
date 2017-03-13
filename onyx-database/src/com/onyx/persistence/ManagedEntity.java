@@ -37,7 +37,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             for(AttributeDescriptor attribute : descriptor.getAttributes().values())
             {
                 try {
-                    final Object obj = ReflectionUtil.getAny(this, attribute.field);
+                    final Object obj = ReflectionUtil.getAny(this, attribute.getField());
                     buffer.writeObject(obj);
                 } catch (Exception ignore) {
                 }
@@ -71,7 +71,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             for(AttributeDescriptor attribute : descriptor.getAttributes().values())
             {
                 try {
-                    ReflectionUtil.setAny(this, buffer.readObject(), attribute.field);
+                    ReflectionUtil.setAny(this, buffer.readObject(), attribute.getField());
                 } catch (Exception ignore) {
                 }
             }
@@ -112,9 +112,9 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             for(AttributeDescriptor attribute : descriptor.getAttributes().values())
             {
                 try {
-                    if (mapObj.containsKey(attribute.field.field.getName())) {
-                        Object attributeValueWithinMap = mapObj.get(attribute.field.field.getName());
-                        ReflectionUtil.setAny(this, attributeValueWithinMap, attribute.field);
+                    if (mapObj.containsKey(attribute.getField().field.getName())) {
+                        Object attributeValueWithinMap = mapObj.get(attribute.getField().field.getName());
+                        ReflectionUtil.setAny(this, attributeValueWithinMap, attribute.getField());
                     }
                 } catch (Exception ignore) {
                 }

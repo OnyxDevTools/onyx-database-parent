@@ -2,6 +2,7 @@ package com.onyx.record;
 
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.util.OffsetField;
 
 import java.util.Map;
 import java.util.Set;
@@ -105,9 +106,12 @@ public interface RecordController
      * @param referenceId entity reference id
      * @return entity attribute
      * @throws EntityException Attribute does not exist
+     *
+     * @since 1.3.0 Changed to include the reflection field in order to optimze
+     *              and not instantiate new reflection fields
      */
     @SuppressWarnings("RedundantThrows")
-    Object getAttributeWithReferenceId(String attribute, long referenceId) throws EntityException;
+    Object getAttributeWithReferenceId(OffsetField attribute, long referenceId) throws EntityException;
 
     /**
      * For sorted indexs, you can find all the entity references above the value.  The index value must impelement comparable

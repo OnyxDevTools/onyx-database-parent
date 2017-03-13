@@ -42,7 +42,7 @@ public class ValidationHelper {
             try {
 
                 if (!attribute.isNullable()) {
-                    field = ReflectionUtil.getOffsetField(entity.getClass(), attribute.getName());
+                    field = attribute.getField();
                     value = ReflectionUtil.getAny(entity, field);
 
                     if (value == null) {
@@ -52,7 +52,7 @@ public class ValidationHelper {
 
                 if (attribute.getType() == String.class) {
                     if (field == null) {
-                        field = ReflectionUtil.getOffsetField(entity.getClass(), attribute.getName());
+                        field = attribute.getField();
                         value = ReflectionUtil.getAny(entity, field);
                     }
 
@@ -70,9 +70,7 @@ public class ValidationHelper {
         try {
             final IdentifierDescriptor identifierDescriptor = descriptor.getIdentifier();
             if (identifierDescriptor.getGenerator() == IdentifierGenerator.NONE) {
-                OffsetField field;
-
-                field = ReflectionUtil.getOffsetField(entity.getClass(), identifierDescriptor.getName());
+                OffsetField field = identifierDescriptor.getField();
 
                 Object value = ReflectionUtil.getAny(entity, field);
                 if (value == null) {

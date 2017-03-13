@@ -51,7 +51,7 @@ public class FileChannelStore implements Store {
      */
     public FileChannelStore(String filePath, SchemaContext context, boolean deleteOnClose) {
         if (deleteOnClose) {
-            SLICE_SIZE = (1024 * 512);
+            SLICE_SIZE = (1024 * 256);
         }
         this.filePath = filePath;
         this.deleteOnClose = deleteOnClose;
@@ -398,5 +398,17 @@ public class FileChannelStore implements Store {
     @Override
     public String getFilePath() {
         return filePath;
+    }
+
+    /**
+     * Reset the storage so that it has a clean slate
+     * and truncates all relative data.
+     *
+     * @since 1.3.0
+     */
+    public void reset()
+    {
+        fileSize.set(0);
+        this.allocate(8);
     }
 }

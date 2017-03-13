@@ -9,11 +9,10 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Relationship;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.SynchronizedMap;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
@@ -30,10 +29,8 @@ import java.util.*;
 @SuppressWarnings("unchecked")
 public class ReflectionUtil {
 
-
     // Cache of class' fields
-    private static final CompatMap<Class, List<OffsetField>> classFields = new SynchronizedMap<>(new CompatWeakHashMap<>());
-
+    private static final CompatMap<Class, List<OffsetField>> classFields = new SynchronizedMap<>(new CompatHashMap<>());
 
     /**
      * Get all the fields to serialize
@@ -58,10 +55,10 @@ public class ReflectionUtil {
                                 && f.getType() != Exception.class
                                 && f.getType() != Throwable.class) {
                             if (!isManagedEntity) {
-                                    fields.add(new OffsetField(-1, f.getName(), f));
+                                fields.add(new OffsetField(f.getName(), f));
                             } else if (f.isAnnotationPresent(Attribute.class)
                                     || f.isAnnotationPresent(Relationship.class)) {
-                                    fields.add(new OffsetField(-1, f.getName(), f));
+                                fields.add(new OffsetField(f.getName(), f));
                             }
                         }
                     }
@@ -84,6 +81,7 @@ public class ReflectionUtil {
      */
     public static OffsetField getOffsetField(Class clazz, String attribute) throws AttributeMissingException {
         Field field = getField(clazz, attribute);
+
         return getOffsetField(field);
     }
 
@@ -94,7 +92,7 @@ public class ReflectionUtil {
      * @return The offset field
      */
     public static OffsetField getOffsetField(Field field) {
-        return new OffsetField(-1, field.getName(), field);
+        return new OffsetField(field.getName(), field);
     }
 
     /**
@@ -254,31 +252,8 @@ public class ReflectionUtil {
     @SuppressWarnings("RedundantThrows")
     public static Object getAny(Object object, OffsetField offsetField) throws AttributeTypeMismatchException {
         try {
-
-
-            final PropertyType fieldType = PropertyType.primitiveValueOf(offsetField.type);
-            switch (fieldType) {
-                case INT:
-                    return ReflectionUtil.getInt(object, offsetField);
-                case LONG:
-                    return ReflectionUtil.getLong(object, offsetField);
-                case BYTE:
-                    return ReflectionUtil.getByte(object, offsetField);
-                case FLOAT:
-                    return ReflectionUtil.getFloat(object, offsetField);
-                case DOUBLE:
-                    return ReflectionUtil.getDouble(object, offsetField);
-                case BOOLEAN:
-                    return ReflectionUtil.getBoolean(object, offsetField);
-                case SHORT:
-                    return ReflectionUtil.getShort(object, offsetField);
-                case CHAR:
-                    return ReflectionUtil.getChar(object, offsetField);
-                default:
-                    return ReflectionUtil.getObject(object, offsetField);
-
-            }
-        } catch (IllegalAccessException e) {
+            return offsetField.field.get(object);
+        } catch (Exception e2) {
             return null;
         }
     }
@@ -393,407 +368,18 @@ public class ReflectionUtil {
      * Reflection utility for setting an attribute
      *
      * @param parent Parent object to set property on
-     * @param child Child object that is the property value
-     * @param field Field to set on the parent
+     * @param child  Child object that is the property value
+     * @param field  Field to set on the parent
      */
     @SuppressWarnings({"ConstantConditions", "RedundantThrows"})
     public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException {
 
+        if(child != null && child.getClass() != field.type)
+            child = CompareUtil.castObject(field.type, child);
 
         try {
-
-            final Class toClass = field.type;
-            final PropertyType toType = PropertyType.valueOf(field.type);
-            final PropertyType fromType = (child == null) ? null : PropertyType.valueOf(child.getClass());
-
-            switch (toType) {
-
-                case MUTABLE_INT:
-                    switch (fromType) {
-                        case MUTABLE_INT:
-                        case INT:
-                        case LONG:
-                        case NULL:
-                            setObject(parent, field, child);
-                            break;
-                        case MUTABLE_LONG:
-                            setObject(parent, field, ((Long) child).intValue());
-                            break;
-                        case MUTABLE_BOOLEAN:
-                        case BOOLEAN:
-                            setObject(parent, field, ((boolean) child) ? new Integer(1) : new Integer(0));
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case INT:
-                    switch (fromType) {
-                        case MUTABLE_INT:
-                        case INT:
-                        case LONG:
-                            setInt(parent, field, (int)child);
-                            break;
-                        case MUTABLE_LONG:
-                            setInt(parent, field, ((Long) child).intValue());
-                            break;
-                        case MUTABLE_BOOLEAN:
-                        case BOOLEAN:
-                            setInt(parent, field, ((boolean) child) ? 1 : 0);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case MUTABLE_LONG:
-                    switch (fromType) {
-                        case LONG:
-                        case MUTABLE_LONG:
-                        case INT:
-                        case NULL:
-                            setObject(parent, field, child);
-                            break;
-                        case MUTABLE_INT:
-                            setObject(parent, field, ((Integer) child).longValue());
-                            break;
-                        case MUTABLE_BOOLEAN:
-                        case BOOLEAN:
-                            setObject(parent, field, ((boolean) child) ? new Long(1) : new Long(0));
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case LONG:
-                    switch (fromType) {
-                        case LONG:
-                        case MUTABLE_LONG:
-                        case INT:
-                            setLong(parent, field, (long)child);
-                            break;
-                        case MUTABLE_INT:
-                            setLong(parent, field, ((Integer) child).longValue());
-                            break;
-                        case BOOLEAN:
-                        case MUTABLE_BOOLEAN:
-                            setLong(parent, field, ((boolean) child) ? 1L : 0L);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                    }
-                    break;
-                case MUTABLE_DOUBLE:
-                    switch (fromType) {
-                        case MUTABLE_DOUBLE:
-                        case DOUBLE:
-                            setObject(parent, field, child);
-                            break;
-                        case FLOAT:
-                        case MUTABLE_FLOAT:
-                            setObject(parent, field, ((Float) child).doubleValue());
-                            break;
-                        case NULL:
-                            setObject(parent, field, null);
-                            break;
-                        case MUTABLE_INT:
-                            setObject(parent, field, ((Integer) child).doubleValue());
-                            break;
-                        case INT:
-                            setObject(parent, field, new Integer((int) child).doubleValue());
-                            break;
-                        case MUTABLE_LONG:
-                            setObject(parent, field, ((Long) child).doubleValue());
-                            break;
-                        case LONG:
-                            setDouble(parent, field, new Long((long) child).doubleValue());
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case DOUBLE:
-                    switch (fromType) {
-                        case MUTABLE_DOUBLE:
-                            setDouble(parent, field, (Double) child);
-                            break;
-                        case DOUBLE:
-                        case FLOAT:
-                            setDouble(parent, field, (double) child);
-                            break;
-                        case MUTABLE_FLOAT:
-                            setDouble(parent, field, ((Float) child).doubleValue());
-                            break;
-                        case MUTABLE_INT:
-                            setDouble(parent, field, ((Integer) child).doubleValue());
-                            break;
-                        case INT:
-                            setDouble(parent, field, new Integer((int) child).doubleValue());
-                            break;
-                        case MUTABLE_LONG:
-                            setDouble(parent, field, ((Long) child).doubleValue());
-                            break;
-                        case LONG:
-                            setDouble(parent, field, new Long((long) child).doubleValue());
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case BOOLEAN:
-                    switch (fromType) {
-                        case BOOLEAN:
-                        case MUTABLE_BOOLEAN:
-                            setBoolean(parent, field, (boolean)child);
-                            break;
-                        case MUTABLE_INT:
-                            setBoolean(parent, field, (Integer) child == 1);
-                            break;
-                        case INT:
-                            setBoolean(parent, field, ((int) child == 1));
-                            break;
-                        case MUTABLE_LONG:
-                            setBoolean(parent, field, (Long) child == 1);
-                            break;
-                        case LONG:
-                            setBoolean(parent, field, ((long) child == 1));
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case MUTABLE_BOOLEAN:
-                    switch (fromType) {
-                        case BOOLEAN:
-                        case MUTABLE_BOOLEAN:
-                            setObject(parent, field, child);
-                            break;
-                        case MUTABLE_INT:
-                        case INT:
-                            setObject(parent, field, ((int) child == 1));
-                            break;
-                        case MUTABLE_LONG:
-                        case LONG:
-                            setObject(parent, field, ((long) child == 1));
-                            break;
-                        case NULL:
-                            setObject(parent, field, child);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case MUTABLE_BYTE:
-                    switch (fromType)
-                    {
-                        case MUTABLE_BYTE:
-                        case BYTE:
-                            setObject(parent, field, child);
-                            break;
-                        case INT:
-                        case MUTABLE_INT:
-                            setObject(parent, field, ((Integer) child).byteValue());
-                            break;
-                        case BOOLEAN:
-                            setObject(parent, field, ((boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
-                            break;
-                        case MUTABLE_BOOLEAN:
-                            setObject(parent, field, ((Boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
-                            break;
-                        case NULL:
-                            setObject(parent, field, null);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case BYTE:
-                    switch (fromType)
-                    {
-                        case MUTABLE_BYTE:
-                        case BYTE:
-                            setByte(parent, field, (byte)child);
-                            break;
-                        case INT:
-                        case MUTABLE_INT:
-                            setByte(parent, field, ((Integer) child).byteValue());
-                            break;
-                        case BOOLEAN:
-                            setByte(parent, field, ((boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
-                            break;
-                        case MUTABLE_BOOLEAN:
-                            setByte(parent, field, ((Boolean) child) ? new Byte((byte)1) : new Byte((byte)0));
-                            break;
-                    }
-                    break;
-                case MUTABLE_SHORT:
-                    switch (fromType)
-                    {
-                        case MUTABLE_LONG:
-                            setObject(parent, field, ((Long) child).shortValue());
-                            break;
-                        case LONG:
-                        case SHORT:
-                        case INT:
-                            setObject(parent, field, child);
-                            break;
-                        case MUTABLE_INT:
-                            setObject(parent, field, ((Integer)child).shortValue());
-                            break;
-                        case MUTABLE_BOOLEAN:
-                            setObject(parent, field, ((Boolean) child) ? new Short((short)1) : new Short((short)0));
-                            break;
-                        case BOOLEAN:
-                            setObject(parent, field, ((boolean) child) ? new Short((short)1) : new Short((short)0));
-                            break;
-                        case NULL:
-                            setObject(parent, field, null);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case SHORT:
-                    switch (fromType)
-                    {
-                        case MUTABLE_LONG:
-                            setShort(parent, field, ((Long) child).shortValue());
-                            break;
-                        case LONG:
-                        case SHORT:
-                        case MUTABLE_SHORT:
-                        case INT:
-                            setShort(parent, field, (short)child);
-                            break;
-                        case MUTABLE_INT:
-                            setShort(parent, field, ((Integer)child).shortValue());
-                            break;
-                        case MUTABLE_BOOLEAN:
-                            setShort(parent, field, ((Boolean) child) ? new Short((short)1) : new Short((short)0));
-                            break;
-                        case BOOLEAN:
-                            setShort(parent, field, ((boolean) child) ? new Short((short)1) : new Short((short)0));
-                            break;
-                        default:
-                            setShort(parent, field, (short)toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case FLOAT:
-                    switch (fromType)
-                    {
-                        case MUTABLE_FLOAT:
-                        case FLOAT:
-                        case MUTABLE_DOUBLE:
-                        case DOUBLE:
-                            setFloat(parent, field, (float)child);
-                            break;
-                        case MUTABLE_INT:
-                            setFloat(parent, field, ((Integer) child).floatValue());
-                            break;
-                        case INT:
-                            setFloat(parent, field, new Integer((int) child).floatValue());
-                            break;
-                        case MUTABLE_LONG:
-                            setFloat(parent, field, ((Long) child).floatValue());
-                            break;
-                        case LONG:
-                            setFloat(parent, field, new Long((long) child).floatValue());
-                            break;
-                        default:
-                            setFloat(parent, field, (float)toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case MUTABLE_FLOAT:
-                    switch (fromType)
-                    {
-                        case MUTABLE_FLOAT:
-                        case FLOAT:
-                        case MUTABLE_DOUBLE:
-                        case DOUBLE:
-                            setObject(parent, field, child);
-                            break;
-                        case MUTABLE_INT:
-                            setObject(parent, field, ((Integer) child).floatValue());
-                            break;
-                        case INT:
-                            setObject(parent, field, new Integer((int) child).floatValue());
-                            break;
-                        case MUTABLE_LONG:
-                            setObject(parent, field, ((Long) child).floatValue());
-                            break;
-                        case LONG:
-                            setObject(parent, field, new Long((long) child).floatValue());
-                            break;
-                        case NULL:
-                            setObject(parent, field, null);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case MUTABLE_CHAR:
-                    switch (fromType)
-                    {
-                        case MUTABLE_CHAR:
-                        case CHAR:
-                            setObject(parent, field, child);
-                            break;
-                        case NULL:
-                            setObject(parent, field, null);
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case CHAR:
-                    switch (fromType)
-                    {
-                        case MUTABLE_CHAR:
-                        case CHAR:
-                            setChar(parent, field, (char)child);
-                            break;
-                        default:
-                            setChar(parent, field, (char)toClass.cast(child));
-                            break;
-                    }
-                    break;
-                case STRING:
-                    switch (fromType) {
-                        case STRING:
-                            setObject(parent, field, child.toString());
-                            break;
-                        default:
-                            setObject(parent, field, toClass.cast(child));
-                    }
-                    break;
-                default:
-
-                    if(toType.isArray())
-                    {
-                        int arrayLength = Array.getLength(child);
-                        Object newArray = Array.newInstance(toClass, arrayLength);
-                        //noinspection SuspiciousSystemArraycopy
-                        System.arraycopy(child, 0, newArray, 0, arrayLength);
-                        setObject(parent, field, newArray);
-                    }
-                    else {
-                        setObject(parent, field, toClass.cast(child));
-                    }
-            }
-        } catch (IllegalAccessException ignore) {
-            // This is suppressed
+            field.field.set(parent, child);
+        } catch (Exception ignore) {
         }
     }
 
@@ -806,26 +392,25 @@ public class ReflectionUtil {
         for (AttributeDescriptor attribute : descriptor.getAttributes().values()) {
             OffsetField field;
             try {
-                field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
+                field = attribute.getField();
                 ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
             } catch (Exception e) {
                 try {
-                    field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
+                    field = attribute.getField();
                     ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
                 } catch (Exception ignore) {
                 }
             }
         }
 
-        for(RelationshipDescriptor attribute : descriptor.getRelationships().values())
-        {
+        for (RelationshipDescriptor attribute : descriptor.getRelationships().values()) {
             OffsetField field;
             try {
-                field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
+                field = attribute.getField();
                 ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
             } catch (Exception e) {
                 try {
-                    field = ReflectionUtil.getOffsetField(orig.getClass(), attribute.getName());
+                    field = attribute.getField();
                     ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, field), field);
                 } catch (Exception ignore) {
                 }

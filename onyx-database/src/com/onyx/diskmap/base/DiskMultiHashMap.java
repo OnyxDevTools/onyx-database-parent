@@ -2,10 +2,7 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.OrderedDiskMap;
-import com.onyx.diskmap.base.concurrent.DefaultDispatchLock;
-import com.onyx.diskmap.base.concurrent.DispatchLock;
-import com.onyx.diskmap.base.concurrent.EmptyDispatchLock;
-import com.onyx.diskmap.base.concurrent.EmptyMap;
+import com.onyx.diskmap.base.concurrent.*;
 import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
 import com.onyx.diskmap.node.CombinedIndexHashNode;
 import com.onyx.diskmap.node.Header;
@@ -127,11 +124,11 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
         setHead(combinedNode.head);
 
-        SkipListHeadNode head = combinedNode.head;
+        final SkipListHeadNode head = combinedNode.head;
         if (head != null) {
             final long headPosition = head.position;
 
-            return (V) dispatchLock.performWithLock(combinedNode.head, o -> {
+            return (V) dispatchLock.performWithLock(head, o -> {
 
                 V returnValue = DiskMultiHashMap.super.put(key, value);
                 SkipListHeadNode newHead = getHead();
@@ -162,7 +159,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
 
         if (head != null) {
             final long headPosition = head.position;
-            return (V) dispatchLock.performWithLock(combinedNode.head, o -> {
+            return (V) dispatchLock.performWithLock(head, o -> {
                 V returnValue = DiskMultiHashMap.super.remove(key);
                 SkipListHeadNode newHead = getHead();
                 combinedNode.head = newHead;
@@ -298,8 +295,6 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
                     return null;
             }
         });
-
-
     }
 
     /**

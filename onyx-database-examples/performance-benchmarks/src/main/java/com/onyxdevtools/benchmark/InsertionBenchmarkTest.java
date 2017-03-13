@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * This test inserts several records.  To demonstrate a valid test, we insert a base level object, and an object with
  * a relationships.  This illustrates not just the speed of the database but the ORM as well.
  */
-class InsertionBenchmarkTest extends BenchmarkTest {
+public class InsertionBenchmarkTest extends BenchmarkTest {
 
     private static final AtomicInteger playerIdCounter = new AtomicInteger(0);
 
@@ -29,7 +29,7 @@ class InsertionBenchmarkTest extends BenchmarkTest {
      *
      * @param providerPersistenceManager The underlying persistence manager
      */
-    InsertionBenchmarkTest(ProviderPersistenceManager providerPersistenceManager) {
+    public InsertionBenchmarkTest(ProviderPersistenceManager providerPersistenceManager) {
         super(providerPersistenceManager);
     }
 
