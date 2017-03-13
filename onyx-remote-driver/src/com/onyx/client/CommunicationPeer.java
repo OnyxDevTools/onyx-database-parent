@@ -10,6 +10,7 @@ import com.onyx.client.exception.ConnectionFailedException;
 import com.onyx.client.exception.OnyxServerException;
 import com.onyx.client.exception.RequestTimeoutException;
 import com.onyx.exception.InitializationException;
+import com.onyx.util.map.SynchronizedMap;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -22,7 +23,6 @@ import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,7 +49,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     // Connection information
     private ConnectionProperties connectionProperties;
     private SocketChannel socketChannel;
-    private final Map<RequestToken, Consumer> pendingRequests = new ConcurrentHashMap<>();
+    private final Map<RequestToken, Consumer> pendingRequests = new SynchronizedMap<>();
     private String host;
 
     // User and authentication

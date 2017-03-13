@@ -5,10 +5,6 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
-import com.onyx.util.map.SynchronizedMap;
 import com.onyx.diskmap.store.StoreType;
 import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
@@ -37,6 +33,10 @@ import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
 import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +44,10 @@ import java.math.BigInteger;
 import java.nio.channels.FileChannel;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -505,6 +508,8 @@ public class DefaultSchemaContext implements SchemaContext {
         recordControllers.clear(); // Clear all Record Controllers
         relationshipControllers.clear(); // Clear all relationship controllers
         indexControllers.clear(); // Clear all index controllers
+        systemEntityByIDMap.clear();
+        defaultSystemEntities.clear();
 
         scheduler.shutdown();
 
@@ -757,7 +762,12 @@ public class DefaultSchemaContext implements SchemaContext {
             systemPersistenceManager.saveEntity(systemEntity);
         }
 
+        Collections.sort(systemEntity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(systemEntity.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+        Collections.sort(systemEntity.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+
         defaultSystemEntities.put(systemEntity.getName(), systemEntity);
+
         systemEntityByIDMap.put(systemEntity.getPrimaryKey(), systemEntity);
 
         return systemEntity;
@@ -797,7 +807,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private final CompatMap<String, SystemEntity> defaultSystemEntities = new CompatHashMap();
+    private final CompatMap<String, SystemEntity> defaultSystemEntities = new SynchronizedMap<>();
 
     /**
      * Get System Entity By Name.
@@ -806,7 +816,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * @return Latest System Entity matching that name
      * @throws EntityException Default Exception
      */
-    public synchronized SystemEntity getSystemEntityByName(final String name) throws EntityException {
+    public SystemEntity getSystemEntityByName(final String name) throws EntityException {
         return defaultSystemEntities.compute(name,
                 (s, systemEntity) ->
                 {
@@ -840,7 +850,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private final CompatMap<Integer, SystemEntity> systemEntityByIDMap = new CompatHashMap();
+    private final CompatMap<Integer, SystemEntity> systemEntityByIDMap = new SynchronizedMap<>();
 
     /**
      * Get System Entity By ID.
@@ -848,12 +858,16 @@ public class DefaultSchemaContext implements SchemaContext {
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
      */
-    public synchronized SystemEntity getSystemEntityById(final int systemEntityId) {
+    public SystemEntity getSystemEntityById(final int systemEntityId) {
         return systemEntityByIDMap.compute(systemEntityId,
                 (id, systemEntity) ->
                 {
 
                     if (systemEntity != null) {
+                        Collections.sort(systemEntity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(systemEntity.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(systemEntity.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+
                         return systemEntity;
                     }
 
