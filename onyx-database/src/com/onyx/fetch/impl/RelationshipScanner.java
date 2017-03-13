@@ -2,6 +2,8 @@ package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
@@ -16,9 +18,7 @@ import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.diskmap.MapBuilder;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -50,7 +50,15 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     @SuppressWarnings("unchecked")
     public Map<Long, Long> scan() throws EntityException
     {
-        return scan(records);
+        Map startingPoint = new HashMap();
+
+        // Hydrate the entire reference set of parent entity before scanning the relationship
+        for(SkipListNode reference : (Set<SkipListNode>)((DiskMap)records).referenceSet())
+        {
+            startingPoint.put(reference.position,reference.position);
+        }
+
+        return scan(startingPoint);
     }
 
     /**
