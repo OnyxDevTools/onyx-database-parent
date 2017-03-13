@@ -13,7 +13,6 @@ import com.onyx.server.cli.CommandLineParser;
 import com.onyx.server.rmi.OnyxRMIServer;
 import com.onyx.util.EncryptionUtil;
 
-
 /**
  * Base Database Server Application.
  * <p>
@@ -65,6 +64,7 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
         this.persistenceManagerFactory = new EmbeddedPersistenceManagerFactory();
     }
 
+    @SuppressWarnings("unused")
     public DatabaseServer(boolean avoidDefaultConstructor) {
 
     }
@@ -162,6 +162,16 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
             persistenceManagerFactory.close();
         }
         super.stop();
+    }
+
+    /**
+     * Get persistence manager
+     *
+     * @return the underlying persistence manager
+     * @since 1.2.3
+     */
+    public PersistenceManager getPersistenceManager() {
+        return this.persistenceManagerFactory.getPersistenceManager();
     }
 }
 

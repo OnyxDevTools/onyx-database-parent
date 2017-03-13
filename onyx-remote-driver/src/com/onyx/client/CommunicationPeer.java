@@ -139,7 +139,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             socketChannel = SocketChannel.open();
             socketChannel.socket().setKeepAlive(true);
             socketChannel.socket().setTcpNoDelay(true);
-            socketChannel.socket().setReuseAddress(true);
+            socketChannel.socket().setReuseAddress(false);
         } catch (IOException e) {
             throw new ConnectionFailedException();
         }
@@ -153,7 +153,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         try {
 
             socketChannel.configureBlocking(true);
-            int connectTimeout = 5;
+            int connectTimeout = 5 * 1000;
             socketChannel.socket().connect(new InetSocketAddress(host, port), connectTimeout);
             while (!socketChannel.finishConnect()) {
                 LockSupport.parkNanos(100);
