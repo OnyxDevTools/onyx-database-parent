@@ -5,6 +5,7 @@ import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.store.StoreType;
 
+import java.io.File;
 import java.util.function.Function;
 
 /**
@@ -79,4 +80,17 @@ public class CacheSchemaContext extends DefaultSchemaContext
         return new DefaultMapBuilder(null, StoreType.IN_MEMORY, this.context);
     }
 
+    /**
+     * Start the schema context
+     * Initialize system entities, partition sequence, and entity descriptors
+     *
+     * @since 1.3.0
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public void start() {
+        killSwitch = false;
+        initializeSystemEntities();
+        initializePartitionSequence();
+        initializeEntityDescriptors();
+    }
 }

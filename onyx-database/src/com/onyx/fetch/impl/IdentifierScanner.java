@@ -165,8 +165,11 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
                 }
 
                 if(values != null) {
-                    for (Long aLong : values)
-                        returnValue.put(aLong, aLong);
+                    for (Long aLong : existingValues.values())
+                    {
+                        if(values.contains(aLong))
+                            returnValue.put(aLong, aLong);
+                    }
                 }
             }
         }

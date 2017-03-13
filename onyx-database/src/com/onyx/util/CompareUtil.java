@@ -136,6 +136,24 @@ public class CompareUtil
     }
 
     /**
+     * Compare without throwing exception
+     *
+     * @param object First object to compare
+     * @param object2 Second object to compare
+     * @param operator Operator to compare against
+     *
+     * @return If the critieria meet return true
+     */
+    public static boolean forceCompare(Object object, Object object2, QueryCriteriaOperator operator)
+    {
+        try {
+            return compare(object, object2, operator);
+        } catch (InvalidDataTypeForOperator invalidDataTypeForOperator) {
+            return false;
+        }
+    }
+
+    /**
      * Generic method use to compare values with a given operator
      *
      * @param object First object to compare
@@ -147,6 +165,12 @@ public class CompareUtil
     @SuppressWarnings("unchecked")
     public static boolean compare(Object object, Object object2, QueryCriteriaOperator operator) throws InvalidDataTypeForOperator
     {
+
+        // If the objects do not match, cast it to the correct object
+        if(object2 != null
+                && object != null
+                && object2.getClass() != object.getClass())
+            object2 = castObject(object.getClass(), object2);
 
         if(operator == QueryCriteriaOperator.NOT_NULL)
             return (object2 != null);

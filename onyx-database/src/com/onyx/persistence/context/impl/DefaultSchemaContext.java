@@ -147,7 +147,7 @@ public class DefaultSchemaContext implements SchemaContext {
     // Startup and Shutdown
     //
     /////////////////////////////////////////////////////////////////////
-    private volatile boolean killSwitch = false;
+    protected volatile boolean killSwitch = false;
 
     /**
      * Get Database kill switch.
@@ -184,7 +184,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.3.0
      */
-    private void createTemporaryDiskMapPool() {
+    protected void createTemporaryDiskMapPool() {
         for (int i = 0; i < 32; i++) {
             String stringBuilder = temporaryFileLocation +
                     File.separator +
@@ -206,7 +206,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * The purpose of this is to auto number the partition ids
      */
-    private void initializePartitionSequence() {
+    protected void initializePartitionSequence() {
 
         try {
             // Get the max partition index
@@ -235,7 +235,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
      * So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
      */
-    private void initializeEntityDescriptors() {
+    protected void initializeEntityDescriptors() {
 
         try {
             // Added criteria for greater than 7 so that we do not disturb the system entities
@@ -258,7 +258,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
-    private void initializeSystemEntities() {
+    protected void initializeSystemEntities() {
         try {
 
             descriptors.put(SystemEntity.class.getName(), new EntityDescriptor(SystemEntity.class));
@@ -1130,7 +1130,9 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     public void releaseMapBuilder(MapBuilder builder) {
         builder.reset();
-        temporaryDiskMapQueue.offer(builder);
+        try {
+            temporaryDiskMapQueue.put(builder);
+        } catch (InterruptedException e) {}
     }
 
     /**

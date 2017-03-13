@@ -8,8 +8,9 @@ import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
-import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
+import com.onyx.persistence.query.QueryCriteriaOperator;
+import com.onyx.util.CompareUtil;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -320,9 +321,14 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
                             continue;
                         }
 
-                        if (shouldMoveDown(0, 0, index, (K) ((SkipListNode) node).key))
-                            results.add(((SkipListNode) node).position);
+                        if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && includeFirst) {
+                            results.add(node.position);
+                        }
+                        else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.GREATER_THAN)) {
+                            results.add(node.position);
+                        }
                     }
+
                     if (node.next > 0L)
                         node = findNodeAtPosition(node.next);
                     else
@@ -358,18 +364,21 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             while (node.next != 0L) {
                 node = findNodeAtPosition(node.next);
                 if (node instanceof SkipListNode) {
-                    if (((SkipListNode) node).key.equals(index) && !includeFirst)
+                    if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && !includeFirst)
                         break;
-                    else if (((SkipListNode) node).key.equals(index)) {
+                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && includeFirst) {
                         results.add(node.position);
                         continue;
                     }
+                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.LESS_THAN)) {
+                        results.add(node.position);
+                        continue;
+                    }
+                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.GREATER_THAN))
+                        break;
 
                     if (this.shouldMoveDown(0, 0, index, (K) ((SkipListNode) node).key))
                         break;
-
-
-                    results.add(node.position);
                 }
             }
             return results;
