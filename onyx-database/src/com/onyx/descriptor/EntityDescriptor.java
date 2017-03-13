@@ -105,6 +105,7 @@ public class EntityDescriptor implements Serializable {
                 identifier.setGenerator(annotation.generator());
                 identifier.setType(field.getType());
                 identifier.setLoadFactor((byte) annotation.loadFactor());
+                identifier.setField(field);
             }
 
             if (field.getAnnotation(Attribute.class) != null) {
@@ -141,6 +142,7 @@ public class EntityDescriptor implements Serializable {
                 relationship.setRelationshipType(annotation.type());
                 relationship.setEntityDescriptor(this);
                 relationship.setLoadFactor((byte) annotation.loadFactor());
+                relationship.setField(field);
                 relationships.put(field.getName(), relationship);
             }
 
@@ -154,6 +156,7 @@ public class EntityDescriptor implements Serializable {
                 index.setLoadFactor(annotation.loadFactor());
                 index.setType(field.getType());
                 index.setEntityDescriptor(this);
+                index.setField(field);
 
                 indexes.put(field.getName(), index);
             }
@@ -162,8 +165,7 @@ public class EntityDescriptor implements Serializable {
                 this.partition = new PartitionDescriptor();
                 this.partition.setName(field.getName());
                 this.partition.setType(field.getType());
-
-                this.partition.setPartitionField(ReflectionUtil.getOffsetField(field));
+                this.partition.setField(field);
             }
         }
 

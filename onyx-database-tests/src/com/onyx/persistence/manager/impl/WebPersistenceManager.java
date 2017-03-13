@@ -440,7 +440,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         }
         List relationship =  (List<IManagedEntity>)this.performCall(getURL() + INITIALIZE, attributeType, List.class, body);
 
-        ReflectionUtil.setAny(entity, relationship, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
+        ReflectionUtil.setAny(entity, relationship, relationshipDescriptor.getField());
     }
 
     /**

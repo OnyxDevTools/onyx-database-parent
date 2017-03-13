@@ -42,7 +42,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
     public Object getRelationship(IManagedEntity entity, String attribute) throws EntityException
     {
         initialize(entity, attribute);
-        return ReflectionUtil.getAny(entity, ReflectionUtil.getOffsetField(entity.getClass(), attribute));
+        return ReflectionUtil.getAny(entity, getContext().getDescriptorForEntity(entity).getRelationships().get(attribute).getField());
     }
 
     /**

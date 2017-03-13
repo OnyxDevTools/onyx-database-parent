@@ -251,21 +251,15 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @param recordId  Record reference within storage structure
      * @return Map of key values
      * @since 1.2.0
+     * @since 1.3.0 Optimized to require the reflection field so it does not have to re-instantiate one.
      */
-    public Object getAttributeWithRecID(final String attribute, final long recordId) throws AttributeTypeMismatchException {
+    public Object getAttributeWithRecID(final OffsetField attribute, final long recordId) throws AttributeTypeMismatchException {
 
         final SkipListNode node = (SkipListNode<K>) findNodeAtPosition(recordId);
 
         V value = findValueAtPosition(node.recordPosition, node.recordSize);
         if (value != null) {
-            final Class clazz = value.getClass();
-            OffsetField attributeField;
-            try {
-                attributeField = ReflectionUtil.getOffsetField(clazz, attribute);
-            } catch (AttributeMissingException e) {
-                return null;
-            }
-            return ReflectionUtil.getAny(value, attributeField);
+            return ReflectionUtil.getAny(value, attribute);
         }
 
         return null;
@@ -277,6 +271,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             AttributeTypeMismatchException {
         if(node == null)
             return null;
+
         V value = findValueAtPosition(node.recordPosition, node.recordSize);
 
         if (value != null) {

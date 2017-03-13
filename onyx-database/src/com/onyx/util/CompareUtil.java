@@ -51,26 +51,26 @@ public class CompareUtil
     }
 
     @SuppressWarnings("unchecked")
-    private static Object castObject(Class clazz, Object object) {
+    public static Object castObject(Class clazz, Object object) {
 
         Method method = null;
 
         try {
-            if (clazz == Integer.class)
+            if (clazz == Integer.class ||  clazz == int.class)
                 method = object.getClass().getMethod("intValue");
-            else if (clazz == Long.class)
+            else if (clazz == Long.class ||  clazz == long.class)
                 method = object.getClass().getMethod("longValue");
-            else if (clazz == Short.class)
+            else if (clazz == Short.class ||  clazz == short.class)
                 method = object.getClass().getMethod("shortValue");
-            else if (clazz == Byte.class)
+            else if (clazz == Byte.class ||  clazz == byte.class)
                 method = object.getClass().getMethod("byteValue");
-            else if (clazz == Boolean.class)
+            else if (clazz == Boolean.class || clazz == boolean.class)
                 method = object.getClass().getMethod("booleanValue");
-            else if (clazz == Float.class)
+            else if (clazz == Float.class  || clazz == int.class)
                 method = object.getClass().getMethod("floatValue");
-            else if (clazz == Double.class)
+            else if (clazz == Double.class || clazz == double.class)
                 method = object.getClass().getMethod("doubleValue");
-            else if (clazz == Character.class)
+            else if (clazz == Character.class || clazz == char.class)
                 method = object.getClass().getMethod("toChar");
             else if (clazz == String.class)
                 method = object.getClass().getMethod("toString");

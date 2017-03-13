@@ -144,4 +144,13 @@ public class SystemAttribute extends ManagedEntity
         this.key = key;
     }
 
+    @SuppressWarnings("unused")
+    public String getPrimaryKey() {
+        return primaryKey;
+    }
+
+    @SuppressWarnings("unused")
+    public void setPrimaryKey(String primaryKey) {
+        this.primaryKey = primaryKey;
+    }
 }

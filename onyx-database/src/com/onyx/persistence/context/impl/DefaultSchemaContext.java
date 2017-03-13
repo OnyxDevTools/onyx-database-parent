@@ -111,6 +111,7 @@ public class DefaultSchemaContext implements SchemaContext {
         this.contextId = contextId;
 
         DefaultSchemaContext.registeredSchemaContexts.put(contextId, this);
+
     }
 
     /**
@@ -168,10 +169,38 @@ public class DefaultSchemaContext implements SchemaContext {
     public void start() {
         temporaryFileLocation = this.location + File.separator + "temporary";
         new File(temporaryFileLocation).mkdirs();
+
+        createTemporaryDiskMapPool();
+
         killSwitch = false;
         initializeSystemEntities();
         initializePartitionSequence();
         initializeEntityDescriptors();
+    }
+
+    /**
+     * This method will create a pool of map builders.  They are used to run queries
+     * and then be recycled and put back on the queue.
+     *
+     * @since 1.3.0
+     */
+    private void createTemporaryDiskMapPool() {
+        for (int i = 0; i < 32; i++) {
+            String stringBuilder = temporaryFileLocation +
+                    File.separator +
+                    String.valueOf(System.currentTimeMillis()) +
+                    new BigInteger(20, random).toString(32);
+
+            final File file = new File(stringBuilder);
+            try {
+                //noinspection ResultOfMethodCallIgnored
+                file.createNewFile();
+                file.deleteOnExit(); // Must delete since there is no more functionality to delete from references
+            } catch (IOException ignore) {
+            }
+            MapBuilder builder = new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, true);
+            temporaryDiskMapQueue.add(builder);
+        }
     }
 
     /**
@@ -436,7 +465,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.0.0
      */
-    public void shutdown()  {
+    public void shutdown() {
         killSwitch = true;
 
         // Shutdown all databases
@@ -448,6 +477,16 @@ public class DefaultSchemaContext implements SchemaContext {
             } catch (Exception ignore) {
             }
 
+        }
+
+        // Shutdown all databases temporary disk map builders
+        while (true) {
+            try {
+                MapBuilder temporaryDiskMap = temporaryDiskMapQueue.remove();
+                temporaryDiskMap.close();
+            } catch (Exception ignore) {
+                break;
+            }
         }
 
         // Close transaction file
@@ -1065,26 +1104,33 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
+    private LinkedBlockingQueue<MapBuilder> temporaryDiskMapQueue = new LinkedBlockingQueue();
+
     /**
      * Create Temporary Map Builder.
      *
      * @return Create new storage mechanism factory
-     * @since 1.0.0
+     * @since 1.3.0 Changed to use a pool of map builders.
+     * The intent of this is to increase performance.  There was a performance
+     * issue with map builders being destroyed invoking the DirectBuffer cleanup.
+     * That was not performant.
      */
     public MapBuilder createTemporaryMapBuilder() {
         try {
-            String stringBuilder = temporaryFileLocation +
-                    File.separator +
-                    String.valueOf(System.currentTimeMillis()) +
-                    new BigInteger(20, random).toString(32);
+            return temporaryDiskMapQueue.take();
+        } catch (InterruptedException ignore) {}
+        return null;
+    }
 
-            final File file = new File(stringBuilder);
-            //noinspection ResultOfMethodCallIgnored
-            file.createNewFile();
-            return new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, true);
-        } catch (IOException e) {
-            return null;
-        }
+    /**
+     * Recycle a temporary map builder so that it may be re-used
+     *
+     * @param builder Discarded map builder
+     * @since 1.3.0
+     */
+    public void releaseMapBuilder(MapBuilder builder) {
+        builder.reset();
+        temporaryDiskMapQueue.offer(builder);
     }
 
     /**

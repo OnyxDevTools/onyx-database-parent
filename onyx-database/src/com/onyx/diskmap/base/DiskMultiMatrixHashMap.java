@@ -2,10 +2,7 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.OrderedDiskMap;
-import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
-import com.onyx.diskmap.base.concurrent.DefaultDispatchLock;
-import com.onyx.diskmap.base.concurrent.DispatchLock;
-import com.onyx.diskmap.base.concurrent.EmptyMap;
+import com.onyx.diskmap.base.concurrent.*;
 import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
 import com.onyx.diskmap.node.CombinedIndexHashMatrixNode;
 import com.onyx.diskmap.node.HashMatrixNode;
@@ -113,7 +110,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         if (head != null) {
 
-            return (V) this.getReadWriteLock().performWithLock(combinedNode.head, o -> {
+            return (V) this.getReadWriteLock().performWithLock(head, o -> {
                 Object returnValue = DiskMultiMatrixHashMap.super.put(key, value);
                 final SkipListHeadNode newHead = getHead();
 
@@ -145,7 +142,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         if (head != null) {
 
-            return (V) this.getReadWriteLock().performWithLock(combinedNode.head, o -> {
+            return (V) this.getReadWriteLock().performWithLock(head, o -> {
                 Object returnValue = DiskMultiMatrixHashMap.super.remove(key);
                 final SkipListHeadNode newHead = getHead();
 

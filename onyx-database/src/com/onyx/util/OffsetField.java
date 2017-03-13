@@ -9,38 +9,37 @@ import java.lang.reflect.Field;
  * It is used for using reflection using the unsafe api.
  *
  */
-public class OffsetField
-{
+public class OffsetField {
+
     /**
      * Default Constructor with field offset, field name, and class type.
      *
-     * @param offset Field unsafe offset
-     * @param name Field Name
-     * @param type Field Class Type
+     * @param name   Field Name
+     * @param type   Field Class Type
      */
-    public OffsetField(long offset, String name, Field type) {
-        this.offset = offset;
+    public OffsetField(String name, Field type) {
         this.name = name;
         this.type = type.getType();
         this.field = type;
 
-        if(!field.isAccessible())
-            field.setAccessible(true);
+        if(!this.field.isAccessible())
+            this.field.setAccessible(true);
     }
 
 
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private final long offset;
     public final Class type;
     public final String name;
     public final Field field;
 
     /**
      * Getter to determine whether the field is an array type
+     *
      * @return Whether the field is an array
      */
     @SuppressWarnings("unused")
     public boolean isArray() {
         return type.isArray();
     }
+
+
 }

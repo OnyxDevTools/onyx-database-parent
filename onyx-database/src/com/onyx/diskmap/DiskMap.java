@@ -46,12 +46,12 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
     /**
      * Get Attribute with record id
      *
-     * @param attribute attribute name to gather
+     * @param attribute attribute field to gather
      * @param reference record reference where the record is stored
      *
      * @return Attribute key of record
      */
-    Object getAttributeWithRecID(String attribute, long reference) throws AttributeTypeMismatchException;
+    Object getAttributeWithRecID(OffsetField attribute, long reference) throws AttributeTypeMismatchException;
 
     /**
      * Get Attribute with record id

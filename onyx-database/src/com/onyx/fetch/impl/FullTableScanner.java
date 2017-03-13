@@ -100,11 +100,11 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
             if(keyValue instanceof PartitionReference)
             {
                 final RecordController recordController = this.getRecordControllerForPartition(((PartitionReference)keyValue).partition);
-                entityAttribute = recordController.getAttributeWithReferenceId(fieldToGrab.field.getName(), ((PartitionReference) keyValue).reference);
+                entityAttribute = recordController.getAttributeWithReferenceId(fieldToGrab, ((PartitionReference) keyValue).reference);
             }
             else
             {
-                entityAttribute = records.getAttributeWithRecID(fieldToGrab.field.getName(), (long)keyValue);
+                entityAttribute = records.getAttributeWithRecID(fieldToGrab, (long)keyValue);
             }
 
             // Compare and add

@@ -104,11 +104,11 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
                             if(aLong instanceof PartitionReference)
                             {
                                 PartitionReference ref = (PartitionReference) aLong;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
+                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)aLong).reference);
                             }
                             else
                             {
-                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
+                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) aLong);
                             }
                         } catch (Exception e)
                         {
@@ -127,11 +127,11 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
                             if(aLong instanceof PartitionReference)
                             {
                                 PartitionReference ref = (PartitionReference) aLong;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
+                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)aLong).reference);
                             }
                             else
                             {
-                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
+                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) aLong);
                             }
                         } catch (Exception e)
                         {
@@ -155,10 +155,10 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
                             if(aLong instanceof PartitionReference)
                             {
                                 PartitionReference ref = (PartitionReference) aLong;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
+                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)aLong).reference);
                             }
 
-                            return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
+                            return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) aLong);
                         } catch (Exception e)
                         {
                             return null;
@@ -175,10 +175,10 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
                             if(aLong instanceof PartitionReference)
                             {
                                 PartitionReference ref = (PartitionReference) aLong;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), ((PartitionReference)aLong).reference);
+                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)aLong).reference);
                             }
 
-                            return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.field.field.getName(), (long) aLong);
+                            return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) aLong);
                         } catch (Exception e)
                         {
                             return null;
