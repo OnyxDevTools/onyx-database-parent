@@ -17,7 +17,8 @@ public class Serializers {
 
     private Map<Short, String> mapById;
     private Map<String, Short> mapByName;
-    private CompatMap<Short, Class> mapCache = new SynchronizedMap(new CompatHashMap<>());
+    @SuppressWarnings("unchecked")
+    final private CompatMap<Short, Class> mapCache = new SynchronizedMap(new CompatHashMap<>());
 
     public SchemaContext context;
 

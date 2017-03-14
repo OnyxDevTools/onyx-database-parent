@@ -12,6 +12,7 @@ public interface BaseDescriptor
      *
      * @return  the name of the descriptor
      */
+    @SuppressWarnings("unused")
     String getName();
 
     /**

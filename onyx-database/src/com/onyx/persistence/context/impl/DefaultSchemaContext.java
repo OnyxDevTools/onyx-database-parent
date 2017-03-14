@@ -150,6 +150,7 @@ public class DefaultSchemaContext implements SchemaContext {
     // Startup and Shutdown
     //
     /////////////////////////////////////////////////////////////////////
+    @SuppressWarnings("WeakerAccess")
     protected volatile boolean killSwitch = false;
 
     /**
@@ -187,6 +188,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.3.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected void createTemporaryDiskMapPool() {
         for (int i = 0; i < 32; i++) {
             String stringBuilder = temporaryFileLocation +
@@ -209,6 +211,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * The purpose of this is to auto number the partition ids
      */
+    @SuppressWarnings("WeakerAccess")
     protected void initializePartitionSequence() {
 
         try {
@@ -238,6 +241,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
      * So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
      */
+    @SuppressWarnings("WeakerAccess")
     protected void initializeEntityDescriptors() {
 
         try {
@@ -261,6 +265,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
+    @SuppressWarnings("WeakerAccess")
     protected void initializeSystemEntities() {
         try {
 
@@ -508,8 +513,6 @@ public class DefaultSchemaContext implements SchemaContext {
         recordControllers.clear(); // Clear all Record Controllers
         relationshipControllers.clear(); // Clear all relationship controllers
         indexControllers.clear(); // Clear all index controllers
-        systemEntityByIDMap.clear();
-        defaultSystemEntities.clear();
 
         scheduler.shutdown();
 
@@ -762,12 +765,7 @@ public class DefaultSchemaContext implements SchemaContext {
             systemPersistenceManager.saveEntity(systemEntity);
         }
 
-        Collections.sort(systemEntity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
-        Collections.sort(systemEntity.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
-        Collections.sort(systemEntity.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
-
         defaultSystemEntities.put(systemEntity.getName(), systemEntity);
-
         systemEntityByIDMap.put(systemEntity.getPrimaryKey(), systemEntity);
 
         return systemEntity;
@@ -807,7 +805,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private final CompatMap<String, SystemEntity> defaultSystemEntities = new SynchronizedMap<>();
+    private final CompatMap<String, SystemEntity> defaultSystemEntities = new CompatHashMap();
 
     /**
      * Get System Entity By Name.
@@ -816,7 +814,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * @return Latest System Entity matching that name
      * @throws EntityException Default Exception
      */
-    public SystemEntity getSystemEntityByName(final String name) throws EntityException {
+    public synchronized SystemEntity getSystemEntityByName(final String name) throws EntityException {
         return defaultSystemEntities.compute(name,
                 (s, systemEntity) ->
                 {
@@ -850,7 +848,7 @@ public class DefaultSchemaContext implements SchemaContext {
     }
 
     // System Entities
-    private final CompatMap<Integer, SystemEntity> systemEntityByIDMap = new SynchronizedMap<>();
+    private final CompatMap<Integer, SystemEntity> systemEntityByIDMap = new CompatHashMap();
 
     /**
      * Get System Entity By ID.
@@ -858,16 +856,12 @@ public class DefaultSchemaContext implements SchemaContext {
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
      */
-    public SystemEntity getSystemEntityById(final int systemEntityId) {
+    public synchronized SystemEntity getSystemEntityById(final int systemEntityId) {
         return systemEntityByIDMap.compute(systemEntityId,
                 (id, systemEntity) ->
                 {
 
                     if (systemEntity != null) {
-                        Collections.sort(systemEntity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
-                        Collections.sort(systemEntity.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
-                        Collections.sort(systemEntity.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
-
                         return systemEntity;
                     }
 
@@ -1118,7 +1112,7 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
-    private LinkedBlockingQueue<MapBuilder> temporaryDiskMapQueue = new LinkedBlockingQueue();
+    final private LinkedBlockingQueue<MapBuilder> temporaryDiskMapQueue = new LinkedBlockingQueue();
 
     /**
      * Create Temporary Map Builder.
@@ -1146,7 +1140,8 @@ public class DefaultSchemaContext implements SchemaContext {
         builder.reset();
         try {
             temporaryDiskMapQueue.put(builder);
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException ignore) {
+        }
     }
 
     /**

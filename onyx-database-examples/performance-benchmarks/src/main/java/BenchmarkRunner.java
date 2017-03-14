@@ -40,7 +40,7 @@ public class BenchmarkRunner {
      * @throws Exception Generic Exception
      */
     @SuppressWarnings("unchecked")
-    public static void main(String args[]) throws Exception {
+    public static void main(@SuppressWarnings("ParameterCanBeLocal") String args[]) throws Exception {
 
         //Default values to run via the IDE
         /*args = new String[2];

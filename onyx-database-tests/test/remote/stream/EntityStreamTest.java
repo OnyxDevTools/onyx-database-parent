@@ -1,8 +1,10 @@
 package remote.stream;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.StreamException;
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -120,6 +122,7 @@ public class EntityStreamTest extends RemoteBaseTest
 
         assert testEntity.correlation == 99;
     }
+
 
     /**
      * Test a basic Query Stream implementation

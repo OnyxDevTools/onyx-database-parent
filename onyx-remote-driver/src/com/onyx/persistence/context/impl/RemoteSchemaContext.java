@@ -46,6 +46,7 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
         {
             location = Files.createTempDirectory("onx").toString();
             temporaryFileLocation = this.location + File.separator + "temporary";
+            //noinspection ResultOfMethodCallIgnored
             new File(temporaryFileLocation).mkdirs();
         }
         catch (IOException ignore){}

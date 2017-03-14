@@ -170,6 +170,7 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
      * @return the underlying persistence manager
      * @since 1.2.3
      */
+    @SuppressWarnings("unused")
     public PersistenceManager getPersistenceManager() {
         return this.persistenceManagerFactory.getPersistenceManager();
     }
