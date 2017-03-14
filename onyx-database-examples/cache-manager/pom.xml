@@ -6,7 +6,7 @@
     
     <groupId>com.onyxdevtools</groupId>
     <artifactId>cache-manager</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:onyx-database-examples:${project.artifactId}</name>
@@ -15,7 +15,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <onyx-database.version>1.2.2</onyx-database.version>
+        <onyx-database.version>1.2.3</onyx-database.version>
     </properties>
     
     <dependencies>
