@@ -6,6 +6,7 @@ import entities.SimpleEntity;
 import entities.exception.*;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import web.base.BaseTest;
@@ -97,6 +98,11 @@ public class TestEntitySaveExceptions extends BaseTest {
         manager.saveEntity(entity);
     }
 
+    /**
+     * This unit test no longer applies becuse there was an enhancement to accept like types.
+     * @throws EntityException
+     */
+    @Ignore
     @Test(expected = AttributeTypeMismatchException.class)
     public void testInvalidFindById() throws EntityException{
         //Save entity
