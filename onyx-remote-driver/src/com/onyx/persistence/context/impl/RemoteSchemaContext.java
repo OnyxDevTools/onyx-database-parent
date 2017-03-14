@@ -3,7 +3,6 @@ package com.onyx.persistence.context.impl;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -45,8 +44,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
         try
         {
             location = Files.createTempDirectory("onx").toString();
-            temporaryFileLocation = this.location + File.separator + "temporary";
-            new File(temporaryFileLocation).mkdirs();
         }
         catch (IOException ignore){}
         createTemporaryDiskMapPool();
@@ -110,10 +107,7 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
             }
         }
 
-        killSwitch = false;
-        initializeSystemEntities();
-        initializePartitionSequence();
-        initializeEntityDescriptors();
+        super.start();
     }
 
 }

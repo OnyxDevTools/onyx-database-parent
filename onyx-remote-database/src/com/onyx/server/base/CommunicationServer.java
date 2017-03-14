@@ -118,7 +118,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
             selector = SelectorProvider.provider().openSelector();
             serverSocketChannel = ServerSocketChannel.open();
-            serverSocketChannel.socket().setReuseAddress(true);
+            serverSocketChannel.socket().setReuseAddress(false);
             serverSocketChannel.configureBlocking(false);
 
             serverSocketChannel.bind(new InetSocketAddress(port));
