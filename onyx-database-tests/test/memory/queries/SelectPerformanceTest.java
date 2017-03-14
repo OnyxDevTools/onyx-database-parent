@@ -9,7 +9,6 @@ import com.onyx.persistence.query.QueryOrder;
 import entities.PerformanceEntity;
 import junit.framework.Assert;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
