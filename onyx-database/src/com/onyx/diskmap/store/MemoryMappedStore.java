@@ -1,12 +1,12 @@
 package com.onyx.diskmap.store;
 
 import com.onyx.buffer.BufferStream;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.SynchronizedMap;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.ReflectionUtil;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -261,8 +261,8 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
             ByteBuffer buffer = null;
             try {
                 buffer = channel.map(FileChannel.MapMode.READ_WRITE, offset, SLICE_SIZE);
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (IOException ignore) {
+
             }
 
             return new FileSlice(buffer);
@@ -405,6 +405,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
     @Override
     public void commit() {
         if (!deleteOnClose) {
+            //noinspection SynchronizeOnNonFinalField
             synchronized (slices) {
                 //noinspection Convert2streamapi
                 for (FileSlice slice : this.slices.values()) {

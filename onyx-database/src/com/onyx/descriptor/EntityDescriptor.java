@@ -1,7 +1,5 @@
 package com.onyx.descriptor;
 
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
@@ -12,7 +10,8 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.ReflectionUtil;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;

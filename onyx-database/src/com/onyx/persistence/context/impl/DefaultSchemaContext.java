@@ -5,10 +5,6 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
-import com.onyx.util.map.SynchronizedMap;
 import com.onyx.diskmap.store.StoreType;
 import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
@@ -37,6 +33,10 @@ import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
 import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +44,10 @@ import java.math.BigInteger;
 import java.nio.channels.FileChannel;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -147,6 +150,7 @@ public class DefaultSchemaContext implements SchemaContext {
     // Startup and Shutdown
     //
     /////////////////////////////////////////////////////////////////////
+    @SuppressWarnings("WeakerAccess")
     protected volatile boolean killSwitch = false;
 
     /**
@@ -184,6 +188,7 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @since 1.3.0
      */
+    @SuppressWarnings("WeakerAccess")
     protected void createTemporaryDiskMapPool() {
         for (int i = 0; i < 32; i++) {
             String stringBuilder = temporaryFileLocation +
@@ -206,6 +211,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * The purpose of this is to auto number the partition ids
      */
+    @SuppressWarnings("WeakerAccess")
     protected void initializePartitionSequence() {
 
         try {
@@ -235,6 +241,7 @@ public class DefaultSchemaContext implements SchemaContext {
      * The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
      * So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
      */
+    @SuppressWarnings("WeakerAccess")
     protected void initializeEntityDescriptors() {
 
         try {
@@ -258,6 +265,7 @@ public class DefaultSchemaContext implements SchemaContext {
     /**
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
+    @SuppressWarnings("WeakerAccess")
     protected void initializeSystemEntities() {
         try {
 
@@ -1104,7 +1112,7 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
-    private LinkedBlockingQueue<MapBuilder> temporaryDiskMapQueue = new LinkedBlockingQueue();
+    final private LinkedBlockingQueue<MapBuilder> temporaryDiskMapQueue = new LinkedBlockingQueue();
 
     /**
      * Create Temporary Map Builder.
@@ -1132,7 +1140,8 @@ public class DefaultSchemaContext implements SchemaContext {
         builder.reset();
         try {
             temporaryDiskMapQueue.put(builder);
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException ignore) {
+        }
     }
 
     /**

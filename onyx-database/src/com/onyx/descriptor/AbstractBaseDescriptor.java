@@ -10,6 +10,7 @@ import java.lang.reflect.Field;
  *
  * This is a base descriptor for an attribute.  It defines the properties based on annotation scanning
  */
+@SuppressWarnings("WeakerAccess")
 public abstract class AbstractBaseDescriptor
 {
 
@@ -19,6 +20,7 @@ public abstract class AbstractBaseDescriptor
     protected Class type;
 
     // Field used for reflection
+    @SuppressWarnings("WeakerAccess")
     protected OffsetField field;
 
     public String getName()

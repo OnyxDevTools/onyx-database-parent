@@ -5,7 +5,6 @@ import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.store.StoreType;
 
-import java.io.File;
 import java.util.function.Function;
 
 /**
