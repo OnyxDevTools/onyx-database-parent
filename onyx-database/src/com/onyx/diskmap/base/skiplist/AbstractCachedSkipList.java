@@ -62,11 +62,13 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
      * @since 1.2.0
      */
     @Override
-    protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down) {
-        final SkipListNode<K> newNode = super.createNewNode(key, value, level, next, down);
+    protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down, boolean cache, long recordId) {
+        final SkipListNode<K> newNode = super.createNewNode(key, value, level, next, down, cache, recordId);
         nodeCache.put(newNode.position, newNode);
-        keyCache.put(key, newNode);
-        valueByPositionCache.put(newNode.recordPosition, value);
+        if (cache) {
+            keyCache.put(key, newNode);
+            valueByPositionCache.put(newNode.recordPosition, value);
+        }
         return newNode;
     }
 
@@ -155,16 +157,20 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
      * @param value The value of the reference
      * @since 1.2.0
      */
-    protected void updateNodeValue(SkipListNode<K> node, V value)
+    protected void updateNodeValue(SkipListNode<K> node, V value, boolean cache)
     {
         // Remove the old value before updating
-        valueByPositionCache.remove(node.recordPosition);
-
+        if (cache) {
+            valueByPositionCache.remove(node.recordPosition);
+        }
         // Update and cache the new value
-        super.updateNodeValue(node, value);
+        super.updateNodeValue(node, value, cache);
         nodeCache.put(node.position, node);
-        keyCache.put(node.key, node);
-        valueByPositionCache.put(node.recordPosition, value);
+
+        if (cache) {
+            keyCache.put(node.key, node);
+            valueByPositionCache.put(node.recordPosition, value);
+        }
     }
 
     /**

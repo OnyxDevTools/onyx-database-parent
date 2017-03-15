@@ -36,6 +36,8 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
      * @param entity Entity to save
      * @return The identifier value
      * @throws EntityException Error saving entity
+     *
+     * @since 1.2.3 Optimized to only do a put if there are not pre persist callbacks
      */
     @Override
     public Object save(IManagedEntity entity) throws EntityException
@@ -48,21 +50,23 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
 
         final AtomicBoolean isNew = new AtomicBoolean(false); // Keeps track of whether the record is new or not
 
-        records.compute(identifierValue, (o, current) -> {
-            try
-            {
-                if (current == null)
-                {
-                    isNew.set(true);
-                    invokePreInsertCallback(entity);
-                } else
-                {
-                    invokePreUpdateCallback(entity);
+        if (this.entityDescriptor.getPreInsertCallback() != null || this.entityDescriptor.getPreUpdateCallback() != null) {
+
+            records.compute(identifierValue, (o, current) -> {
+                try {
+                    if (current == null) {
+                        isNew.set(true);
+                        invokePreInsertCallback(entity);
+                    } else {
+                        invokePreUpdateCallback(entity);
+                    }
+                } catch (EntityCallbackException ignore) {
                 }
-            } catch (EntityCallbackException ignore)
-            { }
-            return entity;
-        });
+                return entity;
+            });
+        } else {
+            records.put(identifierValue, entity);
+        }
 
         // Invoke Post insert or update callback
         if(isNew.get())

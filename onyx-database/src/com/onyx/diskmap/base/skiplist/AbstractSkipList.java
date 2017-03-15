@@ -141,7 +141,9 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         SkipListHeadNode current = head;
         SkipListHeadNode last = null;
         SkipListHeadNode next;
+        SkipListNode recordIndicatorNode = null;
 
+        boolean cache = true;
         while (current != null) {
 
             next = findNodeAtPosition(current.next);
@@ -149,7 +151,14 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
             if (current.next == 0L ||
                     shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), key, ((SkipListNode<K>)next).key)) {
                 if (level >= current.level) {
-                    SkipListNode<K> newNode = createNewNode(key, value, current.level, next == null ? 0L : next.position, 0L);
+                    SkipListNode<K> newNode = createNewNode(key, value, current.level, next == null ? 0L : next.position, 0L, cache, (recordIndicatorNode == null) ? -1 : recordIndicatorNode.recordId);
+                    if (recordIndicatorNode == null) {
+                        recordIndicatorNode = newNode;
+                    }
+                    // There can be multiple nodes for a single record
+                    // We do not want to cache because it will stomp all over our
+                    // intial reference
+                    cache = false;
                     if (last != null) {
                         updateNodeDown(last, newNode.position);
                     }
@@ -289,7 +298,13 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
                 // We found the record we want
                 if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
                     // Get the return value
-                    updateNodeValue((SkipListNode)next, value);
+
+                    // There can be multiple nodes for a single record
+                    // We do not want to cache because it will stomp all over our
+                    // intial reference.  We use the victory flag to identify
+                    // if we have already updated a node
+
+                    updateNodeValue((SkipListNode) next, value, !victory);
                     victory = true;
                 }
 
@@ -470,7 +485,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     @SuppressWarnings("WeakerAccess")
-    protected void updateNodeValue(SkipListNode<K> node, V value) {
+    protected void updateNodeValue(SkipListNode<K> node, V value, boolean cache) {
         final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
         try {
             // Write the record value to the buffer and allocate the space in the store
@@ -569,7 +584,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     @SuppressWarnings({"unchecked", "WeakerAccess"})
-    protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down) {
+    protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down, boolean cache, long recordId) {
         final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
 
         SkipListNode<K> newNode = null;
@@ -595,8 +610,11 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
             int serializerId = buffer.getSerializerId(value); // Get the serializer id.  Note: This only applies to Managed Entities in order to version
 
+            if (recordId < 0) {
+                recordId = position;
+            }
             // Instantiate the new node and write it to the buffer
-            newNode = new SkipListNode(key, position, (value == null) ? 0L : recordPosition, level, next, down, recordSize, serializerId);
+            newNode = new SkipListNode(key, position, (value == null) ? 0L : recordPosition, level, next, down, recordSize, serializerId, recordId);
 
             // Jot down the size of the node so that we know how much data to pull
             buffer.writeInt(sizeOfNode);

@@ -1,7 +1,8 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.util.map.CompatHashMap;
+import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
@@ -10,9 +11,8 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
-import com.onyx.diskmap.MapBuilder;
-import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.util.CompareUtil;
+import com.onyx.util.map.CompatHashMap;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -65,7 +65,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
 
             // Compare and add
             if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
-                long recId = entry.position;
+                long recId = entry.recordId ;
                 allResults.put(recId, recId);
             }
 

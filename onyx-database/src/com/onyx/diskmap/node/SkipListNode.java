@@ -12,8 +12,9 @@ import java.io.IOException;
  */
 public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializable {
 
-    public static final int BASE_SKIP_LIST_NODE_SIZE = Long.BYTES * 3 + Byte.BYTES + Integer.BYTES * 2;
+    public static final int BASE_SKIP_LIST_NODE_SIZE = Long.BYTES * 4 + Byte.BYTES + Integer.BYTES * 2;
     public long recordPosition;
+    public long recordId;
     public int recordSize;
     public int serializerId;
     public K key;
@@ -24,7 +25,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
 
     }
 
-    public SkipListNode(K key, long position, long recordPosition, byte level, long next, long down, int recordSize, int serializerId) {
+    public SkipListNode(K key, long position, long recordPosition, byte level, long next, long down, int recordSize, int serializerId, long recordId) {
         this.position = position;
         this.recordPosition = recordPosition;
         this.level = level;
@@ -33,6 +34,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
         this.key = key;
         this.recordSize = recordSize;
         this.serializerId = serializerId;
+        this.recordId = recordId;
     }
 
     @Override
@@ -42,6 +44,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
         super.writeObject(buffer);
         buffer.writeInt(serializerId);
         buffer.writeObject(key);
+        buffer.writeLong(recordId);
     }
 
     @Override
@@ -52,6 +55,7 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
         super.readObject(buffer);
         serializerId = buffer.readInt();
         key = (K)buffer.readObject();
+        recordId = buffer.readLong();
     }
 
     public void readObject(ObjectBuffer buffer, long position) throws IOException

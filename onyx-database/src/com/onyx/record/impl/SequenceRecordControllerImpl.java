@@ -1,6 +1,8 @@
 package com.onyx.record.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityCallbackException;
 import com.onyx.exception.EntityException;
@@ -9,8 +11,6 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
-import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.MapBuilder;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -55,6 +55,9 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      * @param entity Entity to save
      * @return Entity identifier
      * @throws EntityException Error saving entity
+     *
+     * @since 1.2.3 Added an optimization so it does not do a check if it exist before
+     *              putting if there are no listeners for persit
      */
     @Override
     public Object save(IManagedEntity entity) throws EntityException
@@ -98,22 +101,22 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
             id = val.intValue();
         }
 
-        records.compute(id, (o, current) -> {
-            try
-            {
-                if (current == null)
-                {
-                    isNew.set(true);
-                    invokePreInsertCallback(entity);
-                } else
-                {
-                    invokePreUpdateCallback(entity);
+        if (this.entityDescriptor.getPreInsertCallback() != null || this.entityDescriptor.getPreUpdateCallback() != null) {
+            records.compute(id, (o, current) -> {
+                try {
+                    if (current == null) {
+                        isNew.set(true);
+                        invokePreInsertCallback(entity);
+                    } else {
+                        invokePreUpdateCallback(entity);
+                    }
+                } catch (EntityCallbackException ignore) {
                 }
-            } catch (EntityCallbackException ignore)
-            {
-            }
-            return entity;
-        });
+                return entity;
+            });
+        } else {
+            records.put(id, entity);
+        }
 
         invokePostPersistCallback(entity); // Always invoke Post persist callback
 

@@ -3,20 +3,26 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.node.SkipListNode;
-import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
+import com.onyx.exception.InvalidConstructorException;
+import com.onyx.exception.InvalidQueryException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.ScannerFactory;
 import com.onyx.fetch.TableScanner;
+import com.onyx.helpers.PartitionHelper;
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.util.ReflectionUtil;
+import com.onyx.util.map.CompatHashMap;
 
 import java.util.*;
 
@@ -50,12 +56,59 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
     @SuppressWarnings("unchecked")
     public Map<Long, Long> scan() throws EntityException
     {
+
         Map startingPoint = new HashMap();
 
-        // Hydrate the entire reference set of parent entity before scanning the relationship
-        for(SkipListNode reference : (Set<SkipListNode>)((DiskMap)records).referenceSet())
+        // We do not support querying relationships by all partitions.
+        // This would be about the most rediculous non optimized query
+        // and is frowned upon
+        if (this.query.getPartition() == QueryPartitionMode.ALL)
         {
-            startingPoint.put(reference.position,reference.position);
+            throw new InvalidQueryException();
+        }
+
+        // Added the ability to start with a partition
+        if (this.descriptor.getPartition() != null) {
+            // Get the partition ID
+            IManagedEntity temp;
+            try {
+                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getClazz());
+            } catch (IllegalAccessException | InstantiationException e) {
+                throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
+            }
+            PartitionHelper.setPartitionValueForEntity(temp, query.getPartition(), getContext());
+            long partitionId = getPartitionId(temp);
+
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+                startingPoint.put(new PartitionReference(partitionId, reference.recordId), new PartitionReference(partitionId, reference.recordId));
+            }
+        } else {
+            // Hydrate the entire reference set of parent entity before scanning the relationship
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+                startingPoint.put(reference.recordId, reference.recordId);
+            }
+        }
+
+        // Added the ability to start with a partition
+        if (this.descriptor.getPartition() != null) {
+            // Get the partition ID
+            IManagedEntity temp;
+            try {
+                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getClazz());
+            } catch (IllegalAccessException | InstantiationException e) {
+                throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
+            }
+            PartitionHelper.setPartitionValueForEntity(temp, query.getPartition(), getContext());
+            long partitionId = getPartitionId(temp);
+
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+                startingPoint.put(new PartitionReference(partitionId, reference.recordId), new PartitionReference(partitionId, reference.recordId));
+            }
+        } else {
+            // Hydrate the entire reference set of parent entity before scanning the relationship
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+                startingPoint.put(reference.recordId, reference.recordId);
+            }
         }
 
         return scan(startingPoint);
@@ -120,7 +173,11 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
 
         final Iterator iterator = existingValues.keySet().iterator();
 
-        relationshipDescriptor = descriptor.getRelationships().get(attribute);
+        if (this.query.getPartition() == QueryPartitionMode.ALL) {
+            throw new InvalidQueryException();
+        }
+
+        relationshipDescriptor = this.descriptor.getRelationships().get(attribute);
         final RelationshipController relationshipController = getContext().getRelationshipController(relationshipDescriptor);
         final RecordController inverseRecordController = getDefaultInverseRecordController();
 

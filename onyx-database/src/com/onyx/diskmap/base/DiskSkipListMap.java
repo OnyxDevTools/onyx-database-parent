@@ -196,7 +196,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             SkipListNode<K> node = find((K) key);
             if (node == null)
                 return -1;
-            return node.position;
+            return node.recordId;
         } finally {
             readWriteLock.readLock().unlock();
         }
@@ -235,7 +235,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
 
         try {
             SkipListNode<K> node = (SkipListNode<K>) findNodeAtPosition(recordId);
-            if (node != null && node.position == recordId) {
+            if (node != null && node.recordId == recordId) {
                 return getRecordValueAsDictionary(node);
             }
             return null;
@@ -322,10 +322,10 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
                         }
 
                         if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && includeFirst) {
-                            results.add(node.position);
+                            results.add(((SkipListNode) node).recordId);
                         }
                         else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.GREATER_THAN)) {
-                            results.add(node.position);
+                            results.add(((SkipListNode) node).recordId);
                         }
                     }
 
@@ -367,11 +367,11 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
                     if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && !includeFirst)
                         break;
                     else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && includeFirst) {
-                        results.add(node.position);
+                        results.add(((SkipListNode) node).recordId);
                         continue;
                     }
                     else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.LESS_THAN)) {
-                        results.add(node.position);
+                        results.add(((SkipListNode) node).recordId);
                         continue;
                     }
                     else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.GREATER_THAN))
