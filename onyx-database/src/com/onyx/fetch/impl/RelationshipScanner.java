@@ -89,6 +89,28 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
             }
         }
 
+        // Added the ability to start with a partition
+        if (this.descriptor.getPartition() != null) {
+            // Get the partition ID
+            IManagedEntity temp;
+            try {
+                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getClazz());
+            } catch (IllegalAccessException | InstantiationException e) {
+                throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
+            }
+            PartitionHelper.setPartitionValueForEntity(temp, query.getPartition(), getContext());
+            long partitionId = getPartitionId(temp);
+
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+                startingPoint.put(new PartitionReference(partitionId, reference.recordId), new PartitionReference(partitionId, reference.recordId));
+            }
+        } else {
+            // Hydrate the entire reference set of parent entity before scanning the relationship
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+                startingPoint.put(reference.recordId, reference.recordId);
+            }
+        }
+
         return scan(startingPoint);
     }
 
