@@ -64,7 +64,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         // and is frowned upon
         if (this.query.getPartition() == QueryPartitionMode.ALL)
         {
-            throw new InvalidQueryException(InvalidQueryException.RELATIONSHIP_PARTITION_ALL_EXCEPTION);
+            throw new InvalidQueryException();
         }
 
         // Added the ability to start with a partition
@@ -174,7 +174,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         final Iterator iterator = existingValues.keySet().iterator();
 
         if (this.query.getPartition() == QueryPartitionMode.ALL) {
-            throw new InvalidQueryException(InvalidQueryException.RELATIONSHIP_PARTITION_ALL_EXCEPTION);
+            throw new InvalidQueryException();
         }
 
         relationshipDescriptor = this.descriptor.getRelationships().get(attribute);

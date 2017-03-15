@@ -6,9 +6,9 @@ package com.onyx.exception;
  * This exception indicates an issue with the query detected during runtime.
  */
 public class InvalidQueryException extends EntityException {
-    public static final String RELATIONSHIP_PARTITION_ALL_EXCEPTION = "Invalid Query Predicates.  When applying relationship query predicates you cannot specify QueryPartitionMode.ALL";
+    private static final String RELATIONSHIP_PARTITION_ALL_EXCEPTION = "Invalid Query Predicates.  When applying relationship query predicates you cannot specify QueryPartitionMode.ALL";
 
-    public InvalidQueryException(String message) {
-        super(message);
+    public InvalidQueryException() {
+        super(RELATIONSHIP_PARTITION_ALL_EXCEPTION);
     }
 }
