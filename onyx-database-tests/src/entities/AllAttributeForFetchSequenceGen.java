@@ -16,6 +16,10 @@ public class AllAttributeForFetchSequenceGen extends AbstractEntity implements I
     @Attribute(size = 130)
     public Long id;
 
+    @Index
+    @Attribute
+    public int indexVal;
+
     @Attribute
     public Long longValue;
     @Attribute

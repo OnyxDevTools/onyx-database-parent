@@ -1,6 +1,6 @@
-package memory.relationship;
+package embedded.relationship;
 
-import category.EmbeddedDatabaseTests;
+import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InvalidQueryException;
 import com.onyx.persistence.query.Query;
@@ -21,18 +21,15 @@ import java.util.List;
 /**
  * Created by tosborn1 on 3/13/17.
  */
-@Category({EmbeddedDatabaseTests.class})
-public class RelationshipSelectTest extends BaseTest
-{
+@Category({InMemoryDatabaseTests.class})
+public class RelationshipSelectTest extends BaseTest {
     @Before
-    public void before() throws EntityException
-    {
+    public void before() throws EntityException {
         initialize();
     }
 
     @After
-    public void after() throws IOException
-    {
+    public void after() throws IOException {
         shutdown();
     }
 
@@ -57,10 +54,8 @@ public class RelationshipSelectTest extends BaseTest
 
     @Test(expected = InvalidQueryException.class)
     @SuppressWarnings("unchecked")
-    public void testInsert() throws EntityException
-    {
-        for(int i = 0; i < 50; i++)
-        {
+    public void testInsert() throws EntityException {
+        for (int i = 0; i < 50; i++) {
             Person person = new Person();
             person.firstName = "Cristian";
             person.lastName = "Vogel" + i;

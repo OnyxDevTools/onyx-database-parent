@@ -1,27 +1,30 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
+import com.onyx.exception.InvalidConstructorException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
+import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -134,6 +137,26 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
             if (wrapper.exception != null) {
                 throw wrapper.exception;
             }
+        }
+
+        // Since 1.2.3 Added a fix for querying upon a relationship partition that is not ALL
+        else if (query.getPartition() != null) {
+            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
+
+            final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
+            DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+
+            // Get the partition ID
+            IManagedEntity temp;
+            try {
+                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getClazz());
+            } catch (IllegalAccessException | InstantiationException e) {
+                throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
+            }
+            PartitionHelper.setPartitionValueForEntity(temp, query.getPartition(), getContext());
+
+            Map partitionResults = scanPartition(recs, getPartitionId(temp));
+            results.putAll(partitionResults);
         } else {
             return super.scan();
         }

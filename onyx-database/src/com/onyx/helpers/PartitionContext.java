@@ -1,9 +1,7 @@
 package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
@@ -11,7 +9,9 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.RecordController;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 /**
  * Created by timothy.osborn on 3/19/15.
@@ -169,7 +169,13 @@ public class PartitionContext
                             return defaultDescriptor;
                         }
 
-                        return getContext().getDescriptorForEntity(defaultDescriptor.getClazz(), partitionEntry.getValue());
+                        // since 1.2.3 This has been fixed because previously we could not depend on the defaultDescriptor
+                        // as being identified as the class we are trying to get the parition entry for
+                        try {
+                            return getContext().getDescriptorForEntity(Class.forName(partitionEntry.getPartition().getEntity().getName()), partitionEntry.getValue());
+                        } catch (ClassNotFoundException ignore) {
+                            // This is ignored because if you get this far without having a defined entity that should never happen
+                        }
                     }
                     catch (EntityException e)
                     {

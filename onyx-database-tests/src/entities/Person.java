@@ -9,9 +9,16 @@ import com.onyx.persistence.annotations.*;
 @Entity
 public class Person extends ManagedEntity {
 
+    public Person() {
+
+    }
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
     public Long id;
+
+    @Partition
+    @Attribute
+    public String partitionVal = "ASDF";
 
     @Attribute(nullable = false)
     public String firstName;

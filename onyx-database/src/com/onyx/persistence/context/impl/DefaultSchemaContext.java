@@ -492,6 +492,7 @@ public class DefaultSchemaContext implements SchemaContext {
             try {
                 MapBuilder temporaryDiskMap = temporaryDiskMapQueue.remove();
                 temporaryDiskMap.close();
+                temporaryDiskMap.delete();
             } catch (Exception ignore) {
                 break;
             }

@@ -45,6 +45,7 @@ public class IdentifierListTest extends BaseTest {
         entity.longValue = 323l;
         entity.intValue = 3;
         entity.intPrimitive = 3;
+        entity.id = 1L;
         save(entity);
         find(entity);
 
@@ -59,6 +60,7 @@ public class IdentifierListTest extends BaseTest {
         entity.longValue = 322l;
         entity.intValue = 2;
         entity.intPrimitive = 4;
+        entity.id = 2L;
         save(entity);
         find(entity);
 
@@ -73,6 +75,7 @@ public class IdentifierListTest extends BaseTest {
         entity.longValue = 322l;
         entity.intValue = 2;
         entity.intPrimitive = 4;
+        entity.id = 3L;
         save(entity);
         find(entity);
 
@@ -87,6 +90,7 @@ public class IdentifierListTest extends BaseTest {
         entity.longValue = 321l;
         entity.intValue = 5;
         entity.intPrimitive = 6;
+        entity.id = 4L;
         save(entity);
         find(entity);
 
@@ -101,14 +105,17 @@ public class IdentifierListTest extends BaseTest {
         entity.longValue = 322l;
         entity.intValue = 6;
         entity.intPrimitive = 3;
+        entity.id = 5L;
         save(entity);
         find(entity);
 
         entity = new AllAttributeForFetchSequenceGen();
+        entity.id = 6L;
         save(entity);
         find(entity);
 
         entity = new AllAttributeForFetchSequenceGen();
+        entity.id = 7L;
         save(entity);
         find(entity);
     }
@@ -138,5 +145,26 @@ public class IdentifierListTest extends BaseTest {
         QueryCriteria criteriaList2 = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN_EQUAL, 4);
         List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList.and(criteriaList2));
         Assert.assertEquals(3, results.size());
+    }
+
+    @Test
+    public void testIdentifierGreaterThan() throws EntityException, InstantiationException, IllegalAccessException {
+        QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5);
+        List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList);
+        Assert.assertEquals(2, results.size());
+    }
+
+    @Test
+    public void testIdentifierLessThanNoResults() throws EntityException, InstantiationException, IllegalAccessException {
+        QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 1);
+        List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList);
+        Assert.assertEquals(0, results.size());
+    }
+
+    @Test
+    public void testIdentifierGreaterThanNoResults() throws EntityException, InstantiationException, IllegalAccessException {
+        QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 7);
+        List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList);
+        Assert.assertEquals(0, results.size());
     }
 }
