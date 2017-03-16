@@ -52,13 +52,12 @@ public class Serializers {
      * @since 1.3.0 Added cache.  While profiling this was expensive to do a Class.forName
      */
     Class getSerializerClass(short id) {
-        return mapCache.compute(id, (aShort, s) -> {
-            if (s == null)
-                try {
-                    return Class.forName(mapById.get(id));
-                } catch (ClassNotFoundException ignore) {
-                }
-            return s;
+        return mapCache.computeIfAbsent(id, aShort -> {
+            try {
+                return Class.forName(mapById.get(id));
+            } catch (ClassNotFoundException ignore) {
+            }
+            return null;
         });
     }
 

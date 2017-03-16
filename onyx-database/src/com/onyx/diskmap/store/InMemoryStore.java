@@ -57,10 +57,7 @@ public class InMemoryStore extends MemoryMappedStore implements Store {
             index = (int) (position / SLICE_SIZE);
         }
 
-        return slices.compute(index, (integer, fileSlice) -> {
-            if(fileSlice != null)
-                return fileSlice;
-
+        return slices.computeIfAbsent(index, integer -> {
             ByteBuffer buffer = BufferStream.allocate(SLICE_SIZE);
             return new FileSlice(buffer);
         });

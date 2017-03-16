@@ -55,25 +55,47 @@ public class CompareUtil
 
         Method method = null;
 
+        Class objectClass = object.getClass();
+        if(clazz == int.class && objectClass == Integer.class)
+            return object;
+        else if(clazz == long.class && objectClass == Long.class)
+            return object;
+        else if(clazz == double.class && objectClass == Double.class)
+            return object;
+        else if(clazz == float.class && objectClass == Float.class)
+            return object;
+        else if(clazz == boolean.class && objectClass == Boolean.class)
+            return object;
+        else if(clazz == char.class && objectClass == Character.class)
+            return object;
+        else if(clazz == byte.class && objectClass == Byte.class)
+            return object;
+        else if(clazz == short.class && objectClass == Short.class)
+            return object;
+        else if(clazz == int.class && objectClass == Long.class)
+            return ((Long)object).intValue();
+        else if(clazz == long.class && objectClass == Integer.class)
+            return ((Integer)object).longValue();
+
         try {
             if (clazz == Integer.class ||  clazz == int.class)
-                method = object.getClass().getMethod("intValue");
+                method = objectClass.getMethod("intValue");
             else if (clazz == Long.class ||  clazz == long.class)
-                method = object.getClass().getMethod("longValue");
+                method = objectClass.getMethod("longValue");
             else if (clazz == Short.class ||  clazz == short.class)
-                method = object.getClass().getMethod("shortValue");
+                method = objectClass.getMethod("shortValue");
             else if (clazz == Byte.class ||  clazz == byte.class)
-                method = object.getClass().getMethod("byteValue");
+                method = objectClass.getMethod("byteValue");
             else if (clazz == Boolean.class || clazz == boolean.class)
-                method = object.getClass().getMethod("booleanValue");
+                method = objectClass.getMethod("booleanValue");
             else if (clazz == Float.class  || clazz == int.class)
-                method = object.getClass().getMethod("floatValue");
+                method = objectClass.getMethod("floatValue");
             else if (clazz == Double.class || clazz == double.class)
-                method = object.getClass().getMethod("doubleValue");
+                method = objectClass.getMethod("doubleValue");
             else if (clazz == Character.class || clazz == char.class)
-                method = object.getClass().getMethod("toChar");
+                method = objectClass.getMethod("toChar");
             else if (clazz == String.class)
-                method = object.getClass().getMethod("toString");
+                method = objectClass.getMethod("toString");
 
             if (method == null)
                 return object;
@@ -102,10 +124,16 @@ public class CompareUtil
         // If the objects do not match, cast it to the correct object
         if(object2 != null
                 && object != null
-                && object2.getClass() != object.getClass())
+                && !object2.getClass().isAssignableFrom(object.getClass()))
             object2 = castObject(object.getClass(), object2);
 
-        if(object instanceof Comparable
+        // This was added because string.equals is much more efficient than using comparable.
+        // Comparable iterated through the entire character array whereas .equals does not.
+        if(object instanceof String &&
+                object2 instanceof String)
+            return object.equals(object2);
+
+        else if(object instanceof Comparable
                 && object2 instanceof Comparable)
             return ((Comparable) object).compareTo(object2) == 0;
 
@@ -169,7 +197,7 @@ public class CompareUtil
         // If the objects do not match, cast it to the correct object
         if(object2 != null
                 && object != null
-                && object2.getClass() != object.getClass())
+                && !object2.getClass().isAssignableFrom(object.getClass()))
             object2 = castObject(object.getClass(), object2);
 
         if(operator == QueryCriteriaOperator.NOT_NULL)
@@ -275,7 +303,7 @@ public class CompareUtil
         }
 
         // Not in, the first parameter must be a list of items if using the list key
-        else if(operator == QueryCriteriaOperator.STARTS_WITH && object instanceof List)
+        else if(operator == QueryCriteriaOperator.STARTS_WITH)
         {
             List values = (List)object;
             boolean startsWith = false;
@@ -304,7 +332,7 @@ public class CompareUtil
             return startsWith;
         }
 
-        else if(operator == QueryCriteriaOperator.NOT_STARTS_WITH && object instanceof List)
+        else if(operator == QueryCriteriaOperator.NOT_STARTS_WITH)
         {
             List values = (List)object;
             boolean startsWith = false;
@@ -334,7 +362,8 @@ public class CompareUtil
         }
 
         // Matches, Use a regex, only valid with strings
-        else if(operator == QueryCriteriaOperator.MATCHES && object instanceof String && (object2 instanceof String || object2 == null))
+        else if(operator == QueryCriteriaOperator.MATCHES
+                && object instanceof String && (object2 instanceof String || object2 == null))
         {
             if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {

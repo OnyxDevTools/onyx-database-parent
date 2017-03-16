@@ -78,13 +78,10 @@ public class BufferStream {
                     objectIntegerMap = new CompatHashMap<>();
                 }
 
-                objectIntegerMap.compute(reference, (object, integer) -> {
-                    if (integer == null) {
-                        referenceCount++;
-                        referencesByIndex.put(referenceCount, reference);
-                        integer = referenceCount;
-                    }
-                    return integer;
+                objectIntegerMap.computeIfAbsent(reference, (integer) -> {
+                    referenceCount++;
+                    referencesByIndex.put(referenceCount, reference);
+                    return referenceCount;
                 });
 
                 return objectIntegerMap;
@@ -1176,7 +1173,7 @@ public class BufferStream {
                     return reclaimedBuffer.getBuffer();
                 }
             }
-            final ByteBuffer buffer = ByteBuffer.allocateDirect(count);
+            final ByteBuffer buffer = ByteBuffer.allocate(count);
             buffer.order(ByteOrder.BIG_ENDIAN);
             return buffer;
         }
@@ -1210,14 +1207,6 @@ public class BufferStream {
                 }
             }
         }
-    }
-
-    /**
-     * Recycle a byte buffer to be reused
-     */
-    @SuppressWarnings("unused")
-    public void recycle() {
-        recycle(expandableByteBuffer.buffer);
     }
 
     /**

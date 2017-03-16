@@ -9,7 +9,7 @@ import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
@@ -27,11 +27,11 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
     private static AtomicInteger teamIdCounter = new AtomicInteger(0);
     private static AtomicInteger statIdCounter = new AtomicInteger(0);
 
-    final private BlockingQueue<Integer> cachedPlayerIds = new LinkedBlockingQueue();
-    final private BlockingQueue<String> cachedTeamIds = new LinkedBlockingQueue();
-    final private BlockingQueue<Long> cachedStatIds = new LinkedBlockingQueue();
-    final private BlockingQueue<Integer> cachedStatRushingYards = new LinkedBlockingQueue();
-    final private BlockingQueue<String> cachedPlayerFirstNames = new LinkedBlockingQueue();
+    final private BlockingQueue<Integer> cachedPlayerIds = new ArrayBlockingQueue(5000);
+    final private BlockingQueue<String> cachedTeamIds = new ArrayBlockingQueue(5000);
+    final private BlockingQueue<Long> cachedStatIds = new ArrayBlockingQueue(5000);
+    final private BlockingQueue<Integer> cachedStatRushingYards = new ArrayBlockingQueue(5000);
+    final private BlockingQueue<String> cachedPlayerFirstNames = new ArrayBlockingQueue(5000);
 
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -87,7 +87,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
 
             Team team = new Team();
             team.setTeamName(generateRandomString() + teamIdCounter.addAndGet(1));
-            cachedTeamIds.add(team.getTeamName());
+            cachedTeamIds.offer(team.getTeamName());
 
             Player player = new Player(playerIdCounter.addAndGet(1));
             player.setPosition(generateRandomString());
@@ -97,7 +97,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
             player.setTeam(team);
 
             if (cachedPlayerFirstNames.size() < 40) {
-                cachedPlayerFirstNames.add(player.getFirstName());
+                cachedPlayerFirstNames.offer(player.getFirstName());
             }
             team.setPlayers(Collections.singletonList(player));
             providerPersistenceManager.update(team);
@@ -123,16 +123,16 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
             stats2.setPlayer(player);
 
             if (cachedStatRushingYards.size() < 40) {
-                cachedStatRushingYards.add(stats.getRushingYards());
-                cachedStatRushingYards.add(stats2.getRushingYards());
+                cachedStatRushingYards.offer(stats.getRushingYards());
+                cachedStatRushingYards.offer(stats2.getRushingYards());
             }
 
             providerPersistenceManager.update(stats);
             providerPersistenceManager.update(stats2);
 
-            cachedPlayerIds.add(player.getPlayerId());
-            cachedStatIds.add(stats.getStatId());
-            cachedStatIds.add(stats2.getStatId());
+            cachedPlayerIds.offer(player.getPlayerId());
+            cachedStatIds.offer(stats.getStatId());
+            cachedStatIds.offer(stats2.getStatId());
 
             completionLatch.countDown();
         };
@@ -163,7 +163,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
             }
             Player player = (Player) providerPersistenceManager.find(Player.class, playerId);
 
-            cachedPlayerIds.add(playerId);
+            cachedPlayerIds.offer(playerId);
             completionLatch.countDown();
         };
     }
@@ -176,7 +176,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
                 return;
             }
             Stats stat = (Stats) providerPersistenceManager.find(Stats.class, statId);
-            cachedStatIds.add(statId);
+            cachedStatIds.offer(statId);
 
             completionLatch.countDown();
         };
@@ -204,7 +204,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
 
             providerPersistenceManager.update(stats);
 
-            cachedStatIds.add(statId);
+            cachedStatIds.offer(statId);
 
             completionLatch.countDown();
         };
@@ -227,7 +227,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
 
             providerPersistenceManager.update(player);
 
-            cachedPlayerIds.add(playerId);
+            cachedPlayerIds.offer(playerId);
             completionLatch.countDown();
         };
     }

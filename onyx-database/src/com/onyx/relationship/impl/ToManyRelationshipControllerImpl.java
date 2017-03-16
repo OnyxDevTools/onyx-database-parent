@@ -87,8 +87,9 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         Object reltnIdentifier;
 
         if (relationshipObjects != null) {
-            relationshipObjectCopy = new HashSet(existingRelationshipObjects);
-
+            synchronized (existingRelationshipObjects) {
+                relationshipObjectCopy = new HashSet(existingRelationshipObjects);
+            }
 
             int size = relationshipObjects.size();
             for(int i = 0; i < size; i++) {

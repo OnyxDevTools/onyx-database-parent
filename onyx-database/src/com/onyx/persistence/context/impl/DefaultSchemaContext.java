@@ -44,10 +44,7 @@ import java.math.BigInteger;
 import java.nio.channels.FileChannel;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -816,13 +813,8 @@ public class DefaultSchemaContext implements SchemaContext {
      * @throws EntityException Default Exception
      */
     public synchronized SystemEntity getSystemEntityByName(final String name) throws EntityException {
-        return defaultSystemEntities.compute(name,
-                (s, systemEntity) ->
-                {
-
-                    if (systemEntity != null) {
-                        return systemEntity;
-                    }
+        return defaultSystemEntities.computeIfAbsent(name,
+                (s) -> {
 
                     final Query query = new Query(SystemEntity.class, new QueryCriteria("name", QueryCriteriaOperator.EQUAL, s));
                     query.setMaxResults(1);
@@ -858,14 +850,8 @@ public class DefaultSchemaContext implements SchemaContext {
      * @return System Entity matching ID
      */
     public synchronized SystemEntity getSystemEntityById(final int systemEntityId) {
-        return systemEntityByIDMap.compute(systemEntityId,
-                (id, systemEntity) ->
-                {
-
-                    if (systemEntity != null) {
-                        return systemEntity;
-                    }
-
+        return systemEntityByIDMap.computeIfAbsent(systemEntityId,
+                (id) -> {
                     try {
                         final SystemEntity entity = (SystemEntity) systemPersistenceManager.findById(SystemEntity.class, id);
 
@@ -1113,7 +1099,7 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
-    final private LinkedBlockingQueue<MapBuilder> temporaryDiskMapQueue = new LinkedBlockingQueue();
+    final private ArrayBlockingQueue<MapBuilder> temporaryDiskMapQueue = new ArrayBlockingQueue<>(32, false);
 
     /**
      * Create Temporary Map Builder.
@@ -1139,10 +1125,7 @@ public class DefaultSchemaContext implements SchemaContext {
      */
     public void releaseMapBuilder(MapBuilder builder) {
         builder.reset();
-        try {
-            temporaryDiskMapQueue.put(builder);
-        } catch (InterruptedException ignore) {
-        }
+        temporaryDiskMapQueue.offer(builder);
     }
 
     /**

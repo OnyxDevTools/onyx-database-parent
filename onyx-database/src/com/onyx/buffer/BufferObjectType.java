@@ -68,16 +68,6 @@ enum BufferObjectType {
         this.type = type;
     }
 
-    /**
-     * Indicates whether the serializer type is an array
-     * @return Whether the enum indicates an array
-     */
-    @SuppressWarnings("unused")
-    public boolean isArray()
-    {
-        return (this.ordinal() >= BufferObjectType.BYTE_ARRAY.ordinal()
-                && this.ordinal() <= BufferObjectType.OBJECT_ARRAY.ordinal());
-    }
 
     /**
      * Get Object type for the class

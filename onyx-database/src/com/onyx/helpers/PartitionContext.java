@@ -58,18 +58,15 @@ public class PartitionContext
 
         final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-        MapBuilder retVal = cachedPartitionFiles.compute(partitionId, (aLong, db) -> {
-            if(db == null)
+        MapBuilder retVal = cachedPartitionFiles.computeIfAbsent(partitionId, (aLong) -> {
+            try
             {
-                try
-                {
-                    return getContext().getPartitionDataFile(defaultDescriptor, partitionId);
-                } catch (EntityException e)
-                {
-                    exceptionWrapper.exception = e;
-                }
+                return getContext().getPartitionDataFile(defaultDescriptor, partitionId);
+            } catch (EntityException e)
+            {
+                exceptionWrapper.exception = e;
             }
-            return db;
+            return null;
         });
 
         if(exceptionWrapper.exception != null)
@@ -122,19 +119,16 @@ public class PartitionContext
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            EntityDescriptor retVal = cachedDescriptorsPerEntity.compute(new PartitionKey(entity), (partitionKey, descriptor) -> {
-                if(descriptor == null)
+            EntityDescriptor retVal = cachedDescriptorsPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
+                try
                 {
-                    try
-                    {
-                        return getContext().getDescriptorForEntity(entity);
-                    }
-                    catch (EntityException e)
-                    {
-                        exceptionWrapper.exception = e;
-                    }
+                    return getContext().getDescriptorForEntity(entity);
                 }
-                return descriptor;
+                catch (EntityException e)
+                {
+                    exceptionWrapper.exception = e;
+                }
+                return null;
             });
 
             if(exceptionWrapper.exception != null)
@@ -158,31 +152,28 @@ public class PartitionContext
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            EntityDescriptor retVal = cachedDescriptorsPerPartition.compute(partitionId, (partitionKey, descriptor) -> {
-                if(descriptor == null)
+            EntityDescriptor retVal = cachedDescriptorsPerPartition.computeIfAbsent(partitionId, (partitionKey) -> {
+                try
                 {
-                    try
+                    SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(partitionId);
+                    if(partitionEntry == null)
                     {
-                        SystemPartitionEntry partitionEntry = getContext().getPartitionWithId(partitionId);
-                        if(partitionEntry == null)
-                        {
-                            return defaultDescriptor;
-                        }
-
-                        // since 1.2.3 This has been fixed because previously we could not depend on the defaultDescriptor
-                        // as being identified as the class we are trying to get the parition entry for
-                        try {
-                            return getContext().getDescriptorForEntity(Class.forName(partitionEntry.getPartition().getEntity().getName()), partitionEntry.getValue());
-                        } catch (ClassNotFoundException ignore) {
-                            // This is ignored because if you get this far without having a defined entity that should never happen
-                        }
+                        return defaultDescriptor;
                     }
-                    catch (EntityException e)
-                    {
-                        exceptionWrapper.exception = e;
+
+                    // since 1.2.3 This has been fixed because previously we could not depend on the defaultDescriptor
+                    // as being identified as the class we are trying to get the parition entry for
+                    try {
+                        return getContext().getDescriptorForEntity(Class.forName(partitionEntry.getPartition().getEntity().getName()), partitionEntry.getValue());
+                    } catch (ClassNotFoundException ignore) {
+                        // This is ignored because if you get this far without having a defined entity that should never happen
                     }
                 }
-                return descriptor;
+                catch (EntityException e)
+                {
+                    exceptionWrapper.exception = e;
+                }
+                return null;
             });
 
             if(exceptionWrapper.exception != null)
@@ -204,19 +195,16 @@ public class PartitionContext
 
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            final RecordController retVal = cachedControllersPerEntity.compute(new PartitionKey(entity), (partitionKey, controller) -> {
-                if(controller == null)
+            final RecordController retVal = cachedControllersPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
+                try
                 {
-                    try
-                    {
-                        return getContext().getRecordController(getDescriptorForEntity(entity));
-                    }
-                    catch (EntityException e)
-                    {
-                        exceptionWrapper.exception = e;
-                    }
+                    return getContext().getRecordController(getDescriptorForEntity(entity));
                 }
-                return controller;
+                catch (EntityException e)
+                {
+                    exceptionWrapper.exception = e;
+                }
+                return null;
             });
 
             if(exceptionWrapper.exception != null)
@@ -238,20 +226,17 @@ public class PartitionContext
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            RecordController retVal = cachedControllersPerPartition.compute(partitionId, (partitionKey, controller) -> {
-                if(controller == null)
+            RecordController retVal = cachedControllersPerPartition.computeIfAbsent(partitionId, (partitionKey) -> {
+                try
                 {
-                    try
-                    {
-                        EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
-                        return getContext().getRecordController(inverseDescriptor);
-                    }
-                    catch (EntityException e)
-                    {
-                        exceptionWrapper.exception = e;
-                    }
+                    EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
+                    return getContext().getRecordController(inverseDescriptor);
                 }
-                return controller;
+                catch (EntityException e)
+                {
+                    exceptionWrapper.exception = e;
+                }
+                return null;
             });
 
             if(exceptionWrapper.exception != null)
@@ -273,11 +258,7 @@ public class PartitionContext
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            MapBuilder dataFile = cachedDataFilesPerEntity.compute(new PartitionKey(entity), (partitionKey, db) -> {
-                if(db != null)
-                {
-                    return db;
-                }
+            MapBuilder dataFile = cachedDataFilesPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
                 {
                     return getContext().getDataFile(getDescriptorForEntity(entity));
@@ -311,11 +292,7 @@ public class PartitionContext
         {
             final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
 
-            Long partitionId = cachedPartitionIds.compute(new PartitionKey(entity), (partitionKey, id) -> {
-                if(id != null)
-                {
-                    return id;
-                }
+            Long partitionId = cachedPartitionIds.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
                 {
                     Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, getContext());

@@ -253,10 +253,7 @@ public class MemoryMappedStore extends FileChannelStore implements Store {
 
         final int finalIndex = index;
 
-        return slices.compute(index, (integer, fileSlice) -> {
-            if (fileSlice != null)
-                return fileSlice;
-
+        return slices.computeIfAbsent(index, integer -> {
             long offset = ((long) SLICE_SIZE * (long) finalIndex);
             ByteBuffer buffer = null;
             try {

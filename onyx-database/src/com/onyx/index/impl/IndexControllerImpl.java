@@ -96,7 +96,7 @@ public class IndexControllerImpl implements IndexController {
                 indexes = null;
                 return header;
             });
-            indexValues.compute(reference, (aLong, o) -> indexValue);
+            indexValues.put(reference, indexValue);
         }
     }
 

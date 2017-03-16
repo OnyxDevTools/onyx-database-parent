@@ -42,31 +42,29 @@ public class ReflectionUtil {
         final Class clazz = object.getClass();
         final boolean isManagedEntity = object.getClass().isAnnotationPresent(Entity.class);
 
-        return classFields.compute(clazz, (aClass, fields) -> {
-            if (fields == null) {
-                fields = new ArrayList<>();
+        return classFields.computeIfAbsent(clazz, (aClass) -> {
+            List<OffsetField> fields = new ArrayList<>();
 
-                while (aClass != Object.class
-                        && aClass != Exception.class
-                        && aClass != Throwable.class) {
-                    for (Field f : aClass.getDeclaredFields()) {
-                        if ((f.getModifiers() & Modifier.STATIC) == 0
-                                && !Modifier.isTransient(f.getModifiers())
-                                && f.getType() != Exception.class
-                                && f.getType() != Throwable.class) {
-                            if (!isManagedEntity) {
-                                fields.add(new OffsetField(f.getName(), f));
-                            } else if (f.isAnnotationPresent(Attribute.class)
-                                    || f.isAnnotationPresent(Relationship.class)) {
-                                fields.add(new OffsetField(f.getName(), f));
-                            }
+            while (aClass != Object.class
+                    && aClass != Exception.class
+                    && aClass != Throwable.class) {
+                for (Field f : aClass.getDeclaredFields()) {
+                    if ((f.getModifiers() & Modifier.STATIC) == 0
+                            && !Modifier.isTransient(f.getModifiers())
+                            && f.getType() != Exception.class
+                            && f.getType() != Throwable.class) {
+                        if (!isManagedEntity) {
+                            fields.add(new OffsetField(f.getName(), f));
+                        } else if (f.isAnnotationPresent(Attribute.class)
+                                || f.isAnnotationPresent(Relationship.class)) {
+                            fields.add(new OffsetField(f.getName(), f));
                         }
                     }
-                    aClass = aClass.getSuperclass();
                 }
-
-                Collections.sort(fields, (o1, o2) -> o1.name.compareTo(o2.name));
+                aClass = aClass.getSuperclass();
             }
+
+            Collections.sort(fields, (o1, o2) -> o1.name.compareTo(o2.name));
             return fields;
         });
     }
@@ -81,7 +79,6 @@ public class ReflectionUtil {
      */
     public static OffsetField getOffsetField(Class clazz, String attribute) throws AttributeMissingException {
         Field field = getField(clazz, attribute);
-
         return getOffsetField(field);
     }
 
@@ -374,7 +371,7 @@ public class ReflectionUtil {
     @SuppressWarnings({"ConstantConditions", "RedundantThrows"})
     public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException {
 
-        if(child != null && child.getClass() != field.type)
+        if(child != null && !field.type.isAssignableFrom(child.getClass()))
             child = CompareUtil.castObject(field.type, child);
 
         try {

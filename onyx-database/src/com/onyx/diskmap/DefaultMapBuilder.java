@@ -175,11 +175,7 @@ public class DefaultMapBuilder implements MapBuilder {
      */
     @Override
     public CompatMap getHashMap(Header header, int loadFactor) {
-        return mapsByHeader.compute(header, (header1, map) -> {
-            if (map != null)
-                return map;
-            return newScalableMap(storage, header, loadFactor);
-        });
+        return mapsByHeader.computeIfAbsent(header, header1 -> newScalableMap(storage, header1, loadFactor));
     }
 
     /**
@@ -194,10 +190,7 @@ public class DefaultMapBuilder implements MapBuilder {
     @SuppressWarnings("WeakerAccess")
     protected CompatMap getMapWithType(String name, MapType type, int loadFactor) {
 
-        return maps.compute(name, (s, map) -> {
-            if (map != null)
-                return map;
-
+        return maps.computeIfAbsent(name, s -> {
             Header header = null;
             Long headerReference = internalMaps.get(name);
             if (headerReference != null)

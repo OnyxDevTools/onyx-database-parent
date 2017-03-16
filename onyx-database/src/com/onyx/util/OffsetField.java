@@ -31,15 +31,4 @@ public class OffsetField {
     public final String name;
     public final Field field;
 
-    /**
-     * Getter to determine whether the field is an array type
-     *
-     * @return Whether the field is an array
-     */
-    @SuppressWarnings("unused")
-    public boolean isArray() {
-        return type.isArray();
-    }
-
-
 }

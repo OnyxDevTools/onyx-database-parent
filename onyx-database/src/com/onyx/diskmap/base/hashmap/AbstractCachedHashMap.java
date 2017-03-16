@@ -75,11 +75,7 @@ abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
      */
     protected long getReference(int hash)
     {
-        return cache.compute(hash, (integer, aLong) -> {
-            if(aLong == null)
-                aLong = AbstractCachedHashMap.super.getReference(hash);
-            return aLong;
-        });
+       return cache.computeIfAbsent(hash, integer -> AbstractCachedHashMap.super.getReference(hash));
     }
 
     /**
@@ -105,11 +101,7 @@ abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
      * @since 1.2.0
      */
     protected int getMapIdentifier(int index) {
-        return mapCache.compute(index, (integer, integer2) -> {
-            if (integer2 != null)
-                return integer2;
-            return AbstractCachedHashMap.super.getMapIdentifier(index);
-        });
+        return mapCache.computeIfAbsent(index, integer -> AbstractCachedHashMap.super.getMapIdentifier(index));
     }
 
     /**

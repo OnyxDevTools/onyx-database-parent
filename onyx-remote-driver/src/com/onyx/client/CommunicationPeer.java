@@ -139,7 +139,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             socketChannel = SocketChannel.open();
             socketChannel.socket().setKeepAlive(true);
             socketChannel.socket().setTcpNoDelay(true);
-            socketChannel.socket().setReuseAddress(false);
+            socketChannel.socket().setReuseAddress(true);
         } catch (IOException e) {
             throw new ConnectionFailedException();
         }
