@@ -850,8 +850,18 @@ public class DefaultSchemaContext implements SchemaContext {
      * @return System Entity matching ID
      */
     public synchronized SystemEntity getSystemEntityById(final int systemEntityId) {
-        return systemEntityByIDMap.computeIfAbsent(systemEntityId,
-                (id) -> {
+        return systemEntityByIDMap.compute(systemEntityId,
+                (id, systemEntity) ->
+                {
+
+                    if (systemEntity != null) {
+                        Collections.sort(systemEntity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(systemEntity.getRelationships(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+                        Collections.sort(systemEntity.getIndexes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));
+
+                        return systemEntity;
+                    }
+
                     try {
                         final SystemEntity entity = (SystemEntity) systemPersistenceManager.findById(SystemEntity.class, id);
 
