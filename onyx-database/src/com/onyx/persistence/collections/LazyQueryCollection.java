@@ -4,8 +4,6 @@ package com.onyx.persistence.collections;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
@@ -14,10 +12,11 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * LazyQueryCollection is used to return query results that are lazily instantiated.
@@ -42,7 +41,7 @@ import java.util.Map;
  *
  */
 @SuppressWarnings("unchecked")
-public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, BufferStreamable {
+public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, BufferStreamable {
 
     @SuppressWarnings("WeakerAccess")
     protected List<Object> identifiers = null;
@@ -326,5 +325,58 @@ public class LazyQueryCollection<E> extends ArrayList<E> implements List<E>, Buf
         bufferStream.putCollection(this.getIdentifiers());
         bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
         bufferStream.putString(contextId);
+    }
+
+    /**
+     * Returns an iterator over the elements in this list in proper sequence.
+     * <p>
+     * <p>The returned iterator is <a href="#fail-fast"><i>fail-fast</i></a>.
+     *
+     * @return an iterator over the elements in this list in proper sequence
+     */
+    public Iterator<E> iterator() {
+        return new Iterator<E>() {
+            int i = 0;
+
+            @Override
+            public boolean hasNext() {
+                return i < size();
+            }
+
+            @Override
+            public E next() {
+                try {
+                    return get(i);
+                } finally {
+                    i++;
+                }
+            }
+        };
+    }
+
+    /**
+     * For Each This is overridden to utilize the iterator
+     *
+     * @param action consumer to apply each iteration
+     */
+    @SuppressWarnings("WhileLoopReplaceableByForEach")
+    @Override
+    public void forEach(Consumer<? super E> action) {
+        Iterator<E> iterator = iterator();
+        while(iterator.hasNext())
+        {
+            action.accept(iterator.next());
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This implementation returns {@code listIterator(0)}.
+     *
+     * @see #listIterator(int)
+     */
+    public ListIterator<E> listIterator() {
+        throw new RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator");
     }
 }
