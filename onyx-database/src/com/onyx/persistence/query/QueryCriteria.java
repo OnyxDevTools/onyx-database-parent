@@ -1,8 +1,8 @@
 package com.onyx.persistence.query;
 
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
+import com.onyx.persistence.ManagedEntity;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -59,6 +59,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public static Date NULL_DATE_VALUE = new Date(Long.MIN_VALUE);
     @SuppressWarnings("unused")
     public static String NULL_STRING_VALUE = null;
+
+    private boolean not = false;
 
     /**
      * Default Constructor
@@ -127,11 +129,11 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     @SuppressWarnings("unused")
     private List<ManagedEntity> entityValueList;
 
+    @SuppressWarnings("unused")
+    private List<QueryCriteria> subCriteria = new ArrayList();
 
-    @SuppressWarnings("unused")
-    private List<QueryCriteria> andCriteria = new ArrayList();
-    @SuppressWarnings("unused")
-    private List<QueryCriteria> orCriteria = new ArrayList();
+    private boolean isAnd = false;
+    private boolean isOr = false;
 
     /**
      * Get Or Sub Criteria
@@ -141,7 +143,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     @SuppressWarnings("unused")
     public List<QueryCriteria> getOrCriteria()
     {
-        return orCriteria;
+        return subCriteria;
     }
 
     /**
@@ -150,9 +152,9 @@ public class QueryCriteria implements ObjectSerializable, Serializable
      * @return And Sub Criteria
      */
     @SuppressWarnings("unused")
-    public List<QueryCriteria> getAndCriteria()
+    public List<QueryCriteria> getSubCriteria()
     {
-        return andCriteria;
+        return this.subCriteria;
     }
 
 
@@ -466,7 +468,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Long value)
     {
         final QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -480,7 +483,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     @SuppressWarnings("unused")
     public QueryCriteria and(QueryCriteria andGroup)
     {
-        this.andCriteria.add(andGroup);
+        andGroup.isAnd = true;
+        this.subCriteria.add(andGroup);
         return this;
     }
 
@@ -497,7 +501,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Integer value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -514,7 +519,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Double value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -531,7 +537,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
         criteria.type = QueryCriteriaType.BOOLEAN;
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -549,7 +556,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
         criteria.type = QueryCriteriaType.BOOLEAN;
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -567,7 +575,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, String value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -583,7 +592,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, Date value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -600,7 +610,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria and(String attribute, QueryCriteriaOperator criteriaEnum, List<Object> valueList)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, valueList);
-        andCriteria.add(criteria);
+        criteria.isAnd = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -617,7 +628,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, Long value)
     {
         final QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -631,7 +643,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     @SuppressWarnings("unused")
     public QueryCriteria or(QueryCriteria orGroup)
     {
-        this.orCriteria.add(orGroup);
+        orGroup.isOr = true;
+        this.subCriteria.add(orGroup);
         return this;
     }
 
@@ -648,7 +661,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, Integer value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -665,7 +679,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, Double value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -682,7 +697,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
         criteria.type = QueryCriteriaType.BOOLEAN;
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -699,7 +715,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, String value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
         return this;
     }
 
@@ -715,7 +732,8 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, Date value)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, value);
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
         return this;
 
     }
@@ -733,7 +751,34 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public QueryCriteria or(String attribute, QueryCriteriaOperator criteriaEnum, List<Object> valueList)
     {
         QueryCriteria criteria = new QueryCriteria(attribute, criteriaEnum, valueList);
-        orCriteria.add(criteria);
+        criteria.isOr = true;
+        subCriteria.add(criteria);
+        return this;
+    }
+
+    /**
+     * Indicate you would like the inverse of the QueryCriteria grouping.
+     * <p>
+     * Usage:
+     * <p>
+     * QueryCriteria firstCriteria = new QueryCriteria("age", QueryCriteriaOperator.GREATER_THAN, 18);
+     * QueryCriteria secondCriteria = new QueryCriteria("canDrive", QueryCriteriaOperator.EQUAL, true);
+     * <p>
+     * // first.and(second).not() Criteria
+     * persistenceManager.executeQuery(new Query(Person.class, first.and(second).not());
+     * <p>
+     * <p>
+     * <p>
+     * The equivalent using DSL would be:
+     * <p>
+     * val unqualifiedDrivers = db.query(Driver.Data)
+     * .where [ !(age > 18 && canDrive == true) ]
+     * .list
+     *
+     * @since 1.3.0 Added as enhancement #69
+     */
+    public QueryCriteria not() {
+        this.not = true;
         return this;
     }
 
@@ -1033,15 +1078,13 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     @SuppressWarnings("unused")
-    public void setAndCriteria(List<QueryCriteria> andCriteria)
-    {
-        this.andCriteria = andCriteria;
+    public void setSubCriteria(List<QueryCriteria> andCriteria) {
+        this.subCriteria = andCriteria;
     }
 
     @SuppressWarnings("unused")
-    public void setOrCriteria(List<QueryCriteria> orCriteria)
-    {
-        this.orCriteria = orCriteria;
+    public void setOrCriteria(List<QueryCriteria> orCriteria) {
+        this.subCriteria = orCriteria;
     }
 
     @SuppressWarnings("unused")
@@ -1172,8 +1215,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         buffer.writeObject(integerValueList);
         buffer.writeObject(doubleValueList);
         buffer.writeObject(stringValueList);
-        buffer.writeObject(andCriteria);
-        buffer.writeObject(orCriteria);
+        buffer.writeObject(subCriteria);
 
         buffer.writeObject(enumValue);
         buffer.writeObject(floatValue);
@@ -1186,6 +1228,9 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         buffer.writeObject(byteValueList);
         buffer.writeObject(shortValueList);
         buffer.writeObject(entityValueList);
+        buffer.writeBoolean(not);
+        buffer.writeBoolean(isAnd);
+        buffer.writeBoolean(isOr);
 
     }
 
@@ -1206,8 +1251,7 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         integerValueList = (List<Integer>)buffer.readObject();
         doubleValueList = (List<Double>)buffer.readObject();
         stringValueList =(List<String>) buffer.readObject();
-        andCriteria = (List<QueryCriteria>)buffer.readObject();
-        orCriteria = (List<QueryCriteria>)buffer.readObject();
+        subCriteria = (List<QueryCriteria>) buffer.readObject();
 
         enumValue = (Enum)buffer.readObject();
         floatValue = (Float)buffer.readObject();
@@ -1220,6 +1264,9 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         byteValueList = (List<Byte>)buffer.readObject();
         shortValueList = (List<Short>)buffer.readObject();
         entityValueList = (List<ManagedEntity>)buffer.readObject();
+        not = buffer.readBoolean();
+        isAnd = buffer.readBoolean();
+        isOr = buffer.readBoolean();
     }
 
     @SuppressWarnings("unused")
@@ -1235,4 +1282,33 @@ public class QueryCriteria implements ObjectSerializable, Serializable
 
     }
 
+    /**
+     * Getter for not inverse modifier
+     *
+     * @return Value of modifier
+     * @since 1.3.0
+     */
+    public boolean isNot() {
+        return not;
+    }
+
+    public boolean isAnd() {
+        return isAnd;
+    }
+
+    public boolean isOr() {
+        return isOr;
+    }
+
+    public void setNot(boolean not) {
+        this.not = not;
+    }
+
+    public void setAnd(boolean and) {
+        isAnd = and;
+    }
+
+    public void setOr(boolean or) {
+        isOr = or;
+    }
 }

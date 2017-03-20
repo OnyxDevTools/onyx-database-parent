@@ -506,8 +506,8 @@ public class BufferStreamTest {
         assert findQuery.getEntityType() == query.getEntityType();
         assert findQuery.getCriteria().getIntegerValue().equals(query.getCriteria().getIntegerValue());
         assert findQuery.getCriteria().getType().equals(query.getCriteria().getType());
-        assert findQuery.getCriteria().getAndCriteria().get(0).getAttribute().equals(query.getCriteria().getAndCriteria().get(0).getAttribute());
-        assert findQuery.getCriteria().getAndCriteria().get(0).getStringValue().equals(query.getCriteria().getAndCriteria().get(0).getStringValue());
+        assert findQuery.getCriteria().getSubCriteria().get(0).getAttribute().equals(query.getCriteria().getSubCriteria().get(0).getAttribute());
+        assert findQuery.getCriteria().getSubCriteria().get(0).getStringValue().equals(query.getCriteria().getSubCriteria().get(0).getStringValue());
 
         assert findQuery.getCriteria().getOperator().equals(query.getCriteria().getOperator());
         assert findQuery.getMaxResults() == query.getMaxResults();

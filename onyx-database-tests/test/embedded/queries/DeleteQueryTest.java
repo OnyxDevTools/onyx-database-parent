@@ -51,7 +51,7 @@ public class DeleteQueryTest extends PrePopulatedDatabaseTest
         Query fetchQuery = new Query(AllAttributeForFetch.class, criteria);
         List<AllAttributeForFetch> listResults = manager.executeQuery(fetchQuery);
 
-        Assert.assertTrue(listResults.size() == 3);
+        Assert.assertTrue(listResults.size() == 4);
     }
 
     @Test(expected = NoResultsException.class)

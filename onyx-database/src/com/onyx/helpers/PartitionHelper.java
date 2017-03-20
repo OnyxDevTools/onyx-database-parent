@@ -120,18 +120,9 @@ public class PartitionHelper
             {
                 query.setPartition(criteria.getValue());
                 return true;
-            }
-            else
-            {
-                for(QueryCriteria andCriteria : criteria.getAndCriteria())
-                {
-                    if(setPartitionIdFromCriteria(andCriteria, query, baseDescriptor))
-                        return true;
-                }
-
-                for(QueryCriteria orCriteria : criteria.getOrCriteria())
-                {
-                    if(setPartitionIdFromCriteria(orCriteria, query, baseDescriptor))
+            } else {
+                for (QueryCriteria andCriteria : criteria.getSubCriteria()) {
+                    if (setPartitionIdFromCriteria(andCriteria, query, baseDescriptor))
                         return true;
                 }
             }

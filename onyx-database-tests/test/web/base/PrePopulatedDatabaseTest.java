@@ -1,6 +1,7 @@
 package web.base;
 
-import com.onyx.exception.InitializationException;
+import com.onyx.exception.EntityException;
+import com.onyx.persistence.query.Query;
 import entities.AllAttributeForFetch;
 import entities.AllAttributeForFetchChild;
 import org.junit.After;
@@ -21,9 +22,12 @@ public class PrePopulatedDatabaseTest extends BaseTest {
     }
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws EntityException
     {
         initialize();
+
+        Query query = new Query(AllAttributeForFetch.class);
+        manager.executeDelete(query);
 
         AllAttributeForFetch entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE";

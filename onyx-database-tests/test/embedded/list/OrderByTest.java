@@ -2,11 +2,12 @@ package embedded.list;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import embedded.base.BaseTest;
+import entities.AllAttributeEntity;
 import entities.AllAttributeForFetch;
 import org.junit.After;
 import org.junit.Assert;
@@ -31,9 +32,12 @@ public class OrderByTest extends BaseTest
     }
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws EntityException
     {
         initialize();
+
+        Query deleteQuery = new Query(AllAttributeEntity.class);
+        manager.executeDelete(deleteQuery);
 
         AllAttributeForFetch entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE";

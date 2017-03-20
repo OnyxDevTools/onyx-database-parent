@@ -27,7 +27,7 @@ public class EmptyCriteriaTest extends PrePopulatedDatabaseTest
     public void testEmptyCriteria() throws EntityException
     {
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class);
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(9, results.size());
     }
 
     /**
@@ -40,6 +40,6 @@ public class EmptyCriteriaTest extends PrePopulatedDatabaseTest
     {
         QueryCriteria criteria = new QueryCriteria("intPrimitive", QueryCriteriaOperator.NOT_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(9, results.size());
     }
 }
