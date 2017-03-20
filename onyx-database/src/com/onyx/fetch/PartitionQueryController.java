@@ -132,6 +132,7 @@ public class PartitionQueryController extends PartitionContext
                 if (criteria.isNot()) {
                     Map itemsToRemove = getIndexesForCriteria(subCriteria, results, false, query);
                     Iterator<Object> iterator = itemsToRemove.keySet().iterator();
+                    //noinspection WhileLoopReplaceableByForEach
                     while (iterator.hasNext()) {
                         startingResults.remove(iterator.next());
                     }
