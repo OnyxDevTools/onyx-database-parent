@@ -8,6 +8,7 @@ import com.onyx.client.exception.ServerReadException;
 import com.onyx.client.exception.ServerWriteException;
 import com.onyx.client.serialization.DefaultServerSerializer;
 import com.onyx.client.serialization.ServerSerializer;
+import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.InitializationException;
 
@@ -48,8 +49,12 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
     private static final byte MULTI_PACKET_MIDDLE = (byte) 2;
     private static final byte MULTI_PACKET_STOP = (byte) 3;
 
-    private static final int MAX_PACKET_SIZE = 16000;
+    @SuppressWarnings("WeakerAccess")
+    public static final int MAX_PACKET_SIZE = 16000;
+    @SuppressWarnings("WeakerAccess")
+    public static final int SERIALIZATION_BUFFER_SIZE = 256;
     private static final int MULTI_PACKET_BUFFER_ALLOCATION = MAX_PACKET_SIZE * 3; //50 KB
+
 
     /**
      * Read from a socket channel.  This will read and interpret the packets in order to decipher a message.
@@ -246,8 +251,8 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      */
     protected void write(SocketChannel socketChannel, ConnectionProperties connectionProperties, Serializable message) {
 
+        ByteBuffer buffer = ObjectBuffer.allocate(SERIALIZATION_BUFFER_SIZE);
 
-        ByteBuffer buffer = BufferStream.allocate(connectionProperties.readApplicationData.capacity());
         buffer.position(1);
 
         try {

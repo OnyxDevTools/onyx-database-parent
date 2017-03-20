@@ -3,9 +3,10 @@ package com.onyx.client.rmi;
 import com.onyx.client.CommunicationPeer;
 import com.onyx.client.OnyxClient;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by tosborn1 on 6/27/16.
@@ -37,22 +38,40 @@ public class OnyxRMIClient extends CommunicationPeer implements OnyxClient {
         Class[] interfaces = new Class[1];
         interfaces[0] = type;
 
-        // Instantiate the proxy object and set the request
-        Object instance = Proxy.newProxyInstance(type.getClassLoader(), interfaces, (proxy, method, args) -> {
-            if(method.getName().equals("toString"))
-            {
-                return "Proxy Instance";
-            }
-            RMIRequest request = new RMIRequest(remoteId, method.toString(), args);
-            Object result = this.send(request);
-            if (result instanceof Exception)
-                throw (Exception) result;
-            return result;
-        });
+        Object instance = Proxy.newProxyInstance(type.getClassLoader(), interfaces, new RMIClientInvocationHander(type, remoteId));
 
         // Add it to the local cache
         registeredObjects.put(remoteId, instance);
         return instance;
     }
 
+    /**
+     * This class is added in order to support tracking of methods.
+     * Rather than sending in the string value of a method, this is optimized
+     * to use the sorted index of a method so the packet is reduced from
+     * a string to a single byte.
+     *
+     * @since 1.3.0
+     */
+    private class RMIClientInvocationHander implements InvocationHandler {
+        List<Method> methods = new ArrayList<>();
+        final String remoteId;
+
+        @SuppressWarnings("unchecked")
+        RMIClientInvocationHander(Class type, String remoteId) {
+            Method[] methodArray = type.getDeclaredMethods();
+            this.methods = Arrays.asList(methodArray);
+            Collections.sort(this.methods, (o1, o2) -> o1.toString().compareTo(o2.toString()));
+            this.remoteId = remoteId;
+        }
+
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+            RMIRequest request = new RMIRequest(remoteId, (byte) methods.indexOf(method), args);
+            Object result = send(request);
+            if (result instanceof Exception)
+                throw (Exception) result;
+            return result;
+        }
+    }
 }
