@@ -3,6 +3,7 @@ package com.onyx.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.endpoint.WebPersistenceEndpoint;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.UnknownDatabaseException;
@@ -10,7 +11,6 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;
 import com.onyx.serialization.CustomAnnotationInspector;
-import com.onyx.diskmap.serializer.ObjectBuffer;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -65,6 +65,7 @@ public class JSONDatabaseMessageListener implements HttpHandler {
             case EXECUTE:
             case EXECUTE_DELETE:
             case EXECUTE_UPDATE:
+            case QUERY_COUNT:
                 classToSerialize = EntityQueryBody.class;
                 break;
             case INITIALIZE:
@@ -126,6 +127,8 @@ public class JSONDatabaseMessageListener implements HttpHandler {
             case SAVE_RELATIONSHIPS:
                 webPersistenceEndpoint.saveRelationshipsForEntity((SaveRelationshipRequestBody) body);
                 break;
+            case QUERY_COUNT:
+                return webPersistenceEndpoint.countForQuery((EntityQueryBody) body);
         }
         return null;
     }

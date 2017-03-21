@@ -1,12 +1,12 @@
 package com.onyx.diskmap;
 
-import com.onyx.util.map.CompatMap;
 import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.util.OffsetField;
+import com.onyx.util.map.CompatMap;
 
 import java.util.Map;
 import java.util.Set;
@@ -93,4 +93,11 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
     @SuppressWarnings("unused")
     DispatchLock getReadWriteLock();
 
+    /**
+     * Returns the record count as a long rather than an integer.
+     *
+     * @return size in format of a long
+     * @since 1.3.0
+     */
+    long longSize();
 }

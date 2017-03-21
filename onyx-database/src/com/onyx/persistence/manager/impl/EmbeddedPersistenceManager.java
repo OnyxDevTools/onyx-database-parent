@@ -873,6 +873,40 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     }
 
     /**
+     * Retrieve the quantity of entities that match the query criterium.
+     *
+     * usage:
+     *
+     * Query myQuery = new Query();
+     * myQuery.setClass(SystemEntity.class);
+     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     *
+     * or:
+     *
+     * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
+     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     *
+     * @param query The query to apply to the count operation
+     * @return The number of entities that meet the query criterium
+     * @throws EntityException Error during query.
+     * @since 1.3.0 Implemented with feature request #71
+     */
+    @Override
+    public long countForQuery(Query query) throws EntityException {
+
+        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
+        final Class clazz = query.getEntityType();
+
+        // We want to lock the index controller so that it does not do background indexing
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
+        ValidationHelper.validateQuery(descriptor, query, context);
+
+        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+
+        return queryController.getCountForQuery(query);
+    }
+
+    /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
      * @since 1.0.0
@@ -923,5 +957,6 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         }
         this.stream(query, streamer);
     }
+
 
 }

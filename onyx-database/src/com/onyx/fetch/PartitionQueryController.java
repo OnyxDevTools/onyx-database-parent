@@ -1,12 +1,12 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
+import com.onyx.entity.SystemEntity;
+import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
-import com.onyx.helpers.IndexHelper;
-import com.onyx.helpers.PartitionContext;
-import com.onyx.helpers.PartitionHelper;
-import com.onyx.helpers.RelationshipHelper;
+import com.onyx.helpers.*;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -21,6 +21,7 @@ import com.onyx.util.ReflectionUtil;
 import com.onyx.util.map.CompatHashMap;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by timothy.osborn on 3/5/15.
@@ -99,6 +100,7 @@ public class PartitionQueryController extends PartitionContext
         {
             results = scanner.scan();
         }
+
 
         if (!replace && startingResults != null)
         {
@@ -599,5 +601,50 @@ public class PartitionQueryController extends PartitionContext
         this.defaultDescriptor = null;
     }
 
+    /**
+     * Get the count for a query.  This is used to get the count without actually executing the query.  It is lighter weight
+     * than the entire query and in most cases will use the longSize on the disk map data structure if it is
+     * for the entire table.
+     *
+     * @param query Query to identify count for
+     * @return The number of records matching query criterium
+     * @throws EntityException Excaption ocurred while executing query
+     * @since 1.3.0 Added as enhancement #71
+     */
+    public long getCountForQuery(Query query) throws EntityException {
+        if (ValidationHelper.isDefaultQuery(descriptor, query)) {
+            SystemEntity systemEntity = getContext().getSystemEntityByName(query.getEntityType().getName());
+
+            if (QueryPartitionMode.ALL.equals(query.getPartition())) {
+                AtomicLong resultCount = new AtomicLong(0);
+
+                Iterator<SystemPartitionEntry> it = systemEntity.getPartition().getEntries().iterator();
+                while (it.hasNext()) {
+                    final SystemPartitionEntry partition = it.next();
+
+                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+
+                    final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
+                    DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+
+                    resultCount.addAndGet(recs.longSize());
+                }
+                return resultCount.get();
+            } else if (query.getPartition() == null || query.getPartition().equals("")) {
+                final EntityDescriptor partitionDescriptor = getContext().getBaseDescriptorForEntity(query.getEntityType());
+                final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
+                DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                return recs.longSize();
+            } else {
+                final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
+                final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
+                DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                return recs.longSize();
+            }
+        } else {
+            Map results = this.getIndexesForCriteria(query.getCriteria(), null, true, query);
+            return results.size();
+        }
+    }
 }
 
