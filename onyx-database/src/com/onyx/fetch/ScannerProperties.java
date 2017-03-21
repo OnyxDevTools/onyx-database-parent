@@ -23,19 +23,33 @@ class ScannerProperties
     public EntityDescriptor descriptor = null;
     public RecordController recordController = null;
     AttributeDescriptor attributeDescriptor = null;
-    boolean useParentDescriptor = true;
+    RelationshipDescriptor relationshipDescriptor = null;
+
     @SuppressWarnings("unused")
     protected Query query;
     @SuppressWarnings("unused")
-    protected final String contextId;
+    final protected String contextId;
 
-    private ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, boolean useParentDescriptor, SchemaContext context)
+    final private String attribute;
+
+    private ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, SchemaContext context, String attribute)
+    {
+        this(descriptor, attributeDescriptor, null, context, attribute);
+    }
+
+    private ScannerProperties(EntityDescriptor descriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context, String attribute)
+    {
+        this(descriptor, null, relationshipDescriptor, context, attribute);
+    }
+
+    private ScannerProperties(EntityDescriptor descriptor, AttributeDescriptor attributeDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context, String attribute)
     {
         this.contextId = context.getContextId();
         this.descriptor = descriptor;
         this.attributeDescriptor = attributeDescriptor;
         this.recordController = context.getRecordController(descriptor);
-        this.useParentDescriptor = useParentDescriptor;
+        this.attribute = attribute;
+        this.relationshipDescriptor = relationshipDescriptor;
     }
 
     /**
@@ -53,7 +67,7 @@ class ScannerProperties
         String relationshipsAttributeName; // Get the last in the list so we know what the actual relationship's attribute name is
 
         EntityDescriptor previousDescriptor; // This is so we can keep track of what the final descriptor is in the DOM
-        RelationshipDescriptor relationshipDescriptor;
+        RelationshipDescriptor relationshipDescriptor = null;
         Object tmpObject; // Temporary object instantiated so that we can gather descriptor information
 
 
@@ -80,19 +94,35 @@ class ScannerProperties
 
                 // Hey we found what we want, lets get the attribute and than decide what descriptor we got
                 final AttributeDescriptor attributeDescriptor = previousDescriptor.getAttributes().get(relationshipsAttributeName);
-                scanObjects.add(new ScannerProperties(previousDescriptor, attributeDescriptor, false, context));
+                scanObjects.add(new ScannerProperties(previousDescriptor, attributeDescriptor, relationshipDescriptor, context, attribute));
             } else
             {
                 // Generic ole serializer information and add to the serializer
                 final AttributeDescriptor attributeDescriptor = descriptor.getAttributes().get(attribute);
                 if (attributeDescriptor == null)
                 {
-                    throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.getClazz().getName());
+                    relationshipDescriptor = descriptor.getRelationships().get(attribute);
+                    if(relationshipDescriptor == null) {
+                        throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.getClazz().getName());
+                    }
+                    else
+                    {
+                        tmpObject = EntityDescriptor.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
+                        previousDescriptor = context.getDescriptorForEntity(tmpObject, query.getPartition());
+
+                        scanObjects.add(new ScannerProperties(previousDescriptor, relationshipDescriptor, context, attribute));
+                    }
                 }
-                scanObjects.add(new ScannerProperties(descriptor, attributeDescriptor, true, context));
+                else {
+                    scanObjects.add(new ScannerProperties(descriptor, attributeDescriptor, context, attribute));
+                }
             }
         }
         return scanObjects;
+    }
+
+    public String getAttribute() {
+        return attribute;
     }
 
 }
