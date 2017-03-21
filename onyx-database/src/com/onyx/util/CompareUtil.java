@@ -452,47 +452,4 @@ public class CompareUtil
         throw new InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR);
     }
 
-
-    public static void compare(IManagedEntity entity, Object recordId, QueryCriteria criteria, OffsetField defaultField, Map allResults) throws EntityException {
-        Object attributeValue;
-        if (criteria.getSubGrouping().size() > 0) {
-            boolean meetsCriteria = true;
-
-            for (QueryCriteria subCriteria : criteria.getSubGrouping()) {
-                OffsetField field = ReflectionUtil.getOffsetField(entity.getClass(), subCriteria.getAttribute());
-                attributeValue = ReflectionUtil.getAny(entity, field);
-                if (subCriteria.isAnd()) {
-                    if (!CompareUtil.compare(subCriteria.getValue(), attributeValue, subCriteria.getOperator())) {
-                        if (!subCriteria.isNot()) {
-                            meetsCriteria = false;
-                        }
-                    } else {
-                        if (subCriteria.isNot()) {
-                            meetsCriteria = false;
-                        }
-                    }
-                } else if (subCriteria.isOr()) {
-                    if (CompareUtil.compare(subCriteria.getValue(), attributeValue, subCriteria.getOperator())) {
-                        meetsCriteria = true;
-                        break;
-                    } else if (subCriteria.isNot()) {
-                        meetsCriteria = true;
-                        break;
-                    }
-                }
-
-            }
-
-            if (meetsCriteria) {
-                allResults.put(recordId, recordId);
-            }
-
-        } else {
-            attributeValue = ReflectionUtil.getAny(entity, defaultField);
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
-                allResults.put(recordId, recordId);
-            }
-        }
-    }
-
 }

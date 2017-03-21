@@ -619,6 +619,7 @@ public class PartitionQueryController extends PartitionContext
                 AtomicLong resultCount = new AtomicLong(0);
 
                 Iterator<SystemPartitionEntry> it = systemEntity.getPartition().getEntries().iterator();
+                //noinspection WhileLoopReplaceableByForEach
                 while (it.hasNext()) {
                     final SystemPartitionEntry partition = it.next();
 
