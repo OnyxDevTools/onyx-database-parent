@@ -49,7 +49,6 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     private Selector selector; // Selector for inbound communication
     protected RequestHandler requestHandler; // Handler for responding to requests
     private ServerSocketChannel serverSocketChannel = null;
-
     // Array of buffer pools for connections
     private ConnectionBufferPool[] connectionBufferPools;
 
@@ -57,7 +56,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     private volatile int connectionRoundRobin = 0;
 
     // Thread properties
-    private int maxWorkerThreads = 16; // Worker thread number that is the max number of threads calling request handlers
+    private int maxWorkerThreads = Runtime.getRuntime().availableProcessors() * 2; // Worker thread number that is the max number of threads calling request handlers
     private CountDownLatch daemonCountDownLatch; // Server Count down latch.  Used to keep server alive within a daemon
     private ExecutorService workerThreadPool; // Worker thread pool for executing request pools
     private final ExecutorService daemonService = Executors.newSingleThreadExecutor(); // Daemon thread pool used to keep alive
@@ -84,6 +83,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             connectionRoundRobin = 0;
 
         pool = connectionBufferPools[connectionRoundRobin];
+
         connectionRoundRobin++;
         return pool;
     }

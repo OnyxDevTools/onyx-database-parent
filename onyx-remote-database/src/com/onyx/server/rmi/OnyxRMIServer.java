@@ -8,9 +8,14 @@ import com.onyx.client.rmi.RMIRequest;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
 import com.onyx.server.base.CommunicationServer;
+import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import javax.net.ssl.SSLException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -135,6 +140,8 @@ public class OnyxRMIServer extends CommunicationServer {
         };
     }
 
+    private final CompatMap<Class, List<Method>> methodCache = new SynchronizedMap<>();
+
     /**
      * Find the corresponding method to the proxy object
      *
@@ -143,15 +150,16 @@ public class OnyxRMIServer extends CommunicationServer {
      *               iterating through all the properties and parameters.
      * @return Method if it exist
      * @since 1.2.0
+     * @since 1.3.0 Changed to use the byte index of a method rather than its string value for
+     *              better optimization.  Also added a map to track
      */
-    private Method getCorrectMethod(Class clazz, String method) {
-        Method[] methods = clazz.getMethods();
-        for (Method method1 : methods) {
-            if (method.equals(method1.toString())) {
-                return method1;
-            }
-        }
-        return null;
+    private Method getCorrectMethod(Class clazz, byte method) {
+        return methodCache.computeIfAbsent(clazz, aClass -> {
+            Method[] methods = clazz.getDeclaredMethods();
+            List<Method> methodList = Arrays.asList(methods);
+            Collections.sort(methodList, (o1, o2) -> o1.toString().compareTo(o2.toString()));
+            return methodList;
+        }).get((int) method);
     }
 
     /**

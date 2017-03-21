@@ -1,6 +1,9 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.record.RecordController;
+import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.exception.EntityException;
@@ -27,22 +30,19 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
 
     private List<ScannerProperties> scanObjects = null;
     private QueryOrder[] orderBy = null;
-    private final Map<Object, Object> indexValues;
 
     private final List<CompatMap<Object, Object>> parentObjects = new ArrayList<>();
-    private final List<CompatMap<Object, Object>> childrenObjects = new ArrayList<>();
 
     /**
      * Constructor
      *
      * @param orderBy Order By criteria
-     * @param indexValues Index values to sort
      * @param descriptor Entity descriptor
      * @param context Schema context
      *
      */
     @SuppressWarnings("unchecked")
-    PartitionSortCompare(Query query, QueryOrder[] orderBy, Map indexValues, EntityDescriptor descriptor, SchemaContext context)
+    PartitionSortCompare(Query query, QueryOrder[] orderBy, EntityDescriptor descriptor, SchemaContext context)
     {
         super(context, descriptor);
 
@@ -54,7 +54,6 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         {
             attributes[i] = order.getAttribute();
             parentObjects.add(new CompatWeakHashMap<>());
-            childrenObjects.add(new CompatWeakHashMap<>());
             i++;
         }
 
@@ -65,17 +64,12 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         {}
 
         this.orderBy = orderBy;
-        this.indexValues = indexValues;
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public int compare(T t1, T t2)
     {
-
-        Object o1 = t1;
-        Object o2 = t2;
-
         Object attribute1 = null;
         Object attribute2 = null;
 
@@ -89,104 +83,28 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
 
             try
             {
-                CompatMap kiddos = childrenObjects.get(i);
-                CompatMap papas = parentObjects.get(i);
+                final CompatMap attributeValues = parentObjects.get(i);
 
-                if (scannerProperties.useParentDescriptor)
-                {
-                    final Object a1 = o1;
+                attribute1 = attributeValues.computeIfAbsent(t1, (reference) -> {
+                    try
+                    {
+                        return getValue(scannerProperties, reference);
+                    } catch (Exception e)
+                    {
+                        return null;
+                    }
 
-                    attribute1 = kiddos.computeIfAbsent(o1, o -> {
-                        try
-                        {
-                            if(a1 instanceof PartitionReference)
-                            {
-                                PartitionReference ref = (PartitionReference) a1;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)a1).reference);
-                            }
-                            else
-                            {
-                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) a1);
-                            }
-                        } catch (Exception e)
-                        {
-                            return null;
-                        }
-                    });
+                });
 
-                    final Object b2 = o2;
-                    attribute2 = kiddos.computeIfAbsent(o2, (attributeVal) -> {
-                        try
-                        {
-
-                            if(b2 instanceof PartitionReference)
-                            {
-                                PartitionReference ref = (PartitionReference) b2;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)b2).reference);
-                            }
-                            else
-                            {
-                                return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) b2);
-                            }
-                        } catch (Exception e)
-                        {
-                            return null;
-                        }
-                    });
-
-                } else
-                {
-
-                    o1 = indexValues.get(o1);
-                    o2 = indexValues.get(o2);
-
-                    final Object a1 = o1;
-
-                    attribute1 = papas.computeIfAbsent(o1, (attributeVal) -> {
-                        if(attributeVal != null)
-                        {
-                            return attributeVal;
-                        }
-                        try
-                        {
-                            if(a1 instanceof PartitionReference)
-                            {
-                                PartitionReference ref = (PartitionReference) a1;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)a1).reference);
-                            }
-
-                            return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) a1);
-                        } catch (Exception e)
-                        {
-                            return null;
-                        }
-
-                    });
-
-                    final Object a2 = o2;
-
-                    attribute2 = papas.computeIfAbsent(o2, (attributeVal) -> {
-                        if(attributeVal != null)
-                        {
-                            return attributeVal;
-                        }
-                        try
-                        {
-                            if(a2 instanceof PartitionReference)
-                            {
-                                PartitionReference ref = (PartitionReference) a2;
-                                return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ((PartitionReference)a2).reference);
-                            }
-
-                            return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) a2);
-                        } catch (Exception e)
-                        {
-                            return null;
-                        }
-                    });
-
-                }
-
+                attribute2 = attributeValues.computeIfAbsent(t2, (reference) -> {
+                    try
+                    {
+                        return getValue(scannerProperties, reference);
+                    } catch (Exception e)
+                    {
+                        return null;
+                    }
+                });
             } catch (Exception e)
             {
                 e.printStackTrace();
@@ -212,5 +130,73 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         }
 
         return 1;
+    }
+
+    /**
+     * Get an attribute value
+     *
+     * @param scannerProperties Scanner property
+     * @param reference Object reference
+     * @return The attribute value.  Can also be a relationship attribute value
+     * @throws EntityException Exception when trying to hydrate attribute
+     */
+    public Object getValue(ScannerProperties scannerProperties, Object reference) throws EntityException
+    {
+        if(scannerProperties.relationshipDescriptor != null)
+            return getRelationshipValue(reference, scannerProperties);
+
+        if(reference instanceof PartitionReference)
+        {
+            PartitionReference ref = (PartitionReference) reference;
+            return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.reference);
+        }
+
+        return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) reference);
+    }
+
+    /**
+     * Hydrates a to many relationship and formats in the shape of a map
+     * @param entry Query reference entry
+     * @param properties Scanner properties
+     * @return List of to many relationships
+     * @throws EntityException General exception
+     *
+     * @since 1.3.0
+     */
+    private Object getRelationshipValue(Object entry, ScannerProperties properties) throws EntityException
+    {
+        // Get Relationship controller
+        final RelationshipController relationshipController = getContext().getRelationshipController(properties.relationshipDescriptor);
+
+        List<RelationshipReference> relationshipReferences;
+
+        // Get relationship references
+        if (entry instanceof PartitionReference) {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)entry);
+        }
+        else
+        {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((long)entry);
+        }
+
+        if(relationshipReferences.size() == 0)
+            return null;
+
+        // Iterate through relationship references and get the values of the relationship
+        final RelationshipReference ref = relationshipReferences.get(0);
+        Object relationshipAttributeValue;
+
+        if(ref.partitionId > 0)
+        {
+            final PartitionContext partitionContext = new PartitionContext(getContext(), properties.descriptor);
+            final RecordController recordController = partitionContext.getRecordControllerForPartition(ref.partitionId);
+            relationshipAttributeValue = recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordController.getReferenceId(ref.identifier));
+        }
+        else
+        {
+            relationshipAttributeValue = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordController.getReferenceId(ref.identifier));
+        }
+
+        return relationshipAttributeValue;
     }
 }

@@ -96,6 +96,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
                 consumer.accept(requestToken.packet);
                 needsToRunHeartbeat = false;
             }
+
         } catch (Exception e) {
             failure(requestToken, e);
         }
@@ -205,7 +206,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     private void resumeHeartBeat() {
         if (this.heartBeatTimer == null) {
             this.heartBeatTimer = new Timer();
-            int HEART_BEAT_INTERVAL = 5 * 1000;
+            int HEART_BEAT_INTERVAL = 10 * 1000;
             this.heartBeatTimer.schedule(new RetryHeartbeatTask(), HEART_BEAT_INTERVAL, HEART_BEAT_INTERVAL);
         }
     }
@@ -243,7 +244,6 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         pendingRequests.put(token, consumer);
         write(socketChannel, connectionProperties, token);
     }
-
     /**
      * Send a message to the server.  This is blocking and will wait for the response.
      *
@@ -409,7 +409,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             try {
                 // If there were no recent responses within the last 5 seconds, run a heartbeat
                 if(needsToRunHeartbeat) {
-                    int heartBeatTimeout = 1000*5;
+                    int heartBeatTimeout = 1000 * 10;
                     result = send(null, heartBeatTimeout);
                 } else
                 {

@@ -5,6 +5,10 @@ import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
+import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipReference;
+import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.*;
 import com.onyx.index.IndexController;
@@ -18,7 +22,6 @@ import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
-import com.onyx.util.map.CompatHashMap;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -100,7 +103,6 @@ public class PartitionQueryController extends PartitionContext
         {
             results = scanner.scan();
         }
-
 
         if (!replace && startingResults != null)
         {
@@ -243,7 +245,7 @@ public class PartitionQueryController extends PartitionContext
     @SuppressWarnings({"unchecked", "RedundantThrows"})
     public Map sort(QueryOrder[] orderBy, Map indexValues) throws EntityException
     {
-        final Map retVal = new TreeMap(new PartitionSortCompare(query, orderBy, indexValues, descriptor, getContext()));
+        final Map retVal = new TreeMap(new PartitionSortCompare(query, orderBy, descriptor, getContext()));
         retVal.putAll(indexValues);
         return retVal;
     }
@@ -309,35 +311,30 @@ public class PartitionQueryController extends PartitionContext
 
 
             record = new CompatHashMap();
+
             entry = iterator.next();
             for (ScannerProperties properties : scanObjects)
             {
-                if(properties.useParentDescriptor)
+                if(properties.relationshipDescriptor != null)
                 {
-                    if(entry.getKey() instanceof PartitionReference)
+                    // Added support for TO Many relationships.  This must be treated differently in order to hydrate
+                    // a list rather than a single object.  This is treated special
+                    if(properties.relationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY
+                        || properties.relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY)
                     {
-                        PartitionReference ref = (PartitionReference) entry.getKey();
-                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getField(), ref.reference);
+                        entityAttribute = hydrateRelationshipToManyMap(entry.getKey(), properties);
                     }
-                    else
-                    {
-                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), (long)entry.getKey());
+                    // This is for a to one relationship
+                    else {
+                        entityAttribute = hydrateRelationshipToOneMap(entry.getKey(), properties);
                     }
                 }
-                else
-                {
-                    if(entry.getKey() instanceof PartitionReference)
-                    {
-                        PartitionReference ref = (PartitionReference) entry.getValue();
-                        entityAttribute = getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getField(), ref.reference);
-                    }
-                    else
-                    {
-                        entityAttribute = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), (long)entry.getValue());
-                    }
-                }
-                record.put(properties.attributeDescriptor.getName(), entityAttribute);
 
+                else {
+                    entityAttribute = hydrateEntityMap(entry.getKey(), properties);
+                }
+
+                record.put(properties.getAttribute(), entityAttribute);
                 results.put(entry.getKey(), record);
             }
 
@@ -418,6 +415,105 @@ public class PartitionQueryController extends PartitionContext
         }
 
         return recordsUpdated;
+    }
+
+    /**
+     * Hydrate an entity from a map
+     *
+     * @param entry Key identifier
+     * @param properties Scanner Properties for the attribute
+     * @return hydrated entity as a map
+     * @throws EntityException Exception why trying to retrieve object
+     */
+    private Object hydrateEntityMap(Object entry, ScannerProperties properties) throws EntityException
+    {
+        if (entry instanceof PartitionReference) {
+            PartitionReference ref = (PartitionReference) entry;
+            return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getField(), ref.reference);
+        } else {
+            return properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), (long) entry);
+        }
+    }
+
+    /**
+     * Hydrates a to one relationship and formats in the shape of a map
+     * @param entry Query reference entry
+     * @param properties Scanner properties
+     * @return To one relationship as a map
+     * @throws EntityException General exception
+     *
+     * @since 1.3.0
+     */
+    private Object hydrateRelationshipToOneMap(Object entry, ScannerProperties properties) throws EntityException
+    {
+        List values = hydrateRelationshipToManyMap(entry, properties);
+        if(values.size() > 0)
+            return values.get(0);
+
+        return null;
+    }
+
+    /**
+     * Hydrates a to many relationship and formats in the shape of a map
+     * @param entry Query reference entry
+     * @param properties Scanner properties
+     * @return List of to many relationships
+     * @throws EntityException General exception
+     *
+     * @since 1.3.0
+     */
+    @SuppressWarnings("unchecked")
+    private List hydrateRelationshipToManyMap(Object entry, ScannerProperties properties) throws EntityException
+    {
+        // Get Relationship controller
+        final RelationshipController relationshipController = getContext().getRelationshipController(properties.relationshipDescriptor);
+
+        List<RelationshipReference> relationshipReferences;
+
+        // Get relationship references
+        if (entry instanceof PartitionReference) {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)entry);
+        }
+        else
+        {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((long)entry);
+        }
+
+
+        List value = new ArrayList();
+
+        // Iterate through relationship references and get the values of the relationship
+        for(RelationshipReference ref : relationshipReferences)
+        {
+            Object relationshipMapValue;
+
+            if(ref.partitionId > 0)
+            {
+                final PartitionContext partitionContext = new PartitionContext(getContext(), properties.descriptor);
+                final RecordController recordController = partitionContext.getRecordControllerForPartition(ref.partitionId);
+                if(properties.attributeDescriptor != null)
+                {
+                    relationshipMapValue = recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordController.getReferenceId(ref.identifier));
+                }
+                else {
+                    relationshipMapValue = recordController.getMapWithReferenceId(recordController.getReferenceId(ref.identifier));
+                }
+            }
+            else
+            {
+                if(properties.attributeDescriptor != null)
+                {
+                    relationshipMapValue = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordController.getReferenceId(ref.identifier));
+                }
+                else {
+                    relationshipMapValue = properties.recordController.getMapWithReferenceId(properties.recordController.getReferenceId(ref.identifier));
+                }
+            }
+
+            value.add(relationshipMapValue);
+        }
+
+        return value;
     }
 
     /**
