@@ -3,7 +3,10 @@ package com.onyx.persistence.manager;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.query.*;
+import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryOrder;
+import com.onyx.persistence.query.QueryResult;
 import com.onyx.stream.QueryStream;
 
 import java.util.List;
@@ -558,4 +561,25 @@ public interface PersistenceManager {
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     Map getMapWithReferenceId(Class entityType, long reference) throws EntityException;
+
+    /**
+     * Retrieve the quantity of entities that match the query criterium.
+     * <p>
+     * usage:
+     * <p>
+     * Query myQuery = new Query();
+     * myQuery.setClass(SystemEntity.class);
+     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     * <p>
+     * or:
+     * <p>
+     * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
+     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     *
+     * @param query The query to apply to the count operation
+     * @return The number of entities that meet the query criterium
+     * @throws EntityException Error during query.
+     * @since 1.3.0 Implemented with feature request #71
+     */
+    long countForQuery(Query query) throws EntityException;
 }

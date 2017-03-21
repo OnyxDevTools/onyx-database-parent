@@ -45,6 +45,7 @@ public abstract class AbstractWebPersistenceManager extends AbstractPersistenceM
     public static final String EXECUTE_QUERY = "/execute";
     public static final String EXECUTE_UPDATE_QUERY = "/executeUpdate";
     public static final String EXECUTE_DELETE_QUERY = "/executeDelete";
+    public static final String QUERY_COUNT = "/queryCount";
 
     public static final String BATCH_SAVE = "/batchSave";
     public static final String BATCH_DELETE = "/batchDelete";

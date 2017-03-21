@@ -18,6 +18,7 @@ public enum RestServicePath {
     EXECUTE_UPDATE("/executeUpdate"),
     EXECUTE_DELETE("/executeDelete"),
     EXISTS("/exists"),
+    QUERY_COUNT("/queryCount"),
     SAVE_RELATIONSHIPS("/saveRelationships");
 
     RestServicePath(final String path) {

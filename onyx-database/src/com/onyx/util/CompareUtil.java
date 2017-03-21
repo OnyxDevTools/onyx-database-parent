@@ -1,6 +1,8 @@
 package com.onyx.util;
 
+import com.onyx.exception.EntityException;
 import com.onyx.exception.InvalidDataTypeForOperator;
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 
@@ -8,6 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by timothy.osborn on 12/14/14.

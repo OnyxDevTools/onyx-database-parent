@@ -1311,4 +1311,10 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public void setOr(boolean or) {
         isOr = or;
     }
+
+    private List<QueryCriteria> subGrouping = new ArrayList<>();
+
+    public List<QueryCriteria> getSubGrouping() {
+        return subGrouping;
+    }
 }

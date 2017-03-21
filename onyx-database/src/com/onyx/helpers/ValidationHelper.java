@@ -9,6 +9,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
@@ -164,5 +165,9 @@ public class ValidationHelper {
         }
 
         return true;
+    }
+
+    public static boolean isDefaultQuery(EntityDescriptor descriptor, Query query) {
+        return query.getCriteria() == null || query.getCriteria().getSubCriteria().size() <= 0 && (query.getCriteria().getOperator() == QueryCriteriaOperator.NOT_NULL && query.getCriteria().getAttribute().equals(descriptor.getIdentifier().getName()));
     }
 }
