@@ -2,13 +2,12 @@ package embedded.list;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
-import com.onyx.persistence.annotations.Attribute;
+import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import embedded.base.BaseTest;
-import entities.AllAttributeV2Entity;
 import entities.AllAttributeForFetch;
+import entities.AllAttributeV2Entity;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -27,10 +26,12 @@ public class EqualsTest extends BaseTest
 {
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws EntityException
     {
         initialize();
 
+        Query deleteQuery = new Query(AllAttributeForFetch.class);
+        manager.executeDelete(deleteQuery);
 
         AllAttributeForFetch entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE";

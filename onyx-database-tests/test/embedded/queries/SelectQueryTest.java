@@ -30,7 +30,7 @@ public class SelectQueryTest extends PrePopulatedDatabaseTest
         Query query = new Query(AllAttributeForFetch.class, Arrays.asList("longValue", "intPrimitive"), criteria);
         List results = manager.executeQuery(query);
         Assert.assertNotNull(results);
-        Assert.assertTrue(results.size() == 4);
+        Assert.assertTrue(results.size() == 5);
         Assert.assertTrue(results.get(0) instanceof Map);
         Assert.assertTrue((Long)((Map) results.get(0)).get("longValue") > 0);
     }
@@ -73,7 +73,7 @@ public class SelectQueryTest extends PrePopulatedDatabaseTest
 //        Assert.assertTrue(results.size() == 2);
         Assert.assertTrue(results.get(0) instanceof Map);
         Assert.assertTrue((int)((Map) results.get(0)).get("intPrimitive") == 4);
-        Assert.assertTrue((int)((Map) results.get(1)).get("intPrimitive") == 3);
+        Assert.assertTrue((int) ((Map) results.get(1)).get("intPrimitive") == 6);
     }
 
     @Test
@@ -128,6 +128,6 @@ public class SelectQueryTest extends PrePopulatedDatabaseTest
         Assert.assertTrue(results.size() == 2);
         Assert.assertTrue(results.get(0) instanceof Map);
         Assert.assertTrue(((Map)results.get(0)).get("id").equals("FIRST ONE"));
-        Assert.assertTrue(((Map)results.get(1)).get("id").equals("FIRST ONE4"));
+        Assert.assertTrue(((Map) results.get(1)).get("id").equals("FIRST ONE7"));
     }
 }

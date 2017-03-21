@@ -2,7 +2,7 @@ package web.list;
 
 import category.WebServerTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.AllAttributeForFetch;
@@ -25,9 +25,12 @@ public class FullTableScanTest extends BaseTest
 {
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws EntityException
     {
         initialize();
+
+        Query query = new Query(AllAttributeForFetch.class);
+        manager.executeDelete(query);
 
         AllAttributeForFetch entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE";

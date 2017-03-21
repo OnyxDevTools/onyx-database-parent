@@ -2,7 +2,7 @@ package embedded.list;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import embedded.base.BaseTest;
@@ -31,9 +31,12 @@ public class GreaterThanEqualTest extends BaseTest
     }
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws EntityException
     {
         initialize();
+
+        Query deleteQuery = new Query(AllAttributeForFetch.class);
+        manager.executeDelete(deleteQuery);
 
         AllAttributeForFetch entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE";

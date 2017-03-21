@@ -202,6 +202,8 @@ public class CompareUtil
 
         if(operator == QueryCriteriaOperator.NOT_NULL)
             return (object2 != null);
+        else if (operator == QueryCriteriaOperator.IS_NULL)
+            return (object2 == null);
 
         // Equal - this should take a generic object key
         else if(operator == QueryCriteriaOperator.EQUAL)
@@ -240,70 +242,62 @@ public class CompareUtil
         }
 
         // Contains , only valid for strings
-        else if(operator == QueryCriteriaOperator.CONTAINS && object instanceof String && (object2 instanceof String || object2 == null))
+        else if ((operator == QueryCriteriaOperator.CONTAINS || operator == QueryCriteriaOperator.NOT_CONTAINS)
+                && object instanceof String
+                && (object2 instanceof String || object2 == null))
         {
             if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
-                return true;
+                return (operator == QueryCriteriaOperator.CONTAINS);
             }
             else if(object2 == null)
             {
-                return false;
+                return !(operator == QueryCriteriaOperator.CONTAINS);
             }
-            return ((String) object2).contains((String) object);
+            boolean retVal = ((String) object2).contains((String) object);
+
+            return (operator == QueryCriteriaOperator.CONTAINS) == retVal;
         }
 
         // Like, only valid for strings
-        else if(operator == QueryCriteriaOperator.LIKE && object instanceof String && (object2 instanceof String || object2 == null))
+        else if ((operator == QueryCriteriaOperator.LIKE || operator == QueryCriteriaOperator.NOT_LIKE)
+                && object instanceof String && (object2 instanceof String || object2 == null))
         {
             if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
-                return true;
+                return (operator == QueryCriteriaOperator.LIKE);
             }
             else if(object2 == null)
             {
-                return false;
+                return !(operator == QueryCriteriaOperator.LIKE);
             }
-            return ((String) object2).equalsIgnoreCase((String) object);
+            boolean retVal = ((String) object2).equalsIgnoreCase((String) object);
+            return (operator == QueryCriteriaOperator.LIKE) == retVal;
         }
 
         // Starts with, only valid for strings
-        else if(operator == QueryCriteriaOperator.STARTS_WITH && (object instanceof String || object == null) && (object2 instanceof String || object2 == null))
+        else if ((operator == QueryCriteriaOperator.STARTS_WITH || operator == QueryCriteriaOperator.NOT_STARTS_WITH)
+                && (object instanceof String || object == null)
+                && (object2 instanceof String || object2 == null))
         {
             if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
-                return true;
+                return (operator == QueryCriteriaOperator.STARTS_WITH);
             }
             else if(object2 == null)
             {
-                return false;
+                return !(operator == QueryCriteriaOperator.STARTS_WITH);
             }
             else if(object == null)
             {
-                return false;
+                return !(operator == QueryCriteriaOperator.STARTS_WITH);
             }
-            return ((String) object2).startsWith((String) object);
-        }
-
-        else if(operator == QueryCriteriaOperator.NOT_STARTS_WITH && (object instanceof String || object == null) && (object2 instanceof String || object2 == null))
-        {
-            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
-            {
-                return false;
-            }
-            else if(object2 == null)
-            {
-                return true;
-            }
-            else if(object == null)
-            {
-                return true;
-            }
-            return !((String) object2).startsWith((String) object);
+            boolean retVal = ((String) object2).startsWith((String) object);
+            return (operator == QueryCriteriaOperator.STARTS_WITH) == retVal;
         }
 
         // Not in, the first parameter must be a list of items if using the list key
-        else if(operator == QueryCriteriaOperator.STARTS_WITH)
+        else if (operator == QueryCriteriaOperator.STARTS_WITH || operator == QueryCriteriaOperator.NOT_STARTS_WITH)
         {
             List values = (List)object;
             boolean startsWith = false;
@@ -312,15 +306,15 @@ public class CompareUtil
             {
                 if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
                 {
-                    return true;
+                    return (operator == QueryCriteriaOperator.STARTS_WITH);
                 }
                 else if(object2 == null)
                 {
-                    return false;
+                    return !(operator == QueryCriteriaOperator.STARTS_WITH);
                 }
                 else if(object == null)
                 {
-                    return false;
+                    return !(operator == QueryCriteriaOperator.STARTS_WITH);
                 }
 
                 if (((String) object2).startsWith((String) value))
@@ -329,51 +323,22 @@ public class CompareUtil
                 }
 
             }
-            return startsWith;
-        }
-
-        else if(operator == QueryCriteriaOperator.NOT_STARTS_WITH)
-        {
-            List values = (List)object;
-            boolean startsWith = false;
-
-            for(Object value : values)
-            {
-                if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
-                {
-                    return false;
-                }
-                else if(object2 == null)
-                {
-                    return true;
-                }
-                else if(object == null)
-                {
-                    return true;
-                }
-
-                if (((String) object2).startsWith((String) value))
-                {
-                    startsWith = false;
-                }
-
-            }
-            return startsWith;
+            return (operator == QueryCriteriaOperator.STARTS_WITH) == startsWith;
         }
 
         // Matches, Use a regex, only valid with strings
-        else if(operator == QueryCriteriaOperator.MATCHES
+        else if ((operator == QueryCriteriaOperator.MATCHES || operator == QueryCriteriaOperator.NOT_MATCHES)
                 && object instanceof String && (object2 instanceof String || object2 == null))
         {
             if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
-                return true;
+                return (operator == QueryCriteriaOperator.MATCHES);
             }
             else if(object2 == null)
             {
-                return false;
+                return !(operator == QueryCriteriaOperator.MATCHES);
             }
-            return ((String) object2).matches((String)object);
+            return (operator == QueryCriteriaOperator.MATCHES) == ((String) object2).matches((String) object);
         }
 
         // Greater than, valid for strings, Long, long, Integer, int, Double, double

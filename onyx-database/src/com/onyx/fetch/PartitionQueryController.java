@@ -22,6 +22,7 @@ import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.ReflectionUtil;
+import com.onyx.util.map.CompatHashMap;
 
 import java.util.*;
 
@@ -87,6 +88,12 @@ public class PartitionQueryController extends PartitionContext
             criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_EQUAL);
         }
 
+        // If it is a negative criteria to start off the bat, we need to get the entire set of records
+        if (criteria.isNot() && startingResults == null) {
+            QueryCriteria tempCriteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_EQUAL);
+            criteria = tempCriteria.and(criteria);
+        }
+
         final TableScanner scanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(criteria, classToScan, temporaryDataFile, query, persistenceManager);
 
         if (startingResults != null)
@@ -99,37 +106,54 @@ public class PartitionQueryController extends PartitionContext
 
         if (!replace && startingResults != null)
         {
-            for (Object index : startingResults.keySet())
+            if (criteria.isNot())
             {
-                if(query.isTerminated())
-                    break;
+                for (Object index : results.keySet()) {
+                    if (query.isTerminated())
+                        break;
 
-                results.put(index, startingResults.get(index));
+                    if (criteria.isNot()) {
+                        startingResults.remove(index);
+                    }
+                }
+            } else {
+                for (Object index : startingResults.keySet()) {
+                    if (query.isTerminated())
+                        break;
+
+                    results.put(index, startingResults.get(index));
+                }
             }
         }
 
-        // Gathers or results
-        for (QueryCriteria orCriteria : criteria.getOrCriteria())
-        {
-            if(query.isTerminated())
-                break;
-            Map orResults = getIndexesForCriteria(orCriteria, startingResults, false, query);
-
-            for (Object index : orResults.keySet())
-            {
-                if(query.isTerminated())
-                    break;
-                results.put(index, index);
-            }
-        }
-
-        // Weeds out the and criteria
-        for (QueryCriteria andCriteria : criteria.getAndCriteria())
+        for (QueryCriteria subCriteria : criteria.getSubCriteria())
         {
             if(query.isTerminated())
                 break;
 
-            results = getIndexesForCriteria(andCriteria, results, true, query);
+            if (subCriteria.isAnd())
+            {
+                if (criteria.isNot()) {
+                    Map itemsToRemove = getIndexesForCriteria(subCriteria, results, false, query);
+                    Iterator<Object> iterator = itemsToRemove.keySet().iterator();
+                    //noinspection WhileLoopReplaceableByForEach
+                    while (iterator.hasNext()) {
+                        startingResults.remove(iterator.next());
+                    }
+                } else {
+                    results = getIndexesForCriteria(subCriteria, results, !subCriteria.isNot(), query);
+                }
+            } else if (subCriteria.isOr()) {
+                Map orResults = getIndexesForCriteria(subCriteria, startingResults, !subCriteria.isNot(), query);
+
+                for (Object index : orResults.keySet()) {
+                    if (query.isTerminated())
+                        break;
+
+                    results.put(index, index);
+
+                }
+            }
         }
 
         if(query.isTerminated())
@@ -137,6 +161,8 @@ public class PartitionQueryController extends PartitionContext
             return new CompatHashMap();
         }
 
+        if (criteria.isNot())
+            return startingResults;
         return results;
     }
 
