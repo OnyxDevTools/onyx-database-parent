@@ -6,7 +6,10 @@ import com.onyx.exception.StreamException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.*;
+import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryCriteriaOperator;
+import com.onyx.persistence.query.QueryResult;
 import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
@@ -452,5 +455,29 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
     @Override
     public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
         throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
+    }
+
+    /**
+     * Retrieve the quantity of entities that match the query criterium.
+     * <p>
+     * usage:
+     * <p>
+     * Query myQuery = new Query();
+     * myQuery.setClass(SystemEntity.class);
+     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     * <p>
+     * or:
+     * <p>
+     * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
+     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     *
+     * @param query The query to apply to the count operation
+     * @return The number of entities that meet the query criterium
+     * @throws EntityException Error during query.
+     * @since 1.3.0 Implemented with feature request #71
+     */
+    @Override
+    public long countForQuery(Query query) throws EntityException {
+        return proxy.countForQuery(query);
     }
 }

@@ -754,4 +754,31 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         return null;
     }
 
+    /**
+     * Retrieve the quantity of entities that match the query criterium.
+     * <p>
+     * usage:
+     * <p>
+     * Query myQuery = new Query();
+     * myQuery.setClass(SystemEntity.class);
+     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     * <p>
+     * or:
+     * <p>
+     * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
+     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     *
+     * @param query The query to apply to the count operation
+     * @return The number of entities that meet the query criterium
+     * @throws EntityException Error during query.
+     * @since 1.3.0 Implemented with feature request #71
+     */
+    @Override
+    public long countForQuery(Query query) throws EntityException {
+        final EntityQueryBody body = new EntityQueryBody();
+        body.setQuery(query);
+
+        return (long) this.performCall(getURL() + QUERY_COUNT, null, Long.class, body);
+    }
+
 }

@@ -326,4 +326,16 @@ final public class WebPersistenceEndpoint
 
         persistenceManager.saveRelationshipsForEntity(entity, request.getRelationship(), request.getIdentifiers());
     }
+
+    /**
+     * Returns the number of items matching the query criteria
+     *
+     * @param body Query request body
+     * @return long value of number of items matching criteria
+     * @throws EntityException General query exception
+     * @since 1.3.0 Added as enhancement for git issue #71
+     */
+    public long countForQuery(EntityQueryBody body) throws EntityException {
+        return persistenceManager.countForQuery(body.getQuery());
+    }
 }

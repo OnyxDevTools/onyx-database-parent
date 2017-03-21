@@ -154,10 +154,10 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
 
         criteria1 = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
         criteria2 = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
-        query = new Query(AllAttributeForFetch.class, criteria1.and(criteria2).not());
+        query = new Query(AllAttributeForFetch.class, criteria1.and(criteria2.not()));
         results = manager.executeQuery(query);
 
-        Assert.assertTrue(results.size() == 7);
+        Assert.assertTrue(results.size() == 0);
     }
 
     @Test
