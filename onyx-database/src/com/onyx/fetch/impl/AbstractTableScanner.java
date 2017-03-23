@@ -1,6 +1,8 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
@@ -8,14 +10,11 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.OffsetField;
-import com.onyx.util.ReflectionUtil;
 
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -40,7 +39,7 @@ abstract class AbstractTableScanner extends PartitionContext
     protected MapBuilder temporaryDataFile = null;
     @SuppressWarnings("WeakerAccess")
     protected final Query query;
-    @SuppressWarnings("WeakerAccess")
+    @SuppressWarnings({"WeakerAccess", "CanBeFinal"})
     protected PersistenceManager persistenceManager;
 
     /**
@@ -50,7 +49,7 @@ abstract class AbstractTableScanner extends PartitionContext
      * @param classToScan Class type to scan
      * @param descriptor Entity descriptor of entity type to scan
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "RedundantThrows"})
     AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(context, descriptor);
@@ -75,4 +74,38 @@ abstract class AbstractTableScanner extends PartitionContext
         this.persistenceManager = persistenceManager;
     }
 
+    /**
+     * This method aggregates the list of criteria and sub criteria into
+     * a single list so that it does not have to be done upon checking criteria
+     * each iteration
+     *
+     * @param criteria Root Criteria
+     * @param allCritieria Maintained list of all criteria
+     * @return List of all criteria
+     *
+     * @since 1.3.0 Re-vamped criteria checking to address bugs and maintain
+     *              record insertion criteria checking
+     */
+    public static List<QueryCriteria> aggregateCritieria(QueryCriteria criteria, List<QueryCriteria> allCritieria)
+    {
+        allCritieria.add(criteria);
+
+        for (QueryCriteria subCriteria : criteria.getSubCriteria())
+        {
+            aggregateCritieria(subCriteria, allCritieria);
+            subCriteria.setParentCriteria(criteria);
+
+            // This indicates it is a root criteria.  In that case, we need to
+            // look at the first sub criteria and assign its modifier
+            if(!criteria.isAnd() && !criteria.isOr())
+            {
+                if(subCriteria.isOr())
+                    criteria.setOr(true);
+                else
+                    criteria.setAnd(true);
+            }
+        }
+
+        return allCritieria;
+    }
 }

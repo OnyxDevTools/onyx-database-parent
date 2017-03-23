@@ -3,6 +3,7 @@ package memory.list;
 import category.InMemoryDatabaseTests;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.OneToManyChildFetchEntity;
@@ -29,7 +30,7 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     }
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws EntityException
     {
         initialize();
 
@@ -206,7 +207,6 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
         entity2.id = "FIRST ONE5";
         save(entity2);
         find(entity2);
-
     }
 
     @Test
@@ -259,6 +259,6 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
                 .and("children.id", QueryCriteriaOperator.IN, idlist);
 
         List<OneToOneFetchEntity> results = manager.list(OneToOneFetchEntity.class, criteria);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(0, results.size());
     }
 }

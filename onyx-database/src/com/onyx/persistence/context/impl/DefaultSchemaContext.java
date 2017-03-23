@@ -23,6 +23,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import com.onyx.query.CachedResults;
 import com.onyx.record.RecordController;
 import com.onyx.record.impl.RecordControllerImpl;
 import com.onyx.record.impl.SequenceRecordControllerImpl;
@@ -99,6 +100,7 @@ public class DefaultSchemaContext implements SchemaContext {
     @SuppressWarnings("WeakerAccess")
     protected String temporaryFileLocation;
 
+    private final Set<MapBuilder> temporaryMaps = new HashSet<>();
     /**
      * Constructor.
      *
@@ -202,6 +204,7 @@ public class DefaultSchemaContext implements SchemaContext {
             }
             MapBuilder builder = new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, true);
             temporaryDiskMapQueue.add(builder);
+            temporaryMaps.add(builder);
         }
     }
 
@@ -487,12 +490,17 @@ public class DefaultSchemaContext implements SchemaContext {
         // Shutdown all databases temporary disk map builders
         while (true) {
             try {
-                MapBuilder temporaryDiskMap = temporaryDiskMapQueue.remove();
-                temporaryDiskMap.close();
-                temporaryDiskMap.delete();
+                temporaryDiskMapQueue.remove();
             } catch (Exception ignore) {
                 break;
             }
+        }
+
+        // Added to ensure all builders are closed whether they are checked out or not
+        for(MapBuilder builder : temporaryMaps)
+        {
+            builder.close();
+            builder.delete();
         }
 
         // Close transaction file
@@ -1185,4 +1193,17 @@ public class DefaultSchemaContext implements SchemaContext {
         } catch (EntityException ignore) {
         }
     };
+
+    private CompatMap<Query, CachedResults> cachedQueryResults = new SynchronizedMap<>();
+
+    public CachedResults getCachedQueryResults(Query query)
+    {
+        return cachedQueryResults.get(query);
+    }
+
+    public void setCachedQueryResults(Query query, CachedResults cachedResults)
+    {
+        cachedQueryResults.put(query, cachedResults);
+    }
+
 }

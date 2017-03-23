@@ -3,6 +3,7 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
@@ -23,7 +24,9 @@ import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
@@ -60,33 +63,29 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
     private Map scanPartition(DiskMap existingValues, long partitionId) throws EntityException {
         final CompatMap allResults = new CompatHashMap();
 
-        final Iterator iterator = existingValues.keySet().iterator();
+        final Iterator iterator = existingValues.referenceSet().iterator();
         IManagedEntity entity;
-        Object attributeValue;
-        Object keyValue;
+        SkipListNode node;
+
+        List<QueryCriteria> allCritieria = new ArrayList<>();
+        aggregateCritieria(criteria, allCritieria);
 
         while (iterator.hasNext()) {
             if (query.isTerminated())
                 return allResults;
 
-            keyValue = iterator.next();
-
-            entity = (IManagedEntity) existingValues.get(keyValue);
+            node = (SkipListNode)iterator.next();
+            entity = (IManagedEntity) existingValues.getWithRecID(node.recordId);
 
             // Ensure entity still exists
             if (entity == null) {
                 continue;
             }
 
-            // Get the attribute key
-            attributeValue = ReflectionUtil.getAny(entity, fieldToGrab);
-
-            // Compare and add
-            if (CompareUtil.compare(criteria.getValue(), attributeValue, criteria.getOperator())) {
-                long ref = existingValues.getRecID(keyValue);
-                allResults.put(new PartitionReference(partitionId, ref), new PartitionReference(partitionId, ref));
+            if(CompareUtil.meetsCriteria(allCritieria, criteria, entity, new PartitionReference(partitionId, node.recordId), getContext(), descriptor))
+            {
+                allResults.put(new PartitionReference(partitionId, node.recordId), new PartitionReference(partitionId, node.recordId));
             }
-
         }
 
         return allResults;

@@ -186,18 +186,20 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * @param connectionProperties Socket ConnectionProperties
      * @throws IOException Issue writing to the channel.
      * @since 1.2.0
+     * @since 1.3.0 Altered to reuse write packets rather than application packet for performance
      */
 
-    private void writePacket(SocketChannel socketChannel, ConnectionProperties connectionProperties) throws IOException {
+    private void writePacket(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer overrideBuffer) throws IOException {
 
-        while (connectionProperties.writeApplicationData.hasRemaining()) {
+        ByteBuffer bufferToWrite = (overrideBuffer == null) ? connectionProperties.writeApplicationData : overrideBuffer;
+        while (bufferToWrite.hasRemaining()) {
 
             // My Net Data is guaranteed to only have 16k of data, so you should never get a UNDERFLOW or OVERFLOW
             connectionProperties.writeNetworkData.clear();
 
             // Wrap the data.  The wrapping and unwrapping determine how the packet is coded and how we know when the start
             // and stop of the packet.  The PacketTransportEngine encapsulates that information
-            SSLEngineResult result = connectionProperties.packetTransportEngine.wrap(connectionProperties.writeApplicationData, connectionProperties.writeNetworkData);
+            SSLEngineResult result = connectionProperties.packetTransportEngine.wrap(bufferToWrite, connectionProperties.writeNetworkData);
 
             // Handle Wrap response
             switch (result.getStatus()) {
@@ -274,12 +276,13 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
 
         connectionProperties.writeThread.execute(() -> {
             // Clear and add a placeholder byte for the packet type
-            connectionProperties.writeApplicationData.clear();
             try {
                 // Check to see if the message buffer is the write application buffer.  If it is not,
                 // it indicates the original buffer was resized.  If that is the case, it is too large
                 // to fit onto a single packet
                 if (messageBuffer.limit() >= MAX_PACKET_SIZE) {
+
+                    connectionProperties.writeApplicationData.clear();
 
                     boolean firstPacket = true;
                     byte packetType = MULTI_PACKET_START;
@@ -304,17 +307,16 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                         connectionProperties.writeApplicationData.flip();
 
                         // Write the app buffer as a packet
-                        writePacket(socketChannel, connectionProperties);
+                        writePacket(socketChannel, connectionProperties, null);
                         firstPacket = false;
                     }
                 }
                 // It is small enough to fit onto a single buffer
                 else {
                     BufferStream.recycle(connectionProperties.writeApplicationData);
-                    connectionProperties.writeApplicationData = messageBuffer;
-                    connectionProperties.writeApplicationData.put(SINGLE_PACKET); // Put packet type
-                    connectionProperties.writeApplicationData.rewind();
-                    writePacket(socketChannel, connectionProperties);
+                    messageBuffer.put(SINGLE_PACKET); // Put packet type
+                    messageBuffer.rewind();
+                    writePacket(socketChannel, connectionProperties, messageBuffer);
                 }
             } catch (Exception exception) {
                 if (message instanceof RequestToken) {

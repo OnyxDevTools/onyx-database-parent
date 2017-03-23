@@ -3,13 +3,11 @@ package com.onyx.persistence.query;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.persistence.ManagedEntity;
+import com.onyx.util.CompareUtil;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Specified query filter criteria.  This equates to a query predicates as well as relationship joins.  This can have nested query criteria.
@@ -61,6 +59,16 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     public static String NULL_STRING_VALUE = null;
 
     private boolean not = false;
+
+    private int level;
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
 
     /**
      * Default Constructor
@@ -1312,9 +1320,51 @@ public class QueryCriteria implements ObjectSerializable, Serializable
         isOr = or;
     }
 
-    private List<QueryCriteria> subGrouping = new ArrayList<>();
+    private QueryCriteria parentCriteria;
 
-    public List<QueryCriteria> getSubGrouping() {
-        return subGrouping;
+    public QueryCriteria getParentCriteria() {
+        return parentCriteria;
     }
+
+    public void setParentCriteria(QueryCriteria parentCriteria) {
+        this.parentCriteria = parentCriteria;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(attribute, getValue(), operator, subCriteria, isAnd, isOr, isNot());
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if(this == other)
+            return true;
+
+        if(other instanceof QueryCriteria)
+        {
+            QueryCriteria criteria = (QueryCriteria)other;
+
+            if(criteria.isAnd != this.isAnd)
+                return false;
+            else if(criteria.isOr != this.isOr)
+                return false;
+            else if(criteria.not != this.not)
+                return false;
+            else if(!CompareUtil.forceCompare(criteria.getValue(), this.getValue()))
+                return false;
+            else if(criteria.operator != this.operator)
+                return false;
+            else if(!CompareUtil.forceCompare(criteria.attribute, this.attribute))
+                return false;
+            else if(!criteria.subCriteria.equals(this.subCriteria))
+                return false;
+
+            return true;
+        }
+        return false;
+    }
+
+    public boolean meetsCritieria = false;
 }

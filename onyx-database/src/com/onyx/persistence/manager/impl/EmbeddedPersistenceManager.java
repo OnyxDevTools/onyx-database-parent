@@ -264,11 +264,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), query.getEntityType(), descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
         try
         {
-            final Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+            final Map results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
 
@@ -278,7 +278,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 context.getTransactionController().writeDeleteQuery(query);
             }
 
-            return queryController.deleteRecordsWithIndexes(results, query);
+            return queryController.deleteRecordsWithReferences(results, query);
         } finally
         {
             queryController.cleanup();
@@ -315,11 +315,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, query.getPartition());
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
         try
         {
-            final Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+            final Map<Long, Long> results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
 
@@ -329,7 +329,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 context.getTransactionController().writeQueryUpdate(query);
             }
 
-            return queryController.updateRecordsWithValues(results, query.getUpdates(), query.getFirstRow(), query.getMaxResults());
+            return queryController.performUpdatsForQuery(query, results);
         } finally
         {
             queryController.cleanup();
@@ -362,11 +362,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
         try
         {
-            Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+            Map results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
 
@@ -375,20 +375,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             {
                 if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1)
                 {
-                    results = queryController.sort(
-                            (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
+                    results = queryController.sort(query, results);
                 }
 
-                final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQueryAttributes(query.getSelections().toArray(new String[query.getSelections().size()]), results, false, query.getFirstRow(), query.getMaxResults());
+                final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
 
                 return new ArrayList<>(attributeValues.values());
             } else
             {
 
-                return queryController.hydrateResultsWithIndexes(results,
-                        (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0],
-                        query.getFirstRow(),
-                        query.getMaxResults());
+                return queryController.hydrateResultsWithReferences(query, results);
 
             }
         } finally
@@ -425,17 +421,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
         try
         {
-            Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+            Map<Long, Long> results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
             if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1)
             {
-                results = queryController.sort(
-                        (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
+                results = queryController.sort(query, results);
             }
             return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally
@@ -901,7 +896,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
         return queryController.getCountForQuery(query);
     }

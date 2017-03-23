@@ -38,10 +38,14 @@ public class QueryCountTest extends RemoteBaseTest {
      */
     @Test
     public void testQueryCountForNonPartitionEntity() throws EntityException {
+        Query query = new Query();
+        query.setEntityType(SimpleEntity.class);
+        manager.executeDelete(query);
+
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("ASDF");
-
         manager.saveEntity(simpleEntity);
+
         simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("ASDFL");
         manager.saveEntity(simpleEntity);
@@ -50,7 +54,7 @@ public class QueryCountTest extends RemoteBaseTest {
         simpleEntity.setSimpleId("ASDF");
         manager.deleteEntity(simpleEntity);
 
-        Query query = new Query();
+        query = new Query();
         query.setEntityType(SimpleEntity.class);
         assert manager.countForQuery(query) == 1;
     }
@@ -85,6 +89,12 @@ public class QueryCountTest extends RemoteBaseTest {
      */
     @Test
     public void testQueryCountForAllPartitions() throws EntityException {
+
+        Query query = new Query();
+        query.setEntityType(BasicPartitionEntity.class);
+        query.setPartition(QueryPartitionMode.ALL);
+        manager.executeDelete(query);
+
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
         basicPartitionEntity.id = 1L;
@@ -97,7 +107,7 @@ public class QueryCountTest extends RemoteBaseTest {
 
         manager.saveEntity(basicPartitionEntity);
 
-        Query query = new Query();
+        query = new Query();
         query.setEntityType(BasicPartitionEntity.class);
         query.setPartition(QueryPartitionMode.ALL);
         assert manager.countForQuery(query) == 2;
@@ -108,6 +118,12 @@ public class QueryCountTest extends RemoteBaseTest {
      */
     @Test
     public void testQueryCountForCustomQuery() throws EntityException {
+
+        Query query = new Query();
+        query.setEntityType(BasicPartitionEntity.class);
+        query.setPartition(QueryPartitionMode.ALL);
+        manager.executeDelete(query);
+
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
         basicPartitionEntity.id = 1L;
@@ -120,7 +136,7 @@ public class QueryCountTest extends RemoteBaseTest {
 
         manager.saveEntity(basicPartitionEntity);
 
-        Query query = new Query(BasicPartitionEntity.class, new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 1L));
+        query = new Query(BasicPartitionEntity.class, new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 1L));
         assert manager.countForQuery(query) == 1;
     }
 }

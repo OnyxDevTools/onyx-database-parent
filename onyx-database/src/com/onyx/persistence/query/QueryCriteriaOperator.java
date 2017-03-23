@@ -42,4 +42,18 @@ public enum QueryCriteriaOperator
     {
 
     }
+
+    /**
+     * Indicates if the operator supports indexing capabilities
+     * @return If this operator supports index scanning
+     */
+    public boolean isIndexed()
+    {
+        return (this == QueryCriteriaOperator.EQUAL
+                || this == QueryCriteriaOperator.IN
+                || this == QueryCriteriaOperator.GREATER_THAN
+                || this == QueryCriteriaOperator.GREATER_THAN_EQUAL
+                || this == QueryCriteriaOperator.LESS_THAN
+                || this == QueryCriteriaOperator.LESS_THAN_EQUAL);
+    }
 }

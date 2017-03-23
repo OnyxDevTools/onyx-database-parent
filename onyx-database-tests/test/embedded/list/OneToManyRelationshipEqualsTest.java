@@ -259,6 +259,6 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
                 .and("children.id", QueryCriteriaOperator.IN, idlist);
 
         List<OneToOneFetchEntity> results = manager.list(OneToOneFetchEntity.class, criteria);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(0, results.size());
     }
 }

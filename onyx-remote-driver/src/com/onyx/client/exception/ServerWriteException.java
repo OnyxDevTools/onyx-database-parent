@@ -10,6 +10,15 @@ public class ServerWriteException extends OnyxServerException
     private static final String SERVER_WRITE_EXCEPTION = "An error occurred while attempting to write to a client connection.";
 
     /**
+     * Empty Constructor
+     */
+    @SuppressWarnings("unused")
+    public ServerWriteException()
+    {
+
+    }
+
+    /**
      * Default constructor
      *
      * @param throwable Root cause exception

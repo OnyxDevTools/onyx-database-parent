@@ -2,15 +2,21 @@ package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
+import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InvalidRelationshipTypeException;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
+import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by timothy.osborn on 12/23/14.
@@ -109,6 +115,75 @@ public class RelationshipHelper
             final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
             relationshipController.hydrateRelationshipForEntity(entityId, entity, relationshipManager, false);
         }
+    }
+
+    /**
+     * Helper method to grab a relationship value from the store
+     *
+     * @param entity Parent entity
+     * @param entityReference Parent entity reference
+     * @param attribute Relationship field name
+     * @param context Schema context
+     * @return A list of relationship entities
+     * @throws EntityException Could not pull relationship
+     *
+     * @since 1.3.0 Used to dynamically pull a relationship regardless of relationship type and partition information
+     *              Supports insertion criteria checking.
+     */
+    public static List<IManagedEntity> getRelationshipForValue(IManagedEntity entity, Object entityReference, String attribute, SchemaContext context) throws EntityException
+    {
+        String[] slices = attribute.split("\\.");
+
+        String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
+        EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
+
+        RelationshipDescriptor relationshipDescriptor = null;
+
+        // Iterate through and grab the right descriptor
+        try {
+            for (int i = 0; i < slices.length - 1; i++) {
+                relationshipDescriptor = descriptor.getRelationships().get(slices[i]);
+                descriptor = context.getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
+            }
+        } catch (NullPointerException e)
+        {
+            return null;
+        }
+
+
+        final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
+        List<RelationshipReference> relationshipReferences;
+        RecordController recordController;
+
+        // Get relationship references
+        if (entityReference instanceof PartitionReference) {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)entityReference);
+        }
+        else
+        {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(((SkipListNode)entityReference).recordId);
+        }
+
+        RecordController defaultRecordController = context.getRecordController(descriptor);
+
+        PartitionContext partitionContext = null;
+
+        List<IManagedEntity> entities = new ArrayList<>();
+        for(RelationshipReference reference : relationshipReferences)
+        {
+            if(reference.partitionId <= 0)
+                entities.add(defaultRecordController.getWithId(reference.identifier));
+            else
+            {
+                if(partitionContext == null)
+                    partitionContext = new PartitionContext(context, descriptor);
+
+                recordController = partitionContext.getRecordControllerForPartition(reference.partitionId);
+                entities.add(recordController.getWithId(reference.identifier));
+            }
+        }
+
+        return entities;
     }
 
 }

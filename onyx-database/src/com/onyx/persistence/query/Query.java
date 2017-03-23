@@ -4,12 +4,15 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
+import com.onyx.query.QueryListener;
+import com.onyx.util.CompareUtil;
 
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This class contains all of the information needed to execute a query including criteria, sort order information, limited selection, and row constraints.
@@ -593,6 +596,10 @@ public class Query implements ObjectSerializable, Serializable
         resultsCount = buffer.readInt();
     }
 
+    public void setChangeListener(QueryListener subscriber)
+    {
+
+    }
     /**
      * Read object with position
      *
@@ -610,5 +617,34 @@ public class Query implements ObjectSerializable, Serializable
     public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException
     {
 
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(entityType, partition, queryOrders, criteria);
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if(other == this)
+            return true;
+
+        if(other instanceof Query)
+        {
+            Query otherQuery = (Query)other;
+            if(!this.entityType.equals(otherQuery.entityType))
+                return false;
+            if(!CompareUtil.forceCompare(this.partition,otherQuery.partition))
+                return false;
+            if(!this.criteria.equals(otherQuery.criteria))
+                return false;
+            if(!CompareUtil.forceCompare(this.queryOrders,otherQuery.queryOrders))
+                return false;
+
+            return true;
+        }
+        return false;
     }
 }

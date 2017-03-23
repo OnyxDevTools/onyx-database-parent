@@ -51,7 +51,7 @@ public class RelationshipPartitionSelectTest extends BaseTest {
         assert addresses.size() == 50;
     }
 
-    @Test(expected = InvalidQueryException.class)
+    @Test
     @SuppressWarnings("unchecked")
     public void testInsert() throws EntityException {
         for (int i = 0; i < 50; i++) {
