@@ -12,7 +12,6 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.util.OffsetField;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -31,6 +30,8 @@ abstract class AbstractTableScanner extends PartitionContext
     protected final Class classToScan;
     @SuppressWarnings("WeakerAccess")
     protected final EntityDescriptor descriptor;
+
+    @SuppressWarnings("WeakerAccess")
     OffsetField fieldToGrab = null;
 
     @SuppressWarnings("WeakerAccess")
@@ -74,38 +75,5 @@ abstract class AbstractTableScanner extends PartitionContext
         this.persistenceManager = persistenceManager;
     }
 
-    /**
-     * This method aggregates the list of criteria and sub criteria into
-     * a single list so that it does not have to be done upon checking criteria
-     * each iteration
-     *
-     * @param criteria Root Criteria
-     * @param allCritieria Maintained list of all criteria
-     * @return List of all criteria
-     *
-     * @since 1.3.0 Re-vamped criteria checking to address bugs and maintain
-     *              record insertion criteria checking
-     */
-    public static List<QueryCriteria> aggregateCritieria(QueryCriteria criteria, List<QueryCriteria> allCritieria)
-    {
-        allCritieria.add(criteria);
 
-        for (QueryCriteria subCriteria : criteria.getSubCriteria())
-        {
-            aggregateCritieria(subCriteria, allCritieria);
-            subCriteria.setParentCriteria(criteria);
-
-            // This indicates it is a root criteria.  In that case, we need to
-            // look at the first sub criteria and assign its modifier
-            if(!criteria.isAnd() && !criteria.isOr())
-            {
-                if(subCriteria.isOr())
-                    criteria.setOr(true);
-                else
-                    criteria.setAnd(true);
-            }
-        }
-
-        return allCritieria;
-    }
 }

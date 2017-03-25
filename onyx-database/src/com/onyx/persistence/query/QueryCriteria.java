@@ -144,17 +144,6 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     private boolean isOr = false;
 
     /**
-     * Get Or Sub Criteria
-     * @since 1.0.0
-     * @return Or Sub Criteria
-     */
-    @SuppressWarnings("unused")
-    public List<QueryCriteria> getOrCriteria()
-    {
-        return subCriteria;
-    }
-
-    /**
      * Get And Sub Criteria
      * @since 1.0.0
      * @return And Sub Criteria
@@ -1091,11 +1080,6 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     @SuppressWarnings("unused")
-    public void setOrCriteria(List<QueryCriteria> orCriteria) {
-        this.subCriteria = orCriteria;
-    }
-
-    @SuppressWarnings("unused")
     public Float getFloatValue() {
         return floatValue;
     }
@@ -1352,11 +1336,11 @@ public class QueryCriteria implements ObjectSerializable, Serializable
                 return false;
             else if(criteria.not != this.not)
                 return false;
-            else if(!CompareUtil.forceCompare(criteria.getValue(), this.getValue()))
-                return false;
             else if(criteria.operator != this.operator)
                 return false;
             else if(!CompareUtil.forceCompare(criteria.attribute, this.attribute))
+                return false;
+            else if(!CompareUtil.forceCompare(criteria.getValue(), this.getValue()))
                 return false;
             else if(!criteria.subCriteria.equals(this.subCriteria))
                 return false;

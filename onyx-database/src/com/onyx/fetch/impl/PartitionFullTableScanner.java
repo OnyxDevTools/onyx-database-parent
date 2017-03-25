@@ -24,10 +24,7 @@ import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -67,8 +64,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
         IManagedEntity entity;
         SkipListNode node;
 
-        List<QueryCriteria> allCritieria = new ArrayList<>();
-        aggregateCritieria(criteria, allCritieria);
+        final SchemaContext context = getContext();
 
         while (iterator.hasNext()) {
             if (query.isTerminated())
@@ -82,7 +78,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                 continue;
             }
 
-            if(CompareUtil.meetsCriteria(allCritieria, criteria, entity, new PartitionReference(partitionId, node.recordId), getContext(), descriptor))
+            if(CompareUtil.meetsCriteria(query.getAllCriteria(), criteria, entity, new PartitionReference(partitionId, node.recordId), context, descriptor))
             {
                 allResults.put(new PartitionReference(partitionId, node.recordId), new PartitionReference(partitionId, node.recordId));
             }

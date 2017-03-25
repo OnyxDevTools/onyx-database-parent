@@ -159,6 +159,10 @@ public class RelationshipHelper
         if (entityReference instanceof PartitionReference) {
             relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)entityReference);
         }
+        else if(entityReference instanceof Long)
+        {
+            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((Long)entityReference);
+        }
         else
         {
             relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(((SkipListNode)entityReference).recordId);

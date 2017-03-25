@@ -23,6 +23,7 @@ import java.util.List;
 @Category({RemoteServerTests.class})
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class FullTableScanPartitionTest extends BasePartitionTest {
+
     @Test
     public void aTestSavePartitionEntityWithIndex() {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();

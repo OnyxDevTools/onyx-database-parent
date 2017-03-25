@@ -1,9 +1,10 @@
 package com.onyx.diskmap.base.hashmatrix;
 
-import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
 import com.onyx.diskmap.node.HashMatrixNode;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.store.Store;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.util.Map;
 
@@ -32,7 +33,7 @@ abstract class AbstractCachedHashMatrix<K, V> extends AbstractHashMatrix<K, V> {
      */
     AbstractCachedHashMatrix(Store fileStore, Header header, boolean detached) {
         super(fileStore, header, detached);
-        nodeCache = new ConcurrentWeakHashMap<>();
+        nodeCache = new SynchronizedMap<>(new CompatWeakHashMap<>());
     }
 
     /**

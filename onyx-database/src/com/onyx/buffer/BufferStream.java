@@ -549,7 +549,7 @@ public class BufferStream {
      * @throws BufferingException Generic Buffer Exception
      */
     @SuppressWarnings("RedundantThrows")
-    private void putBoolean(boolean value) throws BufferingException {
+    public void putBoolean(boolean value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
         expandableByteBuffer.buffer.put((value) ? (byte) 1 : (byte) 0);
     }

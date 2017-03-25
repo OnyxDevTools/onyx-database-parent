@@ -100,6 +100,33 @@ public class IdentifierScanPartitionTest extends BasePartitionTest
     }
 
     @Test
+    public void caTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
+    {
+        FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
+        FullTablePartitionEntity.id = 1l;
+        FullTablePartitionEntity.partitionId = 3l;
+        FullTablePartitionEntity.indexVal = 5l;
+
+        save(FullTablePartitionEntity);
+
+        Query query = new Query(FullTablePartitionEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1l).and("partitionId", QueryCriteriaOperator.EQUAL, 3l).and("indexVal", QueryCriteriaOperator.LESS_THAN, 6L));
+
+        // By adding this, it will test our cache and ensure we are properly handling partitions
+        List results = manager.executeQuery(query);
+
+        FullTablePartitionEntity FullTablePartitionEntity2 = new FullTablePartitionEntity();
+        FullTablePartitionEntity2.id = 1l;
+        FullTablePartitionEntity2.partitionId = 3L;
+        FullTablePartitionEntity2.indexVal = 6l;
+
+        save(FullTablePartitionEntity2);
+
+        query = new Query(FullTablePartitionEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1l).and("partitionId", QueryCriteriaOperator.EQUAL, 3l).and("indexVal", QueryCriteriaOperator.LESS_THAN, 6L));
+
+        results = manager.executeQuery(query);
+        Assert.assertTrue(results.size() == 0);
+    }
+    @Test
     public void dTestDeleteQueryPartitionEntity() throws EntityException
     {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();

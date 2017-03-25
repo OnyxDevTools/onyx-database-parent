@@ -9,6 +9,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.util.OffsetField;
@@ -104,9 +105,20 @@ public class ValidationHelper {
      */
     @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
     public static boolean validateQuery(EntityDescriptor descriptor, Query query, SchemaContext context) throws EntityException {
+        // If there are no critieria, add a dummy critieria to the list
+        if (query.getCriteria() == null) {
+            query.setCriteria(new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_EQUAL));
+            query.getAllCriteria();
+        }
+        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
+
+        query.getAllCriteria();
+        query.sortCritieria(descriptor);
+
         if (query.getUpdates() == null) {
             return true;
         }
+
         for (AttributeUpdate instruction : query.getUpdates()) {
             String fieldName = instruction.getFieldName();
 

@@ -1,11 +1,12 @@
 package com.onyx.diskmap.base.skiplist;
 
-import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
+import com.onyx.util.map.CompatWeakHashMap;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -24,8 +25,8 @@ import java.util.Map;
 abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
 
     // Caching maps
-    protected Map<K, SkipListNode> keyCache = new ConcurrentWeakHashMap<>();
-    protected Map<Long, V> valueByPositionCache = new ConcurrentWeakHashMap<>();
+    protected Map<K, SkipListNode> keyCache = Collections.synchronizedMap(new CompatWeakHashMap<>());
+    protected Map<Long, V> valueByPositionCache = Collections.synchronizedMap(new CompatWeakHashMap<>());
 
     /**
      * Constructor defines the caching medium for the nodes and values.

@@ -178,7 +178,10 @@ public class SynchronizedMap<K, V> implements CompatMap<K, V> {
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
         synchronized (mutex) {
-            m.forEach(action);
+            Set<Map.Entry<K,V>> entrySet = m.entrySet();
+            for(Map.Entry entry : entrySet) {
+                action.accept((K)entry.getKey(), (V)entry.getValue());
+            }
         }
     }
 

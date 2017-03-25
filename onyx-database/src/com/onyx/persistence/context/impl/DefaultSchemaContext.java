@@ -10,6 +10,7 @@ import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.TransactionException;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.ScannerFactory;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.index.IndexController;
@@ -32,12 +33,10 @@ import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
+import com.onyx.util.CompareUtil;
 import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.util.map.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -100,7 +99,7 @@ public class DefaultSchemaContext implements SchemaContext {
     @SuppressWarnings("WeakerAccess")
     protected String temporaryFileLocation;
 
-    private final Set<MapBuilder> temporaryMaps = new HashSet<>();
+    protected final Set<MapBuilder> temporaryMaps = new HashSet<>();
     /**
      * Constructor.
      *
@@ -1117,7 +1116,7 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
-    final private ArrayBlockingQueue<MapBuilder> temporaryDiskMapQueue = new ArrayBlockingQueue<>(32, false);
+    final protected ArrayBlockingQueue<MapBuilder> temporaryDiskMapQueue = new ArrayBlockingQueue<>(32, false);
 
     /**
      * Create Temporary Map Builder.
@@ -1194,16 +1193,72 @@ public class DefaultSchemaContext implements SchemaContext {
         }
     };
 
-    private CompatMap<Query, CachedResults> cachedQueryResults = new SynchronizedMap<>();
+
+    private CompatMap<Class, CompatMap<Query, CachedResults>> cachedQueriesByClass = new SynchronizedMap<>(new CompatHashMap<>());
 
     public CachedResults getCachedQueryResults(Query query)
     {
-        return cachedQueryResults.get(query);
+        return cachedQueriesByClass.compute(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
+            if(queryCachedResultsMap == null)
+                queryCachedResultsMap = new SynchronizedMap(new LastRecentlyUsedMap<>(100));
+
+            return queryCachedResultsMap;
+        }).get(query);
     }
 
-    public void setCachedQueryResults(Query query, CachedResults cachedResults)
+    public void setCachedQueryResults(Query query, Map results)
     {
-        cachedQueryResults.put(query, cachedResults);
+        cachedQueriesByClass.computeIfPresent(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
+            queryCachedResultsMap.put(query, new CachedResults(results));
+            return queryCachedResultsMap;
+        });
+    }
+
+    public void updateCachedQueryResultsForEntity(IManagedEntity entity, EntityDescriptor descriptor, final long entityReference, boolean remove)
+    {
+        cachedQueriesByClass.computeIfPresent(entity.getClass(), (aClass, queryCachedResultsMap) -> {
+
+            Object reference = entityReference;
+
+            // This snippet here will resolve the partition reference based on the descriptor and
+            // The entity passed in
+            try {
+                if (descriptor.getPartition() != null
+                        && descriptor.getPartition().getPartitionValue() != null
+                        && descriptor.getPartition().getPartitionValue().length() > 0) {
+                    final SystemPartitionEntry systemPartitionEntry = context.getPartitionWithValue(aClass, descriptor.getPartition().getPartitionValue());
+                    reference = new PartitionReference(systemPartitionEntry.getIndex(), entityReference);
+                }
+            } catch (EntityException ignore) {}
+
+            final Object useThisReference = reference;
+
+            queryCachedResultsMap.forEach((query, cachedResults) -> {
+                try {
+
+                    // If indicated to remove the record, delete it and move on
+                    if(remove)
+                    {
+                        synchronized(cachedResults.getReferences()) {
+                            cachedResults.getReferences().remove(useThisReference);
+                        }
+                    }
+                    else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, DefaultSchemaContext.this, descriptor)) {
+                        synchronized (cachedResults.getReferences()) {
+                            if(query.getSelections() != null && query.getSelections().size() > 0) {
+                                cachedResults.getReferences().put(useThisReference, useThisReference);
+                            }
+                            else
+                            {
+                                cachedResults.getReferences().put(useThisReference, entity);
+                            }
+                        }
+                    }
+                } catch (EntityException ignore) {}
+            });
+
+            return queryCachedResultsMap;
+        });
     }
 
 }

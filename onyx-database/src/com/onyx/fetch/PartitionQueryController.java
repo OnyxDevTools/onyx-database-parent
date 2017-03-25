@@ -67,9 +67,6 @@ public class PartitionQueryController extends PartitionContext {
             return new CompatHashMap();
         }
 
-        // Optimize the sub criteria
-        sortCritieria(criteria);
-
         TableScanner scanner;
         if(forceFullScan)
         {
@@ -161,71 +158,7 @@ public class PartitionQueryController extends PartitionContext {
      */
     @SuppressWarnings("unchecked")
     public Map getReferencesForQuery(Query query) throws EntityException {
-
-        // If there are no critieria, add a dummy critieria to the list
-        if (query.getCriteria() == null) {
-            query.setCriteria(new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_EQUAL));
-        }
-
         return getReferencesForCritieria(query, query.getCriteria(), null, query.getCriteria().isNot());
-    }
-
-    /**
-     * This method is used to optimize the criteria.  If an identifier is included, that will move that
-     * criteria to the top.  Next if an index is included, that will be moved to the top.
-     * <p>
-     * This was added as an enhancement so that the query is self optimized
-     *
-     * @param criteria Critieria to sort
-     * @since 1.3.0 An effort to cleanup query results in preparation for query caching.
-     */
-    private void sortCritieria(QueryCriteria criteria) {
-        Collections.sort(criteria.getSubCriteria(), (o1, o2) -> {
-
-            // Check identifiers first
-            boolean o1isIdentifier = descriptor.getIdentifier().getName().equals(o1.getAttribute());
-            boolean o2isIdentifier = descriptor.getIdentifier().getName().equals(o2.getAttribute());
-
-            if (o1isIdentifier && !o2isIdentifier)
-                return 1;
-            else if (o2isIdentifier && !o1isIdentifier)
-                return -1;
-
-            // Check indexes next
-            boolean o1isIndex = descriptor.getIndexes().get(o1.getAttribute()) != null;
-            boolean o2isIndex = descriptor.getIndexes().get(o2.getAttribute()) != null;
-
-            if (o1isIndex && !o2isIndex)
-                return 1;
-            else if (o2isIndex && !o1isIndex)
-                return -1;
-
-            // Check relationships last.  A full table scan is prefered before a relationship
-            boolean o1isRelationship = descriptor.getRelationships().get(o1.getAttribute()) != null;
-            boolean o2isRelationship = descriptor.getRelationships().get(o2.getAttribute()) != null;
-
-            if (o1isRelationship && !o2isRelationship)
-                return -1;
-            else if (o2isRelationship && !o1isRelationship)
-                return 1;
-
-            if(o1.getOperator().isIndexed() && !o2.getOperator().isIndexed())
-                return 1;
-            else if(o2.getOperator().isIndexed() && !o1.getOperator().isIndexed())
-                return -1;
-
-            // Lastly check for operators.  EQUAL has priority since it is less granular
-            if (o1.getOperator() == QueryCriteriaOperator.EQUAL
-                    && o2.getOperator() == QueryCriteriaOperator.EQUAL)
-                return 0;
-            else if (o1.getOperator() == QueryCriteriaOperator.EQUAL)
-                return 1;
-            else if (o2.getOperator() == QueryCriteriaOperator.EQUAL)
-                return -1;
-            else
-                return 0;
-        });
-
     }
 
     /**
@@ -255,7 +188,8 @@ public class PartitionQueryController extends PartitionContext {
             count = references.size();
         }
 
-        Iterator<PartitionReference> iterator = references.keySet().iterator();
+        Iterator<Map.Entry> iterator = references.entrySet().iterator();
+        Map.Entry entry;
         Object index;
         IManagedEntity value = null;
         int i = 0;
@@ -271,18 +205,34 @@ public class PartitionQueryController extends PartitionContext {
             if ((i >= ((count + start)) || i >= references.size()))
                 break;
 
-            index = iterator.next();
+            entry = iterator.next();
+            index = entry.getKey();
 
-            if (index instanceof PartitionReference) {
-                PartitionReference ref = (PartitionReference) index;
-                value = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
-            } else if (index != null && index instanceof Long) {
-                value = recordController.getWithReferenceId((long) index);
+            if(!(entry.getValue() instanceof IManagedEntity)) {
+
+                if (index instanceof PartitionReference) {
+                    PartitionReference ref = (PartitionReference) index;
+                    value = getRecordControllerForPartition(ref.partition).getWithReferenceId(ref.reference);
+                } else if (index != null && index instanceof Long) {
+                    value = recordController.getWithReferenceId((long) index);
+                }
+
+                if (value != null) {
+                    RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), getContext());
+                }
+
+                // Back fill for query cache
+                entry.setValue(value);
             }
+            else
+            {
+                value = (IManagedEntity)entry.getValue();
+            }
+
             if (value != null) {
-                RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), getContext());
                 returnValue.add(value);
             }
+
             i++;
         }
 
@@ -302,6 +252,7 @@ public class PartitionQueryController extends PartitionContext {
     public Map sort(Query query, Map referenceValues) throws EntityException {
         final Map retVal = new TreeMap(new PartitionSortCompare(query, (query.getQueryOrders() == null) ? new QueryOrder[0] : query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]), descriptor, getContext()));
         retVal.putAll(referenceValues);
+
         return retVal;
     }
 
@@ -355,24 +306,31 @@ public class PartitionQueryController extends PartitionContext {
             record = new CompatHashMap();
 
             entry = iterator.next();
-            for (ScannerProperties properties : scanObjects) {
-                if (properties.relationshipDescriptor != null) {
-                    // Added support for TO Many relationships.  This must be treated differently in order to hydrate
-                    // a list rather than a single object.  This is treated special
-                    if (properties.relationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY
-                            || properties.relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) {
-                        entityAttribute = hydrateRelationshipToManyMap(entry.getKey(), properties);
+            if(entry.getValue() instanceof Map)
+            {
+                results.put(entry.getKey(), (Map)entry.getValue());
+            }
+            else {
+                for (ScannerProperties properties : scanObjects) {
+                    if (properties.relationshipDescriptor != null) {
+                        // Added support for TO Many relationships.  This must be treated differently in order to hydrate
+                        // a list rather than a single object.  This is treated special
+                        if (properties.relationshipDescriptor.getRelationshipType() == RelationshipType.ONE_TO_MANY
+                                || properties.relationshipDescriptor.getRelationshipType() == RelationshipType.MANY_TO_MANY) {
+                            entityAttribute = hydrateRelationshipToManyMap(entry.getKey(), properties);
+                        }
+                        // This is for a to one relationship
+                        else {
+                            entityAttribute = hydrateRelationshipToOneMap(entry.getKey(), properties);
+                        }
+                    } else {
+                        entityAttribute = hydrateEntityMap(entry.getKey(), properties);
                     }
-                    // This is for a to one relationship
-                    else {
-                        entityAttribute = hydrateRelationshipToOneMap(entry.getKey(), properties);
-                    }
-                } else {
-                    entityAttribute = hydrateEntityMap(entry.getKey(), properties);
-                }
 
-                record.put(properties.getAttribute(), entityAttribute);
+                    record.put(properties.getAttribute(), entityAttribute);
+                }
                 results.put(entry.getKey(), record);
+                entry.setValue(entry.getKey());
             }
 
             i++;
@@ -604,7 +562,11 @@ public class PartitionQueryController extends PartitionContext {
                         IndexController previousIndexController = getContext().getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                         previousIndexController.delete(((PartitionReference) referenceId).reference);
-                    } else {
+                    } else if (referenceId instanceof PartitionReference) {
+                        updateInstruction.getIndexController().delete(((PartitionReference) referenceId).reference);
+                    }
+                    else
+                    {
                         updateInstruction.getIndexController().delete((long) referenceId);
                     }
                 } else if (updatedPartition && updateInstruction.getIndexController() != null && referenceId instanceof PartitionReference) {

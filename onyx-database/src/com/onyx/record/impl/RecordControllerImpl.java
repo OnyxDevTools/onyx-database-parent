@@ -58,6 +58,12 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
                         isNew.set(true);
                         invokePreInsertCallback(entity);
                     } else {
+                        long recordId = records.getRecID(identifierValue);
+                        if(recordId > 0L)
+                        {
+                            // Update Cached queries
+                            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                        }
                         invokePreUpdateCallback(entity);
                     }
                 } catch (EntityCallbackException ignore) {
@@ -65,6 +71,12 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
                 return entity;
             });
         } else {
+            long recordId = records.getRecID(identifierValue);
+            if(recordId > 0L)
+            {
+                // Update Cached queries
+                context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+            }
             records.put(identifierValue, entity);
         }
 
@@ -79,6 +91,9 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
         }
 
         invokePostPersistCallback(entity); // Always invoke Post persist callback
+
+        // Update Cached queries
+        context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue),false);
 
         // Return the id
         return identifierValue;

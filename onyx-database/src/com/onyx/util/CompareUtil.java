@@ -13,6 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 12/14/14.
@@ -55,7 +56,7 @@ public class CompareUtil
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked WeakerAccess")
     public static Object castObject(Class clazz, Object object) {
 
         Method method = null;
@@ -519,7 +520,7 @@ public class CompareUtil
      *
      * @since 1.3.0 Simplified query criteria management
      */
-    public static boolean meetsCriteria(List<QueryCriteria> allCritieria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws EntityException {
+    public static boolean meetsCriteria(Set<QueryCriteria> allCritieria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws EntityException {
 
         boolean subCreriaMet;
 

@@ -15,10 +15,7 @@ import com.onyx.record.RecordController;
 import com.onyx.util.CompareUtil;
 import com.onyx.util.map.CompatHashMap;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -56,17 +53,18 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
         SkipListNode entry;
         IManagedEntity entity;
 
-        final List<QueryCriteria> allCritieria = new ArrayList<>();
-        aggregateCritieria(criteria, allCritieria);
+        SchemaContext context = getContext();
 
         while (iterator.hasNext()) {
             if (query.isTerminated())
                 return allResults;
 
             entry = (SkipListNode) iterator.next();
+            if(entry == null) // Entity may have been deleted
+                continue;
             entity = records.getWithRecID(entry.recordId);
 
-            if (CompareUtil.meetsCriteria(allCritieria, criteria, entity, entry, getContext(), descriptor))
+            if (CompareUtil.meetsCriteria(query.getAllCriteria(), criteria, entity, entry, context, descriptor))
                 allResults.put(entry.recordId, entry.recordId);
         }
 
@@ -89,8 +87,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
         IManagedEntity entity;
         Object reference;
 
-        final List<QueryCriteria> allCritieria = new ArrayList<>();
-        aggregateCritieria(criteria, allCritieria);
+        SchemaContext context = getContext();
 
         while (iterator.hasNext()) {
             if (query.isTerminated())
@@ -105,7 +102,7 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
                 entity = records.getWithRecID((long) reference);
             }
 
-            if (CompareUtil.meetsCriteria(allCritieria, criteria, entity, reference, getContext(), descriptor)) {
+            if (CompareUtil.meetsCriteria(query.getAllCriteria(), criteria, entity, reference, context, descriptor)) {
                 allResults.put(reference, reference);
             } else {
                 allResults.remove(reference);

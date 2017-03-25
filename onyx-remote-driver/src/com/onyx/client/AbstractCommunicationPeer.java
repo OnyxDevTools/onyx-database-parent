@@ -313,10 +313,10 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                 }
                 // It is small enough to fit onto a single buffer
                 else {
-                    BufferStream.recycle(connectionProperties.writeApplicationData);
                     messageBuffer.put(SINGLE_PACKET); // Put packet type
                     messageBuffer.rewind();
                     writePacket(socketChannel, connectionProperties, messageBuffer);
+                    BufferStream.recycle(messageBuffer);
                 }
             } catch (Exception exception) {
                 if (message instanceof RequestToken) {

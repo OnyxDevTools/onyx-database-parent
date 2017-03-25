@@ -108,6 +108,13 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
                         isNew.set(true);
                         invokePreInsertCallback(entity);
                     } else {
+
+                        long recordId = records.getRecID(retval);
+                        if(recordId > 0L)
+                        {
+                            // Update Cached queries
+                            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                        }
                         invokePreUpdateCallback(entity);
                     }
                 } catch (EntityCallbackException ignore) {
@@ -115,6 +122,13 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
                 return entity;
             });
         } else {
+            long recordId = records.getRecID(retval);
+            if(recordId > 0L)
+            {
+                // Update Cached queries
+                context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+            }
+
             records.put(id, entity);
         }
 
@@ -128,6 +142,9 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
         {
             invokePostUpdateCallback(entity);
         }
+
+        // Update Cached queries
+        context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),false);
 
         // Return the id
         return id;
@@ -174,11 +191,16 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity);
 
-        invokePreRemoveCallback(entity);
+        // Update Cached queries
+        long recordId = records.getRecID(identifierValue);
+        if(recordId > -1)
+        {
+            invokePreRemoveCallback(entity);
+            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
+            this.deleteWithId(identifierValue);
+            invokePostRemoveCallback(entity);
+        }
 
-        this.deleteWithId(identifierValue);
-
-        invokePostRemoveCallback(entity);
     }
 
     /**
