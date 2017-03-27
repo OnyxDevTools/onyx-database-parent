@@ -11,6 +11,7 @@ import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCacheController;
 import com.onyx.query.CachedResults;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
@@ -332,16 +333,12 @@ public interface SchemaContext
     void releaseMapBuilder(MapBuilder mapBuilder);
 
     /**
-     * Get Query cached results
+     * Get controller responsible for managing query caches
      *
-     * @param query Query to check for existing cached results
-     * @return The Cached results
+     * @return The schema context's query controller
      *
      * @since 1.3.0
      */
-    CachedResults getCachedQueryResults(Query query);
+    QueryCacheController getQueryCacheController();
 
-    void setCachedQueryResults(Query query, Map results);
-
-    void updateCachedQueryResultsForEntity(IManagedEntity entity, EntityDescriptor descriptor, long entityReference, boolean remove);
 }

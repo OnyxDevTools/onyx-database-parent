@@ -10,7 +10,6 @@ import com.onyx.entity.*;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.TransactionException;
-import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.ScannerFactory;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.index.IndexController;
@@ -20,11 +19,8 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.query.QueryOrder;
-import com.onyx.query.CachedResults;
+import com.onyx.persistence.query.*;
+import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 import com.onyx.record.RecordController;
 import com.onyx.record.impl.RecordControllerImpl;
 import com.onyx.record.impl.SequenceRecordControllerImpl;
@@ -33,7 +29,6 @@ import com.onyx.relationship.impl.ToManyRelationshipControllerImpl;
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl;
 import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
-import com.onyx.util.CompareUtil;
 import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
 import com.onyx.util.map.*;
@@ -113,6 +108,7 @@ public class DefaultSchemaContext implements SchemaContext {
         this.contextId = contextId;
 
         DefaultSchemaContext.registeredSchemaContexts.put(contextId, this);
+        this.queryCacheController = new DefaultQueryCacheController(this);
 
     }
 
@@ -1200,72 +1196,18 @@ public class DefaultSchemaContext implements SchemaContext {
         }
     };
 
+    private QueryCacheController queryCacheController;
 
-    private final CompatMap<Class, CompatMap<Query, CachedResults>> cachedQueriesByClass = new SynchronizedMap<>(new CompatHashMap<>());
-
-    public CachedResults getCachedQueryResults(Query query)
-    {
-        return cachedQueriesByClass.compute(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
-            if(queryCachedResultsMap == null)
-                queryCachedResultsMap = new LastRecentlyUsedMap<>(100, 5*60);
-
-            return queryCachedResultsMap;
-        }).get(query);
-    }
-
-    public void setCachedQueryResults(Query query, Map results)
-    {
-        cachedQueriesByClass.computeIfPresent(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
-            queryCachedResultsMap.put(query, new CachedResults(results));
-            return queryCachedResultsMap;
-        });
-    }
-
-    public void updateCachedQueryResultsForEntity(IManagedEntity entity, EntityDescriptor descriptor, final long entityReference, boolean remove)
-    {
-        cachedQueriesByClass.computeIfPresent(entity.getClass(), (aClass, queryCachedResultsMap) -> {
-
-            Object reference = entityReference;
-
-            // This snippet here will resolve the partition reference based on the descriptor and
-            // The entity passed in
-            try {
-                if (descriptor.getPartition() != null
-                        && descriptor.getPartition().getPartitionValue() != null
-                        && descriptor.getPartition().getPartitionValue().length() > 0) {
-                    final SystemPartitionEntry systemPartitionEntry = context.getPartitionWithValue(aClass, descriptor.getPartition().getPartitionValue());
-                    reference = new PartitionReference(systemPartitionEntry.getIndex(), entityReference);
-                }
-            } catch (EntityException ignore) {}
-
-            final Object useThisReference = reference;
-
-            queryCachedResultsMap.forEach((query, cachedResults) -> {
-                try {
-
-                    // If indicated to remove the record, delete it and move on
-                    if(remove)
-                    {
-                        synchronized(cachedResults.getReferences()) {
-                            cachedResults.getReferences().remove(useThisReference);
-                        }
-                    }
-                    else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, DefaultSchemaContext.this, descriptor)) {
-                        synchronized (cachedResults.getReferences()) {
-                            if(query.getSelections() != null && query.getSelections().size() > 0) {
-                                cachedResults.getReferences().put(useThisReference, useThisReference);
-                            }
-                            else
-                            {
-                                cachedResults.getReferences().put(useThisReference, entity);
-                            }
-                        }
-                    }
-                } catch (EntityException ignore) {}
-            });
-
-            return queryCachedResultsMap;
-        });
+    /**
+     * Get controller responsible for managing query caches
+     *
+     * @return The schema context's query controller
+     *
+     * @since 1.3.0
+     */
+    @Override
+    public QueryCacheController getQueryCacheController() {
+        return queryCacheController;
     }
 
 }

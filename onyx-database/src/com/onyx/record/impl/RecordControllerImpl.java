@@ -62,7 +62,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
                         if(recordId > 0L)
                         {
                             // Update Cached queries
-                            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
                         }
                         invokePreUpdateCallback(entity);
                     }
@@ -75,7 +75,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
             if(recordId > 0L)
             {
                 // Update Cached queries
-                context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
             }
             records.put(identifierValue, entity);
         }
@@ -93,7 +93,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
         invokePostPersistCallback(entity); // Always invoke Post persist callback
 
         // Update Cached queries
-        context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue),false);
+        context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue),false);
 
         // Return the id
         return identifierValue;

@@ -113,7 +113,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
                         if(recordId > 0L)
                         {
                             // Update Cached queries
-                            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
                         }
                         invokePreUpdateCallback(entity);
                     }
@@ -126,14 +126,14 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
             if(recordId > 0L)
             {
                 // Update Cached queries
-                context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
             }
 
             records.put(id, entity);
         }
 
         // Update Cached queries
-        context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),false);
+        context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),false);
 
         invokePostPersistCallback(entity); // Always invoke Post persist callback
 
@@ -197,7 +197,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
         if(recordId > -1)
         {
             invokePreRemoveCallback(entity);
-            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
+            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
             this.deleteWithId(identifierValue);
             invokePostRemoveCallback(entity);
         }

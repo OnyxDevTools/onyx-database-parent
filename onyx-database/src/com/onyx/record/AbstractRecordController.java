@@ -102,7 +102,7 @@ public abstract class AbstractRecordController
         if(recordId > -1)
         {
             invokePreRemoveCallback(entity);
-            context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
+            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
             this.deleteWithId(identifierValue);
             invokePostRemoveCallback(entity);
         }

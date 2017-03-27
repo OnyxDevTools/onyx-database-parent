@@ -323,7 +323,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         try {
             // Check to see if there are cached query resutls
-            CachedResults cachedResults = context.getCachedQueryResults(query);
+            CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
             Map results;
 
             // If there are, use the cache rather re-checking criteria
@@ -349,13 +349,13 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             if (query.getSelections() != null) {
 
                 // Cache the query results
-                context.setCachedQueryResults(query, results);
+                context.getQueryCacheController().setCachedQueryResults(query, results);
 
                 final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
                 return new ArrayList<>(attributeValues.values());
             } else {
                 // Cache the query results
-                context.setCachedQueryResults(query, results);
+                context.getQueryCacheController().setCachedQueryResults(query, results);
                 return queryController.hydrateResultsWithReferences(query, results);
             }
         } finally {
@@ -389,7 +389,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         try {
             // Check for cached query results.
-            CachedResults cachedResults = context.getCachedQueryResults(query);
+            CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
             Map results;
 
             // If there are, hydrate the existing rather than looking to the store
@@ -406,7 +406,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
                 results = queryController.sort(query, results);
             }
-            context.setCachedQueryResults(query, results);
+            context.getQueryCacheController().setCachedQueryResults(query, results);
             return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally {
             queryController.cleanup();
@@ -805,7 +805,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        CachedResults cachedResults = context.getCachedQueryResults(query);
+        CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
         if (cachedResults != null)
             return cachedResults.getReferences().size();
 
