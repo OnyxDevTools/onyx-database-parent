@@ -2,6 +2,8 @@ package com.onyx.util.map;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
 
 /**
  * Created by tosborn1 on 3/24/17.
@@ -40,7 +42,7 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
     @Override
     protected boolean removeEldestEntry(final Map.Entry<K, V> eldest) {
         return size() >= maxCapacity
-                || (((ExpirationValue)eldest.getValue()).lastTouched + timeToLive) > System.currentTimeMillis();
+                || (((ExpirationValue)eldest.getValue()).lastTouched + timeToLive) < System.currentTimeMillis();
     }
 
     /**
@@ -55,8 +57,11 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
     @SuppressWarnings("unchecked")
     public V put(K key, V value)
     {
-        super.put(key, (V)new ExpirationValue(System.currentTimeMillis(), value));
-        return value;
+        synchronized (this) {
+
+            super.put(key, (V) new ExpirationValue(System.currentTimeMillis(), value));
+            return value;
+        }
     }
 
     /**
@@ -68,24 +73,23 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
     @Override
     @SuppressWarnings("unchecked")
     public V get(Object key) {
-        final ExpirationValue expirationValue = (ExpirationValue)super.remove(key);
-        if(expirationValue != null)
-        {
-            expirationValue.lastTouched = System.currentTimeMillis();
-            super.put((K)key, (V)expirationValue);
-        }
-        else
-        {
-            return null;
-        }
+        synchronized (this) {
+            final ExpirationValue expirationValue = (ExpirationValue) super.remove(key);
+            if (expirationValue != null) {
+                expirationValue.lastTouched = System.currentTimeMillis();
+                super.put((K) key, (V) expirationValue);
+            } else {
+                return null;
+            }
 
-        return (V)expirationValue.value;
+            return (V) expirationValue.value;
+        }
     }
 
     /**
      * POJO for tracking last touched
      */
-    private static class ExpirationValue
+    public static class ExpirationValue
     {
         long lastTouched;
         final Object value;
@@ -121,6 +125,21 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
         public boolean equals(Object o)
         {
             return (o instanceof ExpirationValue && ((ExpirationValue) o).value.equals(value));
+        }
+    }
+
+    /**
+     * Override to not return the expiration value but the actual value
+     * @param action The action to be performed for each entry
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public void forEach(BiConsumer<? super K, ? super V> action) {
+        synchronized (this) {
+            Set<Map.Entry<K, V>> entrySet = entrySet();
+            for (Map.Entry entry : entrySet) {
+                action.accept((K) entry.getKey(), (V)((ExpirationValue) entry.getValue()).value);
+            }
         }
     }
 }

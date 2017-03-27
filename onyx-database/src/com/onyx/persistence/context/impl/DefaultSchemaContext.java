@@ -1207,7 +1207,7 @@ public class DefaultSchemaContext implements SchemaContext {
     {
         return cachedQueriesByClass.compute(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
             if(queryCachedResultsMap == null)
-                queryCachedResultsMap = new SynchronizedMap(new LastRecentlyUsedMap<>(100, 5*60));
+                queryCachedResultsMap = new LastRecentlyUsedMap<>(100, 5*60);
 
             return queryCachedResultsMap;
         }).get(query);
