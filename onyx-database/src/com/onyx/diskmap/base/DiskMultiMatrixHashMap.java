@@ -11,6 +11,7 @@ import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.SynchronizedMap;
 
 import java.util.HashSet;
@@ -43,7 +44,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     private DispatchLock dispatchLock = new DefaultDispatchLock();
 
     // Cache of skip lists
-    private final CompatMap<Integer, CombinedIndexHashMatrixNode> skipListMapCache = new SynchronizedMap<>(new CompatHashMap<>());
+    private final CompatMap<Integer, CombinedIndexHashMatrixNode> skipListMapCache = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     /**
      * Constructor

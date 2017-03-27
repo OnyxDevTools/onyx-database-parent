@@ -5,8 +5,8 @@ import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.WriteSynchronizedMap;
 
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -25,8 +25,8 @@ import java.util.Map;
 abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
 
     // Caching maps
-    protected Map<K, SkipListNode> keyCache = Collections.synchronizedMap(new CompatWeakHashMap<>());
-    protected Map<Long, V> valueByPositionCache = Collections.synchronizedMap(new CompatWeakHashMap<>());
+    protected Map<K, SkipListNode> keyCache = new WriteSynchronizedMap<>(new CompatWeakHashMap<>());
+    protected Map<Long, V> valueByPositionCache = new WriteSynchronizedMap<>(new CompatWeakHashMap<>());
 
     /**
      * Constructor defines the caching medium for the nodes and values.
@@ -122,10 +122,11 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
             return null;
 
         SkipListHeadNode node = nodeCache.get(position);
+
         if(node == null)
         {
             node = super.findNodeAtPosition(position);
-            nodeCache.put(position, node);
+                nodeCache.put(position, node);
         }
         return node;
     }
@@ -165,8 +166,8 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
             valueByPositionCache.remove(node.recordPosition);
         }
         // Update and cache the new value
-        super.updateNodeValue(node, value, cache);
         nodeCache.put(node.position, node);
+        super.updateNodeValue(node, value, cache);
 
         if (cache) {
             keyCache.put(node.key, node);

@@ -7,8 +7,8 @@ import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.WriteSynchronizedMap;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,7 +34,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
     private ThreadLocal<SkipListHeadNode> threadLocalHead; // Default threadLocalHead of the SkipList
     private SkipListHeadNode headNode;
-    protected Map<Long, SkipListHeadNode> nodeCache = new SynchronizedMap<>(new CompatHashMap<>());
+    protected Map<Long, SkipListHeadNode> nodeCache = new WriteSynchronizedMap<>(new CompatWeakHashMap<>());
 
     /**
      * Constructor with file store
@@ -211,7 +211,9 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
                     // Get the return value
                     value = findValueAtPosition(((SkipListNode<K>)next).recordPosition, ((SkipListNode<K>)next).recordSize);
                     updateNodeNext(current, next.next);
+
                     removeNode(next);
+                    removeNode(current);
 
                     victory = true;
 

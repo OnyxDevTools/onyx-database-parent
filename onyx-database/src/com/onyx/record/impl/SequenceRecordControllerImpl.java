@@ -132,6 +132,9 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
             records.put(id, entity);
         }
 
+        // Update Cached queries
+        context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),false);
+
         invokePostPersistCallback(entity); // Always invoke Post persist callback
 
         // Invoke Post insert or update callback
@@ -143,8 +146,6 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
             invokePostUpdateCallback(entity);
         }
 
-        // Update Cached queries
-        context.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),false);
 
         // Return the id
         return id;
