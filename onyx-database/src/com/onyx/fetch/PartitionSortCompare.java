@@ -140,6 +140,7 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
      * @return The attribute value.  Can also be a relationship attribute value
      * @throws EntityException Exception when trying to hydrate attribute
      */
+    @SuppressWarnings("WeakerAccess")
     public Object getValue(ScannerProperties scannerProperties, Object reference) throws EntityException
     {
         if(scannerProperties.relationshipDescriptor != null)

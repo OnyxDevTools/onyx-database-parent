@@ -1,6 +1,5 @@
 package com.onyx.diskmap.base.hashmap;
 
-import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.store.Store;

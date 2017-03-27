@@ -594,6 +594,7 @@ public class Query implements ObjectSerializable, Serializable
         resultsCount = buffer.readInt();
     }
 
+    @SuppressWarnings("EmptyMethod unused")
     public void setChangeListener(QueryListener subscriber)
     {
 
@@ -630,21 +631,9 @@ public class Query implements ObjectSerializable, Serializable
         if(other == this)
             return true;
 
-        if(other instanceof Query)
-        {
-            Query otherQuery = (Query)other;
-            if(!this.entityType.equals(otherQuery.entityType))
-                return false;
-            if(!CompareUtil.forceCompare(this.partition,otherQuery.partition))
-                return false;
-            if(!this.criteria.equals(otherQuery.criteria))
-                return false;
-            if(!CompareUtil.forceCompare(this.queryOrders,otherQuery.queryOrders))
-                return false;
-            if(!CompareUtil.forceCompare(this.selections,otherQuery.selections))
-                return false;
-
-            return true;
+        if(other instanceof Query) {
+            Query otherQuery = (Query) other;
+            return this.entityType.equals(otherQuery.entityType) && CompareUtil.forceCompare(this.partition, otherQuery.partition) && this.criteria.equals(otherQuery.criteria) && CompareUtil.forceCompare(this.queryOrders, otherQuery.queryOrders) && CompareUtil.forceCompare(this.selections, otherQuery.selections);
         }
         return false;
     }
@@ -690,6 +679,7 @@ public class Query implements ObjectSerializable, Serializable
      * @since 1.3.0 Re-vamped criteria checking to address bugs and maintain
      *              record insertion criteria checking
      */
+    @SuppressWarnings("UnusedReturnValue")
     private static Set<QueryCriteria> aggregateCritieria(QueryCriteria criteria, Set<QueryCriteria> allCritieria)
     {
         if(criteria == null)

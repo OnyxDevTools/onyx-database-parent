@@ -175,6 +175,7 @@ public class SynchronizedMap<K, V> implements CompatMap<K, V> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
         synchronized (mutex) {

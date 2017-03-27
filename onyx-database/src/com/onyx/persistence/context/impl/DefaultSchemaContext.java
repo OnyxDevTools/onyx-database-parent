@@ -99,6 +99,7 @@ public class DefaultSchemaContext implements SchemaContext {
     @SuppressWarnings("WeakerAccess")
     protected String temporaryFileLocation;
 
+    @SuppressWarnings("WeakerAccess")
     protected final Set<MapBuilder> temporaryMaps = new HashSet<>();
     /**
      * Constructor.
@@ -528,7 +529,12 @@ public class DefaultSchemaContext implements SchemaContext {
     // Data File collection
     //
     ///////////////////////////////////////////////////////////////
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
+            r -> {
+                Thread t = Executors.defaultThreadFactory().newThread(r);
+                t.setDaemon(true);
+                return t;
+            });
 
     /**
      * Map of data files.
@@ -1116,6 +1122,7 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
+    @SuppressWarnings("WeakerAccess")
     final protected ArrayBlockingQueue<MapBuilder> temporaryDiskMapQueue = new ArrayBlockingQueue<>(32, false);
 
     /**
@@ -1194,13 +1201,13 @@ public class DefaultSchemaContext implements SchemaContext {
     };
 
 
-    private CompatMap<Class, CompatMap<Query, CachedResults>> cachedQueriesByClass = new SynchronizedMap<>(new CompatHashMap<>());
+    private final CompatMap<Class, CompatMap<Query, CachedResults>> cachedQueriesByClass = new SynchronizedMap<>(new CompatHashMap<>());
 
     public CachedResults getCachedQueryResults(Query query)
     {
         return cachedQueriesByClass.compute(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
             if(queryCachedResultsMap == null)
-                queryCachedResultsMap = new SynchronizedMap(new LastRecentlyUsedMap<>(100));
+                queryCachedResultsMap = new SynchronizedMap(new LastRecentlyUsedMap<>(100, 5*60));
 
             return queryCachedResultsMap;
         }).get(query);

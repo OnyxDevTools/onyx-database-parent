@@ -22,7 +22,6 @@ import remote.base.RemoteBaseTest;
  * Tests the initialization of the database
  */
 @Category({ RemoteServerTests.class })
-@org.junit.Ignore
 public class TestDatabaseInitialization extends RemoteBaseTest
 {
     public static final String INVALID_DATABASE_LOCATION = "onx://localhost:8081";

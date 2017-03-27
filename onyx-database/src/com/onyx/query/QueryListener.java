@@ -6,7 +6,10 @@ import java.util.List;
 
 /**
  * Created by tosborn1 on 3/21/17.
+ *
+ * TBD
  */
+@SuppressWarnings("unused")
 public interface QueryListener {
 
     void onItemsUpdated(List<IManagedEntity> items);

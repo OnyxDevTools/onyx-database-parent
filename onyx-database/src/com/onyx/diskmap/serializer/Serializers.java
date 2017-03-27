@@ -1,7 +1,6 @@
 package com.onyx.diskmap.serializer;
 
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.SynchronizedMap;

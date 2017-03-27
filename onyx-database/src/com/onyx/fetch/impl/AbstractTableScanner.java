@@ -31,7 +31,7 @@ abstract class AbstractTableScanner extends PartitionContext
     @SuppressWarnings("WeakerAccess")
     protected final EntityDescriptor descriptor;
 
-    @SuppressWarnings("WeakerAccess")
+    @SuppressWarnings("WeakerAccess unused")
     OffsetField fieldToGrab = null;
 
     @SuppressWarnings("WeakerAccess")

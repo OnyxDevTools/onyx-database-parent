@@ -28,7 +28,7 @@ public class RMITest {
         rmiClient.connect("localhost", 8080);
         IMessage messanger = (IMessage) rmiClient.getRemoteObject("A", IMessage.class);
 
-        byte[] message = new byte[2048];
+        byte[] message = new byte[50];
         ExecutorService threadPool = Executors.newFixedThreadPool(16);
         CountDownLatch countDownLatch = new CountDownLatch(1000000);
         long startTime = System.currentTimeMillis();
@@ -57,7 +57,7 @@ public class RMITest {
 
         IMessage messanger = RMIClient.getMessage();
 
-        byte[] message = new byte[20];
+        byte[] message = new byte[2048];
         ExecutorService threadPool = Executors.newFixedThreadPool(16);
         CountDownLatch countDownLatch = new CountDownLatch(1000000);
         long startTime = System.currentTimeMillis();

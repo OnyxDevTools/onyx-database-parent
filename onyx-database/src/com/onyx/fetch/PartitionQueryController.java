@@ -118,6 +118,7 @@ public class PartitionQueryController extends PartitionContext {
      *
      *
      */
+    @SuppressWarnings("unchecked")
     private void aggrigateFilteredReferences(QueryCriteria criteria, Map totalResults, Map criteriaResults)
     {
         if(criteria.isNot())
@@ -134,12 +135,14 @@ public class PartitionQueryController extends PartitionContext {
         else if(criteria.isAnd())
         {
             Set itemsToRemove = new HashSet();
+            //noinspection Convert2streamapi
             for (Object index : totalResults.keySet()) {
                 if(!criteriaResults.containsKey(index))
                 {
                     itemsToRemove.add(index);
                 }
             }
+            //noinspection Convert2streamapi
             for(Object index : itemsToRemove)
             {
                 totalResults.remove(index);

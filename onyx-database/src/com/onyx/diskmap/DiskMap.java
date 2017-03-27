@@ -61,6 +61,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      *
      * @return Attribute key of record
      */
+    @SuppressWarnings("unused")
     Object getAttributeWithRecID(OffsetField field, SkipListNode reference) throws AttributeTypeMismatchException;
 
     /**

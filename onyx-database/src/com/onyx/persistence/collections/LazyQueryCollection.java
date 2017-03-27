@@ -72,7 +72,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
      * @param identifiers Map of Identifiers
      * @param context Schema Context
      */
-    public LazyQueryCollection(EntityDescriptor entityDescriptor, Map identifiers, SchemaContext context, boolean hasSelections)
+    public LazyQueryCollection(EntityDescriptor entityDescriptor, Map identifiers, SchemaContext context)
     {
         this.contextId = context.getContextId();
 
@@ -81,6 +81,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         this.references = identifiers;
 
         // Synchrnized because this could be from the cache
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (identifiers) {
             this.identifiers = new ArrayList<>(identifiers.keySet());
         }

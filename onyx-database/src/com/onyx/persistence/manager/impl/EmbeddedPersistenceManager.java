@@ -396,7 +396,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             if (cachedResults != null) {
                 results = cachedResults.getReferences();
                 query.setResultsCount(results.size());
-                return new LazyQueryCollection<IManagedEntity>(descriptor, results, context, query.getSelections() != null && query.getSelections().size() > 0);
+                return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
             }
 
             // There were no cached results, load them from the store
@@ -407,7 +407,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 results = queryController.sort(query, results);
             }
             context.setCachedQueryResults(query, results);
-            return new LazyQueryCollection<IManagedEntity>(descriptor, results, context, query.getSelections() != null && query.getSelections().size() > 0);
+            return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally {
             queryController.cleanup();
         }
