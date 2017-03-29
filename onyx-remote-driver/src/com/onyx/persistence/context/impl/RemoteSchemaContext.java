@@ -2,6 +2,7 @@ package com.onyx.persistence.context.impl;
 
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
+import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 
 import java.io.File;
 import java.io.IOException;
@@ -111,10 +112,14 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
             }
         }
 
+        this.queryCacheController = new DefaultQueryCacheController(this);
+
         killSwitch = false;
         initializeSystemEntities();
         initializePartitionSequence();
         initializeEntityDescriptors();
+
+
     }
 
 }

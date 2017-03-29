@@ -582,4 +582,17 @@ public interface PersistenceManager {
      * @since 1.3.0 Implemented with feature request #71
      */
     long countForQuery(Query query) throws EntityException;
+
+    /**
+     * Un-register a query listener.  This will remove the listener from observing changes for that query.
+     * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
+     * This could cause performance degredation if removing the registration is neglected.
+     *
+     * @param query Query with a listener attached
+     *
+     * @throws EntityException Un expected error when attempting to unregister listener
+     *
+     * @since 1.3.0 Added query subscribers as an enhancement.
+     */
+    boolean unregisterQuery(Query query) throws EntityException;
 }

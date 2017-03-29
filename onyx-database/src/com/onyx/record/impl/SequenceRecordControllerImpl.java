@@ -9,6 +9,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.helpers.ValidationHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.query.QueryListenerEvent;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 
@@ -113,7 +114,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
                         if(recordId > 0L)
                         {
                             // Update Cached queries
-                            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE);
                         }
                         invokePreUpdateCallback(entity);
                     }
@@ -125,15 +126,20 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
             long recordId = records.getRecID(retval);
             if(recordId > 0L)
             {
+                isNew.set(false);
                 // Update Cached queries
-                context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE);
+            }
+            else
+            {
+                isNew.set(true);
             }
 
             records.put(id, entity);
         }
 
         // Update Cached queries
-        context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),false);
+        context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(id),(isNew.get()) ? QueryListenerEvent.INSERT : QueryListenerEvent.UPDATE);
 
         invokePostPersistCallback(entity); // Always invoke Post persist callback
 
@@ -197,7 +203,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
         if(recordId > -1)
         {
             invokePreRemoveCallback(entity);
-            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
+            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.DELETE);
             this.deleteWithId(identifierValue);
             invokePostRemoveCallback(entity);
         }

@@ -320,10 +320,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
+        CachedResults cachedResults = null;
 
         try {
             // Check to see if there are cached query resutls
-            CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
+            cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
             Map results;
 
             // If there are, use the cache rather re-checking criteria
@@ -349,16 +350,19 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             if (query.getSelections() != null) {
 
                 // Cache the query results
-                context.getQueryCacheController().setCachedQueryResults(query, results);
+                cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
 
                 final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
                 return new ArrayList<>(attributeValues.values());
             } else {
                 // Cache the query results
-                context.getQueryCacheController().setCachedQueryResults(query, results);
+                cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
                 return queryController.hydrateResultsWithReferences(query, results);
             }
         } finally {
+            if(query.getChangeListener() != null) {
+                context.getQueryCacheController().subscribe(cachedResults, query.getChangeListener());
+            }
             queryController.cleanup();
         }
     }
@@ -386,10 +390,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         ValidationHelper.validateQuery(descriptor, query, context);
 
         final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
+        CachedResults cachedResults = null;
 
         try {
             // Check for cached query results.
-            CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
+            cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
             Map results;
 
             // If there are, hydrate the existing rather than looking to the store
@@ -406,9 +411,12 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
                 results = queryController.sort(query, results);
             }
-            context.getQueryCacheController().setCachedQueryResults(query, results);
+            cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
             return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally {
+            if(query.getChangeListener() != null) {
+                context.getQueryCacheController().subscribe(cachedResults, query.getChangeListener());
+            }
             queryController.cleanup();
         }
     }
@@ -862,5 +870,25 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         this.stream(query, streamer);
     }
 
+    /**
+     * Un-register a query listener.  This will remove the listener from observing changes for that query.
+     * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
+     * This could cause performance degredation if removing the registration is neglected.
+     *
+     * @param query Query with a listener attached
+     *
+     * @throws EntityException Un expected error when attempting to unregister listener
+     *
+     * @since 1.3.0 Added query subscribers as an enhancement.
+     */
+    public boolean unregisterQuery(Query query) throws EntityException
+    {
+        final Class clazz = query.getEntityType();
 
+        // We want to lock the index controller so that it does not do background indexing
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
+        ValidationHelper.validateQuery(descriptor, query, context);
+
+        return context.getQueryCacheController().unsubscribe(query);
+    }
 }

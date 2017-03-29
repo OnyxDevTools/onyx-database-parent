@@ -2,6 +2,8 @@ package com.onyx.client;
 
 import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.push.PushSubscriber;
+import com.onyx.client.push.PushConsumer;
 import com.onyx.client.base.RequestToken;
 import com.onyx.client.base.engine.PacketTransportEngine;
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine;
@@ -9,7 +11,10 @@ import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine;
 import com.onyx.client.exception.ConnectionFailedException;
 import com.onyx.client.exception.OnyxServerException;
 import com.onyx.client.exception.RequestTimeoutException;
+import com.onyx.client.push.PushRegistrar;
 import com.onyx.exception.InitializationException;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -35,7 +40,7 @@ import java.util.function.Consumer;
  *
  * @since 1.2.0
  */
-public class CommunicationPeer extends AbstractCommunicationPeer implements OnyxClient {
+public class CommunicationPeer extends AbstractCommunicationPeer implements OnyxClient, PushRegistrar {
 
     // Heartbeat and timeout
     private int requestTimeout = 60; // 60 second timeout
@@ -54,7 +59,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     private String password;
 
     // Keeps track of a unique token.  There can only be about 64 K concurrent requests for a client.
-    private volatile short tokenCount = Short.MIN_VALUE;
+    private volatile short tokenCount = Short.MIN_VALUE+1; // +1 because Short.MIN_VALUE denotes a push event
 
     /**
      * Default Constructor
@@ -84,6 +89,10 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             // General unhandled exception that cannot be tied back to a request
             if (requestToken.token == Short.MAX_VALUE) {
                 ((Exception) requestToken.packet).printStackTrace();
+            } else if(requestToken.token == Short.MIN_VALUE)
+            {
+                // This indicates a push request
+                handlePushMessage(requestToken);
             }
 
             consumer = pendingRequests.remove(requestToken);
@@ -96,6 +105,57 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         } catch (Exception e) {
             failure(requestToken, e);
         }
+    }
+
+    // Map of push consumers
+    private Map<Long, PushConsumer> registeredPushConsumers = new SynchronizedMap<>(new CompatHashMap<>());
+
+    /**
+     * Respond to a push event.  The consumer will be invoked
+     * @param requestToken Request token
+     *
+     * @since 1.3.0 Support push events
+     */
+    private void handlePushMessage(RequestToken requestToken)
+    {
+        final PushSubscriber consumer = (PushSubscriber)requestToken.packet;
+        final PushConsumer responder = registeredPushConsumers.get(consumer.getPushObjectId());
+        if(responder != null) {
+            responder.accept(consumer.getPacket());
+        }
+    }
+
+    /**
+     * Register a push consumer with a subscriber.
+     *
+     * @param subscriber Object to send to the server to register the push subscription.
+     * @param responder Local responder object that will handle the inbound push notifications
+     *
+     * @throws OnyxServerException Cannot communicate with server
+     *
+     * @since 1.3.0
+     */
+    public void register(PushSubscriber subscriber, PushConsumer responder) throws OnyxServerException {
+        subscriber.setSubscriberEvent((byte)1);
+
+        long pushId = (long)send(subscriber);
+        subscriber.setPushObjectId(pushId);
+        registeredPushConsumers.put(pushId, responder);
+
+    }
+
+    /**
+     * De register a push subscriber.
+     *
+     * @param subscriber Subscriber associated to the push listener
+     * @throws OnyxServerException Typically indicates cannot connect to server
+     * @since 1.3.0
+     */
+    @Override
+    public void unrigister(PushSubscriber subscriber) throws OnyxServerException {
+        registeredPushConsumers.remove(subscriber.getPushObjectId());
+        subscriber.setSubscriberEvent((byte)2);
+        send(subscriber);
     }
 
     /**
@@ -307,7 +367,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
      */
     private synchronized short generateNewToken() {
         if (tokenCount >= Short.MAX_VALUE - 1) // Short.MAX_VALUE is reserved for un-correlated error
-            tokenCount = Short.MIN_VALUE;
+            tokenCount = Short.MIN_VALUE+1;
         return tokenCount++;
     }
 

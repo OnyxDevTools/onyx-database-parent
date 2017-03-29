@@ -96,6 +96,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
     @SuppressWarnings("WeakerAccess")
     protected final Set<MapBuilder> temporaryMaps = new HashSet<>();
+
     /**
      * Constructor.
      *
@@ -108,7 +109,6 @@ public class DefaultSchemaContext implements SchemaContext {
         this.contextId = contextId;
 
         DefaultSchemaContext.registeredSchemaContexts.put(contextId, this);
-        this.queryCacheController = new DefaultQueryCacheController(this);
 
     }
 
@@ -170,6 +170,8 @@ public class DefaultSchemaContext implements SchemaContext {
         new File(temporaryFileLocation).mkdirs();
 
         createTemporaryDiskMapPool();
+
+        this.queryCacheController = new DefaultQueryCacheController(this);
 
         killSwitch = false;
         initializeSystemEntities();
@@ -1196,7 +1198,7 @@ public class DefaultSchemaContext implements SchemaContext {
         }
     };
 
-    private QueryCacheController queryCacheController;
+    protected QueryCacheController queryCacheController;
 
     /**
      * Get controller responsible for managing query caches
@@ -1209,5 +1211,4 @@ public class DefaultSchemaContext implements SchemaContext {
     public QueryCacheController getQueryCacheController() {
         return queryCacheController;
     }
-
 }

@@ -12,6 +12,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.OrderedDiskMap;
+import com.onyx.query.QueryListenerEvent;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -102,7 +103,7 @@ public abstract class AbstractRecordController
         if(recordId > -1)
         {
             invokePreRemoveCallback(entity);
-            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
+            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.DELETE);
             this.deleteWithId(identifierValue);
             invokePostRemoveCallback(entity);
         }

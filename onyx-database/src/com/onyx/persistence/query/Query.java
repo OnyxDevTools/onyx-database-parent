@@ -564,6 +564,7 @@ public class Query implements ObjectSerializable, Serializable
         buffer.writeInt(firstRow);
         buffer.writeInt(maxResults);
         buffer.writeInt(resultsCount);
+        buffer.writeObject(queryListener);
     }
 
     /**
@@ -592,12 +593,60 @@ public class Query implements ObjectSerializable, Serializable
         firstRow = buffer.readInt();
         maxResults = buffer.readInt();
         resultsCount = buffer.readInt();
+        queryListener = (QueryListener)buffer.readObject();
     }
 
-    @SuppressWarnings("EmptyMethod unused")
-    public void setChangeListener(QueryListener subscriber)
-    {
+    private QueryListener queryListener;
 
+    /**
+     * This method will allow subscribers to query results.  If a record that matches the query critieria is either
+     * added, updated, or removed.  The query listener will be invoked. Note, if you use this, do not forget to remove
+     * the listeners when done.  If you fail to remove the listener that could degrade performance.
+     *
+     * This is compatable with the remote persistence manager, embedded persistence manager, and the in memory persistence manager
+     *
+     * Simple usage is
+     *
+     * <p>
+     *             Query query = new Query(SystemEntity.class);
+     *             query.setCriteria(new QueryCriteria("id", QueryCriteriaOperator.NOT_EQUAL, 2));
+     *             query.setChangeListener(new QueryListener() {
+     *                  @Override
+     *                  public void onItemUpdated(IManagedEntity items) {
+     *                      ...
+     *                  }
+     *
+     *                  @Override
+     *                  public void onItemAdded(IManagedEntity items) {
+     *
+     *                  }
+     *
+     *                  @Override
+     *                  public void onItemRemoved(IManagedEntity items) {
+     *
+     *                  }
+     *            });
+     * </p>
+     *
+     *
+     * @since 1.3.0
+     *
+     * @param queryListener Query Listener Delegate
+     */
+    @SuppressWarnings("EmptyMethod unused")
+    public void setChangeListener(QueryListener queryListener)
+    {
+        this.queryListener = queryListener;
+    }
+
+    /**
+     * Get Query Listener
+     *
+     * @return Query listener
+     * @since 1.3.0
+     */
+    public QueryListener getChangeListener() {
+        return queryListener;
     }
 
     /**

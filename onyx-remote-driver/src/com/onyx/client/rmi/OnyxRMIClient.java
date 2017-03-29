@@ -45,6 +45,8 @@ public class OnyxRMIClient extends CommunicationPeer implements OnyxClient {
         return instance;
     }
 
+
+
     /**
      * This class is added in order to support tracking of methods.
      * Rather than sending in the string value of a method, this is optimized

@@ -781,4 +781,19 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         return (long) this.performCall(getURL() + QUERY_COUNT, null, Long.class, body);
     }
 
+    /**
+     * This functionality is unsupported for the web server database.  Query subscribers do
+     * not work due to the variation of clients.
+     *
+     * @param query Query with a listener attached
+     *
+     * @throws EntityException Un expected error when attempting to unregister listener
+     *
+     * @since 1.3.0 Added query subscribers as an enhancement.
+     */
+    @Override
+    public boolean unregisterQuery(Query query) throws EntityException {
+        return false;
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager.impl;
 
+import com.onyx.client.push.PushRegistrar;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.StreamException;
@@ -10,6 +11,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryResult;
+import com.onyx.persistence.query.impl.RemoteQueryListener;
 import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
@@ -51,6 +53,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
 
     private SchemaContext context;
     private final PersistenceManager proxy;
+    private final PushRegistrar pushRegistrar;
+
 
     /**
      * Default Constructor.  This should be invoked by the persistence manager factory
@@ -58,9 +62,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @since 1.1.0
      * @param persistenceManager Proxy Persistence manager on server
      */
-    public RemotePersistenceManager(PersistenceManager persistenceManager)
+    public RemotePersistenceManager(PersistenceManager persistenceManager, PushRegistrar pushRegistrar)
     {
         this.proxy = persistenceManager;
+        this.pushRegistrar = pushRegistrar;
     }
 
 
@@ -158,6 +163,16 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
     @Override
     public List executeQuery(Query query) throws EntityException
     {
+        // Transform the change listener to a remote change listener.
+        if(query.getChangeListener() != null
+                && !(query.getChangeListener() instanceof RemoteQueryListener))
+        {
+            // Register the query listener as a push subscriber / receiver
+            final RemoteQueryListener remoteQueryListener = new RemoteQueryListener(query.getChangeListener());
+            this.pushRegistrar.register(remoteQueryListener, remoteQueryListener);
+            query.setChangeListener(remoteQueryListener);
+        }
+
         QueryResult result = proxy.executeQueryForResult(query);
         query.setResultsCount(result.getQuery().getResultsCount());
         return (List)result.getResults();
@@ -479,5 +494,36 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
     @Override
     public long countForQuery(Query query) throws EntityException {
         return proxy.countForQuery(query);
+    }
+
+
+    /**
+     * Un-register a query listener.  This will remove the listener from observing changes for that query.
+     * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
+     * This could cause performance degredation if removing the registration is neglected.
+     *
+     * These will eventuallly be cleared out by the server when it detects connections have been dropped but,
+     * it is better to be pro-active about it.
+     *
+     * @param query Query with a listener attached
+     *
+     * @throws EntityException Un expected error when attempting to unregister listener
+     *
+     * @since 1.3.0 Added query subscribers as an enhancement.
+     */
+    @Override
+    public boolean unregisterQuery(Query query) throws EntityException {
+
+        // Ensure the original change listener is attached and is a remote query listener
+        if(query.getChangeListener() != null
+                && (query.getChangeListener() instanceof RemoteQueryListener))
+        {
+            // Un-register query
+            boolean retVal = proxy.unregisterQuery(query);
+            RemoteQueryListener remoteQueryListener = (RemoteQueryListener)query.getChangeListener();
+            this.pushRegistrar.unrigister(remoteQueryListener);
+            return retVal;
+        }
+        return false;
     }
 }

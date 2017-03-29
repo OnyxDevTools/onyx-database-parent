@@ -6,6 +6,7 @@ import com.onyx.exception.EntityException;
 import com.onyx.helpers.ValidationHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
+import com.onyx.query.QueryListenerEvent;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 
@@ -62,7 +63,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
                         if(recordId > 0L)
                         {
                             // Update Cached queries
-                            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE);
                         }
                         invokePreUpdateCallback(entity);
                     }
@@ -74,8 +75,13 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
             long recordId = records.getRecID(identifierValue);
             if(recordId > 0L)
             {
+                isNew.set(false);
                 // Update Cached queries
-                context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, true);
+                context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE);
+            }
+            else
+            {
+                isNew.set(true);
             }
             records.put(identifierValue, entity);
         }
@@ -93,7 +99,7 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
         invokePostPersistCallback(entity); // Always invoke Post persist callback
 
         // Update Cached queries
-        context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue),false);
+        context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue),(isNew.get()) ? QueryListenerEvent.INSERT : QueryListenerEvent.UPDATE);
 
         // Return the id
         return identifierValue;
