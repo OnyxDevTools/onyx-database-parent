@@ -68,6 +68,7 @@ public class QueryEvent implements BufferStreamable {
      * Setter for query listener event type
      * @param type query listener event type
      */
+    @SuppressWarnings("unused")
     public void setType(QueryListenerEvent type) {
         this.type = type;
     }
@@ -84,6 +85,7 @@ public class QueryEvent implements BufferStreamable {
      * Entity involved in cache change
      * @param entity Managed entity involved in change
      */
+    @SuppressWarnings("unused")
     public void setEntity(IManagedEntity entity) {
         this.entity = entity;
     }

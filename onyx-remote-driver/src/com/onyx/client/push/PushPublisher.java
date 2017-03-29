@@ -9,8 +9,7 @@ public interface PushPublisher {
 
     /**
      * Send an arbitrary packet to a client
-     * @param socketChannel Client channel to write to
-     * @param connectionProperties Container for write buffer
+     * @param pushSubscriber Push subscriber containing connection information.
      * @param message Packet to send
      *
      * @since 1.3.0

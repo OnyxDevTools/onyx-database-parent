@@ -252,7 +252,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             // If it is a push subscriber, it can only be a registration event
             if(message.packet instanceof PushSubscriber)
             {
-                handlePushSubscription()
+                handlePushSubscription(message, socketChannel, connectionProperties);
                 return null;
             }
         } catch (Exception e) {
@@ -266,10 +266,10 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     }
 
     // Registered Push subscribers
-    Map<PushSubscriber, PushSubscriber> pushSubscribers = new SynchronizedMap<>(new CompatHashMap<>());
+    private final Map<PushSubscriber, PushSubscriber> pushSubscribers = new SynchronizedMap<>(new CompatHashMap<>());
 
     // Counter for correlating push subscribers
-    private AtomicLong pushSubscriberId = new AtomicLong(0);
+    private final AtomicLong pushSubscriberId = new AtomicLong(0);
 
     /**
      * Handle a push registration event.
@@ -303,18 +303,14 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             pushSubscribers.put(subscriber, subscriber);
 
             final RequestToken response = message;
-            workerThreadPool.execute(() -> {
-                write(socketChannel, connectionProperties, response);
-            });
+            workerThreadPool.execute(() -> write(socketChannel, connectionProperties, response));
         }
         // Remove subscriber
         else if(subscriber.getSubscribeEvent() == 2)
         {
             pushSubscribers.remove(subscriber);
             final RequestToken response = message;
-            workerThreadPool.execute(() -> {
-                write(socketChannel, connectionProperties, response);
-            });
+            workerThreadPool.execute(() -> write(socketChannel, connectionProperties, response));
         }
     }
 
@@ -359,8 +355,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     /**
      * Push an object to the client.  This does not wait for receipt nor a response
      *
-     * @param socketChannel Client channel
-     * @param connectionProperties Connection information containing write buffer and thread pool
+     * @param pushSubscriber Push notification subscriber
      * @param message Message to send to client
      *
      * @since 1.3.0

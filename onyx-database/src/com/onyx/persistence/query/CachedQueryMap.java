@@ -37,7 +37,7 @@ public class CachedQueryMap<K, V> extends LastRecentlyUsedMap<K, V> {
      * @return the value just entered
      * @since 1.3.0
      */
-    @SuppressWarnings("unchecked unused")
+    @SuppressWarnings({"unchecked unused", "UnusedReturnValue"})
     public V putStrongReference(K key, V value) {
         synchronized (this) {
             return (V)hardReferenceSet.put(key, value);

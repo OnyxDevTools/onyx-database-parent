@@ -94,7 +94,7 @@ public class DefaultQueryCacheController implements QueryCacheController {
      * @param entity Entity that was potentially inserted, updated, or deleted.
      * @param descriptor The entity's descriptor
      * @param entityReference The entitity's reference
-     * @param remove Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
+     * @param type Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
      *
      * @since 1.3.0
      */

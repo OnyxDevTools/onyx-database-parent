@@ -108,7 +108,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     }
 
     // Map of push consumers
-    private Map<Long, PushConsumer> registeredPushConsumers = new SynchronizedMap<>(new CompatHashMap<>());
+    private final Map<Long, PushConsumer> registeredPushConsumers = new SynchronizedMap<>(new CompatHashMap<>());
 
     /**
      * Respond to a push event.  The consumer will be invoked

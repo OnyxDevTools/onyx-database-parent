@@ -1198,6 +1198,7 @@ public class DefaultSchemaContext implements SchemaContext {
         }
     };
 
+    @SuppressWarnings("WeakerAccess")
     protected QueryCacheController queryCacheController;
 
     /**

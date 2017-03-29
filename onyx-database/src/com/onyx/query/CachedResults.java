@@ -42,7 +42,7 @@ public class CachedResults {
     }
 
     // Query event listeners
-    private Set<QueryListener> listeners = new HashSet<>();
+    private final Set<QueryListener> listeners = new HashSet<>();
 
     /**
      * Subscribe a query event listener
@@ -78,13 +78,14 @@ public class CachedResults {
      *
      * @since 1.3.0
      */
+    @SuppressWarnings("unchecked")
     public void remove(Object reference, IManagedEntity entity, QueryListenerEvent event)
     {
         references.remove(reference);
         listeners.remove(null); // Clean out old references
         if(event == QueryListenerEvent.DELETE) {
 
-            Set listenersToRemove = new HashSet();
+            Set<QueryListener> listenersToRemove = new HashSet();
             for(QueryListener listener : listeners)
             {
                 try {
@@ -122,7 +123,7 @@ public class CachedResults {
     {
         references.put(reference, value);
         listeners.remove(null);
-        Set listenersToRemove = new HashSet();
+        final Set<QueryListener> listenersToRemove = new HashSet();
         for(QueryListener listener : listeners)
         {
             try {

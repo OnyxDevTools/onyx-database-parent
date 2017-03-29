@@ -9,6 +9,8 @@ import com.onyx.query.QueryListener;
 
 /**
  * Created by tosborn1 on 3/27/17.
+ *
+ * This class is responsible for controlling the query cache for a remote server.
  */
 public class RemoteQueryCacheController extends DefaultQueryCacheController {
 
