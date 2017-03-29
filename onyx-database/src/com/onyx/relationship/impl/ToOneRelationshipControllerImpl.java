@@ -185,6 +185,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
             RecordController inverseRecordController = getRecordControllerForPartition(inverseIdentifier.partitionId);
             IManagedEntity relationshipObject = getRecordControllerForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+            if(relationshipObject == null)
+                return;
 
             EntityDescriptor inverseDescriptor = getDescriptorForEntity(relationshipObject);
             if(!manager.contains(relationshipObject, inverseDescriptor.getIdentifier()))
