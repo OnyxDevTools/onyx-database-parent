@@ -24,7 +24,7 @@ public interface PacketTransportEngine {
      * @return The current handshake status
      * @since 1.2.0
      */
-    default SSLEngineResult.HandshakeStatus getHandshakeStatus() { return SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING; }
+    SSLEngineResult.HandshakeStatus getHandshakeStatus();
 
     /**
      * Wrap a from Buffer and put it into another buffer.  It is wrapped with the meta data
@@ -56,7 +56,7 @@ public interface PacketTransportEngine {
      * @since 1.2.0
      * @return Thread if it applies
      */
-    default Runnable getDelegatedTask() { return null; }
+    Runnable getDelegatedTask();
 
     /**
      * Close the inbound connection.  Awww snap, no soup for you
@@ -64,7 +64,7 @@ public interface PacketTransportEngine {
      * @throws SSLException General exception occurred when closing the inbound socket.
      * @since 1.2.0
      */
-    default void closeInbound() throws SSLException{}
+    void closeInbound() throws SSLException;
 
     /**
      * Close the outbound connection.  Awww snap, no soup for you
@@ -78,21 +78,21 @@ public interface PacketTransportEngine {
      * @return Whether it is all wrapped up
      * @since 1.2.0
      */
-    default boolean isInboundDone() { return true; }
+    boolean isInboundDone();
 
     /**
      * Is the outbound connection done throwing data at you
      * @return Whether it is all wrapped up
      * @since 1.2.0
      */
-    default boolean isOutboundDone() { return  true; }
+    boolean isOutboundDone();
 
     /**
      * Start the handshake process.  This is officiated on purpose.  Need more info.  Tough shit.
      * @throws SSLException Handshake did not go well :(  Nobody wants to be your friend.
      * @since 1.2.0
      */
-    default void beginHandshake() throws SSLException {}
+    void beginHandshake() throws SSLException;
 
     /**
      * Get the maximum size of packets thrown over the network.  For SSL, that means 16k.  Not sure why that is the

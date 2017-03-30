@@ -881,7 +881,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
-    public boolean unregisterQuery(Query query) throws EntityException
+    public boolean removeChangeListener(Query query) throws EntityException
     {
         final Class clazz = query.getEntityType();
 

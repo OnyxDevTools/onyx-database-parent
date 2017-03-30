@@ -226,7 +226,12 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             message = parseRequestToken(socketChannel, connectionProperties, buffer);
         }
 
-        if(message != null) { // Message can be null if it was a push request.  In that case, there is nothing to respond to
+        // If it is a push subscriber, it can only be a registration event
+        if(message != null && message.packet instanceof PushSubscriber)
+        {
+            handlePushSubscription(message, socketChannel, connectionProperties);
+        }
+        else {
             final RequestToken threadPoolMessage = message;
             workerThreadPool.execute(() -> {
                 final RequestToken useThisRequestToken = (isInLargePacket) ? parseRequestToken(socketChannel, connectionProperties, buffer) : threadPoolMessage;
@@ -249,12 +254,6 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
         RequestToken message = null;
         try {
             message = (RequestToken) serverSerializer.deserialize(buffer, new RequestToken());
-            // If it is a push subscriber, it can only be a registration event
-            if(message.packet instanceof PushSubscriber)
-            {
-                handlePushSubscription(message, socketChannel, connectionProperties);
-                return null;
-            }
         } catch (Exception e) {
             // Error de-serializing packet.  Send a response back to the client
             RequestToken token = new RequestToken(Short.MAX_VALUE, new SerializationException(e));

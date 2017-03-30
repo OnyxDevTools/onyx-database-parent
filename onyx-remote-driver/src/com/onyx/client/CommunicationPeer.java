@@ -20,7 +20,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.security.SecureRandom;
@@ -210,8 +212,12 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         try {
 
             socketChannel.configureBlocking(true);
-            int connectTimeout = 5 * 1000;
-            socketChannel.socket().connect(new InetSocketAddress(host, port), connectTimeout);
+            int connectTimeout = 10 * 1000;
+
+            InetAddress inteAddress = InetAddress.getByName(host);
+            SocketAddress socketAddress = new InetSocketAddress(inteAddress, port);
+
+            socketChannel.connect(socketAddress);
             while (!socketChannel.finishConnect()) {
                 LockSupport.parkNanos(100);
             }

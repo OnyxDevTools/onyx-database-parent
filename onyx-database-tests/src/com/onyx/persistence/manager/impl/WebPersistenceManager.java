@@ -792,7 +792,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
     @Override
-    public boolean unregisterQuery(Query query) throws EntityException {
+    public boolean removeChangeListener(Query query) throws EntityException {
         return false;
     }
 

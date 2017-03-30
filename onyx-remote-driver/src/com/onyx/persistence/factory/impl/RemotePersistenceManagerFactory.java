@@ -130,8 +130,8 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         location = location.replaceFirst("onx://", "");
         String[] locationParts = location.split(":");
 
-        String host = locationParts[0];
-        String port = locationParts[1];
+        String port = locationParts[locationParts.length-1];
+        String host = location.replace(":"+port, "");
 
         onyxRMIClient.setSslTrustStoreFilePath(this.sslTrustStoreFilePath);
         onyxRMIClient.setSslTrustStorePassword(this.sslTrustStorePassword);

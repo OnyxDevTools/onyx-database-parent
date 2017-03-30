@@ -594,5 +594,5 @@ public interface PersistenceManager {
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
-    boolean unregisterQuery(Query query) throws EntityException;
+    boolean removeChangeListener(Query query) throws EntityException;
 }

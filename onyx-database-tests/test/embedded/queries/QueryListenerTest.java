@@ -108,7 +108,7 @@ public class QueryListenerTest extends BaseTest {
         CachedResults results = manager.getContext().getQueryCacheController().getCachedQueryResults(query);
         assert results.getListeners().size() == 1;
 
-        manager.unregisterQuery(query);
+        manager.removeChangeListener(query);
 
         assert results.getListeners().size() == 0;
 

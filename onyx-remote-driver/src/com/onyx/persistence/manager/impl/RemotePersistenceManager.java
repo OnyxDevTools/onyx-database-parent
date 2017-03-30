@@ -512,14 +512,14 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
     @Override
-    public boolean unregisterQuery(Query query) throws EntityException {
+    public boolean removeChangeListener(Query query) throws EntityException {
 
         // Ensure the original change listener is attached and is a remote query listener
         if(query.getChangeListener() != null
                 && (query.getChangeListener() instanceof RemoteQueryListener))
         {
             // Un-register query
-            boolean retVal = proxy.unregisterQuery(query);
+            boolean retVal = proxy.removeChangeListener(query);
             RemoteQueryListener remoteQueryListener = (RemoteQueryListener)query.getChangeListener();
             this.pushRegistrar.unrigister(remoteQueryListener);
             return retVal;

@@ -1,7 +1,6 @@
 package remote.queries;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
@@ -9,7 +8,6 @@ import com.onyx.query.QueryListener;
 import entities.SimpleEntity;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
@@ -101,7 +99,7 @@ public class QueryListenerTest extends RemoteBaseTest {
 
         manager.executeQuery(query);
 
-        manager.unregisterQuery(query);
+        manager.removeChangeListener(query);
 
 
         SimpleEntity simpleEntity = new SimpleEntity();

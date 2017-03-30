@@ -6,7 +6,6 @@ import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 
 /**
  * Schema context that defines remote resources for a database.  Use this when connecting to a remote database not to be confused with a Web REST API Database.
@@ -43,16 +42,43 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
     public RemoteSchemaContext(String contextId)
     {
         super(contextId);
-        try
-        {
-            location = Files.createTempDirectory("onx").toString();
-            temporaryFileLocation = this.location + File.separator + "temporary";
-            //noinspection ResultOfMethodCallIgnored
-            new File(temporaryFileLocation).mkdirs();
-        }
-        catch (IOException ignore){}
-        createTemporaryDiskMapPool();
+        location = createTempDir().getPath();
+        temporaryFileLocation = this.location + File.separator + "temporary";
+        //noinspection ResultOfMethodCallIgnored
+        new File(temporaryFileLocation).mkdirs();
 
+        createTemporaryDiskMapPool();
+        this.queryCacheController = new DefaultQueryCacheController(this);
+
+    }
+
+    @Override
+    protected void createTemporaryDiskMapPool()
+    {
+        super.createTemporaryDiskMapPool();
+    }
+
+    /**
+     * Helper method used to create a temporary directory.  This is needed because Android has a shit fit when
+     * using Files.createTempDirectory("onx").toString();
+     *
+     * @return File
+     *
+     * @since 1.3.0
+     */
+    private static File createTempDir() {
+        File baseDir = new File(System.getProperty("java.io.tmpdir"));
+        String baseName = System.currentTimeMillis() + "-";
+        int TEMP_DIR_ATTEMPTS = 10000;
+        for (int counter = 0; counter < TEMP_DIR_ATTEMPTS; counter++) {
+            File tempDir = new File(baseDir, baseName + counter);
+            if (tempDir.mkdir()) {
+                return tempDir;
+            }
+        }
+        throw new IllegalStateException("Failed to create directory within "
+                + TEMP_DIR_ATTEMPTS + " attempts (tried "
+                + baseName + "0 to " + baseName + (TEMP_DIR_ATTEMPTS - 1) + ')');
     }
 
     /**
@@ -103,13 +129,7 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
     {
         if(location == null)
         {
-            try
-            {
-                location = Files.createTempDirectory("onyx.oxd").toString();
-            } catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+            location = createTempDir().getPath();
         }
 
         this.queryCacheController = new DefaultQueryCacheController(this);
@@ -118,8 +138,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
         initializeSystemEntities();
         initializePartitionSequence();
         initializeEntityDescriptors();
-
-
     }
 
 }
