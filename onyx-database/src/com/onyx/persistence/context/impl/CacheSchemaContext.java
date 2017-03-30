@@ -43,6 +43,21 @@ public class CacheSchemaContext extends DefaultSchemaContext
     }
 
     /**
+     * This method will create a pool of map builders.  They are used to run queries
+     * and then be recycled and put back on the queue.
+     *
+     * @since 1.3.0
+     */
+    @SuppressWarnings("WeakerAccess")
+    protected void createTemporaryDiskMapPool() {
+        for (int i = 0; i < 32; i++) {
+            MapBuilder builder = new DefaultMapBuilder(location, StoreType.IN_MEMORY, this.context, true);
+            temporaryDiskMapQueue.add(builder);
+            temporaryMaps.add(builder);
+        }
+    }
+
+    /**
      * Method for creating a new data storage factory
      * @since 1.0.0
      */
@@ -63,33 +78,54 @@ public class CacheSchemaContext extends DefaultSchemaContext
      * @return Data storage mechanism factory
      */
     @SuppressWarnings("unchecked")
+    @Override
     public synchronized MapBuilder getDataFile(EntityDescriptor descriptor)
     {
         return dataFiles.computeIfAbsent(descriptor.getFileName() + ((descriptor.getPartition() == null) ? "" : descriptor.getPartition().getPartitionValue()), createDataFile);
     }
 
     /**
-     * Create Temporary Map Builder
+     * Create Temporary Map Builder.
      *
-     * @since 1.0.0
-     * @return Newly created storage factory with in memory store
+     * @return Create new storage mechanism factory
+     * @since 1.3.0 Changed to use a pool of map builders.
+     * The intent of this is to increase performance.  There was a performance
+     * issue with map builders being destroyed invoking the DirectBuffer cleanup.
+     * That was not performant.
      */
-    public MapBuilder createTemporaryMapBuilder()
-    {
-        return new DefaultMapBuilder(null, StoreType.IN_MEMORY, this.context);
+    @Override
+    public MapBuilder createTemporaryMapBuilder() {
+        try {
+            return temporaryDiskMapQueue.take();
+        } catch (InterruptedException ignore) {}
+        return null;
     }
 
     /**
-     * Start the schema context
-     * Initialize system entities, partition sequence, and entity descriptors
+     * Recycle a temporary map builder so that it may be re-used
      *
+     * @param builder Discarded map builder
      * @since 1.3.0
+     */
+    @Override
+    public void releaseMapBuilder(MapBuilder builder) {
+        builder.reset();
+        temporaryDiskMapQueue.offer(builder);
+    }
+
+    /**
+     * Start the context and initialize storage or any other IO mechanisms used within the schema context.
+     *
+     * @since 1.0.0
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void start() {
+        createTemporaryDiskMapPool();
+
         killSwitch = false;
         initializeSystemEntities();
         initializePartitionSequence();
         initializeEntityDescriptors();
     }
+
 }

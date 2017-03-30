@@ -20,11 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.security.SecureRandom;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -44,7 +40,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     // Heartbeat and timeout
     private int requestTimeout = 60; // 60 second timeout
     private volatile boolean needsToRunHeartbeat = true; // If there was a response recently, there is no need to send a heartbeat
-    private Timer heartBeatTimer;
+    private ScheduledExecutorService heartBeatExecutor;
 
     // Connection information
     private ConnectionProperties connectionProperties;
@@ -204,10 +200,16 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
      * @since 1.2.0
      */
     private void resumeHeartBeat() {
-        if (this.heartBeatTimer == null) {
-            this.heartBeatTimer = new Timer();
+        if (this.heartBeatExecutor == null) {
+            this.heartBeatExecutor = Executors.newSingleThreadScheduledExecutor(
+                    r -> {
+                        final Thread t = Executors.defaultThreadFactory().newThread(r);
+                        t.setDaemon(true);
+                        return t;
+                    });
+
             int HEART_BEAT_INTERVAL = 10 * 1000;
-            this.heartBeatTimer.schedule(new RetryHeartbeatTask(), HEART_BEAT_INTERVAL, HEART_BEAT_INTERVAL);
+            heartBeatExecutor.scheduleWithFixedDelay(new RetryHeartbeatTask(), HEART_BEAT_INTERVAL, HEART_BEAT_INTERVAL, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -323,9 +325,8 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
 
             needsToRunHeartbeat = false;
             pendingRequests.clear();
-            if(this.heartBeatTimer != null) {
-                this.heartBeatTimer.cancel();
-                this.heartBeatTimer.purge();
+            if(this.heartBeatExecutor != null) {
+                this.heartBeatExecutor.shutdown();
             }
         } catch (IOException ignore) {
         }
@@ -397,7 +398,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         e.printStackTrace();
     }
 
-    private class RetryHeartbeatTask extends TimerTask
+    private class RetryHeartbeatTask implements Runnable
     {
         /**
          * Run timer task to execute a heartbeat

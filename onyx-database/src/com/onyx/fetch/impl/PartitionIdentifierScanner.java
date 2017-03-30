@@ -1,6 +1,10 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.exception.EntityClassNotFoundException;
+import com.onyx.helpers.PartitionHelper;
+import com.onyx.persistence.IManagedEntity;
+import com.onyx.util.ReflectionUtil;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
@@ -50,7 +54,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      * @throws EntityException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map<Long, Long> scanPartition(RecordController recordController, long partitionId) throws EntityException
+    private Map scanPartition(RecordController recordController, long partitionId) throws EntityException
     {
         final Map returnValue = new CompatHashMap();
 
@@ -120,7 +124,19 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
         }
         else
         {
-            return super.scan();
+            IManagedEntity entity;
+            try {
+                entity = (IManagedEntity) ReflectionUtil.instantiate(query.getEntityType());
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, query.getEntityType());
+            }
+
+            PartitionHelper.setPartitionValueForEntity(entity, query.getPartition(), getContext());
+            long partitionId = getPartitionId(entity);
+            if(partitionId < 1)
+                return new HashMap();
+            RecordController partitionRecordController = getRecordControllerForPartition(partitionId);
+            results.putAll(scanPartition(partitionRecordController, partitionId));
         }
 
         return results;

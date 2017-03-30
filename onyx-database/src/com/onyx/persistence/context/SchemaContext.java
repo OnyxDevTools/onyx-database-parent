@@ -8,13 +8,18 @@ import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.TransactionException;
 import com.onyx.index.IndexController;
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
+import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCacheController;
+import com.onyx.query.CachedResults;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.transaction.TransactionController;
 
 import java.nio.channels.FileChannel;
+import java.util.Map;
 
 /**
  * The purpose of this interface is to resolve all the the metadata, storage mechanism,  and modeling regarding the structure of the database
@@ -326,5 +331,14 @@ public interface SchemaContext
      * @since 1.3.0
      */
     void releaseMapBuilder(MapBuilder mapBuilder);
+
+    /**
+     * Get controller responsible for managing query caches
+     *
+     * @return The schema context's query controller
+     *
+     * @since 1.3.0
+     */
+    QueryCacheController getQueryCacheController();
 
 }

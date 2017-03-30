@@ -51,7 +51,52 @@ public class ScannerFactory
     }
 
     /**
-     * Returns the proper
+     * Returns a full table scanner despite the criteria supporting an index or identifier.
+     * The purpose for this is so we can force a full scan.  An instance where we want to do that
+     * is if the first criteria has the .not() modifier set to true.  In that case, it is impossible
+     * to determine index values because there is not an existing reference set to base on.
+     *
+     * @param criteria Criteria used to determine entity attribute
+     * @param classToScan Entity class to scan
+     * @param temporaryDataFile Query temporary data file to inject into the scanner
+     * @param query Query definitions
+     * @param persistenceManager Persistence manager
+     * @return An implementation of a full table scanner
+     * @throws EntityException Attribute is either not supported or bad access
+     *
+     * @since 1.3.0
+     */
+    @SuppressWarnings("WeakerAccess")
+    public TableScanner getFullTableScanner(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws EntityException
+    {
+        EntityDescriptor descriptor;
+
+        if (query.getPartition() == QueryPartitionMode.ALL)
+        {
+            descriptor = context.getDescriptorForEntity(classToScan, "");
+        }
+        else
+        {
+            descriptor = context.getDescriptorForEntity(classToScan, query.getPartition());
+        }
+        final AttributeDescriptor attributeDescriptor = descriptor.getAttributes().get(criteria.getAttribute());
+        if (attributeDescriptor != null)
+        {
+            if (PartitionHelper.hasPartitionField(query.getEntityType(), context))
+            {
+                return new PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
+            }
+            else
+            {
+                return new FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
+            }
+        }
+
+        throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + " " + criteria.getAttribute());
+    }
+
+    /**
+     * Returns the proper scanner for criteria
      * @param criteria Query Criteria
      * @param classToScan Entity class to scan
      * @return Scanner implementation

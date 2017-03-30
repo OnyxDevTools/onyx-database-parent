@@ -43,8 +43,8 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
         buffer.writeInt(recordSize);
         super.writeObject(buffer);
         buffer.writeInt(serializerId);
-        buffer.writeObject(key);
         buffer.writeLong(recordId);
+        buffer.writeObject(key);
     }
 
     @Override
@@ -54,8 +54,8 @@ public class SkipListNode<K> extends SkipListHeadNode implements ObjectSerializa
         recordSize = buffer.readInt();
         super.readObject(buffer);
         serializerId = buffer.readInt();
-        key = (K)buffer.readObject();
         recordId = buffer.readLong();
+        key = (K)buffer.readObject();
     }
 
     public void readObject(ObjectBuffer buffer, long position) throws IOException

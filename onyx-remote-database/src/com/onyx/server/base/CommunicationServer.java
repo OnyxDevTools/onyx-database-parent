@@ -59,8 +59,12 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     private int maxWorkerThreads = Runtime.getRuntime().availableProcessors() * 2; // Worker thread number that is the max number of threads calling request handlers
     private CountDownLatch daemonCountDownLatch; // Server Count down latch.  Used to keep server alive within a daemon
     private ExecutorService workerThreadPool; // Worker thread pool for executing request pools
-    private final ExecutorService daemonService = Executors.newSingleThreadExecutor(); // Daemon thread pool used to keep alive
-
+    private final ExecutorService daemonService = Executors.newSingleThreadExecutor(
+            r -> {
+                Thread t = Executors.defaultThreadFactory().newThread(r);
+                t.setDaemon(true);
+                return t;
+            });
     /**
      * Constructor
      *

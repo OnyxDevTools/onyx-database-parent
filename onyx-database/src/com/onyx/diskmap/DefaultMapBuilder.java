@@ -30,10 +30,10 @@ public class DefaultMapBuilder implements MapBuilder {
 
     // Contains all initialized maps
     @SuppressWarnings("WeakerAccess")
-    protected final CompatMap<String, CompatMap> maps = new SynchronizedMap(new CompatWeakHashMap<>());
+    protected final CompatMap<String, CompatMap> maps = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     // Contains all initialized maps
-    private final CompatMap<Header, CompatMap> mapsByHeader = new SynchronizedMap(new CompatWeakHashMap());
+    private final CompatMap<Header, CompatMap> mapsByHeader = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     // Internal map that runs on storage
     @SuppressWarnings("WeakerAccess")

@@ -129,7 +129,7 @@ public class ReflectionUtil {
      * @throws IllegalAccessException Exception thrown when using regular reflection
      */
     public static Object instantiate(Class type) throws InstantiationException, IllegalAccessException {
-        return type.newInstance();
+            return type.newInstance();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////

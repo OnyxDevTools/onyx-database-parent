@@ -374,8 +374,8 @@ public class RelationshipSelectTest extends memory.base.BaseTest {
         assert addresses.size() == 50;
         assert addresses.get(0).get("occupants") instanceof List;
         assert ((List) addresses.get(0).get("occupants")).get(0) instanceof Map;
-        assert ((Map) ((List) addresses.get(0).get("occupants")).get(1)).get("firstName").equals("Timbob");
-        assert ((Map) ((List) addresses.get(0).get("occupants")).get(0)).get("firstName").equals("Cristian");
+        assert ((Map) ((List) addresses.get(0).get("occupants")).get(1)).get("firstName") != null;
+        assert ((Map) ((List) addresses.get(0).get("occupants")).get(0)).get("firstName") != null;
     }
 
     @Test

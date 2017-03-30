@@ -11,6 +11,7 @@ import com.onyx.persistence.collections.LazyQueryCollection;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.*;
+import com.onyx.query.CachedResults;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
@@ -25,10 +26,10 @@ import java.util.*;
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an embedded database.
  *
- *
  * @author Tim Osborn
+ * @see com.onyx.persistence.manager.PersistenceManager
  * @since 1.0.0
- *
+ * <p>
  * <pre>
  * <code>
  *
@@ -43,9 +44,6 @@ import java.util.*;
  *
  * </code>
  * </pre>
- *
- * @see com.onyx.persistence.manager.PersistenceManager
- *
  */
 public class EmbeddedPersistenceManager extends AbstractPersistenceManager implements PersistenceManager {
 
@@ -64,12 +62,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * The context of the database contains descriptor information regarding the entities and instruction on how to structure the record data.  This is usually done within the PersistenceManagerFactory.
      *
-     * @since 1.0.0
      * @param context Schema Context implementation
+     * @since 1.0.0
      */
     @Override
-    public void setContext(SchemaContext context)
-    {
+    public void setContext(SchemaContext context) {
         this.context = context;
         this.context.setSystemPersistenceManager(this);
     }
@@ -77,11 +74,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Return the Schema Context that was created by the Persistence Manager Factory.
      *
-     * @since 1.0.0
      * @return context Schema Context Implementation
+     * @since 1.0.0
      */
-    public SchemaContext getContext()
-    {
+    public SchemaContext getContext() {
         return this.context;
     }
 
@@ -90,25 +86,20 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param journalingEnabled Enabled True or False
      */
-    public void setJournalingEnabled(boolean journalingEnabled)
-    {
+    public void setJournalingEnabled(boolean journalingEnabled) {
         this.journalingEnabled = journalingEnabled;
     }
 
     /**
      * Save entity.  Persists a single entity for update or insert.  This method will cascade relationships and persist indexes.
      *
-     * @since 1.0.0
-     *
      * @param entity Managed Entity to Save
-     *
      * @return Saved Managed Entity
-     *
      * @throws EntityException Exception occured while persisting an entity
+     * @since 1.0.0
      */
     @Override
-    public IManagedEntity saveEntity(IManagedEntity entity) throws EntityException
-    {
+    public IManagedEntity saveEntity(IManagedEntity entity) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -118,16 +109,14 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         Object id = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier());
         long oldReferenceId = 0;
 
-        if(descriptor.getIndexes().size() > 0)
-        {
+        if (descriptor.getIndexes().size() > 0) {
             oldReferenceId = (id != null) ? recordController.getReferenceId(id) : 0;
         }
 
         id = recordController.save(entity);
 
         // Add Write Transaction to log
-        if(this.journalingEnabled)
-        {
+        if (this.journalingEnabled) {
             context.getTransactionController().writeSave(entity);
         }
 
@@ -139,16 +128,15 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Batch saves a list of entities.
-     *
+     * <p>
      * The entities must all be of the same type
      *
-     * @since 1.0.0
      * @param entities List of entities
      * @throws EntityException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
+     * @since 1.0.0
      */
     @Override
-    public void saveEntities(List<? extends IManagedEntity> entities) throws EntityException
-    {
+    public void saveEntities(List<? extends IManagedEntity> entities) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -160,19 +148,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         long oldReferenceId = 0;
 
         Object id;
-        for (IManagedEntity entity : entities)
-        {
+        for (IManagedEntity entity : entities) {
 
             id = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier());
-            if(descriptor.getIndexes().size() > 0)
-            {
+            if (descriptor.getIndexes().size() > 0) {
                 oldReferenceId = (id != null) ? recordController.getReferenceId(id) : 0;
             }
             id = recordController.save(entity);
 
             // Add write trasaction to log
-            if(this.journalingEnabled)
-            {
+            if (this.journalingEnabled) {
                 context.getTransactionController().writeSave(entity);
             }
 
@@ -184,17 +169,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Deletes a single entity
-     *
+     * <p>
      * The entity must exist otherwise it will throw an exception.  This will cascade delete relationships and remove index references.
      *
-     * @since 1.0.0
      * @param entity Managed Entity to delete
      * @return Flag indicating it was deleted
      * @throws EntityException Error occurred while deleting
+     * @since 1.0.0
      */
     @Override
-    public boolean deleteEntity(IManagedEntity entity) throws EntityException
-    {
+    public boolean deleteEntity(IManagedEntity entity) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -202,8 +186,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         final RecordController recordController = context.getRecordController(descriptor);
 
         // Write Delete transaction to log
-        if(this.journalingEnabled)
-        {
+        if (this.journalingEnabled) {
             context.getTransactionController().writeDelete(entity);
         }
 
@@ -218,23 +201,21 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Deletes list of entities.
-     *
+     * <p>
      * The entities must exist otherwise it will throw an exception.  This will cascade delete relationships and remove index references.
-     *
+     * <p>
      * Requires all of the entities to be of the same type
      *
-     * @since 1.0.0
      * @param entities List of entities
      * @throws EntityException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
+     * @since 1.0.0
      */
     @Override
-    public void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException
-    {
+    public void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
-        for (Object entity : entities)
-        {
+        for (Object entity : entities) {
             deleteEntity((IManagedEntity) entity);
         }
 
@@ -243,69 +224,54 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Execute query and delete entities returned in the results
      *
-     * @since 1.0.0
-     *
      * @param query Query used to filter entities with criteria
-     *
-     * @throws EntityException Exception occurred while executing delete query
-     *
      * @return Number of entities deleted
+     * @throws EntityException Exception occurred while executing delete query
+     * @since 1.0.0
      */
     @Override
-    public int executeDelete(Query query) throws EntityException
-    {
+    public int executeDelete(Query query) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
-
-        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
 
         // We want to lock the index controller so that it does not do background indexing
         final EntityDescriptor descriptor = context.getDescriptorForEntity(query.getEntityType(), query.getPartition());
 
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), query.getEntityType(), descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
-        try
-        {
-            final Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+        try {
+            final Map results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
 
             // Write Delete transaction to log
-            if(this.journalingEnabled)
-            {
+            if (this.journalingEnabled) {
                 context.getTransactionController().writeDeleteQuery(query);
             }
 
-            return queryController.deleteRecordsWithIndexes(results, query);
-        } finally
-        {
+            return queryController.deleteRecordsWithReferences(results, query);
+        } finally {
             queryController.cleanup();
         }
     }
 
     /**
      * Updates all rows returned by a given query
-     *
+     * <p>
      * The query#updates list must not be null or empty
      *
-     * @since 1.0.0
-     *
      * @param query Query used to filter entities with criteria
-     *
-     * @throws EntityException Exception occurred while executing update query
-     *
      * @return Number of entities updated
+     * @throws EntityException Exception occurred while executing update query
+     * @since 1.0.0
      */
     @Override
     @SuppressWarnings("unchecked")
-    public int executeUpdate(Query query) throws EntityException
-    {
+    public int executeUpdate(Query query) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
-
-        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
 
         // This will throw an exception if not valid
         final Class clazz = query.getEntityType();
@@ -315,23 +281,20 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, query.getPartition());
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
-        try
-        {
-            final Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+        try {
+            final Map<Long, Long> results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
 
             // Write Delete transaction to log
-            if(this.journalingEnabled)
-            {
+            if (this.journalingEnabled) {
                 context.getTransactionController().writeQueryUpdate(query);
             }
 
-            return queryController.updateRecordsWithValues(results, query.getUpdates(), query.getFirstRow(), query.getMaxResults());
-        } finally
-        {
+            return queryController.performUpdatsForQuery(query, results);
+        } finally {
             queryController.cleanup();
         }
     }
@@ -339,21 +302,15 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Execute query with criteria and optional row limitations
      *
-     * @since 1.0.0
-     *
      * @param query Query containing criteria
-     *
      * @return Query Results
-     *
      * @throws EntityException Error while executing query
+     * @since 1.0.0
      */
     @Override
-    public List executeQuery(Query query) throws EntityException
-    {
+    public List executeQuery(Query query) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
-
-        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
 
         final Class clazz = query.getEntityType();
 
@@ -362,37 +319,46 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
-        try
-        {
-            Map results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+        try {
+            // Check to see if there are cached query resutls
+            CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
+            Map results;
+
+            // If there are, use the cache rather re-checking criteria
+            if (cachedResults != null) {
+                results = cachedResults.getReferences();
+                query.setResultsCount(cachedResults.getReferences().size());
+                if (query.getSelections() != null) {
+                    final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
+                    return new ArrayList<>(attributeValues.values());
+                } else {
+                    return queryController.hydrateResultsWithReferences(query, results);
+                }
+            }
+            results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
 
-            // This will go through and get a subset of fields
-            if (query.getSelections() != null)
-            {
-                if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1)
-                {
-                    results = queryController.sort(
-                            (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
-                }
-
-                final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQueryAttributes(query.getSelections().toArray(new String[query.getSelections().size()]), results, false, query.getFirstRow(), query.getMaxResults());
-
-                return new ArrayList<>(attributeValues.values());
-            } else
-            {
-
-                return queryController.hydrateResultsWithIndexes(results,
-                        (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0],
-                        query.getFirstRow(),
-                        query.getMaxResults());
-
+            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
+                results = queryController.sort(query, results);
             }
-        } finally
-        {
+
+            // This will go through and get a subset of fields
+            if (query.getSelections() != null) {
+
+                // Cache the query results
+                context.getQueryCacheController().setCachedQueryResults(query, results);
+
+                final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
+                return new ArrayList<>(attributeValues.values());
+            } else {
+                // Cache the query results
+                context.getQueryCacheController().setCachedQueryResults(query, results);
+                return queryController.hydrateResultsWithReferences(query, results);
+            }
+        } finally {
             queryController.cleanup();
         }
     }
@@ -400,22 +366,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Execute query with criteria and optional row limitations.  Specify lazy instantiation of query results.
      *
-     * @since 1.0.0
-     *
      * @param query Query containing criteria
-     *
      * @return LazyQueryCollection lazy loaded results
-     *
      * @throws EntityException Error while executing query
+     * @since 1.0.0
      */
     @Override
     @SuppressWarnings("unchecked")
-    public List executeLazyQuery(Query query) throws EntityException
-    {
+    public List executeLazyQuery(Query query) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
-
-        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
 
         final Class clazz = query.getEntityType();
         IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
@@ -425,21 +385,30 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
 
-        try
-        {
-            Map<Long, Long> results = queryController.getIndexesForCriteria(query.getCriteria(), null, true, query);
+        try {
+            // Check for cached query results.
+            CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
+            Map results;
+
+            // If there are, hydrate the existing rather than looking to the store
+            if (cachedResults != null) {
+                results = cachedResults.getReferences();
+                query.setResultsCount(results.size());
+                return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
+            }
+
+            // There were no cached results, load them from the store
+            results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
-            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1)
-            {
-                results = queryController.sort(
-                        (query.getQueryOrders() != null) ? query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]) : new QueryOrder[0], results);
+            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
+                results = queryController.sort(query, results);
             }
+            context.getQueryCacheController().setCachedQueryResults(query, results);
             return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
-        } finally
-        {
+        } finally {
             queryController.cleanup();
         }
     }
@@ -449,17 +418,13 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * All relationships are hydrated based on their fetch policy.
      * The entity must also not be null.
      *
-     * @since 1.0.0
-     *
      * @param entity Entity to hydrate.
-     *
      * @return Managed Entity
-     *
      * @throws EntityException Error when hydrating entity
+     * @since 1.0.0
      */
     @Override
-    public IManagedEntity find(IManagedEntity entity) throws EntityException
-    {
+    public IManagedEntity find(IManagedEntity entity) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -470,8 +435,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         // Find the object
         IManagedEntity results = recordController.get(entity);
 
-        if (results == null)
-        {
+        if (results == null) {
             throw new NoResultsException();
         }
 
@@ -484,19 +448,17 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Find Entity By Class and ID.
-     *
+     * <p>
      * All relationships are hydrated based on their fetch policy.  This does not take into account the partition.
      *
-     * @since 1.0.0
-     *
      * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
-     * @param id Primary Key of entity
+     * @param id    Primary Key of entity
      * @return Managed Entity
      * @throws EntityException Error when finding entity
+     * @since 1.0.0
      */
     @Override
-    public IManagedEntity findById(Class clazz, Object id) throws EntityException
-    {
+    public IManagedEntity findById(Class clazz, Object id) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -507,8 +469,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         // Find the object
         entity = recordController.getWithId(id);
 
-        if (entity == null)
-        {
+        if (entity == null) {
             return null;
         }
 
@@ -519,20 +480,18 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Find Entity By Class and ID.
-     *
+     * <p>
      * All relationships are hydrated based on their fetch policy.  This does not take into account the partition.
      *
-     * @since 1.0.0
-     *
-     * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
-     * @param id Primary Key of entity
+     * @param clazz       Managed Entity Type.  This must be a cast of IManagedEntity
+     * @param id          Primary Key of entity
      * @param partitionId Partition key for entity
      * @return Managed Entity
      * @throws EntityException Error when finding entity within partition specified
+     * @since 1.0.0
      */
     @Override
-    public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException
-    {
+    public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException {
 
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -544,8 +503,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         // Find the object
         entity = recordController.getWithId(id);
 
-        if (entity == null)
-        {
+        if (entity == null) {
             return null;
         }
 
@@ -556,20 +514,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Determines if the entity exists within the database.
-     *
+     * <p>
      * It is determined by the primary id and partition key
      *
-     * @since 1.0.0
-     *
      * @param entity Managed Entity to check
-     *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
-     *
      * @throws EntityException Error when finding entity within partition specified
+     * @since 1.0.0
      */
     @Override
-    public boolean exists(IManagedEntity entity) throws EntityException
-    {
+    public boolean exists(IManagedEntity entity) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -582,22 +536,17 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Determines if the entity exists within the database.
-     *
+     * <p>
      * It is determined by the primary id and partition key
      *
-     * @since 1.0.0
-     *
-     * @param entity Managed Entity to check
-     *
+     * @param entity      Managed Entity to check
      * @param partitionId Partition Value for entity
-     *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
-     *
      * @throws EntityException Error when finding entity within partition specified
+     * @since 1.0.0
      */
     @Override
-    public boolean exists(IManagedEntity entity, Object partitionId) throws EntityException
-    {
+    public boolean exists(IManagedEntity entity, Object partitionId) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -611,17 +560,13 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Force Hydrate relationship based on attribute name
      *
-     * @since 1.0.0
-     *
-     * @param entity Managed Entity to attach relationship values
-     *
+     * @param entity    Managed Entity to attach relationship values
      * @param attribute String representation of relationship attribute
-     *
      * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @since 1.0.0
      */
     @Override
-    public void initialize(IManagedEntity entity, String attribute) throws EntityException
-    {
+    public void initialize(IManagedEntity entity, String attribute) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -631,19 +576,16 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         RelationshipReference entityId;
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
 
-        if (partitionValue != PartitionHelper.NULL_PARTITION && partitionValue != null)
-        {
+        if (partitionValue != PartitionHelper.NULL_PARTITION && partitionValue != null) {
             SystemPartitionEntry partitionEntry = context.getPartitionWithValue(descriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, context));
             entityId = new RelationshipReference(identifier, partitionEntry.getIndex());
-        } else
-        {
+        } else {
             entityId = new RelationshipReference(identifier, 0);
         }
 
         RelationshipDescriptor relationshipDescriptor = descriptor.getRelationships().get(attribute);
 
-        if (relationshipDescriptor == null)
-        {
+        if (relationshipDescriptor == null) {
             throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.getClass().getName());
         }
 
@@ -654,13 +596,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Hydrate a relationship and return the key
      *
-     * @since 1.0.0
-     *
-     * @param entity Managed Entity to attach relationship values
-     *
+     * @param entity    Managed Entity to attach relationship values
      * @param attribute String representation of relationship attribute
-     *
      * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @since 1.0.0
      */
     @SuppressWarnings("unused")
     public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
@@ -670,15 +609,12 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Provides a list of all entities with a given type
      *
-     * @param clazz  Type of managed entity to retrieve
-     *
+     * @param clazz Type of managed entity to retrieve
      * @return Unsorted List of all entities with type
-     *
      * @throws EntityException Exception occurred while fetching results
      */
     @Override
-    public List list(Class clazz) throws EntityException
-    {
+    public List list(Class clazz) throws EntityException {
         final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
@@ -690,31 +626,25 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * This is a way to batch save all relationships for an entity.  This does not retain any existing relationships and will
      * overwrite all existing with the set you are sending in.  This is useful to optimize batch saving entities with relationships.
      *
-     * @since 1.0.0
-     * @param entity Parent Managed Entity
-     * @param relationship Relationship attribute
+     * @param entity                  Parent Managed Entity
+     * @param relationship            Relationship attribute
      * @param relationshipIdentifiers Existing relationship identifiers
-     *
      * @throws EntityException Error occurred while saving relationship.
+     * @since 1.0.0
      */
-    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException
-    {
+    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException {
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
         final RelationshipDescriptor relationshipDescriptor = descriptor.getRelationships().get(relationship);
 
-        if (relationshipDescriptor == null)
-        {
+        if (relationshipDescriptor == null) {
             throw new RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.getClass().getName());
         }
 
         Set<RelationshipReference> references = new HashSet<>();
-        for (Object identifier : relationshipIdentifiers)
-        {
-            if (identifier instanceof RelationshipReference)
-            {
+        for (Object identifier : relationshipIdentifiers) {
+            if (identifier instanceof RelationshipReference) {
                 references.add((RelationshipReference) identifier);
-            } else
-            {
+            } else {
                 references.add(new RelationshipReference(identifier, 0));
             }
         }
@@ -725,13 +655,12 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
      *
-     * @since 1.0.0
      * @param referenceId Reference location within database
      * @return Managed Entity
      * @throws EntityException The reference does not exist for that type
+     * @since 1.0.0
      */
-    public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException
-    {
+    public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException {
 
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -751,19 +680,14 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Retrieves an entity using the primaryKey and partition
      *
-     * @since 1.0.0
-     *
-     * @param clazz Entity Type
-     *
-     * @param id Entity Primary Key
-     *
+     * @param clazz       Entity Type
+     * @param id          Entity Primary Key
      * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
-     *
      * @throws EntityException error occurred while attempting to retrieve entity.
+     * @since 1.0.0
      */
-    public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException
-    {
+    public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -783,70 +707,54 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * Execute query and delete entities returned in the results
      *
-     * @since 1.0.0
-     *
      * @param query Query used to filter entities with criteria
-     *
-     * @throws EntityException Exception occurred while executing delete query
-     *
      * @return Number of entities deleted
+     * @throws EntityException Exception occurred while executing delete query
+     * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeDeleteForResults(Query query) throws EntityException
-    {
+    public QueryResult executeDeleteForResults(Query query) throws EntityException {
         return new QueryResult(query, this.executeDelete(query));
     }
 
     /**
      * Updates all rows returned by a given query
-     *
+     * <p>
      * The query#updates list must not be null or empty
      *
-     * @since 1.0.0
-     *
      * @param query Query used to filter entities with criteria
-     *
-     * @throws EntityException Exception occurred while executing update query
-     *
      * @return Number of entities updated
+     * @throws EntityException Exception occurred while executing update query
+     * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeUpdateForResults(Query query) throws EntityException
-    {
+    public QueryResult executeUpdateForResults(Query query) throws EntityException {
         return new QueryResult(query, this.executeUpdate(query));
     }
 
     /**
      * Execute query with criteria and optional row limitations
      *
-     * @since 1.0.0
-     *
      * @param query Query containing criteria
-     *
      * @return Query Results
-     *
      * @throws EntityException Error while executing query
+     * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeQueryForResults(Query query) throws EntityException
-    {
+    public QueryResult executeQueryForResults(Query query) throws EntityException {
         return new QueryResult(query, this.executeQuery(query));
     }
 
     /**
      * Execute query with criteria and optional row limitations.  Specify lazy instantiation of query results.
      *
-     * @since 1.0.0
-     *
      * @param query Query containing criteria
-     *
      * @return LazyQueryCollection lazy loaded results
-     *
      * @throws EntityException Error while executing query
+     * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeLazyQueryForResults(Query query) throws EntityException
-    {
+    public QueryResult executeLazyQueryForResults(Query query) throws EntityException {
         return new QueryResult(query, this.executeLazyQuery(query));
     }
 
@@ -854,13 +762,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * Get Map representation of an entity with reference id
      *
      * @param entityType Original type of entity
-     *
-     * @param reference Reference location within a data structure
-     *
+     * @param reference  Reference location within a data structure
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
-    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException
-    {
+    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -874,15 +779,15 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
     /**
      * Retrieve the quantity of entities that match the query criterium.
-     *
+     * <p>
      * usage:
-     *
+     * <p>
      * Query myQuery = new Query();
      * myQuery.setClass(SystemEntity.class);
      * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
-     *
+     * <p>
      * or:
-     *
+     * <p>
      * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
      * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
@@ -894,32 +799,35 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     @Override
     public long countForQuery(Query query) throws EntityException {
 
-        PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
         final Class clazz = query.getEntityType();
 
         // We want to lock the index controller so that it does not do background indexing
         final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
         ValidationHelper.validateQuery(descriptor, query, context);
 
-        final PartitionQueryController queryController = new PartitionQueryController(query.getCriteria(), clazz, descriptor, query, context, this);
+        CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
+        if (cachedResults != null)
+            return cachedResults.getReferences().size();
 
-        return queryController.getCountForQuery(query);
+        final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
+
+        try {
+            return queryController.getCountForQuery(query);
+        } finally {
+            queryController.cleanup();
+        }
     }
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
-     * @since 1.0.0
-     *
-     * @param query Query to execute and stream
-     *
+     * @param query    Query to execute and stream
      * @param streamer Instance of the streamer to use to stream the data
-     *
+     * @since 1.0.0
      */
     @Override
     @SuppressWarnings("unchecked")
-    public void stream(Query query, QueryStream streamer) throws EntityException
-    {
+    public void stream(Query query, QueryStream streamer) throws EntityException {
         final LazyQueryCollection entityList = (LazyQueryCollection) executeLazyQuery(query);
         final PersistenceManager persistenceManagerInstance = this;
 
@@ -939,19 +847,15 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
     /**
      * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
-     * @since 1.0.0
-     *
-     * @param query Query to execute and stream
-     *
+     * @param query            Query to execute and stream
      * @param queryStreamClass Class instance of the database stream
-     *
+     * @since 1.0.0
      */
     @Override
-    public void stream(Query query, Class queryStreamClass) throws EntityException
-    {
+    public void stream(Query query, Class queryStreamClass) throws EntityException {
         QueryStream streamer;
         try {
-            streamer = (QueryStream)queryStreamClass.newInstance();
+            streamer = (QueryStream) queryStreamClass.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {
             throw new StreamException(StreamException.CANNOT_INSTANTIATE_STREAM);
         }

@@ -1,8 +1,11 @@
 package com.onyx.util;
 
+import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InvalidDataTypeForOperator;
+import com.onyx.helpers.RelationshipHelper;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 
@@ -10,7 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by timothy.osborn on 12/14/14.
@@ -53,7 +56,7 @@ public class CompareUtil
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked WeakerAccess")
     public static Object castObject(Class clazz, Object object) {
 
         Method method = null;
@@ -452,4 +455,125 @@ public class CompareUtil
         throw new InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR);
     }
 
+    /**
+     * Relationship meets critieria.  This method will hydrate a relationship for an entity and
+     * check its critieria to ensure the critieria is met
+     *
+     * @param entity Original entity containing the relationship.  This entity may or may not have
+     *               hydrated relationships.  For that reason we have to go back to the store to
+     *               retrieve the relationship entitities.
+     *
+     * @param entityReference Used for quick reference so we do not have to retrieve the entitiies
+     *                        reference before retrieving the relationship.
+     *
+     * @param criteria Critieria to check for to see if we meet the requirements
+     *
+     * @param context Schem context used to pull entity descriptors and record controllers and such
+     *
+     * @return Whether the relationship value has met all of the critieria
+     *
+     * @throws EntityException Something bad happened.
+     *
+     * @since 1.3.0 - Used to remove the dependency on relationship scanners and to allow query caching
+     *                to do a quick reference to see if newly saved entities meet the critieria
+     */
+    private static boolean relationshipMeetsCritieria(IManagedEntity entity, Object entityReference, QueryCriteria criteria, SchemaContext context) throws EntityException
+    {
+        boolean meetsCritiera = false;
+        final QueryCriteriaOperator operator = criteria.getOperator();
+
+        // Grab the relationship from the store
+        final List<IManagedEntity> relationshipEntities = RelationshipHelper.getRelationshipForValue(entity, entityReference, criteria.getAttribute(), context);
+
+        // If there are relationship values, check to see if they meet critieria
+        if(relationshipEntities.size() > 0)
+        {
+            String[] items = criteria.getAttribute().split("\\.");
+            String attribute = items[items.length - 1];
+            final OffsetField offsetField = ReflectionUtil.getOffsetField(relationshipEntities.get(0).getClass(), attribute);
+
+            // All we need is a single match.  If there is a relationship that meets the criteria, move along
+            for(IManagedEntity relationshipEntity : relationshipEntities)
+            {
+                meetsCritiera = CompareUtil.compare(criteria.getValue(), ReflectionUtil.getAny(relationshipEntity, offsetField), operator);
+                if(meetsCritiera)
+                    break;
+            }
+        }
+        return meetsCritiera;
+    }
+
+
+    /**
+     * Entity meets the query critieria.  This method is used to determine whether the entity meets all the
+     * critieria of the query.  It was implemented so that we no longer have logic in the query controller
+     * to sift through scans.  We can now only perform a full table scan once.
+     *
+     * @param allCritieria Contribed list of criteria to
+     * @param rootCriteria Critieria to verify whether the entity meets
+     * @param entity Entity to check for criteria
+     * @param entityReference The entities reference
+     * @param context Schema context used to pull entity descriptors, and such
+     * @param descriptor Quick reference to the entities descriptor so we do not have to pull it from the schema context
+     * @return Whether the entity meets all the critieria.
+     * @throws EntityException Cannot hydrate or pull an attribute from an entity
+     *
+     * @since 1.3.0 Simplified query criteria management
+     */
+    public static boolean meetsCriteria(Set<QueryCriteria> allCritieria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws EntityException {
+
+        boolean subCreriaMet;
+
+        // Iterate through
+        for(QueryCriteria criteria1 : allCritieria)
+        {
+            if(criteria1.getAttribute().contains("."))
+            {
+                // Compare operator for relationship object
+                subCreriaMet = relationshipMeetsCritieria(entity, entityReference, criteria1, context);
+            }
+            else
+            {
+                // Compare operator for attribute object
+                final OffsetField offsetField = descriptor.getAttributes().get(criteria1.getAttribute()).getField();
+                subCreriaMet = CompareUtil.compare(criteria1.getValue(), ReflectionUtil.getAny(entity, offsetField), criteria1.getOperator());
+            }
+
+            criteria1.meetsCritieria = subCreriaMet;
+        }
+
+        return calculateCritieriaMet(rootCriteria);
+    }
+
+    /**
+     * Calculates the result of the parent critieria and correlates
+     * its set of children criteria.  A pre-requisite to invoking this method
+     * is that all of the criteria have the meet criteria field set and
+     * it does NOT take into account the not modifier in the pre-requisite.
+     *
+     *
+     * @param criteria Root critiera to check.  This maintains the order of operations
+     * @return Whether all the crierita are met taking into account the order of operations
+     *         and the not() modifier
+     *
+     * @since 1.3.0 Added to enhance insertion based criteria checking
+     */
+    private static boolean calculateCritieriaMet(QueryCriteria criteria)
+    {
+        boolean meetsCritieria = criteria.meetsCritieria;
+
+        if(criteria.getSubCriteria().size() > 0) {
+            for (QueryCriteria subCritieria : criteria.getSubCriteria()) {
+                if (subCritieria.isOr()) {
+                    meetsCritieria = (calculateCritieriaMet(subCritieria) || meetsCritieria);
+                } else {
+                    meetsCritieria = (calculateCritieriaMet(subCritieria) && meetsCritieria);
+                }
+            }
+        }
+
+        if(criteria.isNot())
+            meetsCritieria = !meetsCritieria;
+        return meetsCritieria;
+    }
 }

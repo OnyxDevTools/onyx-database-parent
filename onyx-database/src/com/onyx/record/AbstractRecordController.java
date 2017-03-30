@@ -29,7 +29,7 @@ public abstract class AbstractRecordController
     protected DiskMap<Object, IManagedEntity> records = null;
     protected final EntityDescriptor entityDescriptor;
     @SuppressWarnings("unused")
-    protected final String contextId;
+    protected final SchemaContext context;
 
     /**
      * Constructor
@@ -40,7 +40,7 @@ public abstract class AbstractRecordController
     @SuppressWarnings("WeakerAccess")
     public AbstractRecordController(EntityDescriptor descriptor, SchemaContext context)
     {
-        this.contextId = context.getContextId();
+        this.context = context;
         this.entityDescriptor = descriptor;
         MapBuilder dataFile = context.getDataFile(entityDescriptor);
         records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
@@ -97,11 +97,15 @@ public abstract class AbstractRecordController
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
-        invokePreRemoveCallback(entity);
-
-        this.deleteWithId(identifierValue);
-
-        invokePostRemoveCallback(entity);
+        // Update Cached queries
+        long recordId = records.getRecID(identifierValue);
+        if(recordId > -1)
+        {
+            invokePreRemoveCallback(entity);
+            context.getQueryCacheController().updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId,true);
+            this.deleteWithId(identifierValue);
+            invokePostRemoveCallback(entity);
+        }
     }
 
     /**
@@ -261,6 +265,7 @@ public abstract class AbstractRecordController
      */
     protected void invokePostUpdateCallback(IManagedEntity entity) throws EntityCallbackException
     {
+
         if(this.entityDescriptor.getPostUpdateCallback() != null
                 && !((ManagedEntity)entity).ignoreListeners)
         {

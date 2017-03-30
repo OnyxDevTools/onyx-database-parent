@@ -1,8 +1,8 @@
 package com.onyx.diskmap.serializer;
 
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
+import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.SynchronizedMap;
 
 import java.util.Map;
@@ -18,7 +18,7 @@ public class Serializers {
     private Map<Short, String> mapById;
     private Map<String, Short> mapByName;
     @SuppressWarnings("unchecked")
-    final private CompatMap<Short, Class> mapCache = new SynchronizedMap(new CompatHashMap<>());
+    final private CompatMap<Short, Class> mapCache = new SynchronizedMap(new CompatWeakHashMap());
 
     public SchemaContext context;
 

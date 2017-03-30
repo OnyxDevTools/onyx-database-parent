@@ -1,6 +1,8 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.diskmap.DiskMap;
+import com.onyx.diskmap.MapBuilder;
 import com.onyx.exception.EntityException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
@@ -8,14 +10,10 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.MapBuilder;
 import com.onyx.util.OffsetField;
-import com.onyx.util.ReflectionUtil;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -32,6 +30,8 @@ abstract class AbstractTableScanner extends PartitionContext
     protected final Class classToScan;
     @SuppressWarnings("WeakerAccess")
     protected final EntityDescriptor descriptor;
+
+    @SuppressWarnings("WeakerAccess unused")
     OffsetField fieldToGrab = null;
 
     @SuppressWarnings("WeakerAccess")
@@ -40,7 +40,7 @@ abstract class AbstractTableScanner extends PartitionContext
     protected MapBuilder temporaryDataFile = null;
     @SuppressWarnings("WeakerAccess")
     protected final Query query;
-    @SuppressWarnings("WeakerAccess")
+    @SuppressWarnings({"WeakerAccess", "CanBeFinal"})
     protected PersistenceManager persistenceManager;
 
     /**
@@ -50,7 +50,7 @@ abstract class AbstractTableScanner extends PartitionContext
      * @param classToScan Class type to scan
      * @param descriptor Entity descriptor of entity type to scan
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "RedundantThrows"})
     AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
     {
         super(context, descriptor);
@@ -74,5 +74,6 @@ abstract class AbstractTableScanner extends PartitionContext
 
         this.persistenceManager = persistenceManager;
     }
+
 
 }

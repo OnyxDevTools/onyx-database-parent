@@ -124,7 +124,7 @@ public class ManyToOneTest extends BaseTest
         parent.identifier = "MTO1";
         find(parent);
 
-        Assert.assertEquals(1, parent.childNoCascade.size());
+        Assert.assertEquals(0, parent.childNoCascade.size());
 
         find(child);
 

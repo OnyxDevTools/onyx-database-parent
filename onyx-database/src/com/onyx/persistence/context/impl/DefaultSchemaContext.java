@@ -19,10 +19,8 @@ import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.query.QueryOrder;
+import com.onyx.persistence.query.*;
+import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 import com.onyx.record.RecordController;
 import com.onyx.record.impl.RecordControllerImpl;
 import com.onyx.record.impl.SequenceRecordControllerImpl;
@@ -33,10 +31,7 @@ import com.onyx.transaction.TransactionController;
 import com.onyx.transaction.impl.TransactionControllerImpl;
 import com.onyx.util.EntityClassLoader;
 import com.onyx.util.FileUtil;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.CompatWeakHashMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.util.map.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -99,6 +94,8 @@ public class DefaultSchemaContext implements SchemaContext {
     @SuppressWarnings("WeakerAccess")
     protected String temporaryFileLocation;
 
+    @SuppressWarnings("WeakerAccess")
+    protected final Set<MapBuilder> temporaryMaps = new HashSet<>();
     /**
      * Constructor.
      *
@@ -111,6 +108,7 @@ public class DefaultSchemaContext implements SchemaContext {
         this.contextId = contextId;
 
         DefaultSchemaContext.registeredSchemaContexts.put(contextId, this);
+        this.queryCacheController = new DefaultQueryCacheController(this);
 
     }
 
@@ -202,6 +200,7 @@ public class DefaultSchemaContext implements SchemaContext {
             }
             MapBuilder builder = new DefaultMapBuilder(file.getPath(), StoreType.MEMORY_MAPPED_FILE, this.context, true);
             temporaryDiskMapQueue.add(builder);
+            temporaryMaps.add(builder);
         }
     }
 
@@ -487,12 +486,17 @@ public class DefaultSchemaContext implements SchemaContext {
         // Shutdown all databases temporary disk map builders
         while (true) {
             try {
-                MapBuilder temporaryDiskMap = temporaryDiskMapQueue.remove();
-                temporaryDiskMap.close();
-                temporaryDiskMap.delete();
+                temporaryDiskMapQueue.remove();
             } catch (Exception ignore) {
                 break;
             }
+        }
+
+        // Added to ensure all builders are closed whether they are checked out or not
+        for(MapBuilder builder : temporaryMaps)
+        {
+            builder.close();
+            builder.delete();
         }
 
         // Close transaction file
@@ -521,7 +525,12 @@ public class DefaultSchemaContext implements SchemaContext {
     // Data File collection
     //
     ///////////////////////////////////////////////////////////////
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
+            r -> {
+                Thread t = Executors.defaultThreadFactory().newThread(r);
+                t.setDaemon(true);
+                return t;
+            });
 
     /**
      * Map of data files.
@@ -1109,7 +1118,8 @@ public class DefaultSchemaContext implements SchemaContext {
         return indexControllers.computeIfAbsent(indexDescriptor, createIndexController);
     }
 
-    final private ArrayBlockingQueue<MapBuilder> temporaryDiskMapQueue = new ArrayBlockingQueue<>(32, false);
+    @SuppressWarnings("WeakerAccess")
+    final protected ArrayBlockingQueue<MapBuilder> temporaryDiskMapQueue = new ArrayBlockingQueue<>(32, false);
 
     /**
      * Create Temporary Map Builder.
@@ -1185,4 +1195,19 @@ public class DefaultSchemaContext implements SchemaContext {
         } catch (EntityException ignore) {
         }
     };
+
+    private QueryCacheController queryCacheController;
+
+    /**
+     * Get controller responsible for managing query caches
+     *
+     * @return The schema context's query controller
+     *
+     * @since 1.3.0
+     */
+    @Override
+    public QueryCacheController getQueryCacheController() {
+        return queryCacheController;
+    }
+
 }

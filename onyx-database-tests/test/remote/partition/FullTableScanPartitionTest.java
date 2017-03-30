@@ -23,6 +23,7 @@ import java.util.List;
 @Category({RemoteServerTests.class})
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class FullTableScanPartitionTest extends BasePartitionTest {
+
     @Test
     public void aTestSavePartitionEntityWithIndex() {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
@@ -147,6 +148,9 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
 
     @Test
     public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+        Query query = new Query(FullTablePartitionEntity.class, new QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5l));
+        manager.executeDelete(query);
+
         FullTablePartitionEntity entity = new FullTablePartitionEntity();
         entity.id = 1l;
         entity.partitionId = 3l;
@@ -161,10 +165,8 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
 
         save(entity2);
 
-        Query query = new Query(FullTablePartitionEntity.class, new QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5l));
-
         int results = manager.executeDelete(query);
-        Assert.assertTrue(results == 2);
+        Assert.assertEquals(2, results);
     }
 
 

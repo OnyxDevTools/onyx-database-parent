@@ -6,6 +6,7 @@ import com.onyx.diskmap.serializer.ObjectSerializable;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Objects;
 
 
 /**
@@ -118,5 +119,16 @@ public class QueryOrder implements ObjectSerializable, Serializable
     @Override
     public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException {
 
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(attribute, ascending);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        return other == this || other instanceof QueryOrder && ((QueryOrder) other).attribute.equals(this.attribute) && ((QueryOrder) other).ascending == this.ascending;
     }
 }

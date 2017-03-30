@@ -162,6 +162,7 @@ public class FullTableScanTest extends memory.base.BaseTest
         QueryCriteria intValueNotEqual2 = new QueryCriteria("intValue", QueryCriteriaOperator.NOT_EQUAL, 2);
         QueryCriteria orStringValueEqualsSomeTest = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin2");
 
+
         Assert.assertEquals(2, manager.list(AllAttributeForFetch.class, stringValueEqualsValue.and(containsSubTes.or(intValueNotEqual2)).or(orStringValueEqualsSomeTest)).size());
     }
 

@@ -1,6 +1,10 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.exception.EntityClassNotFoundException;
+import com.onyx.helpers.PartitionHelper;
+import com.onyx.persistence.IManagedEntity;
+import com.onyx.util.ReflectionUtil;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
@@ -97,7 +101,21 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
         }
         else
         {
-            return super.scan();
+            IManagedEntity entity;
+            try {
+                entity = (IManagedEntity) ReflectionUtil.instantiate(query.getEntityType());
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, query.getEntityType());
+            }
+
+            PartitionHelper.setPartitionValueForEntity(entity, query.getPartition(), getContext());
+            long partitionId = getPartitionId(entity);
+            if(partitionId < 1)
+                return new HashMap();
+
+            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
+            final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+            results.putAll(scanPartition(partitionIndexController, partitionId));
         }
 
         return results;
@@ -167,86 +185,61 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
         final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap<>();
 
-
-        if(criteria.getValue() instanceof List)
+        if(query.getPartition() == QueryPartitionMode.ALL)
         {
-            for(Object ignored : (List<Object>) criteria.getValue())
+            for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
             {
-                if(query.isTerminated())
-                    return returnValue;
+                try {
+                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                    final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                    Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
 
-                if(query.getPartition() == QueryPartitionMode.ALL)
-                {
-                    for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
+                    results.putAll(partitionResults);
+
+                    //noinspection Convert2streamapi
+                    for(PartitionReference reference : results.keySet())
                     {
-                        try {
-                            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                            final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-                            Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
-
-                            results.putAll(partitionResults);
-
-                            //noinspection Convert2streamapi
-                            for(PartitionReference reference : results.keySet())
-                            {
-                                if (existingValues.containsKey(reference)) {
-                                    returnValue.put(reference, reference);
-                                }
-                            }
-
-                        } catch (EntityException e) {
-                            wrapper.exception = e;
+                        if (existingValues.containsKey(reference)) {
+                            returnValue.put(reference, reference);
                         }
                     }
 
-                    if (wrapper.exception != null)
-                    {
-                        throw wrapper.exception;
-                    }
+                } catch (EntityException e) {
+                    wrapper.exception = e;
                 }
-                else
-                {
-                    return super.scan(existingValues);
-                }
+            }
+
+            if (wrapper.exception != null)
+            {
+                throw wrapper.exception;
             }
         }
         else
         {
 
-            if(query.getPartition() == QueryPartitionMode.ALL)
-            {
-                for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
-                {
-                    try {
-                        final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                        final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-                        Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
-
-                        results.putAll(partitionResults);
-
-                        //noinspection Convert2streamapi
-                        for(PartitionReference reference : results.keySet())
-                        {
-                            if (existingValues.containsKey(reference)) {
-                                returnValue.put(reference, reference);
-                            }
-                        }
-
-                    } catch (EntityException e) {
-                        wrapper.exception = e;
-                    }
-                }
-
-                if (wrapper.exception != null)
-                {
-                    throw wrapper.exception;
-                }
-            }
-            else
-            {
-                return super.scan(existingValues);
+            IManagedEntity entity;
+            try {
+                entity = (IManagedEntity) ReflectionUtil.instantiate(query.getEntityType());
+            } catch (InstantiationException | IllegalAccessException e) {
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, query.getEntityType());
             }
 
+            PartitionHelper.setPartitionValueForEntity(entity, query.getPartition(), getContext());
+            long partitionId = getPartitionId(entity);
+            if(partitionId < 1)
+                return new HashMap();
+
+            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
+            final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+            results.putAll(scanPartition(partitionIndexController, partitionId));
+
+            //noinspection Convert2streamapi
+            for(PartitionReference reference : results.keySet())
+            {
+                if (existingValues.containsKey(reference)) {
+                    returnValue.put(reference, reference);
+                }
+            }
         }
         return returnValue;
     }

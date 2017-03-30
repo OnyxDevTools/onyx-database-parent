@@ -1,9 +1,10 @@
 package com.onyx.diskmap.base.hashmap;
 
 import com.onyx.util.map.CompatMap;
-import com.onyx.diskmap.base.concurrent.ConcurrentWeakHashMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.store.Store;
+import com.onyx.util.map.CompatWeakHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import java.nio.ByteBuffer;
 
@@ -31,8 +32,8 @@ abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
      */
     AbstractCachedHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
         super(fileStore, header, headless, loadFactor);
-        cache = new ConcurrentWeakHashMap<>();
-        mapCache = new ConcurrentWeakHashMap<>();
+        cache = new SynchronizedMap<>(new CompatWeakHashMap<>());
+        mapCache = new SynchronizedMap<>(new CompatWeakHashMap<>());
     }
 
     /**

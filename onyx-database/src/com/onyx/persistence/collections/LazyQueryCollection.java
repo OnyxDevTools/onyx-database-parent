@@ -46,6 +46,8 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
     @SuppressWarnings("WeakerAccess")
     protected List<Object> identifiers = null;
 
+    transient private Map<Object, Object> references;
+
     @SuppressWarnings("WeakerAccess")
     transient protected CompatMap<Object, IManagedEntity> values = new CompatWeakHashMap<>();
     @SuppressWarnings("WeakerAccess")
@@ -54,6 +56,8 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
     transient protected PersistenceManager persistenceManager = null;
     @SuppressWarnings("WeakerAccess")
     transient protected String contextId;
+
+    private boolean hasSelections = false;
 
     @SuppressWarnings("unused")
     public LazyQueryCollection()
@@ -73,7 +77,14 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         this.contextId = context.getContextId();
 
         this.persistenceManager = context.getSerializedPersistenceManager();
-        this.identifiers = new ArrayList<>(identifiers.keySet());
+
+        this.references = identifiers;
+
+        // Synchrnized because this could be from the cache
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (identifiers) {
+            this.identifiers = new ArrayList<>(identifiers.keySet());
+        }
         this.entityDescriptor = entityDescriptor;
     }
 
@@ -172,7 +183,17 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         {
             try
             {
-                entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), (long)identifiers.get(index));
+                long reference = (long)identifiers.get(index);
+                Object referenceValue = references.put(reference, entity);
+                if(referenceValue != null && referenceValue instanceof IManagedEntity)
+                {
+                    entity = (IManagedEntity)referenceValue;
+                }
+
+                if(entity == null) {
+                    entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), reference);
+                    references.put(reference, entity);
+                }
             } catch (EntityException e)
             {
                 return null;
@@ -304,7 +325,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         this.identifiers = (List) bufferStream.getCollection();
         String className = bufferStream.getString();
         this.contextId = bufferStream.getString();
-
+        this.hasSelections = bufferStream.getBoolean();
 
         SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
         if(context == null)
@@ -325,6 +346,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         bufferStream.putCollection(this.getIdentifiers());
         bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
         bufferStream.putString(contextId);
+        bufferStream.putBoolean(hasSelections);
     }
 
     /**

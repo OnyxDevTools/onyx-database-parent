@@ -138,6 +138,16 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
                 currentInverseIdentifier = null;
             }
         }
+        else
+        {
+            RelationshipReference previousRelationshipReference = toOneMap.get(entityIdentifier);
+
+            if(previousRelationshipReference != null && !previousRelationshipReference.equals(currentInverseIdentifier))
+            {
+                deleteInverseRelationshipReference(entityIdentifier, previousRelationshipReference);
+            }
+        }
+
 
         RelationshipReference refToSave = (newReference != null) ? newReference : currentInverseIdentifier;
 

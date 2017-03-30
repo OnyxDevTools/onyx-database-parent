@@ -1,15 +1,16 @@
 package com.onyx.persistence.query;
 
+import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.update.AttributeUpdate;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
+import com.onyx.query.QueryListener;
+import com.onyx.util.CompareUtil;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * This class contains all of the information needed to execute a query including criteria, sort order information, limited selection, and row constraints.
@@ -593,6 +594,12 @@ public class Query implements ObjectSerializable, Serializable
         resultsCount = buffer.readInt();
     }
 
+    @SuppressWarnings("EmptyMethod unused")
+    public void setChangeListener(QueryListener subscriber)
+    {
+
+    }
+
     /**
      * Read object with position
      *
@@ -610,5 +617,151 @@ public class Query implements ObjectSerializable, Serializable
     public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException
     {
 
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(entityType, partition, queryOrders, criteria, selections);
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if(other == this)
+            return true;
+
+        if(other instanceof Query) {
+            Query otherQuery = (Query) other;
+            return this.entityType.equals(otherQuery.entityType) && CompareUtil.forceCompare(this.partition, otherQuery.partition) && this.criteria.equals(otherQuery.criteria) && CompareUtil.forceCompare(this.queryOrders, otherQuery.queryOrders) && CompareUtil.forceCompare(this.selections, otherQuery.selections);
+        }
+        return false;
+    }
+
+    private transient Set<QueryCriteria> allCriteria = null;
+
+    /**
+     * Getter for all criteria.  This is stored within an unordered list.
+     * It was added so the scanners can check the entire list of critieria
+     * rather than walking through the root level.
+     *
+     * @return Unordered set of Query Critieria
+     *
+     * @since 1
+     */
+    public Set<QueryCriteria> getAllCriteria()
+    {
+        if(allCriteria == null
+                || allCriteria.size() == 0)
+        {
+            synchronized (this)
+            {
+                if(allCriteria == null || allCriteria.size() == 0)
+                {
+                    allCriteria = new HashSet<>();
+                    aggregateCritieria(this.criteria, allCriteria);
+                }
+            }
+        }
+
+        return allCriteria;
+    }
+
+    /**
+     * This method aggregates the list of criteria and sub criteria into
+     * a single list so that it does not have to be done upon checking criteria
+     * each iteration
+     *
+     * @param criteria Root Criteria
+     * @param allCritieria Maintained list of all criteria
+     * @return List of all criteria
+     *
+     * @since 1.3.0 Re-vamped criteria checking to address bugs and maintain
+     *              record insertion criteria checking
+     */
+    @SuppressWarnings("UnusedReturnValue")
+    private static Set<QueryCriteria> aggregateCritieria(QueryCriteria criteria, Set<QueryCriteria> allCritieria)
+    {
+        if(criteria == null)
+            return allCritieria;
+
+        allCritieria.add(criteria);
+
+        for (QueryCriteria subCriteria : criteria.getSubCriteria())
+        {
+            aggregateCritieria(subCriteria, allCritieria);
+            subCriteria.setParentCriteria(criteria);
+
+            // This indicates it is a root criteria.  In that case, we need to
+            // look at the first sub criteria and assign its modifier
+            if(!criteria.isAnd() && !criteria.isOr())
+            {
+                if(subCriteria.isOr())
+                    criteria.setOr(true);
+                else
+                    criteria.setAnd(true);
+            }
+        }
+
+        return allCritieria;
+    }
+
+    /**
+     * This method is used to optimize the criteria.  If an identifier is included, that will move that
+     * criteria to the top.  Next if an index is included, that will be moved to the top.
+     * <p>
+     * This was added as an enhancement so that the query is self optimized
+     *
+     * @param descriptor Entity descriptor to get entity information regarding indexed, relationship, and identifier fields
+     * @since 1.3.0 An effort to cleanup query results in preparation for query caching.
+     */
+    public void sortCritieria(EntityDescriptor descriptor) {
+        if(criteria != null && descriptor != null) {
+            Collections.sort(criteria.getSubCriteria(), (o1, o2) -> {
+
+                // Check identifiers first
+                boolean o1isIdentifier = descriptor.getIdentifier().getName().equals(o1.getAttribute());
+                boolean o2isIdentifier = descriptor.getIdentifier().getName().equals(o2.getAttribute());
+
+                if (o1isIdentifier && !o2isIdentifier)
+                    return 1;
+                else if (o2isIdentifier && !o1isIdentifier)
+                    return -1;
+
+                // Check indexes next
+                boolean o1isIndex = descriptor.getIndexes().get(o1.getAttribute()) != null;
+                boolean o2isIndex = descriptor.getIndexes().get(o2.getAttribute()) != null;
+
+                if (o1isIndex && !o2isIndex)
+                    return 1;
+                else if (o2isIndex && !o1isIndex)
+                    return -1;
+
+                // Check relationships last.  A full table scan is prefered before a relationship
+                boolean o1isRelationship = descriptor.getRelationships().get(o1.getAttribute()) != null;
+                boolean o2isRelationship = descriptor.getRelationships().get(o2.getAttribute()) != null;
+
+                if (o1isRelationship && !o2isRelationship)
+                    return -1;
+                else if (o2isRelationship && !o1isRelationship)
+                    return 1;
+
+                if (o1.getOperator().isIndexed() && !o2.getOperator().isIndexed())
+                    return 1;
+                else if (o2.getOperator().isIndexed() && !o1.getOperator().isIndexed())
+                    return -1;
+
+                // Lastly check for operators.  EQUAL has priority since it is less granular
+                if (o1.getOperator() == QueryCriteriaOperator.EQUAL
+                        && o2.getOperator() == QueryCriteriaOperator.EQUAL)
+                    return 0;
+                else if (o1.getOperator() == QueryCriteriaOperator.EQUAL)
+                    return 1;
+                else if (o2.getOperator() == QueryCriteriaOperator.EQUAL)
+                    return -1;
+                else
+                    return 0;
+            });
+        }
     }
 }
