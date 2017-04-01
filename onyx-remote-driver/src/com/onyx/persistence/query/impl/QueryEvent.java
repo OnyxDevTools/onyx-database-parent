@@ -3,7 +3,6 @@ package com.onyx.persistence.query.impl;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
-import com.onyx.persistence.IManagedEntity;
 import com.onyx.query.QueryListenerEvent;
 
 /**
@@ -11,7 +10,8 @@ import com.onyx.query.QueryListenerEvent;
  *
  * Pojo for a query event push response
  */
-public class QueryEvent implements BufferStreamable {
+@SuppressWarnings("unchecked WeakerAccess")
+public class QueryEvent<T> implements BufferStreamable {
 
     @SuppressWarnings("unused")
     public QueryEvent()
@@ -26,14 +26,15 @@ public class QueryEvent implements BufferStreamable {
      *
      * @since 1.3.0
      */
-    public QueryEvent(QueryListenerEvent type, IManagedEntity entity)
+    @SuppressWarnings("WeakerAccess")
+    public QueryEvent(QueryListenerEvent type, T entity)
     {
         this.type = type;
         this.entity = entity;
     }
 
     private QueryListenerEvent type;
-    private IManagedEntity entity;
+    private T entity;
 
     /**
      * Read object from buffer
@@ -43,7 +44,7 @@ public class QueryEvent implements BufferStreamable {
     @Override
     public void read(BufferStream buffer) throws BufferingException {
         this.type = QueryListenerEvent.values()[buffer.getByte()];
-        this.entity = (IManagedEntity)buffer.getObject();
+        this.entity = (T)buffer.getObject();
     }
 
     /**
@@ -77,7 +78,7 @@ public class QueryEvent implements BufferStreamable {
      * Entity in question
      * @return entity involved in query chche change
      */
-    public IManagedEntity getEntity() {
+    public T getEntity() {
         return entity;
     }
 
@@ -86,7 +87,7 @@ public class QueryEvent implements BufferStreamable {
      * @param entity Managed entity involved in change
      */
     @SuppressWarnings("unused")
-    public void setEntity(IManagedEntity entity) {
+    public void setEntity(T entity) {
         this.entity = entity;
     }
 

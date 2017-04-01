@@ -50,7 +50,7 @@ public class QueryListenerTest extends BaseTest {
     public void testSubscribe() throws EntityException
     {
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity items) {
@@ -85,7 +85,7 @@ public class QueryListenerTest extends BaseTest {
     public void testUnsubscribe() throws EntityException
     {
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity items) {
@@ -126,7 +126,7 @@ public class QueryListenerTest extends BaseTest {
     {
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {
@@ -166,7 +166,7 @@ public class QueryListenerTest extends BaseTest {
     {
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {
@@ -205,7 +205,7 @@ public class QueryListenerTest extends BaseTest {
     {
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {

@@ -51,7 +51,7 @@ public class QueryListenerTest extends RemoteBaseTest {
     public void testSubscribe() throws EntityException
     {
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity items) {
@@ -79,7 +79,7 @@ public class QueryListenerTest extends RemoteBaseTest {
     @Test
     public void testUnsubscribe() throws EntityException, InterruptedException {
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity items) {
@@ -123,7 +123,7 @@ public class QueryListenerTest extends RemoteBaseTest {
         final AtomicBoolean pass = new AtomicBoolean(false);
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {
@@ -166,7 +166,7 @@ public class QueryListenerTest extends RemoteBaseTest {
 
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {
@@ -209,7 +209,7 @@ public class QueryListenerTest extends RemoteBaseTest {
 
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
-        query.setChangeListener(new QueryListener() {
+        query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {

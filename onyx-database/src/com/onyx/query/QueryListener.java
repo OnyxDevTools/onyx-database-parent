@@ -1,6 +1,5 @@
 package com.onyx.query;
 
-import com.onyx.persistence.IManagedEntity;
 
 /**
  * Created by tosborn1 on 3/21/17.
@@ -11,7 +10,7 @@ import com.onyx.persistence.IManagedEntity;
  * of these delegate methods.
  */
 @SuppressWarnings("unused")
-public interface QueryListener {
+public interface QueryListener<T> {
 
     /**
      * Item has been modified.  This ocurres when an entity met the original criteria
@@ -21,7 +20,7 @@ public interface QueryListener {
      *
      * @since 1.3.0
      */
-    void onItemUpdated(IManagedEntity entity);
+    void onItemUpdated(T item);
 
     /**
      * Item has been inserted.  This ocurres when an entity was saved and it meets the query criteria.
@@ -30,7 +29,7 @@ public interface QueryListener {
      *
      * @since 1.3.0
      */
-    void onItemAdded(IManagedEntity entity);
+    void onItemAdded(T item);
 
     /**
      * Item has been deleted or no longer meets the critieria of the query.
@@ -39,6 +38,6 @@ public interface QueryListener {
      *
      * @since 1.3.0
      */
-    void onItemRemoved(IManagedEntity entity);
+    void onItemRemoved(T item);
 
 }

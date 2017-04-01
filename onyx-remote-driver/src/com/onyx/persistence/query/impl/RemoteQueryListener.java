@@ -7,7 +7,6 @@ import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.client.push.PushConsumer;
 import com.onyx.exception.BufferingException;
-import com.onyx.persistence.IManagedEntity;
 import com.onyx.query.QueryListener;
 import com.onyx.query.QueryListenerEvent;
 
@@ -21,7 +20,8 @@ import java.util.Objects;
  * base query listener.
  *
  */
-public class RemoteQueryListener implements BufferStreamable, QueryListener, PushSubscriber, PushConsumer {
+@SuppressWarnings("unchecked")
+public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T>, PushSubscriber, PushConsumer {
 
     // Transfer information
     private long listenerId;
@@ -163,7 +163,7 @@ public class RemoteQueryListener implements BufferStreamable, QueryListener, Pus
      * @since 1.3.0
      */
     @Override
-    public void onItemUpdated(IManagedEntity entity) {
+    public void onItemUpdated(T entity) {
         QueryEvent event = new QueryEvent(QueryListenerEvent.UPDATE, entity);
         this.pushPublisher.push(this, event);
     }
@@ -176,7 +176,7 @@ public class RemoteQueryListener implements BufferStreamable, QueryListener, Pus
      * @since 1.3.0
      */
     @Override
-    public void onItemAdded(IManagedEntity entity) {
+    public void onItemAdded(T entity) {
         QueryEvent event = new QueryEvent(QueryListenerEvent.INSERT, entity);
         this.pushPublisher.push(this, event);
     }
@@ -189,7 +189,7 @@ public class RemoteQueryListener implements BufferStreamable, QueryListener, Pus
      * @since 1.3.0
      */
     @Override
-    public void onItemRemoved(IManagedEntity entity) {
+    public void onItemRemoved(T entity) {
         QueryEvent event = new QueryEvent(QueryListenerEvent.DELETE, entity);
         this.pushPublisher.push(this, event);
     }
