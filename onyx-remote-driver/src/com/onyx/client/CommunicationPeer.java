@@ -456,11 +456,16 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
      */
     @SuppressWarnings("unchecked")
     protected void failure(RequestToken token, Exception e) {
-        final Consumer consumer = pendingRequests.remove(token);
-        if (consumer != null) {
-            consumer.accept(e);
+        try {
+            final Consumer consumer = pendingRequests.remove(token);
+            if (consumer != null) {
+                consumer.accept(e);
+            }
+        } catch (Exception ignore)
+        {}
+        finally {
+            e.printStackTrace();
         }
-        e.printStackTrace();
     }
 
     private class RetryHeartbeatTask implements Runnable
