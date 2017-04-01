@@ -1,5 +1,6 @@
 package com.onyx.client.base.engine.impl;
 
+import com.onyx.client.base.engine.AbstractTransportEngine;
 import com.onyx.client.base.engine.PacketTransportEngine;
 
 import javax.net.ssl.SSLEngineResult;
@@ -18,7 +19,7 @@ import java.nio.channels.SocketChannel;
  *
  * @since 1.2.0
  */
-public class UnsecuredPacketTransportEngine implements PacketTransportEngine {
+public class UnsecuredPacketTransportEngine extends AbstractTransportEngine implements PacketTransportEngine {
 
     private static final int DEFAULT_BUFFER_SIZE = (100*1024); // 100 KB
 

@@ -36,11 +36,11 @@ public class DeletingAnEntityExample {
         person1.setLastName("Elway");
         person1.setDateCreated(new Date());
 
-        Person savedPerson = (Person) manager.saveEntity(person1);
+        Person savedPerson = manager.saveEntity(person1);
 
         manager.deleteEntity(savedPerson);
 
-        Person deletedPerson = (Person) manager.findById(Person.class, savedPerson.getId());
+        Person deletedPerson = manager.findById(Person.class, savedPerson.getId());
 
         if (deletedPerson == null) {
             System.out.println("Entity was deleted sucessfully");

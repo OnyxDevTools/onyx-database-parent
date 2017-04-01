@@ -18,7 +18,7 @@ class UpdateRelationshipDemo {
 
     static void demo(PersistenceManager persistenceManager) throws EntityException
     {
-        final Invoice myLatestInvoice = (Invoice)persistenceManager.findById(Invoice.class, 1L);
+        final Invoice myLatestInvoice = persistenceManager.findById(Invoice.class, 1L);
 
         // This used to be a single entity and now it is a list of payments since the relationship has changed from a One To One
         // to a One To Many.  This is also handled by the light weight migration.

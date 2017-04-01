@@ -1,5 +1,6 @@
 package com.onyx.client.base.engine.impl;
 
+import com.onyx.client.base.engine.AbstractTransportEngine;
 import com.onyx.client.base.engine.PacketTransportEngine;
 
 import javax.net.ssl.SSLEngine;
@@ -14,7 +15,7 @@ import java.nio.ByteBuffer;
  *
  * @since 1.2.0
  */
-public class SecurePacketTransportEngine implements PacketTransportEngine {
+public class SecurePacketTransportEngine extends AbstractTransportEngine implements PacketTransportEngine {
 
     private final SSLEngine sslEngine;
 

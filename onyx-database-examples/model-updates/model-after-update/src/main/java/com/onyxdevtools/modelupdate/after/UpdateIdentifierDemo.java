@@ -30,7 +30,7 @@ class UpdateIdentifierDemo {
 
         try {
             // Fetch an account.  Notice that the id is now a long rather than an integer.
-            Account account = (Account)persistenceManager.findById(Account.class, 1L);
+            Account account = persistenceManager.findById(Account.class, 1L);
             assert account.getAccountId() == 1L;
 
             // This example creates a new account and attempts to save it without an identifier.

@@ -175,15 +175,20 @@ public class RelationshipHelper
         List<IManagedEntity> entities = new ArrayList<>();
         for(RelationshipReference reference : relationshipReferences)
         {
-            if(reference.partitionId <= 0)
-                entities.add(defaultRecordController.getWithId(reference.identifier));
+            if(reference.partitionId <= 0) {
+                IManagedEntity relationshipEntity = defaultRecordController.getWithId(reference.identifier);
+                if(relationshipEntity != null)
+                    entities.add(relationshipEntity);
+            }
             else
             {
                 if(partitionContext == null)
                     partitionContext = new PartitionContext(context, descriptor);
 
                 recordController = partitionContext.getRecordControllerForPartition(reference.partitionId);
-                entities.add(recordController.getWithId(reference.identifier));
+                IManagedEntity relationshipEntity = recordController.getWithId(reference.identifier);
+                if(relationshipEntity != null)
+                    entities.add(relationshipEntity);
             }
         }
 

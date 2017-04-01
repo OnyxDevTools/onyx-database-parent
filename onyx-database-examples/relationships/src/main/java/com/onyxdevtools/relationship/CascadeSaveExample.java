@@ -53,7 +53,7 @@ class CascadeSaveExample extends AbstractDemo
         manager.saveEntity(spongeBobSeries);
 
         // Re-fetch the series so that we can validate a new copy of the series
-        spongeBobSeries = (Series)manager.findById(Series.class, spongeBobSeries.getSeriesId());
+        spongeBobSeries = manager.findById(Series.class, spongeBobSeries.getSeriesId());
 
         // Make sure that it has been cascaded properly
         assertNotNull("Sponge Bob Series should have been saved", spongeBobSeries);

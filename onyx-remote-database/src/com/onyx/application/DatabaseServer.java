@@ -3,8 +3,9 @@ package com.onyx.application;
 import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.entity.SystemUser;
 import com.onyx.entity.SystemUserRole;
+import com.onyx.persistence.context.impl.ServerSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
+import com.onyx.persistence.factory.impl.ServerPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.server.auth.DefaultAuthenticationManager;
 import com.onyx.server.base.AbstractDatabaseServer;
@@ -59,9 +60,12 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
 
     /**
      * Constructor
+     *
+     * @since 1.3.0 Broke out a new ServerPersistenceManager to handle
+     *              the differences in query caching
      */
     public DatabaseServer() {
-        this.persistenceManagerFactory = new EmbeddedPersistenceManagerFactory();
+        this.persistenceManagerFactory = new ServerPersistenceManagerFactory();
     }
 
     @SuppressWarnings("unused")
@@ -131,6 +135,11 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
+
+                // Set the push publisher within the schema context so the query caching mechanism can
+                // tell what push clients to send updates to.
+                ((ServerSchemaContext)this.persistenceManagerFactory.getSchemaContext()).setPushPublisher(rmiServer);
+
                 state = ServerState.RUNNING;
 
             } catch (Throwable t) {

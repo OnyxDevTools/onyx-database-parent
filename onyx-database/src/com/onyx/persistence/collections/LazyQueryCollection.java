@@ -339,6 +339,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         }
 
         this.persistenceManager = context.getSystemPersistenceManager();
+        this.references = new HashMap<>();
     }
 
     @Override

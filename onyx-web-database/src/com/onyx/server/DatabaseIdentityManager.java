@@ -61,7 +61,7 @@ public class DatabaseIdentityManager implements IdentityManager {
     {
         try
         {
-            final SystemUser user = (SystemUser)persistenceManager.findById(SystemUser.class, id);
+            final SystemUser user = persistenceManager.findById(SystemUser.class, id);
 
             if(user == null)
                 return null;

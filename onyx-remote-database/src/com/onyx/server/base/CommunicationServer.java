@@ -3,9 +3,7 @@ package com.onyx.server.base;
 import com.onyx.application.OnyxServer;
 import com.onyx.buffer.BufferStream;
 import com.onyx.client.AbstractCommunicationPeer;
-import com.onyx.client.base.ConnectionBufferPool;
-import com.onyx.client.base.ConnectionProperties;
-import com.onyx.client.base.RequestToken;
+import com.onyx.client.base.*;
 import com.onyx.client.base.engine.PacketTransportEngine;
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine;
 import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine;
@@ -13,7 +11,11 @@ import com.onyx.client.exception.MethodInvocationException;
 import com.onyx.client.exception.SerializationException;
 import com.onyx.client.exception.ServerClosedException;
 import com.onyx.client.handlers.RequestHandler;
+import com.onyx.client.push.PushSubscriber;
+import com.onyx.client.push.PushPublisher;
 import com.onyx.exception.InitializationException;
+import com.onyx.util.map.CompatHashMap;
+import com.onyx.util.map.SynchronizedMap;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -26,9 +28,11 @@ import java.nio.channels.*;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.SecureRandom;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Tim Osborn 02/13/2016
@@ -43,7 +47,7 @@ import java.util.concurrent.Executors;
  * Each connection buffer pool contains 5 allocated buffers with a minimum of 16k bytes.  Be
  * wary on how much you allocate.
  */
-public class CommunicationServer extends AbstractCommunicationPeer implements OnyxServer {
+public class CommunicationServer extends AbstractCommunicationPeer implements OnyxServer, PushPublisher {
 
     private SSLContext sslContext; // SSL Context if used.  Otherwise this will be null
     private Selector selector; // Selector for inbound communication
@@ -222,21 +226,28 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             message = parseRequestToken(socketChannel, connectionProperties, buffer);
         }
 
-        final RequestToken threadPoolMessage = message;
-        workerThreadPool.execute(() -> {
-            final RequestToken useThisRequestToken = (isInLargePacket) ? parseRequestToken(socketChannel, connectionProperties, buffer) : threadPoolMessage;
-            if (isInLargePacket) {
-                BufferStream.recycle(buffer);
-            }
-            if (useThisRequestToken.packet != null) {
-                try {
-                    useThisRequestToken.packet = (Serializable) requestHandler.accept(connectionProperties, useThisRequestToken.packet);
-                } catch (Exception e) {
-                    useThisRequestToken.packet = new MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e);
+        // If it is a push subscriber, it can only be a registration event
+        if(message != null && message.packet instanceof PushSubscriber)
+        {
+            handlePushSubscription(message, socketChannel, connectionProperties);
+        }
+        else {
+            final RequestToken threadPoolMessage = message;
+            workerThreadPool.execute(() -> {
+                final RequestToken useThisRequestToken = (isInLargePacket) ? parseRequestToken(socketChannel, connectionProperties, buffer) : threadPoolMessage;
+                if (isInLargePacket) {
+                    BufferStream.recycle(buffer);
                 }
-            }
-            write(socketChannel, connectionProperties, useThisRequestToken);
-        });
+                if (useThisRequestToken.packet != null) {
+                    try {
+                        useThisRequestToken.packet = (Serializable) requestHandler.accept(connectionProperties, useThisRequestToken.packet);
+                    } catch (Exception e) {
+                        useThisRequestToken.packet = new MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e);
+                    }
+                }
+                write(socketChannel, connectionProperties, useThisRequestToken);
+            });
+        }
     }
 
     private RequestToken parseRequestToken(SocketChannel socketChannel, ConnectionProperties connectionProperties, ByteBuffer buffer) {
@@ -251,6 +262,55 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
         }
 
         return message;
+    }
+
+    // Registered Push subscribers
+    private final Map<PushSubscriber, PushSubscriber> pushSubscribers = new SynchronizedMap<>(new CompatHashMap<>());
+
+    // Counter for correlating push subscribers
+    private final AtomicLong pushSubscriberId = new AtomicLong(0);
+
+    /**
+     * Handle a push registration event.
+     *
+     * 1.  The registration process starts with a request with a subscriber object.
+     *     It is indicated as a push subscriber only because of the type of packet.
+     *     The packet will contain an subscriberEvent of 1 indicating it is a
+     *     request to register for push notifications
+     * 2.  The subscriber object is assigned an identity
+     * 3.  It exists and only gets cleared out if the connection is dropped
+     * 4.  Client sends same request only containing a code of 2 indicating
+     *     it is a de-register event
+     *
+     * @param message Request inforatmion
+     * @param socketChannel Socket to push notifiations to
+     * @param connectionProperties Connection information
+     *
+     * @since 1.3.0 Push notifications were introduced
+     */
+    private void handlePushSubscription(RequestToken message, SocketChannel socketChannel, ConnectionProperties connectionProperties)
+    {
+        final PushSubscriber subscriber = ((PushSubscriber) message.packet);
+        subscriber.setChannel(socketChannel);
+        // Register subscriber
+        if(subscriber.getSubscribeEvent() == 1)
+        {
+            subscriber.setConnectionProperties(connectionProperties);
+            subscriber.setPushPublisher(this);
+            subscriber.setPushObjectId(pushSubscriberId.addAndGet(1));
+            message.packet = subscriber.getPushObjectId();
+            pushSubscribers.put(subscriber, subscriber);
+
+            final RequestToken response = message;
+            workerThreadPool.execute(() -> write(socketChannel, connectionProperties, response));
+        }
+        // Remove subscriber
+        else if(subscriber.getSubscribeEvent() == 2)
+        {
+            pushSubscribers.remove(subscriber);
+            final RequestToken response = message;
+            workerThreadPool.execute(() -> write(socketChannel, connectionProperties, response));
+        }
     }
 
     /**
@@ -291,6 +351,55 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
     }
 
+    /**
+     * Push an object to the client.  This does not wait for receipt nor a response
+     *
+     * @param pushSubscriber Push notification subscriber
+     * @param message Message to send to client
+     *
+     * @since 1.3.0
+     */
+    public void push(PushSubscriber pushSubscriber, Object message)
+    {
+        if(pushSubscriber.getChannel().isOpen()
+                && pushSubscriber.getChannel().isConnected()) {
+
+            pushSubscriber.getConnectionProperties().writeThread.execute(() -> {
+                pushSubscriber.setPacket(message);
+                RequestToken token = new RequestToken(Short.MIN_VALUE, (Serializable)pushSubscriber);
+                write(pushSubscriber.getChannel(), pushSubscriber.getConnectionProperties(), token);
+            });
+        }
+        else
+        {
+            deRegiserSubscriberIdentity(pushSubscriber); // Clean up non connected subscribers if not connected
+        }
+    }
+
+    /**
+     * Get the actual registered identity of the push subscriber.  This correlates references
+     *
+     * @param pushSubscriber Subscriber sent from push registration request
+     * @return The actual reference of the subscriber
+     *
+     * @since 1.3.0
+     */
+    @Override
+    public PushSubscriber getRegisteredSubscriberIdentity(PushSubscriber pushSubscriber) {
+        return pushSubscribers.get(pushSubscriber);
+    }
+
+    /**
+     * Remove the subscriber
+     *
+     * @param pushSubscriber push subscriber to de-register
+     *
+     * @since 1.3.0
+     */
+    @Override
+    public void deRegiserSubscriberIdentity(PushSubscriber pushSubscriber) {
+        pushSubscribers.remove(pushSubscriber);
+    }
 
     /**
      * Stop Server

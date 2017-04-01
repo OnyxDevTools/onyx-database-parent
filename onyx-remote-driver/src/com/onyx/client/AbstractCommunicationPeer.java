@@ -54,7 +54,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
     @SuppressWarnings("WeakerAccess")
     public static final int SERIALIZATION_BUFFER_SIZE = 256;
     private static final int MULTI_PACKET_BUFFER_ALLOCATION = MAX_PACKET_SIZE * 3; //50 KB
-
+    private static final int MAX_READ_ITERATIONS_BEFORE_GIVING_UP = 200;
 
     /**
      * Read from a socket channel.  This will read and interpret the packets in order to decipher a message.
@@ -67,6 +67,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      */
     protected void read(SocketChannel socketChannel, ConnectionProperties connectionProperties) {
         connectionProperties.isReading = true;
+        int readIterations = 0;
         try {
             boolean exitReadLoop = false;
 
@@ -90,6 +91,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                         bytesRead = socketChannel.read(connectionProperties.readNetworkData);
                         if (bytesRead > 0) {
 
+                            readIterations = 0;
                             // Iterate through the network data
                             connectionProperties.readNetworkData.flip();
                             while (connectionProperties.readNetworkData.hasRemaining() && active) {
@@ -153,6 +155,15 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                         } else if (bytesRead < 0) {
                             handleEndOfStream(socketChannel, connectionProperties);
                             return;
+                        } else
+                        {
+                            readIterations++;
+                            if(readIterations > MAX_READ_ITERATIONS_BEFORE_GIVING_UP) {
+                                connectionProperties.readOverflowData.clear();
+                                connectionProperties.readApplicationData.clear();
+                                connectionProperties.readNetworkData.clear();
+                                exitReadLoop = true;
+                            }
                         }
                     } catch (ClosedChannelException closed) {
                         handleEndOfStream(socketChannel, connectionProperties);
@@ -162,7 +173,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                     // of the packet loaded
 
                     if (!exitReadLoop) {
-                        LockSupport.parkNanos(100);
+                        LockSupport.parkNanos(100000);
                     }
 
                 } catch (IOException exception) {

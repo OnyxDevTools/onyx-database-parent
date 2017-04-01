@@ -13,9 +13,11 @@ import java.util.function.BiConsumer;
  */
 public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements CompatMap<K,V> {
 
-    @SuppressWarnings("FieldCanBeLocal")
-    private final int maxCapacity = 100;
-    private int timeToLive = 60*5*1000; // 5 minuts
+    @SuppressWarnings({"FieldCanBeLocal", "WeakerAccess"})
+    protected final int maxCapacity = 100;
+    @SuppressWarnings("WeakerAccess")
+    protected int timeToLive = 60*5*1000; // 5 minuts
+
     /**
      * Constructor with max capacity
      * @param maxCapacity The maximum number of items in the list
@@ -24,6 +26,7 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
      *
      * @since 1.3.0 Used for Query caching
      */
+    @SuppressWarnings("WeakerAccess")
     public LastRecentlyUsedMap(@SuppressWarnings("SameParameterValue") int maxCapacity, int timeToLive)
     {
         super(maxCapacity+1, 1.0f);
@@ -58,7 +61,6 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
     public V put(K key, V value)
     {
         synchronized (this) {
-
             super.put(key, (V) new ExpirationValue(System.currentTimeMillis(), value));
             return value;
         }

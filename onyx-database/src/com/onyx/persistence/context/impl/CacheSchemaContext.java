@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.store.StoreType;
+import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 
 import java.util.function.Function;
 
@@ -121,6 +122,8 @@ public class CacheSchemaContext extends DefaultSchemaContext
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void start() {
         createTemporaryDiskMapPool();
+
+        this.queryCacheController = new DefaultQueryCacheController(this);
 
         killSwitch = false;
         initializeSystemEntities();

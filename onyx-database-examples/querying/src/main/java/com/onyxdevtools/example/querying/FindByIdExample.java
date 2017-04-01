@@ -29,7 +29,7 @@ class FindByIdExample
         final PersistenceManager manager = factory.getPersistenceManager();
 
         // Retreived the 2015 season using the PersistenceManager#findById method
-        final Season season = (Season) manager.findById(Season.class, 2015);
+        final Season season = manager.findById(Season.class, 2015);
 
         // Confirm that season was retreived
         if (season != null)

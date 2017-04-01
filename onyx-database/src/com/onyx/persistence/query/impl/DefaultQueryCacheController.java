@@ -6,17 +6,17 @@ import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
+import com.onyx.persistence.query.CachedQueryMap;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCacheController;
 import com.onyx.query.CachedResults;
+import com.onyx.query.QueryListener;
+import com.onyx.query.QueryListenerEvent;
 import com.onyx.util.CompareUtil;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.LastRecentlyUsedMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.util.map.*;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by tosborn1 on 3/27/17.
@@ -39,7 +39,8 @@ public class DefaultQueryCacheController implements QueryCacheController {
         this.context = context;
     }
 
-    private final CompatMap<Class, CompatMap<Query, CachedResults>> cachedQueriesByClass = new SynchronizedMap<>(new CompatHashMap<>());
+    // @since 1.3.0 - Changed to CachedQueryMap so we can retain strong references for query subscriptions
+    private final CompatMap<Class, CachedQueryMap<Query, CachedResults>> cachedQueriesByClass = new SynchronizedMap<>(new CompatHashMap<>());
 
     /**
      * Get Cached results for a query. This method will return a cached query result if it exist.
@@ -53,7 +54,10 @@ public class DefaultQueryCacheController implements QueryCacheController {
     {
         return cachedQueriesByClass.compute(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
             if(queryCachedResultsMap == null)
-                queryCachedResultsMap = new LastRecentlyUsedMap<>(100, 5*60);
+                // Only allow 100 cached queries per entity with a 5 minute LRU expiration
+                // At some point make this configurable.  The magic number is 100 because that
+                // will limit record insert performance degredation.
+                queryCachedResultsMap = new CachedQueryMap<>(100, 5*60);
 
             return queryCachedResultsMap;
         }).get(query);
@@ -66,12 +70,21 @@ public class DefaultQueryCacheController implements QueryCacheController {
      *
      * @param results Result as references
      */
-    public void setCachedQueryResults(Query query, Map results)
+    public CachedResults setCachedQueryResults(Query query, Map results)
     {
+        final AtomicReference<CachedResults> cachedResultsReference = new AtomicReference<>();
         cachedQueriesByClass.computeIfPresent(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
-            queryCachedResultsMap.put(query, new CachedResults(results));
+            CachedResults cachedResults = new CachedResults(results);
+            cachedResultsReference.set(cachedResults);
+            // Set a strong reference if this is a query listener.  In that
+            // case we do not want it to get cleaned up.
+            if(query.getChangeListener() != null)
+                queryCachedResultsMap.putStrongReference(query, cachedResults);
+            else
+                queryCachedResultsMap.put(query, cachedResults);
             return queryCachedResultsMap;
         });
+        return cachedResultsReference.get();
     }
 
     /**
@@ -81,12 +94,12 @@ public class DefaultQueryCacheController implements QueryCacheController {
      * @param entity Entity that was potentially inserted, updated, or deleted.
      * @param descriptor The entity's descriptor
      * @param entityReference The entitity's reference
-     * @param remove Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
+     * @param type Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
      *
      * @since 1.3.0
      */
     @SuppressWarnings("unchecked")
-    public void updateCachedQueryResultsForEntity(IManagedEntity entity, EntityDescriptor descriptor, final long entityReference, boolean remove)
+    public void updateCachedQueryResultsForEntity(IManagedEntity entity, EntityDescriptor descriptor, final long entityReference, QueryListenerEvent type)
     {
         cachedQueriesByClass.computeIfPresent(entity.getClass(), (aClass, queryCachedResultsMap) -> {
 
@@ -109,20 +122,20 @@ public class DefaultQueryCacheController implements QueryCacheController {
                 try {
 
                     // If indicated to remove the record, delete it and move on
-                    if(remove)
+                    if(type != QueryListenerEvent.INSERT && type != QueryListenerEvent.UPDATE)
                     {
                         synchronized(cachedResults.getReferences()) {
-                            cachedResults.getReferences().remove(useThisReference);
+                            cachedResults.remove(useThisReference, entity, type);
                         }
                     }
                     else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor)) {
                         synchronized (cachedResults.getReferences()) {
                             if(query.getSelections() != null && query.getSelections().size() > 0) {
-                                cachedResults.getReferences().put(useThisReference, useThisReference);
+                                cachedResults.put(useThisReference, useThisReference, type);
                             }
                             else
                             {
-                                cachedResults.getReferences().put(useThisReference, entity);
+                                cachedResults.put(useThisReference, entity, type);
                             }
                         }
                     }
@@ -131,5 +144,35 @@ public class DefaultQueryCacheController implements QueryCacheController {
 
             return queryCachedResultsMap;
         });
+    }
+
+    /**
+     * Subscribe a query listener with associated cached results.
+     * The subscription will ocur during executeQuery and executeLazyQuery.
+     * Currently you cannot subscribe to delete or update queries.
+     *
+     * @param results Results to listen to
+     * @param queryListener listner to respond to cache changes
+     *
+     * @since 1.3.0
+     */
+    public void subscribe(CachedResults results, QueryListener queryListener)
+    {
+        results.subscribe(queryListener);
+    }
+
+    /**
+     * Unsubscribe query.  This must be done manually.  The unsubscribe will not
+     * be done auto-magically.  This is highlighted as a danger of using this
+     * functionality.
+     *
+     * @param query Query to unsubscribe from
+     * @return Whether the listener was listening to begin with
+     *
+     * @since 1.3.0
+     */
+    public boolean unsubscribe(Query query) {
+        final CachedResults cachedResults = getCachedQueryResults(query);
+        return cachedResults != null && cachedResults.unsubscribe(query.getChangeListener());
     }
 }

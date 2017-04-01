@@ -57,8 +57,8 @@ public class Main extends AbstractDemo {
         assertTrue("NSA is only listening to 1 call in area code 555", nsaIsWastingThereTimeListeningTo.size() == 1);
 
         // Use Find By ID in Partition to fetch a call log within a partition
-        CallLog callLogInAreaCode555 =  (CallLog) manager.findByIdInPartition(CallLog.class, 1, 555);
-        CallLog callLogInAreaCode123 = (CallLog) manager.findByIdInPartition(CallLog.class, 1, 123);
+        CallLog callLogInAreaCode555 = manager.findByIdInPartition(CallLog.class, 1, 555);
+        CallLog callLogInAreaCode123 = manager.findByIdInPartition(CallLog.class, 1, 123);
 
         // Make sure the CallLog(s) are 2 different entities.
         assertTrue("The Destination Number should be different for each CallLog!", !callLogInAreaCode123.getDestinationNumber().equals(callLogInAreaCode555.getDestinationNumber()));
