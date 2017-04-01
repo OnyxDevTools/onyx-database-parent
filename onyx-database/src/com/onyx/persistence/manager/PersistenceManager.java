@@ -69,7 +69,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occured while persisting an entity
      */
     @SuppressWarnings("unused")
-    IManagedEntity saveEntity(IManagedEntity entity) throws EntityException;
+    <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws EntityException;
 
     /**
      * Batch saves a list of entities.
@@ -168,7 +168,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Error while executing query
      */
-    List executeQuery(Query query) throws EntityException;
+    <E> List<E> executeQuery(Query query) throws EntityException;
 
     /**
      * Execute a query and return a result object.  This is so that it will play nicely as a proxy object
@@ -191,7 +191,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Error while executing query
      */
-    List executeLazyQuery(Query query) throws EntityException;
+    <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws EntityException;
 
     /**
      * Execute a lazy query and return a result object.  This is so that it will play nicely as a proxy object
@@ -217,7 +217,7 @@ public interface PersistenceManager {
      * @throws EntityException Error when hydrating entity
      */
     @SuppressWarnings("unused")
-    IManagedEntity find(IManagedEntity entity) throws EntityException;
+    <E extends IManagedEntity> E find(IManagedEntity entity) throws EntityException;
 
     /**
      * Find Entity By Class and ID.
@@ -232,7 +232,7 @@ public interface PersistenceManager {
      * @throws EntityException Error when finding entity
      */
     @SuppressWarnings("unused")
-    IManagedEntity findById(Class clazz, Object id) throws EntityException;
+    <E extends IManagedEntity> E findById(Class clazz, Object id) throws EntityException;
 
     /**
      * Find Entity By Class and ID.
@@ -248,7 +248,7 @@ public interface PersistenceManager {
      * @throws EntityException Error when finding entity within partition specified
      */
     @SuppressWarnings("unused")
-    IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException;
 
     /**
      * Determines if the entity exists within the database.
@@ -320,7 +320,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while fetching results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -336,7 +336,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz, QueryCriteria criteria) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -353,7 +353,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -371,7 +371,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -389,7 +389,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -409,7 +409,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -429,9 +429,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException;
-
-
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -454,7 +452,7 @@ public interface PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -480,7 +478,7 @@ public interface PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException;
 
     /**
      * This is a way to batch save all relationships for an entity.  This does not retain any existing relationships and will
@@ -506,7 +504,7 @@ public interface PersistenceManager {
      * @throws EntityException The reference does not exist for that type
      */
     @SuppressWarnings("unused")
-    IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException;
+    <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException;
 
     /**
      * Retrieves an entity using the primaryKey and partition
@@ -523,7 +521,7 @@ public interface PersistenceManager {
      * @throws EntityException error occurred while attempting to retrieve entity.
      */
     @SuppressWarnings("unused")
-    IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException;
+    <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException;
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
