@@ -99,7 +99,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.0.0
      */
     @Override
-    public IManagedEntity saveEntity(IManagedEntity entity) throws EntityException {
+    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -123,7 +123,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         IndexHelper.saveAllIndexesForEntity(context, descriptor, id, oldReferenceId, entity);
         RelationshipHelper.saveAllRelationshipsForEntity(entity, new EntityRelationshipManager(), context);
 
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -308,7 +309,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.0.0
      */
     @Override
-    public List executeQuery(Query query) throws EntityException {
+    @SuppressWarnings("unchecked")
+    public <E> List<E> executeQuery(Query query) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -333,9 +335,9 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 query.setResultsCount(cachedResults.getReferences().size());
                 if (query.getSelections() != null) {
                     final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
-                    return new ArrayList<>(attributeValues.values());
+                    return (List<E>)new ArrayList(attributeValues.values());
                 } else {
-                    return queryController.hydrateResultsWithReferences(query, results);
+                    return (List<E>)queryController.hydrateResultsWithReferences(query, results);
                 }
             }
             results = queryController.getReferencesForQuery(query);
@@ -353,7 +355,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
 
                 final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
-                return new ArrayList<>(attributeValues.values());
+                return (List<E>)new ArrayList<>(attributeValues.values());
             } else {
                 // Cache the query results
                 cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
@@ -432,7 +434,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.0.0
      */
     @Override
-    public IManagedEntity find(IManagedEntity entity) throws EntityException {
+    public <E extends IManagedEntity> E find(IManagedEntity entity) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -451,7 +453,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         ReflectionUtil.copy(results, entity, descriptor);
 
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -466,7 +469,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.0.0
      */
     @Override
-    public IManagedEntity findById(Class clazz, Object id) throws EntityException {
+    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -483,7 +486,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(entity, new EntityRelationshipManager(), context);
 
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -499,7 +503,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.0.0
      */
     @Override
-    public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException {
+    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException {
 
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -517,7 +521,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(entity, new EntityRelationshipManager(), context);
 
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -622,7 +627,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @throws EntityException Exception occurred while fetching results
      */
     @Override
-    public List list(Class clazz) throws EntityException {
+    public <E extends IManagedEntity> List<E> list(Class clazz) throws EntityException {
         final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
@@ -668,7 +673,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @throws EntityException The reference does not exist for that type
      * @since 1.0.0
      */
-    public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException {
+    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException {
 
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -682,7 +687,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(entity, new EntityRelationshipManager(), context);
 
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -695,7 +701,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @throws EntityException error occurred while attempting to retrieve entity.
      * @since 1.0.0
      */
-    public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException {
+    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -709,7 +715,8 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(entity, new EntityRelationshipManager(), context);
 
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**

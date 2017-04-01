@@ -39,9 +39,9 @@ public class SavingAnEntityExample
         person1.setLastName("Elway");
         person1.setDateCreated(new Date());
         
-        Person savedPerson = (Person) manager.saveEntity(person1);
+        Person savedPerson = manager.saveEntity(person1);
         
-        Person retrievedPerson = (Person) manager.findById(Person.class, savedPerson.getId());
+        Person retrievedPerson = manager.findById(Person.class, savedPerson.getId());
         
         System.out.println("Person " + retrievedPerson.getId() + " saved successfully");
         

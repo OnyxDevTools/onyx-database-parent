@@ -5,7 +5,6 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * Schema context that defines remote resources for a database.  Use this when connecting to a remote database not to be confused with a Web REST API Database.
@@ -52,6 +51,11 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
 
     }
 
+    /**
+     * This is only overwritten because Android has a shit fit and throws method not found exception
+     * for older versions
+     */
+    @SuppressWarnings("EmptyMethod")
     @Override
     protected void createTemporaryDiskMapPool()
     {

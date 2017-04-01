@@ -128,9 +128,9 @@ public class CachedResults {
         {
             try {
                 if (event == QueryListenerEvent.INSERT) {
-                    listener.onItemAdded((IManagedEntity) value);
+                    listener.onItemAdded(value);
                 } else if (event == QueryListenerEvent.UPDATE) {
-                    listener.onItemUpdated((IManagedEntity) value);
+                    listener.onItemUpdated(value);
                 }
             } catch (Exception e)
             {

@@ -79,7 +79,7 @@ class ManyToManyExample extends AbstractDemo
         persistenceManager.saveEntity(markHamillActor);
         persistenceManager.saveEntity(harrisonFordActor);
 
-        harrisonFordActor = (Actor)persistenceManager.find(harrisonFordActor);
+        harrisonFordActor = persistenceManager.find(harrisonFordActor);
         persistenceManager.initialize(harrisonFordActor, "movies");
         System.out.println("Harrison Ford has been in "
                 + harrisonFordActor.getMovies().size()

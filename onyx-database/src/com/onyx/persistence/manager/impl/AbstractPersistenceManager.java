@@ -59,7 +59,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public List list(Class clazz, QueryCriteria criteria) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria) throws EntityException
     {
         return list(clazz, criteria, new QueryOrder[0]);
     }
@@ -79,7 +79,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException
     {
         return list(clazz, criteria, 0, -1, orderBy);
     }
@@ -100,7 +100,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException
     {
         QueryOrder[] queryOrders = {orderBy};
         return list(clazz, criteria, queryOrders);
@@ -122,7 +122,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public List list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException
     {
         return list(clazz, criteria, new QueryOrder[0], partitionId);
     }
@@ -145,7 +145,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException
     {
         return list(clazz, criteria, 0, -1, orderBy, partitionId);
     }
@@ -168,7 +168,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException
     {
         QueryOrder[] queryOrders = {orderBy};
         return list(clazz, criteria, queryOrders, partitionId);
@@ -195,7 +195,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @throws EntityException Exception occurred while filtering results
      */
-    public List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException
     {
         final Query tmpQuery = new Query(clazz, criteria);
         tmpQuery.setMaxResults(maxResults);
@@ -231,7 +231,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @throws EntityException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException
     {
 
         final Query tmpQuery = new Query(clazz, criteria);

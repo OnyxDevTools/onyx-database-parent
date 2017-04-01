@@ -86,7 +86,7 @@ class FetchPolicyExample extends AbstractDemo
         manager.saveEntity(theSopranos);
 
         // Fetch a new copy of the entity so that we can illustrate how eager relationships are fetched
-        Series theSopranosCopy = (Series)manager.findById(Series.class, theSopranos.getSeriesId());
+        Series theSopranosCopy = manager.findById(Series.class, theSopranos.getSeriesId());
 
         // Assert seasons which is an eagerly loaded
         assertNotNull("Seasons should be populated because it is eagerly fetched", theSopranosCopy.getSeasons());

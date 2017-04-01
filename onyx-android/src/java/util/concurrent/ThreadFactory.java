@@ -20,6 +20,7 @@ package java.util.concurrent;
  * @since 1.5
  * @author Doug Lea
  */
+@SuppressWarnings("unused")
 public interface ThreadFactory {
 
     /**

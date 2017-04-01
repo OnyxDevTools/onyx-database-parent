@@ -33,7 +33,7 @@ class FindExample
         league.setName("NFL"); // set the id
 
         // invoke the PersistenceManager#find method
-        league = (League) manager.find(league);
+        league = manager.find(league);
 
         // Confirm that the other fields were populated
         System.out.println("The description of the league that was found is: '" + league.getDescription() + "'");

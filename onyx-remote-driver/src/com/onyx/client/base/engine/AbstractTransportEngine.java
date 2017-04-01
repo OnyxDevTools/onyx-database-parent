@@ -8,6 +8,7 @@ import javax.net.ssl.SSLException;
  *
  * Abstract implementation of a transport engine
  */
+@SuppressWarnings("unused")
 public abstract class AbstractTransportEngine {
 
     /**

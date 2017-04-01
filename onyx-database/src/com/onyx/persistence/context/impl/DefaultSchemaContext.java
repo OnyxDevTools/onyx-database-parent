@@ -874,7 +874,7 @@ public class DefaultSchemaContext implements SchemaContext {
                     }
 
                     try {
-                        final SystemEntity entity = (SystemEntity) systemPersistenceManager.findById(SystemEntity.class, id);
+                        final SystemEntity entity = systemPersistenceManager.findById(SystemEntity.class, id);
 
                         if (entity != null) {
                             Collections.sort(entity.getAttributes(), (o1, o2) -> o1.getName().compareTo(o2.getName()));

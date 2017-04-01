@@ -36,7 +36,7 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
     public void verify(String username, String password) throws InitializationException {
         SystemUser user;
         try {
-            user = (SystemUser)persistenceManager.findById(SystemUser.class, username);
+            user = persistenceManager.findById(SystemUser.class, username);
         } catch (EntityException e) {
             throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);
         }

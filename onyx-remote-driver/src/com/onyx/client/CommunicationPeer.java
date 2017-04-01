@@ -212,7 +212,6 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         try {
 
             socketChannel.configureBlocking(true);
-            int connectTimeout = 10 * 1000;
 
             InetAddress inteAddress = InetAddress.getByName(host);
             SocketAddress socketAddress = new InetSocketAddress(inteAddress, port);

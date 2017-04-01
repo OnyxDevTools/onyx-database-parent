@@ -91,11 +91,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Exception occurred while persisting an entity
      */
     @Override
-    public IManagedEntity saveEntity(IManagedEntity entity) throws EntityException
+    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws EntityException
     {
         IManagedEntity copyValue = proxy.saveEntity(entity);
         ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -161,7 +162,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Error while executing query
      */
     @Override
-    public List executeQuery(Query query) throws EntityException
+    public <E> List<E> executeQuery(Query query) throws EntityException
     {
         // Transform the change listener to a remote change listener.
         if(query.getChangeListener() != null
@@ -175,7 +176,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
 
         QueryResult result = proxy.executeQueryForResult(query);
         query.setResultsCount(result.getQuery().getResultsCount());
-        return (List)result.getResults();
+        //noinspection unchecked
+        return (List<E>)result.getResults();
     }
 
     /**
@@ -190,11 +192,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Error while executing query
      */
     @Override
-    public List executeLazyQuery(Query query) throws EntityException
+    public <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws EntityException
     {
         QueryResult result = proxy.executeLazyQueryForResult(query);
         query.setResultsCount(result.getQuery().getResultsCount());
-        return (List)result.getResults();
+        //noinspection unchecked
+        return (List<E>)result.getResults();
     }
 
     /**
@@ -251,11 +254,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Error when hydrating entity
      */
     @Override
-    public IManagedEntity find(IManagedEntity entity) throws EntityException
+    public <E extends IManagedEntity> E find(IManagedEntity entity) throws EntityException
     {
         IManagedEntity results = proxy.find(entity);
         ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity));
-        return entity;
+        //noinspection unchecked
+        return (E)entity;
     }
 
     /**
@@ -271,7 +275,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Error when finding entity
      */
     @Override
-    public IManagedEntity findById(Class clazz, Object id) throws EntityException
+    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws EntityException
     {
         return proxy.findById(clazz, id);
     }
@@ -290,7 +294,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Error when finding entity within partition specified
      */
     @Override
-    public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException
     {
         return proxy.findByIdInPartition(clazz, id, partitionId);
     }
@@ -345,7 +349,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException Exception occurred while fetching results
      */
     @Override
-    public List list(Class clazz) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz) throws EntityException
     {
         final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
         QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
@@ -398,7 +402,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException The reference does not exist for that type
      */
     @Override
-    public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException
+    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException
     {
         return proxy.getWithReferenceId(entityType, referenceId);
     }
@@ -418,7 +422,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws EntityException error occurred while attempting to retrieve entity.
      */
     @Override
-    public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException
+    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException
     {
         return proxy.findByIdWithPartitionId(clazz, id, partitionId);
     }
