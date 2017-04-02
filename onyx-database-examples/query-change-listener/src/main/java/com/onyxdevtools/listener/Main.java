@@ -46,7 +46,6 @@ public class Main {
         // Define critiera to match position = QB & isHallOfFame = true
         QueryCriteria hallOfFameQuarterbackCriteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB")
                                                             .and(new QueryCriteria("isHallOfFame", QueryCriteriaOperator.EQUAL, true));
-
         final Query hallOfFameQuarterBackQuery = new Query(Player.class, hallOfFameQuarterbackCriteria);
 
         // Define Change listener for query
@@ -89,6 +88,9 @@ public class Main {
         // Modify an entity and save, the onItemUpdated should be fired
         johnElway.setDidNotCheat(true);
         manager.saveEntity(johnElway);
+
+        // Remove the change listener when done
+        manager.removeChangeListener(hallOfFameQuarterBackQuery);
 
         factory.close(); //Close the embedded database after you're done with it
     }
