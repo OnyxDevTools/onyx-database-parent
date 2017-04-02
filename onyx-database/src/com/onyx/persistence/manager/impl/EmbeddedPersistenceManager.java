@@ -344,7 +344,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
             query.setResultsCount(results.size());
 
-            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
+            if ((query.getQueryOrders() != null && query.getQueryOrders().size() > 0) || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
                 results = queryController.sort(query, results);
             }
 
@@ -410,7 +410,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             results = queryController.getReferencesForQuery(query);
 
             query.setResultsCount(results.size());
-            if (query.getQueryOrders() != null || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
+            if ((query.getQueryOrders() != null && query.getQueryOrders().size() > 0)  || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
                 results = queryController.sort(query, results);
             }
             cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);

@@ -125,7 +125,7 @@ public class DefaultQueryCacheController implements QueryCacheController {
                     if(type != QueryListenerEvent.INSERT && type != QueryListenerEvent.UPDATE)
                     {
                         synchronized(cachedResults.getReferences()) {
-                            cachedResults.remove(useThisReference, entity, type);
+                            cachedResults.remove(useThisReference, entity, type, CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor));
                         }
                     }
                     else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor)) {

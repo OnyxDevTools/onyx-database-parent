@@ -79,11 +79,11 @@ public class CachedResults {
      * @since 1.3.0
      */
     @SuppressWarnings("unchecked")
-    public void remove(Object reference, IManagedEntity entity, QueryListenerEvent event)
+    public void remove(Object reference, IManagedEntity entity, QueryListenerEvent event, boolean meetsCriteria)
     {
-        references.remove(reference);
+        Object removed = references.remove(reference);
         listeners.remove(null); // Clean out old references
-        if(event == QueryListenerEvent.DELETE) {
+        if(removed != null && (event == QueryListenerEvent.DELETE || (!meetsCriteria && event == QueryListenerEvent.PRE_UPDATE))) {
 
             Set<QueryListener> listenersToRemove = new HashSet();
             for(QueryListener listener : listeners)

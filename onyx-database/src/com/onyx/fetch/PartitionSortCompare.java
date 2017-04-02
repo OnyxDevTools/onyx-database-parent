@@ -129,7 +129,14 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
             }
         }
 
-        return 1;
+        if(scanObjects.size() == 0
+                && t1 instanceof Comparable
+                && t2 instanceof Comparable)
+        {
+            return ((Comparable) t1).compareTo(t2);
+        }
+
+        return 0;
     }
 
     /**
