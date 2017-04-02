@@ -25,6 +25,7 @@
     <module>spring-example</module>
     <module>model-updates</module>
     <module>performance-benchmarks</module>
+    <module>query-change-listener</module>
   </modules>
 
   <build> 

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     
     <groupId>com.onyxdevtools</groupId>
-    <artifactId>persisting-data</artifactId>
+    <artifactId>query-change-listener</artifactId>
     <version>1.3.0</version>
     <packaging>jar</packaging>
 
@@ -41,7 +41,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.com.onyxdevtools.persist.Main</mainClass>
+                    <mainClass>com.onyxdevtools.com.onyxdevtools.listener.Main</mainClass>
                 </configuration>
             </plugin>
 
