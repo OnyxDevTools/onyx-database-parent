@@ -400,6 +400,56 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
      * @see #listIterator(int)
      */
     public ListIterator<E> listIterator() {
-        throw new RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator");
+        return new ListIterator<E>() {
+            int i = -1;
+
+            @Override
+            public boolean hasNext() {
+                return i+1 < size();
+            }
+
+            @Override
+            public E next() {
+                i++;
+                return get(i);
+            }
+
+            @Override
+            public boolean hasPrevious() {
+                return i > 0;
+            }
+
+            @Override
+            public E previous() {
+                E value = get(i);
+                i--;
+                return value;
+            }
+
+            @Override
+            public int nextIndex() {
+                return i+1;
+            }
+
+            @Override
+            public int previousIndex() {
+                return i;
+            }
+
+            @Override
+            public void remove() {
+                throw new RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.remove");
+            }
+
+            @Override
+            public void set(E e) {
+                throw new RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.set");
+            }
+
+            @Override
+            public void add(E e) {
+                throw new RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.add");
+            }
+        };
     }
 }
