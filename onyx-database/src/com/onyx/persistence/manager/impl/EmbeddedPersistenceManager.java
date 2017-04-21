@@ -5,12 +5,16 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.*;
 import com.onyx.fetch.PartitionQueryController;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.*;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.collections.LazyQueryCollection;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.*;
+import com.onyx.persistence.query.Query;
+import com.onyx.persistence.query.QueryCriteria;
+import com.onyx.persistence.query.QueryCriteriaOperator;
+import com.onyx.persistence.query.QueryResult;
 import com.onyx.query.CachedResults;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
@@ -689,6 +693,29 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         //noinspection unchecked
         return (E)entity;
+    }
+
+    /**
+     * Get an entity by its partition reference.  This is the same as the method above but for objects that have
+     * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
+     * hydrate objects in random partitions.
+     *
+     * @param entityType         Type of managed entity
+     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param <E>                The managed entity implementation class
+     * @return Managed Entity
+     * @throws EntityException The reference does not exist for that type
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException {
+
+        final SystemPartitionEntry partitionEntry = context.getPartitionWithId((partitionReference).partition);
+        if (partitionEntry == null)
+            return null;
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(entityType, partitionEntry.getValue());
+        final RecordController recordController = context.getRecordController(descriptor);
+        return (E) recordController.getWithReferenceId(partitionReference.reference);
     }
 
     /**

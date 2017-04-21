@@ -59,6 +59,7 @@ public class JSONDatabaseMessageListener implements HttpHandler {
             case FIND:
             case FIND_BY_PARTITION:
             case FIND_BY_REFERENCE:
+            case FIND_BY_PARTITION_REFERENCE:
             case EXISTS:
                 classToSerialize = EntityRequestBody.class;
                 break;
@@ -108,6 +109,8 @@ public class JSONDatabaseMessageListener implements HttpHandler {
                 return webPersistenceEndpoint.findWithPartitionId((EntityRequestBody) body);
             case FIND_BY_REFERENCE:
                 return webPersistenceEndpoint.findByReferenceId((EntityRequestBody) body);
+            case FIND_BY_PARTITION_REFERENCE:
+                return webPersistenceEndpoint.findByPartitionReference((EntityRequestBody) body);
             case EXISTS:
                 return webPersistenceEndpoint.exists((EntityRequestBody) body);
             case EXECUTE:

@@ -52,6 +52,7 @@ public abstract class AbstractWebPersistenceManager extends AbstractPersistenceM
 
     public static final String SAVE_RELATIONSHIPS = "/saveRelationships";
     public static final String FIND_BY_REFERENCE_ID = "/findByReferenceId";
+    public static final String FIND_BY_PARTITION_REFERENCE = "/findByPartitionReference";
 
     public static final String FIND_WITH_PARTITION_ID = "/findWithPartitionId";
 
