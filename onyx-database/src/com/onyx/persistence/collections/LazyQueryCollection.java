@@ -7,6 +7,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
@@ -183,17 +184,22 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         {
             try
             {
-                long reference = (long)identifiers.get(index);
+                Object reference = identifiers.get(index);
                 Object referenceValue = references.put(reference, entity);
-                if(referenceValue != null && referenceValue instanceof IManagedEntity)
-                {
-                    entity = (IManagedEntity)referenceValue;
+                if (referenceValue != null && referenceValue instanceof IManagedEntity) {
+                    entity = (IManagedEntity) referenceValue;
                 }
 
-                if(entity == null) {
-                    entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), reference);
-                    references.put(reference, entity);
+                if (entity == null) {
+                    if (reference instanceof PartitionReference) {
+                        entity = persistenceManager.getWithPartitionReference(entityDescriptor.getClazz(), (PartitionReference) reference);
+                    } else {
+                        entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), (long) reference);
+                    }
                 }
+
+                references.put(reference, entity);
+
             } catch (EntityException e)
             {
                 return null;

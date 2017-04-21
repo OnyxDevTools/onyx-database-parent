@@ -8,6 +8,7 @@ public enum RestServicePath {
 
     SAVE("/saveEntity"),
     FIND_BY_REFERENCE("/findByReferenceId"),
+    FIND_BY_PARTITION_REFERENCE("/findByPartitionReference"),
     FIND_BY_PARTITION("/findWithPartitionId"),
     FIND("/find"),
     DELETE("/deleteEntity"),
