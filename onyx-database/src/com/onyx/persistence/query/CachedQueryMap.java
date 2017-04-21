@@ -1,12 +1,15 @@
 package com.onyx.persistence.query;
 
+import com.onyx.persistence.annotations.Partition;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.LastRecentlyUsedMap;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 /**
  * Created by tosborn1 on 3/27/17.
@@ -93,6 +96,31 @@ public class CachedQueryMap<K, V> extends LastRecentlyUsedMap<K, V> {
             V value = (V) hardReferenceSet.remove(key);
             if (value == null)
                 value = super.remove(key);
+            return value;
+        }
+    }
+
+    /**
+     * The compute method only applies to hard references
+     *
+     * @param key key with which the specified value is to be associated
+     * @param remappingFunction the function to compute a value
+     * @return Value that was returned in the remapping function
+     */
+    @SuppressWarnings("unchecked")
+    public V compute(K key,
+                      BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        synchronized (this)
+        {
+            V before = (V)hardReferenceSet.get(key);
+            boolean existed = before != null;
+
+            V value = remappingFunction.apply(key, before);
+            if(!existed
+                    || value != before) {
+                hardReferenceSet.put(key, value);
+            }
+
             return value;
         }
     }

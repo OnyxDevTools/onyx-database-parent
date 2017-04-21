@@ -12,6 +12,7 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryResult;
 import com.onyx.persistence.query.impl.RemoteQueryListener;
+import com.onyx.query.QueryListener;
 import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 
@@ -500,7 +501,6 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
         return proxy.countForQuery(query);
     }
 
-
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.
      * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
@@ -530,4 +530,21 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
         }
         return false;
     }
+
+    /**
+     * Listen to a query and register its subscriber
+     *
+     * @param query Query with query listener
+     * @since 1.3.1
+     */
+    @Override
+    public void listen(Query query) throws EntityException {
+        // Register the query listener as a push subscriber / receiver
+        final RemoteQueryListener remoteQueryListener = new RemoteQueryListener(query.getChangeListener());
+        this.pushRegistrar.register(remoteQueryListener, remoteQueryListener);
+        query.setChangeListener(remoteQueryListener);
+
+        proxy.listen(query);
+    }
+
 }

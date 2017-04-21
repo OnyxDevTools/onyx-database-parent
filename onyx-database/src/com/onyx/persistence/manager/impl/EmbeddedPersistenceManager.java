@@ -330,7 +330,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             Map results;
 
             // If there are, use the cache rather re-checking criteria
-            if (cachedResults != null) {
+            if (cachedResults != null && cachedResults.getReferences() != null) {
                 results = cachedResults.getReferences();
                 query.setResultsCount(cachedResults.getReferences().size());
                 if (query.getSelections() != null) {
@@ -357,8 +357,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
                 return (List<E>)new ArrayList<>(attributeValues.values());
             } else {
-                // Cache the query results
-                cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
+                if(cachedResults == null)
+                    // Cache the query results
+                    cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
+                else
+                    cachedResults.setReferences(results);
                 return queryController.hydrateResultsWithReferences(query, results);
             }
         } finally {
@@ -400,7 +403,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             Map results;
 
             // If there are, hydrate the existing rather than looking to the store
-            if (cachedResults != null) {
+            if (cachedResults != null && cachedResults.getReferences() != null) {
                 results = cachedResults.getReferences();
                 query.setResultsCount(results.size());
                 return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
@@ -413,7 +416,13 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             if ((query.getQueryOrders() != null && query.getQueryOrders().size() > 0)  || query.getFirstRow() > 0 || query.getMaxResults() != -1) {
                 results = queryController.sort(query, results);
             }
-            cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
+
+            if(cachedResults == null)
+                // Cache the query results
+                cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
+            else
+                cachedResults.setReferences(results);
+
             return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally {
             if(query.getChangeListener() != null) {
@@ -821,7 +830,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         ValidationHelper.validateQuery(descriptor, query, context);
 
         CachedResults cachedResults = context.getQueryCacheController().getCachedQueryResults(query);
-        if (cachedResults != null)
+        if (cachedResults != null && cachedResults.getReferences() != null)
             return cachedResults.getReferences().size();
 
         final PartitionQueryController queryController = new PartitionQueryController(descriptor, this, context);
@@ -898,4 +907,22 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         return context.getQueryCacheController().unsubscribe(query);
     }
+
+    /**
+     * Listen to a query and register its subscriber
+     *
+     * @param query Query with query listener
+     * @since 1.3.1
+     */
+    @Override
+    public void listen(Query query) throws EntityException {
+        final Class clazz = query.getEntityType();
+
+        // We want to lock the index controller so that it does not do background indexing
+        final EntityDescriptor descriptor = context.getDescriptorForEntity(clazz, query.getPartition());
+        ValidationHelper.validateQuery(descriptor, query, context);
+
+        context.getQueryCacheController().subscribe(query);
+    }
+
 }

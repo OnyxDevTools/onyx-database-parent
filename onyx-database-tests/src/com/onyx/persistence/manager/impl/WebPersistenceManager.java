@@ -11,6 +11,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
+import com.onyx.query.QueryListener;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
 import com.onyx.stream.QueryStream;
@@ -794,6 +795,17 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
     @Override
     public boolean removeChangeListener(Query query) throws EntityException {
         return false;
+    }
+
+    /**
+     * Listen to a query and register its subscriber
+     *
+     * @param query Query with query listener
+     * @since 1.3.1
+     */
+    @Override
+    public void listen(Query query) throws EntityException {
+
     }
 
 }

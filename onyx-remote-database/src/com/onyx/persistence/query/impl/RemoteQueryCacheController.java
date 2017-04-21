@@ -21,6 +21,21 @@ public class RemoteQueryCacheController extends DefaultQueryCacheController {
     }
 
     /**
+     * This method is used to subscribe irrespective of a query being ran.
+     * Overridden in order to associate the remote query listener as the
+     * push subscriber information will be set.
+     *
+     * @param query Query object with defined listener
+     *
+     * @since 1.3.1
+     */
+    public void subscribe(Query query) {
+        RemoteQueryListener remoteQueryListener = (RemoteQueryListener) this.pushPublisher.getRegisteredSubscriberIdentity((PushSubscriber) query.getChangeListener());
+        query.setChangeListener(remoteQueryListener);
+        super.subscribe(query);
+    }
+
+    /**
      * Subscribe a query listener with associated cached results. This is overridden so that we can get the true identity
      * of the push subscriber through the publisher.  The publisher keeps track of all registered subscribers.
      *

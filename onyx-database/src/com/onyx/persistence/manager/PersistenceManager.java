@@ -7,6 +7,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.persistence.query.QueryResult;
+import com.onyx.query.QueryListener;
 import com.onyx.stream.QueryStream;
 
 import java.util.List;
@@ -593,4 +594,22 @@ public interface PersistenceManager {
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
     boolean removeChangeListener(Query query) throws EntityException;
+
+    /**
+     * Listen to a query and register its subscriber
+     *
+     * @param query Query with query listener
+     * @since 1.3.1
+     */
+    void listen(Query query) throws EntityException;
+
+    /**
+     * Listen to a query and register its subscriber
+     *
+     * @param query Query without query listener
+     * @param queryListener listener to invoke for changes
+     * @since 1.3.1
+     */
+    @SuppressWarnings("unused")
+    void listen(Query query, QueryListener queryListener) throws EntityException;
 }
