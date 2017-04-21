@@ -7,6 +7,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.persistence.query.QueryResult;
+import com.onyx.query.QueryListener;
 import com.onyx.util.ReflectionUtil;
 
 import java.util.Arrays;
@@ -285,4 +286,17 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
         return new QueryResult(query, executeQuery(query));
     }
 
+    /**
+     * Listen to a query and register its subscriber
+     *
+     * @param query Query without query listener
+     * @param queryListener listener to invoke for changes
+     * @since 1.3.1
+     */
+    @Override
+    @SuppressWarnings("unused")
+    public void listen(Query query, QueryListener queryListener) throws EntityException {
+        query.setChangeListener(queryListener);
+        listen(query);
+    }
 }

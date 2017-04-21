@@ -59,6 +59,14 @@ public interface QueryCacheController {
     void subscribe(CachedResults results, QueryListener queryListener);
 
     /**
+     * This method is used to subscribe irrespective of a query being ran.
+     * @param query Query object with defined listener
+     *
+     * @since 1.3.1
+     */
+    void subscribe(Query query);
+
+    /**
      * Unsubscribe query
      * @param query Query to unsubscribe from
      * @return Whether the listener was listening to begin with

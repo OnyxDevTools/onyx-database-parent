@@ -16,7 +16,7 @@ import java.util.Set;
 public class CachedResults {
 
     // Query reference/values
-    private final Map references;
+    private Map references;
 
     /**
      * Constructor containing query resutls
@@ -39,6 +39,17 @@ public class CachedResults {
      */
     public Map getReferences() {
         return references;
+    }
+
+    /**
+     * Set the references to the cached results.  Starting in 1.3.1 they can be null because it does not require the
+     * query to have been executed to listen to.
+     *
+     * @param references References for query resutls
+     */
+    public void setReferences(Map references)
+    {
+        this.references = references;
     }
 
     // Query event listeners
@@ -81,10 +92,25 @@ public class CachedResults {
     @SuppressWarnings("unchecked")
     public void remove(Object reference, IManagedEntity entity, QueryListenerEvent event, boolean meetsCriteria)
     {
-        Object removed = references.remove(reference);
+        Object removed = null;
+        if(references != null)
+            references.remove(reference);
         listeners.remove(null); // Clean out old references
         if(removed != null && (event == QueryListenerEvent.DELETE || (!meetsCriteria && event == QueryListenerEvent.PRE_UPDATE))) {
 
+            Set<QueryListener> listenersToRemove = new HashSet();
+            for(QueryListener listener : listeners)
+            {
+                try {
+                    listener.onItemRemoved(entity);
+                } catch (Exception e)
+                {
+                    listenersToRemove.add(listener);
+                }
+            }
+            listeners.removeAll(listenersToRemove);
+        } else if(event == QueryListenerEvent.DELETE && meetsCriteria)
+        {
             Set<QueryListener> listenersToRemove = new HashSet();
             for(QueryListener listener : listeners)
             {
@@ -121,7 +147,8 @@ public class CachedResults {
     @SuppressWarnings("unchecked")
     public void put(Object reference, Object value, QueryListenerEvent event)
     {
-        references.put(reference, value);
+        if(references != null)
+            references.put(reference, value);
         listeners.remove(null);
         final Set<QueryListener> listenersToRemove = new HashSet();
         for(QueryListener listener : listeners)

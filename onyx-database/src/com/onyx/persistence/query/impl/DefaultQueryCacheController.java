@@ -124,12 +124,14 @@ public class DefaultQueryCacheController implements QueryCacheController {
                     // If indicated to remove the record, delete it and move on
                     if(type != QueryListenerEvent.INSERT && type != QueryListenerEvent.UPDATE)
                     {
-                        synchronized(cachedResults.getReferences()) {
+                        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+                        synchronized(cachedResults) {
                             cachedResults.remove(useThisReference, entity, type, CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor));
                         }
                     }
                     else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor)) {
-                        synchronized (cachedResults.getReferences()) {
+                        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+                        synchronized (cachedResults) {
                             if(query.getSelections() != null && query.getSelections().size() > 0) {
                                 cachedResults.put(useThisReference, useThisReference, type);
                             }
@@ -143,6 +145,30 @@ public class DefaultQueryCacheController implements QueryCacheController {
             });
 
             return queryCachedResultsMap;
+        });
+    }
+
+    /**
+     * This method is used to subscribe irrespective of a query being ran.
+     * @param query Query object with defined listener
+     *
+     * @since 1.3.1
+     */
+    public void subscribe(Query query)
+    {
+        cachedQueriesByClass.compute(query.getEntityType(), (aClass, queryCachedResultsMap) -> {
+            if(queryCachedResultsMap == null)
+                // Only allow 100 cached queries per entity with a 5 minute LRU expiration
+                // At some point make this configurable.  The magic number is 100 because that
+                // will limit record insert performance degredation.
+                queryCachedResultsMap = new CachedQueryMap<>(100, 5*60);
+
+            return queryCachedResultsMap;
+        }).compute(query, (query1, results) -> {
+            if(results == null)
+                results = new CachedResults(null);
+            results.subscribe(query1.getChangeListener());
+            return results;
         });
     }
 
