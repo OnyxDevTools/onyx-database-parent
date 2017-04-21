@@ -4,6 +4,7 @@ import com.onyx.client.push.PushRegistrar;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.StreamException;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -405,6 +406,22 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
     public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException
     {
         return proxy.getWithReferenceId(entityType, referenceId);
+    }
+
+    /**
+     * Get an entity by its partition reference.  This is the same as the method above but for objects that have
+     * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
+     * hydrate objects in random partitions.
+     *
+     * @param entityType         Type of managed entity
+     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param <E>                The managed entity implementation class
+     * @return Managed Entity
+     * @throws EntityException The reference does not exist for that type
+     */
+    @Override
+    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException {
+        return proxy.getWithPartitionReference(entityType, partitionReference);
     }
 
     /**

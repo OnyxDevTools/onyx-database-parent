@@ -1,6 +1,7 @@
 package com.onyx.persistence.manager;
 
 import com.onyx.exception.EntityException;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
@@ -505,6 +506,19 @@ public interface PersistenceManager {
      */
     @SuppressWarnings("unused")
     <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException;
+
+    /**
+     * Get an entity by its partition reference.  This is the same as the method above but for objects that have
+     * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
+     * hydrate objects in random partitions.
+     *
+     * @param entityType         Type of managed entity
+     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param <E>                The managed entity implementation class
+     * @return Managed Entity
+     * @throws EntityException The reference does not exist for that type
+     */
+    <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException;
 
     /**
      * Retrieves an entity using the primaryKey and partition

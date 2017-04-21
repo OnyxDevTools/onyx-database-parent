@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.*;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -694,6 +695,27 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
         body.setType(attributeType.getName());
 
         this.performCall(getURL() + SAVE_RELATIONSHIPS, null, null, body);
+    }
+
+    /**
+     * Get an entity by its partition reference.  This is the same as the method above but for objects that have
+     * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
+     * hydrate objects in random partitions.
+     *
+     * @param entityType         Type of managed entity
+     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param <E>                The managed entity implementation class
+     * @return Managed Entity
+     * @throws EntityException The reference does not exist for that type
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException {
+        final EntityRequestBody body = new EntityRequestBody();
+        body.setId(partitionReference.reference);
+        body.setType(entityType.getName());
+        body.setPartitionId(String.valueOf(partitionReference.partition));
+        return (E) this.performCall(getURL() + FIND_BY_PARTITION_REFERENCE, null, entityType, body);
     }
 
     /**
