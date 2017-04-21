@@ -136,7 +136,9 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
             return ((Comparable) t1).compareTo(t2);
         }
 
-        return 0;
+        if(t1 == t2)
+            return 0;
+        return -1;
     }
 
     /**

@@ -61,8 +61,8 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
     public void testSelectTwoOrderBy() throws EntityException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
-        Query query = new Query(AllAttributeForFetch.class, Arrays.asList("stringValue","longValue", "intPrimitive"), criteria);
-        query.setFirstRow(1);
+        Query query = new Query(AllAttributeForFetch.class, Arrays.asList("id","stringValue","longValue", "intPrimitive"), criteria);
+        query.setFirstRow(2);
         query.setMaxResults(2);
         query.setQueryOrders(Arrays.asList(new QueryOrder("stringValue"), new QueryOrder("intPrimitive")));
 

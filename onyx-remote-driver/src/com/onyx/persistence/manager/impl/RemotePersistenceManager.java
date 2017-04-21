@@ -13,7 +13,6 @@ import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryResult;
 import com.onyx.persistence.query.impl.RemoteQueryListener;
-import com.onyx.query.QueryListener;
 import com.onyx.stream.QueryStream;
 import com.onyx.util.ReflectionUtil;
 

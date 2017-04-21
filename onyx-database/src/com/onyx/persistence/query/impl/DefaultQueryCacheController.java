@@ -17,7 +17,6 @@ import com.onyx.util.map.*;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 
 /**
  * Created by tosborn1 on 3/27/17.
@@ -125,11 +124,13 @@ public class DefaultQueryCacheController implements QueryCacheController {
                     // If indicated to remove the record, delete it and move on
                     if(type != QueryListenerEvent.INSERT && type != QueryListenerEvent.UPDATE)
                     {
+                        //noinspection SynchronizationOnLocalVariableOrMethodParameter
                         synchronized(cachedResults) {
                             cachedResults.remove(useThisReference, entity, type, CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor));
                         }
                     }
                     else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.getCriteria(), entity, useThisReference, context, descriptor)) {
+                        //noinspection SynchronizationOnLocalVariableOrMethodParameter
                         synchronized (cachedResults) {
                             if(query.getSelections() != null && query.getSelections().size() > 0) {
                                 cachedResults.put(useThisReference, useThisReference, type);

@@ -365,7 +365,9 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                     // Cache the query results
                     cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
                 else
-                    cachedResults.setReferences(results);
+                    synchronized (cachedResults) {
+                        cachedResults.setReferences(results);
+                    }
                 return queryController.hydrateResultsWithReferences(query, results);
             }
         } finally {
@@ -425,7 +427,9 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 // Cache the query results
                 cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
             else
-                cachedResults.setReferences(results);
+                synchronized (cachedResults) {
+                    cachedResults.setReferences(results);
+                }
 
             return new LazyQueryCollection<IManagedEntity>(descriptor, results, context);
         } finally {

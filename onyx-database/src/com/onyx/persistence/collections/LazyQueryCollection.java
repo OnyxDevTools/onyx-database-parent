@@ -196,9 +196,8 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
                     } else {
                         entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), (long) reference);
                     }
+                    references.put(reference, entity);
                 }
-
-                references.put(reference, entity);
 
             } catch (EntityException e)
             {
