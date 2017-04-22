@@ -22,7 +22,7 @@ public class Main
 
         factory.setCredentials("onyx-remote", "SavingDataIsFun!"); //2
 
-        factory.setDatabaseLocation("onx://localhost:8080"); //3
+        factory.setDatabaseLocation("onx://localhost:8081"); //3
 
         factory.initialize();  //4
 

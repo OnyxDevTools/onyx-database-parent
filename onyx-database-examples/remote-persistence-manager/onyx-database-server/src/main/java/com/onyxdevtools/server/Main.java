@@ -18,7 +18,7 @@ public class Main
     public static void main(String[] args) throws Exception
     {
         DatabaseServer server1 = new DatabaseServer();
-        server1.setPort(8080);
+        server1.setPort(8081);
         String pathToOnyxDB = System.getProperty("user.home") 
                             + File.separatorChar + ".onyxdb" 
                             + File.separatorChar + "sandbox" 
