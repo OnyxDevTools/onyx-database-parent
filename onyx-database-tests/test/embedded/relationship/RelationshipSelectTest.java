@@ -52,6 +52,26 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    public void testDistinctValues() throws EntityException {
+        for (int i = 0; i < 50; i++) {
+            PersonNoPartition person = new PersonNoPartition();
+            person.firstName = "Cristian";
+            person.lastName = "Vogel" + i;
+            person.address = new AddressNoPartition();
+            person.address.street = "Sluisvaart";
+            person.address.houseNr = 98;
+            manager.saveEntity(person);
+        }
+
+        Query query = new Query(PersonNoPartition.class, new QueryCriteria("address.street", QueryCriteriaOperator.EQUAL, "Sluisvaart"));
+        query.setDistinct(true);
+        query.setSelections(Arrays.asList("firstName"));
+        List<Map> addresses = manager.executeQuery(query);
+        assert addresses.size() == 1;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     public void testQuerySpecificPartition() throws EntityException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();

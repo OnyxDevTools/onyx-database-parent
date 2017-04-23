@@ -61,6 +61,7 @@ public class Query implements ObjectSerializable, Serializable
     @SuppressWarnings("WeakerAccess")
     protected int maxResults = -1;
     private int resultsCount;
+    private boolean distinct;
 
     /**
      * Stop query before it finishes
@@ -565,6 +566,7 @@ public class Query implements ObjectSerializable, Serializable
         buffer.writeInt(maxResults);
         buffer.writeInt(resultsCount);
         buffer.writeObject(queryListener);
+        buffer.writeBoolean(distinct);
     }
 
     /**
@@ -594,6 +596,7 @@ public class Query implements ObjectSerializable, Serializable
         maxResults = buffer.readInt();
         resultsCount = buffer.readInt();
         queryListener = (QueryListener)buffer.readObject();
+        distinct = buffer.readBoolean();
     }
 
     private QueryListener queryListener;
@@ -671,7 +674,7 @@ public class Query implements ObjectSerializable, Serializable
     @Override
     public int hashCode()
     {
-        return Objects.hash(entityType, partition, queryOrders, criteria, selections);
+        return Objects.hash(entityType, partition, queryOrders, criteria, selections, distinct);
     }
 
     @Override
@@ -682,7 +685,7 @@ public class Query implements ObjectSerializable, Serializable
 
         if(other instanceof Query) {
             Query otherQuery = (Query) other;
-            return this.entityType.equals(otherQuery.entityType) && CompareUtil.forceCompare(this.partition, otherQuery.partition) && this.criteria.equals(otherQuery.criteria) && CompareUtil.forceCompare(this.queryOrders, otherQuery.queryOrders) && CompareUtil.forceCompare(this.selections, otherQuery.selections);
+            return this.entityType.equals(otherQuery.entityType) && this.distinct == otherQuery.distinct && CompareUtil.forceCompare(this.partition, otherQuery.partition) && this.criteria.equals(otherQuery.criteria) && CompareUtil.forceCompare(this.queryOrders, otherQuery.queryOrders) && CompareUtil.forceCompare(this.selections, otherQuery.selections);
         }
         return false;
     }
@@ -753,6 +756,28 @@ public class Query implements ObjectSerializable, Serializable
         }
 
         return allCritieria;
+    }
+
+    /**
+     * Whether to select unique row results.  This is default to true.  This does not have
+     * an effect on entity queries since entity queries are distinct by default.
+     *
+     * @since 1.3.1 - Feature added to apply distinct rows for queries that define selections
+     * @param distinct Boolean value true or false
+     */
+    public void setDistinct(boolean distinct) {
+        this.distinct = distinct;
+    }
+
+    /**
+     * Getter for distinct property
+     *
+     * @since 1.3.1 New Feature added
+     * @return Whether to select unique row results.
+     */
+    public boolean isDistinct()
+    {
+        return distinct;
     }
 
     /**

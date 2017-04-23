@@ -359,6 +359,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
 
                 final Map<Object, Map<String, Object>> attributeValues = queryController.hydrateQuerySelections(query, results);
+                if(query.isDistinct()) {
+                    Set linkedHashSet = new LinkedHashSet<>(attributeValues.values());
+                    return new ArrayList(linkedHashSet);
+                }
                 return (List<E>)new ArrayList<>(attributeValues.values());
             } else {
                 if(cachedResults == null)

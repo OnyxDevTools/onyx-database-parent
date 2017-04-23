@@ -275,9 +275,7 @@ public class PartitionQueryController extends PartitionContext {
             return new HashMap<>();
         }
 
-        Map<Object, Map<String, Object>> results;
-        int TEMPORARY_MAP_LOAD_FACTOR = 1;
-        results = temporaryDataFile.getHashMap("sortingValues", TEMPORARY_MAP_LOAD_FACTOR);
+        Map<Object, Map<String, Object>> results = new LinkedHashMap<>();
 
         Iterator<Map.Entry<Object, Object>> iterator = references.entrySet().iterator();
 
@@ -387,7 +385,6 @@ public class PartitionQueryController extends PartitionContext {
                 entity = recordController.getWithReferenceId((long) referenceId);
                 IndexHelper.deleteAllIndexesForEntity(getContext(), descriptor, (long) referenceId);
             }
-
 
             RelationshipHelper.deleteAllRelationshipsForEntity(entity, new EntityRelationshipManager(), getContext());
 

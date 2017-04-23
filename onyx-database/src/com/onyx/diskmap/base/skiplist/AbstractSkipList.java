@@ -296,8 +296,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
             SkipListHeadNode next = findNodeAtPosition(current.next);
 
-            if ((current.next == 0L) ||
-                    (shouldMoveDown(hash, hash(((SkipListNode<K>) next).key), key, ((SkipListNode<K>) next).key))) {
+            if ((current.next == 0L) || ((next instanceof SkipListNode) &&
+                    (shouldMoveDown(hash, hash(((SkipListNode<K>) next).key), key, ((SkipListNode<K>) next).key)))) {
 
                 // We found the record we want
                 if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
