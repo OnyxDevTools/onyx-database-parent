@@ -101,6 +101,13 @@ public class RelationshipReference implements ObjectSerializable, Comparable
             else if(this.partitionId > ((RelationshipReference) o).partitionId)
                 return 1;
 
+            /*if(this.identifier == null && ((RelationshipReference) o).identifier != null)
+                return -1;
+            else if (((RelationshipReference) o).identifier == null && this.identifier != null)
+                return 1;
+            else if(((RelationshipReference) o).identifier == null && this.identifier == null)
+                return 0;
+*/
             if(((RelationshipReference) o).identifier.getClass() == this.identifier.getClass()
                 && this.identifier instanceof Comparable)
                 return ((Comparable) this.identifier).compareTo(((RelationshipReference) o).identifier);

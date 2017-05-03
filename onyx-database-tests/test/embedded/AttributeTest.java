@@ -6,16 +6,19 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import embedded.base.BaseTest;
 import entities.AllAttributeV2Entity;
+import entities.EnumEntity;
 import entities.InheritedAttributeEntity;
 import entities.SimpleEntity;
 import org.junit.*;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
+import pojo.SimpleEnum;
 
 import java.io.IOException;
 import java.util.*;
 
 import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -265,6 +268,17 @@ public class AttributeTest extends BaseTest {
         Assert.assertTrue(entity.getName().equals(savedEntity.getName()));
     }
 
+    @Test
+    public void testEnum() throws EntityException
+    {
+        EnumEntity enumEntity = new EnumEntity();
+        enumEntity.setSimpleId("99HIYA");
+        enumEntity.simpleEnum = SimpleEnum.SECOND;
+        save(enumEntity);
+
+        find(enumEntity);
+        assertEquals(enumEntity.simpleEnum,  SimpleEnum.SECOND);
+    }
 
 
 }

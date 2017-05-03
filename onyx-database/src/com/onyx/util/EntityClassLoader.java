@@ -32,13 +32,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- Created by timothy.osborn on 3/6/15.
-
- This class saves the entity information and formats the source on disk
+ * Created by timothy.osborn on 3/6/15.
+ * <p>
+ * This class saves the entity information and formats the source on disk
  */
 @SuppressWarnings("WeakerAccess")
-public class EntityClassLoader
-{
+public class EntityClassLoader {
 
     public static final Set<String> LOADED_CLASSES = new HashSet<>();
 
@@ -52,13 +51,12 @@ public class EntityClassLoader
     /**
      * Generate Write a class to disk.
      *
-     * @param  descriptor Entity descriptor
-     * @param  databaseLocation Database location
+     * @param descriptor       Entity descriptor
+     * @param databaseLocation Database location
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation, SchemaContext context)
-    {
-        if(context instanceof CacheSchemaContext)
+    public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation, SchemaContext context) {
+        if (context instanceof CacheSchemaContext)
             return;
 
         String packageName = descriptor.getClazz().getPackage().getName();
@@ -71,7 +69,7 @@ public class EntityClassLoader
         String fileName = descriptor.getFileName();
         String className = descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", "");
         String generatorType = descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
-                        descriptor.getIdentifier().getGenerator().name();
+                descriptor.getIdentifier().getGenerator().name();
         String idType = descriptor.getIdentifier().getType().getName();
         String idName = descriptor.getIdentifier().getName();
         String idLoadFactor = String.valueOf(descriptor.getIdentifier().getLoadFactor());
@@ -86,7 +84,7 @@ public class EntityClassLoader
                 "import com.onyx.persistence.*;\n" +
                 "\n" +
                 "@Entity(fileName = \"");
-        builder.append(fileName).append("\")\n").append( "public class ");
+        builder.append(fileName).append("\")\n").append("public class ");
         builder.append(className);
         builder.append(" extends ManagedEntity implements IManagedEntity\n" +
                 "{\n" +
@@ -109,30 +107,28 @@ public class EntityClassLoader
         builder.append(idName);
         builder.append(";\n\n");
 
-        for (final AttributeDescriptor attribute : descriptor.getAttributes().values())
-        {
-            if (attribute.getName().equals(descriptor.getIdentifier().getName()))
-            {
+        for (final AttributeDescriptor attribute : descriptor.getAttributes().values()) {
+            if (attribute.getName().equals(descriptor.getIdentifier().getName())) {
                 continue;
+            }
+
+            if (attribute.isEnum()) {
+                writeEnum(attribute.getType().getCanonicalName(), attribute.getEnumValues(), outputDirectory);
             }
 
             builder.append("\n     @Attribute\n");
 
             final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(attribute.getName());
-            if(indexDescriptor != null)
-            {
+            if (indexDescriptor != null) {
                 builder.append("     @Index\n");
             }
-            if((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName()))
-            {
+            if ((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName())) {
                 builder.append("     @Partition\n");
             }
             builder.append("     public ");
-            if(attribute.getType().isArray())
-            {
+            if (attribute.getType().isArray()) {
                 builder.append(attribute.getType().getSimpleName());
-            }
-            else {
+            } else {
                 builder.append(attribute.getType().getName());
             }
             builder.append(" ").append(attribute.getName()).append(";");
@@ -144,7 +140,8 @@ public class EntityClassLoader
             // Get the base Descriptor so that we ensure they get generated also
             try {
                 context.getBaseDescriptorForEntity(relationship.getInverseClass());
-            } catch (EntityException ignore) {}
+            } catch (EntityException ignore) {
+            }
 
             builder.append("\n     @Relationship(type = ");
             builder.append(relationship.getRelationshipType().getDeclaringClass().getName()).append(".").append(relationship.getRelationshipType().name());
@@ -165,40 +162,72 @@ public class EntityClassLoader
 
         builder.append("\n}\n");
 
-        try
-        {
+        writeClassContents(outputDirectory, descriptor.getClazz().getCanonicalName(), builder.toString());
+    }
 
+    /**
+     * Write an enum to file
+     * @param enumClass Enum Class Name
+     * @param enumValues Enum values separated by comman and ended with a semicolon.
+     * @param outputDirectory Source directory
+     */
+    public static void writeEnum(String enumClass, String enumValues, String outputDirectory) {
+        String[] nameTokens = enumClass.split("\\.");
+        String packageName = "package ";
+        for (int i = 0; i < nameTokens.length - 1; i++)
+
+            for (String token : nameTokens)
+                packageName = packageName + token + ".";
+
+        packageName = packageName.substring(0, packageName.length() - 1);
+        packageName = packageName + ";\n\n";
+
+        String classDef = "public enum " + nameTokens[nameTokens.length - 1] + " { \n";
+        String end = "\n}";
+        String classContents = packageName + classDef + enumValues + end;
+
+        writeClassContents(outputDirectory, enumClass, classContents);
+    }
+
+    /**
+     * Helper method used to write the class contents to a file
+     *
+     * @param outputDirectory Source directory
+     * @param className Name of class including package
+     * @param classContents Class source code
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static void writeClassContents(String outputDirectory, String className, String classContents) {
+        try {
             // File output
             final File classFile = new File(outputDirectory + File.separator +
-                    descriptor.getClazz().getName().replaceAll("\\.", "/") + ".java");
+                    className.replaceAll("\\.", "/") + ".java");
             classFile.getParentFile().mkdirs();
             classFile.createNewFile();
 
             final Writer file = new FileWriter(outputDirectory + File.separator +
-                    descriptor.getClazz().getName().replaceAll("\\.", "/") + ".java");
+                    className.replaceAll("\\.", "/") + ".java");
 
-            file.append(builder.toString());
+            file.write(classContents);
             file.flush();
 
             file.flush();
             file.close();
 
-        }
-        catch (IOException e)
-        {
+        } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     /**
      * Generate Write a class to disk.  This is used for remote purposes.  Since we do not have a handle on the entity descriptors, we use the system entity to load
      *
-     * @param  systemEntity System entity
-     * @param  databaseLocation Database location
+     * @param systemEntity     System entity
+     * @param databaseLocation Database location
      */
     @SuppressWarnings({"unused", "ResultOfMethodCallIgnored"})
-    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext context)
-    {
+    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext context) {
         String packageName = systemEntity.getName().replace("." + systemEntity.getClassName(), "");
         final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
 
@@ -210,10 +239,8 @@ public class EntityClassLoader
         AtomicReference<String> idType = new AtomicReference<>();
         AtomicReference<String> idName = new AtomicReference<>();
 
-        for(SystemAttribute attribute : systemEntity.getAttributes())
-        {
-            if( attribute.getName().equals(systemEntity.getIdentifier().getName()))
-            {
+        for (SystemAttribute attribute : systemEntity.getAttributes()) {
+            if (attribute.getName().equals(systemEntity.getIdentifier().getName())) {
                 idType.set(attribute.getDataType());
                 idName.set(attribute.getName());
                 break;
@@ -233,7 +260,7 @@ public class EntityClassLoader
                 "import com.onyx.persistence.*;\n" +
                 "\n" +
                 "@Entity(fileName = \"");
-        builder.append(fileName).append("\")\n").append( "public class ");
+        builder.append(fileName).append("\")\n").append("public class ");
         builder.append(className);
         builder.append(" extends ManagedEntity implements IManagedEntity\n" +
                 "{\n" +
@@ -256,28 +283,26 @@ public class EntityClassLoader
         builder.append(idName.get());
         builder.append(";\n\n");
 
-        for (final SystemAttribute attribute : systemEntity.getAttributes())
-        {
-            if (attribute.getName().equals(systemEntity.getIdentifier().getName()))
-            {
+        for (final SystemAttribute attribute : systemEntity.getAttributes()) {
+            if (attribute.getName().equals(systemEntity.getIdentifier().getName())) {
                 continue;
             }
 
+            if (attribute.isEnum()) {
+                writeEnum(attribute.getDataType(), attribute.getEnumValues(), outputDirectory);
+            }
             boolean isIndex = false;
-            for(SystemIndex indexDescriptor : systemEntity.getIndexes())
-            {
-                if(indexDescriptor.getName().equals(attribute.getName())) {
+            for (SystemIndex indexDescriptor : systemEntity.getIndexes()) {
+                if (indexDescriptor.getName().equals(attribute.getName())) {
                     isIndex = true;
                     break;
                 }
             }
             builder.append("\n     @Attribute\n");
-            if(isIndex)
-            {
+            if (isIndex) {
                 builder.append("     @Index\n");
             }
-            if((systemEntity.getPartition() != null) && systemEntity.getPartition().getName().equals(attribute.getName()))
-            {
+            if ((systemEntity.getPartition() != null) && systemEntity.getPartition().getName().equals(attribute.getName())) {
                 builder.append("     @Partition\n");
             }
             builder.append("     public ");
@@ -292,14 +317,11 @@ public class EntityClassLoader
             String type;
 
             if ((relationship.getRelationshipType() == RelationshipType.ONE_TO_MANY.ordinal()) ||
-                    (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal()))
-            {
+                    (relationship.getRelationshipType() == RelationshipType.MANY_TO_MANY.ordinal())) {
                 final String genericType = relationship.getInverseClass();
                 final String collectionClass = List.class.getName();
                 type = collectionClass + "<" + genericType + ">";
-            }
-            else
-            {
+            } else {
                 type = relationship.getInverseClass();
             }
 
@@ -323,51 +345,29 @@ public class EntityClassLoader
             // Get the base Descriptor so that we ensure they get generated also
             try {
                 context.getBaseDescriptorForEntity(Class.forName(relationship.getInverseClass()));
-            } catch (EntityException | ClassNotFoundException ignore) {}
+            } catch (EntityException | ClassNotFoundException ignore) {
+            }
 
 
         }
 
         builder.append("\n}\n");
 
-        try
-        {
+        writeClassContents(outputDirectory, systemEntity.getName(), builder.toString());
 
-            // File output
-            final File classFile = new File(outputDirectory + File.separator +
-                    systemEntity.getClassName().replaceAll("\\.", "/") + ".java");
-            classFile.getParentFile().mkdirs();
-            classFile.createNewFile();
-
-            final Writer file = new FileWriter(outputDirectory + File.separator +
-                    systemEntity.getClassName().replaceAll("\\.", "/") + ".java");
-
-            file.write(builder.toString());
-            file.flush();
-
-            file.flush();
-            file.close();
-
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
     }
 
     @SuppressWarnings({"WeakerAccess", "unused"})
-    public EntityClassLoader()
-    {
+    public EntityClassLoader() {
     }
 
     /**
      * Load the class source from file and load it into class loader.
      *
-     * @param  context Schema Context
+     * @param context Schema Context
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private static void loadClasses(final SchemaContext context, String location)
-    {
+    private static void loadClasses(final SchemaContext context, String location) {
 
         final File entitiesSourceDirectory = new File(location + File.separator + SOURCE_ENTITIES_DIRECTORY);
         final File entitiesGeneratedDirectory = new File(location + File.separator + GENERATED_ENTITIES_DIRECTORY);
@@ -379,8 +379,7 @@ public class EntityClassLoader
 
         final List<File> classes = new ArrayList<>();
 
-        try
-        {
+        try {
             forEachClass(new File(entitiesSourceDirectory.getPath()), classes::add);
 
             fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Collections.singletonList(entitiesGeneratedDirectory));
@@ -406,9 +405,7 @@ public class EntityClassLoader
                 }
             });
 
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -426,33 +423,29 @@ public class EntityClassLoader
             }
         }
     }
+
     /**
      * Load the class source from file and load it into class loader.
      *
-     * @param  context Schema Context
+     * @param context Schema Context
      */
-    public static void loadClasses(final SchemaContext context)
-    {
-       loadClasses(context, context.getLocation());
+    public static void loadClasses(final SchemaContext context) {
+        loadClasses(context, context.getLocation());
     }
 
     @SuppressWarnings("unchecked")
-    public static void addClassPaths(SchemaContext schemaContext)
-    {
+    public static void addClassPaths(SchemaContext schemaContext) {
         final URLClassLoader systemClassLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
 
         // Add URL to class path
         final Class systemClass = URLClassLoader.class;
 
-        try
-        {
+        try {
             final Method method = systemClass.getDeclaredMethod("addURL", URL.class);
             method.setAccessible(true);
             method.invoke(systemClassLoader, new File(schemaContext.getLocation() + File.separator + GENERATED_ENTITIES_DIRECTORY).toURI().toURL());
             method.invoke(systemClassLoader, new File(schemaContext.getLocation() + File.separator + GENERATED_QUERIES_DIRECTORY).toURI().toURL());
-        }
-        catch (Exception ignore)
-        {
+        } catch (Exception ignore) {
         }
     }
 

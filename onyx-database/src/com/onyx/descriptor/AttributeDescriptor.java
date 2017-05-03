@@ -12,6 +12,9 @@ public class AttributeDescriptor extends AbstractBaseDescriptor
     @SuppressWarnings("WeakerAccess")
     protected int size;
 
+    private boolean isEnum;
+    private String enumValues;
+
     public boolean isNullable()
     {
         return nullable;
@@ -32,4 +35,19 @@ public class AttributeDescriptor extends AbstractBaseDescriptor
         this.size = size;
     }
 
+    public boolean isEnum() {
+        return isEnum;
+    }
+
+    public void setEnum(boolean anEnum) {
+        isEnum = anEnum;
+    }
+
+    public String getEnumValues() {
+        return enumValues;
+    }
+
+    public void setEnumValues(String enumValues) {
+        this.enumValues = enumValues;
+    }
 }

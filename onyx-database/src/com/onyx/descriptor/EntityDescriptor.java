@@ -116,6 +116,21 @@ public class EntityDescriptor implements Serializable {
                 attribute.setType(field.getType());
                 attribute.setNullable(annotation.nullable());
                 attribute.setSize(annotation.size());
+                attribute.setEnum(attribute.getType().isEnum());
+
+                if(attribute.isEnum())
+                {
+                    String enumValues = "";
+                    for(Object enumObject : attribute.getType().getEnumConstants())
+                    {
+                        Enum enumVal = (Enum) enumObject;
+                        enumValues = enumValues + enumVal.toString() + ",";
+                    }
+                    enumValues = enumValues.substring(0, enumValues.length() - 1);
+                    enumValues = enumValues + ";";
+                    attribute.setEnumValues(enumValues);
+                }
+
 
                 if (!field.isAccessible()) {
                     field.setAccessible(true);
