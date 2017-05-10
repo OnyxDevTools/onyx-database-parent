@@ -9,6 +9,7 @@ import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
 import com.onyx.exception.EntityException;
+import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.annotations.IdentifierGenerator;
@@ -40,6 +41,7 @@ import java.util.function.Consumer;
 public class EntityClassLoader {
 
     public static final Set<String> LOADED_CLASSES = new HashSet<>();
+    public static final Set<String> WRITTEN_CLASSES = new HashSet<>();
 
     public static final String GENERATED_DIRECTORY = "generated";
     public static final String GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities";
@@ -58,6 +60,8 @@ public class EntityClassLoader {
     public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation, SchemaContext context) {
         if (context instanceof CacheSchemaContext)
             return;
+
+        WRITTEN_CLASSES.add(descriptor.getClazz().getCanonicalName());
 
         String packageName = descriptor.getClazz().getPackage().getName();
 
@@ -114,6 +118,15 @@ public class EntityClassLoader {
 
             if (attribute.isEnum()) {
                 writeEnum(attribute.getType().getCanonicalName(), attribute.getEnumValues(), outputDirectory);
+            }
+
+            if(ManagedEntity.class.isAssignableFrom(attribute.getType()) && !LOADED_CLASSES.contains(attribute.getType().getCanonicalName()))
+            {
+                try {
+                    context.getBaseDescriptorForEntity(attribute.getType());
+                } catch (EntityException ignore) {
+                    ignore.printStackTrace();
+                }
             }
 
             builder.append("\n     @Attribute\n");
@@ -175,9 +188,7 @@ public class EntityClassLoader {
         String[] nameTokens = enumClass.split("\\.");
         String packageName = "package ";
         for (int i = 0; i < nameTokens.length - 1; i++)
-
-            for (String token : nameTokens)
-                packageName = packageName + token + ".";
+            packageName = packageName + nameTokens[i] + ".";
 
         packageName = packageName.substring(0, packageName.length() - 1);
         packageName = packageName + ";\n\n";
@@ -239,6 +250,8 @@ public class EntityClassLoader {
         AtomicReference<String> idType = new AtomicReference<>();
         AtomicReference<String> idName = new AtomicReference<>();
 
+        WRITTEN_CLASSES.add(systemEntity.getName());
+
         for (SystemAttribute attribute : systemEntity.getAttributes()) {
             if (attribute.getName().equals(systemEntity.getIdentifier().getName())) {
                 idType.set(attribute.getDataType());
@@ -291,6 +304,7 @@ public class EntityClassLoader {
             if (attribute.isEnum()) {
                 writeEnum(attribute.getDataType(), attribute.getEnumValues(), outputDirectory);
             }
+
             boolean isIndex = false;
             for (SystemIndex indexDescriptor : systemEntity.getIndexes()) {
                 if (indexDescriptor.getName().equals(attribute.getName())) {

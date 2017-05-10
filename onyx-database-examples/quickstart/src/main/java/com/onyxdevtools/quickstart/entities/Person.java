@@ -29,6 +29,12 @@ public class Person extends ManagedEntity
     @Attribute
     private String lastName;
 
+    @Attribute
+    private Other other;
+
+    @Attribute
+    private MyEnum myEnum;
+
     public String getId()
     {
         return id;
@@ -79,4 +85,19 @@ public class Person extends ManagedEntity
         this.lastName = lastName;
     }
 
+    public Other getOther() {
+        return other;
+    }
+
+    public void setOther(Other other) {
+        this.other = other;
+    }
+
+    public MyEnum getMyEnum() {
+        return myEnum;
+    }
+
+    public void setMyEnum(MyEnum myEnum) {
+        this.myEnum = myEnum;
+    }
 }
