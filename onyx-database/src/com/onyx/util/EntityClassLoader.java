@@ -1,21 +1,15 @@
 package com.onyx.util;
 
-import com.onyx.descriptor.AttributeDescriptor;
-import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.descriptor.IndexDescriptor;
-import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
 import com.onyx.exception.EntityException;
-import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.annotations.IdentifierGenerator;
 import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.CacheSchemaContext;
 
 import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
@@ -48,135 +42,9 @@ public class EntityClassLoader {
     public static final String GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries";
 
     public static final String SOURCE_DIRECTORY = "source";
+    public static final String XTEND_SOURCE_DIRECTORY = "xtend";
     public static final String SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities";
-
-    /**
-     * Generate Write a class to disk.
-     *
-     * @param descriptor       Entity descriptor
-     * @param databaseLocation Database location
-     */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public synchronized static void writeClass(final EntityDescriptor descriptor, final String databaseLocation, SchemaContext context) {
-        if (context instanceof CacheSchemaContext)
-            return;
-
-        WRITTEN_CLASSES.add(descriptor.getClazz().getCanonicalName());
-
-        String packageName = descriptor.getClazz().getPackage().getName();
-
-        final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
-
-        //noinspection ResultOfMethodCallIgnored
-        new File(outputDirectory).mkdirs();
-
-        String fileName = descriptor.getFileName();
-        String className = descriptor.getClazz().getName().replace(descriptor.getClazz().getPackage().getName() + ".", "");
-        String generatorType = descriptor.getIdentifier().getGenerator().getDeclaringClass().getName() + "." +
-                descriptor.getIdentifier().getGenerator().name();
-        String idType = descriptor.getIdentifier().getType().getName();
-        String idName = descriptor.getIdentifier().getName();
-        String idLoadFactor = String.valueOf(descriptor.getIdentifier().getLoadFactor());
-
-
-        StringBuilder builder = new StringBuilder();
-        builder.append("package ");
-        builder.append(packageName);
-        builder.append(";\n" +
-                "\n" +
-                "import com.onyx.persistence.annotations.*;\n" +
-                "import com.onyx.persistence.*;\n" +
-                "\n" +
-                "@Entity(fileName = \"");
-        builder.append(fileName).append("\")\n").append("public class ");
-        builder.append(className);
-        builder.append(" extends ManagedEntity implements IManagedEntity\n" +
-                "{\n" +
-                "    public ");
-        builder.append(className);
-        builder.append("()\n" +
-                "    {\n" +
-                "\n" +
-                "    }\n" +
-                "\n" +
-                "    @Attribute\n" +
-                "    @Identifier(generator = ");
-        builder.append(generatorType);
-        builder.append(", loadFactor = ");
-        builder.append(idLoadFactor);
-        builder.append(")\n" +
-                "    public ");
-        builder.append(idType);
-        builder.append(" ");
-        builder.append(idName);
-        builder.append(";\n\n");
-
-        for (final AttributeDescriptor attribute : descriptor.getAttributes().values()) {
-            if (attribute.getName().equals(descriptor.getIdentifier().getName())) {
-                continue;
-            }
-
-            if (attribute.isEnum()) {
-                writeEnum(attribute.getType().getCanonicalName(), attribute.getEnumValues(), outputDirectory);
-            }
-
-            if(ManagedEntity.class.isAssignableFrom(attribute.getType()) && !LOADED_CLASSES.contains(attribute.getType().getCanonicalName()))
-            {
-                try {
-                    context.getBaseDescriptorForEntity(attribute.getType());
-                } catch (EntityException ignore) {
-                    ignore.printStackTrace();
-                }
-            }
-
-            builder.append("\n     @Attribute\n");
-
-            final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(attribute.getName());
-            if (indexDescriptor != null) {
-                builder.append("     @Index\n");
-            }
-            if ((descriptor.getPartition() != null) && descriptor.getPartition().getName().equals(attribute.getName())) {
-                builder.append("     @Partition\n");
-            }
-            builder.append("     public ");
-            if (attribute.getType().isArray()) {
-                builder.append(attribute.getType().getSimpleName());
-            } else {
-                builder.append(attribute.getType().getName());
-            }
-            builder.append(" ").append(attribute.getName()).append(";");
-        }
-
-
-        for (final RelationshipDescriptor relationship : descriptor.getRelationships().values()) {
-
-            // Get the base Descriptor so that we ensure they get generated also
-            try {
-                context.getBaseDescriptorForEntity(relationship.getInverseClass());
-            } catch (EntityException ignore) {
-            }
-
-            builder.append("\n     @Relationship(type = ");
-            builder.append(relationship.getRelationshipType().getDeclaringClass().getName()).append(".").append(relationship.getRelationshipType().name());
-            builder.append(", inverseClass = ");
-            builder.append(relationship.getInverseClass().getName());
-            builder.append(".class, inverse = \"");
-            builder.append(relationship.getInverse());
-            builder.append("\", fetchPolicy = ");
-            builder.append(relationship.getFetchPolicy().getDeclaringClass().getName()).append(".").append(relationship.getFetchPolicy().name());
-            builder.append(", cascadePolicy = ");
-            builder.append(relationship.getCascadePolicy().getDeclaringClass().getName()).append(".").append(relationship.getCascadePolicy().name());
-            builder.append(", loadFactor = ");
-            builder.append(String.valueOf(relationship.getLoadFactor()));
-            builder.append(")\n" +
-                    "            public ");
-            builder.append(relationship.getType().getName()).append(" ").append(relationship.getName()).append(";");
-        }
-
-        builder.append("\n}\n");
-
-        writeClassContents(outputDirectory, descriptor.getClazz().getCanonicalName(), builder.toString());
-    }
+    public static final String XTEND_SOURCE_ENTITIES_DIRECTORY = XTEND_SOURCE_DIRECTORY + File.separator + "entities";
 
     /**
      * Write an enum to file
@@ -206,18 +74,19 @@ public class EntityClassLoader {
      * @param outputDirectory Source directory
      * @param className Name of class including package
      * @param classContents Class source code
+     * @param extension file extension
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private static void writeClassContents(String outputDirectory, String className, String classContents) {
+    private static void writeClassContents(String outputDirectory, String className, String classContents, String extension) {
         try {
             // File output
             final File classFile = new File(outputDirectory + File.separator +
-                    className.replaceAll("\\.", "/") + ".java");
+                    className.replaceAll("\\.", "/") + extension);
             classFile.getParentFile().mkdirs();
             classFile.createNewFile();
 
             final Writer file = new FileWriter(outputDirectory + File.separator +
-                    className.replaceAll("\\.", "/") + ".java");
+                    className.replaceAll("\\.", "/") + extension);
 
             file.write(classContents);
             file.flush();
@@ -228,73 +97,58 @@ public class EntityClassLoader {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     /**
-     * Generate Write a class to disk.  This is used for remote purposes.  Since we do not have a handle on the entity descriptors, we use the system entity to load
+     * Helper method used to write the class contents to a file
      *
-     * @param systemEntity     System entity
-     * @param databaseLocation Database location
+     * @param outputDirectory Source directory
+     * @param className Name of class including package
+     * @param classContents Class source code
      */
-    @SuppressWarnings({"unused", "ResultOfMethodCallIgnored"})
-    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext context) {
-        String packageName = systemEntity.getName().replace("." + systemEntity.getClassName(), "");
-        final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private static void writeClassContents(String outputDirectory, String className, String classContents) {
+        writeClassContents(outputDirectory, className, classContents, ".java");
+    }
 
-        new File(outputDirectory).mkdirs();
+    public static void writeXtendClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext schemaContext, String idType, String idName) {
+        final String packageName = systemEntity.getName().replace("." + systemEntity.getClassName(), "");
+        final String outputDirectory = databaseLocation + File.separator + XTEND_SOURCE_ENTITIES_DIRECTORY;
+        final String className = systemEntity.getClassName();
+        final String generatorType = IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString();
+        final String fileName = systemEntity.getFileName();
+        final String idLoadFactor = String.valueOf(systemEntity.getIdentifier().getLoadFactor());
 
-        String className = systemEntity.getClassName();
-        String generatorType = IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].getDeclaringClass().getName() + "." + IdentifierGenerator.values()[systemEntity.getIdentifier().getGenerator()].toString();
-        String fileName = systemEntity.getFileName();
-        AtomicReference<String> idType = new AtomicReference<>();
-        AtomicReference<String> idName = new AtomicReference<>();
-
-        WRITTEN_CLASSES.add(systemEntity.getName());
-
-        for (SystemAttribute attribute : systemEntity.getAttributes()) {
-            if (attribute.getName().equals(systemEntity.getIdentifier().getName())) {
-                idType.set(attribute.getDataType());
-                idName.set(attribute.getName());
-                break;
-            }
-        }
-
-
-        String idLoadFactor = String.valueOf(systemEntity.getIdentifier().getLoadFactor());
-
-
-        StringBuilder builder = new StringBuilder();
+        final StringBuilder builder = new StringBuilder();
         builder.append("package ");
         builder.append(packageName);
-        builder.append(";\n" +
+        builder.append("\n" +
                 "\n" +
-                "import com.onyx.persistence.annotations.*;\n" +
-                "import com.onyx.persistence.*;\n" +
-                "\n" +
-                "@Entity(fileName = \"");
-        builder.append(fileName).append("\")\n").append("public class ");
-        builder.append(className);
-        builder.append(" extends ManagedEntity implements IManagedEntity\n" +
-                "{\n" +
-                "    public ");
-        builder.append(className);
-        builder.append("()\n" +
-                "    {\n" +
-                "\n" +
-                "    }\n" +
-                "\n" +
-                "    @Attribute\n" +
-                "    @Identifier(generator = ");
-        builder.append(generatorType);
-        builder.append(", loadFactor = ");
-        builder.append(idLoadFactor);
-        builder.append(")\n" +
-                "    public ");
-        builder.append(idType.get());
-        builder.append(" ");
-        builder.append(idName.get());
-        builder.append(";\n\n");
+                "import com.onyx.persistence.annotations.*\n" +
+                "import com.onyx.persistence.*\n" +
+                "import net.sagittarian.onyx.annotations.OnyxFields\n" +
+                "import net.sagittarian.onyx.annotations.OnyxJoins\n" +
+                "import org.eclipse.xtend.lib.annotations.Accessors" +
+                "\n\n" +
+                "@Entity(fileName = \"")
+                .append(fileName)
+                .append("\")\n")
+                .append("@OnyxFields\n")
+                .append("@OnyxJoins\n")
+                .append("@Accessors\n")
+                .append("class ")
+                .append(className)
+                .append(" extends ManagedEntity implements IManagedEntity\n{\n\n")
+                .append("    @Attribute\n")
+                .append("    @Identifier(generator = ")
+                .append(generatorType)
+                .append(", loadFactor = ")
+                .append(idLoadFactor)
+                .append(")\n    ")
+                .append(idType)
+                .append(" ")
+                .append(idName)
+                .append(";\n\n");
 
         for (final SystemAttribute attribute : systemEntity.getAttributes()) {
             if (attribute.getName().equals(systemEntity.getIdentifier().getName())) {
@@ -312,16 +166,17 @@ public class EntityClassLoader {
                     break;
                 }
             }
-            builder.append("\n     @Attribute\n");
+            builder.append("\n    @Attribute\n");
             if (isIndex) {
-                builder.append("     @Index\n");
+                builder.append("    @Index\n");
             }
+
             if ((systemEntity.getPartition() != null) && systemEntity.getPartition().getName().equals(attribute.getName())) {
-                builder.append("     @Partition\n");
+                builder.append("    @Partition\n");
             }
-            builder.append("     public ");
-            builder.append(attribute.getDataType());
-            builder.append(" ").append(attribute.getName()).append(";");
+            builder.append("    ")
+                   .append(attribute.getDataType())
+                   .append(" ").append(attribute.getName()).append("\n");
         }
 
         builder.append("\n\n");
@@ -339,36 +194,61 @@ public class EntityClassLoader {
                 type = relationship.getInverseClass();
             }
 
-
-            builder.append("@Relationship(type = ");
-            builder.append(RelationshipType.values()[relationship.getRelationshipType()].getDeclaringClass().getName()).append(".").append(RelationshipType.values()[relationship.getRelationshipType()].name());
-            builder.append(", inverseClass = ");
-            builder.append(relationship.getInverseClass());
-            builder.append(".class, inverse = \"");
-            builder.append(relationship.getInverse());
-            builder.append("\", fetchPolicy = ");
-            builder.append(FetchPolicy.values()[relationship.getFetchPolicy()].getDeclaringClass().getName()).append(".").append(FetchPolicy.values()[relationship.getFetchPolicy()].name());
-            builder.append(", cascadePolicy = ");
-            builder.append(CascadePolicy.values()[relationship.getCascadePolicy()].getDeclaringClass().getName()).append(".").append(CascadePolicy.values()[relationship.getCascadePolicy()].name());
-            builder.append(", loadFactor = ");
-            builder.append(String.valueOf(relationship.getLoadFactor()));
-            builder.append(")\n" +
-                    "            public ");
-            builder.append(type).append(" ").append(relationship.getName()).append(";");
+            builder.append("    @Relationship(type = ")
+                   .append(RelationshipType.values()[relationship.getRelationshipType()].name())
+                   .append(", inverseClass = ")
+                   .append(relationship.getInverseClass())
+                   .append(", inverse = \"")
+                   .append(relationship.getInverse())
+                   .append("\", fetchPolicy = ")
+                   .append(FetchPolicy.values()[relationship.getFetchPolicy()].name())
+                   .append(", cascadePolicy = ")
+                   .append(CascadePolicy.values()[relationship.getCascadePolicy()].name())
+                   .append(", loadFactor = ")
+                   .append(String.valueOf(relationship.getLoadFactor()))
+                   .append(")\n    ")
+                   .append(type)
+                   .append(" ")
+                   .append(relationship.getName())
+                   .append("\n");
 
             // Get the base Descriptor so that we ensure they get generated also
             try {
-                context.getBaseDescriptorForEntity(Class.forName(relationship.getInverseClass()));
+                schemaContext.getBaseDescriptorForEntity(Class.forName(relationship.getInverseClass()));
             } catch (EntityException | ClassNotFoundException ignore) {
             }
-
-
         }
 
         builder.append("\n}\n");
 
-        writeClassContents(outputDirectory, systemEntity.getName(), builder.toString());
+        writeClassContents(outputDirectory, systemEntity.getName(), builder.toString(), ".xtend");
+    }
 
+    /**
+     * Generate Write a class to disk.  This is used for remote purposes.  Since we do not have a handle on the entity descriptors, we use the system entity to load
+     *
+     * @param systemEntity     System entity
+     * @param databaseLocation Database location
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public synchronized static void writeClass(final SystemEntity systemEntity, final String databaseLocation, SchemaContext context) {
+        final String outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY;
+        new File(outputDirectory).mkdirs();
+
+        AtomicReference<String> idType = new AtomicReference<>();
+        AtomicReference<String> idName = new AtomicReference<>();
+
+        WRITTEN_CLASSES.add(systemEntity.getName());
+
+        for (SystemAttribute attribute : systemEntity.getAttributes()) {
+            if (attribute.getName().equals(systemEntity.getIdentifier().getName())) {
+                idType.set(attribute.getDataType());
+                idName.set(attribute.getName());
+                break;
+            }
+        }
+
+        writeXtendClass(systemEntity, databaseLocation, context, idType.get(), idName.get());
     }
 
     @SuppressWarnings({"WeakerAccess", "unused"})
