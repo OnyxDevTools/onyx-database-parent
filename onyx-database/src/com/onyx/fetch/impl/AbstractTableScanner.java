@@ -69,7 +69,7 @@ abstract class AbstractTableScanner extends PartitionContext
         if(!criteria.getAttribute().contains("."))
         {
             // Get the reflection field to grab the key to compare
-            fieldToGrab = this.descriptor.getAttributes().get(criteria.getAttribute()).getField();
+            fieldToGrab = criteria.getAttributeDescriptor().getField();
         }
 
         this.persistenceManager = persistenceManager;
