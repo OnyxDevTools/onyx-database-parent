@@ -535,6 +535,8 @@ public class CompareUtil
             else
             {
                 // Compare operator for attribute object
+                if(criteria1.getAttributeDescriptor() == null)
+                    criteria1.setAttributeDescriptor(descriptor.getAttributes().get(criteria1.getAttribute()));
                 final OffsetField offsetField = criteria1.getAttributeDescriptor().getField();
                 subCreriaMet = CompareUtil.compare(criteria1.getValue(), ReflectionUtil.getAny(entity, offsetField), criteria1.getOperator());
             }

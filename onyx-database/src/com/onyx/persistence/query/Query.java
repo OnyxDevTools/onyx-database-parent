@@ -837,11 +837,5 @@ public class Query implements ObjectSerializable, Serializable
                     return 0;
             });
         }
-
-        // Set Attribute Descriptor for faster criteria matching
-        for(QueryCriteria criteria : getAllCriteria()) {
-            criteria.setAttributeDescriptor(descriptor.getAttributes().get(criteria.getAttribute()));
-        }
-
     }
 }

@@ -1,6 +1,7 @@
 package com.onyx.diskmap.base.skiplist;
 
 import com.onyx.diskmap.base.AbstractDiskMap;
+import com.onyx.diskmap.base.concurrent.EmptyMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
@@ -554,7 +555,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      *
      * @since 1.2.0
      */
-    private void updateNodeNext(SkipListHeadNode node, long position) {
+    protected void updateNodeNext(SkipListHeadNode node, long position) {
         final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(Long.BYTES), fileStore.getSerializers());
         try {
 

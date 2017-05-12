@@ -79,7 +79,7 @@ public class ScannerFactory
         {
             descriptor = context.getDescriptorForEntity(classToScan, query.getPartition());
         }
-        final AttributeDescriptor attributeDescriptor = criteria.getAttributeDescriptor();
+        final AttributeDescriptor attributeDescriptor = descriptor.getAttributes().get(criteria.getAttribute());
         if (attributeDescriptor != null)
         {
             if (PartitionHelper.hasPartitionField(query.getEntityType(), context))

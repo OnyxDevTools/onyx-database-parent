@@ -152,6 +152,20 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
     }
 
     /**
+     * Remove the node from the cache before updating.  Apparantly the reference of the node is not sufficient and
+     * it needs to be removed so that it can be refreshed from disk.
+     *
+     * @param node Node to update
+     * @param position position to set the node.down to
+     *
+     */
+    @Override
+    protected void updateNodeNext(SkipListHeadNode node, long position) {
+        nodeCache.remove(node.position);
+        super.updateNodeNext(node, position);
+    }
+
+    /**
      * Update the Node value.  This is only done upon update to the map.
      * This is intended to do a cleanup of the cache
      *
