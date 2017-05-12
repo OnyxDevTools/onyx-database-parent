@@ -5,6 +5,9 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 import com.onyx.util.OffsetField;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by timothy.osborn on 3/2/15.
  *
@@ -20,7 +23,8 @@ public class SystemAttribute extends ManagedEntity
 
     SystemAttribute(AttributeDescriptor descriptor, SystemEntity entity)
     {
-        this.entity = entity;
+        this.entities = new ArrayList<>();
+        this.entities.add(entity);
         this.name = descriptor.getName();
         this.id = entity.getName() + descriptor.getName();
         this.size = descriptor.getSize();
@@ -28,6 +32,8 @@ public class SystemAttribute extends ManagedEntity
         this.primaryKey = dataType + id;
         this.nullable = descriptor.isNullable();
         this.key = descriptor.getName().equals(entity.getIdentifier().getName());
+        this.isEnum = descriptor.isEnum();
+        this.enumValues = descriptor.getEnumValues();
     }
 
     @SuppressWarnings("unused")
@@ -58,9 +64,15 @@ public class SystemAttribute extends ManagedEntity
     @Attribute
     protected boolean key;
 
+    @Attribute
+    private boolean isEnum;
+
+    @Attribute
+    private String enumValues;
+
     @SuppressWarnings("WeakerAccess")
-    @Relationship(type = RelationshipType.MANY_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 3)
-    protected SystemEntity entity;
+    @Relationship(type = RelationshipType.MANY_TO_MANY, fetchPolicy = FetchPolicy.NONE, cascadePolicy = CascadePolicy.SAVE, inverse = "attributes", inverseClass = SystemEntity.class, loadFactor = 3)
+    protected List<SystemEntity> entities;
 
     public transient OffsetField field;
 
@@ -88,15 +100,15 @@ public class SystemAttribute extends ManagedEntity
     }
 
     @SuppressWarnings("unused")
-    public SystemEntity getEntity()
+    public List<SystemEntity> getEntities()
     {
-        return entity;
+        return entities;
     }
 
     @SuppressWarnings("unused")
-    public void setEntity(SystemEntity entity)
+    public void setEntities(List<SystemEntity> entities)
     {
-        this.entity = entity;
+        this.entities = entities;
     }
 
     public String getDataType()
@@ -152,5 +164,23 @@ public class SystemAttribute extends ManagedEntity
     @SuppressWarnings("unused")
     public void setPrimaryKey(String primaryKey) {
         this.primaryKey = primaryKey;
+    }
+
+    public boolean isEnum() {
+        return isEnum;
+    }
+
+    @SuppressWarnings("unused")
+    public void setEnum(boolean anEnum) {
+        isEnum = anEnum;
+    }
+
+    public String getEnumValues() {
+        return enumValues;
+    }
+
+    @SuppressWarnings("unused")
+    public void setEnumValues(String enumValues) {
+        this.enumValues = enumValues;
     }
 }

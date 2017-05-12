@@ -554,7 +554,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      *
      * @since 1.2.0
      */
-    private void updateNodeNext(SkipListHeadNode node, long position) {
+    @SuppressWarnings("WeakerAccess")
+    protected void updateNodeNext(SkipListHeadNode node, long position) {
         final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(Long.BYTES), fileStore.getSerializers());
         try {
 

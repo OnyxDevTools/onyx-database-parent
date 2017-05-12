@@ -82,7 +82,7 @@ public class SystemEntity extends ManagedEntity
     protected SystemPartition partition;
 
     @SuppressWarnings("WeakerAccess")
-    @Relationship(type = RelationshipType.ONE_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemAttribute.class, inverse = "entity", loadFactor = 3)
+    @Relationship(type = RelationshipType.MANY_TO_MANY, fetchPolicy = FetchPolicy.EAGER, cascadePolicy = CascadePolicy.SAVE, inverseClass = SystemAttribute.class, inverse = "entity", loadFactor = 3)
     protected List<SystemAttribute> attributes;
 
     @SuppressWarnings("WeakerAccess")

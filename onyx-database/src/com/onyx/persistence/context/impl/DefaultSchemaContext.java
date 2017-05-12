@@ -742,7 +742,7 @@ public class DefaultSchemaContext implements SchemaContext {
 
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
-            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
+            EntityClassLoader.writeClass(systemEntity, context.getLocation(), context);
 
             return descriptor;
         } finally {
@@ -947,7 +947,7 @@ public class DefaultSchemaContext implements SchemaContext {
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
 
-            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
+            EntityClassLoader.writeClass(systemEntity, context.getLocation(), context);
 
             return descriptor;
         } finally {
@@ -1020,7 +1020,7 @@ public class DefaultSchemaContext implements SchemaContext {
             checkForValidDescriptorPartition(descriptor, systemEntity);
             checkForEntityChanges(descriptor, systemEntity);
 
-            EntityClassLoader.writeClass(descriptor, context.getLocation(), context);
+            EntityClassLoader.writeClass(systemEntity, context.getLocation(), context);
 
             return descriptor;
         } finally {

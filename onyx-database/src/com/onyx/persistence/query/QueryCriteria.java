@@ -1,5 +1,6 @@
 package com.onyx.persistence.query;
 
+import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.persistence.ManagedEntity;
@@ -1351,4 +1352,14 @@ public class QueryCriteria implements ObjectSerializable, Serializable
     }
 
     public boolean meetsCritieria = false;
+
+    private transient AttributeDescriptor attributeDescriptor;
+
+    public AttributeDescriptor getAttributeDescriptor() {
+        return attributeDescriptor;
+    }
+
+    public void setAttributeDescriptor(AttributeDescriptor attributeDescriptor) {
+        this.attributeDescriptor = attributeDescriptor;
+    }
 }

@@ -78,5 +78,4 @@ public class Person extends ManagedEntity
     {
         this.lastName = lastName;
     }
-
 }

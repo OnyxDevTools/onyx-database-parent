@@ -32,6 +32,7 @@ public class SampleDatabaseServer extends WebDatabaseServer
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setName("Test Name");
         simpleEntity.setSimpleId("ASDF");
+        server1.getPersistenceManager().saveEntity(simpleEntity);
 
         server1.join();
         System.out.println("Started");

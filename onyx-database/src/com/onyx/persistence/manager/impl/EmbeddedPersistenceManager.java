@@ -369,6 +369,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                     // Cache the query results
                     cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
                 else
+                    //noinspection SynchronizationOnLocalVariableOrMethodParameter
                     synchronized (cachedResults) {
                         cachedResults.setReferences(results);
                     }
@@ -431,6 +432,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
                 // Cache the query results
                 cachedResults = context.getQueryCacheController().setCachedQueryResults(query, results);
             else
+                //noinspection SynchronizationOnLocalVariableOrMethodParameter
                 synchronized (cachedResults) {
                     cachedResults.setReferences(results);
                 }

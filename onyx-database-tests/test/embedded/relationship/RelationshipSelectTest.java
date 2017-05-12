@@ -67,7 +67,7 @@ public class RelationshipSelectTest extends BaseTest {
         query.setDistinct(true);
         query.setSelections(Arrays.asList("firstName"));
         List<Map> addresses = manager.executeQuery(query);
-        assert addresses.size() == 1;
+        assert addresses.size() == 2;
     }
 
     @Test
