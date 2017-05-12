@@ -1,13 +1,11 @@
 package com.onyxdevtools.quickstart;
 
 import com.onyx.exception.EntityException;
-import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
+import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyxdevtools.quickstart.entities.MyEnum;
-import com.onyxdevtools.quickstart.entities.Other;
 import com.onyxdevtools.quickstart.entities.Person;
 
 import java.util.List;
@@ -23,13 +21,9 @@ public class Main
         person1.setId("1");
         person1.setFirstName("Michael");
         person1.setLastName("Jordan");
-        person1.setMyEnum(MyEnum.SECOND);
-        person1.setOther(new Other());
-        person1.getOther().setHiya("HIYA");
 
         //Initialize the database and get a handle on the PersistenceManager
-        EmbeddedPersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-        factory.setDatabaseLocation("/Users/tosborn1/Desktop/my.oxd");
+        CacheManagerFactory factory = new CacheManagerFactory();
         factory.initialize();
         PersistenceManager manager = factory.getPersistenceManager();
 
