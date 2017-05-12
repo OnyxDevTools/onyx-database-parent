@@ -21,17 +21,17 @@ public class SystemAttribute extends ManagedEntity
     {
     }
 
-    SystemAttribute(AttributeDescriptor descriptor, SystemEntity entities)
+    SystemAttribute(AttributeDescriptor descriptor, SystemEntity entity)
     {
         this.entities = new ArrayList<>();
-        this.entities.add(entities);
+        this.entities.add(entity);
         this.name = descriptor.getName();
-        this.id = entities.getName() + descriptor.getName();
+        this.id = entity.getName() + descriptor.getName();
         this.size = descriptor.getSize();
         this.dataType = descriptor.getType().getName();
         this.primaryKey = dataType + id;
         this.nullable = descriptor.isNullable();
-        this.key = descriptor.getName().equals(entities.getIdentifier().getName());
+        this.key = descriptor.getName().equals(entity.getIdentifier().getName());
         this.isEnum = descriptor.isEnum();
         this.enumValues = descriptor.getEnumValues();
     }
@@ -170,6 +170,7 @@ public class SystemAttribute extends ManagedEntity
         return isEnum;
     }
 
+    @SuppressWarnings("unused")
     public void setEnum(boolean anEnum) {
         isEnum = anEnum;
     }
