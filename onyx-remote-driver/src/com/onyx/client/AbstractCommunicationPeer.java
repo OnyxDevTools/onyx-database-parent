@@ -178,9 +178,9 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
 
                 } catch (IOException exception) {
                     exception.printStackTrace();
-                    // Write the exception back to the client
-                    final ServerReadException readException = new ServerReadException(exception);
-                    write(socketChannel, connectionProperties, new RequestToken(Short.MAX_VALUE, readException));  // Create a new token and use Short.MAX_VALUE as a placeholder
+                    try {
+                        closeConnection(socketChannel, connectionProperties);
+                    } catch (IOException ignore) {}
                 }
             }
         } finally {
