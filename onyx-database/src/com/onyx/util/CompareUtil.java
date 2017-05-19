@@ -61,6 +61,26 @@ public class CompareUtil
 
         Method method = null;
 
+        if(object == null)
+        {
+            if(clazz == int.class)
+                return 0;
+            else if(clazz == long.class)
+                return 0L;
+            else if(clazz == double.class)
+                return 0.0d;
+            else if(clazz == float.class)
+                return 0.0f;
+            else if(clazz == boolean.class)
+                return false;
+            else if(clazz == char.class)
+                return (char)0;
+            else if(clazz == byte.class)
+                return (byte)0;
+            else if(clazz == short.class)
+                return (short)0;
+        }
+
         Class objectClass = object.getClass();
         if(clazz == int.class && objectClass == Integer.class)
             return object;
@@ -85,21 +105,25 @@ public class CompareUtil
 
         try {
             if (clazz == Integer.class ||  clazz == int.class)
-                method = objectClass.getMethod("intValue");
+                return Integer.valueOf(""+object);
             else if (clazz == Long.class ||  clazz == long.class)
-                method = objectClass.getMethod("longValue");
+                return Long.valueOf(""+object);
             else if (clazz == Short.class ||  clazz == short.class)
-                method = objectClass.getMethod("shortValue");
+                return Short.valueOf(""+object);
             else if (clazz == Byte.class ||  clazz == byte.class)
-                method = objectClass.getMethod("byteValue");
+                return Byte.valueOf(""+object);
             else if (clazz == Boolean.class || clazz == boolean.class)
-                method = objectClass.getMethod("booleanValue");
+                return Boolean.valueOf(""+object);
             else if (clazz == Float.class  || clazz == int.class)
-                method = objectClass.getMethod("floatValue");
+                return Float.valueOf(""+object);
             else if (clazz == Double.class || clazz == double.class)
-                method = objectClass.getMethod("doubleValue");
-            else if (clazz == Character.class || clazz == char.class)
-                method = objectClass.getMethod("toChar");
+                return Double.valueOf(""+object);
+            else if (clazz == Character.class || clazz == char.class) {
+                String stringVal = ""+object;
+                if(stringVal.length() > 0)
+                    return stringVal.charAt(0);
+                return (char)0;
+            }
             else if (clazz == String.class)
                 method = objectClass.getMethod("toString");
 
@@ -109,6 +133,9 @@ public class CompareUtil
             return method.invoke(object);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e)
         {
+            if (clazz == String.class)
+                return "" + object;
+
             return object;
         }
     }
