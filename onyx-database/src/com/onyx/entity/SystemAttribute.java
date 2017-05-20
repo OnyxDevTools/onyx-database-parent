@@ -28,7 +28,7 @@ public class SystemAttribute extends ManagedEntity
         this.name = descriptor.getName();
         this.id = entity.getName() + descriptor.getName();
         this.size = descriptor.getSize();
-        this.dataType = descriptor.getType().getName();
+        this.dataType = descriptor.getType().getCanonicalName();
         this.primaryKey = dataType + id;
         this.nullable = descriptor.isNullable();
         this.key = descriptor.getName().equals(entity.getIdentifier().getName());

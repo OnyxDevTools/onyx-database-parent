@@ -23,7 +23,7 @@ public class SystemIndex extends ManagedEntity
         this.entity = entity;
         this.name = descriptor.getName();
         id = entity.getName() + descriptor.getName();
-        type = descriptor.getType().getName();
+        type = descriptor.getType().getCanonicalName();
         this.loadFactor = descriptor.getLoadFactor();
         this.primaryKey = this.type + this.id;
     }
