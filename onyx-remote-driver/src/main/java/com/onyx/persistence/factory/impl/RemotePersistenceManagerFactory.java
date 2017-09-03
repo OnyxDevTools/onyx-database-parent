@@ -16,6 +16,8 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Persistence manager factory for an remote Onyx Database
@@ -83,6 +85,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * @since 1.0.0
      * @return Instantiated Persistence Manager
      */
+    @NotNull
     public PersistenceManager getPersistenceManager() {
 
         if (persistenceManager == null)
@@ -239,6 +242,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * a file of the trusted sites that can access your secure endpoint
      * @param sslTrustStoreFilePath File path for JKS trust store
      */
+    @SuppressWarnings("unused")
     public void setSslTrustStoreFilePath(String sslTrustStoreFilePath) {
         this.sslTrustStoreFilePath = sslTrustStoreFilePath;
     }
@@ -247,6 +251,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * Trust store password
      * @param sslTrustStorePassword Password used to access your JKS Trust store
      */
+    @SuppressWarnings("unused")
     public void setSslTrustStorePassword(String sslTrustStorePassword) {
         this.sslTrustStorePassword = sslTrustStorePassword;
     }
@@ -269,6 +274,35 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     @SuppressWarnings("unused")
     public void setProtocol(String protocol) {
         this.protocol = protocol;
+    }
+    @Nullable
+    @Override
+    public String getSslStorePassword() {
+        return sslStorePassword;
+    }
+
+    @Nullable
+    @Override
+    public String getSslKeystoreFilePath() {
+        return sslKeystoreFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getSslKeystorePassword() {
+        return sslKeystorePassword;
+    }
+
+    @NotNull
+    @Override
+    public String getSslTrustStoreFilePath() {
+        return sslTrustStoreFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getSslTrustStorePassword() {
+        return sslTrustStorePassword;
     }
 
 }

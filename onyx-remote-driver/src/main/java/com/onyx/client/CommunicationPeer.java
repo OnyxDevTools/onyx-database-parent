@@ -15,6 +15,8 @@ import com.onyx.client.push.PushRegistrar;
 import com.onyx.exception.InitializationException;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.SynchronizedMap;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -461,6 +463,36 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         finally {
             e.printStackTrace();
         }
+    }
+
+    @Nullable
+    @Override
+    public String getSslStorePassword() {
+        return sslStorePassword;
+    }
+
+    @Nullable
+    @Override
+    public String getSslKeystoreFilePath() {
+        return sslKeystoreFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getSslKeystorePassword() {
+        return sslKeystorePassword;
+    }
+
+    @NotNull
+    @Override
+    public String getSslTrustStoreFilePath() {
+        return sslTrustStoreFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getSslTrustStorePassword() {
+        return sslTrustStorePassword;
     }
 
     private class RetryHeartbeatTask implements Runnable

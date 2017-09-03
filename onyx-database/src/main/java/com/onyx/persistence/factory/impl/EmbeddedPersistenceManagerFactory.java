@@ -7,6 +7,7 @@ import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.util.EncryptionUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.*;
 import java.nio.channels.FileChannel;
@@ -379,6 +380,7 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @since 1.0.0
      * @return Instantiated Persistence Manager
      */
+    @NotNull
     @Override
     public PersistenceManager getPersistenceManager()
     {

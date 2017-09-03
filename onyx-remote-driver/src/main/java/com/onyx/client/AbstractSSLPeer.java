@@ -1,5 +1,8 @@
 package com.onyx.client;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
@@ -74,6 +77,36 @@ public abstract class AbstractSSLPeer implements SSLPeer {
      */
     public void setSslTrustStorePassword(String sslTrustStorePassword) {
         this.sslTrustStorePassword = sslTrustStorePassword;
+    }
+
+    @Nullable
+    @Override
+    public String getSslStorePassword() {
+        return sslStorePassword;
+    }
+
+    @Nullable
+    @Override
+    public String getSslKeystoreFilePath() {
+        return sslKeystoreFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getSslKeystorePassword() {
+        return sslKeystorePassword;
+    }
+
+    @NotNull
+    @Override
+    public String getSslTrustStoreFilePath() {
+        return sslTrustStoreFilePath;
+    }
+
+    @NotNull
+    @Override
+    public String getSslTrustStorePassword() {
+        return sslTrustStorePassword;
     }
 
     /**
