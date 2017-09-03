@@ -22,11 +22,10 @@ import java.nio.charset.StandardCharsets
  * @since 1.0.0
  *
  * <pre>
+ * <code>
  *
- *
- * PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
+ * PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory("/MyDatabaseLocation");
  * factory.setCredentials("username", "password");
- * factory.setLocation("/MyDatabaseLocation")
  * factory.initialize();
  *
  * PersistenceManager manager = factory.getPersistenceManager();
@@ -43,12 +42,22 @@ import java.nio.charset.StandardCharsets
  *
  * factory.close(); //Close the in memory database
  *
+ * or... Kotlin
  *
+ * val factory = EmbeddedPersistenceManagerFactory("/MyDatabaseLocation")
+ * factory.setCredentials("username", "password")
+ * factory.initialize()
+ *
+ * val manager = factory.persistenceManager
+ *
+ * factory.close()
+ *
+ * </code>
  * </pre>
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = DEFAULT_INSTANCE) : PersistenceManagerFactory {
+open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation) : PersistenceManagerFactory {
 
     /**
      * Constructor that ensures safe shutdown
