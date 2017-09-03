@@ -24,20 +24,17 @@ public class Main extends AbstractDemo {
     public static void main(String[] args) throws EntityException
     {
 
-        //Initialize the database and get a handle on the PersistenceManager
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"partitioned-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
 
+        //Initialize the database and get a handle on the PersistenceManager
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+        factory.setCredentials("onyx-user", "SavingDataisFun!");
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();

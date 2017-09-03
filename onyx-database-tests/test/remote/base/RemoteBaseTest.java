@@ -37,9 +37,7 @@ public class RemoteBaseTest {
      */
     protected void initialize() throws InitializationException {
         if (context == null) {
-            factory = new RemotePersistenceManagerFactory();
-
-            factory.setDatabaseLocation(DATABASE_LOCATION);
+            factory = new RemotePersistenceManagerFactory(DATABASE_LOCATION);
             factory.setCredentials("admin", "admin");
             factory.initialize();
 

@@ -43,8 +43,7 @@ public class TestDatabaseInitialization extends BaseTest
     @Test
     public void testInitializeDatabase() throws Exception
     {
-        PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory();
-        fac.setDatabaseLocation(TMP_DATABASE_LOCATION);
+        PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION);
         fac.setCredentials("tim", "osborn");
         fac.initialize();
 
@@ -52,8 +51,7 @@ public class TestDatabaseInitialization extends BaseTest
         manager.setContext(fac.getSchemaContext());
         fac.close();
 
-        fac = new EmbeddedPersistenceManagerFactory();
-        fac.setDatabaseLocation(TMP_DATABASE_LOCATION);
+        fac = new EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION);
         fac.setCredentials("tim", "osborn");
         fac.initialize();
 
@@ -72,8 +70,7 @@ public class TestDatabaseInitialization extends BaseTest
     @Test(expected=InitializationException.class)
     public void testDataFileIsNotAccessible() throws Exception
     {
-        PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory();
-        fac.setDatabaseLocation(INVALID_DATABASE_LOCATION);
+        PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory(INVALID_DATABASE_LOCATION);
         fac.initialize();
 
         manager = new EmbeddedPersistenceManager();
@@ -88,8 +85,7 @@ public class TestDatabaseInitialization extends BaseTest
     @Test(expected=InitializationException.class)
     public void testInvalidCredentials() throws Exception
     {
-        PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory();
-        fac.setDatabaseLocation(TMP_DATABASE_LOCATION);
+        PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION);
         fac.setCredentials("bill", "tom");
         fac.initialize();
 

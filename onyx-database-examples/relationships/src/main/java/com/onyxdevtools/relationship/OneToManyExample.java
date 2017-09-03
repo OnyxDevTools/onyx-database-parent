@@ -19,13 +19,12 @@ class OneToManyExample extends AbstractDemo
 
     static void demo() throws EntityException
     {
-        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
+        final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox" +
+                File.separatorChar + "relationship-cascade-save-db.oxd";
+
+        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
 
         factory.setCredentials("onyx-user", "SavingDataisFun!");
-
-        final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox" +
-            File.separatorChar + "relationship-cascade-save-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);

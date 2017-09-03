@@ -21,16 +21,13 @@ public class BatchDeletingDataExample
     @SuppressWarnings("unchecked")
      public static void main(String[] args) throws EntityException
     {
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("username", "password");
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar + "persisting-data.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
 
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+        factory.setCredentials("username", "password");
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();

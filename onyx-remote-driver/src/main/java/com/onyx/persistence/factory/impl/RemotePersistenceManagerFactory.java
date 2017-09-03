@@ -49,16 +49,18 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     private static final String PERSISTENCE_MANAGER_SERVICE = "1";
     private static final String AUTHENTICATION_MANAGER_SERVICE = "2";
 
-    private OnyxRMIClient onyxRMIClient = null;
+    private OnyxRMIClient onyxRMIClient = new OnyxRMIClient();
 
     /**
      * Default Constructor
+     *
+     * @param databaseLocation Remote URI for database starting with onx://
      * @since 1.0.0
      */
-    public RemotePersistenceManagerFactory()
+    @SuppressWarnings("unused")
+    public RemotePersistenceManagerFactory(String databaseLocation)
     {
-        super();
-        onyxRMIClient = new OnyxRMIClient();
+        this(databaseLocation, databaseLocation);
     }
 
     /**
@@ -68,10 +70,9 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public RemotePersistenceManagerFactory(String instance)
+    public RemotePersistenceManagerFactory(String databaseLocation, String instance)
     {
-        super(instance);
-        this.instance = instance;
+        super(databaseLocation, instance);
     }
 
 
@@ -186,18 +187,6 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         }
         persistenceManager = null;
         context = null;
-    }
-
-    /**
-     * Set Database Remote location.  This must be formatted with onx://host:port
-     *
-     * @since 1.0.0
-     * @param location Database Remote Endpoint
-     */
-    @Override
-    public void setDatabaseLocation(String location)
-    {
-        this.location = location;
     }
 
     // SSL Protocol

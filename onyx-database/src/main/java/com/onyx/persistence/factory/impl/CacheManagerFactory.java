@@ -44,20 +44,22 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
      * Default Constructor with instance name
      */
     @SuppressWarnings("WeakerAccess")
-    public CacheManagerFactory(@SuppressWarnings("SameParameterValue") String instance)
+    public CacheManagerFactory(String instance)
     {
+        super(tempDatabaseLocation(), instance);
         this.instance = instance;
         this.setSchemaContext(new CacheSchemaContext(instance));
+    }
 
+    static String tempDatabaseLocation() {
         File tempDirectory = null;
         try {
             tempDirectory = File.createTempFile("temp", Long.toString(System.nanoTime()));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        this.setDatabaseLocation(tempDirectory.getPath());
+        return tempDirectory.getPath();
     }
-
     /**
      * Initialize the in memory database
      *

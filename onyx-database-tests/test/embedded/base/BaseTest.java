@@ -34,8 +34,7 @@ public class BaseTest {
      */
     protected void initialize() throws InitializationException {
         if (context == null) {
-            factory = new EmbeddedPersistenceManagerFactory();
-            factory.setDatabaseLocation(DATABASE_LOCATION);
+            factory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION);
             factory.initialize();
 
             context = factory.getSchemaContext();

@@ -21,10 +21,10 @@ public class Main extends AbstractDemo
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
 
-        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
+        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
         factory.setCredentials("onyx-user", "SavingDataIsFun!");
-        factory.setDatabaseLocation(pathToOnyxDB);
         factory.initialize();
+
         final PersistenceManager manager = factory.getPersistenceManager();
 
         seedData(manager);

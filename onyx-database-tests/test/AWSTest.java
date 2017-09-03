@@ -18,8 +18,7 @@ public class AWSTest {
     @Test
     public void testAWS() throws EntityException
     {
-        PersistenceManagerFactory factory = new RemotePersistenceManagerFactory();
-        factory.setDatabaseLocation("onx://localhost:8080");
+        PersistenceManagerFactory factory = new RemotePersistenceManagerFactory("onx://localhost:8080");
         factory.initialize();
         PersistenceManager manager = factory.getPersistenceManager();
         for(int i = 0; i < 10000000; i++)

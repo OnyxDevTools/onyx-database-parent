@@ -65,7 +65,6 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
      *              the differences in query caching
      */
     public DatabaseServer() {
-        this.persistenceManagerFactory = new ServerPersistenceManagerFactory();
     }
 
     @SuppressWarnings("unused")
@@ -103,8 +102,8 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
     public void start() {
         if (state != ServerState.RUNNING) {
             try {
+                this.persistenceManagerFactory = new ServerPersistenceManagerFactory(this.location);
                 this.persistenceManagerFactory.setCredentials(this.user, this.password);
-                this.persistenceManagerFactory.setDatabaseLocation(this.location);
                 this.persistenceManagerFactory.initialize();
 
                 // Create a default user

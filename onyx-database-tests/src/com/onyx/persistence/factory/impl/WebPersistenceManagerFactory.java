@@ -67,11 +67,16 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
     // Object Mapper for JSON Serialization
     protected ObjectMapper objectMapper = new ObjectMapper();
 
+    @SuppressWarnings("unused")
+    public WebPersistenceManagerFactory(String location) {
+        this(location, location);
+    }
+
     /**
      * Default Constructor
      */
-    public WebPersistenceManagerFactory() {
-        super();
+    public WebPersistenceManagerFactory(String location, String instance) {
+        super(location, instance);
         this.context = new WebSchemaContext(DEFAULT_INSTANCE);
         // Initialize Rest Template
         this.restTemplate = new RestTemplate();
@@ -163,11 +168,11 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
 
     public interface BidirectionalDefinition {
 
-        @JsonIdentityInfo(generator=ObjectIdGenerators.PropertyGenerator.class, property="id", scope=SystemEntity.class)
-        public interface ParentDef{};
+        @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id", scope = SystemEntity.class)
+        public interface ParentDef {};
 
-        @JsonIdentityInfo(generator=ObjectIdGenerators.PropertyGenerator.class, property="id", scope=SystemIdentifier.class)
-        public interface ChildDef{};
+        @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id", scope = SystemIdentifier.class)
+        public interface ChildDef {};
 
     }
 }

@@ -36,8 +36,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.start();
 
-        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
-        fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION);
         fac.setCredentials("admin", "admin");
 
         fac.initialize();
@@ -71,8 +70,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         dbServer.setPort(8082);
         dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
 
-        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
-        fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION);
         fac.setCredentials("admin", "admin");
 
         try {
@@ -113,8 +111,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
             dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
             dbServer.start();
 
-            fac = new RemotePersistenceManagerFactory();
-            fac.setDatabaseLocation(PERSIST_CONN_DATABASE_LOCATION);
+            fac = new RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION);
             fac.setCredentials("admin", "admin");
 
             long time = System.currentTimeMillis();
@@ -148,8 +145,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     @Test
     public void testInitializeDatabase() throws Exception
     {
-        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
-        fac.setDatabaseLocation(DATABASE_LOCATION);
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory(DATABASE_LOCATION);
         fac.setCredentials("admin", "admin");
 
         long time = System.currentTimeMillis();
@@ -170,8 +166,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     @Test(expected=InitializationException.class)
     public void testDataFileIsNotAccessible() throws Exception
     {
-        PersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
-        fac.setDatabaseLocation(INVALID_DATABASE_LOCATION);
+        PersistenceManagerFactory fac = new RemotePersistenceManagerFactory(INVALID_DATABASE_LOCATION);
         fac.initialize();
 
         EmbeddedPersistenceManager mgr  = new EmbeddedPersistenceManager();
@@ -186,8 +181,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     @Test(expected=InitializationException.class)
     public void testInvalidCredentials() throws Exception
     {
-        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory();
-        fac.setDatabaseLocation(DATABASE_LOCATION);
+        RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory(DATABASE_LOCATION);
         fac.setCredentials("bill", "tom");
         fac.initialize();
         fac.close();

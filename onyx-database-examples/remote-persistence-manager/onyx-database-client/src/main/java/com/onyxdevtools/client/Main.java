@@ -18,12 +18,9 @@ public class Main
     public static void main(String[] args) throws EntityException
     {
 
-        PersistenceManagerFactory factory = new RemotePersistenceManagerFactory(); //1
+        PersistenceManagerFactory factory = new RemotePersistenceManagerFactory("onx://localhost:8081"); //1
 
         factory.setCredentials("onyx-remote", "SavingDataIsFun!"); //2
-
-        factory.setDatabaseLocation("onx://localhost:8081"); //3
-
         factory.initialize();  //4
 
         // The Socket Persistence Manager is an alternative PM used to increase performance and reduce network latency

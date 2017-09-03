@@ -15,15 +15,13 @@ class CascadeSaveExample extends AbstractDemo
 {
     static void demo() throws EntityException
     {
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"relationship-cascade-save-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
+
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+        factory.setCredentials("onyx-user", "SavingDataisFun!");
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);

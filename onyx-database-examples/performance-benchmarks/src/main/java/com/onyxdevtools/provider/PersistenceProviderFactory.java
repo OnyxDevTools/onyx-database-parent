@@ -29,8 +29,7 @@ public class PersistenceProviderFactory
                 return new JPAPersistenceManager(emf, databaseProvider);
             // Onyx persistence manager
             case ONYX:
-                final EmbeddedPersistenceManagerFactory embeddedPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory();
-                embeddedPersistenceManagerFactory.setDatabaseLocation(DatabaseProvider.DATABASE_LOCATION + File.separator + "onyx.oxd");
+                final EmbeddedPersistenceManagerFactory embeddedPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(DatabaseProvider.DATABASE_LOCATION + File.separator + "onyx.oxd");
                 embeddedPersistenceManagerFactory.initialize();
                 return new OnyxPersistenceManager(embeddedPersistenceManagerFactory.getPersistenceManager());
         }

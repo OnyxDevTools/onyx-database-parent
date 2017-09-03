@@ -19,21 +19,17 @@ public class Main
     public static void main(String[] args) throws EntityException
     {
 
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(); //1
-        
+        String pathToOnyxDB = System.getProperty("user.home")
+                + File.separatorChar + ".onyxdb"
+                + File.separatorChar + "sandbox"
+                + File.separatorChar +"embedded-db.oxd";
+
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
         factory.setCredentials("onyx-remote", "SavingDataisFun!"); //2
-        
-        String pathToOnyxDB = System.getProperty("user.home") 
-                            + File.separatorChar + ".onyxdb" 
-                            + File.separatorChar + "sandbox" 
-                            + File.separatorChar +"embedded-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB); //3
-        
         factory.initialize();  //4
 
         PersistenceManager manager = factory.getPersistenceManager();  //5
-        
-        
+
         //Create an instance of an entity
         final Person person1 = new Person();
         person1.setId("1");

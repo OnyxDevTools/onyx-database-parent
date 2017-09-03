@@ -46,6 +46,15 @@ import com.onyx.persistence.context.impl.ServerSchemaContext;
  */
 public class ServerPersistenceManagerFactory extends EmbeddedPersistenceManagerFactory {
 
+    public ServerPersistenceManagerFactory(String location, String instance) {
+        super(location, instance);
+    }
+
+    @SuppressWarnings("unused")
+    public ServerPersistenceManagerFactory(String location) {
+        this(location, location);
+    }
+
     /**
      * Initialize the database connection and storage mechanisms
      *

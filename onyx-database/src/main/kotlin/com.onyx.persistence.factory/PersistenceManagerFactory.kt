@@ -41,7 +41,7 @@ interface PersistenceManagerFactory {
      *
      * @since 1.0.0
      */
-    var databaseLocation: String
+    val databaseLocation: String
 
     /**
      * Schema context determines how the data is structured and what mechanism for data storage is used

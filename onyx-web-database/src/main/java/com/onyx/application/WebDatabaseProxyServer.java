@@ -68,9 +68,8 @@ public class WebDatabaseProxyServer extends WebDatabaseServer
     @Override
     public void start()
     {
-        PersistenceManagerFactory remotePersistenceManagerFactory = new RemotePersistenceManagerFactory(this.instance);
+        PersistenceManagerFactory remotePersistenceManagerFactory = new RemotePersistenceManagerFactory(this.location, this.instance);
         remotePersistenceManagerFactory.setCredentials(this.user, this.password);
-        remotePersistenceManagerFactory.setDatabaseLocation(this.location);
         this.persistenceManagerFactory = remotePersistenceManagerFactory;
 
         // Session Manager

@@ -54,8 +54,7 @@ public class TestDatabaseRecovery extends BaseTest
     public void before() throws InitializationException, InterruptedException
     {
         if (context == null) {
-            factory = new EmbeddedPersistenceManagerFactory();
-            factory.setDatabaseLocation(DATABASE_LOCATION_BASE);
+            factory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_BASE);
             ((EmbeddedPersistenceManagerFactory) factory).setEnableJournaling(true);
             factory.initialize();
 
@@ -72,8 +71,7 @@ public class TestDatabaseRecovery extends BaseTest
     {
         this.populateTransactionData();
 
-        EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory();
-        newFactory.setDatabaseLocation(DATABASE_LOCATION_RECOVERED);
+        EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_RECOVERED);
         newFactory.initialize();
 
         SchemaContext newContext = newFactory.getSchemaContext();
@@ -113,8 +111,7 @@ public class TestDatabaseRecovery extends BaseTest
     public void btestDatabaseApplyTransactions() throws EntityException
     {
 
-        EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory();
-        newFactory.setDatabaseLocation(DATABASE_LOCATION_AMMENDED);
+        EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_AMMENDED);
         newFactory.initialize();
 
         SchemaContext newContext = newFactory.getSchemaContext();

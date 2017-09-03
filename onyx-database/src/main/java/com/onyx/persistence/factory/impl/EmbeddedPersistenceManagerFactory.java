@@ -78,40 +78,25 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
      * @since 1.0.0
      * @param instance Instance of context to determine how to store and structure data
      */
-    public EmbeddedPersistenceManagerFactory(String instance)
+    public EmbeddedPersistenceManagerFactory(String location, String instance)
     {
-        super();
         this.instance = instance;
+        this.location = location;
     }
 
     /**
      * Constructor that ensures safe shutdown
      * @since 1.0.0
      */
-    public EmbeddedPersistenceManagerFactory()
+    public EmbeddedPersistenceManagerFactory(String location)
     {
-        this(DEFAULT_INSTANCE);
-
+        this(location, location);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
                 close();
             }
         });
-    }
-
-    /**
-     * Set Database Location.  A directory on local file system
-     *
-     * @since 1.0.0
-     * @param location Database Local Location
-     */
-    @Override
-    public void setDatabaseLocation(String location)
-    {
-        this.location = location;
-        if(context != null)
-            context.setLocation(location);
     }
 
     /**

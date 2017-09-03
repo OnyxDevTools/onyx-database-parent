@@ -37,12 +37,6 @@ public class Main
 
     public static void main(String[] args) throws EntityException
     {
-
-        // Create a database and its connection
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(); //1
-
-        factory.setCredentials("onyx", "SavingDataisFun!"); //2
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
@@ -51,8 +45,9 @@ public class Main
         // Cleanup the database before we begin
         deleteDatabase(pathToOnyxDB);
 
-        factory.setDatabaseLocation(pathToOnyxDB); //3
-
+        // Create a database and its connection
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
+        factory.setCredentials("onyx", "SavingDataisFun!"); //2
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();  //5

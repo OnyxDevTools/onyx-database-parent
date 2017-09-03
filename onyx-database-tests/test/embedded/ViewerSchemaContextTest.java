@@ -22,7 +22,7 @@ public class ViewerSchemaContextTest
     public void testContextInit()
     {
         SchemaContext context = new ViewerSchemaContext(DATABASE_LOCATION);
-        PersistenceManagerFactory persistenceManagerFactory = new EmbeddedPersistenceManagerFactory();
+        PersistenceManagerFactory persistenceManagerFactory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION);
         persistenceManagerFactory.setSchemaContext(context);
 
         try

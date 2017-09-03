@@ -36,8 +36,7 @@ public class BaseTest {
      */
     protected void initialize() throws InitializationException {
         if (context == null) {
-            factory = new WebPersistenceManagerFactory();
-            factory.setDatabaseLocation(DATABASE_LOCATION);
+            factory = new WebPersistenceManagerFactory(DATABASE_LOCATION);
             factory.setCredentials("admin", "admin");
             factory.initialize();
 
