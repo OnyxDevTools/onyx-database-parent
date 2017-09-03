@@ -112,27 +112,6 @@ public class EmbeddedPersistenceManagerFactory implements PersistenceManagerFact
     }
 
     /**
-     * Set Schema Context.  Schema context determines how the data is structured and what mechanism for data storage is used
-     * If this is not specified, it will instantiate a DefaultSchemaContext
-     *
-     * @since 1.0.0
-     *
-     * @see com.onyx.persistence.context.impl.DefaultSchemaContext
-     *
-     * @param context Schema Context implementation
-     */
-    @Override
-    public void setSchemaContext(SchemaContext context)
-    {
-        this.context = context;
-        DefaultSchemaContext.registeredSchemaContexts.put(this.instance, context);
-        if(location != null)
-        {
-            this.context.setLocation(location);
-        }
-    }
-
-    /**
      * Get Schema Context
      *
      * @since 1.0.0

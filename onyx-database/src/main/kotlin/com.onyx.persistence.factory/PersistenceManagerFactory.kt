@@ -37,6 +37,24 @@ import com.onyx.persistence.manager.PersistenceManager
 interface PersistenceManagerFactory {
 
     /**
+     * Get Credentials formatted for HTTP Basic Authentication to be inserted into Cookie
+     * @since 1.0.0
+     *
+     * @return Formatted Credentials
+     */
+    val credentials: String
+
+    /**
+     * Persistence Manager handles the data access for Database
+     *
+     * @since 1.0.0
+     *
+     * @see com.onyx.persistence.manager.PersistenceManager
+     * @see com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
+     */
+    val persistenceManager: PersistenceManager
+
+    /**
      * A directory on local file system or remote endpoint
      *
      * @since 1.0.0
@@ -52,7 +70,7 @@ interface PersistenceManagerFactory {
      * @see com.onyx.persistence.context.impl.DefaultSchemaContext
      *
      */
-    var schemaContext: SchemaContext
+    val schemaContext: SchemaContext
 
     /**
      * Initialize the database connection and storage mechanisms
@@ -77,22 +95,4 @@ interface PersistenceManagerFactory {
      * @param password Set Password
      */
     fun setCredentials(user: String, password: String)
-
-    /**
-     * Get Credentials formatted for HTTP Basic Authentication to be inserted into Cookie
-     * @since 1.0.0
-     *
-     * @return Formatted Credentials
-     */
-    val credentials: String
-
-    /**
-     * Persistence Manager handles the data access for Database
-     *
-     * @since 1.0.0
-     *
-     * @see com.onyx.persistence.manager.PersistenceManager
-     * @see com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
-     */
-    val persistenceManager: PersistenceManager
 }
