@@ -77,7 +77,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
      */
     public WebPersistenceManagerFactory(String location, String instance) {
         super(location, instance);
-        this.context = new WebSchemaContext(DEFAULT_INSTANCE);
+        setSchemaContext(new WebSchemaContext(DEFAULT_INSTANCE));
         // Initialize Rest Template
         this.restTemplate = new RestTemplate();
 
@@ -88,6 +88,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
         restTemplate.setInterceptors(Collections.singletonList(new RequestAuthenticationInterceptor(this)));
     }
 
+    private PersistenceManager persistenceManager;
     /**
      * Getter for persistence manager
      *
@@ -102,15 +103,15 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
             WebPersistenceManager tmpPersistenceManager = (WebPersistenceManager) this.persistenceManager;
 
             final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager();
-            systemPersistenceManager.setContext(context);
-            context.setSystemPersistenceManager(systemPersistenceManager);
+            systemPersistenceManager.setContext(getSchemaContext());
+            getSchemaContext().setSystemPersistenceManager(systemPersistenceManager);
 
-            ((WebSchemaContext) context).setRemoteEndpoint(this.location);
+            ((WebSchemaContext) getSchemaContext()).setRemoteEndpoint(this.getDatabaseLocation());
 
             objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             objectMapper.setAnnotationIntrospector(new CustomAnnotationInspector());
 
-            tmpPersistenceManager.setContext(context);
+            tmpPersistenceManager.setContext(getSchemaContext());
             tmpPersistenceManager.setExecutorService(executorService);
             tmpPersistenceManager.setRestTemplate(restTemplate);
             tmpPersistenceManager.setHttpClient(httpClient);
@@ -132,7 +133,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
         try {
             Query query = new Query(SystemEntity.class, new QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""));
             getPersistenceManager().executeQuery(query);
-            context.start();
+            getSchemaContext().start();
         } catch (ResourceAccessException e) {
             throw new InitializationException(InitializationException.CONNECTION_EXCEPTION);
         } catch (HttpClientErrorException e) {
@@ -149,22 +150,8 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
      */
     @Override
     public void close() {
-        context.shutdown();
+        getSchemaContext().shutdown();
     }
-
-    /**
-     * Set Database Remote location.  This must be formatted with onx://host:port
-     *
-     * @param location Database Remote Endpoint
-     * @since 1.0.0
-     */
-    @Override
-    public void setDatabaseLocation(String location) {
-        this.location = location;
-        if (context != null)
-            ((WebSchemaContext) context).setRemoteEndpoint(location);
-    }
-
 
     public interface BidirectionalDefinition {
 

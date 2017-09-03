@@ -53,6 +53,7 @@ public class ServerPersistenceManagerFactory extends EmbeddedPersistenceManagerF
     @SuppressWarnings("unused")
     public ServerPersistenceManagerFactory(String location) {
         this(location, location);
+        this.setSchemaContext(new ServerSchemaContext(location));
     }
 
     /**
@@ -64,10 +65,10 @@ public class ServerPersistenceManagerFactory extends EmbeddedPersistenceManagerF
     @Override
     public void initialize() throws InitializationException
     {
-        if(context == null)
+        if(getSchemaContext() == null)
         {
-            context = new ServerSchemaContext(location);
-            context.setLocation(location);
+            setSchemaContext(new ServerSchemaContext(getDatabaseLocation()));
+            getSchemaContext().setLocation(getDatabaseLocation());
         }
 
         super.initialize();

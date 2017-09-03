@@ -70,7 +70,7 @@ interface PersistenceManagerFactory {
      * @see com.onyx.persistence.context.impl.DefaultSchemaContext
      *
      */
-    val schemaContext: SchemaContext
+    var schemaContext: SchemaContext?
 
     /**
      * Initialize the database connection and storage mechanisms

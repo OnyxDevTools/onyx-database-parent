@@ -7,6 +7,7 @@ import com.onyx.client.rmi.OnyxRMIClient;
 import com.onyx.entity.SystemEntity;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
@@ -75,8 +76,11 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     public RemotePersistenceManagerFactory(String databaseLocation, String instance)
     {
         super(databaseLocation, instance);
+        this.setSchemaContext(new RemoteSchemaContext(instance));
     }
 
+
+    private PersistenceManager persistenceManager;
 
     /**
      * Getter for persistence manager.  Modified in 1.1.0 to keep a connection open.  If the connection is somehow
@@ -96,31 +100,32 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         return persistenceManager;
     }
 
+
     /**
      * Helper method to instantiate and configure the persistence manager
      */
     private void createPersistenceManager()
     {
-        if (this.context == null) {
-            this.context = new RemoteSchemaContext(instance);
+        if (this.getSchemaContext() == null) {
+            setSchemaContext(new RemoteSchemaContext(getInstance()));
         }
         PersistenceManager proxy = (PersistenceManager) onyxRMIClient.getRemoteObject(PERSISTENCE_MANAGER_SERVICE, PersistenceManager.class);
         this.persistenceManager = new RemotePersistenceManager(proxy, onyxRMIClient);
-        this.persistenceManager.setContext(context);
+        this.persistenceManager.setContext(getSchemaContext());
 
-        DefaultSchemaContext.registeredSchemaContexts.put(instance, context);
+        DefaultSchemaContext.registeredSchemaContexts.put(getInstance(), getSchemaContext());
 
         final EmbeddedPersistenceManager systemPersistenceManager;
 
         // Since the connection remains persistent and open, we do not want to reset the system persistence manager.  That should have
         // remained open and valid through any network blip.
-        if (context.getSystemPersistenceManager() == null) {
+        if (getSchemaContext().getSystemPersistenceManager() == null) {
             systemPersistenceManager = new EmbeddedPersistenceManager();
-            systemPersistenceManager.setContext(context);
-            context.setSystemPersistenceManager(systemPersistenceManager);
+            systemPersistenceManager.setContext(getSchemaContext());
+            getSchemaContext().setSystemPersistenceManager(systemPersistenceManager);
         }
 
-        ((RemoteSchemaContext) context).setDefaultRemotePersistenceManager(persistenceManager);
+        ((RemoteSchemaContext) getSchemaContext()).setDefaultRemotePersistenceManager(persistenceManager);
     }
 
     /**
@@ -131,7 +136,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
      */
     private void connect() throws InitializationException
     {
-        location = location.replaceFirst("onx://", "");
+        String location = getDatabaseLocation().replaceFirst("onx://", "");
         String[] locationParts = location.split(":");
 
         String port = locationParts[locationParts.length-1];
@@ -142,7 +147,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         onyxRMIClient.setSslKeystoreFilePath(this.sslKeystoreFilePath);
         onyxRMIClient.setSslKeystorePassword(this.sslKeystorePassword);
         onyxRMIClient.setSslStorePassword(this.sslStorePassword);
-        onyxRMIClient.setCredentials(this.user, this.password);
+        onyxRMIClient.setCredentials(this.getUser(), this.getPassword());
         AuthenticationManager authenticationManager = (AuthenticationManager) onyxRMIClient.getRemoteObject(AUTHENTICATION_MANAGER_SERVICE, AuthenticationManager.class);
         onyxRMIClient.setAuthenticationManager(authenticationManager);
 
@@ -169,7 +174,7 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
         {
             Query query = new Query(SystemEntity.class, new QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""));
             getPersistenceManager().executeQuery(query);
-            context.start();
+            getSchemaContext().start();
         } catch (EntityException e)
         {
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
@@ -185,11 +190,11 @@ public class RemotePersistenceManagerFactory extends EmbeddedPersistenceManagerF
     {
         onyxRMIClient.close();
 
-        if(context != null) {
-            context.shutdown();
+        if(getSchemaContext() != null) {
+            getSchemaContext().shutdown();
         }
         persistenceManager = null;
-        context = null;
+        setSchemaContext(null);
     }
 
     // SSL Protocol

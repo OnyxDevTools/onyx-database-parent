@@ -40,7 +40,7 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      */
     public ServerSchemaContext(String contextId) {
         super(contextId);
-        this.queryCacheController = new DefaultQueryCacheController(this);
+        this.queryCacheController = new RemoteQueryCacheController(this);
     }
 
     /**

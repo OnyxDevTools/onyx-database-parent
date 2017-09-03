@@ -47,9 +47,8 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
     public CacheManagerFactory(String instance)
     {
         super(tempDatabaseLocation(), instance);
-        this.instance = instance;
-        this.context = new CacheSchemaContext(instance);
-        this.context.setLocation(this.getDatabaseLocation());
+        this.setSchemaContext(new CacheSchemaContext(instance));
+        this.getSchemaContext().setLocation(this.getDatabaseLocation());
     }
 
     static String tempDatabaseLocation() {
@@ -70,6 +69,6 @@ public class CacheManagerFactory extends EmbeddedPersistenceManagerFactory imple
     public void initialize() throws InitializationException
     {
         this.getPersistenceManager();
-        context.start();
+        getSchemaContext().start();
     }
 }
