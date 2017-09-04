@@ -18,9 +18,8 @@ import com.onyx.persistence.context.impl.ServerSchemaContext;
  * <pre>
  * <code>
  *
- *   PersistenceManagerFactory factory = new ServerPersistenceManagerFactory();
+ *   PersistenceManagerFactory factory = new ServerPersistenceManagerFactory("/MyDatabaseLocation");
  *   factory.setCredentials("username", "password");
- *   factory.setLocation("/MyDatabaseLocation")
  *   factory.initialize();
  *
  *   PersistenceManager manager = factory.getPersistenceManager();
@@ -29,10 +28,8 @@ import com.onyx.persistence.context.impl.ServerSchemaContext;
  *
  *   or ...
  *
- *   PersistenceManagerFactory factory = new ServerPersistenceManagerFactory();
+ *   PersistenceManagerFactory factory = new ServerPersistenceManagerFactory("/MyDatabaseLocation");
  *   factory.setCredentials("username", "password");
- *   factory.setLocation("/MyDatabaseLocation")
- *   factory.setContext(new ServerSchemaContext());
  *   factory.initialize();
  *
  *   PersistenceManager manager = factory.getPersistenceManager();
