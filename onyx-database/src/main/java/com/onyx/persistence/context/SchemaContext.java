@@ -26,11 +26,7 @@ import java.nio.channels.FileChannel;
  * <pre>
  * <code>
  *
- *   PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory();
- *   SchemaContext context = new DefaultSchemaContext(); // Instantiate a default schema context (Embedded)
- *
- *   factory.setDatabaseLocation("/MyDatabaseLocation");
- *   factory.setSchemaContext(context); // Define schema context
+ *   PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory("/MyDatabaseLocation");
  *   factory.setCredentials("username", "password");
  *   factory.initialize();
  *
@@ -138,15 +134,6 @@ public interface SchemaContext
      */
     @SuppressWarnings("unused")
     EntityDescriptor getDescriptorForEntity(Object entity) throws EntityException;
-
-    /**
-     * Sets the database location.  This can either be a local location or a remote endpoint.
-     *
-     * @since 1.0.0
-     *
-     * @param location Database endpoint or local store location
-     */
-    void setLocation(String location);
 
     /**
      * Get Kill switch

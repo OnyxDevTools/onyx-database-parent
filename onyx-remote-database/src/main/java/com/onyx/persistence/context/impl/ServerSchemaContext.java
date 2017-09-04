@@ -1,7 +1,6 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.client.push.PushPublisher;
-import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 import com.onyx.persistence.query.impl.RemoteQueryCacheController;
 
 /**
@@ -18,9 +17,7 @@ import com.onyx.persistence.query.impl.RemoteQueryCacheController;
  * <code>
  *
  *
- * PersistenceManagerFactory fac = new ServerPersistenceManagerFactory();
- * fac.setDatabaseLocation("/MyDatabaseLocation");
- * fac.setSchemaContext(new ServerSchemaContext()); //Define Server Schema Context
+ * PersistenceManagerFactory fac = new ServerPersistenceManagerFactory("/MyDatabaseLocation");
  * fac.setCredentials("username", "password");
  * fac.initialize();
  *
@@ -38,8 +35,8 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      *
      * @param contextId Database identifier that must be unique and tied to its process
      */
-    public ServerSchemaContext(String contextId) {
-        super(contextId);
+    public ServerSchemaContext(String contextId, String location) {
+        super(contextId, location);
         this.queryCacheController = new RemoteQueryCacheController(this);
     }
 

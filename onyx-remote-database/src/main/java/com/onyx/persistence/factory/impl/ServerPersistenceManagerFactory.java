@@ -53,24 +53,6 @@ public class ServerPersistenceManagerFactory extends EmbeddedPersistenceManagerF
     @SuppressWarnings("unused")
     public ServerPersistenceManagerFactory(String location) {
         this(location, location);
-        this.setSchemaContext(new ServerSchemaContext(location));
-    }
-
-    /**
-     * Initialize the database connection and storage mechanisms
-     *
-     * @since 1.0.0
-     * @throws InitializationException Failure to start database due to either invalid credentials or a lock on the database already exists.
-     */
-    @Override
-    public void initialize() throws InitializationException
-    {
-        if(getSchemaContext() == null)
-        {
-            setSchemaContext(new ServerSchemaContext(getDatabaseLocation()));
-            getSchemaContext().setLocation(getDatabaseLocation());
-        }
-
-        super.initialize();
+        this.setSchemaContext(new ServerSchemaContext(location, location));
     }
 }

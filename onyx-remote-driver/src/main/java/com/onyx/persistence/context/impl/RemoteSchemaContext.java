@@ -40,8 +40,7 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
      */
     public RemoteSchemaContext(String contextId)
     {
-        super(contextId);
-        location = createTempDir().getPath();
+        super(contextId, createTempDir().getPath());
         temporaryFileLocation = this.location + File.separator + "temporary";
         //noinspection ResultOfMethodCallIgnored
         new File(temporaryFileLocation).mkdirs();
@@ -49,17 +48,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
         createTemporaryDiskMapPool();
         this.queryCacheController = new DefaultQueryCacheController(this);
 
-    }
-
-    /**
-     * This is only overwritten because Android has a shit fit and throws method not found exception
-     * for older versions
-     */
-    @SuppressWarnings("EmptyMethod")
-    @Override
-    protected void createTemporaryDiskMapPool()
-    {
-        super.createTemporaryDiskMapPool();
     }
 
     /**

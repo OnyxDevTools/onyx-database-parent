@@ -38,9 +38,9 @@ public class CacheSchemaContext extends DefaultSchemaContext
     /**
      * Constructor
      */
-    public CacheSchemaContext(String contextId)
+    public CacheSchemaContext(String contextId, String location)
     {
-        super(contextId);
+        super(contextId, location);
     }
 
     /**

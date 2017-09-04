@@ -59,9 +59,7 @@ import java.util.function.Function;
  * <code>
  *
  *
- * PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory();
- * fac.setDatabaseLocation("/MyDatabaseLocation");
- * fac.setSchemaContext(new DefaultSchemaContext()); //Define Default Schema Context
+ * PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory("/MyDatabaseLocation");
  * fac.setCredentials("username", "password");
  * fac.initialize();
  *
@@ -102,11 +100,12 @@ public class DefaultSchemaContext implements SchemaContext {
      *
      * @param contextId Database identifier that must be unique and tied to its process
      */
-    public DefaultSchemaContext(final String contextId) {
+    public DefaultSchemaContext(final String contextId, String location) {
         Runnable commitThread = () -> dataFiles.forEach((s, db) -> db.commit());
         scheduler.scheduleWithFixedDelay(commitThread, 10, 10, TimeUnit.SECONDS);
         context = this;
         this.contextId = contextId;
+        this.location = location;
 
         DefaultSchemaContext.registeredSchemaContexts.put(contextId, this);
 
@@ -118,17 +117,6 @@ public class DefaultSchemaContext implements SchemaContext {
      * @since 1.0.0
      */
     protected String location;
-
-    /**
-     * Set Database location.
-     *
-     * @param location Database local store location
-     * @since 1.0.0
-     */
-    @Override
-    public void setLocation(final String location) {
-        this.location = location;
-    }
 
     /**
      * Database local store location.

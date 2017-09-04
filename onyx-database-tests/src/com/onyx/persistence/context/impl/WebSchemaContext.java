@@ -47,7 +47,15 @@ public class WebSchemaContext extends DefaultSchemaContext implements SchemaCont
      */
     public WebSchemaContext(String contextId)
     {
-        super(contextId);
+        super(contextId, generateTempLocation());
+    }
+
+    private static String generateTempLocation() {
+        try {
+            return Files.createTempDirectory("onyx.oxd").toString();
+        } catch (IOException ignore) {
+            return "/";
+        }
     }
 
     /**

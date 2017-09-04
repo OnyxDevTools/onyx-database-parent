@@ -86,7 +86,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
     //region Override Properties
 
-    override var schemaContext: SchemaContext? = DefaultSchemaContext(instance)
+    override var schemaContext: SchemaContext? = DefaultSchemaContext(instance, databaseLocation)
 
     override val credentials: String by lazy { this.user + ":" + EncryptionUtil.encrypt(this.password) }
 
@@ -125,7 +125,6 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
     @Throws(InitializationException::class)
     override fun initialize() {
         try {
-            schemaContext!!.location = databaseLocation
 
             // Ensure the database file exists
             val databaseDirectory = File(this.databaseLocation)

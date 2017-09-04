@@ -12,9 +12,7 @@ import com.onyx.util.EntityClassLoader;
  * <code>
  *
  *
- *   EmbeddedPersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
- *   factory.setDatabaseLocation(connection.getDatabaseLocation());
- *   factory.setSchemaContext(new ViewerSchemaContext(connection.getDatabaseLocation()));
+ *   EmbeddedPersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(connection.getDatabaseLocation());
  *   factory.setCredentials(connection.getUsername(), connection.getPassword());
  *
  *   factory.initialize();
@@ -34,10 +32,9 @@ public class ViewerSchemaContext extends DefaultSchemaContext
      *
      */
     @SuppressWarnings("unused")
-    public ViewerSchemaContext(String location)
+    public ViewerSchemaContext(String contextId, String location)
     {
-        super(location);
-        this.location = location;
+        super(contextId, location);
         EntityClassLoader.loadClasses(this);
     }
 
