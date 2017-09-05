@@ -34,6 +34,10 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
 {
     private PersistenceManager defaultRemotePersistenceManager = null;
 
+    public RemoteSchemaContext() {
+        super();
+    }
+
     /**
      * Default Constructor
      * @since 1.0.0

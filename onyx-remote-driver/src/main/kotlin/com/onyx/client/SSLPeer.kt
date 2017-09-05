@@ -8,6 +8,12 @@ package com.onyx.client
 interface SSLPeer {
 
     /**
+     * SSL Protocol defaults to "TLSv1.2"
+     * @since 2.0.0 Added to SSL Peer
+     */
+    var protocol:String
+
+    /**
      * Set for SSL Store Password.  Note, this is different than Keystore Password
      * @since 1.2.0
      */
@@ -37,4 +43,18 @@ interface SSLPeer {
      * @since 1.2.0
      */
     var sslTrustStorePassword: String?
+
+    /**
+     * Default implementation of the copy.  Helper method used to copy the SSLPeer properties
+     *
+     * @since 2.0.0
+     */
+    fun copySSLPeerTo(peer:SSLPeer) {
+        peer.protocol = protocol
+        peer.sslStorePassword = sslStorePassword
+        peer.sslKeystoreFilePath = sslKeystoreFilePath
+        peer.sslKeystorePassword = sslKeystorePassword
+        peer.sslTrustStoreFilePath = sslTrustStoreFilePath
+        peer.sslTrustStorePassword = sslTrustStorePassword
+    }
 }

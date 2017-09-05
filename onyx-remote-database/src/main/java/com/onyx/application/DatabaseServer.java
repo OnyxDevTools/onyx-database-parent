@@ -1,5 +1,6 @@
 package com.onyx.application;
 
+import com.onyx.client.SSLPeer;
 import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.entity.SystemUser;
 import com.onyx.entity.SystemUserRole;
@@ -181,6 +182,10 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
     @SuppressWarnings("unused")
     public PersistenceManager getPersistenceManager() {
         return this.persistenceManagerFactory.getPersistenceManager();
+    }
+
+    public void copySSLPeerTo(SSLPeer peer) {
+
     }
 }
 

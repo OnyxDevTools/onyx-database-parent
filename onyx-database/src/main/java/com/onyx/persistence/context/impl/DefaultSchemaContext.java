@@ -95,6 +95,11 @@ public class DefaultSchemaContext implements SchemaContext {
     @SuppressWarnings("WeakerAccess")
     protected final Set<MapBuilder> temporaryMaps = new HashSet<>();
 
+    public DefaultSchemaContext() {
+        context = null;
+        contextId = null;
+    }
+
     /**
      * Constructor.
      *

@@ -38,7 +38,7 @@ import java.io.File
  */
 class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFAULT_INSTANCE) : EmbeddedPersistenceManagerFactory(createTemporaryMetadataLocation(), instance), PersistenceManagerFactory {
 
-    override var schemaContext: SchemaContext? = CacheSchemaContext(instance, this.databaseLocation)
+    override var schemaContext: SchemaContext = CacheSchemaContext(instance, this.databaseLocation)
 
     /**
      * Initialize the in memory database

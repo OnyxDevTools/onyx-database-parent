@@ -86,7 +86,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
     //region Override Properties
 
-    override var schemaContext: SchemaContext? = DefaultSchemaContext(instance, databaseLocation)
+    override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)
 
     override val credentials: String by lazy { this.user + ":" + EncryptionUtil.encrypt(this.password) }
 

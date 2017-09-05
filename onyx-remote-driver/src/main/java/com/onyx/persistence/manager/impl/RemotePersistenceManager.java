@@ -53,9 +53,12 @@ import java.util.Set;
 public class RemotePersistenceManager extends AbstractPersistenceManager implements PersistenceManager {
 
     private SchemaContext context;
-    private final PersistenceManager proxy;
-    private final PushRegistrar pushRegistrar;
+    private PersistenceManager proxy;
+    private PushRegistrar pushRegistrar;
 
+    public RemotePersistenceManager() {
+
+    }
 
     /**
      * Default Constructor.  This should be invoked by the persistence manager factory
