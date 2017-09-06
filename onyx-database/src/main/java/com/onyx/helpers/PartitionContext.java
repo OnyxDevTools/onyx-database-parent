@@ -6,6 +6,7 @@ import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.EntityException;
 import com.onyx.exception.EntityExceptionWrapper;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.RecordController;
@@ -324,6 +325,6 @@ public class PartitionContext
 
     protected SchemaContext getContext()
     {
-        return DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        return Contexts.get(contextId);
     }
 }

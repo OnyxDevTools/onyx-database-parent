@@ -5,6 +5,7 @@ import com.onyx.diskmap.base.concurrent.DefaultAtomicCounter;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.diskmap.serializer.Serializers;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 
@@ -73,7 +74,7 @@ public class FileChannelStore implements Store {
      */
     @SuppressWarnings("unchecked")
     public void init(Map mapById, Map mapByName) {
-        serializers = new Serializers(mapById, mapByName, DefaultSchemaContext.registeredSchemaContexts.get(contextId));
+        serializers = new Serializers(mapById, mapByName, Contexts.get(contextId));
     }
 
 

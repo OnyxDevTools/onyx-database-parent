@@ -6,6 +6,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -297,10 +298,10 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
         String className = bufferStream.getString();
         this.contextId = bufferStream.getString();
 
-        SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        SchemaContext context = Contexts.get(contextId);
         if(context == null)
         {
-            context = (SchemaContext)DefaultSchemaContext.registeredSchemaContexts.values().toArray()[0];
+            context = Contexts.first();
         }
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));

@@ -8,7 +8,7 @@ import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.EntityException
 import com.onyx.exception.TransactionException
-import com.onyx.extension.catchAll
+import com.onyx.extension.*
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
 import com.onyx.index.IndexController
@@ -16,6 +16,7 @@ import com.onyx.index.impl.IndexControllerImpl
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.IdentifierGenerator
 import com.onyx.persistence.annotations.RelationshipType
+import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
@@ -31,7 +32,8 @@ import com.onyx.transaction.TransactionController
 import com.onyx.transaction.impl.TransactionControllerImpl
 import com.onyx.util.EntityClassLoader
 import com.onyx.util.FileUtil
-import com.onyx.util.map.*
+import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.delay
 import java.io.File
 import java.io.IOException
 import java.math.BigInteger
@@ -51,12 +53,8 @@ import java.util.concurrent.atomic.AtomicLong
  * @since 1.0.0
  *
  */
-// TODO: Replace run {} with async
-// TODO: Get Rid of compat map
 // TODO: Remove Transaction file stuff out
 // TODO: Move rebuilding of index out
-// TODO: Move registered schema contexts out
-// TODO: Refactor the scheduler
 open class DefaultSchemaContext : SchemaContext {
 
     // region Properties
@@ -78,11 +76,7 @@ open class DefaultSchemaContext : SchemaContext {
     // Indicates whether the database has been stopped
     @Volatile override var killSwitch = false
 
-    private val scheduler = Executors.newSingleThreadScheduledExecutor { r ->
-        val t = Executors.defaultThreadFactory().newThread(r)
-        t.isDaemon = true
-        t
-    }
+    private lateinit var commitJob:Job
 
     // endregion
 
@@ -101,11 +95,15 @@ open class DefaultSchemaContext : SchemaContext {
         this.contextId = contextId
         this.location = location
 
-        val commitThread = { dataFiles.forEach { _, db -> db.commit() } }
-        scheduler.scheduleWithFixedDelay(commitThread, 10, 10, TimeUnit.SECONDS)
-
         @Suppress("LeakingThis")
-        DefaultSchemaContext.registeredSchemaContexts.put(contextId, this)
+        Contexts.put(this)
+
+        commitJob = runJob {
+            while (!killSwitch) {
+                dataFiles.forEach { _, db -> db.commit() }
+                delay(10L, TimeUnit.SECONDS)
+            }
+        }
     }
 
     // endregion
@@ -190,7 +188,7 @@ open class DefaultSchemaContext : SchemaContext {
         relationshipControllers.clear() // Clear all relationship controllers
         indexControllers.clear() // Clear all index controllers
 
-        scheduler.shutdown()
+        commitJob.cancel()
     }
 
     // endregion
@@ -325,7 +323,7 @@ open class DefaultSchemaContext : SchemaContext {
     private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
         // Check to see if the partition already exists
         if (systemEntity.partition != null && descriptor.partition != null) {
-            if(systemEntity.partition.entries.filter { it.value == descriptor.partition.partitionValue }.count() > 0) {
+            if (systemEntity.partition.entries.filter { it.value == descriptor.partition.partitionValue }.count() > 0) {
                 return
             }
         }
@@ -346,29 +344,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region System Entity
 
-    private val systemEntityByIDMap = ConcurrentHashMap<Int, SystemEntity?>().withDefault {
-        val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, it)
-
-        if (entity != null) {
-            Collections.sort(entity.attributes) { o1, o2 -> o1.name.compareTo(o2.name) }
-            Collections.sort(entity.relationships) { o1, o2 -> o1.name.compareTo(o2.name) }
-            Collections.sort(entity.indexes) { o1, o2 -> o1.name.compareTo(o2.name) }
-        }
-        return@withDefault entity
-    }
-
-    private val defaultSystemEntities = ConcurrentHashMap<String, SystemEntity?>().withDefault {
-        val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.EQUAL, it), QueryOrder("primaryKey", false))
-        query.maxResults = 1
-
-        val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
-        if (result != null) {
-            Collections.sort(result.attributes) { o1, o2 -> o1.name.compareTo(o2.name) }
-            Collections.sort(result.relationships) { o1, o2 -> o1.name.compareTo(o2.name) }
-            Collections.sort(result.indexes) { o1, o2 -> o1.name.compareTo(o2.name) }
-        }
-        return@withDefault result
-    }
+    private val systemEntityByIDMap = BlockingHashMap<Int, SystemEntity?>()
+    private val defaultSystemEntities = BlockingHashMap<String, SystemEntity?>()
 
     /**
      * Get System Entity By Name.
@@ -378,7 +355,20 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws EntityException Default Exception
      */
     @Throws(EntityException::class)
-    override fun getSystemEntityByName(name: String): SystemEntity? = defaultSystemEntities.getValue(name)
+    override fun getSystemEntityByName(name: String): SystemEntity? = runBlockingOn(defaultSystemEntities) {
+        defaultSystemEntities.getOrPut(name) {
+            val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.EQUAL, name), QueryOrder("primaryKey", false))
+            query.maxResults = 1
+
+            val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
+            if (result != null) {
+                Collections.sort(result.attributes) { o1, o2 -> o1.name.compareTo(o2.name) }
+                Collections.sort(result.relationships) { o1, o2 -> o1.name.compareTo(o2.name) }
+                Collections.sort(result.indexes) { o1, o2 -> o1.name.compareTo(o2.name) }
+            }
+            return@getOrPut result
+        }
+    }
 
     /**
      * Get System Entity By ID.
@@ -386,13 +376,24 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
      */
-    override fun getSystemEntityById(systemEntityId: Int): SystemEntity? = systemEntityByIDMap.getValue(systemEntityId)
+    override fun getSystemEntityById(systemEntityId: Int): SystemEntity? = runBlockingOn(systemEntityByIDMap) {
+        systemEntityByIDMap.getOrPut(systemEntityId) {
+            val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
+
+            if (entity != null) {
+                Collections.sort(entity.attributes) { o1, o2 -> o1.name.compareTo(o2.name) }
+                Collections.sort(entity.relationships) { o1, o2 -> o1.name.compareTo(o2.name) }
+                Collections.sort(entity.indexes) { o1, o2 -> o1.name.compareTo(o2.name) }
+            }
+            return@getOrPut entity
+        }
+    }
 
     // endregion
 
     // region Entity Descriptor
 
-    private val descriptors = ConcurrentHashMap<String, EntityDescriptor>()
+    private val descriptors = BlockingHashMap<String, EntityDescriptor>()
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -435,31 +436,35 @@ open class DefaultSchemaContext : SchemaContext {
         val partitionIdVar = partitionId ?: ""
         val entityKey = entityClass.name + partitionIdVar.toString()
 
-        return descriptors.getOrElse(entityKey, {
-            val descriptor = EntityDescriptor(entityClass)
+        return runBlockingOn(descriptors) {
 
-            if (descriptor.partition != null) {
-                descriptor.partition.partitionValue = partitionIdVar.toString()
-            }
+            descriptors.getOrElse(entityKey, {
+                val descriptor = EntityDescriptor(entityClass)
 
-            descriptors.put(entityKey, descriptor)
+                if (descriptor.partition != null) {
+                    descriptor.partition.partitionValue = partitionIdVar.toString()
+                }
 
-            // Get the latest System Entity
-            var systemEntity: SystemEntity? = this.getSystemEntityByName(descriptor.clazz.name)
+                descriptors.put(entityKey, descriptor)
 
-            // If it does not exist, lets create a new one
-            if (systemEntity == null) {
-                systemEntity = SystemEntity(descriptor)
-                serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
-            }
+                // Get the latest System Entity
+                var systemEntity: SystemEntity? = getSystemEntityByName(descriptor.clazz.name)
 
-            checkForValidDescriptorPartition(descriptor, systemEntity)
-            checkForEntityChanges(descriptor, systemEntity)
+                // If it does not exist, lets create a new one
+                if (systemEntity == null) {
+                    systemEntity = SystemEntity(descriptor)
+                    serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
+                }
 
-            EntityClassLoader.writeClass(systemEntity, this.location, this)
+                checkForValidDescriptorPartition(descriptor, systemEntity)
+                checkForEntityChanges(descriptor, systemEntity)
 
-            return@getOrElse descriptor
-        })
+                EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
+
+                return@getOrElse descriptor
+            })
+        }
+
     }
 
     /**
@@ -484,13 +489,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipControllers = ConcurrentHashMap<RelationshipDescriptor, RelationshipController>().withDefault {
-        return@withDefault if (it.relationshipType == RelationshipType.MANY_TO_MANY || it.relationshipType == RelationshipType.ONE_TO_MANY) {
-            ToManyRelationshipControllerImpl(it.entityDescriptor, it, this)
-        } else {
-            ToOneRelationshipControllerImpl(it.entityDescriptor, it, this)
-        }
-    }
+    private val relationshipControllers = BlockingHashMap<RelationshipDescriptor, RelationshipController>()
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -505,13 +504,21 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(EntityException::class)
-    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController = relationshipControllers.getValue(relationshipDescriptor)
+    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController = runBlockingOn(relationshipControllers) {
+        relationshipControllers.getOrPut(relationshipDescriptor) {
+            return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
+                ToManyRelationshipControllerImpl(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
+            } else {
+                ToOneRelationshipControllerImpl(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
+            }
+        }
+    }
 
     // endregion
 
     // region Index Controller
 
-    private val indexControllers = ConcurrentHashMap<IndexDescriptor, IndexController>().withDefault { return@withDefault IndexControllerImpl(it.entityDescriptor, it, this) }
+    private val indexControllers = BlockingHashMap<IndexDescriptor, IndexController>()
 
     /**
      * Get Index Controller with Index descriptor.
@@ -522,13 +529,17 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun getIndexController(indexDescriptor: IndexDescriptor): IndexController = indexControllers.getValue(indexDescriptor)
+    override fun getIndexController(indexDescriptor: IndexDescriptor): IndexController = runBlockingOn(indexControllers) {
+        indexControllers.getOrPut(indexDescriptor) {
+            return@getOrPut IndexControllerImpl(indexDescriptor.entityDescriptor, indexDescriptor, this)
+        }
+    }
 
     // endregion
 
     // region Record Controller
 
-    private val recordControllers = ConcurrentHashMap<EntityDescriptor, RecordController>()
+    private val recordControllers = BlockingHashMap<EntityDescriptor, RecordController>()
 
     /**
      * Get Record Controller.
@@ -537,16 +548,17 @@ open class DefaultSchemaContext : SchemaContext {
      * @return get Record Controller.
      * @since 1.0.0
      */
-    override fun getRecordController(descriptor: EntityDescriptor): RecordController = recordControllers.getOrPut(descriptor, {
-            if (descriptor.identifier.generator == IdentifierGenerator.SEQUENCE) SequenceRecordControllerImpl(descriptor, this) else RecordControllerImpl(descriptor, this)
+    override fun getRecordController(descriptor: EntityDescriptor): RecordController = runBlockingOn(recordControllers) {
+        recordControllers.getOrPut(descriptor) {
+            if (descriptor.identifier.generator == IdentifierGenerator.SEQUENCE) SequenceRecordControllerImpl(descriptor, this@DefaultSchemaContext) else RecordControllerImpl(descriptor, this@DefaultSchemaContext)
         }
-    )
+    }
 
     // endregion
 
     // region Data Files
 
-    @JvmField internal val dataFiles = ConcurrentHashMap<String, MapBuilder>()
+    @JvmField internal val dataFiles = BlockingHashMap<String, MapBuilder>()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -560,9 +572,11 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): MapBuilder {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition.partitionValue
-        return dataFiles.getOrPut(key, {
-            return@getOrPut DefaultMapBuilder("$location/$key", this)
-        })
+        return runBlockingOn(dataFiles) {
+            dataFiles.getOrPut(key) {
+                return@getOrPut DefaultMapBuilder("$location/$key", this@DefaultSchemaContext)
+            }
+        }
     }
 
     /**
@@ -791,10 +805,6 @@ open class DefaultSchemaContext : SchemaContext {
 
         // Random generator for generating random temporary file names
         private val random = SecureRandom()
-
-        // The purpose of this is to gather the registered instances of SchemaContexts so that we may structure a context to a database instance in
-        // event of multiple instances
-        @JvmField val registeredSchemaContexts: CompatMap<String, SchemaContext> = SynchronizedMap()
 
         // Maximum WAL File longSize
         private val MAX_JOURNAL_SIZE = 1024 * 1024 * 20

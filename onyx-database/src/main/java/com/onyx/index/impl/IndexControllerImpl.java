@@ -2,6 +2,7 @@ package com.onyx.index.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.exception.EntityException;
@@ -245,6 +246,6 @@ public class IndexControllerImpl implements IndexController {
     @SuppressWarnings("WeakerAccess")
     protected SchemaContext getContext()
     {
-        return DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        return Contexts.get(contextId);
     }
 }

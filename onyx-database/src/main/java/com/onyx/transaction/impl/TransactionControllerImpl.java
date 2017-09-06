@@ -4,6 +4,7 @@ import com.onyx.buffer.BufferStream;
 import com.onyx.exception.TransactionException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -285,6 +286,6 @@ public class TransactionControllerImpl implements TransactionController
     @SuppressWarnings("WeakerAccess")
     protected SchemaContext getContext()
     {
-        return DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        return Contexts.get(contextId);
     }
 }

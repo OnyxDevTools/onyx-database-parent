@@ -9,6 +9,7 @@ import com.onyx.exception.BufferingException;
 import com.onyx.exception.EntityException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -332,10 +333,10 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         this.contextId = bufferStream.getString();
         this.hasSelections = bufferStream.getBoolean();
 
-        SchemaContext context = DefaultSchemaContext.registeredSchemaContexts.get(contextId);
+        SchemaContext context = Contexts.get(contextId);
         if(context == null)
         {
-            context = (SchemaContext)DefaultSchemaContext.registeredSchemaContexts.values().toArray()[0];
+            context = Contexts.first();
         }
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
