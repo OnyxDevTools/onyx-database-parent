@@ -58,18 +58,6 @@ public class WebSchemaContext extends DefaultSchemaContext implements SchemaCont
         }
     }
 
-    /**
-     * Setter for default persistence manager
-     *
-     * This is not meant to be a public API.  This is called within the persistence manager factory.  It is used to access system data.
-     *
-     * @since 1.0.0
-     * @param defaultPersistenceManager Default Persistence Manager used to access system level entities
-     */
-    public void setSystemPersistenceManager(PersistenceManager defaultPersistenceManager)
-    {
-        this.systemPersistenceManager = defaultPersistenceManager;
-    }
 
     /**
      * Start the context

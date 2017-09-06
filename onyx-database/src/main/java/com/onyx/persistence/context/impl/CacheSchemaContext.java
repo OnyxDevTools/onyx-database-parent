@@ -4,7 +4,6 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.store.StoreType;
-import com.onyx.persistence.query.impl.DefaultQueryCacheController;
 
 import java.util.function.Function;
 
@@ -52,7 +51,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
     @SuppressWarnings("WeakerAccess")
     protected void createTemporaryDiskMapPool() {
         for (int i = 0; i < 32; i++) {
-            MapBuilder builder = new DefaultMapBuilder(location, StoreType.IN_MEMORY, this.context, true);
+            MapBuilder builder = new DefaultMapBuilder(location, StoreType.IN_MEMORY, CacheSchemaContext.this, true);
             temporaryDiskMapQueue.add(builder);
             temporaryMaps.add(builder);
         }
@@ -66,7 +65,7 @@ public class CacheSchemaContext extends DefaultSchemaContext
         @Override
         public MapBuilder apply(String path)
         {
-            return new DefaultMapBuilder(location + "/" + path, StoreType.IN_MEMORY, context);
+            return new DefaultMapBuilder(location + "/" + path, StoreType.IN_MEMORY, CacheSchemaContext.this);
         }
     };
 
@@ -112,23 +111,6 @@ public class CacheSchemaContext extends DefaultSchemaContext
     public void releaseMapBuilder(MapBuilder builder) {
         builder.reset();
         temporaryDiskMapQueue.offer(builder);
-    }
-
-    /**
-     * Start the context and initialize storage or any other IO mechanisms used within the schema context.
-     *
-     * @since 1.0.0
-     */
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    public void start() {
-        createTemporaryDiskMapPool();
-
-        this.queryCacheController = new DefaultQueryCacheController(this);
-
-        killSwitch = false;
-        initializeSystemEntities();
-        initializePartitionSequence();
-        initializeEntityDescriptors();
     }
 
 }

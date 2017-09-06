@@ -17,6 +17,10 @@ import java.util.*;
  */
 public class OnyxRMIClient extends CommunicationPeer implements OnyxClient {
 
+    @Override
+    public void copySSLPeerTo(com.onyx.client.SSLPeer peer) {
+
+    }
     // Local Cache of Remote Objects
     private final Map<String, Object> registeredObjects = new HashMap<>();
 

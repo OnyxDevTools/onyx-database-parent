@@ -30,6 +30,7 @@ import com.onyx.persistence.query.impl.RemoteQueryCacheController;
  */
 public class ServerSchemaContext extends DefaultSchemaContext {
 
+
     /**
      * Constructor.
      *
@@ -37,19 +38,7 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      */
     public ServerSchemaContext(String contextId, String location) {
         super(contextId, location);
-        this.queryCacheController = new RemoteQueryCacheController(this);
-    }
-
-    /**
-     * The start method will redefine the query caching mechinism after already started.
-     * The reason for that is because the initiialization of the system entities will utilize
-     * the default query cacher.
-     *
-     * @since 1.3.0
-     */
-    public void start() {
-        super.start();
-        this.queryCacheController = new RemoteQueryCacheController(this);
+        this.setQueryCacheController(new RemoteQueryCacheController(this));
     }
 
     /**
@@ -65,6 +54,6 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      * @since 1.3.0
      */
     public void setPushPublisher(PushPublisher pushPublisher) {
-        ((RemoteQueryCacheController)this.queryCacheController).setPushPublisher(pushPublisher);
+        ((RemoteQueryCacheController)this.getQueryCacheController()).setPushPublisher(pushPublisher);
     }
 }

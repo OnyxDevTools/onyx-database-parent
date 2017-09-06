@@ -45,13 +45,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
     public RemoteSchemaContext(String contextId)
     {
         super(contextId, createTempDir().getPath());
-        temporaryFileLocation = this.location + File.separator + "temporary";
-        //noinspection ResultOfMethodCallIgnored
-        new File(temporaryFileLocation).mkdirs();
-
-        createTemporaryDiskMapPool();
-        this.queryCacheController = new DefaultQueryCacheController(this);
-
     }
 
     /**
@@ -75,19 +68,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
         throw new IllegalStateException("Failed to create directory within "
                 + TEMP_DIR_ATTEMPTS + " attempts (tried "
                 + baseName + "0 to " + baseName + (TEMP_DIR_ATTEMPTS - 1) + ')');
-    }
-
-    /**
-     * Setter for default persistence manager
-     *
-     * This is not meant to be a public API.  This is called within the persistence manager factory.  It is used to access system data.
-     *
-     * @since 1.0.0
-     * @param defaultPersistenceManager Default Persistence Manager used to access system level entities
-     */
-    public void setSystemPersistenceManager(PersistenceManager defaultPersistenceManager)
-    {
-        this.systemPersistenceManager = defaultPersistenceManager;
     }
 
     /**
@@ -115,25 +95,6 @@ public class RemoteSchemaContext extends DefaultSchemaContext implements SchemaC
     {
         // NOTE: THIS USES THE DEFAULT ON PURPOSE.  So that it talks to the remote server rather than system
         return defaultRemotePersistenceManager;
-    }
-
-    /**
-     * Start the context and initiate the local cache information
-     * @since 1.0.0
-     */
-    public void start()
-    {
-        if(location == null)
-        {
-            location = createTempDir().getPath();
-        }
-
-        this.queryCacheController = new DefaultQueryCacheController(this);
-
-        killSwitch = false;
-        initializeSystemEntities();
-        initializePartitionSequence();
-        initializeEntityDescriptors();
     }
 
 }

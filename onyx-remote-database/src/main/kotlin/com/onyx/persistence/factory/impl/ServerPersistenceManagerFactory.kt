@@ -40,7 +40,7 @@ import com.onyx.persistence.context.impl.ServerSchemaContext
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-class ServerPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, instance: String = databaseLocation) : EmbeddedPersistenceManagerFactory(databaseLocation, instance) {
+class ServerPersistenceManagerFactory(databaseLocation: String) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation) {
 
     override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)
 

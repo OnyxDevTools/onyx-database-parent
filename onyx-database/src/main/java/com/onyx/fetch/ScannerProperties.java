@@ -5,6 +5,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityException;
+import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.record.RecordController;
@@ -89,7 +90,7 @@ class ScannerProperties
                     final String token = attributeTokens[p];
                     relationshipDescriptor = previousDescriptor.getRelationships().get(token);
                     tmpObject = EntityDescriptor.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
-                    previousDescriptor = context.getDescriptorForEntity(tmpObject, query.getPartition());
+                    previousDescriptor = context.getDescriptorForEntity((IManagedEntity)tmpObject, query.getPartition());
                 }
 
                 // Hey we found what we want, lets get the attribute and than decide what descriptor we got
@@ -108,7 +109,7 @@ class ScannerProperties
                     else
                     {
                         tmpObject = EntityDescriptor.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
-                        previousDescriptor = context.getDescriptorForEntity(tmpObject, query.getPartition());
+                        previousDescriptor = context.getDescriptorForEntity((IManagedEntity)tmpObject, query.getPartition());
 
                         scanObjects.add(new ScannerProperties(previousDescriptor, relationshipDescriptor, context, attribute));
                     }

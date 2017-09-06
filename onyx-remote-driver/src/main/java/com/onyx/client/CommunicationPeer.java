@@ -555,4 +555,9 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             }
         }
     }
+
+    @Override
+    public void copySSLPeerTo(com.onyx.client.SSLPeer peer) {
+
+    }
 }

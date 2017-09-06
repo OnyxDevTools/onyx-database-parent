@@ -184,6 +184,6 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
 
         // Placeholder for schema context that is not initialized.  This is a workaround
         // so we can have it as non nullable
-        object UNINITIALIZED_SCHEMA_CONTEXT: RemoteSchemaContext()
+        val UNINITIALIZED_SCHEMA_CONTEXT: RemoteSchemaContext = RemoteSchemaContext()
     }
 }

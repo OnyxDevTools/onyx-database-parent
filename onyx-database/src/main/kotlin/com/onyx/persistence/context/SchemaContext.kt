@@ -1,21 +1,22 @@
-package com.onyx.persistence.context;
+package com.onyx.persistence.context
 
-import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.descriptor.IndexDescriptor;
-import com.onyx.descriptor.RelationshipDescriptor;
-import com.onyx.entity.SystemEntity;
-import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.TransactionException;
-import com.onyx.index.IndexController;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.QueryCacheController;
-import com.onyx.record.RecordController;
-import com.onyx.relationship.RelationshipController;
-import com.onyx.diskmap.MapBuilder;
-import com.onyx.transaction.TransactionController;
+import com.onyx.descriptor.EntityDescriptor
+import com.onyx.descriptor.IndexDescriptor
+import com.onyx.descriptor.RelationshipDescriptor
+import com.onyx.entity.SystemEntity
+import com.onyx.entity.SystemPartitionEntry
+import com.onyx.exception.EntityException
+import com.onyx.index.IndexController
+import com.onyx.persistence.manager.PersistenceManager
+import com.onyx.persistence.query.QueryCacheController
+import com.onyx.record.RecordController
+import com.onyx.relationship.RelationshipController
+import com.onyx.diskmap.MapBuilder
+import com.onyx.exception.TransactionException
+import com.onyx.persistence.IManagedEntity
+import com.onyx.transaction.TransactionController
 
-import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel
 
 /**
  * The purpose of this interface is to resolve all the the metadata, storage mechanism,  and modeling regarding the structure of the database
@@ -23,54 +24,43 @@ import java.nio.channels.FileChannel;
  * @author Tim Osborn
  * @since 1.0.0
  *
- * <pre>
- * <code>
- *
- *   PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory("/MyDatabaseLocation");
- *   factory.setCredentials("username", "password");
- *   factory.initialize();
- *
- *   PersistenceManager manager = factory.getPersistenceManager();
- *
- *   factory.close(); //Close the database
- *
- * </code>
- * </pre>
- *
  */
-public interface SchemaContext
-{
+interface SchemaContext {
 
     /**
-     * Get Descriptor For Entity.  Initializes EntityDescriptor or returns one
-     * if it already exists
-     *
-     * @param entity Entity Type
-     * @return Entity Types default Entity Descriptor
-     *
-     * @throws EntityException Generic Exception
+     * Get location of database.  This can indicate a local or remote endpoint of database.
+     * @return Database location.  Either an endpoint or local path
+     * @since 1.0.0
      */
-    EntityDescriptor getBaseDescriptorForEntity(Class entity) throws EntityException;
+    val location: String
+
+    /**
+     * Get Context ID
+     *
+     * @return context id that maps back to the Persistence Manager Factory instance name
+     */
+    val contextId: String
+
+    /**
+     * Get Controller that handles transactions.  This creates a log of persistence within the database.
+     */
+    val transactionController: TransactionController
+
+    /**
+     * Get controller responsible for managing query caches
+     *
+     * @since 1.3.0
+     */
+    val queryCacheController: QueryCacheController
 
     /**
      * @since 1.0.0
-
+     *
      * Setter for default persistence manager
      *
      * This is not meant to be a public API.  This is called within the persistence manager factory.  It is used to access system data.
-     *
-     * @param defaultPersistenceManager Default Persistence Manager used to access system level entities
      */
-    @SuppressWarnings("unused")
-    void setSystemPersistenceManager(PersistenceManager defaultPersistenceManager);
-
-    /**
-     * This is not meant to be a public API.
-     * @return System Persistence Manager
-     *
-     */
-    @SuppressWarnings("unused")
-    PersistenceManager getSystemPersistenceManager();
+    var systemPersistenceManager: PersistenceManager?
 
     /**
      * This is not meant to be a public API.
@@ -82,9 +72,37 @@ public interface SchemaContext
      * Returns what persistence manager should be de-serialized when attaching this context to an object through the network.  Or lack of network
      *
      * @return Serialized Persistence Manager.
-     *
      */
-    PersistenceManager getSerializedPersistenceManager();
+    val serializedPersistenceManager: PersistenceManager
+
+
+    /**
+     * Get Kill switch
+     *
+     * This is not meant to be a public API.
+     *
+     * @since 1.0.0
+     * @return Volatile indicator the database is shutting down
+     */
+    val killSwitch: Boolean
+
+    /**
+     * Get Descriptor For Entity.  Initializes EntityDescriptor or returns one
+     * if it already exists
+     *
+     * @param entityClass Entity Type
+     * @return Entity Types default Entity Descriptor
+     *
+     * @throws EntityException Generic Exception
+     */
+    @Throws(EntityException::class)
+    fun getBaseDescriptorForEntity(entityClass: Class<*>): EntityDescriptor?
+
+    /**
+     * Get Transaction File that is used to read and write to WAL journaled file
+     */
+    @Throws(TransactionException::class)
+    fun getTransactionFile():FileChannel
 
     /**
      * Get Descriptor For Entity.  Initializes EntityDescriptor or returns one
@@ -93,13 +111,14 @@ public interface SchemaContext
      * This is not meant to be a public API.
      *
      * @since 1.0.0
-     * @param entity Entity Type
+     * @param entityClass Entity Type
      * @param partitionId Partition key
      * @return Records Entity Descriptor for a partition
      *
      * @throws EntityException Generic Exception
      */
-    EntityDescriptor getDescriptorForEntity(Class entity, Object partitionId) throws EntityException;
+    @Throws(EntityException::class)
+    fun getDescriptorForEntity(entityClass: Class<*>?, partitionId: Any?): EntityDescriptor
 
     /**
      * Get Descriptor For Entity.  Initializes EntityDescriptor or returns one
@@ -117,7 +136,8 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
-    EntityDescriptor getDescriptorForEntity(Object entity, Object partitionId) throws EntityException;
+    @Throws(EntityException::class)
+    fun getDescriptorForEntity(entity: IManagedEntity, partitionId: Any?): EntityDescriptor
 
     /**
      * Get Descriptor and have it automatically determine the partition ID
@@ -132,33 +152,20 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
-    @SuppressWarnings("unused")
-    EntityDescriptor getDescriptorForEntity(Object entity) throws EntityException;
-
-    /**
-     * Get Kill switch
-     *
-     * This is not meant to be a public API.
-     *
-     * @since 1.0.0
-     * @return Volatile indicator the database is shutting down
-     */
-    @SuppressWarnings("unused")
-    boolean getKillSwitch();
+    @Throws(EntityException::class)
+    fun getDescriptorForEntity(entity: Any): EntityDescriptor
 
     /**
      * Shutdown schema context.  Close files, connections or any other IO mechanisms used within the context
      *
      * @since 1.0.0
      */
-    @SuppressWarnings("unused")
-    void shutdown();
+    fun shutdown()
 
     /**
      * Start the context and initialize storage, connection, or any other IO mechanisms used within the schema context
      */
-    @SuppressWarnings("unused")
-    void start();
+    fun start()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor
@@ -170,7 +177,7 @@ public interface SchemaContext
      * @since 1.0.0
      * @return Underlying data storage factory
      */
-    MapBuilder getDataFile(EntityDescriptor descriptor);
+    fun getDataFile(descriptor: EntityDescriptor): MapBuilder
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID
@@ -185,7 +192,8 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
-    MapBuilder getPartitionDataFile(EntityDescriptor descriptor, long partitionId) throws EntityException;
+    @Throws(EntityException::class)
+    fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): MapBuilder
 
     /**
      * Get Partition Entry for entity
@@ -199,7 +207,8 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
-    SystemPartitionEntry getPartitionWithValue(Class classToGet, Object partitionValue) throws EntityException;
+    @Throws(EntityException::class)
+    fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry?
 
     /**
      * Get System Partition with Id
@@ -212,7 +221,8 @@ public interface SchemaContext
      *
      * @throws EntityException Generic Exception
      */
-    SystemPartitionEntry getPartitionWithId(long partitionId) throws EntityException;
+    @Throws(EntityException::class)
+    fun getPartitionWithId(partitionId: Long): SystemPartitionEntry?
 
     /**
      * Get Record Controller
@@ -223,7 +233,7 @@ public interface SchemaContext
      * @param descriptor Record's Entity Descriptor
      * @return Corresponding record controller for entity descriptor
      */
-    RecordController getRecordController(EntityDescriptor descriptor);
+    fun getRecordController(descriptor: EntityDescriptor): RecordController
 
     /**
      * Get Index Controller with Index descriptor
@@ -235,7 +245,7 @@ public interface SchemaContext
      *
      * @return Corresponding record controller
      */
-    IndexController getIndexController(IndexDescriptor indexDescriptor);
+    fun getIndexController(indexDescriptor: IndexDescriptor): IndexController
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor
@@ -247,14 +257,8 @@ public interface SchemaContext
      * @throws EntityException Generic Exception
      * @return Relationship Controller for relationship descriptor
      */
-    RelationshipController getRelationshipController(RelationshipDescriptor relationshipDescriptor) throws EntityException;
-
-    /**
-     * Get location of database.  This can indicate a local or remote endpoint of database.
-     * @return Database location.  Either an endpoint or local path
-     * @since 1.0.0
-     */
-    String getLocation();
+    @Throws(EntityException::class)
+    fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController
 
     /**
      * Create Temporary Map Builder
@@ -262,7 +266,7 @@ public interface SchemaContext
      *
      * @return Create new storage mechanism factory
      */
-    MapBuilder createTemporaryMapBuilder();
+    fun createTemporaryMapBuilder(): MapBuilder
 
     /**
      * Get System Entity By Name
@@ -271,8 +275,8 @@ public interface SchemaContext
      * @throws EntityException Default Exception
      * @return Latest System Entity version with matching name
      */
-    @SuppressWarnings("RedundantThrows")
-    SystemEntity getSystemEntityByName(String name) throws EntityException;
+    @Throws(EntityException::class)
+    fun getSystemEntityByName(name: String): SystemEntity?
 
     /**
      * Get System Entity By ID
@@ -280,29 +284,7 @@ public interface SchemaContext
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
      */
-    SystemEntity getSystemEntityById(int systemEntityId);
-
-    /**
-     * Get Context ID
-     *
-     * @return context id that maps back to the Persistence Manager Factory instance name
-     */
-    String getContextId();
-
-    /**
-     * Get Transaction File that is used to read and write to WAL journaled file
-     *
-     * @return FileChannel Open File Channel
-     */
-    FileChannel getTransactionFile() throws TransactionException;
-
-    /**
-     * Get Controller that handles transactions.  This creates a log of persistence within the database.
-     *
-     * @return Transaction Controller implementation.
-     */
-    @SuppressWarnings("unused")
-    TransactionController getTransactionController();
+    fun getSystemEntityById(systemEntityId: Int): SystemEntity?
 
     /**
      * Release a map builder and prepare it for re-use
@@ -313,15 +295,6 @@ public interface SchemaContext
      *
      * @since 1.3.0
      */
-    void releaseMapBuilder(MapBuilder mapBuilder);
-
-    /**
-     * Get controller responsible for managing query caches
-     *
-     * @return The schema context's query controller
-     *
-     * @since 1.3.0
-     */
-    QueryCacheController getQueryCacheController();
+    fun releaseMapBuilder(mapBuilder: MapBuilder)
 
 }

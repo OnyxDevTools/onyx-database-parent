@@ -9,6 +9,7 @@ import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
 import com.onyx.util.EncryptionUtil
 
 import java.io.*
+import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
 import java.nio.charset.StandardCharsets
@@ -196,8 +197,10 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
         if (lock != null) {
             try {
                 lock!!.release()
-            } finally {
-                fileChannelLock!!.close()
+            } catch (e: ClosedChannelException){} finally {
+                try {
+                    fileChannelLock!!.close()
+                } catch (e:Exception){}
             }
         }
     }

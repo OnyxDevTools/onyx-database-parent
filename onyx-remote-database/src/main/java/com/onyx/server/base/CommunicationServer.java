@@ -504,4 +504,9 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
         if (!(e instanceof InitializationException))
             e.printStackTrace();
     }
+
+    @Override
+    public void copySSLPeerTo(com.onyx.client.SSLPeer peer) {
+
+    }
 }
