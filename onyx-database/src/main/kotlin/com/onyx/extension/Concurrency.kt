@@ -3,11 +3,13 @@ package com.onyx.extension
 import kotlinx.coroutines.experimental.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-
 // Interface for blocking object
 interface Blocking {
     var blocked: AtomicBoolean
 }
+
+// Default Blocking implementation
+class Block(override var blocked: AtomicBoolean = AtomicBoolean(false)):Blocking
 
 // Blocking hash map for use within runBlockingOn
 class BlockingHashMap<K,V>(override var blocked: AtomicBoolean = AtomicBoolean(false)) : HashMap<K, V>(), Blocking

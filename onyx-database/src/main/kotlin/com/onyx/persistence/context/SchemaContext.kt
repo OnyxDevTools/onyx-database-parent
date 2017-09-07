@@ -12,11 +12,9 @@ import com.onyx.persistence.query.QueryCacheController
 import com.onyx.record.RecordController
 import com.onyx.relationship.RelationshipController
 import com.onyx.diskmap.MapBuilder
-import com.onyx.exception.TransactionException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.transaction.TransactionController
 
-import java.nio.channels.FileChannel
 
 /**
  * The purpose of this interface is to resolve all the the metadata, storage mechanism,  and modeling regarding the structure of the database
@@ -56,14 +54,11 @@ interface SchemaContext {
     /**
      * @since 1.0.0
      *
-     * Setter for default persistence manager
-     *
-     * This is not meant to be a public API.  This is called within the persistence manager factory.  It is used to access system data.
+     * This is called within the persistence manager factory.  It is used to access system data.
      */
     var systemPersistenceManager: PersistenceManager?
 
     /**
-     * This is not meant to be a public API.
      * This is used to indicate what persistence manager should be serialized.
      * In some cases the embedded or the remote could be injected but we need
      * to use a contract so we can tell which persistence manager pertains the
@@ -78,8 +73,6 @@ interface SchemaContext {
 
     /**
      * Get Kill switch
-     *
-     * This is not meant to be a public API.
      *
      * @since 1.0.0
      * @return Volatile indicator the database is shutting down
@@ -99,16 +92,8 @@ interface SchemaContext {
     fun getBaseDescriptorForEntity(entityClass: Class<*>): EntityDescriptor?
 
     /**
-     * Get Transaction File that is used to read and write to WAL journaled file
-     */
-    @Throws(TransactionException::class)
-    fun getTransactionFile():FileChannel
-
-    /**
      * Get Descriptor For Entity.  Initializes EntityDescriptor or returns one
      * if it already exists
-     *
-     * This is not meant to be a public API.
      *
      * @since 1.0.0
      * @param entityClass Entity Type
@@ -124,12 +109,9 @@ interface SchemaContext {
      * Get Descriptor For Entity.  Initializes EntityDescriptor or returns one
      * if it already exists
      *
-     * This is not meant to be a public API.
-     *
      * @since 1.0.0
      *
      * @param entity Entity Instance
-     *
      * @param partitionId Partition Field Value
      *
      * @return Record's entity descriptor
@@ -141,8 +123,6 @@ interface SchemaContext {
 
     /**
      * Get Descriptor and have it automatically determine the partition ID
-     *
-     * This is not meant to be a public API.
      *
      * @since 1.0.0
      *
@@ -170,8 +150,6 @@ interface SchemaContext {
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor
      *
-     * This is not meant to be a public API.
-     *
      * @param descriptor Record Entity Descriptor
      *
      * @since 1.0.0
@@ -181,8 +159,6 @@ interface SchemaContext {
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID
-     *
-     * This is not meant to be a public API.
      *
      * @since 1.0.0
      * @param descriptor Record Entity Descriptor
@@ -198,8 +174,6 @@ interface SchemaContext {
     /**
      * Get Partition Entry for entity
      *
-     * This is not meant to be a public API.
-     *
      * @since 1.0.0
      * @param classToGet Type of record
      * @param partitionValue Partition Value
@@ -213,8 +187,6 @@ interface SchemaContext {
     /**
      * Get System Partition with Id
      *
-     * This is not meant to be a public API.
-     *
      * @since 1.0.0
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
@@ -227,8 +199,6 @@ interface SchemaContext {
     /**
      * Get Record Controller
      *
-     * This is not meant to be a public API.
-     *
      * @since 1.0.0
      * @param descriptor Record's Entity Descriptor
      * @return Corresponding record controller for entity descriptor
@@ -237,8 +207,6 @@ interface SchemaContext {
 
     /**
      * Get Index Controller with Index descriptor
-     *
-     * This is not meant to be a public API.
      *
      * @since 1.0.0
      * @param indexDescriptor Index Descriptor
@@ -249,8 +217,6 @@ interface SchemaContext {
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor
-     *
-     * This is not meant to be a public API.
      *
      * @since 1.0.0
      * @param relationshipDescriptor Entity relationship descriptor

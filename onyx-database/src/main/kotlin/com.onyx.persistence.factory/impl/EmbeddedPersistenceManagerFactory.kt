@@ -1,6 +1,7 @@
 package com.onyx.persistence.factory.impl
 
 import com.onyx.exception.InitializationException
+import com.onyx.extension.catchAll
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
@@ -87,6 +88,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
     //region Override Properties
 
+    @Suppress("LeakingThis")
     override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)
 
     override val credentials: String by lazy { this.user + ":" + EncryptionUtil.encrypt(this.password) }
@@ -148,7 +150,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
             }
 
             this.persistenceManager
-            schemaContext!!.start()
+            schemaContext.start()
         } catch (e: OverlappingFileLockException) {
             releaseLock()
             throw InitializationException(InitializationException.DATABASE_LOCKED)
@@ -163,7 +165,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      * @since 1.0.0
      */
     override fun close() {
-        schemaContext!!.shutdown()
+        schemaContext.shutdown()
         releaseLock()
     }
 
@@ -198,9 +200,9 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
             try {
                 lock!!.release()
             } catch (e: ClosedChannelException){} finally {
-                try {
+                catchAll {
                     fileChannelLock!!.close()
-                } catch (e:Exception){}
+                }
             }
         }
     }

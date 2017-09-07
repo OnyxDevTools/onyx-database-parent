@@ -4,9 +4,6 @@ import com.onyx.buffer.BufferStream;
 import com.onyx.exception.TransactionException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.context.Contexts;
-import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.diskmap.serializer.ObjectBuffer;
@@ -36,17 +33,16 @@ public class TransactionControllerImpl implements TransactionController
     private static final byte DELETE_QUERY = 3;
     private static final byte UPDATE_QUERY = 4;
 
-    private final String contextId;
     private final PersistenceManager persistenceManager;
-
+    private final TransactionStore transactionStore;
     private final ReentrantLock transactionLock = new ReentrantLock(true);
 
     /**
      * Constructor with schema Context
      */
-    public TransactionControllerImpl(SchemaContext context, PersistenceManager persistenceManager)
+    public TransactionControllerImpl(TransactionStore transactionStore, PersistenceManager persistenceManager)
     {
-        this.contextId = context.getContextId();
+        this.transactionStore = transactionStore;
         this.persistenceManager = persistenceManager;
     }
 
@@ -57,7 +53,7 @@ public class TransactionControllerImpl implements TransactionController
      */
     public void writeSave(IManagedEntity entity) throws TransactionException
     {
-        final FileChannel file = getContext().getTransactionFile();
+        final FileChannel file = transactionStore.getTransactionFile();
 
         transactionLock.lock();
         try {
@@ -85,7 +81,7 @@ public class TransactionControllerImpl implements TransactionController
     public void writeQueryUpdate(Query query) throws TransactionException
     {
 
-        final FileChannel file = getContext().getTransactionFile();
+        final FileChannel file = transactionStore.getTransactionFile();
 
         transactionLock.lock();
         try {
@@ -113,7 +109,7 @@ public class TransactionControllerImpl implements TransactionController
     public void writeDelete(IManagedEntity entity) throws TransactionException
     {
 
-        final FileChannel file = getContext().getTransactionFile();
+        final FileChannel file = transactionStore.getTransactionFile();
 
         transactionLock.lock();
         try {
@@ -139,7 +135,7 @@ public class TransactionControllerImpl implements TransactionController
      */
     public void writeDeleteQuery(Query query) throws TransactionException
     {
-        final FileChannel file = getContext().getTransactionFile();
+        final FileChannel file = transactionStore.getTransactionFile();
 
         transactionLock.lock();
 
@@ -182,6 +178,7 @@ public class TransactionControllerImpl implements TransactionController
         }
 
         String[] filePaths = walDirectory.list();
+        assert filePaths != null;
         Arrays.sort(filePaths);
 
         String transactionFilePath;
@@ -281,11 +278,5 @@ public class TransactionControllerImpl implements TransactionController
         }
 
         return true;
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    protected SchemaContext getContext()
-    {
-        return Contexts.get(contextId);
     }
 }

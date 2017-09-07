@@ -7,7 +7,6 @@ import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.EntityException
-import com.onyx.exception.TransactionException
 import com.onyx.extension.*
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
@@ -28,16 +27,15 @@ import com.onyx.record.impl.SequenceRecordControllerImpl
 import com.onyx.relationship.RelationshipController
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl
+import com.onyx.transaction.impl.DefaultTransactionStore
 import com.onyx.transaction.TransactionController
+import com.onyx.transaction.TransactionStore
 import com.onyx.transaction.impl.TransactionControllerImpl
 import com.onyx.util.EntityClassLoader
-import com.onyx.util.FileUtil
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
 import java.io.File
-import java.io.IOException
 import java.math.BigInteger
-import java.nio.channels.FileChannel
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.*
@@ -53,7 +51,6 @@ import java.util.concurrent.atomic.AtomicLong
  * @since 1.0.0
  *
  */
-// TODO: Remove Transaction file stuff out
 // TODO: Move rebuilding of index out
 open class DefaultSchemaContext : SchemaContext {
 
@@ -78,6 +75,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     private lateinit var commitJob:Job
 
+    private lateinit var transactionStore:TransactionStore
+
     // endregion
 
     // region Constructors
@@ -94,6 +93,7 @@ open class DefaultSchemaContext : SchemaContext {
     constructor(contextId: String, location: String) {
         this.contextId = contextId
         this.location = location
+        this.transactionStore = DefaultTransactionStore(location)
 
         @Suppress("LeakingThis")
         Contexts.put(this)
@@ -127,7 +127,7 @@ open class DefaultSchemaContext : SchemaContext {
         set(systemPersistenceManager) {
             field = systemPersistenceManager!!
             serializedPersistenceManager = field!!
-            this.transactionController = TransactionControllerImpl(this, field)
+            this.transactionController = TransactionControllerImpl(transactionStore, field)
         }
 
     // endregion
@@ -174,11 +174,7 @@ open class DefaultSchemaContext : SchemaContext {
         }
 
         // Close transaction file
-        if (lastWalFileChannel != null) {
-            catchAll {
-                FileUtil.closeFileChannel(lastWalFileChannel)
-            }
-        }
+        transactionStore.close()
 
         ScannerFactory.getInstance(this).reset()
 
@@ -694,84 +690,6 @@ open class DefaultSchemaContext : SchemaContext {
 
     // endregion
 
-    // region Journaling
-
-    private val journalFileIndex = AtomicLong(0L)
-    private var lastWalFileChannel: FileChannel? = null
-    private val transactionFileLock = Object()
-
-    private val walDirectory: String
-        get() = this.location + File.separator + "wal" + File.separator
-
-    /**
-     * Get WAL Transaction File. This will get the appropriate file channel and return it
-     *
-     * @return Open File Channel
-     * @throws TransactionException Cannot write transaction
-     */
-    @Throws(TransactionException::class)
-    override fun getTransactionFile(): FileChannel {
-        synchronized(transactionFileLock) {
-
-            try {
-                if (lastWalFileChannel == null) {
-
-                    // Create the journaling directory if it does'nt exist
-                    val directory = walDirectory
-
-                    val journalingDirector = File(directory)
-                    if (!journalingDirector.exists()) {
-                        journalingDirector.mkdirs()
-                    }
-
-                    // Grab the last used WAL File
-                    val directoryListing = File(directory).list()
-                    Arrays.sort(directoryListing!!)
-
-                    val lastWalFile: File
-
-                    if (directoryListing.isNotEmpty()) {
-                        var fileName = directoryListing[directoryListing.size - 1]
-                        fileName = fileName.replace(".wal", "")
-
-                        journalFileIndex.addAndGet(Integer.valueOf(fileName)!!.toLong())
-                    }
-
-                    lastWalFile = File(directory + journalFileIndex.get() + ".wal")
-
-                    if (!lastWalFile.exists()) {
-                        lastWalFile.createNewFile()
-                    }
-
-                    // Open file channel
-                    lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.path)
-                }
-
-                // If the last wal file exceeds longSize limit threshold, create a new one
-                if (lastWalFileChannel!!.size() > MAX_JOURNAL_SIZE) {
-
-                    // Close the previous
-                    lastWalFileChannel!!.force(true)
-                    lastWalFileChannel!!.close()
-
-                    val directory = walDirectory
-                    val lastWalFile = File(directory + journalFileIndex.addAndGet(1) + ".wal")
-                    lastWalFile.createNewFile()
-
-                    lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.path)
-                }
-
-                return lastWalFileChannel!!
-
-            } catch (e: IOException) {
-                throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_OPEN_FILE)
-            }
-
-        }
-    }
-
-    // endregion
-
     /**
      * Consumer that initiates a new index rebuild.
      */
@@ -802,11 +720,7 @@ open class DefaultSchemaContext : SchemaContext {
     }
 
     companion object {
-
         // Random generator for generating random temporary file names
         private val random = SecureRandom()
-
-        // Maximum WAL File longSize
-        private val MAX_JOURNAL_SIZE = 1024 * 1024 * 20
     }
 }
