@@ -12,7 +12,7 @@ import java.util.Date
  *
  * Contains date modified information
  */
-open class AbstractSystemEntity : ManagedEntity() {
+abstract class AbstractSystemEntity : ManagedEntity() {
 
     @Attribute
     var dateUpdated: Date? = null

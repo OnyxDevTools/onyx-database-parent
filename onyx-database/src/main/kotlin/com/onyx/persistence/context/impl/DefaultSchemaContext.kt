@@ -297,7 +297,7 @@ open class DefaultSchemaContext : SchemaContext {
         // Check to see if the relationships were not changed from a to many to a to one
         descriptor.checkValidRelationships(systemEntity)
 
-        if (descriptor != systemEntity) {
+        if (!descriptor.equals(systemEntity)) {
             systemEntity = SystemEntity(descriptor)
             serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
         }
@@ -319,7 +319,7 @@ open class DefaultSchemaContext : SchemaContext {
     private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
         // Check to see if the partition already exists
         if (systemEntity.partition != null && descriptor.partition != null) {
-            if (systemEntity.partition.entries.filter { it.value == descriptor.partition.partitionValue }.count() > 0) {
+            if (systemEntity.partition!!.entries.filter { it.value == descriptor.partition.partitionValue }.count() > 0) {
                 return
             }
         }
@@ -330,8 +330,8 @@ open class DefaultSchemaContext : SchemaContext {
                 systemEntity.partition = SystemPartition(descriptor.partition, systemEntity)
             }
 
-            val entry = SystemPartitionEntry(descriptor, descriptor.partition, systemEntity.partition, partitionCounter.incrementAndGet())
-            systemEntity.partition.entries.add(entry)
+            val entry = SystemPartitionEntry(descriptor, descriptor.partition, systemEntity.partition!!, partitionCounter.incrementAndGet())
+            systemEntity.partition!!.entries.add(entry)
             serializedPersistenceManager.saveEntity<IManagedEntity>(entry)
         }
     }
@@ -699,8 +699,8 @@ open class DefaultSchemaContext : SchemaContext {
 
             if (systemEntity!!.partition != null) {
 
-                systemEntity.partition.entries.forEach {
-                    val partitionEntityDescriptor = getDescriptorForEntity(inIndexDescriptor.entityDescriptor.clazz, it!!.value)
+                systemEntity.partition!!.entries.forEach {
+                    val partitionEntityDescriptor = getDescriptorForEntity(inIndexDescriptor.entityDescriptor.clazz, it.value)
 
                     run {
                         catchAll {
