@@ -21,6 +21,7 @@ import remote.base.RemoteBaseTest;
  *
  * Tests the initialization of the database
  */
+@org.junit.Ignore
 @Category({ RemoteServerTests.class })
 public class TestDatabaseInitialization extends RemoteBaseTest
 {

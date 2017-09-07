@@ -31,7 +31,7 @@ data class SystemEntity @JvmOverloads constructor(
     @Attribute
     var identifier: SystemIdentifier? = null,
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverse = "entity", inverseClass = SystemPartition::class, loadFactor = 3)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class, loadFactor = 3)
     var partition: SystemPartition? = null,
 
     @Attribute

@@ -165,7 +165,7 @@ public class PartitionContext
                     // since 1.2.3 This has been fixed because previously we could not depend on the defaultDescriptor
                     // as being identified as the class we are trying to get the partition entry for
                     try {
-                        return getContext().getDescriptorForEntity(Class.forName(partitionEntry.getPartition().getEntity().getName()), partitionEntry.getValue());
+                        return getContext().getDescriptorForEntity(Class.forName(partitionEntry.getPartition().getEntityClass()), partitionEntry.getValue());
                     } catch (ClassNotFoundException ignore) {
                         // This is ignored because if you get this far without having a defined entity that should never happen
                     }

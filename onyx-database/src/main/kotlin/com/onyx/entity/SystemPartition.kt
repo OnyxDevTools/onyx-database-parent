@@ -21,8 +21,8 @@ data class SystemPartition @JvmOverloads constructor(
     @Attribute
     var name: String = "",
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.NONE, inverse = "partition", inverseClass = SystemEntity::class, loadFactor = 3)
-    var entity: SystemEntity? = null,
+    @Attribute
+    var entityClass: String = "",
 
     @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry::class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
     var entries: MutableList<SystemPartitionEntry> = ArrayList()
@@ -30,9 +30,9 @@ data class SystemPartition @JvmOverloads constructor(
 ) : ManagedEntity() {
 
     constructor(descriptor: PartitionDescriptor, entity: SystemEntity):this (
-        entity = entity,
+        id = entity.name + descriptor.name,
         name = descriptor.name,
-        id = entity.name + descriptor.name
+        entityClass = entity.name
     )
 
 }
