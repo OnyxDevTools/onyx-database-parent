@@ -1,7 +1,7 @@
 package memory.queries;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.query.CachedResults;
@@ -30,12 +30,12 @@ public class QueryListenerTest extends BaseTest {
     }
 
     @Before
-    public void before() throws EntityException {
+    public void before() throws OnyxException {
         initialize();
         seedData();
     }
 
-    public void seedData() throws EntityException
+    public void seedData() throws OnyxException
     {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("1");
@@ -47,7 +47,7 @@ public class QueryListenerTest extends BaseTest {
      * Test a query is subscribed correctly
      */
     @Test
-    public void testSubscribe() throws EntityException
+    public void testSubscribe() throws OnyxException
     {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
@@ -82,7 +82,7 @@ public class QueryListenerTest extends BaseTest {
      * Test a query is un-subscribed correctly
      */
     @Test
-    public void testUnsubscribe() throws EntityException
+    public void testUnsubscribe() throws OnyxException
     {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
@@ -122,7 +122,7 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an insert listener
      */
     @Test
-    public void testInsert() throws EntityException
+    public void testInsert() throws OnyxException
     {
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
@@ -162,7 +162,7 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an update listener
      */
     @Test
-    public void testUpdate() throws EntityException
+    public void testUpdate() throws OnyxException
     {
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
@@ -201,7 +201,7 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testDelete() throws EntityException
+    public void testDelete() throws OnyxException
     {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("55");
@@ -246,7 +246,7 @@ public class QueryListenerTest extends BaseTest {
      * Test a query is subscribed correctly
      */
     @Test
-    public void testSubscribeListen() throws EntityException
+    public void testSubscribeListen() throws OnyxException
     {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
@@ -281,7 +281,7 @@ public class QueryListenerTest extends BaseTest {
      * Test a query is un-subscribed correctly
      */
     @Test
-    public void testUnsubscribeListen() throws EntityException
+    public void testUnsubscribeListen() throws OnyxException
     {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
@@ -321,7 +321,7 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an insert listener
      */
     @Test
-    public void testInsertListen() throws EntityException
+    public void testInsertListen() throws OnyxException
     {
         final AtomicBoolean pass = new AtomicBoolean(false);
         Query query = new Query(SimpleEntity.class);
@@ -361,7 +361,7 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an update listener
      */
     @Test
-    public void testUpdateListen() throws EntityException
+    public void testUpdateListen() throws OnyxException
     {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("11");
@@ -405,7 +405,7 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testDeleteListen() throws EntityException
+    public void testDeleteListen() throws OnyxException
     {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("12");

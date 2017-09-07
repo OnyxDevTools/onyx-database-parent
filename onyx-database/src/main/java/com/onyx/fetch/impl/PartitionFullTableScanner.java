@@ -6,8 +6,8 @@ import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.EntityExceptionWrapper;
+import com.onyx.exception.OnyxException;
+import com.onyx.exception.OnyxExceptionWrapper;
 import com.onyx.exception.InvalidConstructorException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
@@ -43,7 +43,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
      * @param classToScan Class type to scan
      * @param descriptor  Entity descriptor of entity type to scan
      */
-    public PartitionFullTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException {
+    public PartitionFullTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
         systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
     }
@@ -54,10 +54,10 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
      *
      * @param existingValues Existing values to check for criteria
      * @return Existing values that match the criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map scanPartition(DiskMap existingValues, long partitionId) throws EntityException {
+    private Map scanPartition(DiskMap existingValues, long partitionId) throws OnyxException {
         final CompatMap allResults = new CompatHashMap();
 
         final Iterator iterator = existingValues.referenceSet().iterator();
@@ -91,12 +91,12 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
      * Full Table Scan
      *
      * @return References matching criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    public Map scan() throws EntityException {
+    public Map scan() throws OnyxException {
 
-        final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
+        final OnyxExceptionWrapper wrapper = new OnyxExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
         if (query.getPartition() == QueryPartitionMode.ALL) {
@@ -116,8 +116,8 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                         Map partitionResults = scanPartition(recs, partition.getIndex());
                         results.putAll(partitionResults);
                         partitionScanCountDown.countDown();
-                    } catch (EntityException e) {
-                        wrapper.exception = e;
+                    } catch (OnyxException e) {
+                        wrapper.setException(e);
                     }
 
                 });
@@ -129,8 +129,8 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
             } catch (InterruptedException ignore) {
             }
 
-            if (wrapper.exception != null) {
-                throw wrapper.exception;
+            if (wrapper.getException() != null) {
+                throw wrapper.getException();
             }
         }
 

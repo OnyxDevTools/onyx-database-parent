@@ -1,7 +1,7 @@
 package memory.delete;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
@@ -25,7 +25,7 @@ import static org.junit.Assert.fail;
 public class DeleteSequenceIndexEntityTest extends memory.base.BaseTest
 {
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -37,7 +37,7 @@ public class DeleteSequenceIndexEntityTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testAddDeleteSequence() throws EntityException
+    public void testAddDeleteSequence() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete entity = new ImmutableSequenceIdentifierEntityForDelete();
         entity.correlation = 1;
@@ -52,7 +52,7 @@ public class DeleteSequenceIndexEntityTest extends memory.base.BaseTest
         try {
             manager.find(entity);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -110,7 +110,7 @@ public class DeleteSequenceIndexEntityTest extends memory.base.BaseTest
 
         try {
             manager.deleteEntities(entitiesToDelete);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail("Failure to execute delete batch");
         }
         for (Object deletedEntity : entitiesToDelete)
@@ -119,7 +119,7 @@ public class DeleteSequenceIndexEntityTest extends memory.base.BaseTest
             try {
                 manager.find((IManagedEntity)deletedEntity);
             }
-            catch (EntityException e)
+            catch (OnyxException e)
             {
                 if(e instanceof NoResultsException)
                 {
@@ -173,7 +173,7 @@ public class DeleteSequenceIndexEntityTest extends memory.base.BaseTest
         try
         {
             manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {

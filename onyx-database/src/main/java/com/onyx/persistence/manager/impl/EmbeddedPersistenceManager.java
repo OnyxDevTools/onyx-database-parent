@@ -99,11 +99,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param entity Managed Entity to Save
      * @return Saved Managed Entity
-     * @throws EntityException Exception occured while persisting an entity
+     * @throws OnyxException Exception occured while persisting an entity
      * @since 1.0.0
      */
     @Override
-    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws EntityException {
+    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -137,11 +137,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * The entities must all be of the same type
      *
      * @param entities List of entities
-     * @throws EntityException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
+     * @throws OnyxException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
      * @since 1.0.0
      */
     @Override
-    public void saveEntities(List<? extends IManagedEntity> entities) throws EntityException {
+    public void saveEntities(List<? extends IManagedEntity> entities) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -179,11 +179,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param entity Managed Entity to delete
      * @return Flag indicating it was deleted
-     * @throws EntityException Error occurred while deleting
+     * @throws OnyxException Error occurred while deleting
      * @since 1.0.0
      */
     @Override
-    public boolean deleteEntity(IManagedEntity entity) throws EntityException {
+    public boolean deleteEntity(IManagedEntity entity) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -212,11 +212,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * Requires all of the entities to be of the same type
      *
      * @param entities List of entities
-     * @throws EntityException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
+     * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      * @since 1.0.0
      */
     @Override
-    public void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException {
+    public void deleteEntities(List<? extends IManagedEntity> entities) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -231,11 +231,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query used to filter entities with criteria
      * @return Number of entities deleted
-     * @throws EntityException Exception occurred while executing delete query
+     * @throws OnyxException Exception occurred while executing delete query
      * @since 1.0.0
      */
     @Override
-    public int executeDelete(Query query) throws EntityException {
+    public int executeDelete(Query query) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -269,12 +269,12 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query used to filter entities with criteria
      * @return Number of entities updated
-     * @throws EntityException Exception occurred while executing update query
+     * @throws OnyxException Exception occurred while executing update query
      * @since 1.0.0
      */
     @Override
     @SuppressWarnings("unchecked")
-    public int executeUpdate(Query query) throws EntityException {
+    public int executeUpdate(Query query) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -309,12 +309,12 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query containing criteria
      * @return Query Results
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      * @since 1.0.0
      */
     @Override
     @SuppressWarnings("unchecked")
-    public <E> List<E> executeQuery(Query query) throws EntityException {
+    public <E> List<E> executeQuery(Query query) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -388,12 +388,12 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query containing criteria
      * @return LazyQueryCollection lazy loaded results
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      * @since 1.0.0
      */
     @Override
     @SuppressWarnings("unchecked")
-    public List executeLazyQuery(Query query) throws EntityException {
+    public List executeLazyQuery(Query query) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -453,11 +453,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param entity Entity to hydrate.
      * @return Managed Entity
-     * @throws EntityException Error when hydrating entity
+     * @throws OnyxException Error when hydrating entity
      * @since 1.0.0
      */
     @Override
-    public <E extends IManagedEntity> E find(IManagedEntity entity) throws EntityException {
+    public <E extends IManagedEntity> E find(IManagedEntity entity) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -488,11 +488,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
      * @param id    Primary Key of entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity
+     * @throws OnyxException Error when finding entity
      * @since 1.0.0
      */
     @Override
-    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws EntityException {
+    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -522,11 +522,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param id          Primary Key of entity
      * @param partitionId Partition key for entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      * @since 1.0.0
      */
     @Override
-    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException {
+    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws OnyxException {
 
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -555,11 +555,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param entity Managed Entity to check
      * @return Returns true if the entity primary key exists. Otherwise it returns false
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      * @since 1.0.0
      */
     @Override
-    public boolean exists(IManagedEntity entity) throws EntityException {
+    public boolean exists(IManagedEntity entity) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -578,11 +578,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param entity      Managed Entity to check
      * @param partitionId Partition Value for entity
      * @return Returns true if the entity primary key exists. Otherwise it returns false
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      * @since 1.0.0
      */
     @Override
-    public boolean exists(IManagedEntity entity, Object partitionId) throws EntityException {
+    public boolean exists(IManagedEntity entity, Object partitionId) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -598,11 +598,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param entity    Managed Entity to attach relationship values
      * @param attribute String representation of relationship attribute
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      * @since 1.0.0
      */
     @Override
-    public void initialize(IManagedEntity entity, String attribute) throws EntityException {
+    public void initialize(IManagedEntity entity, String attribute) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -634,11 +634,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param entity    Managed Entity to attach relationship values
      * @param attribute String representation of relationship attribute
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public Object findRelationship(IManagedEntity entity, String attribute) throws EntityException {
+    public Object findRelationship(IManagedEntity entity, String attribute) throws OnyxException {
         return getRelationship(entity, attribute);
     }
 
@@ -647,10 +647,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param clazz Type of managed entity to retrieve
      * @return Unsorted List of all entities with type
-     * @throws EntityException Exception occurred while fetching results
+     * @throws OnyxException Exception occurred while fetching results
      */
     @Override
-    public <E extends IManagedEntity> List<E> list(Class clazz) throws EntityException {
+    public <E extends IManagedEntity> List<E> list(Class clazz) throws OnyxException {
         final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
@@ -665,10 +665,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param entity                  Parent Managed Entity
      * @param relationship            Relationship attribute
      * @param relationshipIdentifiers Existing relationship identifiers
-     * @throws EntityException Error occurred while saving relationship.
+     * @throws OnyxException Error occurred while saving relationship.
      * @since 1.0.0
      */
-    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException {
+    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws OnyxException {
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
         final RelationshipDescriptor relationshipDescriptor = descriptor.getRelationships().get(relationship);
 
@@ -693,10 +693,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param referenceId Reference location within database
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      * @since 1.0.0
      */
-    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException {
+    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws OnyxException {
 
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -723,11 +723,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param partitionReference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
     @Override
     @SuppressWarnings("unchecked")
-    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException {
+    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws OnyxException {
 
         final SystemPartitionEntry partitionEntry = context.getPartitionWithId((partitionReference).partition);
         if (partitionEntry == null)
@@ -744,10 +744,10 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param id          Entity Primary Key
      * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
-     * @throws EntityException error occurred while attempting to retrieve entity.
+     * @throws OnyxException error occurred while attempting to retrieve entity.
      * @since 1.0.0
      */
-    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException {
+    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -770,11 +770,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query used to filter entities with criteria
      * @return Number of entities deleted
-     * @throws EntityException Exception occurred while executing delete query
+     * @throws OnyxException Exception occurred while executing delete query
      * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeDeleteForResults(Query query) throws EntityException {
+    public QueryResult executeDeleteForResults(Query query) throws OnyxException {
         return new QueryResult(query, this.executeDelete(query));
     }
 
@@ -785,11 +785,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query used to filter entities with criteria
      * @return Number of entities updated
-     * @throws EntityException Exception occurred while executing update query
+     * @throws OnyxException Exception occurred while executing update query
      * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeUpdateForResults(Query query) throws EntityException {
+    public QueryResult executeUpdateForResults(Query query) throws OnyxException {
         return new QueryResult(query, this.executeUpdate(query));
     }
 
@@ -798,11 +798,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query containing criteria
      * @return Query Results
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeQueryForResults(Query query) throws EntityException {
+    public QueryResult executeQueryForResults(Query query) throws OnyxException {
         return new QueryResult(query, this.executeQuery(query));
     }
 
@@ -811,11 +811,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query containing criteria
      * @return LazyQueryCollection lazy loaded results
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      * @since 1.0.0
      */
     @SuppressWarnings("unused")
-    public QueryResult executeLazyQueryForResults(Query query) throws EntityException {
+    public QueryResult executeLazyQueryForResults(Query query) throws OnyxException {
         return new QueryResult(query, this.executeLazyQuery(query));
     }
 
@@ -826,7 +826,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @param reference  Reference location within a data structure
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
-    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+    public Map getMapWithReferenceId(Class entityType, long reference) throws OnyxException {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
@@ -854,11 +854,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criterium
-     * @throws EntityException Error during query.
+     * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
     @Override
-    public long countForQuery(Query query) throws EntityException {
+    public long countForQuery(Query query) throws OnyxException {
 
         final Class clazz = query.getEntityType();
 
@@ -888,7 +888,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      */
     @Override
     @SuppressWarnings("unchecked")
-    public void stream(Query query, QueryStream streamer) throws EntityException {
+    public void stream(Query query, QueryStream streamer) throws OnyxException {
         final LazyQueryCollection entityList = (LazyQueryCollection) executeLazyQuery(query);
         final PersistenceManager persistenceManagerInstance = this;
 
@@ -913,7 +913,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.0.0
      */
     @Override
-    public void stream(Query query, Class queryStreamClass) throws EntityException {
+    public void stream(Query query, Class queryStreamClass) throws OnyxException {
         QueryStream streamer;
         try {
             streamer = (QueryStream) queryStreamClass.newInstance();
@@ -930,11 +930,11 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      *
      * @param query Query with a listener attached
      *
-     * @throws EntityException Un expected error when attempting to unregister listener
+     * @throws OnyxException Un expected error when attempting to unregister listener
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
-    public boolean removeChangeListener(Query query) throws EntityException
+    public boolean removeChangeListener(Query query) throws OnyxException
     {
         final Class clazz = query.getEntityType();
 
@@ -952,7 +952,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
      * @since 1.3.1
      */
     @Override
-    public void listen(Query query) throws EntityException {
+    public void listen(Query query) throws OnyxException {
         final Class clazz = query.getEntityType();
 
         // We want to lock the index controller so that it does not do background indexing

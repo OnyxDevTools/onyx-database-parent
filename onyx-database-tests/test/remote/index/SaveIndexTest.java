@@ -1,8 +1,7 @@
 package remote.index;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -38,7 +37,7 @@ public class SaveIndexTest extends RemoteBaseTest
     }
 
     @Test
-    public void saveStringIndexUpdateTest() throws EntityException
+    public void saveStringIndexUpdateTest() throws OnyxException
     {
         StringIdentifierEntityIndex entity = new StringIdentifierEntityIndex();
         entity.identifier = "A";
@@ -64,7 +63,7 @@ public class SaveIndexTest extends RemoteBaseTest
     }
 
     @Test
-    public void saveStringIndexDeleteTest() throws EntityException
+    public void saveStringIndexDeleteTest() throws OnyxException
     {
         StringIdentifierEntityIndex entity = new StringIdentifierEntityIndex();
         entity.identifier = "A";
@@ -85,7 +84,7 @@ public class SaveIndexTest extends RemoteBaseTest
     }
 
     @Test
-    public void saveStringIndexDeleteQueryTest() throws EntityException
+    public void saveStringIndexDeleteQueryTest() throws OnyxException
     {
         StringIdentifierEntityIndex entity = new StringIdentifierEntityIndex();
         entity.identifier = "A";
@@ -106,7 +105,7 @@ public class SaveIndexTest extends RemoteBaseTest
     }
 
     @Test
-    public void saveStringIndexUpdateQueryTest() throws EntityException
+    public void saveStringIndexUpdateQueryTest() throws OnyxException
     {
         StringIdentifierEntityIndex entity = new StringIdentifierEntityIndex();
         entity.identifier = "A";
@@ -133,7 +132,7 @@ public class SaveIndexTest extends RemoteBaseTest
     }
 
     @Test
-    public void testSaveWithExistingFullScanPrior() throws EntityException
+    public void testSaveWithExistingFullScanPrior() throws OnyxException
     {
         StringIdentifierEntityIndex entity = new StringIdentifierEntityIndex();
         entity.identifier = "A";
@@ -148,7 +147,7 @@ public class SaveIndexTest extends RemoteBaseTest
     }
 
     @Test
-    public void testSaveWithExistingFullScanPriorWitIn() throws EntityException
+    public void testSaveWithExistingFullScanPriorWitIn() throws OnyxException
     {
         StringIdentifierEntityIndex entity = new StringIdentifierEntityIndex();
         entity.identifier = "A";

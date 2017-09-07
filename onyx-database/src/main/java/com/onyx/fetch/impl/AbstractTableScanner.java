@@ -3,7 +3,7 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -51,7 +51,7 @@ abstract class AbstractTableScanner extends PartitionContext
      * @param descriptor Entity descriptor of entity type to scan
      */
     @SuppressWarnings({"unchecked", "RedundantThrows"})
-    AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    AbstractTableScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
     {
         super(context, descriptor);
         this.criteria = criteria;

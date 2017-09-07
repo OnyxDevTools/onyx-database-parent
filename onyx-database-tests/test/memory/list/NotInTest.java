@@ -1,7 +1,7 @@
 package memory.list;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -122,7 +122,7 @@ public class NotInTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testNotInString() throws EntityException
+    public void testNotInString() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add("Some test strin1");
@@ -135,7 +135,7 @@ public class NotInTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testNumberNotIn() throws EntityException
+    public void testNumberNotIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(322l);
@@ -146,7 +146,7 @@ public class NotInTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testDateNotIn() throws EntityException
+    public void testDateNotIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(new Date(1000));
@@ -159,7 +159,7 @@ public class NotInTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testDoubleNotIn() throws EntityException
+    public void testDoubleNotIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(1.126);

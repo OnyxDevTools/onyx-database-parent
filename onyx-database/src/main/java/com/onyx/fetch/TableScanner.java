@@ -1,6 +1,6 @@
 package com.onyx.fetch;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 
 import java.util.Map;
 
@@ -16,17 +16,17 @@ public interface TableScanner
      * Full scan
      *
      * @return Matching references meeting criteria
-     * @throws EntityException Cannot scan entity
+     * @throws OnyxException Cannot scan entity
      */
-    Map<Long, Long> scan() throws EntityException;
+    Map<Long, Long> scan() throws OnyxException;
 
     /**
      * Scan with indexes
      *
      * @param existingValues Existing references to start from
      * @return Matching references meeting criteria
-     * @throws EntityException Cannot scan entity
+     * @throws OnyxException Cannot scan entity
      */
-    Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException;
+    Map<Long, Long> scan(Map<Long, Long> existingValues) throws OnyxException;
 
 }

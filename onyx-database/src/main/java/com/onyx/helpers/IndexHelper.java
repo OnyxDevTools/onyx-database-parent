@@ -2,7 +2,7 @@ package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -24,7 +24,7 @@ public class IndexHelper
      * @param descriptor Entity Descriptor
      * @param entity Entity to save indexes for
      */
-    public static void saveAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, Object identifier, long oldReferenceId, IManagedEntity entity) throws EntityException
+    public static void saveAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, Object identifier, long oldReferenceId, IManagedEntity entity) throws OnyxException
     {
         if(descriptor.getIndexes().size() > 0)
         {
@@ -48,7 +48,7 @@ public class IndexHelper
      * @param descriptor Entity Descriptor
      * @param referenceId Entity reference
      */
-    public static void deleteAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, long referenceId) throws EntityException
+    public static void deleteAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, long referenceId) throws OnyxException
     {
         if(descriptor.getIndexes().size() > 0)
         {

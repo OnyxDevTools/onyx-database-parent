@@ -3,12 +3,11 @@ package com.onyx.helpers;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.EntityExceptionWrapper;
+import com.onyx.exception.OnyxException;
+import com.onyx.exception.OnyxExceptionWrapper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.RecordController;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
@@ -50,29 +49,29 @@ public class PartitionContext
      * Cached Data Files for partition ids, return default if there is no partition.  Otherwise insert into cache.
      *
      */
-    protected MapBuilder getDataFileWithPartitionId(long partitionId) throws EntityException
+    protected MapBuilder getDataFileWithPartitionId(long partitionId) throws OnyxException
     {
         if(partitionId == 0)
         {
             return this.getContext().getDataFile(this.defaultDescriptor);
         }
 
-        final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+        final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
         MapBuilder retVal = cachedPartitionFiles.computeIfAbsent(partitionId, (aLong) -> {
             try
             {
                 return getContext().getPartitionDataFile(defaultDescriptor, partitionId);
-            } catch (EntityException e)
+            } catch (OnyxException e)
             {
-                exceptionWrapper.exception = e;
+                exceptionWrapper.setException(e);
             }
             return null;
         });
 
-        if(exceptionWrapper.exception != null)
+        if(exceptionWrapper.getException() != null)
         {
-            throw exceptionWrapper.exception;
+            throw exceptionWrapper.getException();
         }
 
         return retVal;
@@ -84,7 +83,7 @@ public class PartitionContext
     private class PartitionKey
     {
 
-        PartitionKey(IManagedEntity entity) throws EntityException
+        PartitionKey(IManagedEntity entity) throws OnyxException
         {
             this.entityType = entity.getClass();
             this.partitionVal = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, getContext()));
@@ -113,28 +112,28 @@ public class PartitionContext
     private final CompatMap<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     @SuppressWarnings("WeakerAccess")
-    public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws EntityException
+    public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws OnyxException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
         {
 
-            final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+            final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
             EntityDescriptor retVal = cachedDescriptorsPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
                 {
                     return getContext().getDescriptorForEntity(entity);
                 }
-                catch (EntityException e)
+                catch (OnyxException e)
                 {
-                    exceptionWrapper.exception = e;
+                    exceptionWrapper.setException(e);
                 }
                 return null;
             });
 
-            if(exceptionWrapper.exception != null)
+            if(exceptionWrapper.getException() != null)
             {
-                throw exceptionWrapper.exception;
+                throw exceptionWrapper.getException();
             }
 
             return retVal;
@@ -146,12 +145,12 @@ public class PartitionContext
 
     private final CompatMap<Long, EntityDescriptor> cachedDescriptorsPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
-    protected EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws EntityException
+    protected EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws OnyxException
     {
         if(partitionId != 0)
         {
 
-            final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+            final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
             EntityDescriptor retVal = cachedDescriptorsPerPartition.computeIfAbsent(partitionId, (partitionKey) -> {
                 try
@@ -170,16 +169,16 @@ public class PartitionContext
                         // This is ignored because if you get this far without having a defined entity that should never happen
                     }
                 }
-                catch (EntityException e)
+                catch (OnyxException e)
                 {
-                    exceptionWrapper.exception = e;
+                    exceptionWrapper.setException(e);
                 }
                 return null;
             });
 
-            if(exceptionWrapper.exception != null)
+            if(exceptionWrapper.getException() != null)
             {
-                throw exceptionWrapper.exception;
+                throw exceptionWrapper.getException();
             }
 
             return retVal;
@@ -189,28 +188,28 @@ public class PartitionContext
 
     private final CompatMap<PartitionKey, RecordController> cachedControllersPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
-    protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws EntityException
+    protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws OnyxException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
         {
 
-            final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+            final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
             final RecordController retVal = cachedControllersPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
                 {
                     return getContext().getRecordController(getDescriptorForEntity(entity));
                 }
-                catch (EntityException e)
+                catch (OnyxException e)
                 {
-                    exceptionWrapper.exception = e;
+                    exceptionWrapper.setException(e);
                 }
                 return null;
             });
 
-            if(exceptionWrapper.exception != null)
+            if(exceptionWrapper.getException() != null)
             {
-                throw exceptionWrapper.exception;
+                throw exceptionWrapper.getException();
             }
 
             return retVal;
@@ -221,11 +220,11 @@ public class PartitionContext
 
     private final CompatMap<Long, RecordController> cachedControllersPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
-    public RecordController getRecordControllerForPartition(long partitionId) throws EntityException
+    public RecordController getRecordControllerForPartition(long partitionId) throws OnyxException
     {
         if(partitionId != 0)
         {
-            final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+            final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
             RecordController retVal = cachedControllersPerPartition.computeIfAbsent(partitionId, (partitionKey) -> {
                 try
@@ -233,16 +232,16 @@ public class PartitionContext
                     EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
                     return getContext().getRecordController(inverseDescriptor);
                 }
-                catch (EntityException e)
+                catch (OnyxException e)
                 {
-                    exceptionWrapper.exception = e;
+                    exceptionWrapper.setException(e);
                 }
                 return null;
             });
 
-            if(exceptionWrapper.exception != null)
+            if(exceptionWrapper.getException() != null)
             {
-                throw exceptionWrapper.exception;
+                throw exceptionWrapper.getException();
             }
 
             return retVal;
@@ -253,26 +252,26 @@ public class PartitionContext
 
     private final CompatMap<PartitionKey, MapBuilder> cachedDataFilesPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
-    protected MapBuilder getDataFileForEntity(IManagedEntity entity) throws EntityException
+    protected MapBuilder getDataFileForEntity(IManagedEntity entity) throws OnyxException
     {
         if (PartitionHelper.hasPartitionField(entity, getContext()))
         {
-            final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+            final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
             MapBuilder dataFile = cachedDataFilesPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
                 {
                     return getContext().getDataFile(getDescriptorForEntity(entity));
-                } catch (EntityException e)
+                } catch (OnyxException e)
                 {
-                    exceptionWrapper.exception = e;
+                    exceptionWrapper.setException(e);
                 }
                 return null;
             });
 
-            if(exceptionWrapper.exception != null)
+            if(exceptionWrapper.getException() != null)
             {
-                throw exceptionWrapper.exception;
+                throw exceptionWrapper.getException();
             }
 
             if(dataFile == null)
@@ -287,11 +286,11 @@ public class PartitionContext
 
     private final CompatMap<PartitionKey, Long> cachedPartitionIds = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
-    protected long getPartitionId(IManagedEntity entity) throws EntityException
+    protected long getPartitionId(IManagedEntity entity) throws OnyxException
     {
         if (PartitionHelper.hasPartitionField(entity, getContext()))
         {
-            final EntityExceptionWrapper exceptionWrapper = new EntityExceptionWrapper();
+            final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
             Long partitionId = cachedPartitionIds.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
@@ -303,16 +302,16 @@ public class PartitionContext
                     }
                     return getContext().getPartitionWithValue(partitionKey.entityType, partitionKey.partitionVal).getIndex();
                 }
-                catch (EntityException e)
+                catch (OnyxException e)
                 {
-                    exceptionWrapper.exception = e;
+                    exceptionWrapper.setException(e);
                     return 0L;
                 }
             });
 
-            if(exceptionWrapper.exception != null)
+            if(exceptionWrapper.getException() != null)
             {
-                throw exceptionWrapper.exception;
+                throw exceptionWrapper.getException();
             }
 
             return partitionId;

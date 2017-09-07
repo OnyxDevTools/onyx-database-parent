@@ -2,7 +2,7 @@ package com.onyx.persistence.query.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -114,7 +114,7 @@ public class DefaultQueryCacheController implements QueryCacheController {
                     final SystemPartitionEntry systemPartitionEntry = context.getPartitionWithValue(aClass, descriptor.getPartition().getPartitionValue());
                     reference = new PartitionReference(systemPartitionEntry.getIndex(), entityReference);
                 }
-            } catch (EntityException ignore) {}
+            } catch (OnyxException ignore) {}
 
             final Object useThisReference = reference;
 
@@ -141,7 +141,7 @@ public class DefaultQueryCacheController implements QueryCacheController {
                             }
                         }
                     }
-                } catch (EntityException ignore) {}
+                } catch (OnyxException ignore) {}
             });
 
             return queryCachedResultsMap;

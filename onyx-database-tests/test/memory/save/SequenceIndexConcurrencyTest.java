@@ -1,7 +1,7 @@
 package memory.save;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
@@ -53,11 +53,11 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
      * Tests Batch inserting 100,000 records with a Sequence identifier
      * This test is executed using 10 concurrent threads
      * last test took: 1670(win) 2200(mac)
-     * @throws EntityException
+     * @throws OnyxException
      * @throws InterruptedException
      */
     @Test
-    public void aConcurrencySequencePerformanceTest() throws EntityException, InterruptedException
+    public void aConcurrencySequencePerformanceTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -94,7 +94,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                         try
                         {
                             manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -129,7 +129,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
     }
 
     @Test
-    public void concurrencySequenceSaveIntegrityTest() throws EntityException, InterruptedException
+    public void concurrencySequenceSaveIntegrityTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         final InheritedLongAttributeEntity entity2 = new InheritedLongAttributeEntity();
@@ -188,7 +188,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                                 manager.saveEntity(entity1);
                             }
                             //manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -230,7 +230,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
     }
 
     @Test
-    public void concurrencySequenceSaveIntegrityTestWithBatching() throws EntityException, InterruptedException
+    public void concurrencySequenceSaveIntegrityTestWithBatching() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         final InheritedLongAttributeEntity entity2 = new InheritedLongAttributeEntity();
@@ -285,7 +285,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                         try
                         {
                             manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -327,7 +327,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
     }
 
     @Test
-    public void concurrencySequenceDeleteIntegrityTest() throws EntityException, InterruptedException
+    public void concurrencySequenceDeleteIntegrityTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         final InheritedLongAttributeEntity entity2 = new InheritedLongAttributeEntity();
@@ -393,7 +393,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                                 manager.saveEntity(entity1);
                             }
                             //manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -462,7 +462,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                             {
                                 manager.deleteEntity(entitiesToValidateDeleted.get(t));
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -520,7 +520,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
     }
 
     @Test
-    public void concurrencySequenceDeleteBatchIntegrityTest() throws EntityException, InterruptedException
+    public void concurrencySequenceDeleteBatchIntegrityTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         final InheritedLongAttributeEntity entity2 = new InheritedLongAttributeEntity();
@@ -585,7 +585,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                         try
                         {
                             manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -651,7 +651,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                             {
                                 manager.deleteEntity(entitiesToValidateDeleted.get(t));
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -721,11 +721,11 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
      * Executes 10 threads that insert 30k entities with sequence id, then 10k are updated and 10k are deleted.
      * Then it validates the integrity of those actions
      * last test took: 1661(win) 2100(mac)
-     * @throws EntityException
+     * @throws OnyxException
      * @throws InterruptedException
      */
     @Test
-    public void concurrencySequenceAllIntegrityTest() throws EntityException, InterruptedException
+    public void concurrencySequenceAllIntegrityTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
 
@@ -787,7 +787,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                         try
                         {
                             manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -869,7 +869,7 @@ public class SequenceIndexConcurrencyTest extends memory.base.BaseTest {
                             {
                                 manager.deleteEntity(entitiesToValidateDeleted.get(t));
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }

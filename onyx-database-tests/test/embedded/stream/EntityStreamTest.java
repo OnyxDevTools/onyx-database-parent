@@ -1,8 +1,7 @@
 package embedded.stream;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
-import com.onyx.persistence.IManagedEntity;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -27,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class EntityStreamTest extends BaseTest
 {
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -40,10 +39,10 @@ public class EntityStreamTest extends BaseTest
 
     /**
      * Test a basic Query Stream implementation
-     * @throws EntityException Should not happen
+     * @throws OnyxException Should not happen
      */
     @Test
-    public void testBasicQueryStream() throws EntityException
+    public void testBasicQueryStream() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
         testEntity.correlation = 1;
@@ -62,11 +61,11 @@ public class EntityStreamTest extends BaseTest
 
     /**
      * Test a Query Stream implementation with an andThan syntax
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
     @Ignore
-    public void testBasicQueryStreamAndThen() throws EntityException
+    public void testBasicQueryStreamAndThen() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
         testEntity.correlation = 1;
@@ -103,10 +102,10 @@ public class EntityStreamTest extends BaseTest
      * The purpose of this is to display that we can iterate through it without having the dependency
      * of what format the entity used to be in.  In this case, it would help with migrations.
      *
-     * @throws EntityException Should Not happen
+     * @throws OnyxException Should Not happen
      */
     @Test
-    public void testStreamAsDictionary() throws EntityException
+    public void testStreamAsDictionary() throws OnyxException
     {
         // Save some test data
         final ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
@@ -135,7 +134,7 @@ public class EntityStreamTest extends BaseTest
                 assert freshEntity.correlation == 5;
 
                 hadDataToStream.set(true);
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 e.printStackTrace();
             }
         };

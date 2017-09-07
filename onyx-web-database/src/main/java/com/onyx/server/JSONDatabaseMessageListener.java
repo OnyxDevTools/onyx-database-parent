@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.endpoint.WebPersistenceEndpoint;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.UnknownDatabaseException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -94,9 +94,9 @@ public class JSONDatabaseMessageListener implements HttpHandler {
      * @throws ClassNotFoundException Class wasn't found during reflection
      * @throws IllegalAccessException Could not reflect on private method
      * @throws InstantiationException Cannot instantiate entity
-     * @throws EntityException        General entity exception
+     * @throws OnyxException        General entity exception
      */
-    private Object invokeHandler(RestServicePath path, final Object body) throws EntityException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+    private Object invokeHandler(RestServicePath path, final Object body) throws OnyxException, ClassNotFoundException, InstantiationException, IllegalAccessException {
 
         switch (path) {
             case SAVE:
@@ -172,7 +172,7 @@ public class JSONDatabaseMessageListener implements HttpHandler {
 
                         sendResponse(exchange, response, 200);
 
-                    } catch (EntityException entityException) {
+                    } catch (OnyxException entityException) {
                         final ExceptionResponse response = new ExceptionResponse(entityException, entityException.getClass().getName());
                         try {
                             sendResponse(exchange, response, 303);

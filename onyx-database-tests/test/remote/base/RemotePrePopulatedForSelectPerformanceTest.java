@@ -1,6 +1,6 @@
 package remote.base;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import entities.PerformanceEntity;
@@ -63,7 +63,7 @@ public class RemotePrePopulatedForSelectPerformanceTest extends RemoteBaseTest
         try
         {
             manager.saveEntities(entityList);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             e.printStackTrace();
         }

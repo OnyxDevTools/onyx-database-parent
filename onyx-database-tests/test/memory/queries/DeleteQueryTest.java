@@ -1,7 +1,7 @@
 package memory.queries;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -21,7 +21,7 @@ import java.util.List;
 public class DeleteQueryTest extends memory.base.PrePopulatedDatabaseTest
 {
     @Test
-    public void testExecuteDeleteQuery() throws EntityException, InstantiationException, IllegalAccessException
+    public void testExecuteDeleteQuery() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3");
         Query query = new Query(AllAttributeForFetch.class, criteria);
@@ -36,7 +36,7 @@ public class DeleteQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testExecuteDeleteRangeQuery() throws EntityException, InstantiationException, IllegalAccessException
+    public void testExecuteDeleteRangeQuery() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria);
@@ -54,7 +54,7 @@ public class DeleteQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test(expected = NoResultsException.class)
-    public void testCascadeRelationship() throws EntityException, InstantiationException, IllegalAccessException
+    public void testCascadeRelationship() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("intPrimitive", QueryCriteriaOperator.GREATER_THAN_EQUAL, 0).and("child.someOtherField", QueryCriteriaOperator.STARTS_WITH, "HIYA");
 

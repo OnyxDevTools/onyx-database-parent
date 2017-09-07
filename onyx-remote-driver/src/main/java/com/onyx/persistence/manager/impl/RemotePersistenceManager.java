@@ -2,7 +2,7 @@ package com.onyx.persistence.manager.impl;
 
 import com.onyx.client.push.PushRegistrar;
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.StreamException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
@@ -92,10 +92,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Saved Managed Entity
      *
-     * @throws EntityException Exception occurred while persisting an entity
+     * @throws OnyxException Exception occurred while persisting an entity
      */
     @Override
-    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws EntityException
+    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws OnyxException
     {
         IManagedEntity copyValue = proxy.saveEntity(entity);
         ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
@@ -110,10 +110,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @since 1.0.0
      * @param entities List of entities
-     * @throws EntityException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
+     * @throws OnyxException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
      */
     @Override
-    public void saveEntities(List<? extends IManagedEntity> entities) throws EntityException
+    public void saveEntities(List<? extends IManagedEntity> entities) throws OnyxException
     {
         if(entities.size() > 0)
         {
@@ -129,10 +129,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @since 1.0.0
      * @param entity Managed Entity to delete
      * @return Flag indicating it was deleted
-     * @throws EntityException Error occurred while deleting
+     * @throws OnyxException Error occurred while deleting
      */
     @Override
-    public boolean deleteEntity(IManagedEntity entity) throws EntityException
+    public boolean deleteEntity(IManagedEntity entity) throws OnyxException
     {
         return proxy.deleteEntity(entity);
     }
@@ -146,10 +146,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @since 1.0.0
      * @param entities List of entities
-     * @throws EntityException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
+     * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      */
     @Override
-    public void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException
+    public void deleteEntities(List<? extends IManagedEntity> entities) throws OnyxException
     {
         proxy.deleteEntities(entities);
     }
@@ -163,10 +163,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Query Results
      *
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      */
     @Override
-    public <E> List<E> executeQuery(Query query) throws EntityException
+    public <E> List<E> executeQuery(Query query) throws OnyxException
     {
         // Transform the change listener to a remote change listener.
         if(query.getChangeListener() != null
@@ -193,10 +193,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return LazyQueryCollection lazy loaded results
      *
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      */
     @Override
-    public <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws EntityException
+    public <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws OnyxException
     {
         QueryResult result = proxy.executeLazyQueryForResult(query);
         query.setResultsCount(result.getQuery().getResultsCount());
@@ -213,12 +213,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws EntityException Exception occurred while executing update query
+     * @throws OnyxException Exception occurred while executing update query
      *
      * @return Number of entities updated
      */
     @Override
-    public int executeUpdate(Query query) throws EntityException
+    public int executeUpdate(Query query) throws OnyxException
     {
         QueryResult result = proxy.executeUpdateForResult(query);
         query.setResultsCount(result.getQuery().getResultsCount());
@@ -232,12 +232,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws EntityException Exception occurred while executing delete query
+     * @throws OnyxException Exception occurred while executing delete query
      *
      * @return Number of entities deleted
      */
     @Override
-    public int executeDelete(Query query) throws EntityException
+    public int executeDelete(Query query) throws OnyxException
     {
         QueryResult result = proxy.executeDeleteForResult(query);
         query.setResultsCount(result.getQuery().getResultsCount());
@@ -255,10 +255,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Managed Entity
      *
-     * @throws EntityException Error when hydrating entity
+     * @throws OnyxException Error when hydrating entity
      */
     @Override
-    public <E extends IManagedEntity> E find(IManagedEntity entity) throws EntityException
+    public <E extends IManagedEntity> E find(IManagedEntity entity) throws OnyxException
     {
         IManagedEntity results = proxy.find(entity);
         ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity));
@@ -276,10 +276,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
      * @param id Primary Key of entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity
+     * @throws OnyxException Error when finding entity
      */
     @Override
-    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws EntityException
+    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws OnyxException
     {
         return proxy.findById(clazz, id);
     }
@@ -295,10 +295,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param id Primary Key of entity
      * @param partitionId Partition key for entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
     @Override
-    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws OnyxException
     {
         return proxy.findByIdInPartition(clazz, id, partitionId);
     }
@@ -314,10 +314,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
      *
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
     @Override
-    public boolean exists(IManagedEntity entity) throws EntityException
+    public boolean exists(IManagedEntity entity) throws OnyxException
     {
         return proxy.exists(entity);
     }
@@ -335,10 +335,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
      *
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
     @Override
-    public boolean exists(IManagedEntity entity, Object partitionId) throws EntityException
+    public boolean exists(IManagedEntity entity, Object partitionId) throws OnyxException
     {
         return proxy.exists(entity,partitionId);
     }
@@ -350,10 +350,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Unsorted List of all entities with type
      *
-     * @throws EntityException Exception occurred while fetching results
+     * @throws OnyxException Exception occurred while fetching results
      */
     @Override
-    public <E extends IManagedEntity> List<E> list(Class clazz) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz) throws OnyxException
     {
         final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
         QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
@@ -371,10 +371,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @param attribute String representation of relationship attribute
      *
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      */
     @Override
-    public void initialize(IManagedEntity entity, String attribute) throws EntityException
+    public void initialize(IManagedEntity entity, String attribute) throws OnyxException
     {
         Object relationship = proxy.getRelationship(entity, attribute);
         ReflectionUtil.setAny(entity, relationship, context.getDescriptorForEntity(entity).getRelationships().get(attribute).getField());
@@ -389,10 +389,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param relationship Relationship attribute
      * @param relationshipIdentifiers Existing relationship identifiers
      *
-     * @throws EntityException Error occurred while saving relationship.
+     * @throws OnyxException Error occurred while saving relationship.
      */
     @Override
-    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException
+    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws OnyxException
     {
         proxy.saveRelationshipsForEntity(entity, relationship, relationshipIdentifiers);
     }
@@ -403,10 +403,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @since 1.0.0
      * @param referenceId Reference location within database
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
     @Override
-    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException
+    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws OnyxException
     {
         return proxy.getWithReferenceId(entityType, referenceId);
     }
@@ -420,10 +420,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param partitionReference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
     @Override
-    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException {
+    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws OnyxException {
         return proxy.getWithPartitionReference(entityType, partitionReference);
     }
 
@@ -439,10 +439,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
      *
-     * @throws EntityException error occurred while attempting to retrieve entity.
+     * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @Override
-    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException
+    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws OnyxException
     {
         return proxy.findByIdWithPartitionId(clazz, id, partitionId);
     }
@@ -458,7 +458,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      */
     @Override
-    public void stream(Query query, QueryStream streamer) throws EntityException
+    public void stream(Query query, QueryStream streamer) throws OnyxException
     {
         throw new StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE);
     }
@@ -474,7 +474,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      */
     @Override
-    public void stream(Query query, Class queryStreamClass) throws EntityException
+    public void stream(Query query, Class queryStreamClass) throws OnyxException
     {
         proxy.stream(query, queryStreamClass);
     }
@@ -492,12 +492,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     @Override
-    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+    public Map getMapWithReferenceId(Class entityType, long reference) throws OnyxException {
         throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
     }
 
     /**
-     * Retrieve the quantity of entities that match the query criterium.
+     * Retrieve the quantity of entities that match the query criteria.
      * <p>
      * usage:
      * <p>
@@ -512,11 +512,11 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criterium
-     * @throws EntityException Error during query.
+     * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
     @Override
-    public long countForQuery(Query query) throws EntityException {
+    public long countForQuery(Query query) throws OnyxException {
         return proxy.countForQuery(query);
     }
 
@@ -530,12 +530,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @param query Query with a listener attached
      *
-     * @throws EntityException Un expected error when attempting to unregister listener
+     * @throws OnyxException Un expected error when attempting to unregister listener
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
     @Override
-    public boolean removeChangeListener(Query query) throws EntityException {
+    public boolean removeChangeListener(Query query) throws OnyxException {
 
         // Ensure the original change listener is attached and is a remote query listener
         if(query.getChangeListener() != null
@@ -557,7 +557,7 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @since 1.3.1
      */
     @Override
-    public void listen(Query query) throws EntityException {
+    public void listen(Query query) throws OnyxException {
         // Register the query listener as a push subscriber / receiver
         final RemoteQueryListener remoteQueryListener = new RemoteQueryListener(query.getChangeListener());
         this.pushRegistrar.register(remoteQueryListener, remoteQueryListener);

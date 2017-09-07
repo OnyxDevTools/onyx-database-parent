@@ -1,7 +1,7 @@
 package memory.queries;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -28,10 +28,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
     /**
      * Scans 1 table, searching by 1 field. No results found
      * Last result: 151(win), 141(mac)
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void aTestNoResultsSingleFullTableScanFor100kRecords() throws EntityException
+    public void aTestNoResultsSingleFullTableScanFor100kRecords() throws OnyxException
     {
         manager.list(PerformanceEntity.class, new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAHAHAHABOOGER"));
         long time = System.currentTimeMillis();
@@ -47,10 +47,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
     /**
      * Scans 1 table, searching by 1 field. Ordering by 2 fields. 200k recs sorted, 20 recs return because of maxResults.
      * Last result: 1081(win), 1122(mac)
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void bTestSortingResultsFullTableScanFor200kRecords() throws EntityException
+    public void bTestSortingResultsFullTableScanFor200kRecords() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "A"));
         query.setQueryOrders(Arrays.asList(new QueryOrder("booleanPrimitive", false), new QueryOrder("stringValue", true)));
@@ -82,10 +82,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * then joins with one associated table
      * returns a total of 20 recs
      * Last result: 59(win), 36(mac)
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void cTestJoiningResultsFor300kRecords() throws EntityException
+    public void cTestJoiningResultsFor300kRecords() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "A"));
         query.setQueryOrders(Arrays.asList(new QueryOrder("id", true)));
@@ -115,10 +115,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
      * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
      *
-     * @throws EntityException Something bad happened
+     * @throws OnyxException Something bad happened
      */
     @Test
-    public void dTestGreaterThanOnIdValue() throws EntityException
+    public void dTestGreaterThanOnIdValue() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN_EQUAL, 99000l));
         query.setFirstRow(100);
@@ -142,10 +142,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * Scans entities with an identifier less than or equal to 5k.  This should of course return 5k records.  Also,
      * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
      *
-     * @throws EntityException Something bad happened
+     * @throws OnyxException Something bad happened
      */
     @Test
-    public void eTestLessThanOnIdValue() throws EntityException
+    public void eTestLessThanOnIdValue() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN_EQUAL, 5000l));
         query.setFirstRow(100);
@@ -169,10 +169,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * Scans entities with an index less than or equal to 5k.  This should of course return 5k records.  Also,
      * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
      *
-     * @throws EntityException Something bad happened
+     * @throws OnyxException Something bad happened
      */
     @Test
-    public void fTestLessThanOnIndexValue() throws EntityException
+    public void fTestLessThanOnIndexValue() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("idValue", QueryCriteriaOperator.LESS_THAN_EQUAL, 5000l));
         query.setFirstRow(100);
@@ -195,10 +195,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
      * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
      *
-     * @throws EntityException Something bad happened
+     * @throws OnyxException Something bad happened
      */
     @Test
-    public void gTestGreaterThanOnIdValue() throws EntityException
+    public void gTestGreaterThanOnIdValue() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("idValue", QueryCriteriaOperator.GREATER_THAN_EQUAL, 99000l));
         query.setFirstRow(100);
@@ -219,10 +219,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * Scans entities with an index less than or equal to 5k.  This should of course return 5k records.  Also,
      * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
      *
-     * @throws EntityException Something bad happened
+     * @throws OnyxException Something bad happened
      */
     @Test
-    public void hTestLessThanOnIndexValueCompound() throws EntityException
+    public void hTestLessThanOnIndexValueCompound() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("booleanPrimitive", QueryCriteriaOperator.EQUAL, true).and(new QueryCriteria("idValue", QueryCriteriaOperator.LESS_THAN, 5000l)));
         query.setFirstRow(100);
@@ -242,10 +242,10 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
      * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
      * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
      *
-     * @throws EntityException Something bad happened
+     * @throws OnyxException Something bad happened
      */
     @Test
-    public void iTestGreaterThanOnIdValueCompound() throws EntityException
+    public void iTestGreaterThanOnIdValueCompound() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("booleanPrimitive", QueryCriteriaOperator.EQUAL, true).and(new QueryCriteria("idValue", QueryCriteriaOperator.GREATER_THAN, 99000l)));
         query.setFirstRow(100);

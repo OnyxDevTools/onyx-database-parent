@@ -57,9 +57,9 @@ public class EntityDescriptor implements Serializable {
      * Constructor - Initializes the entity descriptor with the target class.
      *
      * @param clazz   Base entity class
-     * @throws EntityException General exception wrapped in entity exception
+     * @throws OnyxException General exception wrapped in entity exception
      */
-    public EntityDescriptor(final Class clazz) throws EntityException {
+    public EntityDescriptor(final Class clazz) throws OnyxException {
         final boolean interfaceFound = IManagedEntity.class.isAssignableFrom(clazz); // clazz.isAssignableFrom(IManagedEntity.class);
 
         if (!interfaceFound) {

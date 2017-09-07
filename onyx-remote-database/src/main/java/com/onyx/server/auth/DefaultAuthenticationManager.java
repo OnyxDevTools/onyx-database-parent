@@ -2,7 +2,7 @@ package com.onyx.server.auth;
 
 import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.entity.SystemUser;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.util.EncryptionUtil;
@@ -37,7 +37,7 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
         SystemUser user;
         try {
             user = persistenceManager.findById(SystemUser.class, username);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             throw new InitializationException(InitializationException.UNKNOWN_EXCEPTION, e);
         }
         if(user == null)

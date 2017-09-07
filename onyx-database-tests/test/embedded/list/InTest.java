@@ -1,7 +1,7 @@
 package embedded.list;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -31,7 +31,7 @@ public class InTest extends BaseTest
     }
 
     @Before
-    public void seedData() throws EntityException
+    public void seedData() throws OnyxException
     {
         initialize();
 
@@ -125,7 +125,7 @@ public class InTest extends BaseTest
     }
 
     @Test
-    public void testInEquals() throws EntityException
+    public void testInEquals() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add("Some test strin1");
@@ -136,7 +136,7 @@ public class InTest extends BaseTest
     }
 
     @Test
-    public void testInStringId() throws EntityException
+    public void testInStringId() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add("FIRST ONE3");
@@ -147,7 +147,7 @@ public class InTest extends BaseTest
     }
 
     @Test
-    public void testNumberIn() throws EntityException
+    public void testNumberIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(322l);
@@ -159,7 +159,7 @@ public class InTest extends BaseTest
     }
 
     @Test
-    public void testDateIn() throws EntityException
+    public void testDateIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(new Date(1000));

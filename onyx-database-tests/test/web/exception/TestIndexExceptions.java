@@ -2,7 +2,7 @@ package web.exception;
 
 import category.WebServerTests;
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.InvalidIndexException;
 import entities.exception.InvalidIndexTypeEntity;
@@ -34,13 +34,13 @@ public class TestIndexExceptions extends BaseTest
     }
 
     @Test(expected = InvalidIndexException.class)
-    public void testMissingAttribute() throws EntityException
+    public void testMissingAttribute() throws OnyxException
     {
         EntityDescriptor descriptor = new EntityDescriptor(entities.exception.InvalidIndexException.class);
     }
 
     @Test(expected = InvalidIndexException.class)
-    public void testInvalidIndexType() throws EntityException
+    public void testInvalidIndexType() throws OnyxException
     {
         EntityDescriptor descriptor = new EntityDescriptor(InvalidIndexTypeEntity.class);
     }

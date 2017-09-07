@@ -1,7 +1,7 @@
 package com.onyx.index;
 
 import com.onyx.descriptor.IndexDescriptor;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 
 import java.util.Map;
 import java.util.Set;
@@ -20,7 +20,7 @@ public interface IndexController
      * @param oldReferenceId Old entity reference for the index
      * @param newReferenceId New entity reference for the index
      */
-    void save(Object indexValue, long oldReferenceId, long newReferenceId) throws EntityException;
+    void save(Object indexValue, long oldReferenceId, long newReferenceId) throws OnyxException;
 
     /**
      * Delete an index key with a record reference
@@ -28,7 +28,7 @@ public interface IndexController
      * @param reference Entity reference
      */
     @SuppressWarnings("RedundantThrows")
-    void delete(long reference) throws EntityException;
+    void delete(long reference) throws OnyxException;
 
     /**
      * Find all index references
@@ -37,7 +37,7 @@ public interface IndexController
      * @return References matching that index value
      */
     @SuppressWarnings("RedundantThrows")
-    Map findAll(Object indexValue) throws EntityException;
+    Map findAll(Object indexValue) throws OnyxException;
 
     /**
      * Find all the references above and perhaps equal to the key parameter
@@ -45,12 +45,12 @@ public interface IndexController
      * @param includeValue Whether to compare above and equal or not.
      * @return A set of record references
      *
-     * @throws EntityException Exception while reading the data structure
+     * @throws OnyxException Exception while reading the data structure
      *
      * @since 1.2.0
      */
     @SuppressWarnings("RedundantThrows")
-    Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException;
+    Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws OnyxException;
 
     /**
      * Find all the references blow and perhaps equal to the key parameter
@@ -58,12 +58,12 @@ public interface IndexController
      * @param includeValue Whether to compare below and equal or not.
      * @return A set of record references
      *
-     * @throws EntityException Exception while reading the data structure
+     * @throws OnyxException Exception while reading the data structure
      *
      * @since 1.2.0
      */
     @SuppressWarnings("RedundantThrows")
-    Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException;
+    Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws OnyxException;
 
     /**
      * Get Index descriptor
@@ -78,7 +78,7 @@ public interface IndexController
      * @return All index references
      */
     @SuppressWarnings("RedundantThrows")
-    Set<Object> findAllValues() throws EntityException;
+    Set<Object> findAllValues() throws OnyxException;
 
 
     /**
@@ -86,6 +86,6 @@ public interface IndexController
      *
      */
     @SuppressWarnings("RedundantThrows")
-    void rebuild() throws EntityException;
+    void rebuild() throws OnyxException;
 
 }

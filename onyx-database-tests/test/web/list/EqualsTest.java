@@ -1,12 +1,10 @@
 package web.list;
 
 import category.WebServerTests;
-import com.onyx.application.WebDatabaseServer;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import entities.AllAttributeEntity;
 import entities.AllAttributeForFetch;
 import entities.AllAttributeV2Entity;
 import org.junit.*;
@@ -179,7 +177,7 @@ public class EqualsTest extends BaseTest
     }
 
     @Test
-    public void testStringEquals() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringEquals() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
 
@@ -263,7 +261,7 @@ public class EqualsTest extends BaseTest
 
 
     @Test
-    public void testFloatEquals() throws EntityException
+    public void testFloatEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("floatValue", QueryCriteriaOperator.EQUAL, 55.3f);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -278,7 +276,7 @@ public class EqualsTest extends BaseTest
 
 
     @Test
-    public void testByteEquals() throws EntityException
+    public void testByteEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("mutableByte", QueryCriteriaOperator.EQUAL, (byte)43);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -292,7 +290,7 @@ public class EqualsTest extends BaseTest
     }
 
     @Test
-    public void testShortEquals() throws EntityException
+    public void testShortEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("mutableShort", QueryCriteriaOperator.EQUAL, (short)828);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -306,7 +304,7 @@ public class EqualsTest extends BaseTest
     }
 
     @Test
-    public void testCharEquals() throws EntityException
+    public void testCharEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("mutableChar", QueryCriteriaOperator.EQUAL, 'A');
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);

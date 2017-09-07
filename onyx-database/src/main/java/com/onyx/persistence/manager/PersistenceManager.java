@@ -1,6 +1,6 @@
 package com.onyx.persistence.manager;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -68,10 +68,10 @@ public interface PersistenceManager {
      *
      * @return Saved Managed Entity
      *
-     * @throws EntityException Exception occured while persisting an entity
+     * @throws OnyxException Exception occured while persisting an entity
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws EntityException;
+    <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws OnyxException;
 
     /**
      * Batch saves a list of entities.
@@ -80,10 +80,10 @@ public interface PersistenceManager {
      *
      * @since 1.0.0
      * @param entities List of entities
-     * @throws EntityException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
+     * @throws OnyxException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
      */
     @SuppressWarnings("unused")
-    void saveEntities(List<? extends IManagedEntity> entities) throws EntityException;
+    void saveEntities(List<? extends IManagedEntity> entities) throws OnyxException;
 
     /**
      * Deletes a single entity
@@ -93,9 +93,9 @@ public interface PersistenceManager {
      * @since 1.0.0
      * @param entity Managed Entity to delete
      * @return Flag indicating it was deleted
-     * @throws EntityException Error occurred while deleting
+     * @throws OnyxException Error occurred while deleting
      */
-    boolean deleteEntity(IManagedEntity entity) throws EntityException;
+    boolean deleteEntity(IManagedEntity entity) throws OnyxException;
 
     /**
      * Deletes list of entities.
@@ -106,10 +106,10 @@ public interface PersistenceManager {
      *
      * @since 1.0.0
      * @param entities List of entities
-     * @throws EntityException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
+     * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      */
     @SuppressWarnings("unused")
-    void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException;
+    void deleteEntities(List<? extends IManagedEntity> entities) throws OnyxException;
 
     /**
      * Execute query and delete entities returned in the results
@@ -118,21 +118,21 @@ public interface PersistenceManager {
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws EntityException Exception occurred while executing delete query
+     * @throws OnyxException Exception occurred while executing delete query
      *
      * @return Number of entities deleted
      */
-    int executeDelete(Query query) throws EntityException;
+    int executeDelete(Query query) throws OnyxException;
 
     /**
      * Execute a delete query and return a result object.  This is so that it will play nicely as a proxy object
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException Exception when deleting entities
+     * @throws OnyxException Exception when deleting entities
      */
     @SuppressWarnings("unused")
-    QueryResult executeDeleteForResult(Query query) throws EntityException;
+    QueryResult executeDeleteForResult(Query query) throws OnyxException;
 
     /**
      * Updates all rows returned by a given query
@@ -143,21 +143,21 @@ public interface PersistenceManager {
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws EntityException Exception occurred while executing update query
+     * @throws OnyxException Exception occurred while executing update query
      *
      * @return Number of entities updated
      */
-    int executeUpdate(Query query) throws EntityException;
+    int executeUpdate(Query query) throws OnyxException;
 
     /**
      * Execute an update query and return a result object.  This is so that it will play nicely as a proxy object
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException when an update query failed
+     * @throws OnyxException when an update query failed
      */
     @SuppressWarnings("unused")
-    QueryResult executeUpdateForResult(Query query) throws EntityException;
+    QueryResult executeUpdateForResult(Query query) throws OnyxException;
 
     /**
      * Execute query with criteria and optional row limitations
@@ -168,19 +168,19 @@ public interface PersistenceManager {
      *
      * @return Query Results
      *
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      */
-    <E> List<E> executeQuery(Query query) throws EntityException;
+    <E> List<E> executeQuery(Query query) throws OnyxException;
 
     /**
      * Execute a query and return a result object.  This is so that it will play nicely as a proxy object
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException when the query is mal formed or general exception
+     * @throws OnyxException when the query is mal formed or general exception
      */
     @SuppressWarnings("unused")
-    QueryResult executeQueryForResult(Query query) throws EntityException;
+    QueryResult executeQueryForResult(Query query) throws OnyxException;
 
     /**
      * Execute query with criteria and optional row limitations.  Specify lazy instantiation of query results.
@@ -191,19 +191,19 @@ public interface PersistenceManager {
      *
      * @return LazyQueryCollection lazy loaded results
      *
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      */
-    <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws EntityException;
+    <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws OnyxException;
 
     /**
      * Execute a lazy query and return a result object.  This is so that it will play nicely as a proxy object
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException General exception happened when the query.
+     * @throws OnyxException General exception happened when the query.
      */
     @SuppressWarnings("unused")
-    QueryResult executeLazyQueryForResult(Query query) throws EntityException;
+    QueryResult executeLazyQueryForResult(Query query) throws OnyxException;
 
     /**
      * Hydrates an instantiated entity.  The instantiated entity must have the primary key defined and partition key if the data is partitioned.
@@ -216,10 +216,10 @@ public interface PersistenceManager {
      *
      * @return Managed Entity
      *
-     * @throws EntityException Error when hydrating entity
+     * @throws OnyxException Error when hydrating entity
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> E find(IManagedEntity entity) throws EntityException;
+    <E extends IManagedEntity> E find(IManagedEntity entity) throws OnyxException;
 
     /**
      * Find Entity By Class and ID.
@@ -231,10 +231,10 @@ public interface PersistenceManager {
      * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
      * @param id Primary Key of entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity
+     * @throws OnyxException Error when finding entity
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> E findById(Class clazz, Object id) throws EntityException;
+    <E extends IManagedEntity> E findById(Class clazz, Object id) throws OnyxException;
 
     /**
      * Find Entity By Class and ID.
@@ -247,10 +247,10 @@ public interface PersistenceManager {
      * @param id Primary Key of entity
      * @param partitionId Partition key for entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws OnyxException;
 
     /**
      * Determines if the entity exists within the database.
@@ -263,10 +263,10 @@ public interface PersistenceManager {
      *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
      *
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
     @SuppressWarnings("unused")
-    boolean exists(IManagedEntity entity) throws EntityException;
+    boolean exists(IManagedEntity entity) throws OnyxException;
 
     /**
      * Determines if the entity exists within the database.
@@ -281,10 +281,10 @@ public interface PersistenceManager {
      *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
      *
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
     @SuppressWarnings("unused")
-    boolean exists(IManagedEntity entity, Object partitionId) throws EntityException;
+    boolean exists(IManagedEntity entity, Object partitionId) throws OnyxException;
 
     /**
      * Force Hydrate relationship based on attribute name
@@ -295,9 +295,9 @@ public interface PersistenceManager {
      *
      * @param attribute String representation of relationship attribute
      *
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      */
-    void initialize(IManagedEntity entity, String attribute) throws EntityException;
+    void initialize(IManagedEntity entity, String attribute) throws OnyxException;
 
     /**
      * Get relationship for an entity
@@ -305,11 +305,11 @@ public interface PersistenceManager {
      * @param entity The entity to load
      * @param attribute Attribute that represents the relationship
      * @return The relationship Value
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and must be a annotated with a relationship
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and must be a annotated with a relationship
      * @since 1.2.0
      */
     @SuppressWarnings("unused")
-    Object getRelationship(IManagedEntity entity, String attribute) throws EntityException;
+    Object getRelationship(IManagedEntity entity, String attribute) throws OnyxException;
 
 
     /**
@@ -319,10 +319,10 @@ public interface PersistenceManager {
      *
      * @return Unsorted List of all entities with type
      *
-     * @throws EntityException Exception occurred while fetching results
+     * @throws OnyxException Exception occurred while fetching results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -335,10 +335,10 @@ public interface PersistenceManager {
      *
      * @return Unsorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -353,9 +353,9 @@ public interface PersistenceManager {
      *
      * @return Sorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -370,10 +370,10 @@ public interface PersistenceManager {
      *
      * @return Sorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -388,10 +388,10 @@ public interface PersistenceManager {
      *
      * @return Unsorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, Object partitionId) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -408,10 +408,10 @@ public interface PersistenceManager {
      *
      * @return Sorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -428,10 +428,10 @@ public interface PersistenceManager {
      *
      * @return Sorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -452,9 +452,9 @@ public interface PersistenceManager {
      *
      * @return Sorted List of results matching criteria within range
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws OnyxException;
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -477,10 +477,10 @@ public interface PersistenceManager {
      *
      * @return Sorted List of results matching criteria within range and partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException;
+    <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws OnyxException;
 
     /**
      * This is a way to batch save all relationships for an entity.  This does not retain any existing relationships and will
@@ -491,10 +491,10 @@ public interface PersistenceManager {
      * @param relationship Relationship attribute
      * @param relationshipIdentifiers Existing relationship identifiers
      *
-     * @throws EntityException Error occurred while saving relationship.
+     * @throws OnyxException Error occurred while saving relationship.
      */
     @SuppressWarnings("unused")
-    void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException;
+    void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws OnyxException;
 
     /**
      * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
@@ -503,10 +503,10 @@ public interface PersistenceManager {
      * @param entityType Type of managed entity
      * @param referenceId Reference location within database
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws EntityException;
+    <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws OnyxException;
 
     /**
      * Get an entity by its partition reference.  This is the same as the method above but for objects that have
@@ -517,9 +517,9 @@ public interface PersistenceManager {
      * @param partitionReference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
-    <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException;
+    <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws OnyxException;
 
     /**
      * Retrieves an entity using the primaryKey and partition
@@ -533,10 +533,10 @@ public interface PersistenceManager {
      * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
      *
-     * @throws EntityException error occurred while attempting to retrieve entity.
+     * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @SuppressWarnings("unused")
-    <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException;
+    <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws OnyxException;
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -549,7 +549,7 @@ public interface PersistenceManager {
      *
      */
     @SuppressWarnings("unused")
-    void stream(Query query, QueryStream streamer) throws EntityException;
+    void stream(Query query, QueryStream streamer) throws OnyxException;
 
     /**
      * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -562,7 +562,7 @@ public interface PersistenceManager {
      *
      */
     @SuppressWarnings("unused")
-    void stream(Query query, Class queryStreamClass) throws EntityException;
+    void stream(Query query, Class queryStreamClass) throws OnyxException;
 
     /**
      * Get Map representation of an entity with reference id
@@ -573,7 +573,7 @@ public interface PersistenceManager {
      *
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
-    Map getMapWithReferenceId(Class entityType, long reference) throws EntityException;
+    Map getMapWithReferenceId(Class entityType, long reference) throws OnyxException;
 
     /**
      * Retrieve the quantity of entities that match the query criterium.
@@ -591,10 +591,10 @@ public interface PersistenceManager {
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criterium
-     * @throws EntityException Error during query.
+     * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
-    long countForQuery(Query query) throws EntityException;
+    long countForQuery(Query query) throws OnyxException;
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.
@@ -603,11 +603,11 @@ public interface PersistenceManager {
      *
      * @param query Query with a listener attached
      *
-     * @throws EntityException Un expected error when attempting to unregister listener
+     * @throws OnyxException Un expected error when attempting to unregister listener
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
-    boolean removeChangeListener(Query query) throws EntityException;
+    boolean removeChangeListener(Query query) throws OnyxException;
 
     /**
      * Listen to a query and register its subscriber
@@ -615,7 +615,7 @@ public interface PersistenceManager {
      * @param query Query with query listener
      * @since 1.3.1
      */
-    void listen(Query query) throws EntityException;
+    void listen(Query query) throws OnyxException;
 
     /**
      * Listen to a query and register its subscriber
@@ -625,5 +625,5 @@ public interface PersistenceManager {
      * @since 1.3.1
      */
     @SuppressWarnings("unused")
-    void listen(Query query, QueryListener queryListener) throws EntityException;
+    void listen(Query query, QueryListener queryListener) throws OnyxException;
 }

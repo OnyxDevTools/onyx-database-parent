@@ -4,7 +4,7 @@ import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
@@ -42,7 +42,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
                 } catch (Exception ignore) {
                 }
             }
-        } catch (EntityException ignore) {
+        } catch (OnyxException ignore) {
         }
     }
 
@@ -65,7 +65,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             if (descriptor == null) {
                 try {
                     descriptor = buffer.serializers.context.getDescriptorForEntity(this, "");
-                } catch (EntityException ignore) {}
+                } catch (OnyxException ignore) {}
             }
 
             for(AttributeDescriptor attribute : descriptor.getAttributes().values())
@@ -106,7 +106,7 @@ public abstract class ManagedEntity implements IManagedEntity, ObjectSerializabl
             if (descriptor == null) {
                 try {
                     descriptor = context.getDescriptorForEntity(this, "");
-                } catch (EntityException ignore) {}
+                } catch (OnyxException ignore) {}
             }
 
             for(AttributeDescriptor attribute : descriptor.getAttributes().values())

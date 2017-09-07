@@ -12,7 +12,6 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
-import com.onyx.query.QueryListener;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.request.pojo.*;
 import com.onyx.stream.QueryStream;
@@ -68,10 +67,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Saved Managed Entity
      *
-     * @throws EntityException Exception occured while persisting an entity
+     * @throws OnyxException Exception occured while persisting an entity
      */
     @Override
-    public IManagedEntity saveEntity(IManagedEntity entity) throws EntityException
+    public IManagedEntity saveEntity(IManagedEntity entity) throws OnyxException
     {
         EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
@@ -93,10 +92,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @since 1.0.0
      * @param entities List of entities
-     * @throws EntityException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
+     * @throws OnyxException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
      */
     @Override
-    public void saveEntities(List<? extends IManagedEntity> entities) throws EntityException
+    public void saveEntities(List<? extends IManagedEntity> entities) throws OnyxException
     {
         if(entities.size() > 0)
         {
@@ -129,10 +128,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @since 1.0.0
      * @param entity Managed Entity to delete
      * @return Flag indicating it was deleted
-     * @throws EntityException Error occurred while deleting
+     * @throws OnyxException Error occurred while deleting
      */
     @Override
-    public boolean deleteEntity(IManagedEntity entity) throws EntityException
+    public boolean deleteEntity(IManagedEntity entity) throws OnyxException
     {
         EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
@@ -149,10 +148,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @since 1.0.0
      * @param entities List of entities
-     * @throws EntityException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
+     * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      */
     @Override
-    public void deleteEntities(List<? extends IManagedEntity> entities) throws EntityException
+    public void deleteEntities(List<? extends IManagedEntity> entities) throws OnyxException
     {
         if(entities.size() > 0)
         {
@@ -178,10 +177,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Query Results
      *
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      */
     @Override
-    public List executeQuery(Query query) throws EntityException
+    public List executeQuery(Query query) throws OnyxException
     {
         final EntityQueryBody body = new EntityQueryBody();
         body.setQuery(query);
@@ -207,10 +206,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return LazyQueryCollection lazy loaded results
      *
-     * @throws EntityException Error while executing query
+     * @throws OnyxException Error while executing query
      */
     @Override
-    public List executeLazyQuery(Query query) throws EntityException
+    public List executeLazyQuery(Query query) throws OnyxException
     {
         final EntityQueryBody body = new EntityQueryBody();
         body.setQuery(query);
@@ -226,12 +225,12 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws EntityException Exception occurred while executing update query
+     * @throws OnyxException Exception occurred while executing update query
      *
      * @return Number of entities updated
      */
     @Override
-    public int executeUpdate(Query query) throws EntityException
+    public int executeUpdate(Query query) throws OnyxException
     {
         final EntityQueryBody body = new EntityQueryBody();
         body.setQuery(query);
@@ -248,12 +247,12 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @param query Query used to filter entities with criteria
      *
-     * @throws EntityException Exception occurred while executing delete query
+     * @throws OnyxException Exception occurred while executing delete query
      *
      * @return Number of entities deleted
      */
     @Override
-    public int executeDelete(Query query) throws EntityException
+    public int executeDelete(Query query) throws OnyxException
     {
         final EntityQueryBody body = new EntityQueryBody();
         body.setQuery(query);
@@ -274,9 +273,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Managed Entity
      *
-     * @throws EntityException Error when hydrating entity
+     * @throws OnyxException Error when hydrating entity
      */
-    public IManagedEntity find(IManagedEntity entity) throws EntityException
+    public IManagedEntity find(IManagedEntity entity) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
@@ -302,9 +301,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @param clazz Managed Entity Type.  This must be a cast of IManagedEntity
      * @param id Primary Key of entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity
+     * @throws OnyxException Error when finding entity
      */
-    public IManagedEntity findById(Class clazz, Object id) throws EntityException
+    public IManagedEntity findById(Class clazz, Object id) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
@@ -323,9 +322,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @param id Primary Key of entity
      * @param partitionId Partition key for entity
      * @return Managed Entity
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
-    public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws EntityException
+    public IManagedEntity findByIdInPartition(Class clazz, Object id, Object partitionId) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
@@ -346,10 +345,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @param partitionId - Partition Identifier.  Not to be confused with partition key.  This is a unique id within the partition System table
      * @return Managed Entity
      *
-     * @throws EntityException error occurred while attempting to retrieve entity.
+     * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @Override
-    public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws EntityException
+    public IManagedEntity findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(id);
@@ -369,9 +368,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
      *
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
-    public boolean exists(IManagedEntity entity) throws EntityException
+    public boolean exists(IManagedEntity entity) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
@@ -397,9 +396,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Returns true if the entity primary key exists. Otherwise it returns false
      *
-     * @throws EntityException Error when finding entity within partition specified
+     * @throws OnyxException Error when finding entity within partition specified
      */
-    public boolean exists(IManagedEntity entity, Object partitionId) throws EntityException
+    public boolean exists(IManagedEntity entity, Object partitionId) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setEntity(entity);
@@ -417,9 +416,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @param attribute String representation of relationship attribute
      *
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and be a relationship.
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      */
-    public void initialize(IManagedEntity entity, String attribute) throws EntityException
+    public void initialize(IManagedEntity entity, String attribute) throws OnyxException
     {
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
 
@@ -452,10 +451,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Unsorted List of all entities with type
      *
-     * @throws EntityException Exception occurred while fetching results
+     * @throws OnyxException Exception occurred while fetching results
      */
     @Override
-    public List list(Class clazz) throws EntityException
+    public List list(Class clazz) throws OnyxException
     {
         final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
 
@@ -475,10 +474,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Unsorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria) throws OnyxException
     {
         return list(clazz, criteria, new QueryOrder[0]);
     }
@@ -496,10 +495,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Sorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws OnyxException
     {
         return list(clazz, criteria, 0, -1, orderBy);
     }
@@ -517,10 +516,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Sorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws OnyxException
     {
         QueryOrder[] queryOrders = {orderBy};
         return list(clazz, criteria, queryOrders);
@@ -539,10 +538,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Unsorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, Object partitionId) throws OnyxException
     {
         return list(clazz, criteria, new QueryOrder[0], partitionId);
     }
@@ -562,10 +561,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Sorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws OnyxException
     {
         return list(clazz, criteria, 0, -1, orderBy, partitionId);
     }
@@ -585,10 +584,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Sorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws OnyxException
     {
         QueryOrder[] queryOrders = {orderBy};
         return list(clazz, criteria, queryOrders, partitionId);
@@ -613,10 +612,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Sorted List of results matching criteria within range
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws OnyxException
     {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -652,10 +651,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @return Sorted List of results matching criteria within range and partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @Override
-    public List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    public List list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws OnyxException
     {
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
@@ -681,9 +680,9 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @param relationship Relationship attribute
      * @param relationshipIdentifiers Existing relationship identifiers
      *
-     * @throws EntityException Error occurred while saving relationship.
+     * @throws OnyxException Error occurred while saving relationship.
      */
-    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws EntityException
+    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws OnyxException
     {
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity);
 
@@ -707,11 +706,11 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @param partitionReference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
     @Override
     @SuppressWarnings("unchecked")
-    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws EntityException {
+    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws OnyxException {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(partitionReference.reference);
         body.setType(entityType.getName());
@@ -725,10 +724,10 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @since 1.0.0
      * @param referenceId Reference location within database
      * @return Managed Entity
-     * @throws EntityException The reference does not exist for that type
+     * @throws OnyxException The reference does not exist for that type
      */
     @Override
-    public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws EntityException
+    public IManagedEntity getWithReferenceId(Class entityType, long referenceId) throws OnyxException
     {
         final EntityRequestBody body = new EntityRequestBody();
         body.setId(referenceId);
@@ -749,7 +748,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      */
     @Override
-    public void stream(Query query, QueryStream streamer) throws EntityException
+    public void stream(Query query, QueryStream streamer) throws OnyxException
     {
         throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
     }
@@ -767,13 +766,13 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      */
     @Override
-    public void stream(Query query, Class queryStreamClass) throws EntityException
+    public void stream(Query query, Class queryStreamClass) throws OnyxException
     {
         throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
     }
 
     @Override
-    public Map getMapWithReferenceId(Class entityType, long reference) throws EntityException {
+    public Map getMapWithReferenceId(Class entityType, long reference) throws OnyxException {
         return null;
     }
 
@@ -793,11 +792,11 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criterium
-     * @throws EntityException Error during query.
+     * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
     @Override
-    public long countForQuery(Query query) throws EntityException {
+    public long countForQuery(Query query) throws OnyxException {
         final EntityQueryBody body = new EntityQueryBody();
         body.setQuery(query);
 
@@ -810,12 +809,12 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      *
      * @param query Query with a listener attached
      *
-     * @throws EntityException Un expected error when attempting to unregister listener
+     * @throws OnyxException Un expected error when attempting to unregister listener
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
     @Override
-    public boolean removeChangeListener(Query query) throws EntityException {
+    public boolean removeChangeListener(Query query) throws OnyxException {
         return false;
     }
 
@@ -826,7 +825,7 @@ public class WebPersistenceManager extends AbstractWebPersistenceManager impleme
      * @since 1.3.1
      */
     @Override
-    public void listen(Query query) throws EntityException {
+    public void listen(Query query) throws OnyxException {
 
     }
 

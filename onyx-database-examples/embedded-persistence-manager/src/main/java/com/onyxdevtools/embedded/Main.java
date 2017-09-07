@@ -1,6 +1,6 @@
 package com.onyxdevtools.embedded;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -16,7 +16,7 @@ public class Main
 {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
 
         String pathToOnyxDB = System.getProperty("user.home")

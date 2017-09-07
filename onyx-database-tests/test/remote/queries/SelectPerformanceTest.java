@@ -1,7 +1,7 @@
 package remote.queries;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -28,10 +28,10 @@ public class SelectPerformanceTest extends RemotePrePopulatedForSelectPerformanc
     /**
      * Scans 1 table, searching by 1 field. No results found
      * Last result: 151(win), 141(mac)
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void aTestNoResultsSingleFullTableScanFor100kRecords() throws EntityException
+    public void aTestNoResultsSingleFullTableScanFor100kRecords() throws OnyxException
     {
         manager.list(PerformanceEntity.class, new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAHAHAHABOOGER"));
         long time = System.currentTimeMillis();
@@ -47,10 +47,10 @@ public class SelectPerformanceTest extends RemotePrePopulatedForSelectPerformanc
     /**
      * Scans 1 table, searching by 1 field. Ordering by 2 fields. 200k recs sorted, 20 recs return because of maxResults.
      * Last result: 1081(win), 1122(mac)
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void bTestSortingResultsFullTableScanFor200kRecords() throws EntityException
+    public void bTestSortingResultsFullTableScanFor200kRecords() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "A"));
         query.setQueryOrders(Arrays.asList(new QueryOrder("booleanPrimitive", false), new QueryOrder("stringValue", true)));
@@ -82,10 +82,10 @@ public class SelectPerformanceTest extends RemotePrePopulatedForSelectPerformanc
      * then joins with one associated table
      * returns a total of 20 recs
      * Last result: 59(win), 36(mac)
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void cTestJoiningResultsFor300kRecords() throws EntityException
+    public void cTestJoiningResultsFor300kRecords() throws OnyxException
     {
         Query query = new Query(PerformanceEntity.class, new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "A"));
         query.setQueryOrders(Arrays.asList(new QueryOrder("id", true)));

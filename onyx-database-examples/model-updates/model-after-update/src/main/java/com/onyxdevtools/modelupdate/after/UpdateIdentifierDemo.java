@@ -1,6 +1,6 @@
 package com.onyxdevtools.modelupdate.after;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.modelupdate.entities.Account;
 
@@ -40,7 +40,7 @@ class UpdateIdentifierDemo {
             // The account ID was not auto incremented.
             // This is because we removed the generator from the @Identifier annotation.
             assert account2.getAccountId() == 0;
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             e.printStackTrace();
         }

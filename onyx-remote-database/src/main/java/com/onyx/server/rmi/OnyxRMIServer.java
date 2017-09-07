@@ -5,7 +5,7 @@ import com.onyx.client.base.ConnectionProperties;
 import com.onyx.client.exception.MethodInvocationException;
 import com.onyx.client.handlers.RequestHandler;
 import com.onyx.client.rmi.RMIRequest;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.server.base.CommunicationServer;
 import com.onyx.util.map.CompatMap;
@@ -127,7 +127,7 @@ public class OnyxRMIServer extends CommunicationServer {
                     } catch (Throwable t) {
                         // In some cases an entity exception is expected.  Return that
                         // as the cause rather than wrapping it.
-                        if (t.getCause() instanceof EntityException) {
+                        if (t.getCause() instanceof OnyxException) {
                             return t.getCause();
                         }
                         return new MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, t);

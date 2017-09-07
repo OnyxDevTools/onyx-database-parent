@@ -1,7 +1,7 @@
 package embedded;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import embedded.base.BaseTest;
@@ -49,11 +49,11 @@ public class AttributeTest extends BaseTest {
     /**
      * Tests all possible populated values in order to test a round trip serialization
      *
-     * @throws EntityException
+     * @throws OnyxException
      * @throws InitializationException
      */
     @Test
-    public void testPopulatedEntity() throws EntityException {
+    public void testPopulatedEntity() throws OnyxException {
         AllAttributeV2Entity entity = new AllAttributeV2Entity();
 
         entity.id = "A";
@@ -93,7 +93,7 @@ public class AttributeTest extends BaseTest {
         try
         {
             entity2 = (AllAttributeV2Entity)manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             e.printStackTrace();
         }
@@ -139,7 +139,7 @@ public class AttributeTest extends BaseTest {
         try
         {
             manager.saveEntity(entity);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail(e.getMessage());
         }
@@ -149,7 +149,7 @@ public class AttributeTest extends BaseTest {
         try
         {
             manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail(e.getMessage());
         }
@@ -186,10 +186,10 @@ public class AttributeTest extends BaseTest {
     /**
      * Tests that inherited properties are persisted and hydrated properly
      *
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void testInheritedPopulatedEntity() throws EntityException, InterruptedException {
+    public void testInheritedPopulatedEntity() throws OnyxException, InterruptedException {
 
         InheritedAttributeEntity entity = new InheritedAttributeEntity();
 
@@ -206,7 +206,7 @@ public class AttributeTest extends BaseTest {
         try
         {
             manager.saveEntity(entity);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail(e.getMessage());
         }
@@ -219,7 +219,7 @@ public class AttributeTest extends BaseTest {
         try
         {
             entity2 = (InheritedAttributeEntity)manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail("Error finding entity");
         }
@@ -238,7 +238,7 @@ public class AttributeTest extends BaseTest {
 
 
     @Test
-    public void simpleMultipleTest() throws EntityException{
+    public void simpleMultipleTest() throws OnyxException {
         SimpleEntity simpleEntity2 = new SimpleEntity();
         simpleEntity2.setSimpleId("2");
         simpleEntity2.setName("Name2");
@@ -254,7 +254,7 @@ public class AttributeTest extends BaseTest {
     }
 
     @Test
-    public void testFindById() throws EntityException{
+    public void testFindById() throws OnyxException {
         //Save entity
         SimpleEntity entity = new SimpleEntity();
         entity.setSimpleId("1");
@@ -269,7 +269,7 @@ public class AttributeTest extends BaseTest {
     }
 
     @Test
-    public void testEnum() throws EntityException
+    public void testEnum() throws OnyxException
     {
         EnumEntity enumEntity = new EnumEntity();
         enumEntity.setSimpleId("99HIYA");

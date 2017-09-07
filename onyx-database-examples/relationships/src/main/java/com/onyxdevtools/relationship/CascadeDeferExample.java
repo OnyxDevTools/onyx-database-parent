@@ -1,6 +1,6 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -15,7 +15,7 @@ class CascadeDeferExample extends AbstractDemo
 {
 
     @SuppressWarnings("unchecked")
-    static void demo() throws EntityException
+    static void demo() throws OnyxException
     {
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox" +
                 File.separatorChar + "relationship-cascade-db.oxd";

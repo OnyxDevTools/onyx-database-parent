@@ -4,7 +4,7 @@ import com.onyx.entity.SystemAttribute;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.annotations.CascadePolicy;
 import com.onyx.persistence.annotations.FetchPolicy;
 import com.onyx.persistence.annotations.IdentifierGenerator;
@@ -216,7 +216,7 @@ public class EntityClassLoader {
             // Get the base Descriptor so that we ensure they get generated also
             try {
                 schemaContext.getBaseDescriptorForEntity(Class.forName(relationship.getInverseClass()));
-            } catch (EntityException | ClassNotFoundException ignore) {
+            } catch (OnyxException | ClassNotFoundException ignore) {
             }
         }
 

@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InvalidRelationshipTypeException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
@@ -32,7 +32,7 @@ public class RelationshipHelper
      * @param entity Entity to save relationships for
      * @param manager Relationship manager keeping track of what was already done
      */
-    public static void saveAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager manager, SchemaContext context) throws EntityException
+    public static void saveAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager manager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
 
@@ -64,7 +64,7 @@ public class RelationshipHelper
      * @param relationshipManager Relationship manager keeping track of what was already done
      * @param context Schema context
      */
-    public static void deleteAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws EntityException
+    public static void deleteAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
@@ -93,7 +93,7 @@ public class RelationshipHelper
      * @param entity Entity to save relationships for
      * @param relationshipManager Relationship manager keeping track of what was already done
      */
-    public static void hydrateAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws EntityException
+    public static void hydrateAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
@@ -125,12 +125,12 @@ public class RelationshipHelper
      * @param attribute Relationship field name
      * @param context Schema context
      * @return A list of relationship entities
-     * @throws EntityException Could not pull relationship
+     * @throws OnyxException Could not pull relationship
      *
      * @since 1.3.0 Used to dynamically pull a relationship regardless of relationship type and partition information
      *              Supports insertion criteria checking.
      */
-    public static List<IManagedEntity> getRelationshipForValue(IManagedEntity entity, Object entityReference, String attribute, SchemaContext context) throws EntityException
+    public static List<IManagedEntity> getRelationshipForValue(IManagedEntity entity, Object entityReference, String attribute, SchemaContext context) throws OnyxException
     {
         String[] slices = attribute.split("\\.");
 

@@ -1,6 +1,6 @@
 package com.onyxdevtools.example.querying;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -13,7 +13,7 @@ import java.util.Arrays;
 public class Main extends AbstractDemo
 {
 
-    public static void main(final String[] args) throws EntityException
+    public static void main(final String[] args) throws OnyxException
     {
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox"
                 + File.separatorChar + "querying-db.oxd";
@@ -59,7 +59,7 @@ public class Main extends AbstractDemo
         LazyQueryExample.demo();
     }
 
-    private static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws OnyxException
     {
 
         //Create league

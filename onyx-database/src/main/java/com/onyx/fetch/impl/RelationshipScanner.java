@@ -5,7 +5,7 @@ import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.node.SkipListNode;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InvalidConstructorException;
 import com.onyx.exception.InvalidQueryException;
 import com.onyx.fetch.PartitionReference;
@@ -43,7 +43,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      * @param classToScan Class type to scan
      * @param descriptor Entity descriptor of entity type to scan
      */
-    public RelationshipScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    public RelationshipScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
     }
@@ -54,7 +54,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map<Long, Long> scan() throws EntityException
+    public Map<Long, Long> scan() throws OnyxException
     {
 
         Map startingPoint = new HashMap();
@@ -97,11 +97,11 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      *
      * @param existingValues Existing values to check criteria
      * @return filterd map of results matching additional criteria
-     * @throws EntityException Cannot scan relationship values
+     * @throws OnyxException Cannot scan relationship values
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan(Map existingValues) throws EntityException
+    public Map scan(Map existingValues) throws OnyxException
     {
         // Retain the original attribute
         final String originalAttribute = criteria.getAttribute();
@@ -145,7 +145,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      * @return References that match criteria
      */
     @SuppressWarnings("unchecked")
-    private Map getRelationshipIndexes(String attribute, Map existingValues) throws EntityException
+    private Map getRelationshipIndexes(String attribute, Map existingValues) throws OnyxException
     {
         final Map allResults = new CompatHashMap();
 
@@ -201,9 +201,9 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      * Grabs the inverse record controller
      *
      * @return Record controller for inverse relationship
-     * @throws EntityException Cannot get record controller for inverse relatioship
+     * @throws OnyxException Cannot get record controller for inverse relatioship
      */
-    private RecordController getDefaultInverseRecordController() throws EntityException
+    private RecordController getDefaultInverseRecordController() throws OnyxException
     {
         final EntityDescriptor inverseDescriptor = getContext().getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
         return getContext().getRecordController(inverseDescriptor);

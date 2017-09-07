@@ -6,7 +6,7 @@ import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InvalidDataTypeForOperator;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.context.SchemaContext;
@@ -60,7 +60,7 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         try
         {
             scanObjects = ScannerProperties.getScannerProperties(attributes, descriptor, query, context);
-        } catch (EntityException ignore)
+        } catch (OnyxException ignore)
         {}
 
         this.orderBy = orderBy;
@@ -148,10 +148,10 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
      * @param scannerProperties Scanner property
      * @param reference Object reference
      * @return The attribute value.  Can also be a relationship attribute value
-     * @throws EntityException Exception when trying to hydrate attribute
+     * @throws OnyxException Exception when trying to hydrate attribute
      */
     @SuppressWarnings("WeakerAccess")
-    public Object getValue(ScannerProperties scannerProperties, Object reference) throws EntityException
+    public Object getValue(ScannerProperties scannerProperties, Object reference) throws OnyxException
     {
         if(scannerProperties.relationshipDescriptor != null)
             return getRelationshipValue(reference, scannerProperties);
@@ -170,11 +170,11 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
      * @param entry Query reference entry
      * @param properties Scanner properties
      * @return List of to many relationships
-     * @throws EntityException General exception
+     * @throws OnyxException General exception
      *
      * @since 1.3.0
      */
-    private Object getRelationshipValue(Object entry, ScannerProperties properties) throws EntityException
+    private Object getRelationshipValue(Object entry, ScannerProperties properties) throws OnyxException
     {
         // Get Relationship controller
         final RelationshipController relationshipController = getContext().getRelationshipController(properties.relationshipDescriptor);

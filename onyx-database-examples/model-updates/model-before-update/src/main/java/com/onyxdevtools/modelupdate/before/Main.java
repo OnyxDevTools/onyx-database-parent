@@ -1,6 +1,6 @@
 package com.onyxdevtools.modelupdate.before;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -35,7 +35,7 @@ public class Main
     // Date formatter used to convert strings to dates
     private static final SimpleDateFormat formatter = new SimpleDateFormat("MM-dd-yyyy");
 
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
@@ -63,9 +63,9 @@ public class Main
      * Fill the database with some test data, so that we can show how the data model updates impact the changes to the values.
      *
      * @param manager Persistence Manager used to save the entities
-     * @throws EntityException Failure to persist entities
+     * @throws OnyxException Failure to persist entities
      */
-    private static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws OnyxException
     {
         Account account = new Account();
         account.setAccountName("Timbob's Lawn Care");

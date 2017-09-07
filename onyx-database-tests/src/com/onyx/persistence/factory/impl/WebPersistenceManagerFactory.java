@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIdentifier;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.context.impl.WebSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
@@ -138,7 +138,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
             throw new InitializationException(InitializationException.CONNECTION_EXCEPTION);
         } catch (HttpClientErrorException e) {
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
         }
     }

@@ -1,7 +1,7 @@
 package embedded;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
@@ -67,7 +67,7 @@ public class TestDatabaseRecovery extends BaseTest
     static int expectedUpdatedEntitiesAfterRecovery;
 
     @Test
-    public void atestDatabaseRecovery() throws EntityException
+    public void atestDatabaseRecovery() throws OnyxException
     {
         this.populateTransactionData();
 
@@ -108,7 +108,7 @@ public class TestDatabaseRecovery extends BaseTest
     }
 
     @Test
-    public void btestDatabaseApplyTransactions() throws EntityException
+    public void btestDatabaseApplyTransactions() throws OnyxException
     {
 
         EmbeddedPersistenceManagerFactory newFactory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_AMMENDED);
@@ -131,7 +131,7 @@ public class TestDatabaseRecovery extends BaseTest
         newFactory.close();
     }
 
-    protected void populateTransactionData() throws EntityException
+    protected void populateTransactionData() throws OnyxException
     {
 
         AllAttributeEntity allAttributeEntity = null;

@@ -1,6 +1,6 @@
 package com.onyxdevtools.modelupdate.after;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -32,7 +32,7 @@ class ManualMigrationDemo {
      * @param persistenceManager Open and valid persistence manager
      */
     @SuppressWarnings("unchecked")
-    static void demo(PersistenceManager persistenceManager) throws EntityException
+    static void demo(PersistenceManager persistenceManager) throws OnyxException
     {
 
         // This is a simple example of how to use the stream() api to iterate through payment records and dynamically update the payment record
@@ -48,7 +48,7 @@ class ManualMigrationDemo {
             payment.setNotes("The Deadbeat with account number: " + payment.getInvoice().getAccount().getAccountId() + " didn't pay anything cause he/she is broke!!!");
             try {
                 internalPersistenceManager.saveEntity(payment);
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 e.printStackTrace();
             }
         });
@@ -96,7 +96,7 @@ class ManualMigrationDemo {
                     }
                 }
 
-            }catch (EntityException e)
+            }catch (OnyxException e)
             {
                 e.printStackTrace();
             }

@@ -1,7 +1,7 @@
 package remote.save;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import entities.AllAttributeEntity;
@@ -55,11 +55,11 @@ public class HashIndexConcurrencyTest extends RemoteBaseTest {
     /**
      * Tests Batch inserting 100,000 record with a String identifier
      * last test took: 1741(win) 2231(mac)
-     * @throws EntityException
+     * @throws OnyxException
      * @throws InterruptedException
      */
     @Test
-    public void aConcurrencyHashPerformanceTest() throws EntityException, InterruptedException
+    public void aConcurrencyHashPerformanceTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -96,7 +96,7 @@ public class HashIndexConcurrencyTest extends RemoteBaseTest {
                         try
                         {
                             manager.saveEntities(tmpList);
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }

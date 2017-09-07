@@ -1,7 +1,7 @@
 package remote.partition;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -35,7 +35,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndex() throws EntityException {
+    public void bTestQueryPartitionEntityWithIndex() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -58,7 +58,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -80,7 +80,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void dTestQueryFindQueryPartitionEntityWithIndex() throws EntityException {
+    public void dTestQueryFindQueryPartitionEntityWithIndex() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -102,7 +102,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void eTestDeleteQueryPartitionEntity() throws EntityException {
+    public void eTestDeleteQueryPartitionEntity() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -124,7 +124,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void fTestDeleteQueryPartitionEntityWithIndex() throws EntityException {
+    public void fTestDeleteQueryPartitionEntityWithIndex() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -147,7 +147,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws OnyxException {
         Query query = new Query(FullTablePartitionEntity.class, new QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5l));
         manager.executeDelete(query);
 
@@ -171,7 +171,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
 
 
     @Test
-    public void hTestUpdateQueryPartitionEntity() throws EntityException {
+    public void hTestUpdateQueryPartitionEntity() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -194,7 +194,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void iTestUpdateQueryPartitionEntityWithIndex() throws EntityException {
+    public void iTestUpdateQueryPartitionEntityWithIndex() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -218,7 +218,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException {
+    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;
@@ -241,7 +241,7 @@ public class FullTableScanPartitionTest extends BasePartitionTest {
     }
 
     @Test
-    public void kTestUpdatePartitionField() throws EntityException {
+    public void kTestUpdatePartitionField() throws OnyxException {
         FullTablePartitionEntity FullTablePartitionEntity = new FullTablePartitionEntity();
         FullTablePartitionEntity.id = 1l;
         FullTablePartitionEntity.partitionId = 3l;

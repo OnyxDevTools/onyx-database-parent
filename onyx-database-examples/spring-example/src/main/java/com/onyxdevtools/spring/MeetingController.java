@@ -1,6 +1,6 @@
 package com.onyxdevtools.spring;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -26,7 +26,7 @@ class MeetingController
     {
         try {
             persistenceManager.saveEntity(meeting);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             // Log an error
         }
     }
@@ -46,7 +46,7 @@ class MeetingController
         List<Meeting> boringMeetings = null;
         try {
             boringMeetings = persistenceManager.executeQuery(query);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             // Log an error
         }
         return boringMeetings;

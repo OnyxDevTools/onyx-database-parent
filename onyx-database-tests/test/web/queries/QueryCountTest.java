@@ -1,7 +1,7 @@
 package web.queries;
 
 import category.WebServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -38,7 +38,7 @@ public class QueryCountTest extends BaseTest {
      * Tests an entity without a partition
      */
     @Test
-    public void testQueryCountForNonPartitionEntity() throws EntityException {
+    public void testQueryCountForNonPartitionEntity() throws OnyxException {
         Query query = new Query();
         query.setEntityType(SimpleEntity.class);
         manager.executeDelete(query);
@@ -64,7 +64,7 @@ public class QueryCountTest extends BaseTest {
      * Tests an entity with a partition.  The count uses a specific partition
      */
     @Test
-    public void testQueryCountForPartitionEntity() throws EntityException {
+    public void testQueryCountForPartitionEntity() throws OnyxException {
 
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
@@ -94,7 +94,7 @@ public class QueryCountTest extends BaseTest {
      */
     @Test
     @Ignore
-    public void testQueryCountForAllPartitions() throws EntityException {
+    public void testQueryCountForAllPartitions() throws OnyxException {
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
         basicPartitionEntity.id = 1L;
@@ -121,7 +121,7 @@ public class QueryCountTest extends BaseTest {
      */
     @Test
     @Ignore
-    public void testQueryCountForCustomQuery() throws EntityException {
+    public void testQueryCountForCustomQuery() throws OnyxException {
 
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;

@@ -2,7 +2,7 @@ package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
@@ -44,7 +44,7 @@ public class PartitionHelper
      * @param context Schema context
      * @return Whether that entity has a partition
      */
-    static boolean hasPartitionField(IManagedEntity entity, SchemaContext context) throws EntityException
+    static boolean hasPartitionField(IManagedEntity entity, SchemaContext context) throws OnyxException
     {
         final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
         return (baseDescriptor.getPartition() != null);
@@ -56,7 +56,7 @@ public class PartitionHelper
      * @param context Schema context
      * @return whether that entity type is partitioned
      */
-    public static boolean hasPartitionField(Class type, SchemaContext context) throws EntityException
+    public static boolean hasPartitionField(Class type, SchemaContext context) throws OnyxException
     {
         final EntityDescriptor baseDescriptor = context.getBaseDescriptorForEntity(type);
         return (baseDescriptor != null && baseDescriptor.getPartition() != null);
@@ -69,7 +69,7 @@ public class PartitionHelper
      * @param context Schema context
      * @return Get the value of the partition identifier
      */
-    public static Object getPartitionFieldValue(IManagedEntity entity, SchemaContext context) throws EntityException
+    public static Object getPartitionFieldValue(IManagedEntity entity, SchemaContext context) throws OnyxException
     {
         final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
         if(baseDescriptor.getPartition() == null)
@@ -91,7 +91,7 @@ public class PartitionHelper
      * @param query Query object
      * @param context Schema context
      */
-    public static void setPartitionIdForQuery(Query query, SchemaContext context) throws EntityException
+    public static void setPartitionIdForQuery(Query query, SchemaContext context) throws OnyxException
     {
         if(hasPartitionField(query.getEntityType(), context) && (query.getPartition() == null || query.getPartition().equals("")))
         {
@@ -142,7 +142,7 @@ public class PartitionHelper
      * @param entity Entity to set partition value
      */
     @SuppressWarnings("unused")
-    public static void setPartitionValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
+    public static void setPartitionValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws OnyxException
     {
         try
         {

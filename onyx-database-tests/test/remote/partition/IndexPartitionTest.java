@@ -1,7 +1,7 @@
 package remote.partition;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -36,7 +36,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestQueryPartitionEntityWithIndex() throws EntityException
+    public void bTestQueryPartitionEntityWithIndex() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -60,7 +60,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void cTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -83,7 +83,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void dTestQueryFindQueryPartitionEntityWithIndex() throws EntityException
+    public void dTestQueryFindQueryPartitionEntityWithIndex() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -106,7 +106,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void eTestDeleteQueryPartitionEntity() throws EntityException
+    public void eTestDeleteQueryPartitionEntity() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -129,7 +129,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void fTestDeleteQueryPartitionEntityWithIndex() throws EntityException
+    public void fTestDeleteQueryPartitionEntityWithIndex() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -153,7 +153,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void gTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -177,7 +177,7 @@ public class IndexPartitionTest extends BasePartitionTest
 
 
     @Test
-    public void hTestUpdateQueryPartitionEntity() throws EntityException
+    public void hTestUpdateQueryPartitionEntity() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -201,7 +201,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void iTestUpdateQueryPartitionEntityWithIndex() throws EntityException
+    public void iTestUpdateQueryPartitionEntityWithIndex() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -226,7 +226,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws EntityException
+    public void jTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;
@@ -250,7 +250,7 @@ public class IndexPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void kTestUpdatePartitionField() throws EntityException
+    public void kTestUpdatePartitionField() throws OnyxException
     {
         IndexPartitionEntity IndexPartitionEntity = new IndexPartitionEntity();
         IndexPartitionEntity.id = 1l;

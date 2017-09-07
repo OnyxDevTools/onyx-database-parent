@@ -1,11 +1,11 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 
 public class Main
 {
 
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
         OneToOneExample.demo();
         OneToManyExample.demo();

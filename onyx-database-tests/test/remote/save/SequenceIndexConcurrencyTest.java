@@ -1,7 +1,7 @@
 package remote.save;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import entities.InheritedLongAttributeEntity;
@@ -43,11 +43,11 @@ public class SequenceIndexConcurrencyTest extends RemoteBaseTest {
      * Tests Batch inserting 100,000 records with a Sequence identifier
      * This test is executed using 10 concurrent threads
      * last test took: 1670(win) 2200(mac)
-     * @throws EntityException
+     * @throws OnyxException
      * @throws InterruptedException
      */
     @Test
-    public void aConcurrencySequencePerformanceTest() throws EntityException, InterruptedException
+    public void aConcurrencySequencePerformanceTest() throws OnyxException, InterruptedException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -81,7 +81,7 @@ public class SequenceIndexConcurrencyTest extends RemoteBaseTest {
                     try
                     {
                         manager.saveEntities(tmpList);
-                    } catch (EntityException e)
+                    } catch (OnyxException e)
                     {
                         e.printStackTrace();
                     }

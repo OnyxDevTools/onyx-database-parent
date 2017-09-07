@@ -1,5 +1,5 @@
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -16,7 +16,7 @@ import org.junit.Test;
 public class AWSTest {
 
     @Test
-    public void testAWS() throws EntityException
+    public void testAWS() throws OnyxException
     {
         PersistenceManagerFactory factory = new RemotePersistenceManagerFactory("onx://localhost:8080");
         factory.initialize();

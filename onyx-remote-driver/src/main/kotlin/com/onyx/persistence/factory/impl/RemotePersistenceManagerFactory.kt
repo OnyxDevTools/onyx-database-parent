@@ -5,7 +5,7 @@ import com.onyx.client.auth.AuthenticationManager
 import com.onyx.client.exception.ConnectionFailedException
 import com.onyx.client.rmi.OnyxRMIClient
 import com.onyx.entity.SystemEntity
-import com.onyx.exception.EntityException
+import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
 import com.onyx.mutableLazy
 import com.onyx.persistence.context.SchemaContext
@@ -153,7 +153,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
             val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""))
             persistenceManager.executeQuery<Any>(query)
             schemaContext.start()
-        } catch (e: EntityException) {
+        } catch (e: OnyxException) {
             throw InitializationException(InitializationException.INVALID_CREDENTIALS)
         }
     }

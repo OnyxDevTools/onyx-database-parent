@@ -1,7 +1,7 @@
 package memory.save;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import entities.identifiers.DateIdentifierEntity;
 import entities.identifiers.IntegerIdentifierEntity;
@@ -49,7 +49,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 1;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -57,7 +57,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = "ABSCStringID1";
         try {
             entity2 = (StringIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -76,7 +76,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 2;
         try {
             entity = (StringIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -88,7 +88,7 @@ public class SaveHashIdentifierTest extends BaseTest
         try {
             manager.saveEntity(entity2);
             entity = (StringIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -105,7 +105,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 2;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -113,7 +113,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = "ASDVF*32234";
         try {
             entity2 = (StringIdentifierEntity) manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -131,7 +131,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 5;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -139,7 +139,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = 2;
         try {
             entity2 = (IntegerIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -156,7 +156,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 6;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -164,7 +164,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = 4;
         try {
             entity2 = (IntegerIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -181,7 +181,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 7;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -189,7 +189,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = 1;
         try {
             entity2 = (IntegerIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -213,7 +213,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 2;
         try {
             entity = (IntegerIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -224,7 +224,7 @@ public class SaveHashIdentifierTest extends BaseTest
         try {
             manager.saveEntity(entity2);
             entity = (IntegerIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -241,7 +241,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 5;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -249,7 +249,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = 2;
         try {
             entity2 = (MutableIntegerIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -266,7 +266,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 6;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -274,7 +274,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = 4;
         try {
             entity2 = (MutableIntegerIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -291,7 +291,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 7;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -299,7 +299,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = 1;
         try {
             entity2 = (MutableIntegerIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -326,7 +326,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 2;
         try {
             entity = (MutableIntegerIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -337,7 +337,7 @@ public class SaveHashIdentifierTest extends BaseTest
         try {
             manager.saveEntity(entity2);
             entity = (MutableIntegerIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -355,7 +355,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 5;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -363,7 +363,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = new Date(entity.identifier.getTime());
         try {
             entity2 = (DateIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -380,7 +380,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 6;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -388,7 +388,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = new Date(entity.identifier.getTime());
         try {
             entity2 = (DateIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -405,7 +405,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 7;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -413,7 +413,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity2.identifier = new Date(entity.identifier.getTime());
         try {
             entity2 = (DateIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -445,7 +445,7 @@ public class SaveHashIdentifierTest extends BaseTest
         entity.correlation = 2;
         try {
             entity = (DateIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -456,7 +456,7 @@ public class SaveHashIdentifierTest extends BaseTest
         try {
             manager.saveEntity(entity2);
             entity = (DateIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 

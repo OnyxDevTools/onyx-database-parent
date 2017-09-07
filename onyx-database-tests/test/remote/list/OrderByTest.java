@@ -1,7 +1,7 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -122,7 +122,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByString() throws EntityException
+    public void testOrderByString() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("longValue", false), new QueryOrder("id", false)};
@@ -137,7 +137,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByNumber() throws EntityException
+    public void testOrderByNumber() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("longValue", false)};
@@ -147,7 +147,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByDoubleDesc() throws EntityException
+    public void testOrderByDoubleDesc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("doubleValue", false)};
@@ -157,7 +157,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByDoubleAsc() throws EntityException
+    public void testOrderByDoubleAsc() throws OnyxException
     {
 
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
@@ -168,7 +168,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByIntDesc() throws EntityException
+    public void testOrderByIntDesc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("intValue", false)};
@@ -178,7 +178,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByIntAsc() throws EntityException
+    public void testOrderByIntAsc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("intValue", true), new QueryOrder("id", true)};
@@ -188,7 +188,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByDateDesc() throws EntityException
+    public void testOrderByDateDesc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("dateValue", false)};
@@ -198,7 +198,7 @@ public class OrderByTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOrderByDateAsc() throws EntityException
+    public void testOrderByDateAsc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("dateValue", true), new QueryOrder("id", true)};

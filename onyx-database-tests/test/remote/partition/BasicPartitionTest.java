@@ -1,7 +1,7 @@
 package remote.partition;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.NoResultsException;
 import entities.partition.BasicPartitionEntity;
 import org.junit.Assert;
@@ -19,7 +19,7 @@ public class BasicPartitionTest extends BasePartitionTest
 {
 
     @Test
-    public void aTestSavePartitionEntityTest() throws EntityException
+    public void aTestSavePartitionEntityTest() throws OnyxException
     {
         BasicPartitionEntity entity = new BasicPartitionEntity();
         entity.partitionId = 2l;
@@ -28,7 +28,7 @@ public class BasicPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void bTestFindPartitionEntityTest() throws EntityException
+    public void bTestFindPartitionEntityTest() throws OnyxException
     {
         BasicPartitionEntity entity = new BasicPartitionEntity();
         entity.partitionId = 1l;
@@ -49,7 +49,7 @@ public class BasicPartitionTest extends BasePartitionTest
     }
 
     @Test(expected = NoResultsException.class)
-    public void cTestFindPartitionEntityByIDTest() throws EntityException
+    public void cTestFindPartitionEntityByIDTest() throws OnyxException
     {
         BasicPartitionEntity entity = new BasicPartitionEntity();
         entity.partitionId = 2l;
@@ -66,7 +66,7 @@ public class BasicPartitionTest extends BasePartitionTest
 
 
     @Test
-    public void dTestNonUniqueEntityWithDifferentPartition() throws EntityException
+    public void dTestNonUniqueEntityWithDifferentPartition() throws OnyxException
     {
         BasicPartitionEntity entity = new BasicPartitionEntity();
         entity.partitionId = 1l;
@@ -102,7 +102,7 @@ public class BasicPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testDeletePartitionEntity() throws EntityException
+    public void testDeletePartitionEntity() throws OnyxException
     {
         BasicPartitionEntity entity = new BasicPartitionEntity();
         entity.partitionId = 1l;
@@ -123,7 +123,7 @@ public class BasicPartitionTest extends BasePartitionTest
         {
             manager.find(entity2Find);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             exceptionThrown = true;
         }

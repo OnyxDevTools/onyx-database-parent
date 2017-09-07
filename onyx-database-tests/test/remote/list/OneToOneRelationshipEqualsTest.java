@@ -1,11 +1,10 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.application.DatabaseServer;
 import entities.OneToOneChildFetchEntity;
 import entities.OneToOneFetchEntity;
 import entities.relationship.OneToManyChild;
@@ -210,7 +209,7 @@ public class OneToOneRelationshipEqualsTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOneToOneHasRelationship() throws EntityException
+    public void testOneToOneHasRelationship() throws OnyxException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
                 .and("child.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3");
@@ -223,7 +222,7 @@ public class OneToOneRelationshipEqualsTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOneToOneNoMeetCriteriaRelationship() throws EntityException
+    public void testOneToOneNoMeetCriteriaRelationship() throws OnyxException
     {
 
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some te1st strin3")

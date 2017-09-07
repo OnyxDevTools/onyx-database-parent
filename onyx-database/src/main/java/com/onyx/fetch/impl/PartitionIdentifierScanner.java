@@ -10,8 +10,8 @@ import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.EntityExceptionWrapper;
+import com.onyx.exception.OnyxException;
+import com.onyx.exception.OnyxExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
 import com.onyx.persistence.context.SchemaContext;
@@ -41,7 +41,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      * @param classToScan Class type to scan
      * @param descriptor Entity descriptor of entity type to scan
      */
-    public PartitionIdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    public PartitionIdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
         systemEntity = context.getSystemEntityByName(query.getEntityType().getName());
@@ -51,10 +51,10 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      * Full scan with ids
      *
      * @return References matching criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map scanPartition(RecordController recordController, long partitionId) throws EntityException
+    private Map scanPartition(RecordController recordController, long partitionId) throws OnyxException
     {
         final Map returnValue = new CompatHashMap();
 
@@ -94,13 +94,13 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      * Scan existing values for identifiers
      *
      * @return Matching identifiers within partition
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan() throws EntityException
+    public Map scan() throws OnyxException
     {
-        final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
+        final OnyxExceptionWrapper wrapper = new OnyxExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
         if(query.getPartition() == QueryPartitionMode.ALL)
@@ -112,14 +112,14 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                     final RecordController recordController = getContext().getRecordController(partitionDescriptor);
                     Map partitionResults = scanPartition(recordController, partition.getIndex());
                     results.putAll(partitionResults);
-                } catch (EntityException e) {
-                    wrapper.exception = e;
+                } catch (OnyxException e) {
+                    wrapper.setException(e);
                 }
             }
 
-            if (wrapper.exception != null)
+            if (wrapper.getException() != null)
             {
-                throw wrapper.exception;
+                throw wrapper.getException();
             }
         }
         else
@@ -148,11 +148,11 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      *
      * @param existingValues Existing values to match with criteria
      * @return Values matching criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan(Map existingValues) throws EntityException
+    public Map scan(Map existingValues) throws OnyxException
     {
         final CompatMap returnValue = new CompatHashMap();
 

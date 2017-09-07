@@ -1,7 +1,7 @@
 package web.relationship;
 
 import category.WebServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
 import org.junit.After;
@@ -21,7 +21,7 @@ import java.util.ArrayList;
 public class ManyToManyTest extends BaseTest
 {
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }

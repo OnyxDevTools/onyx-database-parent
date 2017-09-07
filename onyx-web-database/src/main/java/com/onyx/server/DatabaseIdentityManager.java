@@ -1,7 +1,7 @@
 package com.onyx.server;
 
 import com.onyx.entity.SystemUser;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
@@ -68,7 +68,7 @@ public class DatabaseIdentityManager implements IdentityManager {
 
             return new DatabaseUserAccount(user);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             return null;
         }

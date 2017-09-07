@@ -1,6 +1,6 @@
 package com.onyxdevtools.modelupdate.after;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -65,7 +65,7 @@ class UpdateIndexDemo {
             // First pass may not give you 2 results since the index could still be rebuilding.  After it is done re-indexing you should have 2 results.
             assert invoices.size() == 2;
 
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             e.printStackTrace();
         }

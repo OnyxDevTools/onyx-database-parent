@@ -6,7 +6,7 @@ import com.onyx.diskmap.MapBuilder
 import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
-import com.onyx.exception.EntityException
+import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
@@ -254,10 +254,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @param descriptor   Base Entity Descriptor
      * @param systemEntityToCheck Current system entity key to base the comparison on the new entity descriptor
      * @return Newly created system entity if it was created otherwise the existing one
-     * @throws EntityException default exception
+     * @throws OnyxException default exception
      * @since 1.1.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     private fun checkForEntityChanges(descriptor: EntityDescriptor, systemEntityToCheck: SystemEntity): SystemEntity {
         var systemEntity = systemEntityToCheck
 
@@ -285,7 +285,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntity System entity to get from the database and compare partition on
      * @since 1.1.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
         // Check to see if the partition already exists
         if (systemEntity.partition != null && descriptor.partition != null) {
@@ -318,9 +318,9 @@ open class DefaultSchemaContext : SchemaContext {
      *
      * @param name System Entity Name
      * @return Latest System Entity matching that name
-     * @throws EntityException Default Exception
+     * @throws OnyxException Default Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getSystemEntityByName(name: String): SystemEntity? = runBlockingOn(defaultSystemEntities) {
         defaultSystemEntities.getOrPut(name) {
             val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.EQUAL, name), QueryOrder("primaryKey", false))
@@ -367,10 +367,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @param entity      Entity Instance
      * @param partitionId Partition Field Value
      * @return Record's entity descriptor
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getDescriptorForEntity(entity: IManagedEntity, partitionId: Any?): EntityDescriptor = getDescriptorForEntity(entity.javaClass, partitionId)
 
     /**
@@ -378,10 +378,10 @@ open class DefaultSchemaContext : SchemaContext {
      *
      * @param entityClass Entity Type
      * @return Entity Descriptor for class
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getBaseDescriptorForEntity(entityClass: Class<*>): EntityDescriptor? = getDescriptorForEntity(entityClass, "")
 
     /**
@@ -390,10 +390,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @param entityClass Entity Type
      * @param partitionId Partition Id
      * @return Entity Descriptor for class and partition id
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getDescriptorForEntity(entityClass: Class<*>?, partitionId: Any?): EntityDescriptor {
 
         if (entityClass == null)
@@ -438,10 +438,10 @@ open class DefaultSchemaContext : SchemaContext {
      *
      * @param entity Entity Instance
      * @return Record's entity descriptor
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getDescriptorForEntity(entity: Any): EntityDescriptor {
         if (entity !is IManagedEntity) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND, entity.javaClass)
@@ -466,10 +466,10 @@ open class DefaultSchemaContext : SchemaContext {
      *
      * @param relationshipDescriptor Relationship Descriptor
      * @return Relationship Controller corresponding to relationship descriptor
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController = runBlockingOn(relationshipControllers) {
         relationshipControllers.getOrPut(relationshipDescriptor) {
             return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
@@ -551,10 +551,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @param descriptor Record Entity Descriptor
      * @param partitionId    Partition the records belong to
      * @return Underlying data storage factory
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): MapBuilder {
 
         if (partitionId == 0L) {
@@ -633,10 +633,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @param classToGet     Entity type for record
      * @param partitionValue Partition Value
      * @return System Partition Entry for class with partition key
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry? {
         val query = Query(SystemPartitionEntry::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, classToGet.name + partitionValue.toString()))
         val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
@@ -648,10 +648,10 @@ open class DefaultSchemaContext : SchemaContext {
      *
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     override fun getPartitionWithId(partitionId: Long): SystemPartitionEntry? {
         val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
         val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)

@@ -1,7 +1,7 @@
 package embedded.list;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -32,7 +32,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Before
-    public void seedData() throws EntityException
+    public void seedData() throws OnyxException
     {
         initialize();
 
@@ -126,7 +126,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByString() throws EntityException
+    public void testOrderByString() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("longValue", false), new QueryOrder("id", false)};
@@ -141,7 +141,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByNumber() throws EntityException
+    public void testOrderByNumber() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("longValue", false)};
@@ -151,7 +151,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByDoubleDesc() throws EntityException
+    public void testOrderByDoubleDesc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("doubleValue", false)};
@@ -161,7 +161,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByDoubleAsc() throws EntityException
+    public void testOrderByDoubleAsc() throws OnyxException
     {
 
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
@@ -172,7 +172,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByIntDesc() throws EntityException
+    public void testOrderByIntDesc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("intValue", false)};
@@ -182,7 +182,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByIntAsc() throws EntityException
+    public void testOrderByIntAsc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("intValue", true), new QueryOrder("id", true)};
@@ -192,7 +192,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByDateDesc() throws EntityException
+    public void testOrderByDateDesc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("dateValue", false)};
@@ -202,7 +202,7 @@ public class OrderByTest extends BaseTest
     }
 
     @Test
-    public void testOrderByDateAsc() throws EntityException
+    public void testOrderByDateAsc() throws OnyxException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "ZZZ");
         QueryOrder[] orderList = {new QueryOrder("dateValue", true), new QueryOrder("id", true)};

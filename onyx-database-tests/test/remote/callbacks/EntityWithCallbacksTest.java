@@ -1,6 +1,6 @@
 package remote.callbacks;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import entities.EntityWithCallbacks;
 import entities.SequencedEntityWithCallbacks;
@@ -31,7 +31,7 @@ public class EntityWithCallbacksTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testPrePersistCallbacksForHashIndex() throws EntityException{
+    public void testPrePersistCallbacksForHashIndex() throws OnyxException {
         //Create new entity
         EntityWithCallbacks entity = new EntityWithCallbacks();
         entity.setId("1");
@@ -56,7 +56,7 @@ public class EntityWithCallbacksTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testPrePersistCallbacksForSequenceIndex() throws EntityException{
+    public void testPrePersistCallbacksForSequenceIndex() throws OnyxException {
         //Create new entity
         SequencedEntityWithCallbacks entity = new SequencedEntityWithCallbacks();
         entity.setName("INSERT");
@@ -78,7 +78,7 @@ public class EntityWithCallbacksTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testPostPersistCallbacksForHashIndex() throws EntityException{
+    public void testPostPersistCallbacksForHashIndex() throws OnyxException {
         //Create new entity
         EntityWithCallbacks entity = new EntityWithCallbacks();
         entity.setId("1");
@@ -88,7 +88,7 @@ public class EntityWithCallbacksTest extends RemoteBaseTest {
         {
             manager.deleteEntity(entity);
 
-        } catch (EntityException e)
+        } catch (OnyxException e)
         { }
 
         manager.saveEntity(entity);
@@ -112,7 +112,7 @@ public class EntityWithCallbacksTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testPostPersistCallbacksForSequenceIndex() throws EntityException{
+    public void testPostPersistCallbacksForSequenceIndex() throws OnyxException {
         //Create new entity
         SequencedEntityWithCallbacks entity = new SequencedEntityWithCallbacks();
         entity.setName("INSERT");

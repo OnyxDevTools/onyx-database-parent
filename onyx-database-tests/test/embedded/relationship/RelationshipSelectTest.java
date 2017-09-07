@@ -1,7 +1,7 @@
 package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.*;
 import embedded.base.BaseTest;
 import entities.AddressNoPartition;
@@ -23,7 +23,7 @@ import java.util.Map;
 public class RelationshipSelectTest extends BaseTest {
 
     @Before
-    public void before() throws EntityException {
+    public void before() throws OnyxException {
         initialize();
     }
 
@@ -34,7 +34,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testInvalidQueryException() throws EntityException {
+    public void testInvalidQueryException() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -52,7 +52,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testDistinctValues() throws EntityException {
+    public void testDistinctValues() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -72,7 +72,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testQuerySpecificPartition() throws EntityException {
+    public void testQuerySpecificPartition() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -93,7 +93,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testSelectAttribute() throws EntityException {
+    public void testSelectAttribute() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -115,7 +115,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testSelectRelationship() throws EntityException {
+    public void testSelectRelationship() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -140,7 +140,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testToManySelectRelationship() throws EntityException {
+    public void testToManySelectRelationship() throws OnyxException {
         manager.executeDelete(new Query(PersonNoPartition.class));
         manager.executeDelete(new Query(AddressNoPartition.class));
         for (int i = 0; i < 50; i++) {
@@ -180,7 +180,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testToManySelectRelationshipNoRelationshipCriteria() throws EntityException {
+    public void testToManySelectRelationshipNoRelationshipCriteria() throws OnyxException {
         manager.executeDelete(new Query(PersonNoPartition.class));
         manager.executeDelete(new Query(AddressNoPartition.class));
         for (int i = 0; i < 50; i++) {
@@ -220,7 +220,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testQuerySpecificPartitionOrderBy() throws EntityException {
+    public void testQuerySpecificPartitionOrderBy() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -243,7 +243,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testSelectAttributeOrderBy() throws EntityException {
+    public void testSelectAttributeOrderBy() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -266,7 +266,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testSelectRelationshipOrderBy() throws EntityException {
+    public void testSelectRelationshipOrderBy() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";
@@ -292,7 +292,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testToManySelectRelationshipOrderBy() throws EntityException {
+    public void testToManySelectRelationshipOrderBy() throws OnyxException {
         manager.executeDelete(new Query(PersonNoPartition.class));
         manager.executeDelete(new Query(AddressNoPartition.class));
 
@@ -334,7 +334,7 @@ public class RelationshipSelectTest extends BaseTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void testToManySelectRelationshipNoRelationshipCriteriaOrderBy() throws EntityException {
+    public void testToManySelectRelationshipNoRelationshipCriteriaOrderBy() throws OnyxException {
         for (int i = 0; i < 50; i++) {
             PersonNoPartition person = new PersonNoPartition();
             person.firstName = "Cristian";

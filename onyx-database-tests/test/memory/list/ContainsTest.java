@@ -1,7 +1,7 @@
 package memory.list;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.AllAttributeEntity;
@@ -20,7 +20,7 @@ public class ContainsTest extends memory.base.PrePopulatedDatabaseTest
 {
 
     @Test
-    public void testStringContains() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringContains() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.CONTAINS, "Some test strin");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -28,7 +28,7 @@ public class ContainsTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testContainsStringId() throws EntityException, InstantiationException, IllegalAccessException
+    public void testContainsStringId() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("id",QueryCriteriaOperator.STARTS_WITH, "FIRST ONE");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -36,7 +36,7 @@ public class ContainsTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testStringStartsWith() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringStartsWith() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.CONTAINS, "ome test strin");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -44,7 +44,7 @@ public class ContainsTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testContainsStartsWith() throws EntityException, InstantiationException, IllegalAccessException
+    public void testContainsStartsWith() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("id",QueryCriteriaOperator.CONTAINS, "IRST ONE");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);

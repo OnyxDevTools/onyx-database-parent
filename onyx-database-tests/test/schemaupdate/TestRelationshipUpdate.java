@@ -1,6 +1,6 @@
 package schemaupdate;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InvalidRelationshipTypeException;
 import embedded.base.BaseTest;
 import entities.schema.SchemaAttributeEntity;
@@ -279,7 +279,7 @@ public class TestRelationshipUpdate extends BaseTest
      * PRE - Comment out relationship addedRelationship on SchemaRelationshipEntity
      */
     @Test(expected = InvalidRelationshipTypeException.class)
-    public void testChangeRelationshipToOne() throws EntityException {
+    public void testChangeRelationshipToOne() throws OnyxException {
         SchemaRelationshipEntity relationshipEntity = new SchemaRelationshipEntity();
         relationshipEntity.id = "HIYA";
         manager.find(relationshipEntity);

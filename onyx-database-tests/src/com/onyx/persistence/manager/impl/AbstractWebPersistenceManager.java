@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.onyx.entity.SystemError;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.WebSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
@@ -74,9 +74,9 @@ public abstract class AbstractWebPersistenceManager extends AbstractPersistenceM
      * @param returnType Return Type
      * @param body Packet
      * @return Generic Object
-     * @throws EntityException Generic Database Exception thrown
+     * @throws OnyxException Generic Database Exception thrown
      */
-    protected Object performCall(String path, Class elementType, Class returnType, Object body) throws EntityException
+    protected Object performCall(String path, Class elementType, Class returnType, Object body) throws OnyxException
     {
         HttpEntity<String> requestEntity = null;
         try
@@ -135,11 +135,11 @@ public abstract class AbstractWebPersistenceManager extends AbstractPersistenceM
         {
 
             String exception = (String)((LinkedHashMap)res.getBody()).get("exceptionType");
-            EntityException e = null;
+            OnyxException e = null;
             try
             {
                 Class exceptionClass = Class.forName(exception);
-                e = (EntityException)objectMapper.convertValue(res.getBody(), exceptionClass);
+                e = (OnyxException)objectMapper.convertValue(res.getBody(), exceptionClass);
                 throw e;
             } catch (ClassNotFoundException ignore)
             {}

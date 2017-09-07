@@ -2,7 +2,7 @@ package com.onyx.record.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityCallbackException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.helpers.ValidationHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -36,12 +36,12 @@ public class RecordControllerImpl extends AbstractRecordController implements Re
      *
      * @param entity Entity to save
      * @return The identifier value
-     * @throws EntityException Error saving entity
+     * @throws OnyxException Error saving entity
      *
      * @since 1.2.3 Optimized to only do a put if there are not pre persist callbacks
      */
     @Override
-    public Object save(IManagedEntity entity) throws EntityException
+    public Object save(IManagedEntity entity) throws OnyxException
     {
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()); // Get the Identifier key
 

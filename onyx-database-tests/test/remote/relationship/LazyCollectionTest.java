@@ -1,7 +1,7 @@
 package remote.relationship;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.collections.LazyRelationshipCollection;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
@@ -19,7 +19,7 @@ import java.util.ArrayList;
 public class LazyCollectionTest extends RemoteBaseTest
 {
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }

@@ -1,7 +1,7 @@
 package embedded.list;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -121,7 +121,7 @@ public class IdentifierListTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierRange() throws EntityException, InstantiationException, IllegalAccessException
+    public void testIdentifierRange() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 2);
         QueryCriteria criteriaList2 = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 4);
@@ -130,7 +130,7 @@ public class IdentifierListTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierRangeLTEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testIdentifierRangeLTEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 2);
         QueryCriteria criteriaList2 = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN_EQUAL, 4);
@@ -139,7 +139,7 @@ public class IdentifierListTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierRangeEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testIdentifierRangeEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN_EQUAL, 2);
         QueryCriteria criteriaList2 = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN_EQUAL, 4);
@@ -148,21 +148,21 @@ public class IdentifierListTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierGreaterThan() throws EntityException, InstantiationException, IllegalAccessException {
+    public void testIdentifierGreaterThan() throws OnyxException, InstantiationException, IllegalAccessException {
         QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5);
         List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }
 
     @Test
-    public void testIdentifierLessThanNoResults() throws EntityException, InstantiationException, IllegalAccessException {
+    public void testIdentifierLessThanNoResults() throws OnyxException, InstantiationException, IllegalAccessException {
         QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 1);
         List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList);
         Assert.assertEquals(0, results.size());
     }
 
     @Test
-    public void testIdentifierGreaterThanNoResults() throws EntityException, InstantiationException, IllegalAccessException {
+    public void testIdentifierGreaterThanNoResults() throws OnyxException, InstantiationException, IllegalAccessException {
         QueryCriteria criteriaList = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 7);
         List<AllAttributeForFetchSequenceGen> results = manager.list(AllAttributeForFetchSequenceGen.class, criteriaList);
         Assert.assertEquals(0, results.size());

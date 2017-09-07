@@ -4,11 +4,10 @@ import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.BufferingException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.relationship.RelationshipReference;
@@ -137,7 +136,7 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
         {
             AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
             return true;
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             return false;
         }
@@ -197,7 +196,7 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
                 {
                     entity = persistenceManager.findById(entityDescriptor.getClazz(), ref.identifier);
                 }
-            } catch (EntityException e)
+            } catch (OnyxException e)
             {
                 return null;
             }
@@ -305,7 +304,7 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
         }
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        } catch (EntityException | ClassNotFoundException e) {
+        } catch (OnyxException | ClassNotFoundException e) {
             e.printStackTrace();
         }
         this.persistenceManager = context.getSystemPersistenceManager();

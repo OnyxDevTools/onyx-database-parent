@@ -1,7 +1,7 @@
 package remote.queries;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -22,7 +22,7 @@ public class UpdateQueryTest extends RemotePrePopulatedBaseTest
 {
 
     @Test
-    public void testExecuteUpdateQuery() throws EntityException, InstantiationException, IllegalAccessException
+    public void testExecuteUpdateQuery() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3");
         Query query = new Query(AllAttributeForFetch.class, criteria, new AttributeUpdate("stringValue", "B"));
@@ -41,7 +41,7 @@ public class UpdateQueryTest extends RemotePrePopulatedBaseTest
     }
 
     @Test
-    public void testExecuteUpdateMultipleQuery() throws EntityException, InstantiationException, IllegalAccessException
+    public void testExecuteUpdateMultipleQuery() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria, new AttributeUpdate("stringValue", "B"));
@@ -58,7 +58,7 @@ public class UpdateQueryTest extends RemotePrePopulatedBaseTest
     }
 
     @Test
-    public void testExecuteUpdateMultipleFieldsQuery() throws EntityException, InstantiationException, IllegalAccessException
+    public void testExecuteUpdateMultipleFieldsQuery() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria, new AttributeUpdate("stringValue", "B"), new AttributeUpdate("intValue", 4));

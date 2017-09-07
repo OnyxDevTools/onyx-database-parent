@@ -1,6 +1,6 @@
 package remote.base;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
@@ -73,7 +73,7 @@ public class RemoteBaseTest {
     public void save(IManagedEntity entity) {
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error saving entity");
         }
@@ -82,7 +82,7 @@ public class RemoteBaseTest {
     public IManagedEntity find(IManagedEntity entity) {
         try {
             return manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error finding entity");
         }
@@ -92,7 +92,7 @@ public class RemoteBaseTest {
     public void delete(IManagedEntity entity) {
         try {
             manager.deleteEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error deleting entity");
         }
@@ -101,7 +101,7 @@ public class RemoteBaseTest {
     public void initialize(IManagedEntity entity, String attribute) {
         try {
             manager.initialize(entity, attribute);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error saving entity");
         }

@@ -5,7 +5,7 @@ import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.EntityCallbackException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.helpers.ValidationHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -55,13 +55,13 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      *
      * @param entity Entity to save
      * @return Entity identifier
-     * @throws EntityException Error saving entity
+     * @throws OnyxException Error saving entity
      *
      * @since 1.2.3 Added an optimization so it does not do a check if it exist before
      *              putting if there are no listeners for persit
      */
     @Override
-    public Object save(IManagedEntity entity) throws EntityException
+    public Object save(IManagedEntity entity) throws OnyxException
     {
 
         Object retval = getIndexValueFromEntity(entity);
@@ -179,7 +179,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      * @param entity entity to check to see if it exists
      * @return Whether it alread exist in the record set
      */
-    public boolean exists(IManagedEntity entity) throws EntityException
+    public boolean exists(IManagedEntity entity) throws OnyxException
     {
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity);
@@ -191,9 +191,9 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      * Delete
      *
      * @param entity Entity to delete
-     * @throws EntityException Error deleting entity
+     * @throws OnyxException Error deleting entity
      */
-    public void delete(IManagedEntity entity) throws EntityException
+    public void delete(IManagedEntity entity) throws OnyxException
     {
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity);
@@ -216,7 +216,7 @@ public class SequenceRecordControllerImpl extends AbstractRecordController imple
      * @param entity Entity to get.  A prereq is that it has its identifier defined
      * @return The entity if it exsts
      */
-    public IManagedEntity get(IManagedEntity entity) throws EntityException
+    public IManagedEntity get(IManagedEntity entity) throws OnyxException
     {
         // Get the Identifier key
         Object identifierValue = getIndexValueFromEntity(entity);

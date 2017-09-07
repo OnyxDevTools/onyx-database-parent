@@ -2,7 +2,7 @@ package com.onyx.relationship.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.RelationshipHelper;
@@ -38,7 +38,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @param entityDescriptor Entity descriptor
      * @param relationshipDescriptor relationship descriptor
      */
-    public ToOneRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
+    public ToOneRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws OnyxException
     {
         super(entityDescriptor, relationshipDescriptor, context);
 
@@ -54,7 +54,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @param entity Entity to save relationships for
      * @param manager Prevents recursion
      */
-    public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException
+    public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws OnyxException
     {
         IManagedEntity relationshipObject = getRelationshipValue(entity);
 
@@ -173,7 +173,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @param entityIdentifier Entity relationship reference
      * @param manager Prevents recursion
      */
-    public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws EntityException
+    public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws OnyxException
     {
 
         final RelationshipReference inverseIdentifier = toOneMap.get(entityIdentifier);
@@ -216,7 +216,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @param identifier Relationship reference
      * @return Whether the record controller is an implementation of a Sequence
      */
-    private boolean isSequenceIdentifier(RelationshipReference identifier) throws EntityException
+    private boolean isSequenceIdentifier(RelationshipReference identifier) throws OnyxException
     {
         return (getRecordControllerForPartition(identifier.partitionId) instanceof SequenceRecordControllerImpl);
     }
@@ -230,7 +230,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @param force Force hydrate
      */
     @Override
-    public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws EntityException
+    public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws OnyxException
     {
         manager.add(entity, entityDescriptor.getIdentifier());
 
@@ -277,7 +277,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @return List of relationship references
      */
     @Override
-    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws EntityException
+    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws OnyxException
     {
         List<RelationshipReference> results = new ArrayList<>();
 
@@ -302,7 +302,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @return List of relationship references
      */
     @Override
-    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws EntityException
+    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws OnyxException
     {
         List<RelationshipReference> results = new ArrayList<>();
 
@@ -327,7 +327,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      * @param entity Entity to update
      * @param relationshipIdentifiers Relationship references
      */
-    public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException
+    public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws OnyxException
     {
     }
 

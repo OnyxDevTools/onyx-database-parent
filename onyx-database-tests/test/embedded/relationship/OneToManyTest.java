@@ -1,7 +1,7 @@
 package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.NoResultsException;
 import embedded.base.BaseTest;
 import entities.relationship.OneToManyChild;
@@ -27,7 +27,7 @@ public class OneToManyTest extends BaseTest
 {
 
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -141,7 +141,7 @@ public class OneToManyTest extends BaseTest
         try
         {
             manager.find(child1);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {

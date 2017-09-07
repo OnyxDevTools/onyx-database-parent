@@ -4,7 +4,7 @@ import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.impl.*;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.context.SchemaContext;
@@ -62,12 +62,12 @@ public class ScannerFactory
      * @param query Query definitions
      * @param persistenceManager Persistence manager
      * @return An implementation of a full table scanner
-     * @throws EntityException Attribute is either not supported or bad access
+     * @throws OnyxException Attribute is either not supported or bad access
      *
      * @since 1.3.0
      */
     @SuppressWarnings("WeakerAccess")
-    public TableScanner getFullTableScanner(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws EntityException
+    public TableScanner getFullTableScanner(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws OnyxException
     {
         EntityDescriptor descriptor;
 
@@ -101,7 +101,7 @@ public class ScannerFactory
      * @param classToScan Entity class to scan
      * @return Scanner implementation
      */
-    public TableScanner getScannerForQueryCriteria(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws EntityException
+    public TableScanner getScannerForQueryCriteria(QueryCriteria criteria, Class classToScan, MapBuilder temporaryDataFile, Query query, PersistenceManager persistenceManager) throws OnyxException
     {
         EntityDescriptor descriptor;
 

@@ -1,6 +1,6 @@
 package com.onyxdevtools.example.querying;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -15,7 +15,7 @@ import java.io.File;
 class FindExample
 {
 
-    public static void demo() throws EntityException
+    public static void demo() throws OnyxException
     {
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox" +
                 File.separatorChar + "querying-db.oxd";

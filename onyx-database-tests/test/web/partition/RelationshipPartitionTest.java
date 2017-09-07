@@ -1,7 +1,7 @@
 package web.partition;
 
 import category.WebServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.NoResultsException;
 import entities.partition.*;
 import junit.framework.Assert;
@@ -21,7 +21,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
 {
 
     @Test
-    public void testSaveEntityWithRelationshipToOne() throws EntityException
+    public void testSaveEntityWithRelationshipToOne() throws OnyxException
     {
         ToOnePartitionEntityParent parent = new ToOnePartitionEntityParent();
         parent.id = 4l;
@@ -53,7 +53,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test(expected = NoResultsException.class)
-    public void testDeleteEntityWithRelationshipToOne() throws EntityException
+    public void testDeleteEntityWithRelationshipToOne() throws OnyxException
     {
         testSaveEntityWithRelationshipToOne();
 
@@ -69,7 +69,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testUpdateEntityWithRelationshipToOne() throws EntityException
+    public void testUpdateEntityWithRelationshipToOne() throws OnyxException
     {
         testSaveEntityWithRelationshipToOne();
         testSaveEntityWithRelationshipToOne();
@@ -96,7 +96,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testSaveEntityAsRelationshipOneToMany() throws EntityException
+    public void testSaveEntityAsRelationshipOneToMany() throws OnyxException
     {
         OneToManyPartitionEntity parent = new OneToManyPartitionEntity();
         parent.id = 23l;
@@ -122,7 +122,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testDeleteEntityAsRelationshipOneToMany() throws EntityException
+    public void testDeleteEntityAsRelationshipOneToMany() throws OnyxException
     {
         OneToManyPartitionEntity parent = new OneToManyPartitionEntity();
         parent.id = 23l;
@@ -150,7 +150,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
         {
             manager.find(parent);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             failedToFind = true;
         }
@@ -159,7 +159,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testUpdateEntityAsRelationshipOneToMany() throws EntityException
+    public void testUpdateEntityAsRelationshipOneToMany() throws OnyxException
     {
         OneToManyPartitionEntity parent = new OneToManyPartitionEntity();
         parent.id = 23l;
@@ -197,7 +197,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testSaveEntityWithRelationshipManyToMany() throws EntityException
+    public void testSaveEntityWithRelationshipManyToMany() throws OnyxException
     {
         ToManyPartitionEntityParent parent = new ToManyPartitionEntityParent();
         parent.id = 23l;
@@ -227,7 +227,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testDeleteEntityWithRelationshipManyToMany() throws EntityException
+    public void testDeleteEntityWithRelationshipManyToMany() throws OnyxException
     {
         ToManyPartitionEntityParent parent = new ToManyPartitionEntityParent();
         parent.id = 23l;
@@ -277,7 +277,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testUpdateEntityWithRelationshipManyToMany() throws EntityException
+    public void testUpdateEntityWithRelationshipManyToMany() throws OnyxException
     {
         ToManyPartitionEntityParent parent = new ToManyPartitionEntityParent();
         parent.id = 23l;
@@ -325,7 +325,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
     }
 
     @Test
-    public void testInitializeToMany() throws EntityException
+    public void testInitializeToMany() throws OnyxException
     {
         ToManyPartitionEntityParent parent = new ToManyPartitionEntityParent();
         parent.id = 23l;

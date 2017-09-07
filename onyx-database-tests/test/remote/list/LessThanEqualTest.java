@@ -1,7 +1,7 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -121,7 +121,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testStringIDLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringIDLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("id",QueryCriteriaOperator.LESS_THAN_EQUAL, "FIRST ONE3");
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -129,7 +129,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testStringStringLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringStringLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.LESS_THAN_EQUAL, "Some test strin2");
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -138,7 +138,7 @@ public class LessThanEqualTest extends RemoteBaseTest
 
 
     @Test
-    public void testLongLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testLongLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.LESS_THAN_EQUAL, 323l);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -146,7 +146,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testPrimitiveLongLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testPrimitiveLongLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("longPrimitive",QueryCriteriaOperator.LESS_THAN_EQUAL, 1000l);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -154,7 +154,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testIntegerLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testIntegerLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.LESS_THAN_EQUAL, 3);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -162,7 +162,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testPrimitiveIntegerLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testPrimitiveIntegerLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("intPrimitive",QueryCriteriaOperator.LESS_THAN_EQUAL, 4);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -171,7 +171,7 @@ public class LessThanEqualTest extends RemoteBaseTest
 
 
     @Test
-    public void testDoubleLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testDoubleLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.LESS_THAN_EQUAL, 1.11);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -179,7 +179,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testPrimitiveDoubleLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testPrimitiveDoubleLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("doublePrimitive",QueryCriteriaOperator.LESS_THAN_EQUAL, 3.32);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -187,7 +187,7 @@ public class LessThanEqualTest extends RemoteBaseTest
     }
 
     @Test
-    public void testDateLessThanEqual() throws EntityException, InstantiationException, IllegalAccessException
+    public void testDateLessThanEqual() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.LESS_THAN_EQUAL, new Date(1001));
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);

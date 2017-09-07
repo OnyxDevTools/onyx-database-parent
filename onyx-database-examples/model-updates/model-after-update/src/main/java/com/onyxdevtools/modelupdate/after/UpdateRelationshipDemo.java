@@ -1,6 +1,6 @@
 package com.onyxdevtools.modelupdate.after;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.modelupdate.entities.Invoice;
 import com.onyxdevtools.modelupdate.entities.Payment;
@@ -16,7 +16,7 @@ import java.util.List;
  */
 class UpdateRelationshipDemo {
 
-    static void demo(PersistenceManager persistenceManager) throws EntityException
+    static void demo(PersistenceManager persistenceManager) throws OnyxException
     {
         final Invoice myLatestInvoice = persistenceManager.findById(Invoice.class, 1L);
 

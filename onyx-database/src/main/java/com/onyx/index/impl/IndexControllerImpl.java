@@ -5,11 +5,10 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.diskmap.DiskMap;
@@ -54,7 +53,7 @@ public class IndexControllerImpl implements IndexController {
      * @param indexDescriptor Index Descriptor
      */
     @SuppressWarnings("RedundantThrows")
-    public IndexControllerImpl(EntityDescriptor descriptor, IndexDescriptor indexDescriptor, SchemaContext context) throws EntityException
+    public IndexControllerImpl(EntityDescriptor descriptor, IndexDescriptor indexDescriptor, SchemaContext context) throws OnyxException
     {
         this.contextId = context.getContextId();
 
@@ -74,7 +73,7 @@ public class IndexControllerImpl implements IndexController {
      * @param oldReference Old entity reference for the index
      * @param reference New entity reference for the index
      */
-    public void save(Object indexValue, long oldReference, long reference) throws EntityException
+    public void save(Object indexValue, long oldReference, long reference) throws OnyxException
     {
         // Delete the old index key
         if(oldReference > 0)
@@ -106,7 +105,7 @@ public class IndexControllerImpl implements IndexController {
      *
      * @param reference Entity reference
      */
-    public void delete(long reference) throws EntityException
+    public void delete(long reference) throws OnyxException
     {
         if(reference > 0)
         {
@@ -134,7 +133,7 @@ public class IndexControllerImpl implements IndexController {
      * @param indexValue Index value to find values for
      * @return References matching that index value
      */
-    public Map findAll(Object indexValue) throws EntityException
+    public Map findAll(Object indexValue) throws OnyxException
     {
         final Header header = references.get(indexValue);
         if(header == null)
@@ -149,7 +148,7 @@ public class IndexControllerImpl implements IndexController {
      *
      * @return All index references
      */
-    public Set<Object> findAllValues() throws EntityException
+    public Set<Object> findAllValues() throws OnyxException
     {
         return references.keySet();
     }
@@ -165,11 +164,11 @@ public class IndexControllerImpl implements IndexController {
      * @param includeValue Whether to compare above and equal or not.
      * @return A set of record references
      *
-     * @throws EntityException Exception while reading the data structure
+     * @throws OnyxException Exception while reading the data structure
      *
      * @since 1.2.0
      */
-    public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
+    public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws OnyxException
     {
         final Set<Long> allReferences = new HashSet();
         final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).above(indexValue, includeValue);
@@ -196,11 +195,11 @@ public class IndexControllerImpl implements IndexController {
      * @param includeValue Whether to compare below and equal or not.
      * @return A set of record references
      *
-     * @throws EntityException Exception while reading the data structure
+     * @throws OnyxException Exception while reading the data structure
      *
      * @since 1.2.0
      */
-    public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
+    public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws OnyxException
     {
         final Set<Long> allReferences = new HashSet();
         final Set<Long> diskReferences = ((DiskMultiMatrixHashMap)references).below(indexValue, includeValue);
@@ -219,7 +218,7 @@ public class IndexControllerImpl implements IndexController {
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *
      */
-    public void rebuild() throws EntityException
+    public void rebuild() throws OnyxException
     {
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 

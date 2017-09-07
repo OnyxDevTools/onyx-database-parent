@@ -2,7 +2,7 @@ package embedded.exception;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.EntityCallbackException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import embedded.base.BaseTest;
 import entities.exception.EntityCallbackExceptionEntity;
@@ -49,7 +49,7 @@ public class TestCallbackExceptions extends BaseTest
     }
 
     @Test(expected = EntityCallbackException.class)
-    public void testPersistCallbackException() throws EntityException
+    public void testPersistCallbackException() throws OnyxException
     {
         EntityCallbackExceptionEntity entity = new EntityCallbackExceptionEntity();
         manager.saveEntity(entity);

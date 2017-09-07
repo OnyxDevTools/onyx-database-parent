@@ -1,7 +1,7 @@
 package web.delete;
 
 import category.WebServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.NoResultsException;
 import entities.AllAttributeEntity;
 import entities.identifiers.IntegerIdentifierEntity;
@@ -22,7 +22,7 @@ import java.util.Date;
 public class DeleteHashIndexEntityTest extends BaseTest
 {
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -34,7 +34,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
     }
 
     @Test
-    public void testDeleteEntity() throws EntityException {
+    public void testDeleteEntity() throws OnyxException {
         AllAttributeEntity entity = new AllAttributeEntity();
         entity.id = "dc5cholqdu5vha5bb6ned8ASDF";
         entity.booleanValue = false;
@@ -71,7 +71,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         try {
             manager.find(entity);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -87,7 +87,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         try {
             manager.find(entity);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -136,7 +136,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         try {
             manager.find(entity1);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -185,7 +185,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         try {
             manager.find(entity5);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -240,7 +240,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         try {
             manager.find(entity3);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -300,7 +300,7 @@ public class DeleteHashIndexEntityTest extends BaseTest
         try {
             manager.find(entity6);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {

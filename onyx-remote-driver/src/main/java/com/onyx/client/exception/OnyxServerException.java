@@ -1,6 +1,6 @@
 package com.onyx.client.exception;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 
 import java.io.PrintWriter;
 import java.io.Serializable;
@@ -11,7 +11,7 @@ import java.io.StringWriter;
  *
  * Base server exception
  */
-public abstract class OnyxServerException extends EntityException implements Serializable
+public abstract class OnyxServerException extends OnyxException implements Serializable
 {
 
     // Error message

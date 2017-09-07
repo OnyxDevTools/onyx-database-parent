@@ -2,7 +2,7 @@ package embedded;
 
 import com.onyx.buffer.BufferStream;
 import com.onyx.client.base.RequestToken;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import entities.AllAttributeEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
@@ -26,7 +26,7 @@ public class SerializationTest extends RemoteBaseTest {
 
 
     @Test
-    public void testBasic() throws EntityException
+    public void testBasic() throws OnyxException
     {
 
         final AllAttributeEntity entity = new AllAttributeEntity();
@@ -68,7 +68,7 @@ public class SerializationTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testPerformance() throws EntityException
+    public void testPerformance() throws OnyxException
     {
 
 

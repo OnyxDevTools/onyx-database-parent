@@ -11,7 +11,7 @@ import com.onyx.persistence.annotations.RelationshipType;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatHashMap;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.helpers.*;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
@@ -61,7 +61,7 @@ public class PartitionQueryController extends PartitionContext {
     }
 
     @SuppressWarnings("unchecked")
-    private Map getReferencesForCritieria(Query query, QueryCriteria criteria, Map filteredReferences, boolean forceFullScan) throws EntityException {
+    private Map getReferencesForCritieria(Query query, QueryCriteria criteria, Map filteredReferences, boolean forceFullScan) throws OnyxException {
         // Ensure query is still valid
         if (query.isTerminated()) {
             return new CompatHashMap();
@@ -155,12 +155,12 @@ public class PartitionQueryController extends PartitionContext {
      *
      * @param query Query Criteria
      * @return References matching query criteria
-     * @throws com.onyx.exception.EntityException General query exception
+     * @throws com.onyx.exception.OnyxException General query exception
      * @since 1.3.0 This has been refactored to remove the logic for meeting critieria.  That has
      * been moved to CompareUtil
      */
     @SuppressWarnings("unchecked")
-    public Map getReferencesForQuery(Query query) throws EntityException {
+    public Map getReferencesForQuery(Query query) throws OnyxException {
         return getReferencesForCritieria(query, query.getCriteria(), null, query.getCriteria().isNot());
     }
 
@@ -170,10 +170,10 @@ public class PartitionQueryController extends PartitionContext {
      * @param query      Query containing all the munging instructions
      * @param references References from query results
      * @return Hydrated entities
-     * @throws EntityException Error hydrating entities
+     * @throws OnyxException Error hydrating entities
      */
     @SuppressWarnings("unchecked")
-    public List hydrateResultsWithReferences(Query query, Map references) throws EntityException {
+    public List hydrateResultsWithReferences(Query query, Map references) throws OnyxException {
 
         // Sort if needed
         if (query.getQueryOrders() != null
@@ -249,10 +249,10 @@ public class PartitionQueryController extends PartitionContext {
      * @param query           Query containing order instructions
      * @param referenceValues Query reference values from result of scan
      * @return Sorted references
-     * @throws EntityException Error sorting objects
+     * @throws OnyxException Error sorting objects
      */
     @SuppressWarnings({"unchecked", "RedundantThrows"})
-    public Map sort(Query query, Map referenceValues) throws EntityException {
+    public Map sort(Query query, Map referenceValues) throws OnyxException {
         final Map retVal = new TreeMap(new PartitionSortCompare(query, (query.getQueryOrders() == null) ? new QueryOrder[0] : query.getQueryOrders().toArray(new QueryOrder[query.getQueryOrders().size()]), descriptor, getContext()));
         retVal.putAll(referenceValues);
 
@@ -265,10 +265,10 @@ public class PartitionQueryController extends PartitionContext {
      * @param query      Query containing selection and count information
      * @param references References found during query execution
      * @return Hydrated key value set for entity attributes
-     * @throws EntityException Cannot hydrate entities
+     * @throws OnyxException Cannot hydrate entities
      */
     @SuppressWarnings("unchecked")
-    public Map<Object, Map<String, Object>> hydrateQuerySelections(Query query, Map references) throws EntityException {
+    public Map<Object, Map<String, Object>> hydrateQuerySelections(Query query, Map references) throws OnyxException {
         final List<ScannerProperties> scanObjects = ScannerProperties.getScannerProperties(query.getSelections().toArray(new String[query.getSelections().size()]), descriptor, query, getContext());
 
         if (references.size() == 0) {
@@ -346,10 +346,10 @@ public class PartitionQueryController extends PartitionContext {
      * @param records References to delete
      * @param query   Query object
      * @return Number of entities deleted
-     * @throws EntityException Cannot delete entities
+     * @throws OnyxException Cannot delete entities
      */
     @SuppressWarnings("unchecked")
-    public int deleteRecordsWithReferences(Map records, Query query) throws EntityException {
+    public int deleteRecordsWithReferences(Map records, Query query) throws OnyxException {
 
         final Iterator<Object> iterator = records.keySet().iterator();
         Object referenceId;
@@ -408,9 +408,9 @@ public class PartitionQueryController extends PartitionContext {
      * @param entry      Key identifier
      * @param properties Scanner Properties for the attribute
      * @return hydrated entity as a map
-     * @throws EntityException Exception why trying to retrieve object
+     * @throws OnyxException Exception why trying to retrieve object
      */
-    private Object hydrateEntityMap(Object entry, ScannerProperties properties) throws EntityException {
+    private Object hydrateEntityMap(Object entry, ScannerProperties properties) throws OnyxException {
         if (entry instanceof PartitionReference) {
             PartitionReference ref = (PartitionReference) entry;
             return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(properties.attributeDescriptor.getField(), ref.reference);
@@ -425,10 +425,10 @@ public class PartitionQueryController extends PartitionContext {
      * @param entry      Query reference entry
      * @param properties Scanner properties
      * @return To one relationship as a map
-     * @throws EntityException General exception
+     * @throws OnyxException General exception
      * @since 1.3.0
      */
-    private Object hydrateRelationshipToOneMap(Object entry, ScannerProperties properties) throws EntityException {
+    private Object hydrateRelationshipToOneMap(Object entry, ScannerProperties properties) throws OnyxException {
         List values = hydrateRelationshipToManyMap(entry, properties);
         if (values.size() > 0)
             return values.get(0);
@@ -442,11 +442,11 @@ public class PartitionQueryController extends PartitionContext {
      * @param entry      Query reference entry
      * @param properties Scanner properties
      * @return List of to many relationships
-     * @throws EntityException General exception
+     * @throws OnyxException General exception
      * @since 1.3.0
      */
     @SuppressWarnings("unchecked")
-    private List hydrateRelationshipToManyMap(Object entry, ScannerProperties properties) throws EntityException {
+    private List hydrateRelationshipToManyMap(Object entry, ScannerProperties properties) throws OnyxException {
         // Get Relationship controller
         final RelationshipController relationshipController = getContext().getRelationshipController(properties.relationshipDescriptor);
 
@@ -494,10 +494,10 @@ public class PartitionQueryController extends PartitionContext {
      * @param query   Query information containing update values
      * @param results Entity references as a result of the query
      * @return how many entities were updated
-     * @throws EntityException Cannot update entity
+     * @throws OnyxException Cannot update entity
      */
     @SuppressWarnings("unchecked")
-    public int performUpdatsForQuery(Query query, Map results) throws EntityException {
+    public int performUpdatsForQuery(Query query, Map results) throws OnyxException {
         final Iterator<Object> iterator = results.keySet().iterator();
         Object referenceId;
         IManagedEntity entity;
@@ -656,10 +656,10 @@ public class PartitionQueryController extends PartitionContext {
      *
      * @param query Query to identify count for
      * @return The number of records matching query criterium
-     * @throws EntityException Excaption ocurred while executing query
+     * @throws OnyxException Excaption ocurred while executing query
      * @since 1.3.0 Added as enhancement #71
      */
-    public long getCountForQuery(Query query) throws EntityException {
+    public long getCountForQuery(Query query) throws OnyxException {
         if (ValidationHelper.isDefaultQuery(descriptor, query)) {
             SystemEntity systemEntity = getContext().getSystemEntityByName(query.getEntityType().getName());
 

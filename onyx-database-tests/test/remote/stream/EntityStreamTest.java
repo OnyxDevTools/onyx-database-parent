@@ -1,10 +1,8 @@
 package remote.stream;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.StreamException;
-import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -32,7 +30,7 @@ public class EntityStreamTest extends RemoteBaseTest
 {
 
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -45,10 +43,10 @@ public class EntityStreamTest extends RemoteBaseTest
 
     /**
      * Test a basic Query Stream implementation
-     * @throws EntityException Should not happen
+     * @throws OnyxException Should not happen
      */
     @Test(expected = StreamException.class)
-    public void testBasicQueryStream() throws EntityException
+    public void testBasicQueryStream() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
         testEntity.correlation = 1;
@@ -67,11 +65,11 @@ public class EntityStreamTest extends RemoteBaseTest
 
     /**
      * Test a Query Stream implementation with an andThan syntax
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test(expected = StreamException.class)
     @Ignore
-    public void testBasicQueryStreamAndThen() throws EntityException
+    public void testBasicQueryStreamAndThen() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
         testEntity.correlation = 1;
@@ -106,10 +104,10 @@ public class EntityStreamTest extends RemoteBaseTest
 
     /**
      * Test a basic Query Stream implementation
-     * @throws EntityException Should not happen
+     * @throws OnyxException Should not happen
      */
     @Test
-    public void testBasicQueryStreamByClassLoading() throws EntityException
+    public void testBasicQueryStreamByClassLoading() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
         testEntity.correlation = 1;
@@ -126,10 +124,10 @@ public class EntityStreamTest extends RemoteBaseTest
 
     /**
      * Test a basic Query Stream implementation
-     * @throws EntityException Should not happen
+     * @throws OnyxException Should not happen
      */
     @Test
-    public void testBasicQueryStreamDictionaryByClassLoading() throws EntityException
+    public void testBasicQueryStreamDictionaryByClassLoading() throws OnyxException
     {
         ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
         testEntity.correlation = 1;
@@ -148,10 +146,10 @@ public class EntityStreamTest extends RemoteBaseTest
      * The purpose of this is to display that we can iterate through it without having the dependency
      * of what format the entity used to be in.  In this case, it would help with migrations.
      *
-     * @throws EntityException Should Not happen
+     * @throws OnyxException Should Not happen
      */
     @Test(expected = StreamException.class)
-    public void testStreamAsDictionary() throws EntityException
+    public void testStreamAsDictionary() throws OnyxException
     {
         // Save some test data
         final ImmutableSequenceIdentifierEntityForDelete testEntity = new ImmutableSequenceIdentifierEntityForDelete();
@@ -180,7 +178,7 @@ public class EntityStreamTest extends RemoteBaseTest
                 assert freshEntity.correlation == 5;
 
                 hadDataToStream.set(true);
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 e.printStackTrace();
             }
         };

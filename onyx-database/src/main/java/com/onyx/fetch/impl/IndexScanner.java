@@ -3,7 +3,7 @@ package com.onyx.fetch.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.util.map.CompatHashMap;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.context.SchemaContext;
@@ -31,9 +31,9 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
      * @param classToScan Class type to scan
      * @param descriptor Entity descriptor of entity type to scan
      * @param temporaryDataFile Temproary data file to put results into
-     * @throws EntityException Cannot scan index
+     * @throws OnyxException Cannot scan index
      */
-    public IndexScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    public IndexScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
 
@@ -45,11 +45,11 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
      * Scan indexes
      *
      * @return Indexes meeting criteria
-     * @throws EntityException Cannot scan index
+     * @throws OnyxException Cannot scan index
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map<Long, Long> scan() throws EntityException
+    public Map<Long, Long> scan() throws OnyxException
     {
         final Map<Long, Long> returnValue = new CompatHashMap<>();
         final List<Long> references = new ArrayList<>();
@@ -109,11 +109,11 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
      *
      * @param existingValues Existing values to check
      * @return Existing values matching criteria
-     * @throws EntityException Cannot scan index
+     * @throws OnyxException Cannot scan index
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
+    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws OnyxException
     {
         final Map<Long, Long> returnValue = new CompatHashMap<>();
 

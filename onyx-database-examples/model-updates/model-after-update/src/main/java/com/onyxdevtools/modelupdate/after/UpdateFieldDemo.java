@@ -1,6 +1,6 @@
 package com.onyxdevtools.modelupdate.after;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.modelupdate.entities.Account;
 
@@ -38,7 +38,7 @@ class UpdateFieldDemo
 
             // Notice, the one thing that we cannot demonstrate is that we removed a field, "balanceDue"
             // Don't worry, we can add it back and the data will still be there since it has not been orphaned.
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             e.printStackTrace();
             assert false;

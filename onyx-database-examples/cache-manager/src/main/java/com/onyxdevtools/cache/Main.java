@@ -1,6 +1,6 @@
 package com.onyxdevtools.cache;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -15,7 +15,7 @@ public class Main
 {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException {
+    public static void main(String[] args) throws OnyxException {
 
         PersistenceManagerFactory factory = new CacheManagerFactory(); //1
         

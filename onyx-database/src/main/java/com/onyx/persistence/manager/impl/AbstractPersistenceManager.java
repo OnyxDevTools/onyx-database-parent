@@ -1,6 +1,6 @@
 package com.onyx.persistence.manager.impl;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
@@ -22,10 +22,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException General exception happened when the query.
+     * @throws OnyxException General exception happened when the query.
      */
     @SuppressWarnings("unused")
-    public QueryResult executeLazyQueryForResult(Query query) throws EntityException
+    public QueryResult executeLazyQueryForResult(Query query) throws OnyxException
     {
         return new QueryResult(query, executeLazyQuery(query));
     }
@@ -36,11 +36,11 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @param entity The entity to load
      * @param attribute Attribute that represents the relationship
      * @return The relationship Value
-     * @throws EntityException Error when hydrating relationship.  The attribute must exist and must be a annotated with a relationship
+     * @throws OnyxException Error when hydrating relationship.  The attribute must exist and must be a annotated with a relationship
      * @since 1.2.0
      */
     @SuppressWarnings("unused")
-    public Object getRelationship(IManagedEntity entity, String attribute) throws EntityException
+    public Object getRelationship(IManagedEntity entity, String attribute) throws OnyxException
     {
         initialize(entity, attribute);
         return ReflectionUtil.getAny(entity, getContext().getDescriptorForEntity(entity).getRelationships().get(attribute).getField());
@@ -57,10 +57,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Unsorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria) throws OnyxException
     {
         return list(clazz, criteria, new QueryOrder[0]);
     }
@@ -78,9 +78,9 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Sorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy) throws OnyxException
     {
         return list(clazz, criteria, 0, -1, orderBy);
     }
@@ -98,10 +98,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Sorted List of results matching criteria
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy) throws OnyxException
     {
         QueryOrder[] queryOrders = {orderBy};
         return list(clazz, criteria, queryOrders);
@@ -120,10 +120,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Unsorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, Object partitionId) throws OnyxException
     {
         return list(clazz, criteria, new QueryOrder[0], partitionId);
     }
@@ -143,10 +143,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Sorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder[] orderBy, Object partitionId) throws OnyxException
     {
         return list(clazz, criteria, 0, -1, orderBy, partitionId);
     }
@@ -166,10 +166,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Sorted List of results matching criteria within a partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, QueryOrder orderBy, Object partitionId) throws OnyxException
     {
         QueryOrder[] queryOrders = {orderBy};
         return list(clazz, criteria, queryOrders, partitionId);
@@ -194,9 +194,9 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Sorted List of results matching criteria within range
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy) throws OnyxException
     {
         final Query tmpQuery = new Query(clazz, criteria);
         tmpQuery.setMaxResults(maxResults);
@@ -229,10 +229,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      *
      * @return Sorted List of results matching criteria within range and partition
      *
-     * @throws EntityException Exception occurred while filtering results
+     * @throws OnyxException Exception occurred while filtering results
      */
     @SuppressWarnings("unused")
-    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws EntityException
+    public <E extends IManagedEntity> List<E> list(Class clazz, QueryCriteria criteria, int start, int maxResults, QueryOrder[] orderBy, Object partitionId) throws OnyxException
     {
 
         final Query tmpQuery = new Query(clazz, criteria);
@@ -252,10 +252,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException Exception when deleting entities
+     * @throws OnyxException Exception when deleting entities
      */
     @SuppressWarnings("unused")
-    public QueryResult executeDeleteForResult(Query query) throws EntityException
+    public QueryResult executeDeleteForResult(Query query) throws OnyxException
     {
         return new QueryResult(query, executeDelete(query));
     }
@@ -265,10 +265,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException when an update query failed
+     * @throws OnyxException when an update query failed
      */
     @SuppressWarnings("unused")
-    public QueryResult executeUpdateForResult(Query query) throws EntityException
+    public QueryResult executeUpdateForResult(Query query) throws OnyxException
     {
         return new QueryResult(query, executeUpdate(query));
     }
@@ -278,10 +278,10 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
      * @return The results including the original result from the query execute and the updated query object
-     * @throws EntityException when the query is mal formed or general exception
+     * @throws OnyxException when the query is mal formed or general exception
      */
     @SuppressWarnings("unused")
-    public QueryResult executeQueryForResult(Query query) throws EntityException
+    public QueryResult executeQueryForResult(Query query) throws OnyxException
     {
         return new QueryResult(query, executeQuery(query));
     }
@@ -295,7 +295,7 @@ abstract class AbstractPersistenceManager implements PersistenceManager {
      */
     @Override
     @SuppressWarnings("unused")
-    public void listen(Query query, QueryListener queryListener) throws EntityException {
+    public void listen(Query query, QueryListener queryListener) throws OnyxException {
         query.setChangeListener(queryListener);
         listen(query);
     }

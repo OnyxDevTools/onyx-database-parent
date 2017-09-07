@@ -1,7 +1,7 @@
 package com.onyx.util;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InvalidDataTypeForOperator;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.persistence.IManagedEntity;
@@ -499,12 +499,12 @@ public class CompareUtil
      *
      * @return Whether the relationship value has met all of the critieria
      *
-     * @throws EntityException Something bad happened.
+     * @throws OnyxException Something bad happened.
      *
      * @since 1.3.0 - Used to remove the dependency on relationship scanners and to allow query caching
      *                to do a quick reference to see if newly saved entities meet the critieria
      */
-    private static boolean relationshipMeetsCritieria(IManagedEntity entity, Object entityReference, QueryCriteria criteria, SchemaContext context) throws EntityException
+    private static boolean relationshipMeetsCritieria(IManagedEntity entity, Object entityReference, QueryCriteria criteria, SchemaContext context) throws OnyxException
     {
         boolean meetsCritiera = false;
         final QueryCriteriaOperator operator = criteria.getOperator();
@@ -543,11 +543,11 @@ public class CompareUtil
      * @param context Schema context used to pull entity descriptors, and such
      * @param descriptor Quick reference to the entities descriptor so we do not have to pull it from the schema context
      * @return Whether the entity meets all the critieria.
-     * @throws EntityException Cannot hydrate or pull an attribute from an entity
+     * @throws OnyxException Cannot hydrate or pull an attribute from an entity
      *
      * @since 1.3.0 Simplified query criteria management
      */
-    public static boolean meetsCriteria(Set<QueryCriteria> allCritieria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws EntityException {
+    public static boolean meetsCriteria(Set<QueryCriteria> allCritieria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws OnyxException {
 
         boolean subCreriaMet;
 

@@ -1,8 +1,7 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -121,7 +120,7 @@ public class InTest extends RemoteBaseTest
     }
 
     @Test
-    public void testInEquals() throws EntityException
+    public void testInEquals() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add("Some test strin1");
@@ -132,7 +131,7 @@ public class InTest extends RemoteBaseTest
     }
 
     @Test
-    public void testInStringId() throws EntityException
+    public void testInStringId() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add("FIRST ONE3");
@@ -143,7 +142,7 @@ public class InTest extends RemoteBaseTest
     }
 
     @Test
-    public void testNumberIn() throws EntityException
+    public void testNumberIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(322l);
@@ -155,7 +154,7 @@ public class InTest extends RemoteBaseTest
     }
 
     @Test
-    public void testDateIn() throws EntityException
+    public void testDateIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(new Date(1000));
@@ -166,7 +165,7 @@ public class InTest extends RemoteBaseTest
     }
 
     @Test
-    public void testDoubleIn() throws EntityException
+    public void testDoubleIn() throws OnyxException
     {
         List stringArray = new ArrayList<>();
         stringArray.add(1.126);

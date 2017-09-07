@@ -2,7 +2,7 @@ package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.util.map.CompatHashMap;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.TableScanner;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -32,9 +32,9 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
      * @param classToScan Class type to scan
      * @param descriptor Entity descriptor of entity type to scan
      *
-     * @throws EntityException Cannot find entity information
+     * @throws OnyxException Cannot find entity information
      */
-    public IdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    public IdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
     }
@@ -43,10 +43,10 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
      * Full scan with ids
      *
      * @return Identifiers matching criteria
-     * @throws EntityException Cannot scan records
+     * @throws OnyxException Cannot scan records
      */
     @Override
-    public Map<Long, Long> scan() throws EntityException
+    public Map<Long, Long> scan() throws OnyxException
     {
         final Map<Long, Long> returnValue = new CompatHashMap<>();
 
@@ -108,10 +108,10 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
      *
      * @param existingValues Existing values to check
      * @return Existing values that meed additional criteria
-     * @throws EntityException Cannot scan records
+     * @throws OnyxException Cannot scan records
      */
     @Override
-    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws EntityException
+    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws OnyxException
     {
         final Map<Long, Long> returnValue = new CompatHashMap<>();
 

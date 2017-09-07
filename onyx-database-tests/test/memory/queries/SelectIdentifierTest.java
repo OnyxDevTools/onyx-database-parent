@@ -1,8 +1,7 @@
 package memory.queries;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.InitializationException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -27,12 +26,12 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Before
-    public void before() throws EntityException {
+    public void before() throws OnyxException {
         initialize();
         seedData();
     }
 
-    private void seedData() throws EntityException
+    private void seedData() throws OnyxException
     {
         SelectIdentifierTestEntity entity = new SelectIdentifierTestEntity();
         entity.id = 1L;
@@ -107,7 +106,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierAndCritieria() throws EntityException
+    public void testIdentifierAndCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -119,7 +118,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierOrCritieria() throws EntityException
+    public void testIdentifierOrCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L);
@@ -131,7 +130,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierCompoundCritieria() throws EntityException
+    public void testIdentifierCompoundCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L);
@@ -146,7 +145,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierAndCritieriaWithNot() throws EntityException
+    public void testIdentifierAndCritieriaWithNot() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -158,7 +157,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierAndCritieriaWithNotGroup() throws EntityException
+    public void testIdentifierAndCritieriaWithNotGroup() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -170,7 +169,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierOrCritieriaWithNot() throws EntityException
+    public void testIdentifierOrCritieriaWithNot() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -182,7 +181,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierOrCritieriaWithNotGroup() throws EntityException
+    public void testIdentifierOrCritieriaWithNotGroup() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -194,7 +193,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierCompoundCritieriaWithNot() throws EntityException
+    public void testIdentifierCompoundCritieriaWithNot() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L);
@@ -209,7 +208,7 @@ public class SelectIdentifierTest extends BaseTest {
     }
 
     @Test
-    public void testIdentifierCompoundCritieriaWithNotFullScan() throws EntityException
+    public void testIdentifierCompoundCritieriaWithNotFullScan() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L);

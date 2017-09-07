@@ -1,7 +1,7 @@
 package com.onyxdevtools.persist;
 
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -16,7 +16,7 @@ import java.util.Date;
 public class DeletingAnEntityExample {
 
 
-    public static void main(String[] args) throws EntityException {
+    public static void main(String[] args) throws OnyxException {
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"

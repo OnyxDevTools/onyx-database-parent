@@ -1,6 +1,6 @@
 package com.onyxdevtools.partition;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -21,7 +21,7 @@ import java.util.List;
 public class Main extends AbstractDemo {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
 
         String pathToOnyxDB = System.getProperty("user.home")
@@ -68,9 +68,9 @@ public class Main extends AbstractDemo {
      * Seed Cell phone log data
      *
      * @param manager Persistence Manager to use to seed data
-     * @throws EntityException Generic exception from persistence manager
+     * @throws OnyxException Generic exception from persistence manager
      */
-    private static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws OnyxException
     {
         // Create a call log for area code (555)
         CellPhone myPhoneNumber = new CellPhone();

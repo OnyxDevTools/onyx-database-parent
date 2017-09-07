@@ -1,7 +1,7 @@
 package memory.list;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -121,7 +121,7 @@ public class MutableEqualsNullTest extends BaseTest
     }
 
     @Test
-    public void testStringEqualsNull() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_STRING_VALUE);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -129,7 +129,7 @@ public class MutableEqualsNullTest extends BaseTest
     }
 
     @Test
-    public void testIntEqualsNull() throws EntityException, InstantiationException, IllegalAccessException
+    public void testIntEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_INTEGER_VALUE);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -137,7 +137,7 @@ public class MutableEqualsNullTest extends BaseTest
     }
 
     @Test
-    public void testLongEqualsNull() throws EntityException, InstantiationException, IllegalAccessException
+    public void testLongEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_LONG_VALUE);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -145,7 +145,7 @@ public class MutableEqualsNullTest extends BaseTest
     }
 
     @Test
-    public void testDateEqualsNull() throws EntityException, InstantiationException, IllegalAccessException
+    public void testDateEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_DATE_VALUE);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -153,7 +153,7 @@ public class MutableEqualsNullTest extends BaseTest
     }
 
     @Test
-    public void testDoubleEqualsNull() throws EntityException, InstantiationException, IllegalAccessException
+    public void testDoubleEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_DOUBLE_VALUE);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
@@ -161,7 +161,7 @@ public class MutableEqualsNullTest extends BaseTest
     }
 
     @Test
-    public void testBooleanEqualsNull() throws EntityException, InstantiationException, IllegalAccessException
+    public void testBooleanEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteriaList = new QueryCriteria("booleanValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_BOOLEAN_VALUE);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);

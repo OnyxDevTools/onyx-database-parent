@@ -1,6 +1,6 @@
 package memory.base;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -67,7 +67,7 @@ public class BaseTest {
     public void save(IManagedEntity entity) {
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error saving entity");
         }
@@ -76,7 +76,7 @@ public class BaseTest {
     public IManagedEntity find(IManagedEntity entity) {
         try {
             return manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error finding entity");
         }
@@ -86,7 +86,7 @@ public class BaseTest {
     public void delete(IManagedEntity entity) {
         try {
             manager.deleteEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error deleting entity");
         }
@@ -95,7 +95,7 @@ public class BaseTest {
     public void initialize(IManagedEntity entity, String attribute) {
         try {
             manager.initialize(entity, attribute);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
             fail("Error saving entity");
         }

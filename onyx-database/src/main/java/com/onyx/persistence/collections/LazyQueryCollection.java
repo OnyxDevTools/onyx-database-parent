@@ -6,12 +6,11 @@ import com.onyx.buffer.BufferStreamable;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.BufferingException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.context.impl.DefaultSchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.util.map.CompatMap;
@@ -131,7 +130,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         try
         {
             identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             return false;
         }
@@ -200,7 +199,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
                     references.put(reference, entity);
                 }
 
-            } catch (EntityException e)
+            } catch (OnyxException e)
             {
                 return null;
             }
@@ -222,7 +221,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         try
         {
             return persistenceManager.getMapWithReferenceId(entityDescriptor.getClazz(), (long)identifiers.get(index));
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             return null;
         }
@@ -340,7 +339,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         }
         try {
             this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className));
-        } catch (EntityException | ClassNotFoundException e) {
+        } catch (OnyxException | ClassNotFoundException e) {
             e.printStackTrace();
         }
 

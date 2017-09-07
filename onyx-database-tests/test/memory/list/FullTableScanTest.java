@@ -1,7 +1,7 @@
 package memory.list;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -123,7 +123,7 @@ public class FullTableScanTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testBasicAnd() throws EntityException, InstantiationException, IllegalAccessException
+    public void testBasicAnd() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
                 .and("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some test str")
@@ -135,7 +135,7 @@ public class FullTableScanTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testBasicAndOr() throws EntityException, InstantiationException, IllegalAccessException
+    public void testBasicAndOr() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
                 .or("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3");
@@ -146,7 +146,7 @@ public class FullTableScanTest extends memory.base.BaseTest
 
 
     @Test
-    public void testBasicOrsSub() throws EntityException, InstantiationException, IllegalAccessException
+    public void testBasicOrsSub() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria containsSubTes = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some tes");
         QueryCriteria containsSubTestStrin1 = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some test strin1");
@@ -155,7 +155,7 @@ public class FullTableScanTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testBasicAndSub() throws EntityException, InstantiationException, IllegalAccessException
+    public void testBasicAndSub() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria stringValueEqualsValue = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
         QueryCriteria containsSubTes = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some tes");
@@ -167,7 +167,7 @@ public class FullTableScanTest extends memory.base.BaseTest
     }
 
     @Test
-    public void testBasicOrSub() throws EntityException, InstantiationException, IllegalAccessException
+    public void testBasicOrSub() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria stringValueEqualsValue = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
         QueryCriteria containsSubTes = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some tes");

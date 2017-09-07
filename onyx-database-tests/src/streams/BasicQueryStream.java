@@ -1,6 +1,6 @@
 package streams;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.stream.QueryStream;
@@ -16,7 +16,7 @@ public class BasicQueryStream implements QueryStream {
         ((ImmutableSequenceIdentifierEntityForDelete)entity).correlation = 99;
         try {
             persistenceManager.saveEntity((IManagedEntity)entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
     }

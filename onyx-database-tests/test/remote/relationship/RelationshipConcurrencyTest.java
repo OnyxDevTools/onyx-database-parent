@@ -1,7 +1,7 @@
 package remote.relationship;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
 import entities.relationship.OneToOneChild;
@@ -23,7 +23,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 /**
  * Created by timothy.osborn on 11/3/14.
@@ -33,7 +32,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 {
 
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -45,7 +44,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
     }
 
     @Test
-    public void testOneToOneCascadeConcurrency() throws EntityException
+    public void testOneToOneCascadeConcurrency() throws OnyxException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -86,7 +85,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
                             {
                                 manager.saveEntity(entity1);
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -122,7 +121,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
             newEntity.identifier = entity.identifier;
             try {
                 manager.find(newEntity);
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 Assert.assertTrue(false);
             }
             Assert.assertTrue(newEntity.identifier.equals(entity.identifier));
@@ -134,7 +133,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
 
 
     @Test
-    public void testManyToManyCascadeConcurrency() throws EntityException
+    public void testManyToManyCascadeConcurrency() throws OnyxException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -174,7 +173,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
                         {
                             manager.saveEntity(entity1);
                         }
-                    } catch (EntityException e)
+                    } catch (OnyxException e)
                     {
                         e.printStackTrace();
                     }
@@ -206,7 +205,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
             newEntity.identifier = manyToManyParent.identifier;
             try {
                 manager.find(newEntity);
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 Assert.assertTrue(false);
             }
             Assert.assertTrue(newEntity.identifier.equals(manyToManyParent.identifier));
@@ -217,7 +216,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
     }
 
     @Test
-    public void testManyToManyCascadeConcurrencyMultiple() throws EntityException
+    public void testManyToManyCascadeConcurrencyMultiple() throws OnyxException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -270,7 +269,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
                             {
                                 manager.saveEntity(entity1);
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -286,7 +285,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
                         {
                             manager.saveEntity(entity1);
                         }
-                    } catch (EntityException e)
+                    } catch (OnyxException e)
                     {
                         e.printStackTrace();
                     }
@@ -322,7 +321,7 @@ public class RelationshipConcurrencyTest extends RemoteBaseTest
             newEntity.identifier = manyToManyParent.identifier;
             try {
                 manager.find(newEntity);
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 failures.addAndGet(1);
             }
             Assert.assertTrue(newEntity.identifier.equals(manyToManyParent.identifier));

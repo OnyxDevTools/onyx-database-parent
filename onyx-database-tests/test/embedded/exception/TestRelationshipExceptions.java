@@ -36,32 +36,32 @@ public class TestRelationshipExceptions extends BaseTest
     }
 
     @Test(expected = InvalidRelationshipTypeException.class)
-    public void testInvalidInverse() throws EntityException
+    public void testInvalidInverse() throws OnyxException
     {
         EntityDescriptor descriptor = new EntityDescriptor(NoInverseEntity.class);
     }
 
     @Test(expected = InvalidRelationshipTypeException.class)
-    public void testInvalidType() throws EntityException
+    public void testInvalidType() throws OnyxException
     {
         EntityDescriptor descriptor = new EntityDescriptor(OTMNoListEntity.class);
     }
 
     @Test(expected = EntityClassNotFoundException.class)
-    public void testInvalidTypeInverse() throws EntityException
+    public void testInvalidTypeInverse() throws OnyxException
     {
         EntityDescriptor descriptor = new EntityDescriptor(RelationshipNoEntityType.class);
     }
 
     @Test(expected = InvalidRelationshipTypeException.class)
-    public void testInvalidTypeInverseNoMatch() throws EntityException
+    public void testInvalidTypeInverseNoMatch() throws OnyxException
     {
         EntityDescriptor descriptor = new EntityDescriptor(EntityToOneDoesntMatch.class);
     }
 
 
     @Test(expected = RelationshipNotFoundException.class)
-    public void testRelationshipNotFound() throws EntityException
+    public void testRelationshipNotFound() throws OnyxException
     {
         AllAttributeEntity entity = new AllAttributeEntity();
         entity.id = "ZZZ";

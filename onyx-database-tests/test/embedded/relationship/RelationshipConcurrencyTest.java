@@ -1,7 +1,7 @@
 package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import embedded.base.BaseTest;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
@@ -31,7 +31,7 @@ public class RelationshipConcurrencyTest extends BaseTest
 {
 
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -43,7 +43,7 @@ public class RelationshipConcurrencyTest extends BaseTest
     }
 
     @Test
-    public void testOneToOneCascadeConcurrency() throws EntityException
+    public void testOneToOneCascadeConcurrency() throws OnyxException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -84,7 +84,7 @@ public class RelationshipConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntity(entity1);
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -128,7 +128,7 @@ public class RelationshipConcurrencyTest extends BaseTest
 
 
     @Test
-    public void testManyToManyCascadeConcurrency() throws EntityException
+    public void testManyToManyCascadeConcurrency() throws OnyxException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -171,7 +171,7 @@ public class RelationshipConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntity(entity1);
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -214,7 +214,7 @@ public class RelationshipConcurrencyTest extends BaseTest
     }
 
     @Test
-    public void testManyToManyCascadeConcurrencyMultiple() throws EntityException
+    public void testManyToManyCascadeConcurrencyMultiple() throws OnyxException
     {
         SecureRandom random = new SecureRandom();
         long time = System.currentTimeMillis();
@@ -267,7 +267,7 @@ public class RelationshipConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntity(entity1);
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }
@@ -286,7 +286,7 @@ public class RelationshipConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntity(entity1);
                             }
-                        } catch (EntityException e)
+                        } catch (OnyxException e)
                         {
                             e.printStackTrace();
                         }

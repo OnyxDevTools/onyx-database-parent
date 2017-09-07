@@ -45,7 +45,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @Test(expected = EntityClassNotFoundException.class)
-    public void testNoEntitySave() throws EntityException
+    public void testNoEntitySave() throws OnyxException
     {
         NoEntityAnnotationClass entity = new NoEntityAnnotationClass();
         entity.id = "Hiya";
@@ -55,7 +55,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
 
 
     @Test(expected = InvalidIdentifierException.class)
-    public void testNoIDEntity() throws EntityException
+    public void testNoIDEntity() throws OnyxException
     {
         NoIdEntity entity = new NoIdEntity();
         entity.attr = 3;
@@ -63,7 +63,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @Test(expected = InvalidIdentifierException.class)
-    public void testInvalidIDEntity() throws EntityException
+    public void testInvalidIDEntity() throws OnyxException
     {
         InvalidIDEntity entity = new InvalidIDEntity();
         entity.id = 23.3;
@@ -71,7 +71,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @Test(expected = InvalidIdentifierException.class)
-    public void testInvalidGenerator() throws EntityException
+    public void testInvalidGenerator() throws OnyxException
     {
         InvalidIDGeneratorEntity entity = new InvalidIDGeneratorEntity();
         entity.id = "ASDF";
@@ -79,7 +79,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @Test(expected = EntityClassNotFoundException.class)
-    public void testNoInterfaceException() throws EntityException
+    public void testNoInterfaceException() throws OnyxException
     {
         EntityNoIPersistedEntity entity = new EntityNoIPersistedEntity();
         entity.id = "ASDF";
@@ -90,7 +90,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @Test(expected = EntityTypeMatchException.class)
-    public void testInvalidAttributeType() throws EntityException
+    public void testInvalidAttributeType() throws OnyxException
     {
         InvalidAttributeTypeEntity entity = new InvalidAttributeTypeEntity();
         entity.id = "ASDF";
@@ -98,7 +98,7 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
     }
 
     @Test
-    public void testInvalidFindById() throws EntityException{
+    public void testInvalidFindById() throws OnyxException {
         //Save entity
         SimpleEntity entity = new SimpleEntity();
         entity.setSimpleId("1");

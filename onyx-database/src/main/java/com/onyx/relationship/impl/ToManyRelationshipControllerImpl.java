@@ -3,7 +3,7 @@ package com.onyx.relationship.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.RelationshipHydrationException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
@@ -41,7 +41,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @param entityDescriptor       Parent entity descriptor
      * @param relationshipDescriptor Child entity descriptor
      */
-    public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException {
+    public ToManyRelationshipControllerImpl(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws OnyxException {
         super(entityDescriptor, relationshipDescriptor, context);
         MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
 
@@ -54,7 +54,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override
-    public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws EntityException {
+    public void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws OnyxException {
         if (relationshipDescriptor.getCascadePolicy() == CascadePolicy.DEFER_SAVE) {
             return;
         }
@@ -182,7 +182,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @param manager          Relationship manager keeps track of actions already taken on entity relationships
      */
     @Override
-    public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws EntityException {
+    public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws OnyxException {
         IManagedEntity entity = recordController.getWithId(entityIdentifier.identifier);
         manager.add(entity, entityDescriptor.getIdentifier());
 
@@ -218,7 +218,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     @Override
-    public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws EntityException {
+    public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws OnyxException {
         manager.add(entity, entityDescriptor.getIdentifier());
 
         Set<RelationshipReference> existingRelationshipObjects = null;
@@ -282,7 +282,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @return List of relationship references
      */
     @Override
-    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws EntityException {
+    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws OnyxException {
         IManagedEntity entity = recordController.getWithReferenceId(referenceId);
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
         Set<RelationshipReference> existingRelationshipObjects = null;
@@ -307,7 +307,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @return List of relationship references
      */
     @Override
-    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws EntityException {
+    public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws OnyxException {
         IManagedEntity entity = getRecordControllerForPartition(referenceId.partition).getWithReferenceId(referenceId.reference);
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
         Set<RelationshipReference> existingRelationshipObjects = null;
@@ -333,7 +333,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      * @param entity                  entity to update
      * @param relationshipIdentifiers Relationship references
      */
-    public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws EntityException {
+    public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws OnyxException {
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.getContext());
         Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 

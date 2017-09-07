@@ -5,7 +5,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.EntityCallbackException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -54,7 +54,7 @@ public abstract class AbstractRecordController
      * @return Entity if it exist
      */
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
-    public IManagedEntity getWithId(Object primaryKey) throws EntityException
+    public IManagedEntity getWithId(Object primaryKey) throws OnyxException
     {
         return records.get(primaryKey);
     }
@@ -66,7 +66,7 @@ public abstract class AbstractRecordController
      * @return Whether it exists
      */
     @SuppressWarnings("unused")
-    public boolean exists(IManagedEntity entity) throws EntityException
+    public boolean exists(IManagedEntity entity) throws OnyxException
     {
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
@@ -81,7 +81,7 @@ public abstract class AbstractRecordController
      * @return Whether that id is taken
      */
     @SuppressWarnings("unused")
-    public boolean existsWithId(Object primaryKey) throws EntityException
+    public boolean existsWithId(Object primaryKey) throws OnyxException
     {
         return records.containsKey(primaryKey);
     }
@@ -90,10 +90,10 @@ public abstract class AbstractRecordController
      * Delete
      *
      * @param entity Entity to delete
-     * @throws EntityException Error deleting an entity
+     * @throws OnyxException Error deleting an entity
      */
     @SuppressWarnings("unused")
-    public void delete(IManagedEntity entity) throws EntityException
+    public void delete(IManagedEntity entity) throws OnyxException
     {
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
@@ -127,7 +127,7 @@ public abstract class AbstractRecordController
      * @return Hydrated entity
      */
     @SuppressWarnings("unused")
-    public IManagedEntity get(IManagedEntity entity) throws EntityException
+    public IManagedEntity get(IManagedEntity entity) throws OnyxException
     {
         // Get the Identifier key
         final Object identifierValue = getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
@@ -346,7 +346,7 @@ public abstract class AbstractRecordController
      * @throws AttributeMissingException Attribute does not exist
      */
     @SuppressWarnings("unused")
-    public static void setIndexValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws EntityException
+    public static void setIndexValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws OnyxException
     {
 
         // Use reflection to get the key
@@ -368,7 +368,7 @@ public abstract class AbstractRecordController
      * @return Entity reference id
      */
     @SuppressWarnings("unused")
-    public long getReferenceId(Object primaryKey) throws EntityException
+    public long getReferenceId(Object primaryKey) throws OnyxException
     {
         return records.getRecID(primaryKey);
     }
@@ -381,7 +381,7 @@ public abstract class AbstractRecordController
      * @return Hydrated entity
      */
     @SuppressWarnings("unused")
-    public IManagedEntity getWithReferenceId(long referenceId) throws EntityException
+    public IManagedEntity getWithReferenceId(long referenceId) throws OnyxException
     {
         return records.getWithRecID(referenceId);
     }
@@ -393,7 +393,7 @@ public abstract class AbstractRecordController
      * @return Entity as a map
      */
     @SuppressWarnings("unused")
-    public Map getMapWithReferenceId(long referenceId) throws EntityException
+    public Map getMapWithReferenceId(long referenceId) throws OnyxException
     {
         return records.getMapWithRecID(referenceId);
     }
@@ -417,10 +417,10 @@ public abstract class AbstractRecordController
      * @param indexValue The value to compare
      * @param includeValue Include whether the keys match what you pass in as index value
      * @return A set of REFERENCES not the actual values
-     * @throws EntityException Error when reading the store
+     * @throws OnyxException Error when reading the store
      */
     @SuppressWarnings("unused")
-    public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws EntityException
+    public Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws OnyxException
     {
         return ((OrderedDiskMap)records).above(indexValue, includeValue);
     }
@@ -432,10 +432,10 @@ public abstract class AbstractRecordController
      * @param indexValue The value to compare
      * @param includeValue Include whether the keys match what you pass in as index value
      * @return A set of REFERENCES not the actual values
-     * @throws EntityException Error when reading the store
+     * @throws OnyxException Error when reading the store
      */
     @SuppressWarnings("unused")
-    public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws EntityException
+    public Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws OnyxException
     {
         return ((OrderedDiskMap)records).below(indexValue, includeValue);
     }

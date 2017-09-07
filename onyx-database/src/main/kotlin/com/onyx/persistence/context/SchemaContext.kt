@@ -5,7 +5,7 @@ import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.entity.SystemEntity
 import com.onyx.entity.SystemPartitionEntry
-import com.onyx.exception.EntityException
+import com.onyx.exception.OnyxException
 import com.onyx.index.IndexController
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.QueryCacheController
@@ -86,9 +86,9 @@ interface SchemaContext {
      * @param entityClass Entity Type
      * @return Entity Types default Entity Descriptor
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getBaseDescriptorForEntity(entityClass: Class<*>): EntityDescriptor?
 
     /**
@@ -100,9 +100,9 @@ interface SchemaContext {
      * @param partitionId Partition key
      * @return Records Entity Descriptor for a partition
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getDescriptorForEntity(entityClass: Class<*>?, partitionId: Any?): EntityDescriptor
 
     /**
@@ -116,9 +116,9 @@ interface SchemaContext {
      *
      * @return Record's entity descriptor
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getDescriptorForEntity(entity: IManagedEntity, partitionId: Any?): EntityDescriptor
 
     /**
@@ -130,9 +130,9 @@ interface SchemaContext {
      *
      * @return Record's entity descriptor
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getDescriptorForEntity(entity: Any): EntityDescriptor
 
     /**
@@ -166,9 +166,9 @@ interface SchemaContext {
      *
      * @return Underlying data storage factory
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): MapBuilder
 
     /**
@@ -179,9 +179,9 @@ interface SchemaContext {
      * @param partitionValue Partition Value
      * @return System Partition Entry by class and partition key
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry?
 
     /**
@@ -191,9 +191,9 @@ interface SchemaContext {
      * @param partitionId Partition ID
      * @return System Partition Entry for class with partition id
      *
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getPartitionWithId(partitionId: Long): SystemPartitionEntry?
 
     /**
@@ -220,10 +220,10 @@ interface SchemaContext {
      *
      * @since 1.0.0
      * @param relationshipDescriptor Entity relationship descriptor
-     * @throws EntityException Generic Exception
+     * @throws OnyxException Generic Exception
      * @return Relationship Controller for relationship descriptor
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController
 
     /**
@@ -238,10 +238,10 @@ interface SchemaContext {
      * Get System Entity By Name
      * @since 1.0.0
      * @param name System entity name
-     * @throws EntityException Default Exception
+     * @throws OnyxException Default Exception
      * @return Latest System Entity version with matching name
      */
-    @Throws(EntityException::class)
+    @Throws(OnyxException::class)
     fun getSystemEntityByName(name: String): SystemEntity?
 
     /**

@@ -32,7 +32,7 @@ public class TestEntityValidation extends RemoteBaseTest
     }
 
     @Test(expected = AttributeNonNullException.class)
-    public void testNullValue() throws EntityException
+    public void testNullValue() throws OnyxException
     {
         ValidationEntity validationEntity = new ValidationEntity();
         validationEntity.id = 3l;
@@ -40,7 +40,7 @@ public class TestEntityValidation extends RemoteBaseTest
     }
 
     @Test(expected = AttributeSizeException.class)
-    public void testAttributeSizeException() throws EntityException
+    public void testAttributeSizeException() throws OnyxException
     {
         ValidationEntity validationEntity = new ValidationEntity();
         validationEntity.id = 3l;
@@ -50,7 +50,7 @@ public class TestEntityValidation extends RemoteBaseTest
     }
 
     @Test
-    public void testValidAttributeSizeException() throws EntityException
+    public void testValidAttributeSizeException() throws OnyxException
     {
         ValidationEntity validationEntity = new ValidationEntity();
         validationEntity.id = 3l;
@@ -60,7 +60,7 @@ public class TestEntityValidation extends RemoteBaseTest
     }
 
     @Test(expected = IdentifierRequiredException.class)
-    public void testRequiredIDException() throws EntityException
+    public void testRequiredIDException() throws OnyxException
     {
         ValidateRequiredIDEntity validationEntity = new ValidateRequiredIDEntity();
         validationEntity.requiredString =  "ASFD";

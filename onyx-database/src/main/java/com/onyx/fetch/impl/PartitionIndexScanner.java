@@ -10,8 +10,8 @@ import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.exception.EntityException;
-import com.onyx.exception.EntityExceptionWrapper;
+import com.onyx.exception.OnyxException;
+import com.onyx.exception.OnyxExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
 import com.onyx.index.IndexController;
@@ -43,7 +43,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
      * @param descriptor Entity descriptor of entity type to scan
      * @param temporaryDataFile Temproary data file to put results into
      */
-    public PartitionIndexScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws EntityException
+    public PartitionIndexScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
 
@@ -54,13 +54,13 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
      * Full Table Scan
      *
      * @return Matching references for criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    public Map scan() throws EntityException
+    public Map scan() throws OnyxException
     {
 
-        final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
+        final OnyxExceptionWrapper wrapper = new OnyxExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
         if(query.getPartition() == QueryPartitionMode.ALL)
@@ -80,10 +80,10 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                         Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
                         results.putAll(partitionResults);
                         countDownLatch.countDown();
-                    } catch (EntityException e)
+                    } catch (OnyxException e)
                     {
                         countDownLatch.countDown();
-                        wrapper.exception = e;
+                        wrapper.setException(e);
                     }
 
                 });
@@ -94,9 +94,9 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 countDownLatch.await();
             } catch (InterruptedException ignore) {}
 
-            if (wrapper.exception != null)
+            if (wrapper.getException() != null)
             {
-                throw wrapper.exception;
+                throw wrapper.getException();
             }
         }
         else
@@ -125,10 +125,10 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
      * Scan indexes
      *
      * @return Matching values meeting criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map scanPartition(IndexController partitionIndexController, long partitionId) throws EntityException
+    private Map scanPartition(IndexController partitionIndexController, long partitionId) throws OnyxException
     {
         final CompatMap returnValue = new CompatHashMap();
         final List<Long> references = new ArrayList<>();
@@ -174,15 +174,15 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
      *
      * @param existingValues Existing values to match criteria
      * @return Existing values meeting additional criteria
-     * @throws EntityException Cannot scan partition
+     * @throws OnyxException Cannot scan partition
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan(Map existingValues) throws EntityException
+    public Map scan(Map existingValues) throws OnyxException
     {
         final CompatMap returnValue = new CompatHashMap<>();
 
-        final EntityExceptionWrapper wrapper = new EntityExceptionWrapper();
+        final OnyxExceptionWrapper wrapper = new OnyxExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap<>();
 
         if(query.getPartition() == QueryPartitionMode.ALL)
@@ -204,14 +204,14 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                         }
                     }
 
-                } catch (EntityException e) {
-                    wrapper.exception = e;
+                } catch (OnyxException e) {
+                    wrapper.setException(e);
                 }
             }
 
-            if (wrapper.exception != null)
+            if (wrapper.getException() != null)
             {
-                throw wrapper.exception;
+                throw wrapper.getException();
             }
         }
         else

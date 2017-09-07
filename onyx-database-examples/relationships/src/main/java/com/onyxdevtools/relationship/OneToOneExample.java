@@ -1,6 +1,6 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -18,7 +18,7 @@ import java.io.File;
 class OneToOneExample extends AbstractDemo
 {
 
-    static void demo() throws EntityException
+    static void demo() throws OnyxException
     {
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"

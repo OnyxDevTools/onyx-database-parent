@@ -1,15 +1,13 @@
 package remote.queries;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
 import com.onyx.query.QueryListener;
 import entities.SimpleEntity;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
@@ -33,12 +31,12 @@ public class QueryListenerTest extends RemoteBaseTest {
     }
 
     @Before
-    public void before() throws EntityException {
+    public void before() throws OnyxException {
         initialize();
         seedData();
     }
 
-    public void seedData() throws EntityException
+    public void seedData() throws OnyxException
     {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("1");
@@ -50,7 +48,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test a query is subscribed correctly
      */
     @Test
-    public void testSubscribe() throws EntityException
+    public void testSubscribe() throws OnyxException
     {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
@@ -79,7 +77,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test a query is un-subscribed correctly
      */
     @Test
-    public void testUnsubscribe() throws EntityException, InterruptedException {
+    public void testUnsubscribe() throws OnyxException, InterruptedException {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
@@ -121,7 +119,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test an entity correctly hits an insert listener
      */
     @Test
-    public void testInsert() throws EntityException, InterruptedException {
+    public void testInsert() throws OnyxException, InterruptedException {
         final AtomicBoolean pass = new AtomicBoolean(false);
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
@@ -163,7 +161,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test an entity correctly hits an update listener
      */
     @Test
-    public void testUpdate() throws EntityException, InterruptedException {
+    public void testUpdate() throws OnyxException, InterruptedException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
 
         final AtomicBoolean pass = new AtomicBoolean(false);
@@ -206,7 +204,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testDelete() throws EntityException, InterruptedException {
+    public void testDelete() throws OnyxException, InterruptedException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
 
         SimpleEntity simpleEntity = new SimpleEntity();
@@ -255,7 +253,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test a query is subscribed correctly
      */
     @Test
-    public void testSubscribeListen() throws EntityException
+    public void testSubscribeListen() throws OnyxException
     {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
@@ -284,7 +282,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test a query is un-subscribed correctly
      */
     @Test
-    public void testUnsubscribeListen() throws EntityException, InterruptedException {
+    public void testUnsubscribeListen() throws OnyxException, InterruptedException {
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
@@ -322,7 +320,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test an entity correctly hits an insert listener
      */
     @Test
-    public void testInsertListen() throws EntityException, InterruptedException {
+    public void testInsertListen() throws OnyxException, InterruptedException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
 
         final AtomicBoolean pass = new AtomicBoolean(false);
@@ -366,7 +364,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test an entity correctly hits an update listener
      */
     @Test
-    public void testUpdateListen() throws EntityException, InterruptedException {
+    public void testUpdateListen() throws OnyxException, InterruptedException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("11");
@@ -412,7 +410,7 @@ public class QueryListenerTest extends RemoteBaseTest {
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testDeleteListen() throws EntityException, InterruptedException {
+    public void testDeleteListen() throws OnyxException, InterruptedException {
         final CountDownLatch countDownLatch = new CountDownLatch(1);
 
         SimpleEntity simpleEntity = new SimpleEntity();

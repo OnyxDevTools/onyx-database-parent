@@ -1,7 +1,7 @@
 package memory.queries;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -37,7 +37,7 @@ public class QueryCountTest extends BaseTest {
      * Tests an entity without a partition
      */
     @Test
-    public void testQueryCountForNonPartitionEntity() throws EntityException {
+    public void testQueryCountForNonPartitionEntity() throws OnyxException {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("ASDF");
 
@@ -59,7 +59,7 @@ public class QueryCountTest extends BaseTest {
      * Tests an entity with a partition.  The count uses a specific partition
      */
     @Test
-    public void testQueryCountForPartitionEntity() throws EntityException {
+    public void testQueryCountForPartitionEntity() throws OnyxException {
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
         basicPartitionEntity.id = 1L;
@@ -84,7 +84,7 @@ public class QueryCountTest extends BaseTest {
      * partition set.
      */
     @Test
-    public void testQueryCountForAllPartitions() throws EntityException {
+    public void testQueryCountForAllPartitions() throws OnyxException {
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
         basicPartitionEntity.id = 1L;
@@ -107,7 +107,7 @@ public class QueryCountTest extends BaseTest {
      * Tests a custom query rather than the entire data set
      */
     @Test
-    public void testQueryCountForCustomQuery() throws EntityException {
+    public void testQueryCountForCustomQuery() throws OnyxException {
         BasicPartitionEntity basicPartitionEntity = new BasicPartitionEntity();
         basicPartitionEntity.partitionId = 3L;
         basicPartitionEntity.id = 1L;

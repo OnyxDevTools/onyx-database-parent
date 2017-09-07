@@ -1,6 +1,6 @@
 package embedded.base;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import entities.AllAttributeForFetch;
 import entities.AllAttributeForFetchChild;
@@ -22,7 +22,7 @@ public class PrePopulatedDatabaseTest extends BaseTest {
     }
 
     @Before
-    public void seedData() throws EntityException
+    public void seedData() throws OnyxException
     {
         initialize();
 

@@ -1,6 +1,6 @@
 package streams;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.stream.QueryMapStream;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
@@ -26,7 +26,7 @@ public class BasicQueryMapStream implements QueryMapStream{
         // Save the entity
         try {
             persistenceManager.saveEntity(freshEntity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
     }

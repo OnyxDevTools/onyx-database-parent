@@ -1,7 +1,7 @@
 package web.save;
 
 import category.WebServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import entities.identifiers.ImmutableIntSequenceIdentifierEntity;
 import entities.identifiers.ImmutableSequenceIdentifierEntity;
@@ -50,7 +50,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -58,7 +58,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 1l;
         try {
             entity2 = (MutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
         assertTrue("Sequence Identifier should be greater than 0", entity.identifier > 0);
@@ -73,7 +73,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.correlation = 6;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -81,7 +81,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 1l;
         try {
             entity2 = (ImmutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -98,7 +98,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -106,7 +106,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 2l;
         try {
             entity2 = (MutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
         assertTrue("Sequence Identifier should be greater than 1", entity.identifier > 1);
@@ -121,7 +121,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.correlation = 9;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -129,7 +129,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 2l;
         try {
             entity2 = (ImmutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -146,7 +146,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.identifier = 3l;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -154,7 +154,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 3l;
         try {
             entity2 = (MutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
         assertTrue("Sequence Identifier should be greater than 1", entity.identifier == 3);
@@ -170,7 +170,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.identifier = 3;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -178,7 +178,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 3l;
         try {
             entity2 = (ImmutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -195,7 +195,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.identifier = 5;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -203,7 +203,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 5l;
         try {
             entity2 = (ImmutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -215,7 +215,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.correlation = 12;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -223,7 +223,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 6l;
         try {
             entity2 = (ImmutableSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -241,7 +241,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -249,7 +249,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 1;
         try {
             entity2 = (MutableIntSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
         assertTrue("Sequence Identifier should be greater than 0", entity.identifier > 0);
@@ -264,7 +264,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity.correlation = 6;
         try {
             manager.saveEntity(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -272,7 +272,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.identifier = 1;
         try {
             entity2 = (ImmutableIntSequenceIdentifierEntity)manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
@@ -290,7 +290,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             entity = (ImmutableSequenceIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             Assert.fail("Failure to find entity");
         }
 
@@ -307,7 +307,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             entity = (ImmutableSequenceIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             Assert.fail("Failure to find entity");
         }
 
@@ -325,7 +325,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             entity = (ImmutableSequenceIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -336,13 +336,13 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.correlation = 88;
         try {
             manager.saveEntity(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
         try {
             entity = (ImmutableSequenceIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -359,7 +359,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             entity = (MutableSequenceIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -370,13 +370,13 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.correlation = 87;
         try {
             manager.saveEntity(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
         try {
             entity = (MutableSequenceIdentifierEntity)manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -394,7 +394,7 @@ public class SaveSequenceIdentifierTest extends BaseTest {
 
         try {
             manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
@@ -405,20 +405,20 @@ public class SaveSequenceIdentifierTest extends BaseTest {
         entity2.correlation = 87;
         try {
             manager.saveEntity(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             e.printStackTrace();
         }
 
         try {
             manager.find(entity);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
 
 
         try {
             manager.find(entity2);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             fail(e.getMessage());
         }
         assertEquals(entity2.correlation, 87);

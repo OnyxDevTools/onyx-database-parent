@@ -1,7 +1,7 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -182,7 +182,7 @@ public class EqualsTest extends RemoteBaseTest
     }
 
     @Test
-    public void testStringEquals() throws EntityException, InstantiationException, IllegalAccessException
+    public void testStringEquals() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
 
@@ -267,7 +267,7 @@ public class EqualsTest extends RemoteBaseTest
 
 
     @Test
-    public void testFloatEquals() throws EntityException
+    public void testFloatEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("floatValue", QueryCriteriaOperator.EQUAL, 55.3f);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -282,7 +282,7 @@ public class EqualsTest extends RemoteBaseTest
 
 
     @Test
-    public void testByteEquals() throws EntityException
+    public void testByteEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("mutableByte", QueryCriteriaOperator.EQUAL, (byte)43);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -296,7 +296,7 @@ public class EqualsTest extends RemoteBaseTest
     }
 
     @Test
-    public void testShortEquals() throws EntityException
+    public void testShortEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("mutableShort", QueryCriteriaOperator.EQUAL, (short)828);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -310,7 +310,7 @@ public class EqualsTest extends RemoteBaseTest
     }
 
     @Test
-    public void testCharEquals() throws EntityException
+    public void testCharEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("mutableChar", QueryCriteriaOperator.EQUAL, 'A');
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
@@ -325,7 +325,7 @@ public class EqualsTest extends RemoteBaseTest
 
 
     @Test
-    public void testEntityEquals() throws EntityException
+    public void testEntityEquals() throws OnyxException
     {
         AllAttributeV2Entity entity = new AllAttributeV2Entity();
         entity.id = "ASDF";
@@ -337,7 +337,7 @@ public class EqualsTest extends RemoteBaseTest
     }
 
     @Test
-    public void testEnumEquals() throws EntityException
+    public void testEnumEquals() throws OnyxException
     {
         final QueryCriteria criteria = new QueryCriteria("operator", QueryCriteriaOperator.EQUAL, QueryCriteriaOperator.CONTAINS);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);

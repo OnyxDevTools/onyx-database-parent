@@ -4,7 +4,7 @@ import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
@@ -58,7 +58,7 @@ class ScannerProperties
      * @param attributes Attributes to scan
      * @return List of scanner properties
      */
-    static List<ScannerProperties> getScannerProperties(String[] attributes, EntityDescriptor descriptor, Query query, SchemaContext context) throws EntityException
+    static List<ScannerProperties> getScannerProperties(String[] attributes, EntityDescriptor descriptor, Query query, SchemaContext context) throws OnyxException
     {
         // Get the attribute names so that we can hydrate them later on
         final List<ScannerProperties> scanObjects = new ArrayList<>();

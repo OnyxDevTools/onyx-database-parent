@@ -3,7 +3,7 @@ package com.onyx.endpoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.onyx.exception.EntityClassNotFoundException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
@@ -47,10 +47,10 @@ final public class WebPersistenceEndpoint
      *
      * @param request Entity Request Body
      * @return Managed entity after save with populated id
-     * @throws EntityException Generic exception
+     * @throws OnyxException Generic exception
      * @throws ClassNotFoundException Not found when attempting to reflect
      */
-    public IManagedEntity save(EntityRequestBody request) throws EntityException, ClassNotFoundException {
+    public IManagedEntity save(EntityRequestBody request) throws OnyxException, ClassNotFoundException {
         final Class clazz = Class.forName(request.getType());
         IManagedEntity entity = (IManagedEntity)objectMapper.convertValue(request.getEntity(), clazz);
         persistenceManager.saveEntity(entity);
@@ -63,9 +63,9 @@ final public class WebPersistenceEndpoint
      *
      * @param request Entity Request Body
      * @return Populated entity or null if not found
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
-    public IManagedEntity findByReferenceId(EntityRequestBody request) throws EntityException {
+    public IManagedEntity findByReferenceId(EntityRequestBody request) throws OnyxException {
         Class clazz = null;
         try {
             clazz = Class.forName(request.getType());
@@ -81,9 +81,9 @@ final public class WebPersistenceEndpoint
      *
      * @param request Entity Request Body
      * @return Populated entity or null if not found
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
-    public IManagedEntity findByPartitionReference(EntityRequestBody request) throws EntityException {
+    public IManagedEntity findByPartitionReference(EntityRequestBody request) throws OnyxException {
         Class clazz = null;
         try {
             clazz = Class.forName(request.getType());
@@ -104,9 +104,9 @@ final public class WebPersistenceEndpoint
      * @throws ClassNotFoundException Class wasn't found during reflection
      * @throws IllegalAccessException Could not reflect on private method
      * @throws InstantiationException Cannot instantiate entity
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
-    public IManagedEntity get(EntityRequestBody request) throws ClassNotFoundException, IllegalAccessException, InstantiationException, EntityException {
+    public IManagedEntity get(EntityRequestBody request) throws ClassNotFoundException, IllegalAccessException, InstantiationException, OnyxException {
         Class clazz = Class.forName(request.getType());
         IManagedEntity entity;
 
@@ -133,9 +133,9 @@ final public class WebPersistenceEndpoint
      *
      * @param request Entity Request Body
      * @return Hydrated entity
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
-    public IManagedEntity findWithPartitionId(EntityRequestBody request) throws EntityException {
+    public IManagedEntity findWithPartitionId(EntityRequestBody request) throws OnyxException {
         Class clazz;
         try {
             clazz = Class.forName(request.getType());
@@ -157,9 +157,9 @@ final public class WebPersistenceEndpoint
      * @throws ClassNotFoundException Class wasn't found during reflection
      * @throws IllegalAccessException Could not reflect on private method
      * @throws InstantiationException Cannot instantiate entity
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
-    public boolean delete(EntityRequestBody request) throws ClassNotFoundException, IllegalAccessException, InstantiationException, EntityException {
+    public boolean delete(EntityRequestBody request) throws ClassNotFoundException, IllegalAccessException, InstantiationException, OnyxException {
         Class clazz = Class.forName(request.getType());
         IManagedEntity entity;
 
@@ -185,9 +185,9 @@ final public class WebPersistenceEndpoint
      *
      * @param request Query Body
      * @return Query Result body
-     * @throws EntityException Entity exception while executing query
+     * @throws OnyxException Entity exception while executing query
      */
-    public QueryResultResponseBody executeQuery(EntityQueryBody request) throws EntityException
+    public QueryResultResponseBody executeQuery(EntityQueryBody request) throws OnyxException
     {
         final List results = persistenceManager.executeQuery(request.getQuery());
         return new QueryResultResponseBody(request.getQuery().getResultsCount(), results);
@@ -201,10 +201,10 @@ final public class WebPersistenceEndpoint
      * @throws ClassNotFoundException Class wasn't found during reflection
      * @throws IllegalAccessException Could not reflect on private method
      * @throws InstantiationException Cannot instantiate entity
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
     @SuppressWarnings("unchecked")
-    public List<IManagedEntity> initialize(EntityInitializeBody request) throws EntityException, IllegalAccessException, InstantiationException, ClassNotFoundException
+    public List<IManagedEntity> initialize(EntityInitializeBody request) throws OnyxException, IllegalAccessException, InstantiationException, ClassNotFoundException
     {
         Class clazz = Class.forName(request.getEntityType());
         IManagedEntity entity = (IManagedEntity)clazz.newInstance();
@@ -228,10 +228,10 @@ final public class WebPersistenceEndpoint
      * Batch Save
      *
      * @param request List of entity body
-     * @throws EntityException Error saving entities
+     * @throws OnyxException Error saving entities
      * @throws ClassNotFoundException Cannot reflect cause entity not found
      */
-    public void saveEntities(EntityListRequestBody request) throws EntityException, ClassNotFoundException
+    public void saveEntities(EntityListRequestBody request) throws OnyxException, ClassNotFoundException
     {
         final Class clazz = Class.forName(request.getType());
 
@@ -253,10 +253,10 @@ final public class WebPersistenceEndpoint
      * Batch Delete
      *
      * @param request Entity List body
-     * @throws EntityException Exception when deleting entities
+     * @throws OnyxException Exception when deleting entities
      * @throws ClassNotFoundException Cannot find entity type
      */
-    public void deleteEntities(EntityListRequestBody request) throws EntityException, ClassNotFoundException
+    public void deleteEntities(EntityListRequestBody request) throws OnyxException, ClassNotFoundException
     {
         final Class clazz = Class.forName(request.getType());
 
@@ -279,9 +279,9 @@ final public class WebPersistenceEndpoint
      *
      * @param request Entity Query Body
      * @return Query Result body
-     * @throws EntityException Error executing update
+     * @throws OnyxException Error executing update
      */
-    public QueryResultResponseBody executeUpdate(EntityQueryBody request) throws EntityException
+    public QueryResultResponseBody executeUpdate(EntityQueryBody request) throws OnyxException
     {
         final int results = persistenceManager.executeUpdate(request.getQuery());
         return new QueryResultResponseBody(request.getQuery().getMaxResults(), results);
@@ -292,9 +292,9 @@ final public class WebPersistenceEndpoint
      *
      * @param request Entity Query Body
      * @return Query Result body
-     * @throws EntityException Error executing delete
+     * @throws OnyxException Error executing delete
      */
-    public QueryResultResponseBody executeDelete(EntityQueryBody request) throws EntityException
+    public QueryResultResponseBody executeDelete(EntityQueryBody request) throws OnyxException
     {
         final int results = persistenceManager.executeDelete(request.getQuery());
         return new QueryResultResponseBody(request.getQuery().getMaxResults(), results);
@@ -308,9 +308,9 @@ final public class WebPersistenceEndpoint
      * @throws ClassNotFoundException Class wasn't found during reflection
      * @throws IllegalAccessException Could not reflect on private method
      * @throws InstantiationException Cannot instantiate entity
-     * @throws EntityException General entity exception
+     * @throws OnyxException General entity exception
      */
-    public boolean exists(EntityRequestBody body) throws ClassNotFoundException, IllegalAccessException, InstantiationException, EntityException {
+    public boolean exists(EntityRequestBody body) throws ClassNotFoundException, IllegalAccessException, InstantiationException, OnyxException {
         Class clazz = Class.forName(body.getType());
 
         IManagedEntity entity;
@@ -336,10 +336,10 @@ final public class WebPersistenceEndpoint
      * Save Deferred Relationships
      *
      * @param request Save Relationship Request Body
-     * @throws EntityException Generic Entity exception trying to save relationships
+     * @throws OnyxException Generic Entity exception trying to save relationships
      * @throws ClassNotFoundException Entity type not found
      */
-    public void saveRelationshipsForEntity(SaveRelationshipRequestBody request) throws EntityException, ClassNotFoundException
+    public void saveRelationshipsForEntity(SaveRelationshipRequestBody request) throws OnyxException, ClassNotFoundException
     {
         final Class clazz = Class.forName(request.getType());
         IManagedEntity entity = (IManagedEntity)objectMapper.convertValue(request.getEntity(), clazz);
@@ -352,10 +352,10 @@ final public class WebPersistenceEndpoint
      *
      * @param body Query request body
      * @return long value of number of items matching criteria
-     * @throws EntityException General query exception
+     * @throws OnyxException General query exception
      * @since 1.3.0 Added as enhancement for git issue #71
      */
-    public long countForQuery(EntityQueryBody body) throws EntityException {
+    public long countForQuery(EntityQueryBody body) throws OnyxException {
         return persistenceManager.countForQuery(body.getQuery());
     }
 }

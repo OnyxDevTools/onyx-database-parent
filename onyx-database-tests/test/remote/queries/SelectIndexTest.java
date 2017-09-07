@@ -1,7 +1,7 @@
 package remote.queries;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -26,12 +26,12 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Before
-    public void before() throws EntityException {
+    public void before() throws OnyxException {
         initialize();
         seedData();
     }
 
-    private void seedData() throws EntityException
+    private void seedData() throws OnyxException
     {
         SelectIdentifierTestEntity entity = new SelectIdentifierTestEntity();
         entity.id = 1L;
@@ -106,7 +106,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierAndCritieria() throws EntityException
+    public void testIdentifierAndCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -118,7 +118,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierOrCritieria() throws EntityException
+    public void testIdentifierOrCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L);
@@ -130,7 +130,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierCompoundCritieria() throws EntityException
+    public void testIdentifierCompoundCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 3L);
@@ -145,7 +145,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierAndCritieriaWithNot() throws EntityException
+    public void testIdentifierAndCritieriaWithNot() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -157,7 +157,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierAndCritieriaWithNotGroup() throws EntityException
+    public void testIdentifierAndCritieriaWithNotGroup() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -169,7 +169,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierOrCritieriaWithNot() throws EntityException
+    public void testIdentifierOrCritieriaWithNot() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -181,7 +181,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierOrCritieriaWithNotGroup() throws EntityException
+    public void testIdentifierOrCritieriaWithNotGroup() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L);
@@ -193,7 +193,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierCompoundCritieriaWithNot() throws EntityException
+    public void testIdentifierCompoundCritieriaWithNot() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 3L);
@@ -208,7 +208,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testIdentifierCompoundCritieriaWithNotFullScan() throws EntityException
+    public void testIdentifierCompoundCritieriaWithNotFullScan() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 3L);
@@ -224,7 +224,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testMixMatchOfCritieria() throws EntityException
+    public void testMixMatchOfCritieria() throws OnyxException
     {
         QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L);
@@ -239,7 +239,7 @@ public class SelectIndexTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testMixMatchOfCritieriaIncludeFull() throws EntityException
+    public void testMixMatchOfCritieriaIncludeFull() throws OnyxException
     {
         QueryCriteria indexGreaterThan5 = new QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L);
         QueryCriteria idLessThan3 = new QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L);

@@ -3,7 +3,7 @@ package com.onyx.relationship.impl;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.RelationshipType;
@@ -37,7 +37,7 @@ class AbstractRelationshipController extends PartitionContext
 
     static final int RELATIONSHIP_MAP_LOAD_FACTOR = 2;
 
-    AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws EntityException
+    AbstractRelationshipController(EntityDescriptor entityDescriptor, RelationshipDescriptor relationshipDescriptor, SchemaContext context) throws OnyxException
     {
         super(context, context.getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass()));
 
@@ -62,7 +62,7 @@ class AbstractRelationshipController extends PartitionContext
      * @param childIdentifier Child entity identifier
      */
     @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
-    void saveInverseRelationship(IManagedEntity parentEntity, IManagedEntity childEntity, RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws EntityException
+    void saveInverseRelationship(IManagedEntity parentEntity, IManagedEntity childEntity, RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws OnyxException
     {
         // There is no inverse defined, nothing left to do
         if(defaultInverseRelationshipDescriptor == null)
@@ -124,7 +124,7 @@ class AbstractRelationshipController extends PartitionContext
      * @param childIdentifier Child entity identifier
      */
     @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
-    void deleteInverseRelationshipReference(RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws EntityException
+    void deleteInverseRelationshipReference(RelationshipReference parentIdentifier, RelationshipReference childIdentifier) throws OnyxException
     {
         // There is no inverse defined, nothing left to do
         if(defaultInverseRelationshipDescriptor == null)
@@ -176,7 +176,7 @@ class AbstractRelationshipController extends PartitionContext
         {
             final OffsetField relationshipField = relationshipDescriptor.getField();
             return (IManagedEntity)ReflectionUtil.getAny(entity, relationshipField);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE);
         }
@@ -208,7 +208,7 @@ class AbstractRelationshipController extends PartitionContext
         {
             final OffsetField relationshipField = relationshipDescriptor.getField();
             return (List)ReflectionUtil.getAny(entity, relationshipField);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             throw new AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE);
         }

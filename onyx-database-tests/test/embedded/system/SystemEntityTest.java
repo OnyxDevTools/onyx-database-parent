@@ -2,7 +2,7 @@ package embedded.system;
 
 import category.EmbeddedDatabaseTests;
 import com.onyx.entity.SystemEntity;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -33,7 +33,7 @@ public class SystemEntityTest extends BaseTest
     /**
      * This should delete the database after the test category has finished
      *
-     * @throws EntityException
+     * @throws OnyxException
      * @throws IOException
      */
     @After
@@ -44,7 +44,7 @@ public class SystemEntityTest extends BaseTest
     }
 
     @Test
-    public void testQuerySystemEntities() throws EntityException
+    public void testQuerySystemEntities() throws OnyxException
     {
         Query query = new Query();
         query.setEntityType(SystemEntity.class);

@@ -1,7 +1,7 @@
 package memory.queries;
 
 import category.InMemoryDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -23,7 +23,7 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
 {
 
     @Test
-    public void testExecuteSelectFields() throws EntityException, InstantiationException, IllegalAccessException
+    public void testExecuteSelectFields() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, Arrays.asList("longValue", "intPrimitive"), criteria);
@@ -35,7 +35,7 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testSelectOnlyOne() throws EntityException, InstantiationException, IllegalAccessException
+    public void testSelectOnlyOne() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, Arrays.asList("longValue", "intPrimitive"), criteria);
@@ -58,7 +58,7 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testSelectTwoOrderBy() throws EntityException, InstantiationException, IllegalAccessException
+    public void testSelectTwoOrderBy() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, Arrays.asList("id","stringValue","longValue", "intPrimitive"), criteria);
@@ -76,7 +76,7 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testNoSelect() throws EntityException, InstantiationException, IllegalAccessException
+    public void testNoSelect() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria);
@@ -94,7 +94,7 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testSelectRelationship() throws EntityException, InstantiationException, IllegalAccessException
+    public void testSelectRelationship() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some")
                                               .and("child.someOtherField", QueryCriteriaOperator.STARTS_WITH, "HIYA");
@@ -112,7 +112,7 @@ public class SelectQueryTest extends memory.base.PrePopulatedDatabaseTest
     }
 
     @Test
-    public void testSelectRelationshipMultiResult() throws EntityException, InstantiationException, IllegalAccessException
+    public void testSelectRelationshipMultiResult() throws OnyxException, InstantiationException, IllegalAccessException
     {
         QueryCriteria criteria = new QueryCriteria("id", QueryCriteriaOperator.STARTS_WITH, "FIRST ONE").and("child.someOtherField", QueryCriteriaOperator.STARTS_WITH, "HIYA");
         Query query = new Query(AllAttributeForFetch.class, criteria);

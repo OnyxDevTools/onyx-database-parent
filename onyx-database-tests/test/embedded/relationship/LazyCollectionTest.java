@@ -1,7 +1,7 @@
 package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.collections.LazyRelationshipCollection;
 import embedded.base.BaseTest;
 import entities.relationship.ManyToManyChild;
@@ -19,7 +19,7 @@ import java.util.ArrayList;
 public class LazyCollectionTest extends BaseTest
 {
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }

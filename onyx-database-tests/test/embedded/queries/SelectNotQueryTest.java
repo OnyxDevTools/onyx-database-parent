@@ -1,7 +1,7 @@
 package embedded.queries;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -25,7 +25,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
      * This test simply checks the NOT_EQUAL operator agains a full table scan
      */
     @Test
-    public void testNotEqualsOperator() throws EntityException {
+    public void testNotEqualsOperator() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "Some test strin1");
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -37,7 +37,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
      * This test does the same as the one above.  The only difference is that it uses the .not() syntax on the Query Criteria
      */
     @Test
-    public void testNotEqualsInverseCriteria() throws EntityException {
+    public void testNotEqualsInverseCriteria() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1").not();
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -49,7 +49,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
      * This test simply checks the NOT_STARTS_WITH operator agains a full table scan
      */
     @Test
-    public void testNotStartsWithOperator() throws EntityException {
+    public void testNotStartsWithOperator() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -61,7 +61,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
      * This test does the same as the one above.  The only difference is that it uses the .not() syntax on the Query Criteria
      */
     @Test
-    public void testNotStartsWithInverseCriteria() throws EntityException {
+    public void testNotStartsWithInverseCriteria() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some").not();
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -70,7 +70,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testNotNullOperator() throws EntityException {
+    public void testNotNullOperator() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_NULL);
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -79,7 +79,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testNotNullOperatorInverseCriteria() throws EntityException {
+    public void testNotNullOperatorInverseCriteria() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.IS_NULL).not();
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -90,7 +90,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testNotMatchesOperator() throws EntityException {
+    public void testNotMatchesOperator() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_MATCHES, "Some.*");
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -99,7 +99,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testNotMatchesOperatorInverseCriteria() throws EntityException {
+    public void testNotMatchesOperatorInverseCriteria() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.MATCHES, "Some.*").not();
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -108,7 +108,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testNotLikeOperator() throws EntityException {
+    public void testNotLikeOperator() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_LIKE, "some test strin1");
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -117,7 +117,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testNotLikeOperatorInverseCriteria() throws EntityException {
+    public void testNotLikeOperatorInverseCriteria() throws OnyxException {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.LIKE, "some test strin1").not();
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
@@ -127,7 +127,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
 
 
     @Test
-    public void testFullTableScanAndCriteriaWithInverse() throws EntityException {
+    public void testFullTableScanAndCriteriaWithInverse() throws OnyxException {
         QueryCriteria criteria1 = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
         QueryCriteria criteria2 = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria1.and(criteria2));
@@ -144,7 +144,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testFullTableScanAndCriteriaWithInverseAndNonMatching() throws EntityException {
+    public void testFullTableScanAndCriteriaWithInverseAndNonMatching() throws OnyxException {
         QueryCriteria criteria1 = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
         QueryCriteria criteria2 = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         Query query = new Query(AllAttributeForFetch.class, criteria1.and(criteria2));
@@ -161,7 +161,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testFullTableScanWithCompundQueryInverse() throws EntityException {
+    public void testFullTableScanWithCompundQueryInverse() throws OnyxException {
 
         QueryCriteria criteria1 = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1");
         QueryCriteria criteria2 = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
@@ -175,7 +175,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testComplexQuery() throws EntityException {
+    public void testComplexQuery() throws OnyxException {
 
         QueryCriteria criteria1 = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         QueryCriteria criteria2 = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_LIKE, "Some");
@@ -197,7 +197,7 @@ public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
     }
 
     @Test
-    public void testComplexQueryMultipleLevel() throws EntityException {
+    public void testComplexQueryMultipleLevel() throws OnyxException {
         QueryCriteria criteria1 = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some");
         QueryCriteria criteria2 = new QueryCriteria("stringValue", QueryCriteriaOperator.LIKE, "Some");
         QueryCriteria criteria3 = new QueryCriteria("intValue", QueryCriteriaOperator.GREATER_THAN_EQUAL, 3);

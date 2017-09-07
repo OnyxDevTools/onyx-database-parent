@@ -2,7 +2,7 @@ package web.exception;
 
 import category.WebServerTests;
 import com.onyx.exception.EntityCallbackException;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import entities.exception.EntityCallbackExceptionEntity;
 import org.junit.After;
@@ -49,7 +49,7 @@ public class TestCallbackExceptions extends BaseTest
     }
 
     @Test(expected = EntityCallbackException.class)
-    public void testPersistCallbackException() throws EntityException
+    public void testPersistCallbackException() throws OnyxException
     {
         EntityCallbackExceptionEntity entity = new EntityCallbackExceptionEntity();
         manager.saveEntity(entity);

@@ -1,6 +1,6 @@
 package com.onyx.request.pojo;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 
 /**
  * Created by timothy.osborn on 4/10/15.
@@ -15,7 +15,7 @@ public class ExceptionResponse
      * @param exception Underlying Exception
      * @param type Type of exception
      */
-    public ExceptionResponse(EntityException exception, String type)
+    public ExceptionResponse(OnyxException exception, String type)
     {
         this.exception = exception;
         this.exceptionType = type;

@@ -33,7 +33,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @Test(expected = AttributeNonNullException.class)
-    public void testNullValue() throws EntityException
+    public void testNullValue() throws OnyxException
     {
         ValidationEntity validationEntity = new ValidationEntity();
         validationEntity.id = 3l;
@@ -41,7 +41,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @Test(expected = AttributeSizeException.class)
-    public void testAttributeSizeException() throws EntityException
+    public void testAttributeSizeException() throws OnyxException
     {
         ValidationEntity validationEntity = new ValidationEntity();
         validationEntity.id = 3l;
@@ -51,7 +51,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @Test
-    public void testValidAttributeSizeException() throws EntityException
+    public void testValidAttributeSizeException() throws OnyxException
     {
         ValidationEntity validationEntity = new ValidationEntity();
         validationEntity.id = 3l;
@@ -61,7 +61,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @Test(expected = IdentifierRequiredException.class)
-    public void testRequiredIDException() throws EntityException
+    public void testRequiredIDException() throws OnyxException
     {
         ValidateRequiredIDEntity validationEntity = new ValidateRequiredIDEntity();
         validationEntity.requiredString =  "ASFD";
@@ -70,7 +70,7 @@ public class TestEntityValidation extends BaseTest
     }
 
     @Test
-    public void testValidObjectAsExtendingAbstract() throws EntityException
+    public void testValidObjectAsExtendingAbstract() throws OnyxException
     {
         TestValidExtendAbstract obj = new TestValidExtendAbstract();
         manager.saveEntity(obj);

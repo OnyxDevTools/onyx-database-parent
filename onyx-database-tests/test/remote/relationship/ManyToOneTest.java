@@ -1,7 +1,7 @@
 package remote.relationship;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import entities.relationship.OneToManyChild;
 import entities.relationship.OneToManyParent;
 import junit.framework.Assert;
@@ -21,7 +21,7 @@ public class ManyToOneTest extends RemoteBaseTest
 {
 
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }

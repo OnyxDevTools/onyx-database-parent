@@ -1,10 +1,9 @@
 package remote.delete;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
-import com.onyx.application.DatabaseServer;
 import entities.AllAttributeEntity;
 import entities.identifiers.IntegerIdentifierEntity;
 import org.junit.*;
@@ -34,7 +33,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
     }
 
     @Test
-    public void testDeleteEntity() throws EntityException {
+    public void testDeleteEntity() throws OnyxException {
         AllAttributeEntity entity = new AllAttributeEntity();
         entity.id = "dc5cholqdu5vha5bb6ned8ASDF";
         entity.booleanValue = false;
@@ -57,7 +56,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
         try {
             manager.find(entity);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -73,7 +72,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
         try {
             manager.find(entity);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -122,7 +121,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
         try {
             manager.find(entity1);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -171,7 +170,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
         try {
             manager.find(entity5);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -226,7 +225,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
         try {
             manager.find(entity3);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {
@@ -286,7 +285,7 @@ public class DeleteHashIndexEntityTest extends RemoteBaseTest
         try {
             manager.find(entity6);
         }
-        catch (EntityException e)
+        catch (OnyxException e)
         {
             if(e instanceof NoResultsException)
             {

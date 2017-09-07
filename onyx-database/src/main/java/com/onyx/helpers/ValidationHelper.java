@@ -33,7 +33,7 @@ public class ValidationHelper {
      * @return Whether the entity passes validation
      */
     @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
-    public static boolean validateEntity(EntityDescriptor descriptor, IManagedEntity entity) throws EntityException {
+    public static boolean validateEntity(EntityDescriptor descriptor, IManagedEntity entity) throws OnyxException {
 
         final List<Throwable> exceptionsThrown = new ArrayList<>();
 
@@ -85,10 +85,10 @@ public class ValidationHelper {
 
         if (exceptionsThrown.size() > 0) {
             Throwable t = exceptionsThrown.get(0);
-            if (t instanceof EntityException) {
-                throw (EntityException) t;
+            if (t instanceof OnyxException) {
+                throw (OnyxException) t;
             } else {
-                throw new EntityException(EntityException.UNKNOWN_EXCEPTION, t);
+                throw new OnyxException(OnyxException.UNKNOWN_EXCEPTION, t);
             }
         }
 
@@ -104,7 +104,7 @@ public class ValidationHelper {
      * @return Whether the query is valid
      */
     @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
-    public static boolean validateQuery(EntityDescriptor descriptor, Query query, SchemaContext context) throws EntityException {
+    public static boolean validateQuery(EntityDescriptor descriptor, Query query, SchemaContext context) throws OnyxException {
         // If there are no critieria, add a dummy critieria to the list
         if (query.getCriteria() == null) {
             query.setCriteria(new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_EQUAL));

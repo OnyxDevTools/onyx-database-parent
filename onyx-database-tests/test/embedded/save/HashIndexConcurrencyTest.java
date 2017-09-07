@@ -1,7 +1,7 @@
 package embedded.save;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.NoResultsException;
 import com.onyx.persistence.IManagedEntity;
@@ -59,10 +59,10 @@ public class HashIndexConcurrencyTest extends BaseTest
     /**
      * Tests Batch inserting 100,000 record with a String identifier last test took: 1741(win) 2231(mac)
      *
-     * @throws  EntityException
+     * @throws OnyxException
      * @throws  InterruptedException
      */
-    @Test public void aConcurrencyHashPerformanceTest() throws EntityException, InterruptedException
+    @Test public void aConcurrencyHashPerformanceTest() throws OnyxException, InterruptedException
     {
         final SecureRandom random = new SecureRandom();
         final long time = System.currentTimeMillis();
@@ -98,7 +98,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                     {
                         manager.saveEntities(tmpList);
                     }
-                    catch (EntityException e)
+                    catch (OnyxException e)
                     {
                         e.printStackTrace();
                     }
@@ -138,10 +138,10 @@ public class HashIndexConcurrencyTest extends BaseTest
      * Runs 10 threads that insert 10k entities with a String identifier. After insertion, this test validates the data integrity. last test
      * took: 698(win) 2231(mac)
      *
-     * @throws  EntityException
+     * @throws OnyxException
      * @throws  InterruptedException
      */
-    @Test public void concurrencyHashSaveIntegrityTest() throws EntityException, InterruptedException
+    @Test public void concurrencyHashSaveIntegrityTest() throws OnyxException, InterruptedException
     {
         final SecureRandom random = new SecureRandom();
         final AllAttributeEntity entity2 = new AllAttributeEntity();
@@ -203,7 +203,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                                 }
                                 // manager.saveEntities(tmpList);
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -247,7 +247,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         }
     }
 
-    @Test public void concurrencyHashSaveIntegrityTestWithBatching() throws EntityException, InterruptedException
+    @Test public void concurrencyHashSaveIntegrityTestWithBatching() throws OnyxException, InterruptedException
     {
         final SecureRandom random = new SecureRandom();
         final AllAttributeEntity entity2 = new AllAttributeEntity();
@@ -304,7 +304,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntities(tmpList);
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -350,7 +350,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         }
     }
 
-    @Test public void concurrencyHashDeleteIntegrityTest() throws EntityException, InterruptedException
+    @Test public void concurrencyHashDeleteIntegrityTest() throws OnyxException, InterruptedException
     {
         final SecureRandom random = new SecureRandom();
         final AllAttributeEntity entity2 = new AllAttributeEntity();
@@ -419,7 +419,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                                 }
                                 // manager.saveEntities(tmpList);
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -494,7 +494,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                                     manager.deleteEntity(entitiesToValidateDeleted.get(t));
                                 }
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -556,7 +556,7 @@ public class HashIndexConcurrencyTest extends BaseTest
         }
     }
 
-    @Test public void concurrencyHashDeleteBatchIntegrityTest() throws EntityException, InterruptedException
+    @Test public void concurrencyHashDeleteBatchIntegrityTest() throws OnyxException, InterruptedException
     {
         final SecureRandom random = new SecureRandom();
         final AllAttributeEntity entity2 = new AllAttributeEntity();
@@ -624,7 +624,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntities(tmpList);
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -696,7 +696,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                                     manager.deleteEntity(entitiesToValidateDeleted.get(t));
                                 }
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -771,10 +771,10 @@ public class HashIndexConcurrencyTest extends BaseTest
      * Executes 10 threads that insert 30k entities with string id, then 10k are updated and 10k are deleted. Then it validates the
      * integrity of those actions last test took: 3995(win) 2231(mac)
      *
-     * @throws  EntityException
+     * @throws OnyxException
      * @throws  InterruptedException
      */
-    @Test public void concurrencyHashAllIntegrityTest() throws EntityException, InterruptedException
+    @Test public void concurrencyHashAllIntegrityTest() throws OnyxException, InterruptedException
     {
         final SecureRandom random = new SecureRandom();
 
@@ -840,7 +840,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                             {
                                 manager.saveEntities(tmpList);
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }
@@ -928,7 +928,7 @@ public class HashIndexConcurrencyTest extends BaseTest
                                     manager.deleteEntity(entitiesToValidateDeleted.get(t));
                                 }
                             }
-                            catch (EntityException e)
+                            catch (OnyxException e)
                             {
                                 e.printStackTrace();
                             }

@@ -1,7 +1,7 @@
 package remote;
 
 import category.RemoteServerTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.application.DatabaseServer;
 import entities.AllAttributeEntity;
@@ -58,11 +58,11 @@ public class AttributeTest extends RemoteBaseTest {
     /**
      * Tests all possible populated values in order to test a round trip serialization
      *
-     * @throws EntityException
+     * @throws OnyxException
      * @throws InitializationException
      */
     @Test
-    public void testPopulatedEntity() throws EntityException {
+    public void testPopulatedEntity() throws OnyxException {
         AllAttributeEntity entity = new AllAttributeEntity();
 
         entity.id = "A";
@@ -82,7 +82,7 @@ public class AttributeTest extends RemoteBaseTest {
         try
         {
             entity2 = (AllAttributeEntity)manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             e.printStackTrace();
         }
@@ -112,7 +112,7 @@ public class AttributeTest extends RemoteBaseTest {
         try
         {
             manager.saveEntity(entity);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail(e.getMessage());
         }
@@ -122,7 +122,7 @@ public class AttributeTest extends RemoteBaseTest {
         try
         {
             manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail(e.getMessage());
         }
@@ -142,10 +142,10 @@ public class AttributeTest extends RemoteBaseTest {
     /**
      * Tests that inherited properties are persisted and hydrated properly
      *
-     * @throws EntityException
+     * @throws OnyxException
      */
     @Test
-    public void testInheritedPopulatedEntity() throws EntityException {
+    public void testInheritedPopulatedEntity() throws OnyxException {
 
         InheritedAttributeEntity entity = new InheritedAttributeEntity();
 
@@ -162,7 +162,7 @@ public class AttributeTest extends RemoteBaseTest {
         try
         {
             manager.saveEntity(entity);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail(e.getMessage());
         }
@@ -175,7 +175,7 @@ public class AttributeTest extends RemoteBaseTest {
         try
         {
             entity2 = (InheritedAttributeEntity)manager.find(entity2);
-        } catch (EntityException e)
+        } catch (OnyxException e)
         {
             fail("Error finding entity");
         }
@@ -194,7 +194,7 @@ public class AttributeTest extends RemoteBaseTest {
 
 
     @Test
-    public void simpleMultipleTest() throws EntityException{
+    public void simpleMultipleTest() throws OnyxException {
         SimpleEntity simpleEntity2 = new SimpleEntity();
         simpleEntity2.setSimpleId("2");
         simpleEntity2.setName("Name2");
@@ -210,7 +210,7 @@ public class AttributeTest extends RemoteBaseTest {
     }
 
     @Test
-    public void testFindById() throws EntityException{
+    public void testFindById() throws OnyxException {
         //Save entity
         SimpleEntity entity = new SimpleEntity();
         entity.setSimpleId("1");

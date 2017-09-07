@@ -1,7 +1,7 @@
 package embedded.relationship;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyxdevtools.server.entities.Actor;
 import com.onyxdevtools.server.entities.Movie;
 import embedded.base.BaseTest;
@@ -24,7 +24,7 @@ public class CascadeDeferTest extends BaseTest
 {
 
     @Before
-    public void before() throws EntityException
+    public void before() throws OnyxException
     {
         initialize();
     }
@@ -36,7 +36,7 @@ public class CascadeDeferTest extends BaseTest
     }
 
     @Test
-    public void testCascadeDefer() throws EntityException
+    public void testCascadeDefer() throws OnyxException
     {
         // Populate the movie data with actors
         Movie starWarsMovie = new Movie();

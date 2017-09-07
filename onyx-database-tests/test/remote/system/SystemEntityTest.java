@@ -2,7 +2,7 @@ package remote.system;
 
 import category.RemoteServerTests;
 import com.onyx.entity.SystemEntity;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -38,7 +38,7 @@ public class SystemEntityTest extends RemoteBaseTest
     }
 
     @Test
-    public void testQuerySystemEntities() throws EntityException
+    public void testQuerySystemEntities() throws OnyxException
     {
         Query query = new Query();
         query.setEntityType(SystemEntity.class);

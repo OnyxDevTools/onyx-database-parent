@@ -1,7 +1,7 @@
 package embedded.list;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
@@ -210,7 +210,7 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     }
 
     @Test
-    public void testOneToOneHasRelationshipMeetsOne() throws EntityException
+    public void testOneToOneHasRelationshipMeetsOne() throws OnyxException
     {
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
                 .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3");
@@ -223,7 +223,7 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     }
 
     @Test
-    public void testOneToOneHasRelationship() throws EntityException
+    public void testOneToOneHasRelationship() throws OnyxException
     {
 
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some test strin")
@@ -235,7 +235,7 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     }
 
     @Test
-    public void testOneToOneNoMeetCriteriaRelationship() throws EntityException
+    public void testOneToOneNoMeetCriteriaRelationship() throws OnyxException
     {
 
         QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some te1st strin3")
@@ -249,7 +249,7 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     }
 
     @Test
-    public void testOneToManyInCriteriaRelationship() throws EntityException
+    public void testOneToManyInCriteriaRelationship() throws OnyxException
     {
         List<Object> idlist = new ArrayList<Object>();
         idlist.add("FIRST ONE3");
