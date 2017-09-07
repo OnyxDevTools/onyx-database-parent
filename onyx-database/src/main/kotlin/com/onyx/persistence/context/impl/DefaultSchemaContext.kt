@@ -13,6 +13,7 @@ import com.onyx.helpers.PartitionHelper
 import com.onyx.index.IndexController
 import com.onyx.index.impl.IndexControllerImpl
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.IdentifierGenerator
 import com.onyx.persistence.annotations.RelationshipType
 import com.onyx.persistence.context.Contexts
@@ -40,6 +41,8 @@ import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.collections.ArrayList
+import kotlin.reflect.KClass
 
 /**
  * Schema context that defines local stores for data storage and partitioning. This can only be accessed by a single process. Databases must
@@ -197,7 +200,6 @@ open class DefaultSchemaContext : SchemaContext {
      * The purpose of this is to auto number the partition ids
      */
     private fun initializePartitionSequence() {
-
         // Get the max partition index
         val indexController = this.getIndexController(descriptors[SystemPartitionEntry::class.java.name]!!.indexes["index"]!!)
         val values = indexController.findAllValues()
@@ -222,55 +224,23 @@ open class DefaultSchemaContext : SchemaContext {
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
     private fun initializeSystemEntities() {
-        try {
+        val classes:List<KClass<out ManagedEntity>> = listOf(SystemEntity::class,SystemAttribute::class,SystemRelationship::class,SystemIndex::class,SystemIdentifier::class,SystemPartition::class,SystemPartitionEntry::class)
+        val systemEntities = ArrayList<SystemEntity>()
+        var i = 1
 
-            descriptors.put(SystemEntity::class.java.name, EntityDescriptor(SystemEntity::class.java))
-            descriptors.put(SystemAttribute::class.java.name, EntityDescriptor(SystemAttribute::class.java))
-            descriptors.put(SystemRelationship::class.java.name, EntityDescriptor(SystemRelationship::class.java))
-            descriptors.put(SystemIndex::class.java.name, EntityDescriptor(SystemIndex::class.java))
-            descriptors.put(SystemIdentifier::class.java.name, EntityDescriptor(SystemIdentifier::class.java))
-            descriptors.put(SystemPartition::class.java.name, EntityDescriptor(SystemPartition::class.java))
-            descriptors.put(SystemPartitionEntry::class.java.name, EntityDescriptor(SystemPartitionEntry::class.java))
+        classes.forEach {
+            val descriptor = EntityDescriptor(it.java)
+            val systemEntity = SystemEntity(descriptor)
+            systemEntity.primaryKey = i
 
-            val systemEntity = SystemEntity(descriptors[SystemEntity::class.java.name])
-            val systemAttributeEntity = SystemEntity(descriptors[SystemAttribute::class.java.name])
-            val systemRelationshipEntity = SystemEntity(descriptors[SystemRelationship::class.java.name])
-            val systemIndexEntity = SystemEntity(descriptors[SystemIndex::class.java.name])
-            val systemIdentifierEntity = SystemEntity(descriptors[SystemIdentifier::class.java.name])
-            val systemPartitionEntity = SystemEntity(descriptors[SystemPartition::class.java.name])
-            val systemPartitionEntryEntity = SystemEntity(descriptors[SystemPartitionEntry::class.java.name])
-
-            systemEntity.primaryKey = 1
-            systemAttributeEntity.primaryKey = 2
-            systemRelationshipEntity.primaryKey = 3
-            systemIndexEntity.primaryKey = 4
-            systemIdentifierEntity.primaryKey = 5
-            systemPartitionEntity.primaryKey = 6
-            systemPartitionEntryEntity.primaryKey = 7
-
-            defaultSystemEntities.put(SystemEntity::class.java.name, systemEntity)
-            defaultSystemEntities.put(SystemAttribute::class.java.name, systemAttributeEntity)
-            defaultSystemEntities.put(SystemRelationship::class.java.name, systemRelationshipEntity)
-            defaultSystemEntities.put(SystemIndex::class.java.name, systemIndexEntity)
-            defaultSystemEntities.put(SystemIdentifier::class.java.name, systemIdentifierEntity)
-            defaultSystemEntities.put(SystemPartition::class.java.name, systemPartitionEntity)
-            defaultSystemEntities.put(SystemPartitionEntry::class.java.name, systemPartitionEntryEntity)
-
-            this.systemEntityByIDMap.put(1, systemEntity)
-            this.systemEntityByIDMap.put(2, systemAttributeEntity)
-            this.systemEntityByIDMap.put(3, systemRelationshipEntity)
-            this.systemEntityByIDMap.put(4, systemIndexEntity)
-            this.systemEntityByIDMap.put(5, systemIdentifierEntity)
-            this.systemEntityByIDMap.put(6, systemPartitionEntity)
-            this.systemEntityByIDMap.put(7, systemPartitionEntryEntity)
-
-            val systemEntities = Arrays.asList(systemEntity, systemAttributeEntity, systemRelationshipEntity, systemIndexEntity, systemIdentifierEntity, systemPartitionEntity, systemPartitionEntryEntity)
-
-            serializedPersistenceManager.saveEntities(systemEntities)
-
-        } catch (e: EntityException) {
-            e.printStackTrace()
+            this.descriptors.put(it.java.name, descriptor)
+            this.defaultSystemEntities.put(it.java.name, systemEntity)
+            this.systemEntityByIDMap.put(i, systemEntity)
+            systemEntities.add(systemEntity)
+            i++
         }
+
+        serializedPersistenceManager.saveEntities(systemEntities)
     }
 
     // endregion
