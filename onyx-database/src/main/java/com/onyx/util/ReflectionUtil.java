@@ -7,9 +7,7 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.exception.InvalidConstructorException;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.annotations.Attribute;
-import com.onyx.persistence.annotations.Entity;
-import com.onyx.persistence.annotations.Relationship;
+import com.onyx.persistence.annotations.*;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
@@ -56,6 +54,9 @@ public class ReflectionUtil {
                         if (!isManagedEntity) {
                             fields.add(new OffsetField(f.getName(), f));
                         } else if (f.isAnnotationPresent(Attribute.class)
+                                || f.isAnnotationPresent(Index.class)
+                                || f.isAnnotationPresent(Partition.class)
+                                || f.isAnnotationPresent(Identifier.class)
                                 || f.isAnnotationPresent(Relationship.class)) {
                             fields.add(new OffsetField(f.getName(), f));
                         }

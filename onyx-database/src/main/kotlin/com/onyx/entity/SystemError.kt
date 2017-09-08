@@ -17,7 +17,6 @@ import java.io.StringWriter
 data class SystemError @JvmOverloads constructor(
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    @Attribute
     var id: Long? = null,
 
     @Attribute

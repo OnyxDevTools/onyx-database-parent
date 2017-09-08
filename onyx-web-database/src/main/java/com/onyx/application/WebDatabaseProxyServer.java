@@ -2,7 +2,7 @@ package com.onyx.application;
 
 import com.onyx.cli.WebServerCommandLineParser;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.factory.impl.RemotePersistenceManagerFactory;
+import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.server.DatabaseIdentityManager;
 import com.onyx.server.JSONDatabaseMessageListener;
 import io.undertow.Handlers;

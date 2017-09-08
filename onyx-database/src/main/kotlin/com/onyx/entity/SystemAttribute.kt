@@ -14,7 +14,6 @@ import com.onyx.util.OffsetField
 data class SystemAttribute @JvmOverloads constructor(
 
     @Identifier
-    @Attribute
     var name: String = "",
 
     @Attribute

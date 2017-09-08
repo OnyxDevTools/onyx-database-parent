@@ -399,9 +399,9 @@ open class DefaultSchemaContext : SchemaContext {
 
             val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
             if (result != null) {
-                Collections.sort(result.attributes) { o1, o2 -> o1.name.compareTo(o2.name) }
-                Collections.sort(result.relationships) { o1, o2 -> o1.name.compareTo(o2.name) }
-                Collections.sort(result.indexes) { o1, o2 -> o1.name.compareTo(o2.name) }
+                result.attributes.sortBy { it.name }
+                result.relationships.sortBy { it.name }
+                result.indexes.sortBy { it.name }
             }
             return@getOrPut result
         }
