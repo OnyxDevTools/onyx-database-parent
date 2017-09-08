@@ -2,6 +2,7 @@ package entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
  * Created by cosborn on 12/26/2014.
@@ -9,7 +10,7 @@ import com.onyx.persistence.annotations.*;
 @Entity
 public class SequencedEntityWithCallbacks extends AbstractEntity implements IManagedEntity {
 
-    @Identifier(generator=IdentifierGenerator.SEQUENCE)
+    @Identifier(generator= IdentifierGenerator.SEQUENCE)
     @Attribute
     private Long id;
 
@@ -70,11 +71,6 @@ public class SequencedEntityWithCallbacks extends AbstractEntity implements IMan
     @PostRemove
     public void afterRemove(){
         setName(getName() + "_PostRemove");
-    }
-
-    @PostLoad
-    public void afterLoad(){
-        setName(getName() + "_PostLoad");
     }
 
 }

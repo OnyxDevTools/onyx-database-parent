@@ -1,6 +1,6 @@
 package com.onyx.descriptor
 
-import com.onyx.persistence.annotations.IdentifierGenerator
+import com.onyx.persistence.annotations.values.IdentifierGenerator
 
 /**
  * Created by timothy.osborn on 12/11/14.
@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.IdentifierGenerator
  * General information about a key identifier for an entity
  */
 data class IdentifierDescriptor(
-        var generator:IdentifierGenerator = IdentifierGenerator.NONE,
+        var generator: IdentifierGenerator = IdentifierGenerator.NONE,
         override var name: String = "",
         override var type: Class<*> = Any::class.java,
         override var loadFactor: Byte = 1

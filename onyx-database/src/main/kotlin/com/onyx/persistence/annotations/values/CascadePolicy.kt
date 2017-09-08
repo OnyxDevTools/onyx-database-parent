@@ -1,4 +1,4 @@
-package com.onyx.persistence.annotations;
+package com.onyx.persistence.annotations.values
 
 /**
  * Policy for maintaining the save or delete status for relationship
@@ -13,35 +13,18 @@ package com.onyx.persistence.annotations;
  * NONE - Do not perform cascading on related entities
  *
  * <pre>
- * <code>
- *{@literal @}Entity
+ *
+ * @Entity
  * public class Person extends ManagedEntity
  * {
- *     {@literal @}Relationship(name = "children" cascadePolicy = CascadePolicy.ALL)
- *      protected List{@literal <Children>} myChildren
+ *      @Relationship(name = "children" cascadePolicy = CascadePolicy.ALL)
+ *      protected List<Children> myChildren
  * }
  *
- * </code>
  * </pre>
  *
  * @see com.onyx.persistence.annotations.Relationship
- *
  */
-public enum CascadePolicy
-{
-
-    SAVE,
-    DELETE,
-    ALL,
-    DEFER_SAVE,
-    NONE;
-
-    /**
-     * Constructor
-     */
-    @SuppressWarnings("unused")
-    CascadePolicy()
-    {
-
-    }
+enum class CascadePolicy {
+    SAVE,DELETE,ALL,DEFER_SAVE,NONE
 }

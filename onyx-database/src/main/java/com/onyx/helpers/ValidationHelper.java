@@ -6,7 +6,7 @@ import com.onyx.descriptor.IdentifierDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.*;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.annotations.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;

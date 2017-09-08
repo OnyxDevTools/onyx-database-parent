@@ -10,7 +10,7 @@ import java.util.Date;
 /**
  * Created by timothy.osborn on 11/3/14.
  */
-@Entity(cachable = false, cacheSize = 100000, fileName = "allattribute.dat")
+@Entity(fileName = "allattribute.dat")
 public class AllAttributeEntity extends AbstractEntity implements IManagedEntity
 {
     @Identifier

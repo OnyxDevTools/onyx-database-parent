@@ -5,10 +5,10 @@ import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemIndex;
 import com.onyx.entity.SystemRelationship;
 import com.onyx.exception.OnyxException;
-import com.onyx.persistence.annotations.CascadePolicy;
-import com.onyx.persistence.annotations.FetchPolicy;
-import com.onyx.persistence.annotations.IdentifierGenerator;
-import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.annotations.values.CascadePolicy;
+import com.onyx.persistence.annotations.values.FetchPolicy;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.context.impl.CacheSchemaContext;
 

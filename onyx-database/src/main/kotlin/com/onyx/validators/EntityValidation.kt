@@ -8,8 +8,8 @@ import com.onyx.exception.*
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Entity
-import com.onyx.persistence.annotations.IdentifierGenerator
-import com.onyx.persistence.annotations.RelationshipType
+import com.onyx.persistence.annotations.values.IdentifierGenerator
+import com.onyx.persistence.annotations.values.RelationshipType
 
 /**
  * Created by tosborn1 on 9/7/17.

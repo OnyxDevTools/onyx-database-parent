@@ -1,8 +1,8 @@
 package com.onyx.descriptor
 
-import com.onyx.persistence.annotations.CascadePolicy
-import com.onyx.persistence.annotations.FetchPolicy
-import com.onyx.persistence.annotations.RelationshipType
+import com.onyx.persistence.annotations.values.CascadePolicy
+import com.onyx.persistence.annotations.values.FetchPolicy
+import com.onyx.persistence.annotations.values.RelationshipType
 import kotlin.jvm.internal.Intrinsics
 
 /**
@@ -11,15 +11,15 @@ import kotlin.jvm.internal.Intrinsics
  * Details on an entity relationship
  */
 data class RelationshipDescriptor(
-    var inverse: String? = null,
-    var parentClass: Class<*>,
-    var relationshipType: RelationshipType,
-    var inverseClass: Class<*>,
-    var fetchPolicy: FetchPolicy,
-    var cascadePolicy: CascadePolicy,
-    var loadFactor: Byte = 1,
-    var name: String = "",
-    var type: Class<*> = Any::class.java
+        var inverse: String? = null,
+        var parentClass: Class<*>,
+        var relationshipType: RelationshipType,
+        var inverseClass: Class<*>,
+        var fetchPolicy: FetchPolicy,
+        var cascadePolicy: CascadePolicy,
+        var loadFactor: Byte = 1,
+        var name: String = "",
+        var type: Class<*> = Any::class.java
 ) : AbstractBaseDescriptor() {
 
     lateinit var entityDescriptor: EntityDescriptor

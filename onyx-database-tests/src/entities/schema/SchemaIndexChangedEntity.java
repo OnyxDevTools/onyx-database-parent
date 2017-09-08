@@ -3,6 +3,7 @@ package entities.schema;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
  * Created by tosborn1 on 9/1/15.

@@ -4,7 +4,7 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
  * Simple POJO / Managed Entity for a Football Player

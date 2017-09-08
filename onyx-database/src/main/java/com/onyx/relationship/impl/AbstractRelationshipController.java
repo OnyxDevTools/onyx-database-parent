@@ -6,7 +6,7 @@ import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.OnyxException;
 import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.RelationshipReference;

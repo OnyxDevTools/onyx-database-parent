@@ -7,7 +7,7 @@ import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.fetch.impl.FullTableScanner;
 import com.onyx.fetch.impl.PartitionFullTableScanner;
-import com.onyx.persistence.annotations.RelationshipType;
+import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatHashMap;

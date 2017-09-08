@@ -15,8 +15,8 @@ import com.onyx.index.IndexController
 import com.onyx.index.impl.IndexControllerImpl
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
-import com.onyx.persistence.annotations.IdentifierGenerator
-import com.onyx.persistence.annotations.RelationshipType
+import com.onyx.persistence.annotations.values.IdentifierGenerator
+import com.onyx.persistence.annotations.values.RelationshipType
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory

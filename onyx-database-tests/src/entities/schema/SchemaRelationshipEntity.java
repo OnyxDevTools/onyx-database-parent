@@ -3,6 +3,7 @@ package entities.schema;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 import java.util.Date;
 

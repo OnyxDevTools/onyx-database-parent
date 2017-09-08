@@ -2,6 +2,7 @@ package entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 
 import java.util.Date;

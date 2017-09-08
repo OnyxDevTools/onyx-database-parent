@@ -2,6 +2,8 @@ package com.onyxdevtools.server.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.CascadePolicy;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 @Entity
 public class Actor extends Person implements IManagedEntity

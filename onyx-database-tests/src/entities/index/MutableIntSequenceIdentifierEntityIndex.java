@@ -2,6 +2,7 @@ package entities.index;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 import entities.AbstractEntity;
 
 /**

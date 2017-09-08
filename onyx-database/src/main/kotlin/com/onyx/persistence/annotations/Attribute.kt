@@ -1,9 +1,4 @@
-package com.onyx.persistence.annotations;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+package com.onyx.persistence.annotations
 
 /**
  * This annotation is used to indicate an attribute within a ManagedEntity
@@ -15,34 +10,30 @@ import java.lang.annotation.Target;
  * @since 1.0.0
  *
  * <pre>
- * <code>
- *{@literal @}Entity
+ * `
+ * @Entity
  * public class Person extends ManagedEntity
  * {
- *     {@literal @}Attribute(nullable = false, size = 200)
+ *      @Attribute(nullable = false, size = 200)
  *      public String firstNameAttribute;
  * }
  *
- * </code>
  * </pre>
  */
-@Target(ElementType.FIELD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Attribute
-{
+@Target(AnnotationTarget.FIELD)
+annotation class Attribute(
+
     /**
      * Determines whether the attribute is nullable
      *
      * @since 1.0.0
      * @return Boolean key indicating nullable or not
      */
-    @SuppressWarnings("unused") boolean nullable() default true;
-
+    val nullable: Boolean = true,
     /**
      * Size of an attribute.  Only applies if the attribute is type string
      *
      * @since 1.0.0
      * @return Attribute max size
      */
-    @SuppressWarnings("unused") int size() default -1;
-}
+    val size: Int = -1)

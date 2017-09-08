@@ -9,7 +9,7 @@ import entities.AbstractEntity;
 /**
  * Created by tosborn on 8/27/14.
  */
-@Entity(cachable = true, cacheSize = 200)
+@Entity
 public class WorkspaceFileTmp extends AbstractEntity implements IManagedEntity
 {
 

@@ -3,6 +3,7 @@ package com.onyxdevtools.modelupdate.entities;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 @SuppressWarnings("unused")
 @Entity

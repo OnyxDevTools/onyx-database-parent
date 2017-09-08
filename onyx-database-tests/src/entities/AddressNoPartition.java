@@ -2,6 +2,10 @@ package entities;
 
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.CascadePolicy;
+import com.onyx.persistence.annotations.values.FetchPolicy;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 import java.util.List;
 

@@ -7,7 +7,7 @@ import com.onyx.fetch.PartitionReference;
 import com.onyx.helpers.IndexHelper;
 import com.onyx.helpers.RelationshipHelper;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.annotations.CascadePolicy;
+import com.onyx.persistence.annotations.values.CascadePolicy;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;

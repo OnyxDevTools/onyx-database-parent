@@ -1,9 +1,9 @@
-package com.onyx.persistence.annotations;
+package com.onyx.persistence.annotations
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.onyx.persistence.annotations.values.CascadePolicy
+import com.onyx.persistence.annotations.values.FetchPolicy
+import com.onyx.persistence.annotations.values.RelationshipType
+import kotlin.reflect.KClass
 
 /**
  * This annotation is used to indicate an attribute within a ManagedEntity
@@ -34,68 +34,68 @@ import java.lang.annotation.Target;
  * </pre>
  *
  *
- * @see com.onyx.persistence.annotations.FetchPolicy
- * @see com.onyx.persistence.annotations.CascadePolicy
- * @see com.onyx.persistence.annotations.RelationshipType
+ * @see com.onyx.persistence.annotations.values.FetchPolicy
+ * @see com.onyx.persistence.annotations.values.CascadePolicy
+ * @see com.onyx.persistence.annotations.values.RelationshipType
  */
-@Target(ElementType.FIELD)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface Relationship
-{
-    /**
+@Target(AnnotationTarget.FIELD)
+annotation class Relationship(
+        /**
      * This indicates the relationship type.
      * It can either be One To One, Many To One, One To Many, or Many to Many
      *
      * @since 1.0.0
-     * @see com.onyx.persistence.annotations.RelationshipType
+     * @see RelationshipType
+     *
      *
      * @return Relationship Type
      */
-    @SuppressWarnings("unused") RelationshipType type();
+    val type: RelationshipType,
 
-    /**
+        /**
      * Specify the relationship inverse type.
      *
      * @since 1.0.0
      * @return Class that relationship objects are declared as
      */
-    @SuppressWarnings("unused") Class inverseClass();
+    val inverseClass: KClass<*>,
 
-    /**
+        /**
      * Inverse relationship property name
      *
      * @since 1.0.0
      * @return Inverse name as identified on the inverse class
      */
-    @SuppressWarnings("unused") String inverse() default "";
+    val inverse: String = "",
 
-    /**
+        /**
      * Fetch policy for the relationship.  This will determine how the relationship objects are hydrated
      *
      * The fetch policy can be either Lazy, None, or Eager
      *
      * @since 1.0.0
-     * @see com.onyx.persistence.annotations.FetchPolicy
+     * @see FetchPolicy
+     *
      *
      * @return Fetch Policy for relationship
-     *
      */
-    @SuppressWarnings("unused") FetchPolicy fetchPolicy() default FetchPolicy.LAZY;
+    val fetchPolicy: FetchPolicy = FetchPolicy.LAZY,
 
-    /**
+        /**
      * Cascade policy whether to save the child when you are saving the parent entity
      * The cascade policy can either be None, Save, Delete, Defer Save
      *
      * Defer Save is used under conditions of batch saving.  This is done in order to optimize the persisting of records and reduce the amount of transactions performed when saving a collection of entities
      *
      * @since 1.0.0
-     * @see com.onyx.persistence.annotations.CascadePolicy
+     * @see CascadePolicy
+     *
      *
      * @return The relationships Cascade Policy
      */
-    @SuppressWarnings("unused") CascadePolicy cascadePolicy() default CascadePolicy.NONE;
+    val cascadePolicy: CascadePolicy = CascadePolicy.NONE,
 
-    /**
+        /**
      * Getter for the load factor
      * @return The values are from 1-10.
      *
@@ -108,6 +108,4 @@ public @interface Relationship
      *
      * @since 1.2.0
      */
-    @SuppressWarnings("unused") int loadFactor() default 5;
-
-}
+    val loadFactor: Int = 5)

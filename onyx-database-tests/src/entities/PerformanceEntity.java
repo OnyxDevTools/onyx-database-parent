@@ -2,13 +2,16 @@ package entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.CascadePolicy;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 import java.util.Date;
 
 /**
  * Created by timothy.osborn on 11/3/14.
  */
-@Entity(cachable = true, cacheSize = 35)
+@Entity
 public class PerformanceEntity extends AbstractEntity implements IManagedEntity
 {
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
