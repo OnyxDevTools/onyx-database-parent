@@ -47,7 +47,7 @@ public class TestDatabaseInitialization extends BaseTest
         fac.setCredentials("tim", "osborn");
         fac.initialize();
 
-        manager = new EmbeddedPersistenceManager();
+        manager = new EmbeddedPersistenceManager(null);
         manager.setContext(fac.getSchemaContext());
         fac.close();
 
@@ -73,7 +73,7 @@ public class TestDatabaseInitialization extends BaseTest
         PersistenceManagerFactory fac = new EmbeddedPersistenceManagerFactory(INVALID_DATABASE_LOCATION);
         fac.initialize();
 
-        manager = new EmbeddedPersistenceManager();
+        manager = new EmbeddedPersistenceManager(null);
         manager.setContext(fac.getSchemaContext());
     }
 
@@ -89,7 +89,7 @@ public class TestDatabaseInitialization extends BaseTest
         fac.setCredentials("bill", "tom");
         fac.initialize();
 
-        manager = new EmbeddedPersistenceManager();
+        manager = new EmbeddedPersistenceManager(null);
         manager.setContext(fac.getSchemaContext());
     }
 

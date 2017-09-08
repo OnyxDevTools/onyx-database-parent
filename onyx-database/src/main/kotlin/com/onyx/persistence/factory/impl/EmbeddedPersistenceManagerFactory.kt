@@ -51,7 +51,6 @@ import java.nio.charset.StandardCharsets
  * factory.initialize()
  *
  * val manager = factory.persistenceManager
- *
  * factory.close()
  *
  * </code>
@@ -96,8 +95,8 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
     // Setup Persistence Manager
 
     override val persistenceManager: PersistenceManager by lazy<PersistenceManager> {
-        val manager = EmbeddedPersistenceManager()
-        manager.setJournalingEnabled(this.isEnableJournaling)
+        val manager = EmbeddedPersistenceManager(schemaContext)
+        manager.isJournalingEnabled = this.isEnableJournaling
         manager.context = schemaContext
         manager.context.systemPersistenceManager = manager
         return@lazy manager

@@ -1,24 +1,18 @@
-package com.onyx.persistence.manager.impl;
+package com.onyx.persistence.manager.impl
 
-import com.onyx.client.push.PushRegistrar;
-import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.exception.OnyxException;
-import com.onyx.exception.StreamException;
-import com.onyx.fetch.PartitionReference;
-import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.persistence.query.Query;
-import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.query.QueryResult;
-import com.onyx.persistence.query.impl.RemoteQueryListener;
-import com.onyx.stream.QueryStream;
-import com.onyx.util.ReflectionUtil;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import com.onyx.client.push.PushRegistrar
+import com.onyx.exception.OnyxException
+import com.onyx.exception.StreamException
+import com.onyx.fetch.PartitionReference
+import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.context.SchemaContext
+import com.onyx.persistence.manager.PersistenceManager
+import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.impl.RemoteQueryListener
+import com.onyx.stream.QueryStream
+import com.onyx.util.ReflectionUtil
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an remote database.
@@ -30,35 +24,35 @@ import java.util.Set;
  * @author Tim Osborn
  * @since 1.0.0
  *
- * <pre>
- * <code>
  *
- *   PersistenceManagerFactory factory = new RemotePersistenceManagerFactory();
- *   factory.setCredentials("username", "password");
- *   factory.setLocation("onx://23.234.25.23:8080")
- *   factory.initialize();
+ * PersistenceManagerFactory factory = new RemotePersistenceManagerFactory("onx://23.234.25.23:8080");
+ * factory.setCredentials("username", "password");
+ * factory.initialize();
  *
- *   PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
+ * PersistenceManager manager = factory.getPersistenceManager(); // Get the Persistence manager from the persistence manager factory
  *
- *   factory.close(); //Close the remote database
+ * factory.close(); //Close the remote database
  *
- * </code>
- * </pre>
+ * or.. Kotlin
+ *
+ * val factory = RemotePersistenceManagerFactory("onx://23.234.25.23:8080")
+ * factory.initialize()
+ *
+ * val persistenceManager = factory.persistenceManager
+ * factory.close()
  *
  * @see com.onyx.persistence.manager.PersistenceManager
  *
  * Tim Osborn - 02/13/2017 This was augmented to use the new RMI Server.  Also, simplified
- *              so that we take advantage of default methods within the PersistenceManager interface.
+ * so that we take advantage of default methods within the PersistenceManager interface.
  */
-public class RemotePersistenceManager extends AbstractPersistenceManager implements PersistenceManager {
+open class RemotePersistenceManager : PersistenceManager {
 
-    private SchemaContext context;
-    private PersistenceManager proxy;
-    private PushRegistrar pushRegistrar;
+    override lateinit var context: SchemaContext
+    private lateinit var proxy: PersistenceManager
+    private lateinit var pushRegistrar: PushRegistrar
 
-    public RemotePersistenceManager() {
-
-    }
+    constructor()
 
     /**
      * Default Constructor.  This should be invoked by the persistence manager factory
@@ -66,21 +60,9 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @since 1.1.0
      * @param persistenceManager Proxy Persistence manager on server
      */
-    public RemotePersistenceManager(PersistenceManager persistenceManager, PushRegistrar pushRegistrar)
-    {
-        this.proxy = persistenceManager;
-        this.pushRegistrar = pushRegistrar;
-    }
-
-
-    @Override
-    public void setContext(SchemaContext context) {
-        this.context = context;
-    }
-
-    @Override
-    public SchemaContext getContext() {
-        return context;
+    constructor(persistenceManager: PersistenceManager, pushRegistrar: PushRegistrar) {
+        this.proxy = persistenceManager
+        this.pushRegistrar = pushRegistrar
     }
 
     /**
@@ -94,13 +76,13 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Exception occurred while persisting an entity
      */
-    @Override
-    public <E extends IManagedEntity> E saveEntity(IManagedEntity entity) throws OnyxException
-    {
-        IManagedEntity copyValue = proxy.saveEntity(entity);
-        ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity));
-        //noinspection unchecked
-        return (E)entity;
+    @Throws(OnyxException::class)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E : IManagedEntity> saveEntity(entity: IManagedEntity): E {
+        val copyValue = proxy.saveEntity<IManagedEntity>(entity)
+        ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity))
+
+        return entity as E
     }
 
     /**
@@ -112,12 +94,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param entities List of entities
      * @throws OnyxException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
      */
-    @Override
-    public void saveEntities(List<? extends IManagedEntity> entities) throws OnyxException
-    {
-        if(entities.size() > 0)
-        {
-            proxy.saveEntities(entities);
+    @Throws(OnyxException::class)
+    override fun saveEntities(entities: List<IManagedEntity>) {
+        if (entities.isNotEmpty()) {
+            proxy.saveEntities(entities)
         }
     }
 
@@ -131,11 +111,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @return Flag indicating it was deleted
      * @throws OnyxException Error occurred while deleting
      */
-    @Override
-    public boolean deleteEntity(IManagedEntity entity) throws OnyxException
-    {
-        return proxy.deleteEntity(entity);
-    }
+    @Throws(OnyxException::class)
+    override fun deleteEntity(entity: IManagedEntity): Boolean = proxy.deleteEntity(entity)
 
     /**
      * Deletes list of entities.
@@ -148,10 +125,9 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param entities List of entities
      * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      */
-    @Override
-    public void deleteEntities(List<? extends IManagedEntity> entities) throws OnyxException
-    {
-        proxy.deleteEntities(entities);
+    @Throws(OnyxException::class)
+    override fun deleteEntities(entities: List<IManagedEntity>) {
+        proxy.deleteEntities(entities)
     }
 
     /**
@@ -165,23 +141,21 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error while executing query
      */
-    @Override
-    public <E> List<E> executeQuery(Query query) throws OnyxException
-    {
+    @Throws(OnyxException::class)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E> executeQuery(query: Query): List<E> {
         // Transform the change listener to a remote change listener.
-        if(query.getChangeListener() != null
-                && !(query.getChangeListener() instanceof RemoteQueryListener))
-        {
+        if (query.changeListener != null && query.changeListener !is RemoteQueryListener<*>) {
             // Register the query listener as a push subscriber / receiver
-            final RemoteQueryListener remoteQueryListener = new RemoteQueryListener(query.getChangeListener());
-            this.pushRegistrar.register(remoteQueryListener, remoteQueryListener);
-            query.setChangeListener(remoteQueryListener);
+            val remoteQueryListener = RemoteQueryListener(query.changeListener)
+            this.pushRegistrar.register(remoteQueryListener, remoteQueryListener)
+            query.changeListener = remoteQueryListener
         }
 
-        QueryResult result = proxy.executeQueryForResult(query);
-        query.setResultsCount(result.getQuery().getResultsCount());
-        //noinspection unchecked
-        return (List<E>)result.getResults();
+        val result = proxy.executeQueryForResult(query)
+        query.resultsCount = result.query.resultsCount
+
+        return result.results as List<E>
     }
 
     /**
@@ -195,13 +169,13 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error while executing query
      */
-    @Override
-    public <E extends IManagedEntity> List<E> executeLazyQuery(Query query) throws OnyxException
-    {
-        QueryResult result = proxy.executeLazyQueryForResult(query);
-        query.setResultsCount(result.getQuery().getResultsCount());
-        //noinspection unchecked
-        return (List<E>)result.getResults();
+    @Throws(OnyxException::class)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E : IManagedEntity> executeLazyQuery(query: Query): List<E> {
+        val result = proxy.executeLazyQueryForResult(query)
+        query.resultsCount = result.query.resultsCount
+
+        return result.results as List<E>
     }
 
     /**
@@ -217,12 +191,11 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Number of entities updated
      */
-    @Override
-    public int executeUpdate(Query query) throws OnyxException
-    {
-        QueryResult result = proxy.executeUpdateForResult(query);
-        query.setResultsCount(result.getQuery().getResultsCount());
-        return (int)result.getResults();
+    @Throws(OnyxException::class)
+    override fun executeUpdate(query: Query): Int {
+        val result = proxy.executeUpdateForResult(query)
+        query.resultsCount = result.query.resultsCount
+        return result.results as Int
     }
 
     /**
@@ -236,12 +209,11 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Number of entities deleted
      */
-    @Override
-    public int executeDelete(Query query) throws OnyxException
-    {
-        QueryResult result = proxy.executeDeleteForResult(query);
-        query.setResultsCount(result.getQuery().getResultsCount());
-        return (int)result.getResults();
+    @Throws(OnyxException::class)
+    override fun executeDelete(query: Query): Int {
+        val result = proxy.executeDeleteForResult(query)
+        query.resultsCount = result.query.resultsCount
+        return result.results as Int
     }
 
     /**
@@ -257,13 +229,13 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error when hydrating entity
      */
-    @Override
-    public <E extends IManagedEntity> E find(IManagedEntity entity) throws OnyxException
-    {
-        IManagedEntity results = proxy.find(entity);
-        ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity));
-        //noinspection unchecked
-        return (E)entity;
+    @Throws(OnyxException::class)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E : IManagedEntity> find(entity: IManagedEntity): E {
+        val results = proxy.find<IManagedEntity>(entity)
+        ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity))
+
+        return entity as E
     }
 
     /**
@@ -278,11 +250,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @return Managed Entity
      * @throws OnyxException Error when finding entity
      */
-    @Override
-    public <E extends IManagedEntity> E findById(Class clazz, Object id) throws OnyxException
-    {
-        return proxy.findById(clazz, id);
-    }
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> findById(clazz: Class<*>, id: Any): E? = proxy.findById(clazz, id)
 
     /**
      * Find Entity By Class and ID.
@@ -297,11 +266,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @return Managed Entity
      * @throws OnyxException Error when finding entity within partition specified
      */
-    @Override
-    public <E extends IManagedEntity> E findByIdInPartition(Class clazz, Object id, Object partitionId) throws OnyxException
-    {
-        return proxy.findByIdInPartition(clazz, id, partitionId);
-    }
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> findByIdInPartition(clazz: Class<*>, id: Any, partitionId: Any): E? = proxy.findByIdInPartition(clazz, id, partitionId)
 
     /**
      * Determines if the entity exists within the database.
@@ -316,11 +282,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error when finding entity within partition specified
      */
-    @Override
-    public boolean exists(IManagedEntity entity) throws OnyxException
-    {
-        return proxy.exists(entity);
-    }
+    @Throws(OnyxException::class)
+    override fun exists(entity: IManagedEntity): Boolean = proxy.exists(entity)
 
     /**
      * Determines if the entity exists within the database.
@@ -337,11 +300,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error when finding entity within partition specified
      */
-    @Override
-    public boolean exists(IManagedEntity entity, Object partitionId) throws OnyxException
-    {
-        return proxy.exists(entity,partitionId);
-    }
+    @Throws(OnyxException::class)
+    override fun exists(entity: IManagedEntity, partitionId: Any): Boolean = proxy.exists(entity, partitionId)
 
     /**
      * Provides a list of all entities with a given type
@@ -352,13 +312,12 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Exception occurred while fetching results
      */
-    @Override
-    public <E extends IManagedEntity> List<E> list(Class clazz) throws OnyxException
-    {
-        final EntityDescriptor descriptor = context.getBaseDescriptorForEntity(clazz);
-        QueryCriteria criteria = new QueryCriteria(descriptor.getIdentifier().getName(), QueryCriteriaOperator.NOT_NULL);
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> list(clazz: Class<*>): List<E> {
+        val descriptor = context.getBaseDescriptorForEntity(clazz)
+        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
 
-        return proxy.list(clazz, criteria);
+        return proxy.list(clazz, criteria)
     }
 
 
@@ -373,11 +332,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      */
-    @Override
-    public void initialize(IManagedEntity entity, String attribute) throws OnyxException
-    {
-        Object relationship = proxy.getRelationship(entity, attribute);
-        ReflectionUtil.setAny(entity, relationship, context.getDescriptorForEntity(entity).getRelationships().get(attribute).getField());
+    @Throws(OnyxException::class)
+    override fun initialize(entity: IManagedEntity, attribute: String) {
+        val relationship = proxy.getRelationship(entity, attribute)
+        ReflectionUtil.setAny(entity, relationship, context.getDescriptorForEntity(entity).relationships[attribute]!!.field)
     }
 
     /**
@@ -391,11 +349,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException Error occurred while saving relationship.
      */
-    @Override
-    public void saveRelationshipsForEntity(IManagedEntity entity, String relationship, Set<Object> relationshipIdentifiers) throws OnyxException
-    {
-        proxy.saveRelationshipsForEntity(entity, relationship, relationshipIdentifiers);
-    }
+    @Throws(OnyxException::class)
+    override fun saveRelationshipsForEntity(entity: IManagedEntity, relationship: String, relationshipIdentifiers: Set<Any>) = proxy.saveRelationshipsForEntity(entity, relationship, relationshipIdentifiers)
 
     /**
      * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
@@ -405,11 +360,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @return Managed Entity
      * @throws OnyxException The reference does not exist for that type
      */
-    @Override
-    public <E extends IManagedEntity> E getWithReferenceId(Class entityType, long referenceId) throws OnyxException
-    {
-        return proxy.getWithReferenceId(entityType, referenceId);
-    }
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E? = proxy.getWithReferenceId(entityType, referenceId)
 
     /**
      * Get an entity by its partition reference.  This is the same as the method above but for objects that have
@@ -422,10 +374,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @return Managed Entity
      * @throws OnyxException The reference does not exist for that type
      */
-    @Override
-    public <E extends IManagedEntity> E getWithPartitionReference(Class entityType, PartitionReference partitionReference) throws OnyxException {
-        return proxy.getWithPartitionReference(entityType, partitionReference);
-    }
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> getWithPartitionReference(entityType: Class<*>, partitionReference: PartitionReference): E? = proxy.getWithPartitionReference(entityType, partitionReference)
 
     /**
      * Retrieves an entity using the primaryKey and partition
@@ -441,11 +391,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @throws OnyxException error occurred while attempting to retrieve entity.
      */
-    @Override
-    public <E extends IManagedEntity> E findByIdWithPartitionId(Class clazz, Object id, long partitionId) throws OnyxException
-    {
-        return proxy.findByIdWithPartitionId(clazz, id, partitionId);
-    }
+    @Throws(OnyxException::class)
+    override fun <E : IManagedEntity> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E? = proxy.findByIdWithPartitionId(clazz, id, partitionId)
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -455,13 +402,10 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param query Query to execute and stream
      *
      * @param streamer Instance of the streamer to use to stream the data
-     *
      */
-    @Override
-    public void stream(Query query, QueryStream streamer) throws OnyxException
-    {
-        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE);
-    }
+    @Throws(OnyxException::class)
+    override fun <T : Any> stream(query: Query, streamer: QueryStream<T>) = throw StreamException(StreamException.UNSUPPORTED_FUNCTION_ALTERNATIVE)
+
 
     /**
      * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -471,13 +415,9 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param query Query to execute and stream
      *
      * @param queryStreamClass Class instance of the database stream
-     *
      */
-    @Override
-    public void stream(Query query, Class queryStreamClass) throws OnyxException
-    {
-        proxy.stream(query, queryStreamClass);
-    }
+    @Throws(OnyxException::class)
+    override fun stream(query: Query, queryStreamClass: Class<*>) = proxy.stream(query, queryStreamClass)
 
     /**
      * Get Map representation of an entity with reference id.
@@ -491,22 +431,24 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
-    @Override
-    public Map getMapWithReferenceId(Class entityType, long reference) throws OnyxException {
-        throw new StreamException(StreamException.UNSUPPORTED_FUNCTION);
-    }
+    @Throws(OnyxException::class)
+    override fun getMapWithReferenceId(entityType: Class<*>, reference: Long): Map<*, *> = throw StreamException(StreamException.UNSUPPORTED_FUNCTION)
 
     /**
      * Retrieve the quantity of entities that match the query criteria.
-     * <p>
+     *
+     *
      * usage:
-     * <p>
+     *
+     *
      * Query myQuery = new Query();
      * myQuery.setClass(SystemEntity.class);
      * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
-     * <p>
+     *
+     *
      * or:
-     * <p>
+     *
+     *
      * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
      * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
@@ -515,10 +457,8 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
-    @Override
-    public long countForQuery(Query query) throws OnyxException {
-        return proxy.countForQuery(query);
-    }
+    @Throws(OnyxException::class)
+    override fun countForQuery(query: Query): Long = proxy.countForQuery(query)
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.
@@ -534,20 +474,18 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      *
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
-    @Override
-    public boolean removeChangeListener(Query query) throws OnyxException {
+    @Throws(OnyxException::class)
+    override fun removeChangeListener(query: Query): Boolean {
 
         // Ensure the original change listener is attached and is a remote query listener
-        if(query.getChangeListener() != null
-                && (query.getChangeListener() instanceof RemoteQueryListener))
-        {
+        if (query.changeListener != null && query.changeListener is RemoteQueryListener<*>) {
             // Un-register query
-            boolean retVal = proxy.removeChangeListener(query);
-            RemoteQueryListener remoteQueryListener = (RemoteQueryListener)query.getChangeListener();
-            this.pushRegistrar.unrigister(remoteQueryListener);
-            return retVal;
+            val retVal = proxy.removeChangeListener(query)
+            val remoteQueryListener = query.changeListener as RemoteQueryListener<*>
+            this.pushRegistrar.unrigister(remoteQueryListener)
+            return retVal
         }
-        return false;
+        return false
     }
 
     /**
@@ -556,14 +494,14 @@ public class RemotePersistenceManager extends AbstractPersistenceManager impleme
      * @param query Query with query listener
      * @since 1.3.1
      */
-    @Override
-    public void listen(Query query) throws OnyxException {
+    @Throws(OnyxException::class)
+    override fun listen(query: Query) {
         // Register the query listener as a push subscriber / receiver
-        final RemoteQueryListener remoteQueryListener = new RemoteQueryListener(query.getChangeListener());
-        this.pushRegistrar.register(remoteQueryListener, remoteQueryListener);
-        query.setChangeListener(remoteQueryListener);
+        val remoteQueryListener = RemoteQueryListener(query.changeListener)
+        this.pushRegistrar.register(remoteQueryListener, remoteQueryListener)
+        query.changeListener = remoteQueryListener
 
-        proxy.listen(query);
+        proxy.listen(query)
     }
 
 }

@@ -838,4 +838,8 @@ public class Query implements ObjectSerializable, Serializable
             });
         }
     }
+
+    public boolean shouldSortResults() {
+        return (this.queryOrders != null && this.queryOrders.size() > 0 || this.firstRow > 0 || this.maxResults != -1);
+    }
 }

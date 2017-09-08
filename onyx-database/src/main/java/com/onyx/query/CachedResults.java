@@ -1,9 +1,13 @@
 package com.onyx.query;
 
+import com.onyx.extension.Blocking;
 import com.onyx.persistence.IManagedEntity;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -13,7 +17,7 @@ import java.util.Set;
  *
  * @since 1.3.0 When query caching was implemented
  */
-public class CachedResults {
+public class CachedResults implements Blocking {
 
     // Query reference/values
     private Map references;
@@ -165,5 +169,17 @@ public class CachedResults {
             }
         }
         listeners.removeAll(listenersToRemove);
+    }
+
+    private AtomicBoolean blocked = new AtomicBoolean(false);
+
+    @NotNull
+    @Override
+    public AtomicBoolean getBlocked() {
+        return blocked;
+    }
+
+    public void setBlocked(@NotNull AtomicBoolean blocked) {
+        this.blocked = blocked;
     }
 }

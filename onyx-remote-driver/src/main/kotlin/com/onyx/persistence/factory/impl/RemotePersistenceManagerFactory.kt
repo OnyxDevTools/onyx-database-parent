@@ -90,8 +90,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
         // Since the connection remains persistent and open, we do not want to reset the system persistence manager.  That should have
         // remained open and valid through any network blip.
         if (schemaContext.systemPersistenceManager == null) {
-            systemPersistenceManager = EmbeddedPersistenceManager()
-            systemPersistenceManager.context = schemaContext
+            systemPersistenceManager = EmbeddedPersistenceManager(schemaContext)
             schemaContext.systemPersistenceManager = systemPersistenceManager
         }
 

@@ -50,7 +50,7 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
      * @param baseListener Query listener
      */
     @SuppressWarnings("unused")
-    public RemoteQueryListener(QueryListener baseListener)
+    public RemoteQueryListener(QueryListener<T> baseListener)
     {
         this.baseListener = baseListener;
     }

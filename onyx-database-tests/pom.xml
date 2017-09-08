@@ -25,7 +25,6 @@
         <junit.version>4.12</junit.version>
     </properties>
     <build>
-        <sourceDirectory>src</sourceDirectory>
         <resources>
             <resource>
                 <directory>../onyx-database-tests/resources</directory>

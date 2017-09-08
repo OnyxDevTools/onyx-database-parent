@@ -167,7 +167,7 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         PersistenceManagerFactory fac = new RemotePersistenceManagerFactory(INVALID_DATABASE_LOCATION);
         fac.initialize();
 
-        EmbeddedPersistenceManager mgr  = new EmbeddedPersistenceManager();
+        EmbeddedPersistenceManager mgr  = new EmbeddedPersistenceManager(null);
         mgr.setContext(fac.getSchemaContext());
     }
 

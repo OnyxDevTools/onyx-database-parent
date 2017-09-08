@@ -12,6 +12,7 @@ import com.onyx.persistence.query.QueryCacheController
 import com.onyx.record.RecordController
 import com.onyx.relationship.RelationshipController
 import com.onyx.diskmap.MapBuilder
+import com.onyx.exception.InitializationException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.transaction.TransactionController
 
@@ -263,4 +264,9 @@ interface SchemaContext {
      */
     fun releaseMapBuilder(mapBuilder: MapBuilder)
 
+    @Throws(InitializationException::class)
+    fun checkForKillSwitch() {
+        if(killSwitch)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+    }
 }

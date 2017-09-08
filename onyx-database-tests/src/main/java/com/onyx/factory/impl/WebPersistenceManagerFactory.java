@@ -99,11 +99,11 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
     public PersistenceManager getPersistenceManager() {
 
         if (persistenceManager == null) {
-            this.persistenceManager = new WebPersistenceManager();
+            this.persistenceManager = new WebPersistenceManager(getSchemaContext());
 
             WebPersistenceManager tmpPersistenceManager = (WebPersistenceManager) this.persistenceManager;
 
-            final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager();
+            final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager(null);
             systemPersistenceManager.setContext(getSchemaContext());
             getSchemaContext().setSystemPersistenceManager(systemPersistenceManager);
 
@@ -137,9 +137,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
             getSchemaContext().start();
         } catch (ResourceAccessException e) {
             throw new InitializationException(InitializationException.CONNECTION_EXCEPTION);
-        } catch (HttpClientErrorException e) {
-            throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
-        } catch (OnyxException e) {
+        } catch (HttpClientErrorException | OnyxException e) {
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
         }
     }
