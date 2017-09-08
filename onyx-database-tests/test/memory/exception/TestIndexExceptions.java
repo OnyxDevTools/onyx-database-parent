@@ -31,18 +31,4 @@ public class TestIndexExceptions extends memory.base.BaseTest
     {
         shutdown();
     }
-
-    @Test(expected = InvalidIndexException.class)
-    public void testMissingAttribute() throws OnyxException
-    {
-        EntityDescriptor descriptor = new EntityDescriptor(entities.exception.InvalidIndexException.class);
-    }
-
-    @Test(expected = InvalidIndexException.class)
-    public void testInvalidIndexType() throws OnyxException
-    {
-        EntityDescriptor descriptor = new EntityDescriptor(InvalidIndexTypeEntity.class);
-    }
-
-
 }

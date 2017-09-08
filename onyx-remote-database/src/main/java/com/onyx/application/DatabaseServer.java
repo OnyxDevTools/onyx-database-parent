@@ -6,7 +6,7 @@ import com.onyx.entity.SystemUser;
 import com.onyx.entity.SystemUserRole;
 import com.onyx.persistence.context.impl.ServerSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.factory.impl.ServerPersistenceManagerFactory;
+import com.onyx.factory.impl.ServerPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.server.auth.DefaultAuthenticationManager;
 import com.onyx.server.base.AbstractDatabaseServer;

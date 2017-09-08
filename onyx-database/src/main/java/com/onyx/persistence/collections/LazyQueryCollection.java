@@ -192,9 +192,9 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
 
                 if (entity == null) {
                     if (reference instanceof PartitionReference) {
-                        entity = persistenceManager.getWithPartitionReference(entityDescriptor.getClazz(), (PartitionReference) reference);
+                        entity = persistenceManager.getWithPartitionReference(entityDescriptor.getEntityClass(), (PartitionReference) reference);
                     } else {
-                        entity = persistenceManager.getWithReferenceId(entityDescriptor.getClazz(), (long) reference);
+                        entity = persistenceManager.getWithReferenceId(entityDescriptor.getEntityClass(), (long) reference);
                     }
                     references.put(reference, entity);
                 }
@@ -220,7 +220,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
     {
         try
         {
-            return persistenceManager.getMapWithReferenceId(entityDescriptor.getClazz(), (long)identifiers.get(index));
+            return persistenceManager.getMapWithReferenceId(entityDescriptor.getEntityClass(), (long)identifiers.get(index));
         } catch (OnyxException e)
         {
             return null;
@@ -350,7 +350,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
     @Override
     public void write(BufferStream bufferStream) throws BufferingException {
         bufferStream.putCollection(this.getIdentifiers());
-        bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
+        bufferStream.putString(this.getEntityDescriptor().getEntityClass().getName());
         bufferStream.putString(contextId);
         bufferStream.putBoolean(hasSelections);
     }

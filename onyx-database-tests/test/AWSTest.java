@@ -1,7 +1,7 @@
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
+import com.onyx.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import org.junit.Ignore;
 import org.junit.Test;

@@ -62,8 +62,8 @@ public class IndexControllerImpl implements IndexController {
         this.descriptor = descriptor;
         final MapBuilder dataFile = context.getDataFile(descriptor);
 
-        references = (CompatMap)dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
-        indexValues = (CompatMap)dataFile.getHashMap(descriptor.getClazz().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
+        references = (CompatMap)dataFile.getHashMap(descriptor.getEntityClass().getName() + indexDescriptor.getName(), indexDescriptor.getLoadFactor());
+        indexValues = (CompatMap)dataFile.getHashMap(descriptor.getEntityClass().getName() + indexDescriptor.getName() + "indexValues", indexDescriptor.getLoadFactor());
     }
 
     /**
@@ -222,7 +222,7 @@ public class IndexControllerImpl implements IndexController {
     {
         final MapBuilder dataFile = getContext().getDataFile(descriptor);
 
-        final DiskMap records = (DiskMap)dataFile.getHashMap(indexDescriptor.getEntityDescriptor().getClazz().getName(), indexDescriptor.getLoadFactor());
+        final DiskMap records = (DiskMap)dataFile.getHashMap(descriptor.getEntityClass().getName(), indexDescriptor.getLoadFactor());
             final Iterator<Map.Entry> iterator = records.entrySet().iterator();
 
             // Iterate Through all of the values and re-structure the key key for the record id

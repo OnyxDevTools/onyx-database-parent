@@ -96,7 +96,7 @@ public class PartitionHelper
         if(hasPartitionField(query.getEntityType(), context) && (query.getPartition() == null || query.getPartition().equals("")))
         {
             Class queryClass = query.getEntityType();
-            IManagedEntity entity = EntityDescriptor.createNewEntity(queryClass);
+            IManagedEntity entity = ReflectionUtil.createNewEntity(queryClass);
             final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
 
             QueryCriteria criteria = query.getCriteria();

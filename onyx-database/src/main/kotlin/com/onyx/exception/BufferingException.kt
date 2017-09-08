@@ -12,7 +12,8 @@ open class BufferingException : OnyxException {
      *
      * @param message Error message
      */
-    constructor(message: String) : super(message)
+    @JvmOverloads
+    constructor(message: String? = "") : super(message)
 
     /**
      * Constructor with message and class attempted to expandableByteBuffer

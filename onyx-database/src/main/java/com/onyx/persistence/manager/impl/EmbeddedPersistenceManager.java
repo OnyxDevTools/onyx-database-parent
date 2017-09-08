@@ -280,7 +280,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
 
         // This will throw an exception if not valid
         final Class clazz = query.getEntityType();
-        final IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
+        final IManagedEntity entity = ReflectionUtil.createNewEntity(clazz);
 
         // We want to lock the index controller so that it does not do background indexing
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, query.getPartition());
@@ -398,7 +398,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
         final Class clazz = query.getEntityType();
-        IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
+        IManagedEntity entity = ReflectionUtil.createNewEntity(clazz);
 
         // We want to lock the index controller so that it does not do background indexing
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, query.getPartition());
@@ -496,7 +496,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
-        IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
+        IManagedEntity entity = ReflectionUtil.createNewEntity(clazz);
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
         final RecordController recordController = context.getRecordController(descriptor);
 
@@ -531,7 +531,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
-        IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
+        IManagedEntity entity = ReflectionUtil.createNewEntity(clazz);
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionId);
         final RecordController recordController = context.getRecordController(descriptor);
 
@@ -613,7 +613,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, context);
 
         if (partitionValue != PartitionHelper.NULL_PARTITION && partitionValue != null) {
-            SystemPartitionEntry partitionEntry = context.getPartitionWithValue(descriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, context));
+            SystemPartitionEntry partitionEntry = context.getPartitionWithValue(descriptor.getEntityClass(), PartitionHelper.getPartitionFieldValue(entity, context));
             entityId = new RelationshipReference(identifier, partitionEntry.getIndex());
         } else {
             entityId = new RelationshipReference(identifier, 0);
@@ -701,7 +701,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
-        IManagedEntity entity = EntityDescriptor.createNewEntity(entityType);
+        IManagedEntity entity = ReflectionUtil.createNewEntity(entityType);
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
         final RecordController recordController = context.getRecordController(descriptor);
 
@@ -751,7 +751,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
-        IManagedEntity entity = EntityDescriptor.createNewEntity(clazz);
+        IManagedEntity entity = ReflectionUtil.createNewEntity(clazz);
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
         final PartitionContext partitionContext = new PartitionContext(context, descriptor);
         final RecordController recordController = partitionContext.getRecordControllerForPartition(partitionId);
@@ -830,7 +830,7 @@ public class EmbeddedPersistenceManager extends AbstractPersistenceManager imple
         if (context.getKillSwitch())
             throw new InitializationException(InitializationException.DATABASE_SHUTDOWN);
 
-        IManagedEntity entity = EntityDescriptor.createNewEntity(entityType);
+        IManagedEntity entity = ReflectionUtil.createNewEntity(entityType);
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, "");
         final RecordController recordController = context.getRecordController(descriptor);
 

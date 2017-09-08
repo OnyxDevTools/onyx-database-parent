@@ -1,7 +1,8 @@
-package com.onyx.persistence.factory.impl
+package com.onyx.factory.impl
 
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.ServerSchemaContext
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 
 /**
  * Created by tosborn1 on 3/27/17.

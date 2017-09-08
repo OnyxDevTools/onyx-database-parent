@@ -190,11 +190,11 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
 
                 if(ref.partitionId > 0)
                 {
-                    entity = persistenceManager.findByIdWithPartitionId(entityDescriptor.getClazz(), ref.identifier, ref.partitionId);
+                    entity = persistenceManager.findByIdWithPartitionId(entityDescriptor.getEntityClass(), ref.identifier, ref.partitionId);
                 }
                 else
                 {
-                    entity = persistenceManager.findById(entityDescriptor.getClazz(), ref.identifier);
+                    entity = persistenceManager.findById(entityDescriptor.getEntityClass(), ref.identifier);
                 }
             } catch (OnyxException e)
             {
@@ -314,7 +314,7 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
     public void write(BufferStream bufferStream) throws BufferingException {
 
         bufferStream.putCollection(this.getIdentifiers());
-        bufferStream.putString(this.getEntityDescriptor().getClazz().getName());
+        bufferStream.putString(this.getEntityDescriptor().getEntityClass().getName());
         bufferStream.putString(this.contextId);
     }
 

@@ -5,6 +5,7 @@ import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.AttributeTypeMismatchException;
+import com.onyx.exception.InvalidConstructorException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
@@ -13,8 +14,7 @@ import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.util.*;
 
 /**
@@ -129,7 +129,51 @@ public class ReflectionUtil {
      * @throws IllegalAccessException Exception thrown when using regular reflection
      */
     public static Object instantiate(Class type) throws InstantiationException, IllegalAccessException {
-        return type.newInstance();
+        try {
+            return type.newInstance();
+        }
+        catch(InstantiationException e) {
+            Constructor constructor = type.getConstructors()[0];
+            Parameter[] parameters = constructor.getParameters();
+            Object[] parameterValues = new Object[parameters.length];
+            int i = 0;
+            for(Parameter parameter : parameters) {
+                if(!parameter.getType().isPrimitive())
+                    parameterValues[i] = null;
+                else
+                    parameterValues[i] = parameter.getType().newInstance();
+                i++;
+            }
+            if(!constructor.isAccessible()) {
+                constructor.setAccessible(true);
+            }
+            try {
+                return constructor.newInstance(parameterValues);
+            } catch (InvocationTargetException e1) {
+                throw new InstantiationException("Cannot instantiate class " + type.getCanonicalName());
+            }
+        }
+    }
+
+    /**
+     * Instantiate a managed entity
+     * @param type Type of class
+     * @return New Instance
+     * @throws InvalidConstructorException Exception occurred while creating new object
+     *
+     * @since 2.0.0 Moved from Entity Descriptor class since it should not be creating new objects
+     */
+    public static IManagedEntity createNewEntity(Class type) throws InvalidConstructorException
+    {
+        IManagedEntity entity;
+
+        try {
+            entity = (IManagedEntity) instantiate(type);
+        } catch (Exception e1) {
+            throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e1);
+        }
+
+        return entity;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////

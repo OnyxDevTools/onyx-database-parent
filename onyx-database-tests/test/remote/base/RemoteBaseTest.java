@@ -4,7 +4,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
-import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
+import com.onyx.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.application.DatabaseServer;
 import org.junit.AfterClass;

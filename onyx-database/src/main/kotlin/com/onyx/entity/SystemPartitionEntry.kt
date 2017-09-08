@@ -13,12 +13,10 @@ import com.onyx.persistence.annotations.*
 @Entity(fileName = "system")
 data class SystemPartitionEntry @JvmOverloads constructor(
 
-    @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     var primaryKey: Int = 0,
 
     @Index(loadFactor = 3)
-    @Attribute
     var id: String? = null,
 
     @Attribute(size = 1024)
@@ -27,7 +25,6 @@ data class SystemPartitionEntry @JvmOverloads constructor(
     @Attribute(size = 2048)
     var fileName: String = "",
 
-    @Attribute
     @Index(loadFactor = 3)
     var index: Long = 0,
 
@@ -38,7 +35,7 @@ data class SystemPartitionEntry @JvmOverloads constructor(
 
     constructor(entityDescriptor: EntityDescriptor, descriptor: PartitionDescriptor, partition: SystemPartition, index: Long):this (
         partition = partition,
-        id = entityDescriptor.clazz.name + descriptor.partitionValue,
+        id = entityDescriptor.entityClass.name + descriptor.partitionValue,
         value = descriptor.partitionValue,
         fileName = entityDescriptor.fileName + descriptor.partitionValue,
         index = index,

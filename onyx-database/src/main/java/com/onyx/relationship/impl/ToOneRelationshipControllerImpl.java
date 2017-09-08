@@ -44,7 +44,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
         MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
         // Get the correct data file
-        toOneMap = (DiskMap)mapBuilder.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName(), RELATIONSHIP_MAP_LOAD_FACTOR);
+        toOneMap = (DiskMap)mapBuilder.getHashMap(entityDescriptor.getEntityClass().getName() + relationshipDescriptor.getName(), RELATIONSHIP_MAP_LOAD_FACTOR);
     }
 
 

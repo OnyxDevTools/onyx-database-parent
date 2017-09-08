@@ -5,7 +5,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.impl.WebSchemaContext;
-import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory;
+import com.onyx.factory.impl.WebPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import org.junit.AfterClass;
 

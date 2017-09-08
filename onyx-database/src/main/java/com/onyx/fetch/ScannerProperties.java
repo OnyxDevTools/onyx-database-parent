@@ -9,6 +9,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.record.RecordController;
+import com.onyx.util.ReflectionUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,7 +90,7 @@ class ScannerProperties
                 {
                     final String token = attributeTokens[p];
                     relationshipDescriptor = previousDescriptor.getRelationships().get(token);
-                    tmpObject = EntityDescriptor.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
+                    tmpObject = ReflectionUtil.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
                     previousDescriptor = context.getDescriptorForEntity((IManagedEntity)tmpObject, query.getPartition());
                 }
 
@@ -104,11 +105,11 @@ class ScannerProperties
                 {
                     relationshipDescriptor = descriptor.getRelationships().get(attribute);
                     if(relationshipDescriptor == null) {
-                        throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.getClazz().getName());
+                        throw new AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.getEntityClass().getName());
                     }
                     else
                     {
-                        tmpObject = EntityDescriptor.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
+                        tmpObject = ReflectionUtil.createNewEntity(relationshipDescriptor.getInverseClass()); // Keep on getting the descriptors until we get what we need
                         previousDescriptor = context.getDescriptorForEntity((IManagedEntity)tmpObject, query.getPartition());
 
                         scanObjects.add(new ScannerProperties(previousDescriptor, relationshipDescriptor, context, attribute));

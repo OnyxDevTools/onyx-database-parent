@@ -674,7 +674,7 @@ public class PartitionQueryController extends PartitionContext {
                     final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                     final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
-                    DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                    DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
                     resultCount.addAndGet(recs.longSize());
                 }
@@ -682,12 +682,12 @@ public class PartitionQueryController extends PartitionContext {
             } else if (query.getPartition() == null || query.getPartition().equals("")) {
                 final EntityDescriptor partitionDescriptor = getContext().getBaseDescriptorForEntity(query.getEntityType());
                 final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
-                DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
                 return recs.longSize();
             } else {
                 final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
                 final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
-                DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
                 return recs.longSize();
             }
         } else {

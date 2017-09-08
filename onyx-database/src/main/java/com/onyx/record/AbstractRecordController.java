@@ -44,7 +44,7 @@ public abstract class AbstractRecordController
         this.context = context;
         this.entityDescriptor = descriptor;
         MapBuilder dataFile = context.getDataFile(entityDescriptor);
-        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getClazz().getName(), descriptor.getIdentifier().getLoadFactor());
+        records = (DiskMap)dataFile.getHashMap(entityDescriptor.getEntityClass().getName(), descriptor.getIdentifier().getLoadFactor());
     }
 
     /**

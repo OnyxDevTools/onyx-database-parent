@@ -17,6 +17,7 @@ public class Main
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws OnyxException {
 
+
         PersistenceManagerFactory factory = new CacheManagerFactory(); //1
         
         factory.setCredentials("username", "password"); //2

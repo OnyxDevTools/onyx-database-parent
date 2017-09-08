@@ -45,7 +45,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         super(entityDescriptor, relationshipDescriptor, context);
         MapBuilder mapBuilder = context.getDataFile(entityDescriptor);
 
-        records = (DiskMap) mapBuilder.getHashMap(entityDescriptor.getClazz().getName() + relationshipDescriptor.getName(), RELATIONSHIP_MAP_LOAD_FACTOR);
+        records = (DiskMap) mapBuilder.getHashMap(entityDescriptor.getEntityClass().getName() + relationshipDescriptor.getName(), RELATIONSHIP_MAP_LOAD_FACTOR);
     }
 
     /**
@@ -339,7 +339,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
         RelationshipReference entityId;
         if (partitionValue != "" && partitionValue != null) {
-            SystemPartitionEntry relationshipDescriptor = this.getContext().getPartitionWithValue(entityDescriptor.getClazz(), PartitionHelper.getPartitionFieldValue(entity, this.getContext()));
+            SystemPartitionEntry relationshipDescriptor = this.getContext().getPartitionWithValue(entityDescriptor.getEntityClass(), PartitionHelper.getPartitionFieldValue(entity, this.getContext()));
             entityId = new RelationshipReference(indexValue, relationshipDescriptor.getIndex());
         } else {
             entityId = new RelationshipReference(indexValue, 0L);

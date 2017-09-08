@@ -7,7 +7,7 @@ import com.onyx.transaction.Transaction
  *
  * This error denotes a failure to interact with a transaction WAL file
  */
-class TransactionException(message: String) : OnyxException(message) {
+class TransactionException @JvmOverloads constructor(message: String? = "") : OnyxException(message) {
 
     private var transaction: Transaction? = null
 

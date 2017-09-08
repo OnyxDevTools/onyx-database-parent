@@ -14,7 +14,6 @@ import java.util.ArrayList
 @Entity(fileName = "system")
 data class SystemPartition @JvmOverloads constructor(
 
-    @Attribute
     @Identifier(loadFactor = 3)
     var id: String = "",
 
@@ -22,10 +21,7 @@ data class SystemPartition @JvmOverloads constructor(
     var name: String = "",
 
     @Attribute
-    var entityClass: String = "",
-
-    @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry::class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
-    var entries: MutableList<SystemPartitionEntry> = ArrayList()
+    var entityClass: String = ""
 
 ) : ManagedEntity() {
 
@@ -34,5 +30,8 @@ data class SystemPartition @JvmOverloads constructor(
         name = descriptor.name,
         entityClass = entity.name
     )
+
+    @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry::class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
+    var entries: MutableList<SystemPartitionEntry> = ArrayList()
 
 }

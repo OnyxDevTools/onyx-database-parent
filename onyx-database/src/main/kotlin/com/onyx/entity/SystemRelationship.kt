@@ -12,12 +12,11 @@ import com.onyx.persistence.annotations.*
 @Entity(fileName = "system")
 data class SystemRelationship @JvmOverloads constructor(
 
-    @Attribute
     @Identifier
     var name: String = "",
 
     @Attribute
-    var inverse: String = "",
+    var inverse: String? = null,
 
     @Attribute
     var inverseClass: String = "",

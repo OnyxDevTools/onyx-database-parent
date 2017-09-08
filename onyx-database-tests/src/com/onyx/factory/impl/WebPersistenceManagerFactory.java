@@ -1,4 +1,4 @@
-package com.onyx.persistence.factory.impl;
+package com.onyx.factory.impl;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
@@ -10,6 +10,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.context.impl.WebSchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.persistence.manager.impl.WebPersistenceManager;

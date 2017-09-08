@@ -111,7 +111,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                         final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
 
                         final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
-                        DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+                        DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
                         Map partitionResults = scanPartition(recs, partition.getIndex());
                         results.putAll(partitionResults);
@@ -139,12 +139,12 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
             final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
 
             final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
-            DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getClazz().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
+            DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
 
             // Get the partition ID
             IManagedEntity temp;
             try {
-                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getClazz());
+                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getEntityClass());
             } catch (IllegalAccessException | InstantiationException e) {
                 throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
             }

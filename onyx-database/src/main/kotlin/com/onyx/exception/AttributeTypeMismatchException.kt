@@ -5,9 +5,7 @@ package com.onyx.exception
  *
  * Attribute type does not match value
  */
-class AttributeTypeMismatchException(message: String, expectedClass: Class<*>, actualClass: Class<*>, attribute: String) : OnyxException(message + expectedClass.name + " actual " + actualClass.name + " for attribute " + attribute) {
-
-    var attribute: String = attribute
+class AttributeTypeMismatchException @JvmOverloads constructor(message: String? = "", expectedClass: Class<*>? = null, actualClass: Class<*>? = null, val attribute: String? = "") : OnyxException(message + expectedClass?.name + " actual " + actualClass?.name + " for attribute " + attribute) {
 
     companion object {
         @JvmField val ATTRIBUTE_TYPE_MISMATCH = "Attribute type mismatch, expecting "

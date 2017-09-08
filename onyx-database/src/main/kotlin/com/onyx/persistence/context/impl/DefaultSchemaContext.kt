@@ -6,6 +6,7 @@ import com.onyx.diskmap.MapBuilder
 import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
+import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.fetch.ScannerFactory
@@ -261,15 +262,14 @@ open class DefaultSchemaContext : SchemaContext {
     private fun checkForEntityChanges(descriptor: EntityDescriptor, systemEntityToCheck: SystemEntity): SystemEntity {
         var systemEntity = systemEntityToCheck
 
-        // Re-Build indexes if necessary
-        descriptor.checkIndexChanges(systemEntity, rebuildIndexConsumer)
+        val newSystemEntity = SystemEntity(descriptor)
+        if (newSystemEntity != systemEntity) {
 
-        // Check to see if the relationships were not changed from a to many to a to one
-        descriptor.checkValidRelationships(systemEntity)
+            checkForIndexChanges(systemEntity, newSystemEntity)
+            checkForInvalidRelationshipChanges(systemEntity, newSystemEntity)
 
-        if (!descriptor.equals(systemEntity)) {
-            systemEntity = SystemEntity(descriptor)
-            serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
+            serializedPersistenceManager.saveEntity<IManagedEntity>(newSystemEntity)
+            systemEntity = newSystemEntity
         }
 
         defaultSystemEntities.put(systemEntity.name, systemEntity)
@@ -289,7 +289,7 @@ open class DefaultSchemaContext : SchemaContext {
     private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
         // Check to see if the partition already exists
         if (systemEntity.partition != null && descriptor.partition != null) {
-            if (systemEntity.partition!!.entries.filter { it.value == descriptor.partition.partitionValue }.count() > 0) {
+            if (systemEntity.partition!!.entries.filter { it.value == descriptor.partition!!.partitionValue }.count() > 0) {
                 return
             }
         }
@@ -297,12 +297,83 @@ open class DefaultSchemaContext : SchemaContext {
         // Add a new partition entry if it does not exist
         if (descriptor.partition != null) {
             if (systemEntity.partition == null) {
-                systemEntity.partition = SystemPartition(descriptor.partition, systemEntity)
+                systemEntity.partition = SystemPartition(descriptor.partition!!, systemEntity)
             }
 
-            val entry = SystemPartitionEntry(descriptor, descriptor.partition, systemEntity.partition!!, partitionCounter.incrementAndGet())
+            val entry = SystemPartitionEntry(descriptor, descriptor.partition!!, systemEntity.partition!!, partitionCounter.incrementAndGet())
             systemEntity.partition!!.entries.add(entry)
             serializedPersistenceManager.saveEntity<IManagedEntity>(entry)
+        }
+    }
+
+    /**
+     * Check For Index Changes.
+     *
+     * @param systemEntity System Entity from previous
+     * @param newRevision Entity Descriptor with new potential index changes
+     */
+    private fun checkForIndexChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
+        val oldIndexes = systemEntity.indexes.associate { Pair(it.name, it) }
+        val newIndexes = newRevision.indexes.associate { Pair(it.name, it) }
+
+        (oldIndexes - newIndexes).values.forEach { rebuildIndex(systemEntity, it.name) }
+    }
+
+    /**
+     * Check for valid relationships.
+     *
+     * @param systemEntity System entity from previous version
+     * @param newRevision New revision of system entity
+     *
+     * @throws InvalidRelationshipTypeException when relationship is invalid
+     */
+    @Throws(InvalidRelationshipTypeException::class)
+    private fun checkForInvalidRelationshipChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
+
+        val oldRelationships = systemEntity.relationships.associate { Pair(it.name, it) }
+        val newRelationships = newRevision.relationships.associate { Pair(it.name, it) }
+
+        (newRelationships - oldRelationships).values.forEach {
+            val old = oldRelationships[it.name]
+
+            if (old != null && old.relationshipType.toInt() == RelationshipType.MANY_TO_MANY.ordinal || old != null && old.relationshipType.toInt() == RelationshipType.ONE_TO_MANY.ordinal) {
+
+                if (it.relationshipType == RelationshipType.MANY_TO_ONE.ordinal.toByte() || it.relationshipType == RelationshipType.ONE_TO_ONE.ordinal.toByte()) {
+                    throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.CANNOT_UPDATE_RELATIONSHIP)
+                }
+            }
+        }
+
+    }
+
+    /**
+     * Method that will re-build an index.  It will perform it for all partitions
+     *
+     * @param systemEntity Parent System Entity
+     * @param indexName Index to rebuild
+     */
+    private fun rebuildIndex(systemEntity: SystemEntity, indexName: String) {
+        catchAll {
+            val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
+            val indexDescriptor = entityDescriptor!!.indexes[indexName]
+            if (systemEntity.partition != null) {
+                systemEntity.partition!!.entries.forEach {
+                    val partitionEntityDescriptor = getDescriptorForEntity(entityDescriptor.entityClass, it.value)
+
+                    async {
+                        catchAll {
+                            getIndexController(partitionEntityDescriptor.indexes[indexDescriptor!!.name]!!).rebuild()
+                        }
+                    }
+                }
+
+            } else {
+                async {
+                    catchAll {
+                        getIndexController(indexDescriptor!!).rebuild()
+                    }
+                }
+            }
         }
     }
 
@@ -347,9 +418,9 @@ open class DefaultSchemaContext : SchemaContext {
             val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
 
             if (entity != null) {
-                Collections.sort(entity.attributes) { o1, o2 -> o1.name.compareTo(o2.name) }
-                Collections.sort(entity.relationships) { o1, o2 -> o1.name.compareTo(o2.name) }
-                Collections.sort(entity.indexes) { o1, o2 -> o1.name.compareTo(o2.name) }
+                entity.attributes.sortBy { it.name }
+                entity.relationships.sortBy { it.name }
+                entity.indexes.sortBy { it.name }
             }
             return@getOrPut entity
         }
@@ -388,6 +459,17 @@ open class DefaultSchemaContext : SchemaContext {
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
      *
      * @param entityClass Entity Type
+     * @return Entity Descriptor for class
+     * @throws OnyxException Generic Exception
+     * @since 1.0.0
+     */
+    @Throws(OnyxException::class)
+    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(Class.forName(entityClass))
+
+    /**
+     * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
+     *
+     * @param entityClass Entity Type
      * @param partitionId Partition Id
      * @return Entity Descriptor for class and partition id
      * @throws OnyxException Generic Exception
@@ -406,15 +488,12 @@ open class DefaultSchemaContext : SchemaContext {
 
             descriptors.getOrElse(entityKey, {
                 val descriptor = EntityDescriptor(entityClass)
-
-                if (descriptor.partition != null) {
-                    descriptor.partition.partitionValue = partitionIdVar.toString()
-                }
+                descriptor.partition?.partitionValue = partitionIdVar.toString()
 
                 descriptors.put(entityKey, descriptor)
 
                 // Get the latest System Entity
-                var systemEntity: SystemEntity? = getSystemEntityByName(descriptor.clazz.name)
+                var systemEntity: SystemEntity? = getSystemEntityByName(descriptor.entityClass.name)
 
                 // If it does not exist, lets create a new one
                 if (systemEntity == null) {
@@ -516,7 +595,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun getRecordController(descriptor: EntityDescriptor): RecordController = runBlockingOn(recordControllers) {
         recordControllers.getOrPut(descriptor) {
-            if (descriptor.identifier.generator == IdentifierGenerator.SEQUENCE) SequenceRecordControllerImpl(descriptor, this@DefaultSchemaContext) else RecordControllerImpl(descriptor, this@DefaultSchemaContext)
+            if (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE) SequenceRecordControllerImpl(descriptor, this@DefaultSchemaContext) else RecordControllerImpl(descriptor, this@DefaultSchemaContext)
         }
     }
 
@@ -537,7 +616,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): MapBuilder {
-        val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition.partitionValue
+        val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
         return runBlockingOn(dataFiles) {
             dataFiles.getOrPut(key) {
                 return@getOrPut DefaultMapBuilder("$location/$key", this@DefaultSchemaContext)
@@ -565,7 +644,7 @@ open class DefaultSchemaContext : SchemaContext {
         val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
         val partition = partitions[0]
 
-        return getDataFile(getDescriptorForEntity(descriptor.clazz, partition.value))
+        return getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
     }
 
     // endregion
@@ -659,35 +738,6 @@ open class DefaultSchemaContext : SchemaContext {
     }
 
     // endregion
-
-    /**
-     * Consumer that initiates a new index rebuild.
-     */
-    private val rebuildIndexConsumer = { inIndexDescriptor: IndexDescriptor ->
-        catchAll {
-            val systemEntity = getSystemEntityByName(inIndexDescriptor.entityDescriptor.clazz.name)
-
-            if (systemEntity!!.partition != null) {
-
-                systemEntity.partition!!.entries.forEach {
-                    val partitionEntityDescriptor = getDescriptorForEntity(inIndexDescriptor.entityDescriptor.clazz, it.value)
-
-                    run {
-                        catchAll {
-                            getIndexController(partitionEntityDescriptor.indexes[inIndexDescriptor.name]!!).rebuild()
-                        }
-                    }
-                }
-
-            } else {
-                run {
-                    catchAll {
-                        getIndexController(inIndexDescriptor).rebuild()
-                    }
-                }
-            }
-        }
-    }
 
     companion object {
         // Random generator for generating random temporary file names

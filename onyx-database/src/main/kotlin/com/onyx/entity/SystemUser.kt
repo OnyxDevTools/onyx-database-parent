@@ -17,7 +17,6 @@ import java.security.Principal
 data class SystemUser @JvmOverloads constructor(
 
     @Identifier(loadFactor = 3)
-    @Attribute
     var username: String? = null,
 
     @Attribute(size = 255)

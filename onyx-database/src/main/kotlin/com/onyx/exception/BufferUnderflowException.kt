@@ -6,7 +6,8 @@ package com.onyx.exception
  */
 class BufferUnderflowException : BufferingException {
 
-    constructor(message: String) : super(message)
+    @JvmOverloads
+    constructor(message: String? = "") : super(message)
 
     constructor(message: String, clazz: Class<*>) : super(message, clazz)
 

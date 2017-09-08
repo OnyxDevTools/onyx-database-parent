@@ -80,7 +80,6 @@ public interface IndexController
     @SuppressWarnings("RedundantThrows")
     Set<Object> findAllValues() throws OnyxException;
 
-
     /**
      * ReBuilds an index by iterating through all the values and re-mapping index values
      *

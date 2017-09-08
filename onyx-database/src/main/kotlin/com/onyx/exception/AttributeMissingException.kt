@@ -22,7 +22,8 @@ class AttributeMissingException : OnyxException {
      *
      * @param message Error message
      */
-    constructor(message: String) : super(message)
+    @JvmOverloads
+    constructor(message: String? = null) : super(message ?: "")
 
     companion object {
 

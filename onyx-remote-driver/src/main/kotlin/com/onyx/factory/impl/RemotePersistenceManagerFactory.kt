@@ -1,4 +1,4 @@
-package com.onyx.persistence.factory.impl
+package com.onyx.factory.impl
 
 import com.onyx.client.SSLPeer
 import com.onyx.client.auth.AuthenticationManager
@@ -11,6 +11,7 @@ import com.onyx.mutableLazy
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.RemoteSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
 import com.onyx.persistence.manager.impl.RemotePersistenceManager

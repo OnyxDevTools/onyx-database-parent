@@ -5,7 +5,7 @@ package com.onyx.exception
  *
  * Exception occurred while invoking a callback
  */
-class EntityCallbackException(methodName: String, message: String, cause: Throwable) : OnyxException(message + methodName, cause) {
+class EntityCallbackException @JvmOverloads constructor(methodName: String? = "", message: String? = "", cause: Throwable? = null) : OnyxException(message + methodName, cause) {
 
     companion object {
         @JvmField val INVOCATION = "Exception occurred when invoking callback: "

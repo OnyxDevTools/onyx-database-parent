@@ -20,9 +20,8 @@ class InitializationException : OnyxException {
      *
      * @param message Error messsage
      */
-    constructor(message: String) : super(message)
-
-    constructor() : super()
+    @JvmOverloads
+    constructor(message: String = "") : super(message)
 
     companion object {
         @JvmField val DATABASE_FILE_PERMISSION_ERROR = "Exception occurred when initializing the database.  The data file may not have valid permissions."

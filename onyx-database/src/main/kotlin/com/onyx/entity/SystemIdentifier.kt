@@ -13,7 +13,6 @@ import com.onyx.persistence.annotations.*
 data class SystemIdentifier @JvmOverloads constructor(
 
     @Identifier
-    @Attribute
     var name: String = "",
 
     @Attribute

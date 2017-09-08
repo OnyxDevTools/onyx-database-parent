@@ -5,7 +5,7 @@ package com.onyx.exception
  *
  * Value exceeds maximum size
  */
-class AttributeSizeException (message: String, val attribute: String) : OnyxException(message + " : " + attribute) {
+class AttributeSizeException @JvmOverloads constructor(message: String? = "", val attribute: String? = "") : OnyxException(message + " : " + attribute) {
 
     companion object {
         @JvmField val ATTRIBUTE_SIZE_EXCEPTION = "Attribute size exceeds maximum length"

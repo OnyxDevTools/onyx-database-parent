@@ -62,12 +62,15 @@ public class TestEntitySaveExceptions extends memory.base.BaseTest {
         manager.saveEntity(entity);
     }
 
-    @Test(expected = InvalidIdentifierException.class)
+    // Changed to validate you can have a double as an id
+    @Test
     public void testInvalidIDEntity() throws OnyxException
     {
         InvalidIDEntity entity = new InvalidIDEntity();
         entity.id = 23.3;
         manager.saveEntity(entity);
+
+        manager.find(entity);
     }
 
     @Test(expected = InvalidIdentifierException.class)

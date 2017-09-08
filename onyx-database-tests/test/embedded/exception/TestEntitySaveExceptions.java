@@ -71,14 +71,6 @@ public class TestEntitySaveExceptions extends BaseTest {
     }
 
     @Test(expected = InvalidIdentifierException.class)
-    public void testInvalidIDEntity() throws OnyxException
-    {
-        InvalidIDEntity entity = new InvalidIDEntity();
-        entity.id = 23.3;
-        manager.saveEntity(entity);
-    }
-
-    @Test(expected = InvalidIdentifierException.class)
     public void testInvalidGenerator() throws OnyxException
     {
         InvalidIDGeneratorEntity entity = new InvalidIDGeneratorEntity();

@@ -20,16 +20,12 @@ open class OnyxException : Exception {
     }
 
     /**
-     * Constructor
-     */
-    constructor() : super()
-
-    /**
      * Constructor with error message
      *
      * @param message Exception message
      */
-    constructor(message: String) : super(message)
+    @JvmOverloads
+    constructor(message: String? = UNKNOWN_EXCEPTION) : super(message)
 
     /**
      * Constructor with message and cause
@@ -37,7 +33,7 @@ open class OnyxException : Exception {
      * @param message Exception message
      * @param cause Root cause
      */
-    constructor(message: String, cause: Throwable) : super(message, cause)
+    constructor(message: String? = UNKNOWN_EXCEPTION, cause: Throwable?) : super(message, cause)
 
     companion object {
         @JvmField val UNKNOWN_EXCEPTION = "Unknown exception occurred"

@@ -72,7 +72,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
             // Get the partition ID
             IManagedEntity temp;
             try {
-                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getClazz());
+                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getEntityClass());
             } catch (IllegalAccessException | InstantiationException e) {
                 throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
             }

@@ -14,12 +14,7 @@ import java.util.ArrayList
 @Entity(fileName = "system")
 data class SystemEntity @JvmOverloads constructor(
 
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
-    @Attribute
-    var primaryKey: Int = 0,
-
     @Index(loadFactor = 3)
-    @Attribute
     var name: String = "",
 
     @Attribute
@@ -27,9 +22,6 @@ data class SystemEntity @JvmOverloads constructor(
 
     @Attribute
     var fileName: String? = null,
-
-    @Attribute
-    var identifier: SystemIdentifier? = null,
 
     @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class, loadFactor = 3)
     var partition: SystemPartition? = null,
@@ -41,19 +33,24 @@ data class SystemEntity @JvmOverloads constructor(
     var relationships: MutableList<SystemRelationship> = ArrayList(),
 
     @Attribute
-    var indexes: MutableList<SystemIndex> = ArrayList()
+    var indexes: MutableList<SystemIndex> = ArrayList(),
 
+    @Attribute
+    var identifier: SystemIdentifier? = null
 ) : ManagedEntity() {
 
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
+    var primaryKey: Int = 0
+
     constructor(descriptor: EntityDescriptor?) : this(
-            name = descriptor!!.clazz.name,
-            className = descriptor.clazz.simpleName,
+            name = descriptor!!.entityClass.name,
+            className = descriptor.entityClass.simpleName,
             indexes = ArrayList(),
             relationships = ArrayList(),
             attributes = ArrayList(),
             fileName = descriptor.fileName) {
 
-        this.identifier = SystemIdentifier(descriptor.identifier)
+        this.identifier = SystemIdentifier(descriptor.identifier!!)
 
         descriptor.attributes.values.forEach {
             this.attributes.add(SystemAttribute(it))
@@ -68,7 +65,7 @@ data class SystemEntity @JvmOverloads constructor(
         }
 
         if (descriptor.partition != null) {
-            this.partition = SystemPartition(descriptor.partition, this)
+            this.partition = SystemPartition(descriptor.partition!!, this)
         }
 
         this.attributes.sortBy { it.name }

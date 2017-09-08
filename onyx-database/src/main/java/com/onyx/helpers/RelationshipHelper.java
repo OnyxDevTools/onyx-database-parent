@@ -73,7 +73,7 @@ public class RelationshipHelper
 
         if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
         {
-            final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getClazz(), partitionValue);
+            final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getEntityClass(), partitionValue);
             entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
         } else
         {
@@ -102,7 +102,7 @@ public class RelationshipHelper
 
         if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
         {
-            final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getClazz(), partitionValue);
+            final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getEntityClass(), partitionValue);
             entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
         } else
         {

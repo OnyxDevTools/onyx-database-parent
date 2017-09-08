@@ -5,7 +5,7 @@ package com.onyx.exception
  *
  * Class that is trying to work on is not a persistable type
  */
-class EntityClassNotFoundException(message: String) : OnyxException(message) {
+class EntityClassNotFoundException @JvmOverloads constructor(message: String? = "") : OnyxException(message) {
 
     private var entityClassName: String? = null
 
@@ -20,7 +20,6 @@ class EntityClassNotFoundException(message: String) : OnyxException(message) {
 
     companion object {
 
-        @JvmField val RELATIONSHIP_ENTITY_PERSISTED_NOT_FOUND = "Relationship type does not implement IManagedEntity"
         @JvmField val RELATIONSHIP_ENTITY_BASE_NOT_FOUND = "Relationship type does not extend from ManagedEntity"
         @JvmField val RELATIONSHIP_ENTITY_NOT_FOUND = "Relationship type does not have entity annotation"
         @JvmField val ENTITY_NOT_FOUND = "Entity is not able to persist because entity annotation does not exist"
