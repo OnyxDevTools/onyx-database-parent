@@ -1,18 +1,17 @@
-package com.onyx.diskmap.store;
+package com.onyx.diskmap.store
 
-import com.onyx.diskmap.serializer.ObjectBuffer;
-import com.onyx.diskmap.serializer.ObjectSerializable;
-import com.onyx.diskmap.serializer.Serializers;
-
-import java.nio.ByteBuffer;
-import java.util.Map;
+import com.onyx.buffer.BufferStream
+import com.onyx.diskmap.serializer.ObjectBuffer
+import com.onyx.diskmap.serializer.ObjectSerializable
+import com.onyx.diskmap.serializer.Serializers
+import java.nio.ByteBuffer
 
 /**
  * Created by tosborn on 3/27/15.
  *
  * This declares the contract for the volume storage
  */
-public interface Store {
+interface Store {
 
     /**
      * Write a serializable object to
@@ -20,8 +19,7 @@ public interface Store {
      * @param serializable Object serializable to write to store
      * @param position location to write to
      */
-    @SuppressWarnings("UnusedReturnValue")
-    int write(ObjectSerializable serializable, long position);
+    fun write(serializable: ObjectSerializable, position: Long): Int
 
     /**
      * Write an Object Buffer
@@ -30,8 +28,7 @@ public interface Store {
      * @param position Position within the volume to write to.
      * @return How many bytes were written
      */
-    @SuppressWarnings("UnusedReturnValue")
-    int write(ObjectBuffer serializable, long position);
+    fun write(serializable: ObjectBuffer, position: Long): Int
 
     /**
      * Write a serializable object
@@ -40,7 +37,7 @@ public interface Store {
      * @param size Amount of bytes to read.
      * @return Object Buffer contains bytes read
      */
-    ObjectBuffer read(long position, int size);
+    fun read(position: Long, size: Int): ObjectBuffer?
 
     /**
      * Read the file channel and put it into a buffer at a position
@@ -48,8 +45,7 @@ public interface Store {
      * @param buffer   Buffer to put into
      * @param position position in store to read
      */
-    @SuppressWarnings("unused")
-    void read(ByteBuffer buffer, long position);
+    fun read(buffer: ByteBuffer, position: Long)
 
     /**
      * Read a serializable object from the store
@@ -59,17 +55,17 @@ public interface Store {
      * @param type class type
      * @return The object that was read from the store
      */
-    Object read(long position, int size, Class type);
+    fun read(position: Long, size: Int, type: Class<*>): Any?
 
     /**
      * Read a serializable object
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
-     * @param object object to read into
+     * @param serializable object to read into
      * @return same object instance that was sent in.
      */
-    Object read(long position, int size, ObjectSerializable object);
+    fun read(position: Long, size: Int, serializable: ObjectSerializable): Any?
 
     /**
      * Read a serializable object
@@ -79,8 +75,7 @@ public interface Store {
      * @param serializerId Key to the serializer version that was used when written to the store
      * @return Object read from the store
      */
-    @SuppressWarnings("unused")
-    Object read(long position, int size, Class type, int serializerId);
+    fun read(position: Long, size: Int, type: Class<*>, serializerId: Int): Any?
 
     /**
      * Allocates a spot in the file
@@ -88,54 +83,52 @@ public interface Store {
      * @param size Allocate space within the store.
      * @return position of started allocated bytes
      */
-    long allocate(int size);
+    fun allocate(size: Int): Long
 
     /**
      * Getter for serializers
      * @return Serializers used to serialize Object Buffers
      */
-    Serializers getSerializers();
+    val serializers: Serializers?
 
     /**
      * Getter for file longSize
      *
      * @return The self tracked size of the storage
      */
-    long getFileSize();
+    fun getFileSize(): Long
 
     /**
      * Close file storage
      *
      * @return Whether the store was closed
      */
-    @SuppressWarnings("UnusedReturnValue")
-    boolean close();
+    fun close(): Boolean
 
     /**
      * Commit and flush Storage
      */
-    void commit();
+    fun commit()
 
     /**
      * Initialize
      * @param mapById Serializers by id
      * @param mapByName Serializers by namre
      */
-    void init(Map mapById, Map mapByName);
+    fun assignSerializers(mapById: Map<Short, String>, mapByName: Map<String, Short>)
 
     /**
      * Delete File
      *
      */
-    void delete();
+    fun delete()
 
     /**
      * Getter for file path for store.  If this is in memory, this will be null
      *
      * @return File path
      */
-    @SuppressWarnings("unused")
-    String getFilePath();
+    val filePath: String
 
     /**
      * Reset the storage so that it has a clean slate
@@ -143,6 +136,5 @@ public interface Store {
      *
      * @since 1.3.0
      */
-    void reset();
+    fun reset()
 }
-

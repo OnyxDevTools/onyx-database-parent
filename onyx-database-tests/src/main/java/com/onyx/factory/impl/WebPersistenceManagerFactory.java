@@ -103,8 +103,7 @@ public class WebPersistenceManagerFactory extends EmbeddedPersistenceManagerFact
 
             WebPersistenceManager tmpPersistenceManager = (WebPersistenceManager) this.persistenceManager;
 
-            final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager(null);
-            systemPersistenceManager.setContext(getSchemaContext());
+            final EmbeddedPersistenceManager systemPersistenceManager = new EmbeddedPersistenceManager(getSchemaContext());
             getSchemaContext().setSystemPersistenceManager(systemPersistenceManager);
 
             ((WebSchemaContext) getSchemaContext()).setRemoteEndpoint(this.getDatabaseLocation());

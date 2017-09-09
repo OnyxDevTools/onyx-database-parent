@@ -12,6 +12,7 @@ import java.util.Date
  *
  * Contains date modified information
  */
+@Suppress("MemberVisibilityCanPrivate")
 abstract class AbstractSystemEntity : ManagedEntity() {
 
     @Attribute

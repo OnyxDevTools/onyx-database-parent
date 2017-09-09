@@ -4,6 +4,9 @@ import com.onyx.diskmap.base.*;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.serializer.Serializers;
 import com.onyx.diskmap.store.*;
+import com.onyx.diskmap.store.impl.FileChannelStore;
+import com.onyx.diskmap.store.impl.InMemoryStore;
+import com.onyx.diskmap.store.impl.MemoryMappedStore;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
@@ -152,7 +155,7 @@ public class DefaultMapBuilder implements MapBuilder {
         }
 
         if (this.storage != null)
-            this.storage.init(mapById, mapByName);
+            this.storage.assignSerializers(mapById, mapByName);
 
     }
 
@@ -426,6 +429,6 @@ public class DefaultMapBuilder implements MapBuilder {
 
         // Re-initialize the storage
         if (this.storage != null)
-            this.storage.init(mapById, mapByName);
+            this.storage.assignSerializers(mapById, mapByName);
     }
 }

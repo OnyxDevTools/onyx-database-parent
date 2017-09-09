@@ -46,5 +46,12 @@ data class SystemUser @JvmOverloads constructor(
 
     override fun implies(subject: Subject?): Boolean = false
 
+    override fun hashCode(): Int {
+        var result = username?.hashCode() ?: 0
+        result = 31 * result + (password?.hashCode() ?: 0)
+        result = 31 * result + (role?.hashCode() ?: 0)
+        return result
+    }
+
     // endregion
 }

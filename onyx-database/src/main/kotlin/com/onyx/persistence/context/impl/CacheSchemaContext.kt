@@ -4,7 +4,6 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DefaultMapBuilder
 import com.onyx.diskmap.MapBuilder
 import com.onyx.diskmap.store.StoreType
-import com.onyx.extension.runBlockingOn
 
 /**
  * The purpose of this class is to resolve all the the metadata, storage mechanism,  and modeling regarding the structure of the database.
@@ -41,7 +40,7 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
      */
     override fun getDataFile(descriptor: EntityDescriptor): MapBuilder {
         val path = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        return runBlockingOn(dataFiles) { dataFiles.getOrPut(path) { DefaultMapBuilder("$location/$path", StoreType.IN_MEMORY, this@CacheSchemaContext) } }
+        return synchronized(dataFiles) { dataFiles.getOrPut(path) { DefaultMapBuilder("$location/$path", StoreType.IN_MEMORY, this@CacheSchemaContext) } }
     }
 
     /**

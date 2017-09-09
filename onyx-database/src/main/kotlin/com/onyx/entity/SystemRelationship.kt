@@ -9,6 +9,7 @@ import com.onyx.persistence.annotations.*
  *
  * Relationship information for an entity
  */
+@Suppress("MemberVisibilityCanPrivate")
 @Entity(fileName = "system")
 data class SystemRelationship @JvmOverloads constructor(
 

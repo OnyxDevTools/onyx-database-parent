@@ -43,6 +43,7 @@ import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.reflect.KClass
 
 /**
@@ -55,7 +56,6 @@ import kotlin.reflect.KClass
  * @since 1.0.0
  *
  */
-// TODO: Move rebuilding of index out
 open class DefaultSchemaContext : SchemaContext {
 
     // region Properties
@@ -381,8 +381,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region System Entity
 
-    private val systemEntityByIDMap = BlockingHashMap<Int, SystemEntity?>()
-    private val defaultSystemEntities = BlockingHashMap<String, SystemEntity?>()
+    private val systemEntityByIDMap = HashMap<Int, SystemEntity?>()
+    private val defaultSystemEntities = HashMap<String, SystemEntity?>()
 
     /**
      * Get System Entity By Name.
@@ -392,7 +392,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws OnyxException Default Exception
      */
     @Throws(OnyxException::class)
-    override fun getSystemEntityByName(name: String): SystemEntity? = runBlockingOn(defaultSystemEntities) {
+    override fun getSystemEntityByName(name: String): SystemEntity? = synchronized(defaultSystemEntities) {
         defaultSystemEntities.getOrPut(name) {
             val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.EQUAL, name), QueryOrder("primaryKey", false))
             query.maxResults = 1
@@ -413,7 +413,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntityId Unique identifier for system entity version
      * @return System Entity matching ID
      */
-    override fun getSystemEntityById(systemEntityId: Int): SystemEntity? = runBlockingOn(systemEntityByIDMap) {
+    override fun getSystemEntityById(systemEntityId: Int): SystemEntity? = synchronized(systemEntityByIDMap) {
         systemEntityByIDMap.getOrPut(systemEntityId) {
             val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
 
@@ -430,7 +430,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Entity Descriptor
 
-    private val descriptors = BlockingHashMap<String, EntityDescriptor>()
+    private val descriptors = HashMap<String, EntityDescriptor>()
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -484,7 +484,7 @@ open class DefaultSchemaContext : SchemaContext {
         val partitionIdVar = partitionId ?: ""
         val entityKey = entityClass.name + partitionIdVar.toString()
 
-        return runBlockingOn(descriptors) {
+        return synchronized(descriptors) {
 
             descriptors.getOrElse(entityKey, {
                 val descriptor = EntityDescriptor(entityClass)
@@ -534,7 +534,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipControllers = BlockingHashMap<RelationshipDescriptor, RelationshipController>()
+    private val relationshipControllers = HashMap<RelationshipDescriptor, RelationshipController>()
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -549,7 +549,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController = runBlockingOn(relationshipControllers) {
+    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController = synchronized(relationshipControllers) {
         relationshipControllers.getOrPut(relationshipDescriptor) {
             return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
                 ToManyRelationshipControllerImpl(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
@@ -563,7 +563,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Index Controller
 
-    private val indexControllers = BlockingHashMap<IndexDescriptor, IndexController>()
+    private val indexControllers = HashMap<IndexDescriptor, IndexController>()
 
     /**
      * Get Index Controller with Index descriptor.
@@ -574,7 +574,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun getIndexController(indexDescriptor: IndexDescriptor): IndexController = runBlockingOn(indexControllers) {
+    override fun getIndexController(indexDescriptor: IndexDescriptor): IndexController = synchronized(indexControllers) {
         indexControllers.getOrPut(indexDescriptor) {
             return@getOrPut IndexControllerImpl(indexDescriptor.entityDescriptor, indexDescriptor, this)
         }
@@ -584,7 +584,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Record Controller
 
-    private val recordControllers = BlockingHashMap<EntityDescriptor, RecordController>()
+    private val recordControllers = HashMap<EntityDescriptor, RecordController>()
 
     /**
      * Get Record Controller.
@@ -593,7 +593,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @return get Record Controller.
      * @since 1.0.0
      */
-    override fun getRecordController(descriptor: EntityDescriptor): RecordController = runBlockingOn(recordControllers) {
+    override fun getRecordController(descriptor: EntityDescriptor): RecordController = synchronized(recordControllers) {
         recordControllers.getOrPut(descriptor) {
             if (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE) SequenceRecordControllerImpl(descriptor, this@DefaultSchemaContext) else RecordControllerImpl(descriptor, this@DefaultSchemaContext)
         }
@@ -603,7 +603,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = BlockingHashMap<String, MapBuilder>()
+    @JvmField internal val dataFiles = HashMap<String, MapBuilder>()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -617,7 +617,7 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): MapBuilder {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        return runBlockingOn(dataFiles) {
+        return synchronized(dataFiles) {
             dataFiles.getOrPut(key) {
                 return@getOrPut DefaultMapBuilder("$location/$key", this@DefaultSchemaContext)
             }

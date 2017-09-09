@@ -1,7 +1,6 @@
 package com.onyx.persistence.manager.impl
 
 import com.onyx.exception.*
-import com.onyx.extension.runBlockingOn
 import com.onyx.fetch.PartitionQueryController
 import com.onyx.fetch.PartitionReference
 import com.onyx.helpers.*
@@ -290,7 +289,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                     // Cache the query results
                     cachedResults = context.queryCacheController.setCachedQueryResults(query, results)
                 else
-                    runBlockingOn(cachedResults) {
+                    synchronized(cachedResults) {
                         cachedResults!!.references = results
                     }
                 return queryController.hydrateResultsWithReferences(query, results) as List<E>
@@ -349,7 +348,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                 // Cache the query results
                 cachedResults = context.queryCacheController.setCachedQueryResults(query, results)
             else
-                runBlockingOn(cachedResults) {
+                synchronized(cachedResults) {
                     cachedResults!!.references = results
                 }
             return LazyQueryCollection<IManagedEntity>(descriptor, results, context) as List<E>

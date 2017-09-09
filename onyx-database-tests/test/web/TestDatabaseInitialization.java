@@ -47,8 +47,7 @@ public class TestDatabaseInitialization extends BaseTest
         fac.setCredentials("tim", "osborn");
         fac.initialize();
 
-        manager = new EmbeddedPersistenceManager(null);
-        manager.setContext(fac.getSchemaContext());
+        manager = new EmbeddedPersistenceManager(fac.getSchemaContext());
         fac.close();
 
         fac = new EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION);

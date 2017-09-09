@@ -1,7 +1,5 @@
 package com.onyx.persistence.context
 
-import com.onyx.extension.BlockingHashMap
-import com.onyx.extension.runBlockingOn
 
 /**
  * Created by tosborn1 on 9/6/17.
@@ -13,7 +11,7 @@ import com.onyx.extension.runBlockingOn
  */
 object Contexts {
 
-    private val contexts = BlockingHashMap<String, SchemaContext>()
+    private val contexts = HashMap<String, SchemaContext>()
 
     /**
      * Add Context to catalog.  This will uniquely store via contextId
@@ -23,7 +21,7 @@ object Contexts {
      */
     @JvmStatic
     fun put(context:SchemaContext){
-        runBlockingOn(contexts) {
+        synchronized(contexts) {
             contexts[context.contextId] = context
         }
     }
@@ -35,7 +33,7 @@ object Contexts {
      * @return Schema context within the catalog
      */
     @JvmStatic
-    fun get(contextId:String) = runBlockingOn(contexts) { contexts[contextId] }
+    fun get(contextId:String) = synchronized(contexts) { contexts[contextId] }
 
     /**
      * Get First context within the catalog.  This is in the event it has not been added
@@ -46,5 +44,5 @@ object Contexts {
      * @return First context within catalog
      */
     @JvmStatic
-    fun first() = runBlockingOn(contexts) { contexts.values.first() }
+    fun first() = synchronized(contexts) { contexts.values.first() }
 }

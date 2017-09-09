@@ -14,6 +14,7 @@ import java.io.StringWriter
  * System error.  To be logged when logging gets to be implemented
  */
 @Entity(fileName = "error")
+@Suppress("UNUSED")
 data class SystemError @JvmOverloads constructor(
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
