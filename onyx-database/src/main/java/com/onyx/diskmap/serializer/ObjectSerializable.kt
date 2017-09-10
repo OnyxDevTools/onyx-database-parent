@@ -1,21 +1,22 @@
-package com.onyx.diskmap.serializer;
+package com.onyx.diskmap.serializer
 
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.IOException
+import java.io.Serializable
 
 /**
  * Created by timothy.osborn on 3/25/15.
  *
  * Interface that defines custom serialization behavior with the ObjectBuffer
  */
-public interface ObjectSerializable extends Serializable
-{
+interface ObjectSerializable : Serializable {
+
     /**
      * Write Object to the object buffer
      * @param buffer Object buffer to write from
      * @throws IOException Exception while writing.
      */
-    void writeObject(ObjectBuffer buffer) throws IOException;
+    @Throws(IOException::class)
+    fun writeObject(buffer: ObjectBuffer)
 
     /**
      * Read an object from the buffer
@@ -23,8 +24,8 @@ public interface ObjectSerializable extends Serializable
      * @param buffer Buffer to read from
      * @throws IOException Exception while reading
      */
-    @SuppressWarnings("unused")
-    void readObject(ObjectBuffer buffer) throws IOException;
+    @Throws(IOException::class)
+    fun readObject(buffer: ObjectBuffer)
 
     /**
      * Read an object from the object buffer an check the checksum to ensure the record was de-serialized propertly.
@@ -33,7 +34,10 @@ public interface ObjectSerializable extends Serializable
      * @param position position to verify the checksum with
      * @throws IOException Exception while reading
      */
-    void readObject(ObjectBuffer buffer, long position) throws IOException;
+    @Throws(IOException::class)
+    fun readObject(buffer: ObjectBuffer, position: Long) {
+        readObject(buffer)
+    }
 
     /**
      * Read an object from the object buffer an check the checksum to ensure the record was de-serialized propertly.  Also
@@ -43,6 +47,9 @@ public interface ObjectSerializable extends Serializable
      * @param position position to verify the checksum with
      * @throws IOException Exception while reading
      */
-    @SuppressWarnings("UnusedParameters")
-    void readObject(ObjectBuffer buffer, @SuppressWarnings("SameParameterValue") long position, int serializerId) throws IOException;
+    @Throws(IOException::class)
+    fun readObject(buffer: ObjectBuffer, position: Long, serializerId: Int) {
+        readObject(buffer, position)
+    }
+
 }

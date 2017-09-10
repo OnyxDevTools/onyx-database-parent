@@ -1,19 +1,14 @@
-package com.onyx.persistence.query;
+package com.onyx.persistence.query
 
 /**
  * Set of defined Query Operators.  Used when specifying a Query and QueryCriteria.
  *
- *
  * @author Tim Osborn
  * @since 1.0.0
  *
- *
  * @see com.onyx.persistence.query.QueryCriteria
- *
  */
-public enum QueryCriteriaOperator
-{
-
+enum class QueryCriteriaOperator {
     EQUAL,
     NOT_EQUAL,
     NOT_STARTS_WITH,
@@ -33,27 +28,15 @@ public enum QueryCriteriaOperator
     IN,
     NOT_IN;
 
-
-    /**
-     * Constructor
-     */
-    @SuppressWarnings("unused")
-    QueryCriteriaOperator()
-    {
-
-    }
-
     /**
      * Indicates if the operator supports indexing capabilities
      * @return If this operator supports index scanning
      */
-    public boolean isIndexed()
-    {
-        return (this == QueryCriteriaOperator.EQUAL
+    val isIndexed: Boolean
+        get() = this == QueryCriteriaOperator.EQUAL
                 || this == QueryCriteriaOperator.IN
                 || this == QueryCriteriaOperator.GREATER_THAN
                 || this == QueryCriteriaOperator.GREATER_THAN_EQUAL
                 || this == QueryCriteriaOperator.LESS_THAN
-                || this == QueryCriteriaOperator.LESS_THAN_EQUAL);
-    }
+                || this == QueryCriteriaOperator.LESS_THAN_EQUAL
 }

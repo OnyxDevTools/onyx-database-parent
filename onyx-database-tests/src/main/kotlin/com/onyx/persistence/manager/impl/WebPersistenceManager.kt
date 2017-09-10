@@ -168,7 +168,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val body = EntityQueryBody()
         body.query = query
 
-        if (query.selections != null && query.selections.size > 0) {
+        if (query.selections != null && query.selections!!.isNotEmpty()) {
             val response = this.performCall(url + AbstractWebPersistenceManager.EXECUTE_QUERY, HashMap::class.java, QueryResultResponseBody::class.java, body) as QueryResultResponseBody
             query.resultsCount = response.maxResults
             return response.resultList as List<E>
@@ -435,7 +435,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val descriptor = context.getBaseDescriptorForEntity(clazz)
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
-        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
+        val criteria = QueryCriteria<Nothing>(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
         return list(clazz, criteria)
     }
 

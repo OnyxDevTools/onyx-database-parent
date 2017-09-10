@@ -65,7 +65,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
     /**
      * Close the data file
      *
-     * @return  Close the memory mapped flie and truncate to get rid of the remainder of allocated space for the last
+     * @return  Close the memory mapped file and truncate to get rid of the remainder of allocated space for the last
      * file slice
      */
     @Synchronized override fun close(): Boolean {
@@ -214,7 +214,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             return null
 
         val buffer = read(position, size)
-        serializable.readObject(buffer)
+        serializable.readObject(buffer!!)
         return serializable
     }
 
@@ -275,8 +275,8 @@ open class MemoryMappedStore : FileChannelStore, Store {
         this.read(buffer, position)
         buffer.rewind()
 
-        try {
-            return when {
+        return try {
+            when {
                 serializerId > 0 -> ObjectBuffer.unwrap(buffer, serializers, serializerId)
                 ObjectSerializable::class.java.isAssignableFrom(type) -> {
                     val serializable = ReflectionUtil.instantiate(type)//type.newInstance();
@@ -308,8 +308,8 @@ open class MemoryMappedStore : FileChannelStore, Store {
         this.read(buffer, position)
         buffer.rewind()
 
-        try {
-            return if (ObjectSerializable::class.java.isAssignableFrom(type)) {
+        return try {
+            if (ObjectSerializable::class.java.isAssignableFrom(type)) {
                 val serializable = ReflectionUtil.instantiate(type)//type.newInstance();
                 val objectBuffer = ObjectBuffer(buffer, serializers)
                 (serializable as ObjectSerializable).readObject(objectBuffer, position)

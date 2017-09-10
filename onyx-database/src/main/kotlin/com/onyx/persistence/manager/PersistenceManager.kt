@@ -318,7 +318,7 @@ interface PersistenceManager {
         val descriptor = context.getBaseDescriptorForEntity(clazz)
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
-        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
+        val criteria = QueryCriteria<Nothing>(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
         return list(clazz, criteria)
     }
 
@@ -336,7 +336,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria): List<E> = list(clazz, criteria, arrayOf())
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>): List<E> = list(clazz, criteria, arrayOf())
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -354,7 +354,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: Array<QueryOrder>): List<E> = list(clazz, criteria, 0, -1, orderBy)
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: Array<QueryOrder>): List<E> = list(clazz, criteria, 0, -1, orderBy)
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -372,7 +372,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: QueryOrder): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: QueryOrder): List<E> {
         val queryOrders = arrayOf(orderBy)
         return list(clazz, criteria, queryOrders)
     }
@@ -393,7 +393,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, partitionId: Any): List<E> = list(clazz, criteria, arrayOf(), partitionId)
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, partitionId: Any): List<E> = list(clazz, criteria, arrayOf(), partitionId)
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -413,7 +413,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: Array<QueryOrder>, partitionId: Any): List<E> = list(clazz, criteria, 0, -1, orderBy, partitionId)
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: Array<QueryOrder>, partitionId: Any): List<E> = list(clazz, criteria, 0, -1, orderBy, partitionId)
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -433,7 +433,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: QueryOrder, partitionId: Any): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: QueryOrder, partitionId: Any): List<E> {
         val queryOrders = arrayOf(orderBy)
         return list(clazz, criteria, queryOrders, partitionId)
     }
@@ -460,7 +460,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?): List<E> {
         val tmpQuery = Query(clazz, criteria)
         tmpQuery.maxResults = maxResults
         tmpQuery.firstRow = start
@@ -494,7 +494,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?, partitionId: Any): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?, partitionId: Any): List<E> {
 
         val tmpQuery = Query(clazz, criteria)
         tmpQuery.partition = partitionId
@@ -601,7 +601,7 @@ interface PersistenceManager {
     fun getMapWithReferenceId(entityType: Class<*>, reference: Long): Map<*, *>?
 
     /**
-     * Retrieve the quantity of entities that match the query criterium.
+     * Retrieve the quantity of entities that match the query criteria.
      *
      *
      * usage:
@@ -619,7 +619,7 @@ interface PersistenceManager {
      * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
-     * @return The number of entities that meet the query criterium
+     * @return The number of entities that meet the query criteria
      * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
@@ -628,8 +628,8 @@ interface PersistenceManager {
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.
-     * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
-     * This could cause performance degredation if removing the registration is neglected.
+     * If you do not un-register queries, they will not expire nor will they be de-registered automatically.
+     * This could cause performance degradation if removing the registration is neglected.
      *
      * @param query Query with a listener attached
      *

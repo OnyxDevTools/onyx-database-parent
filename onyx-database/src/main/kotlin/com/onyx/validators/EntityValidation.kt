@@ -105,7 +105,7 @@ object EntityValidation {
      * @throws InvalidIndexException Index is not valid
      */
     @Throws(InvalidIndexException::class)
-    fun validateIndexes(entityClass: Class<*>, indexes:Map<String, IndexDescriptor>) {
+    fun validateIndexes(entityClass: Class<*>, indexes:Map<String, IndexDescriptor>) =
         indexes.values.forEach {
             try {
                 entityClass.getDeclaredField(it.name)
@@ -113,7 +113,6 @@ object EntityValidation {
                 throw InvalidIndexException(InvalidIndexException.INDEX_MISSING_FIELD)
             }
         }
-    }
 
     /**
      * Validate Attributes.
@@ -121,7 +120,7 @@ object EntityValidation {
      * @throws EntityTypeMatchException Entity is not a valid type
      */
     @Throws(EntityTypeMatchException::class)
-    fun validateAttributes(attributes:Map<String, AttributeDescriptor>) {
+    fun validateAttributes(attributes:Map<String, AttributeDescriptor>) =
         attributes.values.forEach {
 
             val type = it.type
@@ -169,7 +168,7 @@ object EntityValidation {
                 throw EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " + type)
             }
         }
-    }
+
 
     /**
      * Validate Identifier.

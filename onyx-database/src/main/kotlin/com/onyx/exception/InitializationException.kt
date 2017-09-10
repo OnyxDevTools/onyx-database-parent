@@ -18,7 +18,7 @@ class InitializationException : OnyxException {
     /**
      * Constructor
      *
-     * @param message Error messsage
+     * @param message Error message
      */
     @JvmOverloads
     constructor(message: String = "") : super(message)

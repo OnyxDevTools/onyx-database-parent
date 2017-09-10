@@ -42,7 +42,7 @@ public class SystemEntityTest extends RemoteBaseTest
     {
         Query query = new Query();
         query.setEntityType(SystemEntity.class);
-        query.setCriteria(new QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, QueryCriteria.NULL_STRING_VALUE));
+        query.setCriteria(new QueryCriteria("name", QueryCriteriaOperator.NOT_NULL));
 
         List<SystemEntity> results = manager.executeQuery(query);
         Assert.assertTrue(results.size() > 0);

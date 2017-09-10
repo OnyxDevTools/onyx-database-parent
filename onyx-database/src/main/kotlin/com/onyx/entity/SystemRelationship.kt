@@ -2,7 +2,9 @@ package com.onyx.entity
 
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.persistence.ManagedEntity
-import com.onyx.persistence.annotations.*
+import com.onyx.persistence.annotations.Attribute
+import com.onyx.persistence.annotations.Entity
+import com.onyx.persistence.annotations.Identifier
 
 /**
  * tim.osborn on 3/2/15.

@@ -6,8 +6,7 @@ import com.onyx.persistence.annotations.*
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.annotations.values.RelationshipType
-
-import java.util.ArrayList
+import java.util.*
 
 /**
  * Created by timothy.osborn on 3/2/15.

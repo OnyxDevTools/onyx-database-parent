@@ -127,7 +127,7 @@ public class MutableEqualsNullTest extends BaseTest
     @Test
     public void testStringEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
-        QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_STRING_VALUE);
+        QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }
@@ -135,7 +135,7 @@ public class MutableEqualsNullTest extends BaseTest
     @Test
     public void testIntEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
-        QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_INTEGER_VALUE);
+        QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }
@@ -143,7 +143,7 @@ public class MutableEqualsNullTest extends BaseTest
     @Test
     public void testLongEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
-        QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_LONG_VALUE);
+        QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }
@@ -151,7 +151,7 @@ public class MutableEqualsNullTest extends BaseTest
     @Test
     public void testDateEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
-        QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_DATE_VALUE);
+        QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }
@@ -159,7 +159,7 @@ public class MutableEqualsNullTest extends BaseTest
     @Test
     public void testDoubleEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
-        QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_DOUBLE_VALUE);
+        QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }
@@ -167,7 +167,7 @@ public class MutableEqualsNullTest extends BaseTest
     @Test
     public void testBooleanEqualsNull() throws OnyxException, InstantiationException, IllegalAccessException
     {
-        QueryCriteria criteriaList = new QueryCriteria("booleanValue",QueryCriteriaOperator.EQUAL, QueryCriteria.NULL_BOOLEAN_VALUE);
+        QueryCriteria criteriaList = new QueryCriteria("booleanValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
         Assert.assertEquals(2, results.size());
     }

@@ -6,8 +6,6 @@ package com.onyx.extension
  * @since 2.0.0
  */
 @Suppress("UNCHECKED_CAST")
-fun catchAll(body: () -> Unit) {
-    try {
-        body.invoke()
-    } catch (ignore:Exception){}
-}
+fun catchAll(body: () -> Unit) = try {
+    body.invoke()
+} catch (ignore:Exception){}

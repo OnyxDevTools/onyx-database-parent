@@ -18,7 +18,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.*;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
@@ -77,19 +77,19 @@ public class PartitionQueryController extends PartitionContext {
             scanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(criteria, query.getEntityType(), temporaryDataFile, query, persistenceManager);
         }
         // Scan for records
-        Map critieriaResults;
+        Map criteriaResults;
 
         // If there are existing references, use those to whiddle it down.  Otherwise
         // start from a clean slate
         if (filteredReferences == null) {
-            critieriaResults = scanner.scan();
+            criteriaResults = scanner.scan();
         } else {
             if(criteria.isOr() || criteria.isNot())
             {
-                critieriaResults = scanner.scan();
+                criteriaResults = scanner.scan();
             }
             else {
-                critieriaResults = scanner.scan(filteredReferences);
+                criteriaResults = scanner.scan(filteredReferences);
             }
         }
 
@@ -97,15 +97,16 @@ public class PartitionQueryController extends PartitionContext {
         // The full table scanner compares all critieria
         if (scanner instanceof FullTableScanner
                 || scanner instanceof PartitionFullTableScanner)
-            return critieriaResults;
+            return criteriaResults;
 
         // Go through and ensure all the sub criteria is met
-        for (QueryCriteria subCriteria : criteria.getSubCriteria()) {
-            Map subCritieriaResults = getReferencesForCritieria(query, subCriteria, critieriaResults, false);
-            aggrigateFilteredReferences(subCriteria, critieriaResults, subCritieriaResults);
+        for (Object subCriteriaObject : criteria.getSubCriteria()) {
+            QueryCriteria<?> subCriteria = (QueryCriteria)subCriteriaObject;
+            Map subCritieriaResults = getReferencesForCritieria(query, subCriteria, criteriaResults, false);
+            aggrigateFilteredReferences(subCriteria, criteriaResults, subCritieriaResults);
         }
 
-        return critieriaResults;
+        return criteriaResults;
     }
 
     /**

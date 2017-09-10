@@ -9,7 +9,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import com.onyx.transaction.SaveTransaction;
 import embedded.base.BaseTest;
 import entities.AllAttributeEntity;

@@ -5,7 +5,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import entities.partition.FullTablePartitionEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
@@ -266,8 +266,8 @@ public class FullTableScanPartitionTest extends BasePartitionTest
 
         save(FullTablePartitionEntity2);
 
-        Query query = new Query(FullTablePartitionEntity.class, new QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5l));
-        query.setUpdates(Arrays.asList(new AttributeUpdate("partitionId", 5l), new AttributeUpdate<Long>("indexVal", 6l)));
+        Query query = new Query(FullTablePartitionEntity.class, new QueryCriteria<>("indexVal", QueryCriteriaOperator.EQUAL, 5l));
+        query.setUpdates(Arrays.asList(new AttributeUpdate("partitionId", 5l), new AttributeUpdate("indexVal", 6l)));
 
         int results = manager.executeUpdate(query);
         Assert.assertTrue(results == 2);

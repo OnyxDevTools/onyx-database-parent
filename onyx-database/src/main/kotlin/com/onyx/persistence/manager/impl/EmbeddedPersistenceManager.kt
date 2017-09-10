@@ -1,6 +1,9 @@
 package com.onyx.persistence.manager.impl
 
-import com.onyx.exception.*
+import com.onyx.exception.NoResultsException
+import com.onyx.exception.OnyxException
+import com.onyx.exception.RelationshipNotFoundException
+import com.onyx.exception.StreamException
 import com.onyx.fetch.PartitionQueryController
 import com.onyx.fetch.PartitionReference
 import com.onyx.helpers.*
@@ -16,7 +19,6 @@ import com.onyx.relationship.RelationshipReference
 import com.onyx.stream.QueryMapStream
 import com.onyx.stream.QueryStream
 import com.onyx.util.ReflectionUtil
-
 import java.util.*
 
 /**
@@ -172,7 +174,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         ValidationHelper.validateQuery(descriptor, query, context)
         val queryController = PartitionQueryController(descriptor, this, context)
 
-        try {
+        return try {
             val results = queryController.getReferencesForQuery(query)
 
             query.resultsCount = results.size
@@ -181,7 +183,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                 context.transactionController.writeDeleteQuery(query)
             }
 
-            return queryController.deleteRecordsWithReferences(results, query)
+            queryController.deleteRecordsWithReferences(results, query)
         } finally {
             queryController.cleanup()
         }
@@ -211,7 +213,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         val queryController = PartitionQueryController(descriptor, this, context)
 
-        try {
+        return try {
             val results = queryController.getReferencesForQuery(query)
 
             query.resultsCount = results.size
@@ -221,7 +223,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                 context.transactionController.writeQueryUpdate(query)
             }
 
-            return queryController.performUpdatsForQuery(query, results)
+            queryController.performUpdatsForQuery(query, results)
         } finally {
             queryController.cleanup()
         }
@@ -646,7 +648,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     }
 
     /**
-     * Retrieve the quantity of entities that match the query criterium.
+     * Retrieve the quantity of entities that match the query criteria.
      *
      *
      * usage:
@@ -664,7 +666,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
-     * @return The number of entities that meet the query criterium
+     * @return The number of entities that meet the query criteria
      * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
@@ -683,8 +685,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         val queryController = PartitionQueryController(descriptor, this, context)
 
-        try {
-            return queryController.getCountForQuery(query)
+        return try {
+            queryController.getCountForQuery(query)
         } finally {
             queryController.cleanup()
         }
@@ -720,9 +722,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      */
     @Throws(OnyxException::class)
     override fun stream(query: Query, queryStreamClass: Class<*>) {
-        val streamer: QueryStream<*>
-        try {
-            streamer = queryStreamClass.newInstance() as QueryStream<*>
+        val streamer = try {
+            queryStreamClass.newInstance() as QueryStream<*>
         } catch (e: InstantiationException) {
             throw StreamException(StreamException.CANNOT_INSTANTIATE_STREAM)
         } catch (e: IllegalAccessException) {
@@ -734,8 +735,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.
-     * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
-     * This could cause performance degredation if removing the registration is neglected.
+     * If you do not un-register queries, they will not expire nor will they be de-registered automatically.
+     * This could cause performance degradation if removing the registration is neglected.
      *
      * @param query Query with a listener attached
      *

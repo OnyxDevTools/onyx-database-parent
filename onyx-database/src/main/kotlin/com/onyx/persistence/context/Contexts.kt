@@ -20,10 +20,8 @@ object Contexts {
      * @since 2.0.0
      */
     @JvmStatic
-    fun put(context:SchemaContext){
-        synchronized(contexts) {
-            contexts[context.contextId] = context
-        }
+    fun put(context:SchemaContext) = synchronized(contexts) {
+        contexts[context.contextId] = context
     }
 
     /**

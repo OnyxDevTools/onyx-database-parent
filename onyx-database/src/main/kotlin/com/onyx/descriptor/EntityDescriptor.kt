@@ -1,9 +1,8 @@
 package com.onyx.descriptor
 
-import com.onyx.exception.*
+import com.onyx.exception.OnyxException
 import com.onyx.persistence.annotations.*
 import com.onyx.validators.EntityValidation
-
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -39,7 +38,7 @@ constructor(
 ) : Serializable {
 
     /**
-     * All fields from entityClass and its decendents
+     * All fields from entityClass and its descendants
      */
     private val fields: List<Field> by lazy {
         val fields = ArrayList<Field>()
@@ -54,7 +53,7 @@ constructor(
     }
 
     /**
-     * All methods from entityClass and its decendents
+     * All methods from entityClass and its descendants
      */
     private val methods: Collection<Method> by lazy {
         val methodMap:MutableMap<String, Method> = HashMap()
@@ -92,63 +91,60 @@ constructor(
     /**
      * Find and define identifier
      */
-    private fun assignIdentifier() {
-        // Find the first identifier annotation
-        fields.find {
-            it.getAnnotation(Identifier::class.java) != null
-        }.let {
-            // Build relationship descriptor
-            if(it != null) {
-                val annotation = it.getAnnotation(Identifier::class.java)
-                identifier = IdentifierDescriptor()
-                identifier!!.name = it.name
-                identifier!!.generator = annotation.generator
-                identifier!!.type = it.type
-                identifier!!.loadFactor = annotation.loadFactor.toByte()
-                identifier!!.entityDescriptor = this
-                identifier!!.setReflectionField(it)
+    private fun assignIdentifier() = // Find the first identifier annotation
+            fields.find {
+                it.getAnnotation(Identifier::class.java) != null
+            }.let {
+                // Build relationship descriptor
+                if(it != null) {
+                    val annotation = it.getAnnotation(Identifier::class.java)
+                    identifier = IdentifierDescriptor()
+                    identifier!!.name = it.name
+                    identifier!!.generator = annotation.generator
+                    identifier!!.type = it.type
+                    identifier!!.loadFactor = annotation.loadFactor.toByte()
+                    identifier!!.entityDescriptor = this
+                    identifier!!.setReflectionField(it)
+                }
             }
-        }
-    }
 
     /**
      * Assign attributes for all entities containing @Attribute & @Identifier annotation
      */
-    private fun assignAttributes() {
-        fields.filter {
-                    it.getAnnotation(Attribute::class.java) != null || it.getAnnotation(Identifier::class.java) != null || it.getAnnotation(Index::class.java) != null || it.getAnnotation(Partition::class.java) != null
-                }
-                .forEach {
-                    // Build Attribute descriptor
-                    val annotation = it.getAnnotation(Attribute::class.java)
-                    val attribute = AttributeDescriptor()
-                    attribute.name = it.name
-                    attribute.type = it.type
-                    attribute.isNullable = annotation?.nullable ?: true
-                    attribute.size = annotation?.size ?: -1
-                    attribute.isEnum = attribute.type.isEnum
+    private fun assignAttributes() =
+            fields.filter {
+                it.getAnnotation(Attribute::class.java) != null || it.getAnnotation(Identifier::class.java) != null || it.getAnnotation(Index::class.java) != null || it.getAnnotation(Partition::class.java) != null
+            }
+            .forEach {
+                // Build Attribute descriptor
+                val annotation = it.getAnnotation(Attribute::class.java)
+                val attribute = AttributeDescriptor()
+                attribute.name = it.name
+                attribute.type = it.type
+                attribute.isNullable = annotation?.nullable != false
+                attribute.size = annotation?.size ?: -1
+                attribute.isEnum = attribute.type.isEnum
 
-                    if (attribute.isEnum) {
-                        var enumValues = ""
-                        attribute.type.enumConstants
-                                .asSequence()
-                                .map { it as Enum<*> }
-                                .forEach { enumValues = enumValues + it.toString() + "," }
-                        enumValues = enumValues.substring(0, enumValues.length - 1)
-                        enumValues += ";"
-                        attribute.enumValues = enumValues
-                    }
-
-                    it.isAccessible = true
-                    attribute.setReflectionField(it)
-                    attributes.put(it.name, attribute)
+                if (attribute.isEnum) {
+                    var enumValues = ""
+                    attribute.type.enumConstants
+                            .asSequence()
+                            .map { it as Enum<*> }
+                            .forEach { enumValues = enumValues + it.toString() + "," }
+                    enumValues = enumValues.substring(0, enumValues.length - 1)
+                    enumValues += ";"
+                    attribute.enumValues = enumValues
                 }
-    }
+
+                it.isAccessible = true
+                attribute.setReflectionField(it)
+                attributes.put(it.name, attribute)
+            }
 
     /**
      * Find and define relationships for all variables containing the Relationship
      */
-    private fun assignRelationships() {
+    private fun assignRelationships() =
         fields.filter {
             it.getAnnotation(Relationship::class.java) != null
         }.forEach {
@@ -162,12 +158,12 @@ constructor(
             relationship.setReflectionField(it)
             relationships.put(it.name, relationship)
         }
-    }
+
 
     /**
      * Assign Indexes from annotated fields
      */
-    private fun assignIndexes() {
+    private fun assignIndexes() =
         fields.filter {
             it.getAnnotation(Index::class.java) != null
         }.forEach {
@@ -183,12 +179,12 @@ constructor(
 
             indexes.put(it.name, index)
         }
-    }
+
 
     /**
      * Get Partition Properties from annotated class
      */
-    private fun assignPartition() {
+    private fun assignPartition() =
         fields.filter {
             it.getAnnotation(Partition::class.java) != null
         }.forEach {
@@ -199,7 +195,7 @@ constructor(
                 this.partition!!.setReflectionField(it)
             }
         }
-    }
+
 
     /**
      * Get entity callbacks from the annotations on the entity.

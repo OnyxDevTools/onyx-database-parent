@@ -11,7 +11,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 
@@ -113,7 +113,7 @@ public class ValidationHelper {
         PartitionHelper.setPartitionIdForQuery(query, context); // Helper for setting the partition mode
 
         query.getAllCriteria();
-        query.sortCritieria(descriptor);
+        query.sortCriteria(descriptor);
 
         if (query.getUpdates() == null) {
             return true;

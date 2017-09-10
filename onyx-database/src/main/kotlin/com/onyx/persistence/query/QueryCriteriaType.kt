@@ -1,19 +1,14 @@
-package com.onyx.persistence.query;
-
+package com.onyx.persistence.query
 
 /**
  * Type of attribute to compare while filtering record
- *
  *
  * @author Tim Osborn
  * @since 1.0.0
  *
  * @see com.onyx.persistence.query.QueryCriteria
- *
  */
-public enum QueryCriteriaType
-{
-
+enum class QueryCriteriaType {
     STRING,
     LONG,
     DOUBLE,
@@ -35,14 +30,5 @@ public enum QueryCriteriaType
     LIST_LONG,
     LIST_INTEGER,
     LIST_DOUBLE,
-    LIST_DATE;
-
-    /**
-     * Constructor
-     */
-    @SuppressWarnings("unused")
-    QueryCriteriaType()
-    {
-
-    }
+    LIST_DATE
 }

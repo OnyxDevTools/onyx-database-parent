@@ -5,7 +5,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import entities.partition.FullTablePartitionEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;

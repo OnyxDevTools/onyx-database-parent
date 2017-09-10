@@ -153,7 +153,7 @@ open class RemotePersistenceManager : PersistenceManager {
         }
 
         val result = proxy.executeQueryForResult(query)
-        query.resultsCount = result.query.resultsCount
+        query.resultsCount = result.query!!.resultsCount
 
         return result.results as List<E>
     }
@@ -173,7 +173,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Suppress("UNCHECKED_CAST")
     override fun <E : IManagedEntity> executeLazyQuery(query: Query): List<E> {
         val result = proxy.executeLazyQueryForResult(query)
-        query.resultsCount = result.query.resultsCount
+        query.resultsCount = result.query!!.resultsCount
 
         return result.results as List<E>
     }
@@ -194,7 +194,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Throws(OnyxException::class)
     override fun executeUpdate(query: Query): Int {
         val result = proxy.executeUpdateForResult(query)
-        query.resultsCount = result.query.resultsCount
+        query.resultsCount = result.query!!.resultsCount
         return result.results as Int
     }
 
@@ -212,7 +212,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Throws(OnyxException::class)
     override fun executeDelete(query: Query): Int {
         val result = proxy.executeDeleteForResult(query)
-        query.resultsCount = result.query.resultsCount
+        query.resultsCount = result.query!!.resultsCount
         return result.results as Int
     }
 
@@ -315,7 +315,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Throws(OnyxException::class)
     override fun <E : IManagedEntity> list(clazz: Class<*>): List<E> {
         val descriptor = context.getBaseDescriptorForEntity(clazz)
-        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
+        val criteria = QueryCriteria<Nothing>(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
 
         return proxy.list(clazz, criteria)
     }

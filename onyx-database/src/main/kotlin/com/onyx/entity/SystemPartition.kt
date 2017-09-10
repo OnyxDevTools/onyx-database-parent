@@ -2,12 +2,14 @@ package com.onyx.entity
 
 import com.onyx.descriptor.PartitionDescriptor
 import com.onyx.persistence.ManagedEntity
-import com.onyx.persistence.annotations.*
+import com.onyx.persistence.annotations.Attribute
+import com.onyx.persistence.annotations.Entity
+import com.onyx.persistence.annotations.Identifier
+import com.onyx.persistence.annotations.Relationship
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.FetchPolicy
 import com.onyx.persistence.annotations.values.RelationshipType
-
-import java.util.ArrayList
+import java.util.*
 
 /**
  * Created by timothy.osborn on 3/2/15.

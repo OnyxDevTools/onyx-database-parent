@@ -20,7 +20,7 @@ import java.nio.channels.FileChannel
 /**
  * Created by timothy.osborn on 3/25/15.
  *
- * The default implementation of a store that includes the i/o of writting to a basic file channel.
+ * The default implementation of a store that includes the i/o of writing to a basic file channel.
  * This is recommended for larger data sets.
  *
  * This class also encapsulates the serialization of objects that are read and written to the store.
@@ -113,22 +113,19 @@ open class FileChannelStore() : Store {
      *
      * @return Whether the file was closed successfully.
      */
-    override fun close(): Boolean {
-        return try {
-            if (!deleteOnClose) {
-                this.channel!!.force(true)
-            }
-            this.channel!!.close()
-            async {
-                if (deleteOnClose) {
-                    delete()
-                }
-            }
-            !this.channel!!.isOpen
-        } catch (e: IOException) {
-            false
+    override fun close(): Boolean = try {
+        if (!deleteOnClose) {
+            this.channel!!.force(true)
         }
-
+        this.channel!!.close()
+        async {
+            if (deleteOnClose) {
+                delete()
+            }
+        }
+        !this.channel!!.isOpen
+    } catch (e: IOException) {
+        false
     }
 
     /**

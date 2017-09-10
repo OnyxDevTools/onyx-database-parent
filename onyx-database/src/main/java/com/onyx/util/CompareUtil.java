@@ -11,7 +11,6 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -171,7 +170,7 @@ public class CompareUtil
             return ((Comparable) object).compareTo(object2) == 0;
 
         // Null checkers
-        else if(object instanceof String && object == QueryCriteria.NULL_STRING_VALUE)
+        /*else if(object instanceof String && object == QueryCriteria.NULL_STRING_VALUE)
             return object2 == null;
         else if(object instanceof Double && (Double)object == QueryCriteria.NULL_DOUBLE_VALUE)
             return object2 == null;
@@ -184,7 +183,7 @@ public class CompareUtil
         else if(object instanceof Date && object == QueryCriteria.NULL_DATE_VALUE)
             return object2 == null;
         else if(object2 == null && object instanceof Date && ((Date)object).getTime() == QueryCriteria.NULL_DATE_VALUE.getTime())
-            return true;
+            return true;*/
         else if(object == null && object2 != null)
             return false;
         else if(object != null && object2 == null)
@@ -279,11 +278,11 @@ public class CompareUtil
                 && object instanceof String
                 && (object2 instanceof String || object2 == null))
         {
-            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
+/*            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
                 return (operator == QueryCriteriaOperator.CONTAINS);
             }
-            else if(object2 == null)
+            else*/ if(object2 == null)
             {
                 return !(operator == QueryCriteriaOperator.CONTAINS);
             }
@@ -296,11 +295,11 @@ public class CompareUtil
         else if ((operator == QueryCriteriaOperator.LIKE || operator == QueryCriteriaOperator.NOT_LIKE)
                 && object instanceof String && (object2 instanceof String || object2 == null))
         {
-            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
+            /*if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
                 return (operator == QueryCriteriaOperator.LIKE);
             }
-            else if(object2 == null)
+            else*/ if(object2 == null)
             {
                 return !(operator == QueryCriteriaOperator.LIKE);
             }
@@ -313,11 +312,11 @@ public class CompareUtil
                 && (object instanceof String || object == null)
                 && (object2 instanceof String || object2 == null))
         {
-            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
+/*            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
                 return (operator == QueryCriteriaOperator.STARTS_WITH);
             }
-            else if(object2 == null)
+            else */if(object2 == null)
             {
                 return !(operator == QueryCriteriaOperator.STARTS_WITH);
             }
@@ -337,11 +336,11 @@ public class CompareUtil
 
             for(Object value : values)
             {
-                if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
+                /*if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
                 {
                     return (operator == QueryCriteriaOperator.STARTS_WITH);
                 }
-                else if(object2 == null)
+                else */if(object2 == null)
                 {
                     return !(operator == QueryCriteriaOperator.STARTS_WITH);
                 }
@@ -363,11 +362,11 @@ public class CompareUtil
         else if ((operator == QueryCriteriaOperator.MATCHES || operator == QueryCriteriaOperator.NOT_MATCHES)
                 && object instanceof String && (object2 instanceof String || object2 == null))
         {
-            if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
+            /*if(object2 == null && object == QueryCriteria.NULL_STRING_VALUE)
             {
                 return (operator == QueryCriteriaOperator.MATCHES);
             }
-            else if(object2 == null)
+            else */if(object2 == null)
             {
                 return !(operator == QueryCriteriaOperator.MATCHES);
             }
@@ -536,7 +535,7 @@ public class CompareUtil
      * critieria of the query.  It was implemented so that we no longer have logic in the query controller
      * to sift through scans.  We can now only perform a full table scan once.
      *
-     * @param allCritieria Contribed list of criteria to
+     * @param allCriteria Contribed list of criteria to
      * @param rootCriteria Critieria to verify whether the entity meets
      * @param entity Entity to check for criteria
      * @param entityReference The entities reference
@@ -547,12 +546,12 @@ public class CompareUtil
      *
      * @since 1.3.0 Simplified query criteria management
      */
-    public static boolean meetsCriteria(Set<QueryCriteria> allCritieria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws OnyxException {
+    public static boolean meetsCriteria(Set<QueryCriteria<?>> allCriteria, QueryCriteria rootCriteria, IManagedEntity entity, Object entityReference, SchemaContext context, EntityDescriptor descriptor) throws OnyxException {
 
         boolean subCreriaMet;
 
         // Iterate through
-        for(QueryCriteria criteria1 : allCritieria)
+        for(QueryCriteria criteria1 : allCriteria)
         {
             if(criteria1.getAttribute().contains("."))
             {
@@ -568,10 +567,10 @@ public class CompareUtil
                 subCreriaMet = CompareUtil.compare(criteria1.getValue(), ReflectionUtil.getAny(entity, offsetField), criteria1.getOperator());
             }
 
-            criteria1.meetsCritieria = subCreriaMet;
+            criteria1.setMeetsCriteria(subCreriaMet);
         }
 
-        return calculateCritieriaMet(rootCriteria);
+        return calculateCriteriaMet(rootCriteria);
     }
 
     /**
@@ -581,28 +580,29 @@ public class CompareUtil
      * it does NOT take into account the not modifier in the pre-requisite.
      *
      *
-     * @param criteria Root critiera to check.  This maintains the order of operations
-     * @return Whether all the crierita are met taking into account the order of operations
+     * @param criteria Root criteria to check.  This maintains the order of operations
+     * @return Whether all the criteria are met taking into account the order of operations
      *         and the not() modifier
      *
      * @since 1.3.0 Added to enhance insertion based criteria checking
      */
-    private static boolean calculateCritieriaMet(QueryCriteria criteria)
+    private static boolean calculateCriteriaMet(QueryCriteria criteria)
     {
-        boolean meetsCritieria = criteria.meetsCritieria;
+        boolean meetsCriteria = criteria.getMeetsCriteria();
 
         if(criteria.getSubCriteria().size() > 0) {
-            for (QueryCriteria subCritieria : criteria.getSubCriteria()) {
-                if (subCritieria.isOr()) {
-                    meetsCritieria = (calculateCritieriaMet(subCritieria) || meetsCritieria);
+            for (Object object : criteria.getSubCriteria()) {
+                QueryCriteria subCriteria = (QueryCriteria)object; // Rediculous I have to do this but the Java compiler has a shit fit if I iterate through typed values
+                if (subCriteria.isOr()) {
+                    meetsCriteria = (calculateCriteriaMet(subCriteria) || meetsCriteria);
                 } else {
-                    meetsCritieria = (calculateCritieriaMet(subCritieria) && meetsCritieria);
+                    meetsCriteria = (calculateCriteriaMet(subCriteria) && meetsCriteria);
                 }
             }
         }
 
         if(criteria.isNot())
-            meetsCritieria = !meetsCritieria;
-        return meetsCritieria;
+            meetsCriteria = !meetsCriteria;
+        return meetsCriteria;
     }
 }

@@ -50,7 +50,7 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
      * @since 1.3.0 Changed to use a pool of map builders.
      * The intent of this is to increase performance.  There was a performance
      * issue with map builders being destroyed invoking the DirectBuffer cleanup.
-     * That was not performant.
+     * That did not perform well
      */
     override fun createTemporaryMapBuilder(): MapBuilder = temporaryDiskMapQueue.take()
 

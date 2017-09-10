@@ -2,7 +2,9 @@ package com.onyx.entity
 
 import com.onyx.descriptor.AttributeDescriptor
 import com.onyx.persistence.ManagedEntity
-import com.onyx.persistence.annotations.*
+import com.onyx.persistence.annotations.Attribute
+import com.onyx.persistence.annotations.Entity
+import com.onyx.persistence.annotations.Identifier
 import com.onyx.util.OffsetField
 
 /**

@@ -13,7 +13,7 @@ package com.onyx.persistence.annotations.values
  * @since 1.0.0
  *
  * // One To One Relationship
- * @elationship(name = "children" fetchPolicy = RelationshipType.MANY_TO_MANY)
+ * @Relationship(name = "children" fetchPolicy = RelationshipType.MANY_TO_MANY)
  * protected <Children> myChildren
  *
  * @see com.onyx.persistence.annotations.Relationship

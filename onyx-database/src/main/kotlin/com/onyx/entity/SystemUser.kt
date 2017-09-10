@@ -4,12 +4,11 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
-
-import javax.security.auth.Subject
 import java.security.Principal
+import javax.security.auth.Subject
 
 /**
- * Created by cosbor11 on 3/2/2015.
+ * Created by cosborn on 3/2/2015.
  *
  * User for the database.
  */

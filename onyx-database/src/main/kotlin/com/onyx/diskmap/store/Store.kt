@@ -1,6 +1,5 @@
 package com.onyx.diskmap.store
 
-import com.onyx.buffer.BufferStream
 import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.diskmap.serializer.Serializers
@@ -113,7 +112,7 @@ interface Store {
     /**
      * Initialize
      * @param mapById Serializers by id
-     * @param mapByName Serializers by namre
+     * @param mapByName Serializers by name
      */
     fun assignSerializers(mapById: Map<Short, String>, mapByName: Map<String, Short>)
 

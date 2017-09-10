@@ -1,6 +1,9 @@
 package com.onyx.extension
 
-import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.experimental.CommonPool
+import kotlinx.coroutines.experimental.CoroutineScope
+import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.Job
 
 typealias Block = Any
 

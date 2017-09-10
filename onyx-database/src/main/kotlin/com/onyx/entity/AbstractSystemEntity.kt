@@ -4,8 +4,7 @@ import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.PreInsert
 import com.onyx.persistence.annotations.PreUpdate
-
-import java.util.Date
+import java.util.*
 
 /**
  * Created by timothy.osborn on 3/15/15.

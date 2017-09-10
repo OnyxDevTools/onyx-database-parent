@@ -1,6 +1,8 @@
 package com.onyx.persistence.context.impl
 
-import com.onyx.descriptor.*
+import com.onyx.descriptor.EntityDescriptor
+import com.onyx.descriptor.IndexDescriptor
+import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.diskmap.DefaultMapBuilder
 import com.onyx.diskmap.MapBuilder
 import com.onyx.diskmap.store.StoreType
@@ -8,7 +10,9 @@ import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
-import com.onyx.extension.*
+import com.onyx.extension.async
+import com.onyx.extension.catchAll
+import com.onyx.extension.runJob
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
 import com.onyx.index.IndexController
@@ -29,9 +33,9 @@ import com.onyx.record.impl.SequenceRecordControllerImpl
 import com.onyx.relationship.RelationshipController
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl
-import com.onyx.transaction.impl.DefaultTransactionStore
 import com.onyx.transaction.TransactionController
 import com.onyx.transaction.TransactionStore
+import com.onyx.transaction.impl.DefaultTransactionStore
 import com.onyx.transaction.impl.TransactionControllerImpl
 import com.onyx.util.EntityClassLoader
 import kotlinx.coroutines.experimental.Job
@@ -40,7 +44,8 @@ import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -352,26 +357,24 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntity Parent System Entity
      * @param indexName Index to rebuild
      */
-    private fun rebuildIndex(systemEntity: SystemEntity, indexName: String) {
-        catchAll {
-            val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
-            val indexDescriptor = entityDescriptor!!.indexes[indexName]
-            if (systemEntity.partition != null) {
-                systemEntity.partition!!.entries.forEach {
-                    val partitionEntityDescriptor = getDescriptorForEntity(entityDescriptor.entityClass, it.value)
+    private fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
+        val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
+        val indexDescriptor = entityDescriptor!!.indexes[indexName]
+        if (systemEntity.partition != null) {
+            systemEntity.partition!!.entries.forEach {
+                val partitionEntityDescriptor = getDescriptorForEntity(entityDescriptor.entityClass, it.value)
 
-                    async {
-                        catchAll {
-                            getIndexController(partitionEntityDescriptor.indexes[indexDescriptor!!.name]!!).rebuild()
-                        }
-                    }
-                }
-
-            } else {
                 async {
                     catchAll {
-                        getIndexController(indexDescriptor!!).rebuild()
+                        getIndexController(partitionEntityDescriptor.indexes[indexDescriptor!!.name]!!).rebuild()
                     }
+                }
+            }
+
+        } else {
+            async {
+                catchAll {
+                    getIndexController(indexDescriptor!!).rebuild()
                 }
             }
         }
@@ -687,7 +690,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.3.0 Changed to use a pool of map builders.
      * The intent of this is to increase performance.  There was a performance
      * issue with map builders being destroyed invoking the DirectBuffer cleanup.
-     * That was not performant
+     * That did not perform well
      */
     override fun createTemporaryMapBuilder(): MapBuilder = temporaryDiskMapQueue.take()
 

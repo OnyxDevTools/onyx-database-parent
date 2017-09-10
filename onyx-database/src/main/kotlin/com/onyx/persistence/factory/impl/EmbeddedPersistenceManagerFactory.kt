@@ -66,9 +66,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      */
     init {
         Runtime.getRuntime().addShutdownHook(object : Thread() {
-            override fun run() {
-                close()
-            }
+            override fun run() = close()
         })
     }
 
@@ -125,38 +123,36 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      * @throws InitializationException Failure to start database due to either invalid credentials or a lock on the database already exists.
      */
     @Throws(InitializationException::class)
-    override fun initialize() {
-        try {
+    override fun initialize() = try {
 
-            // Ensure the database file exists
-            val databaseDirectory = File(this.databaseLocation)
+        // Ensure the database file exists
+        val databaseDirectory = File(this.databaseLocation)
 
-            if (!databaseDirectory.exists()) {
-                databaseDirectory.mkdirs()
-                createCredentialsFile()
-            }
-
-            acquireLock()
-
-            if (!databaseDirectory.canWrite()) {
-                releaseLock()
-                throw InitializationException(InitializationException.DATABASE_FILE_PERMISSION_ERROR)
-            }
-
-            if (!checkCredentials()) {
-                releaseLock()
-                throw InitializationException(InitializationException.INVALID_CREDENTIALS)
-            }
-
-            this.persistenceManager
-            schemaContext.start()
-        } catch (e: OverlappingFileLockException) {
-            releaseLock()
-            throw InitializationException(InitializationException.DATABASE_LOCKED)
-        } catch (e: IOException) {
-            releaseLock()
-            throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
+        if (!databaseDirectory.exists()) {
+            databaseDirectory.mkdirs()
+            createCredentialsFile()
         }
+
+        acquireLock()
+
+        if (!databaseDirectory.canWrite()) {
+            releaseLock()
+            throw InitializationException(InitializationException.DATABASE_FILE_PERMISSION_ERROR)
+        }
+
+        if (!checkCredentials()) {
+            releaseLock()
+            throw InitializationException(InitializationException.INVALID_CREDENTIALS)
+        }
+
+        this.persistenceManager
+        schemaContext.start()
+    } catch (e: OverlappingFileLockException) {
+        releaseLock()
+        throw InitializationException(InitializationException.DATABASE_LOCKED)
+    } catch (e: IOException) {
+        releaseLock()
+        throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
     }
 
     /**
@@ -218,11 +214,11 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
         if (!databaseFile.exists()) {
             return true
         }
-        try {
+        return try {
             // Read the credentials and compare
             val credFile = File(databaseLocation + File.separator + CREDENTIALS_FILE)
             val credentials = String(readContentIntoByteArray(credFile), StandardCharsets.UTF_16)
-            return credentials == encryptCredentials()
+            credentials == encryptCredentials()
         } catch (e: IOException) {
             throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
         }
@@ -235,12 +231,10 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      * @return Encrypted Credentials
      */
     @Throws(InitializationException::class)
-    private fun encryptCredentials(): String {
-        try {
-            return EncryptionUtil.encrypt(user + password)
-        } catch (e: Exception) {
-            throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
-        }
+    private fun encryptCredentials(): String = try {
+        EncryptionUtil.encrypt(user + password)
+    } catch (e: Exception) {
+        throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
     }
 
     /**

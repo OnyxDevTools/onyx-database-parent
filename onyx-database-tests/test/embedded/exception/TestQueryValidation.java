@@ -6,7 +6,7 @@ import com.onyx.exception.*;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import embedded.base.BaseTest;
 import entities.ValidationEntity;
 import org.junit.After;
@@ -39,7 +39,7 @@ public class TestQueryValidation extends BaseTest
     @Test(expected = AttributeNonNullException.class)
     public void testNullValue() throws OnyxException
     {
-        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate<>("requiredString", QueryCriteria.NULL_STRING_VALUE));
+        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate("requiredString", null));
         manager.executeUpdate(updateQuery);
     }
 
@@ -47,14 +47,14 @@ public class TestQueryValidation extends BaseTest
     @Test(expected = AttributeMissingException.class)
     public void testAttributeMissing() throws OnyxException
     {
-        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate<>("booger", QueryCriteria.NULL_STRING_VALUE));
+        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate("booger", null));
         manager.executeUpdate(updateQuery);
     }
 
     @Test(expected = AttributeSizeException.class)
     public void testAttributeSizeException() throws OnyxException
     {
-        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate<>("maxSizeString", "12345678901"));
+        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate("maxSizeString", "12345678901"));
         manager.executeUpdate(updateQuery);
 
     }
@@ -62,21 +62,21 @@ public class TestQueryValidation extends BaseTest
     @Test(expected = AttributeUpdateException.class)
     public void testUpdateIdentifier() throws OnyxException
     {
-        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate<>("id", 5l));
+        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate("id", 5l));
         manager.executeUpdate(updateQuery);
     }
 
     @Test(expected = AttributeTypeMismatchException.class)
     public void testTypeMisMatchException() throws OnyxException
     {
-        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate<>("requiredString", 5l));
+        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate("requiredString", 5l));
         manager.executeUpdate(updateQuery);
     }
     
     @Test(expected = OnyxException.class)
     public void testMissingEntityTypeException() throws OnyxException
     {
-        QueryCriteria criteria = new QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, QueryCriteria.NULL_STRING_VALUE);
+        QueryCriteria criteria = new QueryCriteria("name", QueryCriteriaOperator.NOT_NULL);
         Query query = new Query();
         // query.setEntityType(SystemEntity.class); //should throw error because this line is missing
         query.setCriteria(criteria);

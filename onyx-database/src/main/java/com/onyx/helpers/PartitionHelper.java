@@ -121,7 +121,8 @@ public class PartitionHelper
                 query.setPartition(criteria.getValue());
                 return true;
             } else {
-                for (QueryCriteria andCriteria : criteria.getSubCriteria()) {
+                for (Object andCriteriaObject : criteria.getSubCriteria()) {
+                    QueryCriteria<?> andCriteria = (QueryCriteria)andCriteriaObject;
                     if (setPartitionIdFromCriteria(andCriteria, query, baseDescriptor))
                         return true;
                 }

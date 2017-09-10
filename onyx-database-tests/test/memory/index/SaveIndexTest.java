@@ -6,7 +6,7 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.persistence.update.AttributeUpdate;
+import com.onyx.persistence.query.AttributeUpdate;
 import entities.identifiers.StringIdentifierEntity;
 import entities.index.StringIdentifierEntityIndex;
 import org.junit.After;

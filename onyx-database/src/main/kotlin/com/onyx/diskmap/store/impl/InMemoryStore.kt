@@ -1,10 +1,10 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferStream
-import com.onyx.persistence.context.SchemaContext
 import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.async
+import com.onyx.persistence.context.SchemaContext
 
 /**
  * Created by tosborn on 3/27/15.
@@ -61,7 +61,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
         }
     }
 
-    override fun delete(){}
+    override fun delete() {  }
 
     /**
      * Close the data file

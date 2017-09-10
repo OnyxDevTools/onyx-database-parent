@@ -18,7 +18,7 @@ open class IndexDescriptor(
     override fun hashCode(): Int = (((this.entityDescriptor.entityClass.hashCode()) * 31 + this.loadFactor) * 31 + this.name.hashCode()) * 31 + this.type.hashCode()
 
     override fun equals(other: Any?): Boolean {
-        if (this !== other) {
+        return if (this !== other) {
             if (other is IndexDescriptor) {
                 val var2 = other as IndexDescriptor?
                 if (Intrinsics.areEqual(this.entityDescriptor.partition, var2!!.entityDescriptor.partition) && this.loadFactor == var2.loadFactor && Intrinsics.areEqual(this.name, var2.name) && Intrinsics.areEqual(this.type, var2.type)) {
@@ -26,9 +26,9 @@ open class IndexDescriptor(
                 }
             }
 
-            return false
+            false
         } else {
-            return true
+            true
         }
     }
 }
