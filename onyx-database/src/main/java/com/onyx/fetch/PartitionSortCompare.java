@@ -13,7 +13,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 
 import java.util.*;
 

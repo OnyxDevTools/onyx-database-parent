@@ -1,4 +1,4 @@
-package com.onyx.extension
+package com.onyx.extension.common
 
 /**
  * Method to help reduce boiler plate code for ignoring exceptions

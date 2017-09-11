@@ -10,7 +10,7 @@ import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
 

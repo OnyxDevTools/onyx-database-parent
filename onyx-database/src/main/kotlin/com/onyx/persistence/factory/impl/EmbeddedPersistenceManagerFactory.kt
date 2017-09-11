@@ -1,7 +1,7 @@
 package com.onyx.persistence.factory.impl
 
 import com.onyx.exception.InitializationException
-import com.onyx.extension.catchAll
+import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory

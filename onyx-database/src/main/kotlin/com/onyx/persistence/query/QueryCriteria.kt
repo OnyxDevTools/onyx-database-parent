@@ -52,6 +52,9 @@ class QueryCriteria<T> : ObjectSerializable, Serializable {
     var operator: QueryCriteriaOperator? = null
     var type: QueryCriteriaType? = null
 
+    // ALL of the value objects are public since they are needed for web services.  Most serializers cannot serialize Any? or Object
+    // type so they are strongly typed.  Also they cannot serialize private values.  So, we will have to live with the lint
+    // check.  Also, there is no way to suppress WEAKER_ACCESS in kotlin
     var dateValue: Date? = null
     var longValue: Long? = null
     var integerValue: Int? = null

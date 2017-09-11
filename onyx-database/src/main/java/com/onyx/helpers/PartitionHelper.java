@@ -22,6 +22,7 @@ import java.util.Locale;
  *
  * Helper containing methods useful for identifying partition functioanlity
  */
+@Deprecated
 public class PartitionHelper
 {
 
@@ -33,6 +34,7 @@ public class PartitionHelper
      * @param baseDescriptor Base descriptor for entity
      * @return Whether that field is annotated with partition
      */
+    @Deprecated
     public static boolean isPartitionField(String fieldName, EntityDescriptor baseDescriptor)
     {
         return (baseDescriptor.getPartition() != null && baseDescriptor.getPartition().getName().equals(fieldName));
@@ -44,6 +46,7 @@ public class PartitionHelper
      * @param context Schema context
      * @return Whether that entity has a partition
      */
+    @Deprecated
     static boolean hasPartitionField(IManagedEntity entity, SchemaContext context) throws OnyxException
     {
         final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
@@ -56,6 +59,7 @@ public class PartitionHelper
      * @param context Schema context
      * @return whether that entity type is partitioned
      */
+    @Deprecated
     public static boolean hasPartitionField(Class type, SchemaContext context) throws OnyxException
     {
         final EntityDescriptor baseDescriptor = context.getBaseDescriptorForEntity(type);
@@ -69,6 +73,7 @@ public class PartitionHelper
      * @param context Schema context
      * @return Get the value of the partition identifier
      */
+    @Deprecated
     public static Object getPartitionFieldValue(IManagedEntity entity, SchemaContext context) throws OnyxException
     {
         final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
@@ -91,6 +96,7 @@ public class PartitionHelper
      * @param query Query object
      * @param context Schema context
      */
+    @Deprecated
     public static void setPartitionIdForQuery(Query query, SchemaContext context) throws OnyxException
     {
         if(hasPartitionField(query.getEntityType(), context) && (query.getPartition() == null || query.getPartition().equals("")))
@@ -112,6 +118,7 @@ public class PartitionHelper
      * @param baseDescriptor Entity descriptor
      * @return whether the partition id was set in the query
      */
+    @Deprecated
     private static boolean setPartitionIdFromCriteria(QueryCriteria criteria, Query query, EntityDescriptor baseDescriptor)
     {
         if(baseDescriptor.getPartition() != null || query.getPartition().equals(""))
@@ -143,6 +150,7 @@ public class PartitionHelper
      * @param entity Entity to set partition value
      */
     @SuppressWarnings("unused")
+    @Deprecated
     public static void setPartitionValueForEntity(IManagedEntity entity, Object value, SchemaContext context) throws OnyxException
     {
         try

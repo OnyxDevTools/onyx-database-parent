@@ -22,7 +22,7 @@ import com.onyx.persistence.query.AttributeUpdate;
 import com.onyx.record.AbstractRecordController;
 import com.onyx.record.RecordController;
 import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
 import java.util.*;

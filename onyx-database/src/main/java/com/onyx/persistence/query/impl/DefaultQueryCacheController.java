@@ -12,7 +12,7 @@ import com.onyx.persistence.query.QueryCacheController;
 import com.onyx.query.CachedResults;
 import com.onyx.query.QueryListener;
 import com.onyx.query.QueryListenerEvent;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 import com.onyx.util.map.*;
 
 import java.util.Map;

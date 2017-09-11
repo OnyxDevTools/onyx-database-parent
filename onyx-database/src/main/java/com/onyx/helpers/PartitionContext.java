@@ -20,6 +20,7 @@ import com.onyx.util.map.SynchronizedMap;
  * It is to make it more efficient
  *
  */
+@Deprecated
 public class PartitionContext
 {
 
@@ -49,6 +50,7 @@ public class PartitionContext
      * Cached Data Files for partition ids, return default if there is no partition.  Otherwise insert into cache.
      *
      */
+    @Deprecated
     protected MapBuilder getDataFileWithPartitionId(long partitionId) throws OnyxException
     {
         if(partitionId == 0)
@@ -112,6 +114,7 @@ public class PartitionContext
     private final CompatMap<PartitionKey, EntityDescriptor> cachedDescriptorsPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     @SuppressWarnings("WeakerAccess")
+    @Deprecated
     public EntityDescriptor getDescriptorForEntity(IManagedEntity entity) throws OnyxException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
@@ -145,6 +148,7 @@ public class PartitionContext
 
     private final CompatMap<Long, EntityDescriptor> cachedDescriptorsPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
+    @Deprecated
     protected EntityDescriptor getDescriptorWithPartitionId(long partitionId) throws OnyxException
     {
         if(partitionId != 0)
@@ -188,6 +192,7 @@ public class PartitionContext
 
     private final CompatMap<PartitionKey, RecordController> cachedControllersPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
+    @Deprecated
     protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws OnyxException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
@@ -220,6 +225,7 @@ public class PartitionContext
 
     private final CompatMap<Long, RecordController> cachedControllersPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
+    @Deprecated
     public RecordController getRecordControllerForPartition(long partitionId) throws OnyxException
     {
         if(partitionId != 0)
@@ -252,6 +258,7 @@ public class PartitionContext
 
     private final CompatMap<PartitionKey, MapBuilder> cachedDataFilesPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
+    @Deprecated
     protected MapBuilder getDataFileForEntity(IManagedEntity entity) throws OnyxException
     {
         if (PartitionHelper.hasPartitionField(entity, getContext()))
@@ -286,6 +293,7 @@ public class PartitionContext
 
     private final CompatMap<PartitionKey, Long> cachedPartitionIds = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
+    @Deprecated
     protected long getPartitionId(IManagedEntity entity) throws OnyxException
     {
         if (PartitionHelper.hasPartitionField(entity, getContext()))
@@ -322,6 +330,7 @@ public class PartitionContext
         }
     }
 
+    @Deprecated
     protected SchemaContext getContext()
     {
         return Contexts.get(contextId);

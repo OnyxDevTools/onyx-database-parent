@@ -23,6 +23,7 @@ import java.util.List;
  *
  * Helper methds for a relationship
  */
+@Deprecated
 public class RelationshipHelper
 {
 
@@ -32,6 +33,7 @@ public class RelationshipHelper
      * @param entity Entity to save relationships for
      * @param manager Relationship manager keeping track of what was already done
      */
+    @Deprecated
     public static void saveAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager manager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
@@ -64,6 +66,7 @@ public class RelationshipHelper
      * @param relationshipManager Relationship manager keeping track of what was already done
      * @param context Schema context
      */
+    @Deprecated
     public static void deleteAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
@@ -93,6 +96,7 @@ public class RelationshipHelper
      * @param entity Entity to save relationships for
      * @param relationshipManager Relationship manager keeping track of what was already done
      */
+    @Deprecated
     public static void hydrateAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
@@ -130,6 +134,7 @@ public class RelationshipHelper
      * @since 1.3.0 Used to dynamically pull a relationship regardless of relationship type and partition information
      *              Supports insertion criteria checking.
      */
+    @Deprecated
     public static List<IManagedEntity> getRelationshipForValue(IManagedEntity entity, Object entityReference, String attribute, SchemaContext context) throws OnyxException
     {
         String[] slices = attribute.split("\\.");

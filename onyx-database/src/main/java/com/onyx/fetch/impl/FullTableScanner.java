@@ -12,7 +12,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.record.RecordController;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 import com.onyx.util.map.CompatHashMap;
 
 import java.util.*;

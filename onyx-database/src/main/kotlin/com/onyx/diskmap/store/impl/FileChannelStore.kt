@@ -6,7 +6,7 @@ import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.diskmap.serializer.Serializers
 import com.onyx.diskmap.store.Store
-import com.onyx.extension.async
+import com.onyx.extension.common.async
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 

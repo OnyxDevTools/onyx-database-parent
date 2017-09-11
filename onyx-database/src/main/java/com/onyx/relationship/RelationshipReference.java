@@ -4,7 +4,7 @@ import com.onyx.exception.InvalidDataTypeForOperator;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.serializer.ObjectSerializable;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 
 import java.io.IOException;
 

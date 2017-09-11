@@ -1,4 +1,4 @@
-package com.onyx.extension
+package com.onyx.extension.common
 
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.CoroutineScope

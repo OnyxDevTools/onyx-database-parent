@@ -14,6 +14,7 @@ import com.onyx.record.RecordController;
  *
  * Static helper methods for entity indexes
  */
+@Deprecated
 public class IndexHelper
 {
 
@@ -24,6 +25,7 @@ public class IndexHelper
      * @param descriptor Entity Descriptor
      * @param entity Entity to save indexes for
      */
+    @Deprecated
     public static void saveAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, Object identifier, long oldReferenceId, IManagedEntity entity) throws OnyxException
     {
         if(descriptor.getIndexes().size() > 0)
@@ -48,6 +50,7 @@ public class IndexHelper
      * @param descriptor Entity Descriptor
      * @param referenceId Entity reference
      */
+    @Deprecated
     public static void deleteAllIndexesForEntity(SchemaContext context, EntityDescriptor descriptor, long referenceId) throws OnyxException
     {
         if(descriptor.getIndexes().size() > 0)

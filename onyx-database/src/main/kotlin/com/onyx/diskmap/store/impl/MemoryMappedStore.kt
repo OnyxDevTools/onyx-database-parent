@@ -4,8 +4,8 @@ import com.onyx.buffer.BufferStream
 import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.diskmap.store.Store
-import com.onyx.extension.async
-import com.onyx.extension.catchAll
+import com.onyx.extension.common.async
+import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.util.ReflectionUtil
 

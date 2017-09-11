@@ -132,7 +132,7 @@ public class LessThanEqualTest extends memory.base.BaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.LESS_THAN_EQUAL, "Some test strin2");
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
 
@@ -141,7 +141,7 @@ public class LessThanEqualTest extends memory.base.BaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.LESS_THAN_EQUAL, 323l);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(6, results.size());
     }
 
     @Test
@@ -157,7 +157,7 @@ public class LessThanEqualTest extends memory.base.BaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.LESS_THAN_EQUAL, 3);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
     @Test
@@ -174,7 +174,7 @@ public class LessThanEqualTest extends memory.base.BaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.LESS_THAN_EQUAL, 1.11);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
     @Test
@@ -190,7 +190,7 @@ public class LessThanEqualTest extends memory.base.BaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.LESS_THAN_EQUAL, new Date(1001));
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
 }

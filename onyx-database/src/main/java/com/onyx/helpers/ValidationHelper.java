@@ -23,6 +23,7 @@ import java.util.List;
  * <p>
  * Validate an entity
  */
+@Deprecated
 public class ValidationHelper {
 
     /**
@@ -33,6 +34,7 @@ public class ValidationHelper {
      * @return Whether the entity passes validation
      */
     @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
+    @Deprecated
     public static boolean validateEntity(EntityDescriptor descriptor, IManagedEntity entity) throws OnyxException {
 
         final List<Throwable> exceptionsThrown = new ArrayList<>();
@@ -104,6 +106,7 @@ public class ValidationHelper {
      * @return Whether the query is valid
      */
     @SuppressWarnings({"UnusedReturnValue", "SameReturnValue"})
+    @Deprecated
     public static boolean validateQuery(EntityDescriptor descriptor, Query query, SchemaContext context) throws OnyxException {
         // If there are no critieria, add a dummy critieria to the list
         if (query.getCriteria() == null) {
@@ -179,6 +182,7 @@ public class ValidationHelper {
         return true;
     }
 
+    @Deprecated
     public static boolean isDefaultQuery(EntityDescriptor descriptor, Query query) {
         return query.getCriteria() == null || query.getCriteria().getSubCriteria().size() <= 0 && (query.getCriteria().getOperator() == QueryCriteriaOperator.NOT_NULL && query.getCriteria().getAttribute().equals(descriptor.getIdentifier().getName()));
     }

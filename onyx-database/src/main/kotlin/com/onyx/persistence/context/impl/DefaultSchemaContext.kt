@@ -10,9 +10,9 @@ import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
-import com.onyx.extension.async
-import com.onyx.extension.catchAll
-import com.onyx.extension.runJob
+import com.onyx.extension.common.async
+import com.onyx.extension.common.catchAll
+import com.onyx.extension.common.runJob
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
 import com.onyx.index.IndexController
@@ -236,6 +236,7 @@ open class DefaultSchemaContext : SchemaContext {
 
         classes.forEach {
             val descriptor = EntityDescriptor(it.java)
+            descriptor.context = this
             val systemEntity = SystemEntity(descriptor)
             systemEntity.primaryKey = i
 
@@ -491,6 +492,7 @@ open class DefaultSchemaContext : SchemaContext {
 
             descriptors.getOrElse(entityKey, {
                 val descriptor = EntityDescriptor(entityClass)
+                descriptor.context = this
                 descriptor.partition?.partitionValue = partitionIdVar.toString()
 
                 descriptors.put(entityKey, descriptor)

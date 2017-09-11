@@ -6,7 +6,7 @@ import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
-import com.onyx.util.CompareUtil;
+import com.onyx.depricated.CompareUtil;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.WriteSynchronizedMap;
 

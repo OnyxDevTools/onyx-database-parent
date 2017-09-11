@@ -1,19 +1,16 @@
 package com.onyx.persistence.manager.impl
 
-import com.onyx.exception.NoResultsException
-import com.onyx.exception.OnyxException
-import com.onyx.exception.RelationshipNotFoundException
-import com.onyx.exception.StreamException
+import com.onyx.exception.*
+import com.onyx.extension.*
 import com.onyx.fetch.PartitionQueryController
 import com.onyx.fetch.PartitionReference
 import com.onyx.helpers.*
-import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.*
 import com.onyx.persistence.collections.LazyQueryCollection
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.query.CachedResults
-import com.onyx.record.AbstractRecordController
 import com.onyx.relationship.EntityRelationshipManager
 import com.onyx.relationship.RelationshipReference
 import com.onyx.stream.QueryMapStream
@@ -63,25 +60,19 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> saveEntity(entity: IManagedEntity): E {
         context.checkForKillSwitch()
 
-        val descriptor = context.getDescriptorForEntity(entity)
-        val recordController = context.getRecordController(descriptor)
+        if(entity.isValid(context)) {
+            val previousReferenceId = entity.referenceId(context)
 
-        var entityIdentifier: Any? = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.identifier)
-        var oldReferenceId = 0L
+            entity.save(context)
 
-        if (descriptor.indexes.isNotEmpty()) {
-            oldReferenceId = if (entityIdentifier != null) recordController.getReferenceId(entityIdentifier) else 0L
+            journal {
+                context.transactionController.writeSave(entity)
+            }
+
+            entity.saveIndexes(context, previousReferenceId)
+            entity.saveRelationships(context)
+
         }
-
-        entityIdentifier = recordController.save(entity)
-
-        journal {
-            context.transactionController.writeSave(entity)
-        }
-
-        IndexHelper.saveAllIndexesForEntity(context, descriptor, entityIdentifier, oldReferenceId, entity)
-        RelationshipHelper.saveAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
-
         return entity as E
     }
 
@@ -102,27 +93,15 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         if (entities.isEmpty())
             return
 
-        val descriptor = context.getDescriptorForEntity(entities[0])
-        val recordController = context.getRecordController(descriptor)
-        var oldReferenceId = 0L
-        var entityIdentifier: Any?
-
-        for (entity in entities) {
-
-            entityIdentifier = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.identifier)
-            if (descriptor.indexes.isNotEmpty()) {
-                oldReferenceId = if (entityIdentifier != null) recordController.getReferenceId(entityIdentifier) else 0
+        try {
+            entities.forEach {
+                if (it.isValid(context)) {
+                    saveEntity<IManagedEntity>(it)
+                }
             }
-            entityIdentifier = recordController.save(entity)
-
-            journal {
-                context.transactionController.writeSave(entity)
-            }
-
-            IndexHelper.saveAllIndexesForEntity(context, descriptor, entityIdentifier, oldReferenceId, entity)
-            RelationshipHelper.saveAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
+        } catch (e:ClassCastException) {
+            throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND)
         }
-
     }
 
     /**
@@ -140,21 +119,18 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun deleteEntity(entity: IManagedEntity): Boolean {
         context.checkForKillSwitch()
 
-        val descriptor = context.getDescriptorForEntity(entity)
-        val recordController = context.getRecordController(descriptor)
+        val previousReferenceId = entity.referenceId(context)
 
-        // Write Delete transaction to log
-        journal {
-            context.transactionController.writeDelete(entity)
+        if(previousReferenceId > 0) {
+            journal {
+                context.transactionController.writeDelete(entity)
+            }
+            entity.deleteAllIndexes(context, previousReferenceId)
+            entity.deleteRelationships(context)
+            entity.recordController(context).delete(entity)
         }
 
-        val referenceId = recordController.getReferenceId(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.identifier))
-        IndexHelper.deleteAllIndexesForEntity(context, descriptor, referenceId)
-        RelationshipHelper.deleteAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
-
-        recordController.delete(entity)
-
-        return true
+        return previousReferenceId > 0
     }
 
     /**
@@ -171,12 +147,12 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         // We want to lock the index controller so that it does not do background indexing
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
-        ValidationHelper.validateQuery(descriptor, query, context)
+
+        query.validate(context, descriptor)
         val queryController = PartitionQueryController(descriptor, this, context)
 
         return try {
             val results = queryController.getReferencesForQuery(query)
-
             query.resultsCount = results.size
 
             journal {
@@ -203,22 +179,16 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun executeUpdate(query: Query): Int {
         context.checkForKillSwitch()
 
-        // This will throw an exception if not valid
-        val clazz = query.entityType
-        val entity = ReflectionUtil.createNewEntity(clazz)
-
         // We want to lock the index controller so that it does not do background indexing
-        val descriptor = context.getDescriptorForEntity(entity, query.partition)
-        ValidationHelper.validateQuery(descriptor, query, context)
+        val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
+        query.validate(context, descriptor)
 
         val queryController = PartitionQueryController(descriptor, this, context)
 
         return try {
             val results = queryController.getReferencesForQuery(query)
-
             query.resultsCount = results.size
 
-            // Write Delete transaction to log
             journal {
                 context.transactionController.writeQueryUpdate(query)
             }
@@ -242,10 +212,9 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E> executeQuery(query: Query): List<E> {
         context.checkForKillSwitch()
 
-        val clazz = query.entityType
-        val descriptor = context.getDescriptorForEntity(clazz, query.partition)
+        val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
 
-        ValidationHelper.validateQuery(descriptor, query, context)
+        query.validate(context, descriptor)
 
         val queryController = PartitionQueryController(descriptor, this, context)
         var cachedResults: CachedResults? = null
@@ -317,11 +286,9 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> executeLazyQuery(query: Query): List<E> {
         context.checkForKillSwitch()
 
-        val clazz = query.entityType
-        val entity = ReflectionUtil.createNewEntity(clazz)
-        val descriptor = context.getDescriptorForEntity(entity, query.partition)
+        val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
 
-        ValidationHelper.validateQuery(descriptor, query, context)
+        query.validate(context, descriptor)
 
         val queryController = PartitionQueryController(descriptor, this, context)
         var cachedResults: CachedResults? = null
@@ -377,15 +344,10 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> find(entity: IManagedEntity): E {
         context.checkForKillSwitch()
 
-        val descriptor = context.getDescriptorForEntity(entity)
-        val recordController = context.getRecordController(descriptor)
-
-        // Find the object
-        val results = recordController.get(entity) ?: throw NoResultsException()
+        val results = entity.recordController(context).get(entity) ?: throw NoResultsException()
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(results, EntityRelationshipManager(), context)
-
-        ReflectionUtil.copy(results, entity, descriptor)
+        ReflectionUtil.copy(results, entity, entity.descriptor(context))
         return entity as E
     }
 
@@ -406,19 +368,14 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> findById(clazz: Class<*>, id: Any): E? {
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity? = ReflectionUtil.createNewEntity(clazz)
-        val descriptor = context.getDescriptorForEntity(entity!!, "")
-        val recordController = context.getRecordController(descriptor)
+        var entity: IManagedEntity? = ReflectionUtil.createNewEntity(clazz)!!
 
         // Find the object
-        entity = recordController.getWithId(id)
+        entity = entity!!.recordController(context).getWithId(id)
 
-        if (entity == null) {
-            return null
+        if (entity != null) {
+            RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
         }
-
-        RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
-
         return entity as E?
     }
 
@@ -441,18 +398,15 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity? = ReflectionUtil.createNewEntity(clazz)
-        val descriptor = context.getDescriptorForEntity(entity!!, partitionId)
-        val recordController = context.getRecordController(descriptor)
+        var entity: IManagedEntity = ReflectionUtil.createNewEntity(clazz)!!
 
         // Find the object
-        entity = recordController.getWithId(id)
+        entity = entity.recordController(context).getWithId(id)
 
-        if (entity == null) {
-            return null
+        if (entity != null) {
+            RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
         }
 
-        RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
 
         return entity as E?
     }
@@ -471,11 +425,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     @Throws(OnyxException::class)
     override fun exists(entity: IManagedEntity): Boolean {
         context.checkForKillSwitch()
-        val descriptor = context.getDescriptorForEntity(entity)
-        val recordController = context.getRecordController(descriptor)
-
-        // Find the object
-        return recordController.exists(entity)
+        return entity.recordController(context).exists(entity)
     }
 
     /**
@@ -513,10 +463,10 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         context.checkForKillSwitch()
 
         val descriptor = context.getDescriptorForEntity(entity)
-        val identifier = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.identifier)
-        val partitionValue = PartitionHelper.getPartitionFieldValue(entity, context)
+        val identifier = entity.identifier(context)
+        val partitionValue = entity.partitionValue(context)
 
-        val entityRelationshipReference = if (partitionValue !== PartitionHelper.NULL_PARTITION && partitionValue != null) {
+        val entityRelationshipReference = if (partitionValue !== PartitionHelper.NULL_PARTITION ) {
             val partitionEntry = context.getPartitionWithValue(descriptor.entityClass, PartitionHelper.getPartitionFieldValue(entity, context))
             RelationshipReference(identifier, partitionEntry!!.index)
         } else {

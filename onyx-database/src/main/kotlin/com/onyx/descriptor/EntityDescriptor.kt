@@ -2,7 +2,9 @@ package com.onyx.descriptor
 
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.annotations.*
-import com.onyx.validators.EntityValidation
+import com.onyx.persistence.context.SchemaContext
+import com.onyx.extension.validate
+import com.onyx.extension.validateIsManagedEntity
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -37,6 +39,8 @@ constructor(
         var relationships: MutableMap<String, RelationshipDescriptor> = TreeMap()
 ) : Serializable {
 
+    lateinit var context: SchemaContext
+
     /**
      * All fields from entityClass and its descendants
      */
@@ -70,7 +74,7 @@ constructor(
 
     init {
 
-        EntityValidation.validateIsManagedEntity(entityClass)
+        validateIsManagedEntity()
 
         this.entity = entityClass.getAnnotation(Entity::class.java) as Entity
 
@@ -82,10 +86,7 @@ constructor(
         assignEntityCallbacks()
 
         // Validate Entity
-        EntityValidation.validateIdentifier(entityClass, identifier)
-        EntityValidation.validateAttributes(attributes)
-        EntityValidation.validateRelationships(entityClass, relationships)
-        EntityValidation.validateIndexes(entityClass, indexes)
+        validate()
     }
 
     /**
@@ -231,4 +232,9 @@ constructor(
             "data.dat"
         } else entity!!.fileName
 
+    val hasIndexes: Boolean
+        get() = indexes.isNotEmpty()
+
+    val hasRelationships: Boolean
+        get() = relationships.isNotEmpty()
 }

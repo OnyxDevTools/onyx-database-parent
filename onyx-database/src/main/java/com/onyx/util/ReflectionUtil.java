@@ -1,5 +1,6 @@
 package com.onyx.util;
 
+import com.onyx.depricated.CompareUtil;
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
@@ -417,7 +418,7 @@ public class ReflectionUtil {
     public static void setAny(Object parent, Object child, OffsetField field) throws AttributeMissingException {
 
         if(child != null && !field.type.isAssignableFrom(child.getClass()))
-            child = CompareUtil.castObject(field.type, child);
+            child = CompareUtil.castTo(field.type, child);
 
         try {
             field.field.set(parent, child);
