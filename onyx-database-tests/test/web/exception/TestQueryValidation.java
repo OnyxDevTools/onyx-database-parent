@@ -65,11 +65,4 @@ public class TestQueryValidation extends BaseTest
         manager.executeUpdate(updateQuery);
     }
 
-    @Test(expected = AttributeTypeMismatchException.class)
-    public void testTypeMisMatchException() throws OnyxException
-    {
-        Query updateQuery = new Query(ValidationEntity.class, new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3l), new AttributeUpdate("requiredString", 5l));
-        manager.executeUpdate(updateQuery);
-    }
-
 }

@@ -2,6 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.*
+import com.onyx.extension.common.castTo
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -55,7 +56,7 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor):Boolean
                 if (attribute.type.isPrimitive && attribute.type == it.value!!::class.javaPrimitiveType) {}
                 else {
                     try {
-                        it.value = attribute.type.cast(it.value)
+                        it.value = it.value.castTo(attribute.type)
                     } catch (e: Exception) {
                         throw AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, attribute.type, it.value?.javaClass, attribute.name)
                     }
