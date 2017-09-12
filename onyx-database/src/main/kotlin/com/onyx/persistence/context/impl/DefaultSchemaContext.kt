@@ -13,8 +13,8 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
+import com.onyx.extension.partitionValue
 import com.onyx.fetch.ScannerFactory
-import com.onyx.helpers.PartitionHelper
 import com.onyx.index.IndexController
 import com.onyx.index.impl.IndexControllerImpl
 import com.onyx.persistence.IManagedEntity
@@ -30,13 +30,13 @@ import com.onyx.persistence.query.impl.DefaultQueryCacheController
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.interactors.record.impl.SequenceRecordInteractor
+import com.onyx.interactors.transaction.TransactionInteractor
+import com.onyx.interactors.transaction.TransactionStore
+import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
+import com.onyx.interactors.transaction.impl.DefaultTransactionStore
 import com.onyx.relationship.RelationshipController
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl
-import com.onyx.transaction.TransactionController
-import com.onyx.transaction.TransactionStore
-import com.onyx.transaction.impl.DefaultTransactionStore
-import com.onyx.transaction.impl.TransactionControllerImpl
 import com.onyx.util.EntityClassLoader
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
@@ -77,14 +77,14 @@ open class DefaultSchemaContext : SchemaContext {
     override var queryCacheController: QueryCacheController = DefaultQueryCacheController(this)
 
     // Wait to initialize when the system persistence manager is set
-    override lateinit var transactionController: TransactionController
+    override lateinit var transactionInteractor: TransactionInteractor
 
     // Indicates whether the database has been stopped
     @Volatile override var killSwitch = false
 
     private lateinit var commitJob:Job
 
-    private lateinit var transactionStore:TransactionStore
+    private lateinit var transactionStore: TransactionStore
 
     // endregion
 
@@ -136,7 +136,7 @@ open class DefaultSchemaContext : SchemaContext {
         set(systemPersistenceManager) {
             field = systemPersistenceManager!!
             serializedPersistenceManager = field!!
-            this.transactionController = TransactionControllerImpl(transactionStore, field)
+            this.transactionInteractor = DefaultTransactionInteractor(transactionStore, field!!)
         }
 
     // endregion
@@ -531,8 +531,7 @@ open class DefaultSchemaContext : SchemaContext {
             throw EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND, entity.javaClass)
         }
 
-        val partitionId = PartitionHelper.getPartitionFieldValue(entity, this)
-        return getDescriptorForEntity(entity, partitionId)
+        return getDescriptorForEntity(entity, entity.partitionValue(this))
     }
 
     // endregion

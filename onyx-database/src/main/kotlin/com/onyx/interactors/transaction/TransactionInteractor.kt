@@ -1,45 +1,47 @@
-package com.onyx.transaction;
+package com.onyx.interactors.transaction
 
-import com.onyx.exception.TransactionException;
-import com.onyx.persistence.IManagedEntity;
-import com.onyx.persistence.query.Query;
-
-import java.util.function.Function;
+import com.onyx.exception.TransactionException
+import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.query.Query
+import com.onyx.interactors.transaction.data.Transaction
 
 /**
  * Created by tosborn1 on 3/25/16.
  *
  * The purpose of this class is to write a WAL transaction to keep a history of all transactions
  */
-public interface TransactionController
-{
+interface TransactionInteractor {
 
     /**
      * Write a save transaction to a WAL file
      *
      * @param entity Entity to save
      */
-    void writeSave(IManagedEntity entity) throws TransactionException;
+    @Throws(TransactionException::class)
+    fun writeSave(entity: IManagedEntity)
 
     /**
      * Write a query update to the WAL transaction
      *
      * @param query Query to update
      */
-    void writeQueryUpdate(Query query) throws TransactionException;
+    @Throws(TransactionException::class)
+    fun writeQueryUpdate(query: Query)
 
     /**
      * Write a Delete transaction to a WAL File
      *
      * @param entity Deleted entity
      */
-    void writeDelete(IManagedEntity entity) throws TransactionException;
+    @Throws(TransactionException::class)
+    fun writeDelete(entity: IManagedEntity)
 
     /**
      * Write a delete query to a WAL file
      * @param query Query to write to WAL
      */
-    void writeDeleteQuery(Query query) throws TransactionException;
+    @Throws(TransactionException::class)
+    fun writeDeleteQuery(query: Query)
 
     /**
      * Rebuild Database From a directory of WAL transaction files to a new database location.
@@ -54,8 +56,8 @@ public interface TransactionController
      * @param fromDirectoryPath Directory containing WAL transaction files.
      * @param executeTransaction Function that determines whether or not you should execute the transaction
      */
-    @SuppressWarnings("unused")
-    void recoverDatabase(String fromDirectoryPath, Function<Transaction, Boolean> executeTransaction) throws TransactionException;
+    @Throws(TransactionException::class)
+    fun recoverDatabase(fromDirectoryPath: String, executeTransaction:  (Transaction) -> Boolean)
 
 
     /**
@@ -69,7 +71,7 @@ public interface TransactionController
      * @param executeTransaction Function that determines whether or not you should execute the transaction
      * @throws TransactionException If a transaction failed to execute, this will be thrown
      */
-    @SuppressWarnings({"SameReturnValue", "unused"})
-    boolean applyTransactionLog(String walTransactionFile, Function<Transaction, Boolean> executeTransaction) throws TransactionException;
+    @Throws(TransactionException::class)
+    fun applyTransactionLog(walTransactionFile: String, executeTransaction: (Transaction) -> Boolean): Boolean
 
 }

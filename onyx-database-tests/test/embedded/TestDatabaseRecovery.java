@@ -3,6 +3,7 @@ package embedded;
 import category.EmbeddedDatabaseTests;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
+import com.onyx.interactors.transaction.data.SaveTransaction;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -10,7 +11,6 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.AttributeUpdate;
-import com.onyx.transaction.SaveTransaction;
 import embedded.base.BaseTest;
 import entities.AllAttributeEntity;
 import org.junit.*;
@@ -77,7 +77,7 @@ public class TestDatabaseRecovery extends BaseTest
         SchemaContext newContext = newFactory.getSchemaContext();
         PersistenceManager newManager = newFactory.getPersistenceManager();
 
-        newContext.getTransactionController().recoverDatabase(DATABASE_LOCATION_BASE + File.separator + "wal", transaction -> true);
+        newContext.getTransactionInteractor().recoverDatabase(DATABASE_LOCATION_BASE + File.separator + "wal", transaction -> true);
 
         Assert.assertTrue(newManager.findById(AllAttributeEntity.class, "ASDFASDF100020") == null);
         Assert.assertTrue(newManager.findById(AllAttributeEntity.class, "ASDFASDF100") == null);
@@ -117,7 +117,7 @@ public class TestDatabaseRecovery extends BaseTest
         SchemaContext newContext = newFactory.getSchemaContext();
         PersistenceManager newManager = newFactory.getPersistenceManager();
 
-        newContext.getTransactionController().applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "0.wal", transaction -> {
+        newContext.getTransactionInteractor().applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "0.wal", transaction -> {
             return transaction instanceof SaveTransaction;
 
         });

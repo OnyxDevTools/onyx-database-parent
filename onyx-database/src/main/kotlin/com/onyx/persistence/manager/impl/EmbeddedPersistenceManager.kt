@@ -66,7 +66,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
             entity.save(context)
 
             journal {
-                context.transactionController.writeSave(entity)
+                context.transactionInteractor.writeSave(entity)
             }
 
             entity.saveIndexes(context, previousReferenceId)
@@ -123,7 +123,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         if(previousReferenceId > 0) {
             journal {
-                context.transactionController.writeDelete(entity)
+                context.transactionInteractor.writeDelete(entity)
             }
             entity.deleteAllIndexes(context, previousReferenceId)
             entity.deleteRelationships(context)
@@ -156,7 +156,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
             query.resultsCount = results.size
 
             journal {
-                context.transactionController.writeDeleteQuery(query)
+                context.transactionInteractor.writeDeleteQuery(query)
             }
 
             queryController.deleteRecordsWithReferences(results, query)
@@ -190,7 +190,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
             query.resultsCount = results.size
 
             journal {
-                context.transactionController.writeQueryUpdate(query)
+                context.transactionInteractor.writeQueryUpdate(query)
             }
 
             queryController.performUpdatsForQuery(query, results)

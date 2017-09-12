@@ -1,6 +1,6 @@
 package com.onyx.exception
 
-import com.onyx.transaction.Transaction
+import com.onyx.interactors.transaction.data.Transaction
 
 /**
  * Created by tosborn1 on 3/25/16.

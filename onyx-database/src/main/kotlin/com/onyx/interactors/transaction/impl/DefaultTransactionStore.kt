@@ -1,9 +1,9 @@
-package com.onyx.transaction.impl
+package com.onyx.interactors.transaction.impl
 
 import com.onyx.exception.TransactionException
 import com.onyx.extension.common.Block
 import com.onyx.extension.common.catchAll
-import com.onyx.transaction.TransactionStore
+import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.util.FileUtil
 import java.io.File
 import java.io.IOException

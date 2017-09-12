@@ -13,8 +13,8 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.QueryCacheController
 import com.onyx.interactors.record.RecordInteractor
+import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.relationship.RelationshipController
-import com.onyx.transaction.TransactionController
 
 
 /**
@@ -43,7 +43,7 @@ interface SchemaContext {
     /**
      * Get Controller that handles transactions.  This creates a log of persistence within the database.
      */
-    val transactionController: TransactionController
+    val transactionInteractor: TransactionInteractor
 
     /**
      * Get controller responsible for managing query caches

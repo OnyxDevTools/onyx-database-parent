@@ -1,4 +1,4 @@
-package com.onyx.transaction
+package com.onyx.interactors.transaction
 
 import com.onyx.exception.TransactionException
 import java.nio.channels.FileChannel
