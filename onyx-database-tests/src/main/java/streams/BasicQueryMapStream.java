@@ -2,7 +2,7 @@ package streams;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.stream.QueryMapStream;
+import com.onyx.persistence.stream.QueryMapStream;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 
 import java.util.Map;
@@ -10,13 +10,12 @@ import java.util.Map;
 /**
  * Created by tosborn1 on 7/14/16.
  */
-public class BasicQueryMapStream implements QueryMapStream{
+public class BasicQueryMapStream implements QueryMapStream<Map<String, ? >> {
 
     @Override
-    public void accept(Object obj, PersistenceManager persistenceManager) {
+    public void accept(Map entityMap, PersistenceManager persistenceManager) {
 
         // Modify the entity structure
-        final Map entityMap = (Map)obj;
         entityMap.put("correlation", 55);
 
         // Remap to the entity so that we can persist it with the changes to the dictionary after we manipulate it.

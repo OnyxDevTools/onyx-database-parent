@@ -1,4 +1,4 @@
-package com.onyx.stream;
+package com.onyx.persistence.stream
 
 /**
  * Created by tosborn1 on 5/19/16.
@@ -6,7 +6,4 @@ package com.onyx.stream;
  * This is a custom lambda for the stream api.  It will indicate the expected
  * value is a map rather than hydrated entities
  */
-@FunctionalInterface
-public interface QueryMapStream extends QueryStream {
-
-}
+interface QueryMapStream<in T : Map<String, Any?>> : QueryStream<T>

@@ -3,7 +3,7 @@ package streams;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.stream.QueryStream;
+import com.onyx.persistence.stream.QueryStream;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 
 /**

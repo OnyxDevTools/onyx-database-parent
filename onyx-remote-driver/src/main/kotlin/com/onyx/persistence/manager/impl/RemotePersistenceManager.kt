@@ -11,7 +11,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.impl.RemoteQueryListener
-import com.onyx.stream.QueryStream
+import com.onyx.persistence.stream.QueryStream
 import com.onyx.util.ReflectionUtil
 
 /**

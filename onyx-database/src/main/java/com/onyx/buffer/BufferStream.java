@@ -1179,6 +1179,18 @@ public class BufferStream {
         }
     }
 
+    /**
+     * Allocation that will encapsulate the endian as well as the allocation method
+     *
+     * @param count Size to allocate
+     * @return An Allocated ByteBuffer and limit to the amount of bytes
+     */
+    public static ByteBuffer allocateAndLimit(int count) {
+        ByteBuffer buffer = allocate(count);
+        buffer.limit(count);
+        return buffer;
+    }
+
     private static volatile int staleBufferMemory = 0;
 
     /**
@@ -1187,6 +1199,7 @@ public class BufferStream {
      */
     public static void recycle(ByteBuffer buffer) {
         synchronized (buffers) {
+            buffer.limit(buffer.capacity());
             buffers.add(new RecycledBuffer(buffer));
             staleBufferMemory += buffer.capacity();
 

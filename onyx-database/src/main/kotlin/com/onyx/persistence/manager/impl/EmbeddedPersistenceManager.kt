@@ -13,8 +13,8 @@ import com.onyx.persistence.query.Query
 import com.onyx.query.CachedResults
 import com.onyx.relationship.EntityRelationshipManager
 import com.onyx.relationship.RelationshipReference
-import com.onyx.stream.QueryMapStream
-import com.onyx.stream.QueryStream
+import com.onyx.persistence.stream.QueryMapStream
+import com.onyx.persistence.stream.QueryStream
 import com.onyx.util.ReflectionUtil
 import java.util.*
 
@@ -656,7 +656,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         entityList.forEachIndexed { index, iManagedEntity ->
             if (streamer is QueryMapStream) {
-                streamer.accept(entityList.getDict(index), this)
+                (streamer as QueryStream<Map<String, Any?>>).accept(entityList.getDict(index) as Map<String, Any?>, this)
             } else {
                 streamer.accept(iManagedEntity as T, this)
             }

@@ -13,7 +13,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.request.pojo.*
-import com.onyx.stream.QueryStream
+import com.onyx.persistence.stream.QueryStream
 import com.onyx.util.ReflectionUtil
 
 import java.util.*
