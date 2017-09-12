@@ -9,7 +9,7 @@ import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.record.AbstractRecordController;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.request.pojo.*;
 import com.onyx.util.ReflectionUtil;
 
@@ -117,7 +117,7 @@ final public class WebPersistenceEndpoint
 
         if(request.getId() != null)
         {
-            AbstractRecordController.setIndexValueForEntity(entity, request.getId(), context);
+            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, request.getId(), context);
         }
         if(request.getPartitionId() != null && !request.getPartitionId().equals(""))
         {
@@ -170,7 +170,7 @@ final public class WebPersistenceEndpoint
 
         if(request.getId() != null)
         {
-            AbstractRecordController.setIndexValueForEntity(entity, request.getId(), context);
+            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, request.getId(), context);
         }
         if(request.getPartitionId() != null && !request.getPartitionId().equals(""))
         {
@@ -211,7 +211,7 @@ final public class WebPersistenceEndpoint
 
         if(request.getEntityId() != null)
         {
-            AbstractRecordController.setIndexValueForEntity(entity, request.getEntityId(), context);
+            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, request.getEntityId(), context);
         }
 
         if(request.getPartitionId() != null && !request.getPartitionId().equals(""))
@@ -321,7 +321,7 @@ final public class WebPersistenceEndpoint
 
         if(body.getId() != null)
         {
-            AbstractRecordController.setIndexValueForEntity(entity, body.getId(), context);
+            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, body.getId(), context);
         }
 
         if(body.getPartitionId() != null && !body.getPartitionId().equals(""))

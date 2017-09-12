@@ -27,9 +27,9 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import com.onyx.persistence.query.impl.DefaultQueryCacheController
-import com.onyx.record.RecordController
-import com.onyx.record.impl.RecordControllerImpl
-import com.onyx.record.impl.SequenceRecordControllerImpl
+import com.onyx.interactors.record.RecordInteractor
+import com.onyx.interactors.record.impl.DefaultRecordInteractor
+import com.onyx.interactors.record.impl.SequenceRecordInteractor
 import com.onyx.relationship.RelationshipController
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl
@@ -189,7 +189,7 @@ open class DefaultSchemaContext : SchemaContext {
 
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors
-        recordControllers.clear() // Clear all Record Controllers
+        recordInteractors.clear() // Clear all Record Controllers
         relationshipControllers.clear() // Clear all relationship controllers
         indexControllers.clear() // Clear all index controllers
 
@@ -589,7 +589,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Record Controller
 
-    private val recordControllers = HashMap<EntityDescriptor, RecordController>()
+    private val recordInteractors = HashMap<EntityDescriptor, RecordInteractor>()
 
     /**
      * Get Record Controller.
@@ -598,9 +598,9 @@ open class DefaultSchemaContext : SchemaContext {
      * @return get Record Controller.
      * @since 1.0.0
      */
-    override fun getRecordController(descriptor: EntityDescriptor): RecordController = synchronized(recordControllers) {
-        recordControllers.getOrPut(descriptor) {
-            if (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE) SequenceRecordControllerImpl(descriptor, this@DefaultSchemaContext) else RecordControllerImpl(descriptor, this@DefaultSchemaContext)
+    override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor = synchronized(recordInteractors) {
+        recordInteractors.getOrPut(descriptor) {
+            if (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE) SequenceRecordInteractor(descriptor, this@DefaultSchemaContext) else DefaultRecordInteractor(descriptor, this@DefaultSchemaContext)
         }
     }
 

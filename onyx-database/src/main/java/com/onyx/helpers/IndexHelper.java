@@ -6,8 +6,8 @@ import com.onyx.exception.OnyxException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.AbstractRecordController;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 
 /**
  * Created by timothy.osborn on 12/23/14.
@@ -30,13 +30,13 @@ public class IndexHelper
     {
         if(descriptor.getIndexes().size() > 0)
         {
-            final RecordController recordController = context.getRecordController(descriptor);
-            long newReferenceId = recordController.getReferenceId(identifier);
+            final RecordInteractor recordInteractor = context.getRecordInteractor(descriptor);
+            long newReferenceId = recordInteractor.getReferenceId(identifier);
 
             // Save all indexes
             for (IndexDescriptor indexDescriptor : descriptor.getIndexes().values())
             {
-                final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, indexDescriptor);
+                final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, indexDescriptor);
                 final IndexController controller = context.getIndexController(indexDescriptor);
                 controller.save(indexValue, oldReferenceId, newReferenceId);
             }

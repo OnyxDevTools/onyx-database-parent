@@ -1,5 +1,5 @@
 package com.onyx.descriptor
 
-import com.onyx.record.RecordController
+import com.onyx.interactors.record.RecordInteractor
 
-fun EntityDescriptor.recordController():RecordController = this.context.getRecordController(this)
+fun EntityDescriptor.recordInteractor(): RecordInteractor = this.context.getRecordInteractor(this)

@@ -9,7 +9,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.record.AbstractRecordController;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
@@ -134,7 +134,7 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
     {
         try
         {
-            AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
+            DefaultRecordInteractor.Companion.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
             return true;
         } catch (OnyxException e)
         {

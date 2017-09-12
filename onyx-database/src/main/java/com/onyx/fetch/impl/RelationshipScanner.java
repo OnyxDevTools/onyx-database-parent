@@ -18,7 +18,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.ReflectionUtil;
@@ -157,7 +157,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
 
         relationshipDescriptor = this.descriptor.getRelationships().get(attribute);
         final RelationshipController relationshipController = getContext().getRelationshipController(relationshipDescriptor);
-        final RecordController inverseRecordController = getDefaultInverseRecordController();
+        final RecordInteractor inverseRecordInteractor = getDefaultInverseRecordInteractor();
 
         List<RelationshipReference> relationshipIdentifiers;
         Object keyValue;
@@ -182,12 +182,12 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
 
                 if(id.partitionId == 0)
                 {
-                    allResults.put(inverseRecordController.getReferenceId(id.identifier), keyValue);
+                    allResults.put(inverseRecordInteractor.getReferenceId(id.identifier), keyValue);
                 }
                 else
                 {
-                    RecordController recordController = getRecordControllerForPartition(id.partitionId);
-                    PartitionReference reference = new PartitionReference(id.partitionId, recordController.getReferenceId(id.identifier));
+                    RecordInteractor recordInteractorForPartition = getRecordInteractorForPartition(id.partitionId);
+                    PartitionReference reference = new PartitionReference(id.partitionId, recordInteractorForPartition.getReferenceId(id.identifier));
                     allResults.put(reference, keyValue);
                 }
 
@@ -201,11 +201,11 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      * Grabs the inverse record controller
      *
      * @return Record controller for inverse relationship
-     * @throws OnyxException Cannot get record controller for inverse relatioship
+     * @throws OnyxException Cannot get record controller for inverse relationship
      */
-    private RecordController getDefaultInverseRecordController() throws OnyxException
+    private RecordInteractor getDefaultInverseRecordInteractor() throws OnyxException
     {
         final EntityDescriptor inverseDescriptor = getContext().getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
-        return getContext().getRecordController(inverseDescriptor);
+        return getContext().getRecordInteractor(inverseDescriptor);
     }
 }

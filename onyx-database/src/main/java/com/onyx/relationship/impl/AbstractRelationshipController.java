@@ -8,7 +8,7 @@ import com.onyx.helpers.PartitionContext;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
@@ -31,7 +31,7 @@ class AbstractRelationshipController extends PartitionContext
     @SuppressWarnings("WeakerAccess")
     protected EntityDescriptor entityDescriptor;
     @SuppressWarnings("WeakerAccess")
-    protected RecordController recordController;
+    protected RecordInteractor recordInteractor;
 
     private RelationshipDescriptor defaultInverseRelationshipDescriptor;
 
@@ -44,7 +44,7 @@ class AbstractRelationshipController extends PartitionContext
         // Assign the Entity Details
         this.relationshipDescriptor = relationshipDescriptor;
         this.entityDescriptor = entityDescriptor;
-        this.recordController = context.getRecordController(entityDescriptor);
+        this.recordInteractor = context.getRecordInteractor(entityDescriptor);
 
         // Get the inverse entity details
 

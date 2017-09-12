@@ -12,7 +12,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.record.AbstractRecordController;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
 
@@ -129,7 +129,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         Object identifier;
         try
         {
-            identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
+            identifier = DefaultRecordInteractor.Companion.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
         } catch (OnyxException e)
         {
             return false;
@@ -288,7 +288,7 @@ public class LazyQueryCollection<E> extends AbstractList<E> implements List<E>, 
         Object identifier;
         try
         {
-            identifier = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
+            identifier = DefaultRecordInteractor.Companion.getIndexValueFromEntity((IManagedEntity) o, entityDescriptor.getIdentifier());
         } catch (AttributeMissingException e)
         {
             return false;

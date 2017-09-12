@@ -9,7 +9,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.diskmap.MapBuilder;
 
 import java.util.Iterator;
@@ -50,7 +50,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     {
         final Map<Long, Long> returnValue = new CompatHashMap<>();
 
-        final RecordController recordController = getContext().getRecordController(descriptor);
+        final RecordInteractor recordInteractor = getContext().getRecordInteractor(descriptor);
 
         // If it is an in clause
         if(criteria.getValue() instanceof List)
@@ -60,7 +60,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
                 if(query.isTerminated())
                     return returnValue;
 
-                long referenceId = recordController.getReferenceId(idValue);
+                long referenceId = recordInteractor.getReferenceId(idValue);
                 // The id does exist, lets add it to the results
                 if(referenceId > -1)
                 {
@@ -77,16 +77,16 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
             Set<Long> values = null;
 
             if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                values = recordController.findAllAbove(criteria.getValue(), false);
+                values = recordInteractor.findAllAbove(criteria.getValue(), false);
             else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                values = recordController.findAllAbove(criteria.getValue(), true);
+                values = recordInteractor.findAllAbove(criteria.getValue(), true);
             else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                values = recordController.findAllBelow(criteria.getValue(), false);
+                values = recordInteractor.findAllBelow(criteria.getValue(), false);
             else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                values = recordController.findAllBelow(criteria.getValue(), true);
+                values = recordInteractor.findAllBelow(criteria.getValue(), true);
             else
             {
-                long referenceId = recordController.getReferenceId(criteria.getValue());
+                long referenceId = recordInteractor.getReferenceId(criteria.getValue());
                 if(referenceId > -1)
                 {
                     returnValue.put(referenceId, referenceId);
@@ -115,7 +115,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
     {
         final Map<Long, Long> returnValue = new CompatHashMap<>();
 
-        final RecordController recordController = getContext().getRecordController(descriptor);
+        final RecordInteractor recordInteractor = getContext().getRecordInteractor(descriptor);
 
         Iterator<Long> iterator = existingValues.keySet().iterator();
 
@@ -133,7 +133,7 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
                     if(query.isTerminated())
                         return returnValue;
 
-                    long referenceId = recordController.getReferenceId(idValue);
+                    long referenceId = recordInteractor.getReferenceId(idValue);
 
                     if(referenceId == key)
                     {
@@ -148,16 +148,16 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
                 Set<Long> values = null;
 
                 if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                    values = recordController.findAllAbove(criteria.getValue(), false);
+                    values = recordInteractor.findAllAbove(criteria.getValue(), false);
                 else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                    values = recordController.findAllAbove(criteria.getValue(), true);
+                    values = recordInteractor.findAllAbove(criteria.getValue(), true);
                 else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                    values = recordController.findAllBelow(criteria.getValue(), false);
+                    values = recordInteractor.findAllBelow(criteria.getValue(), false);
                 else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                    values = recordController.findAllBelow(criteria.getValue(), true);
+                    values = recordInteractor.findAllBelow(criteria.getValue(), true);
                 else
                 {
-                    long referenceId = recordController.getReferenceId(criteria.getValue());
+                    long referenceId = recordInteractor.getReferenceId(criteria.getValue());
                     if(referenceId > -1)
                     {
                         returnValue.put(referenceId, referenceId);

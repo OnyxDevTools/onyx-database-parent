@@ -8,7 +8,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.util.ReflectionUtil;
 
 import java.util.ArrayList;
@@ -23,7 +23,7 @@ class ScannerProperties
 {
     @SuppressWarnings("unused")
     public EntityDescriptor descriptor = null;
-    public RecordController recordController = null;
+    public RecordInteractor recordInteractor = null;
     AttributeDescriptor attributeDescriptor = null;
     RelationshipDescriptor relationshipDescriptor = null;
 
@@ -49,7 +49,7 @@ class ScannerProperties
         this.contextId = context.getContextId();
         this.descriptor = descriptor;
         this.attributeDescriptor = attributeDescriptor;
-        this.recordController = context.getRecordController(descriptor);
+        this.recordInteractor = context.getRecordInteractor(descriptor);
         this.attribute = attribute;
         this.relationshipDescriptor = relationshipDescriptor;
     }

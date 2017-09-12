@@ -50,4 +50,8 @@ fun IManagedEntity.partitionValue(context: SchemaContext):String {
 @Suppress("UNCHECKED_CAST")
 operator fun <T : Any?> IManagedEntity.get(context: SchemaContext, name:String): T = property(context = context, name = name) as T
 
-
+/**
+ * Overload operator to use entity[context, property] = value syntax
+ * @since 2.0.0
+ */
+operator fun <T : Any?> IManagedEntity.set(context: SchemaContext, name: String, value:T):T  { ReflectionUtil.setAny(this, value, descriptor(context).attributes[name]!!.field); return value }

@@ -1,26 +1,24 @@
-package com.onyx.record;
+package com.onyx.interactors.record
 
-import com.onyx.exception.OnyxException;
-import com.onyx.persistence.IManagedEntity;
-import com.onyx.util.OffsetField;
-
-import java.util.Map;
-import java.util.Set;
+import com.onyx.exception.OnyxException
+import com.onyx.persistence.IManagedEntity
+import com.onyx.util.OffsetField
 
 /**
  * Created by timothy.osborn on 2/5/15.
  *
  * This is the contract that contains the actions acted upon an entity
  */
-public interface RecordController
-{
+interface RecordInteractor {
+
     /**
      * Save an entity and persist it to the data file
      * @param entity Entity to save
      * @return ENtity id
      * @throws OnyxException Attribute missing
      */
-    Object save(IManagedEntity entity) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun save(entity: IManagedEntity): Any
 
     /**
      * Delete
@@ -28,15 +26,15 @@ public interface RecordController
      * @param entity Entity to delete
      * @throws OnyxException Error deleting entity
      */
-    void delete(IManagedEntity entity) throws OnyxException;
-
+    @Throws(OnyxException::class)
+    fun delete(entity: IManagedEntity)
 
     /**
      * Delete with ID
      *
      * @param primaryKey Entity id to delete
      */
-    void deleteWithId(Object primaryKey);
+    fun deleteWithId(primaryKey: Any): IManagedEntity?
 
     /**
      * Get an entity by primary key
@@ -44,16 +42,17 @@ public interface RecordController
      * @param primaryKey entity id
      * @return hydrated entity
      */
-    @SuppressWarnings("RedundantThrows")
-    IManagedEntity getWithId(Object primaryKey) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getWithId(primaryKey: Any): IManagedEntity?
 
     /**
      * Get an entity by the entity
      *
-     * @param primaryKey entity with id pre defined
+     * @param entity entity with id pre defined
      * @return hydrated entity
      */
-    IManagedEntity get(IManagedEntity primaryKey) throws OnyxException;
+    @Throws(OnyxException::class)
+    operator fun get(entity: IManagedEntity): IManagedEntity?
 
     /**
      * Returns true if the records exists
@@ -61,7 +60,8 @@ public interface RecordController
      * @param entity Entity to check
      * @return whether it exist
      */
-    boolean exists(IManagedEntity entity) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun exists(entity: IManagedEntity): Boolean
 
     /**
      * Returns true if the records contain a primary key
@@ -69,8 +69,8 @@ public interface RecordController
      * @param primaryKey entity primary key
      * @return whether it exist
      */
-    @SuppressWarnings("RedundantThrows")
-    boolean existsWithId(Object primaryKey) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun existsWithId(primaryKey: Any?): Boolean
 
     /**
      * Returns true if the records contain a primary key
@@ -78,8 +78,8 @@ public interface RecordController
      * @param primaryKey entity id
      * @return reference within store
      */
-    @SuppressWarnings("RedundantThrows")
-    long getReferenceId(Object primaryKey) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getReferenceId(primaryKey: Any): Long
 
     /**
      * Returns the object using the reference ID
@@ -87,8 +87,8 @@ public interface RecordController
      * @param referenceId entity reference within store
      * @return hydrated entity
      */
-    @SuppressWarnings("RedundantThrows")
-    IManagedEntity getWithReferenceId(long referenceId) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getWithReferenceId(referenceId: Long): IManagedEntity?
 
     /**
      * Returns a structure of the entity with a reference id
@@ -96,8 +96,8 @@ public interface RecordController
      * @param referenceId entity reference
      * @return entity as a map
      */
-    @SuppressWarnings("RedundantThrows")
-    Map getMapWithReferenceId(long referenceId) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getMapWithReferenceId(referenceId: Long): Map<*, *>
 
     /**
      * Returns a specific attribute of an entity
@@ -108,10 +108,10 @@ public interface RecordController
      * @throws OnyxException Attribute does not exist
      *
      * @since 1.3.0 Changed to include the reflection field in order to optimze
-     *              and not instantiate new reflection fields
+     * and not instantiate new reflection fields
      */
-    @SuppressWarnings("RedundantThrows")
-    Object getAttributeWithReferenceId(OffsetField attribute, long referenceId) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getAttributeWithReferenceId(attribute: OffsetField, referenceId: Long): Any?
 
     /**
      * For sorted indexs, you can find all the entity references above the value.  The index value must impelement comparable
@@ -124,8 +124,8 @@ public interface RecordController
      *
      * @since 1.2.0
      */
-    @SuppressWarnings("RedundantThrows")
-    Set<Long> findAllAbove(Object indexValue, boolean includeValue) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long>
 
     /**
      * For sorted indexs, you can find all the entity references below the value.  The index value must impelement comparable
@@ -138,7 +138,6 @@ public interface RecordController
      *
      * @since 1.2.0
      */
-    @SuppressWarnings("RedundantThrows")
-    Set<Long> findAllBelow(Object indexValue, boolean includeValue) throws OnyxException;
-
+    @Throws(OnyxException::class)
+    fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long>
 }

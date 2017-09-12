@@ -1,7 +1,7 @@
 package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatMap;
@@ -159,10 +159,10 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         if(reference instanceof PartitionReference)
         {
             PartitionReference ref = (PartitionReference) reference;
-            return getRecordControllerForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.reference);
+            return getRecordInteractorForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.reference);
         }
 
-        return scannerProperties.recordController.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) reference);
+        return scannerProperties.recordInteractor.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) reference);
     }
 
     /**
@@ -200,12 +200,12 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         if(ref.partitionId > 0)
         {
             final PartitionContext partitionContext = new PartitionContext(getContext(), properties.descriptor);
-            final RecordController recordController = partitionContext.getRecordControllerForPartition(ref.partitionId);
-            relationshipAttributeValue = recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordController.getReferenceId(ref.identifier));
+            final RecordInteractor recordInteractor = partitionContext.getRecordInteractorForPartition(ref.partitionId);
+            relationshipAttributeValue = recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordInteractor.getReferenceId(ref.identifier));
         }
         else
         {
-            relationshipAttributeValue = properties.recordController.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordController.getReferenceId(ref.identifier));
+            relationshipAttributeValue = properties.recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordInteractor.getReferenceId(ref.identifier));
         }
 
         return relationshipAttributeValue;

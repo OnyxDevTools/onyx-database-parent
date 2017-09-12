@@ -89,16 +89,16 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
     val relationshipController = context.getRelationshipController(relationshipDescriptor!!)
     val relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(entityReference)
 
-    val defaultRecordController = context.getRecordController(descriptor!!)
+    val defaultRecordInteractor = context.getRecordInteractor(descriptor!!)
     val entities = ArrayList<IManagedEntity>()
 
     relationshipReferences.forEach {
         if (it.partitionId <= 0) {
-            val relationshipEntity = defaultRecordController.getWithId(it.identifier)
+            val relationshipEntity = defaultRecordInteractor.getWithId(it.identifier)
             if (relationshipEntity != null)
                 entities.add(relationshipEntity)
         } else {
-            val relationshipEntity = recordController(context).getWithId(it.identifier)
+            val relationshipEntity = recordInteractor(context).getWithId(it.identifier)
             if (relationshipEntity != null)
                 entities.add(relationshipEntity)
         }

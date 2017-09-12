@@ -19,7 +19,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.diskmap.MapBuilder;
 
 import java.util.*;
@@ -54,7 +54,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map scanPartition(RecordController recordController, long partitionId) throws OnyxException
+    private Map scanPartition(RecordInteractor recordInteractor, long partitionId) throws OnyxException
     {
         final Map returnValue = new CompatHashMap();
 
@@ -66,7 +66,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                 if(query.isTerminated())
                     return returnValue;
 
-                long referenceId = recordController.getReferenceId(idValue);
+                long referenceId = recordInteractor.getReferenceId(idValue);
                 // The id does exist, lets add it to the results
                 if(referenceId > -1)
                 {
@@ -79,7 +79,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
         // Its an equals, if the object exists, add it to the results
         else
         {
-            long referenceId = recordController.getReferenceId(criteria.getValue());
+            long referenceId = recordInteractor.getReferenceId(criteria.getValue());
             if(referenceId > -1)
             {
                 final PartitionReference reference = new PartitionReference(partitionId, referenceId);
@@ -109,8 +109,8 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
             {
                 try {
                     final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                    final RecordController recordController = getContext().getRecordController(partitionDescriptor);
-                    Map partitionResults = scanPartition(recordController, partition.getIndex());
+                    final RecordInteractor recordInteractor = getContext().getRecordInteractor(partitionDescriptor);
+                    Map partitionResults = scanPartition(recordInteractor, partition.getIndex());
                     results.putAll(partitionResults);
                 } catch (OnyxException e) {
                     wrapper.setException(e);
@@ -135,8 +135,8 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
             long partitionId = getPartitionId(entity);
             if(partitionId < 1)
                 return new HashMap();
-            RecordController partitionRecordController = getRecordControllerForPartition(partitionId);
-            results.putAll(scanPartition(partitionRecordController, partitionId));
+            RecordInteractor partitionRecordInteractor = getRecordInteractorForPartition(partitionId);
+            results.putAll(scanPartition(partitionRecordInteractor, partitionId));
         }
 
         return results;
@@ -156,7 +156,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
     {
         final CompatMap returnValue = new CompatHashMap();
 
-        final RecordController recordController = getContext().getRecordController(descriptor);
+        final RecordInteractor recordInteractor = getContext().getRecordInteractor(descriptor);
 
         Iterator iterator = existingValues.keySet().iterator();
 
@@ -168,7 +168,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
 
             if(key instanceof PartitionReference)
             {
-                RecordController recordController1 = this.getRecordControllerForPartition(((PartitionReference) key).partition);
+                RecordInteractor recordInteractorForPartition = this.getRecordInteractorForPartition(((PartitionReference) key).partition);
                 // If it is an in clause
                 if(criteria.getValue() instanceof List)
                 {
@@ -177,7 +177,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                         if(query.isTerminated())
                             return returnValue;
 
-                        long referenceId = recordController1.getReferenceId(idValue);
+                        long referenceId = recordInteractorForPartition.getReferenceId(idValue);
 
                         if(referenceId == ((PartitionReference)key).reference)
                         {
@@ -188,7 +188,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                 // Its an equals, if the object exists, add it to the results
                 else
                 {
-                    long referenceId = recordController1.getReferenceId(criteria.getValue());
+                    long referenceId = recordInteractorForPartition.getReferenceId(criteria.getValue());
 
                     if(referenceId ==  ((PartitionReference)key).reference)
                     {
@@ -206,7 +206,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                         if(query.isTerminated())
                             return returnValue;
 
-                        long referenceId = recordController.getReferenceId(idValue);
+                        long referenceId = recordInteractor.getReferenceId(idValue);
 
                         if(referenceId == (Long)key)
                         {
@@ -217,7 +217,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
                 // Its an equals, if the object exists, add it to the results
                 else
                 {
-                    long referenceId = recordController.getReferenceId(criteria.getValue());
+                    long referenceId = recordInteractor.getReferenceId(criteria.getValue());
 
                     if(referenceId ==  (Long)key)
                     {

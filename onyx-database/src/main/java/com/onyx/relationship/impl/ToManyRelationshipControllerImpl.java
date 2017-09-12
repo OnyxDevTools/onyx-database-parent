@@ -14,8 +14,8 @@ import com.onyx.persistence.annotations.values.CascadePolicy;
 import com.onyx.persistence.annotations.values.FetchPolicy;
 import com.onyx.persistence.collections.LazyRelationshipCollection;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.AbstractRecordController;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
@@ -60,7 +60,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
         }
 
         final List<IManagedEntity> relationshipObjects = getRelationshipListValue(relationshipDescriptor, entity);
-        final RelationshipReference entityIdentifier = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()), getPartitionId(entity));
+        final RelationshipReference entityIdentifier = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()), getPartitionId(entity));
 
         Set<RelationshipReference> existingRelationshipObjects = null;
 
@@ -106,7 +106,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
 
                 // Get the inverse identifier
-                reltnIdentifier = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
+                reltnIdentifier = DefaultRecordInteractor.Companion.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
                 relationshipObjectIdentifier = new RelationshipReference(reltnIdentifier, getPartitionId(relationshipObject));
 
                 // If it is in the list, it is accounted for, lets continue
@@ -120,12 +120,12 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
                     EntityRelationshipManager newManager = new EntityRelationshipManager();
                     newManager.add(entity, entityDescriptor.getIdentifier());
 
-                    final RecordController inverseRecordController = getRecordControllerForEntity(relationshipObject);
+                    final RecordInteractor inverseRecordInteractor = getRecordInteractorForEntity(relationshipObject);
 
-                    Object id = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
-                    final long oldReference = (id != null) ? inverseRecordController.getReferenceId(id) : 0;
+                    Object id = DefaultRecordInteractor.Companion.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
+                    final long oldReference = (id != null) ? inverseRecordInteractor.getReferenceId(id) : 0;
 
-                    relationshipObjectIdentifier = new RelationshipReference(inverseRecordController.save(relationshipObject), getPartitionId(relationshipObject));
+                    relationshipObjectIdentifier = new RelationshipReference(inverseRecordInteractor.save(relationshipObject), getPartitionId(relationshipObject));
 
                     IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), relationshipObjectIdentifier.identifier, oldReference, relationshipObject);
                     RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, newManager, getContext());
@@ -135,7 +135,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 } else {
                     // Ensure the record exists
-                    saveRelationship = getRecordControllerForPartition(relationshipObjectIdentifier.partitionId).existsWithId(relationshipObjectIdentifier.identifier);
+                    saveRelationship = getRecordInteractorForPartition(relationshipObjectIdentifier.partitionId).existsWithId(relationshipObjectIdentifier.identifier);
                 }
 
                 // The entity exists yay, that means we can save it
@@ -183,7 +183,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     @Override
     public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws OnyxException {
-        IManagedEntity entity = recordController.getWithId(entityIdentifier.identifier);
+        IManagedEntity entity = recordInteractor.getWithId(entityIdentifier.identifier);
         manager.add(entity, entityDescriptor.getIdentifier());
 
         Set<RelationshipReference> existingRelationshipObjects;
@@ -253,7 +253,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
             for (RelationshipReference existingRelationshipObject : existingRelationshipObjects) {
                 inverseIdentifier = existingRelationshipObject;
-                IManagedEntity relationshipObject = getRecordControllerForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+                IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
 
                 if (relationshipObject == null) {
                     throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
@@ -283,8 +283,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     @Override
     public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws OnyxException {
-        IManagedEntity entity = recordController.getWithReferenceId(referenceId);
-        Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
+        IManagedEntity entity = recordInteractor.getWithReferenceId(referenceId);
+        Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
         Set<RelationshipReference> existingRelationshipObjects = null;
         Object retVal = records.get(new RelationshipReference(indexValue, 0));
         if (retVal instanceof Set)
@@ -308,8 +308,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     @Override
     public List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws OnyxException {
-        IManagedEntity entity = getRecordControllerForPartition(referenceId.partition).getWithReferenceId(referenceId.reference);
-        Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
+        IManagedEntity entity = getRecordInteractorForPartition(referenceId.partition).getWithReferenceId(referenceId.reference);
+        Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
         Set<RelationshipReference> existingRelationshipObjects = null;
 
         Object retVal = records.get(new RelationshipReference(indexValue, referenceId.partition));
@@ -335,7 +335,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     public void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws OnyxException {
         Object partitionValue = PartitionHelper.getPartitionFieldValue(entity, this.getContext());
-        Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
+        Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         RelationshipReference entityId;
         if (partitionValue != "" && partitionValue != null) {

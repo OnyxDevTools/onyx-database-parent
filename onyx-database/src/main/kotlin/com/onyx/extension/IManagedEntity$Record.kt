@@ -1,10 +1,10 @@
 package com.onyx.extension
 
-import com.onyx.descriptor.recordController
+import com.onyx.descriptor.recordInteractor
 import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.record.RecordController
+import com.onyx.interactors.record.RecordInteractor
 
 /**
  * Get the entity's reference ID from the store.
@@ -18,7 +18,7 @@ import com.onyx.record.RecordController
  */
 fun IManagedEntity.referenceId(context: SchemaContext):Long {
     val identifier = identifier(context)
-    return if(identifier == null) 0L else recordController(context).getReferenceId(identifier)
+    return if(identifier == null) 0L else recordInteractor(context).getReferenceId(identifier)
 }
 
 /**
@@ -33,7 +33,7 @@ fun IManagedEntity.reference(context: SchemaContext):PartitionReference = Partit
  * @return The record controller manages the i/o of the entity
  * @since 2.0.0
  */
-fun IManagedEntity.recordController(context: SchemaContext): RecordController = descriptor(context).recordController()
+fun IManagedEntity.recordInteractor(context: SchemaContext): RecordInteractor = descriptor(context).recordInteractor()
 
 /**
  * Save an entity within it's store
@@ -41,4 +41,4 @@ fun IManagedEntity.recordController(context: SchemaContext): RecordController = 
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.save(context:SchemaContext):Any = recordController(context).save(this)
+fun IManagedEntity.save(context:SchemaContext):Any = recordInteractor(context).save(this)

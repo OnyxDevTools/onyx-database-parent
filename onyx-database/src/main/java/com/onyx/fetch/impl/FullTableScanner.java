@@ -11,7 +11,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.depricated.CompareUtil;
 import com.onyx.util.map.CompatHashMap;
 
@@ -96,8 +96,8 @@ public class FullTableScanner extends AbstractTableScanner implements TableScann
             reference = iterator.next();
 
             if (reference instanceof PartitionReference) {
-                final RecordController recordController = this.getRecordControllerForPartition(((PartitionReference) reference).partition);
-                entity = recordController.getWithReferenceId(((PartitionReference) reference).reference);
+                final RecordInteractor recordInteractor = this.getRecordInteractorForPartition(((PartitionReference) reference).partition);
+                entity = recordInteractor.getWithReferenceId(((PartitionReference) reference).reference);
             } else {
                 entity = records.getWithRecID((long) reference);
             }

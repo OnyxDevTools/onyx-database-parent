@@ -2,6 +2,7 @@ package com.onyx.index.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
@@ -9,8 +10,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.index.IndexController;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.AbstractRecordController;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.diskmap.base.DiskMultiMatrixHashMap;
@@ -33,7 +33,7 @@ public class IndexControllerImpl implements IndexController {
     protected CompatMap<Object, Header> references = null; // Stores the references for an index key
     private CompatMap<Long, Object> indexValues = null;
     @SuppressWarnings("unused")
-    protected RecordController recordController = null;
+    protected RecordInteractor recordInteractor = null;
     @SuppressWarnings("WeakerAccess")
     protected IndexDescriptor indexDescriptor = null;
     @SuppressWarnings("WeakerAccess")
@@ -58,7 +58,7 @@ public class IndexControllerImpl implements IndexController {
         this.contextId = context.getContextId();
 
         this.indexDescriptor = indexDescriptor;
-        this.recordController = context.getRecordController(descriptor);
+        this.recordInteractor = context.getRecordInteractor(descriptor);
         this.descriptor = descriptor;
         final MapBuilder dataFile = context.getDataFile(descriptor);
 
@@ -232,7 +232,7 @@ public class IndexControllerImpl implements IndexController {
                     entry = iterator.next();
                     long recId = records.getRecID(entry.getKey());
                     if (recId > 0) {
-                        final Object indexValue = AbstractRecordController.getIndexValueFromEntity((IManagedEntity) entry.getValue(), indexDescriptor);
+                        final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity((IManagedEntity) entry.getValue(), indexDescriptor);
                         if (indexValue != null)
                             save(indexValue, recId, recId);
                     }

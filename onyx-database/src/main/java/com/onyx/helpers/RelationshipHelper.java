@@ -9,8 +9,8 @@ import com.onyx.exception.InvalidRelationshipTypeException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.AbstractRecordController;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
@@ -77,10 +77,10 @@ public class RelationshipHelper
         if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
         {
             final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getEntityClass(), partitionValue);
-            entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
+            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
         } else
         {
-            entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), 0);
+            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), 0);
         }
 
         for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
@@ -107,10 +107,10 @@ public class RelationshipHelper
         if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
         {
             final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getEntityClass(), partitionValue);
-            entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
+            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
         } else
         {
-            entityId = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, descriptor.getIdentifier()), 0);
+            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), 0);
         }
 
 
@@ -158,7 +158,7 @@ public class RelationshipHelper
 
         final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
         List<RelationshipReference> relationshipReferences;
-        RecordController recordController;
+        RecordInteractor recordInteractor;
 
         // Get relationship references
         if (entityReference instanceof PartitionReference) {
@@ -173,7 +173,7 @@ public class RelationshipHelper
             relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(((SkipListNode)entityReference).recordId);
         }
 
-        RecordController defaultRecordController = context.getRecordController(descriptor);
+        RecordInteractor defaultRecordInteractor = context.getRecordInteractor(descriptor);
 
         PartitionContext partitionContext = null;
 
@@ -181,7 +181,7 @@ public class RelationshipHelper
         for(RelationshipReference reference : relationshipReferences)
         {
             if(reference.partitionId <= 0) {
-                IManagedEntity relationshipEntity = defaultRecordController.getWithId(reference.identifier);
+                IManagedEntity relationshipEntity = defaultRecordInteractor.getWithId(reference.identifier);
                 if(relationshipEntity != null)
                     entities.add(relationshipEntity);
             }
@@ -190,8 +190,8 @@ public class RelationshipHelper
                 if(partitionContext == null)
                     partitionContext = new PartitionContext(context, descriptor);
 
-                recordController = partitionContext.getRecordControllerForPartition(reference.partitionId);
-                IManagedEntity relationshipEntity = recordController.getWithId(reference.identifier);
+                recordInteractor = partitionContext.getRecordInteractorForPartition(reference.partitionId);
+                IManagedEntity relationshipEntity = recordInteractor.getWithId(reference.identifier);
                 if(relationshipEntity != null)
                     entities.add(relationshipEntity);
             }

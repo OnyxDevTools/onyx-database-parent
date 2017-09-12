@@ -17,7 +17,7 @@ class TransactionException @JvmOverloads constructor(message: String? = "") : On
      * @param message message
      * @param transaction transaction
      */
-    constructor(message: String, transaction: Transaction, cause: Throwable) : this(message) {
+    constructor(message: String, transaction: Transaction?, cause: Throwable) : this(message) {
         this.transaction = transaction
         this.rootCause = cause
     }

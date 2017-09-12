@@ -1,10 +1,10 @@
 package com.onyx.relationship;
 
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.persistence.IManagedEntity;
-import com.onyx.record.AbstractRecordController;
 import com.onyx.util.map.CompatMap;
 
 import java.util.Map;
@@ -39,7 +39,7 @@ public class EntityRelationshipManager
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
-        final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, indexDescriptor);
+        final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, indexDescriptor);
 
         return indexValue != null && entityMap.containsKey(indexValue);
     }
@@ -62,7 +62,7 @@ public class EntityRelationshipManager
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
 
-        entityMap.put(AbstractRecordController.getIndexValueFromEntity(entity, indexDescriptor), entity);
+        entityMap.put(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, indexDescriptor), entity);
     }
 
     /**
@@ -81,7 +81,7 @@ public class EntityRelationshipManager
         }
 
         final Map<Object, IManagedEntity> entityMap = entities.get(className);
-        final Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, descriptor);
+        final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor);
 
         return entityMap.get(indexValue);
     }

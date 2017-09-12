@@ -8,7 +8,7 @@ import com.onyx.exception.OnyxExceptionWrapper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.RecordController;
+import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.SynchronizedMap;
@@ -25,7 +25,7 @@ public class PartitionContext
 {
 
     protected String contextId = null;
-    protected RecordController defaultRecordController = null;
+    protected RecordInteractor defaultRecordInteractor = null;
     protected EntityDescriptor defaultDescriptor = null;
 
     /**
@@ -38,7 +38,7 @@ public class PartitionContext
     {
         this.contextId = context.getContextId();
         this.defaultDescriptor = descriptor;
-        this.defaultRecordController = context.getRecordController(this.defaultDescriptor);
+        this.defaultRecordInteractor = context.getRecordInteractor(this.defaultDescriptor);
     }
 
     /**
@@ -190,20 +190,20 @@ public class PartitionContext
         return defaultDescriptor;
     }
 
-    private final CompatMap<PartitionKey, RecordController> cachedControllersPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
+    private final CompatMap<PartitionKey, RecordInteractor> cachedControllersPerEntity = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     @Deprecated
-    protected RecordController getRecordControllerForEntity(IManagedEntity entity) throws OnyxException
+    protected RecordInteractor getRecordInteractorForEntity(IManagedEntity entity) throws OnyxException
     {
         if(PartitionHelper.hasPartitionField(entity, getContext()))
         {
 
             final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
-            final RecordController retVal = cachedControllersPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
+            final RecordInteractor retVal = cachedControllersPerEntity.computeIfAbsent(new PartitionKey(entity), (partitionKey) -> {
                 try
                 {
-                    return getContext().getRecordController(getDescriptorForEntity(entity));
+                    return getContext().getRecordInteractor(getDescriptorForEntity(entity));
                 }
                 catch (OnyxException e)
                 {
@@ -219,24 +219,24 @@ public class PartitionContext
 
             return retVal;
         }
-        return defaultRecordController;
+        return defaultRecordInteractor;
     }
 
 
-    private final CompatMap<Long, RecordController> cachedControllersPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
+    private final CompatMap<Long, RecordInteractor> cachedControllersPerPartition = new SynchronizedMap<>(new CompatWeakHashMap<>());
 
     @Deprecated
-    public RecordController getRecordControllerForPartition(long partitionId) throws OnyxException
+    public RecordInteractor getRecordInteractorForPartition(long partitionId) throws OnyxException
     {
         if(partitionId != 0)
         {
             final OnyxExceptionWrapper exceptionWrapper = new OnyxExceptionWrapper();
 
-            RecordController retVal = cachedControllersPerPartition.computeIfAbsent(partitionId, (partitionKey) -> {
+            RecordInteractor retVal = cachedControllersPerPartition.computeIfAbsent(partitionId, (partitionKey) -> {
                 try
                 {
                     EntityDescriptor inverseDescriptor = getDescriptorWithPartitionId(partitionId);
-                    return getContext().getRecordController(inverseDescriptor);
+                    return getContext().getRecordInteractor(inverseDescriptor);
                 }
                 catch (OnyxException e)
                 {
@@ -252,7 +252,7 @@ public class PartitionContext
 
             return retVal;
         }
-        return defaultRecordController;
+        return defaultRecordInteractor;
     }
 
 

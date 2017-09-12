@@ -127,7 +127,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
             }
             entity.deleteAllIndexes(context, previousReferenceId)
             entity.deleteRelationships(context)
-            entity.recordController(context).delete(entity)
+            entity.recordInteractor(context).delete(entity)
         }
 
         return previousReferenceId > 0
@@ -344,7 +344,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> find(entity: IManagedEntity): E {
         context.checkForKillSwitch()
 
-        val results = entity.recordController(context).get(entity) ?: throw NoResultsException()
+        val results = entity.recordInteractor(context).get(entity) ?: throw NoResultsException()
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(results, EntityRelationshipManager(), context)
         ReflectionUtil.copy(results, entity, entity.descriptor(context))
@@ -371,7 +371,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         var entity: IManagedEntity? = ReflectionUtil.createNewEntity(clazz)!!
 
         // Find the object
-        entity = entity!!.recordController(context).getWithId(id)
+        entity = entity!!.recordInteractor(context).getWithId(id)
 
         if (entity != null) {
             RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
@@ -398,10 +398,10 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity = ReflectionUtil.createNewEntity(clazz)!!
+        var entity: IManagedEntity? = ReflectionUtil.createNewEntity(clazz)!!
 
         // Find the object
-        entity = entity.recordController(context).getWithId(id)
+        entity = entity!!.recordInteractor(context).getWithId(id)
 
         if (entity != null) {
             RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
@@ -425,7 +425,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     @Throws(OnyxException::class)
     override fun exists(entity: IManagedEntity): Boolean {
         context.checkForKillSwitch()
-        return entity.recordController(context).exists(entity)
+        return entity.recordInteractor(context).exists(entity)
     }
 
     /**
@@ -445,9 +445,9 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         context.checkForKillSwitch()
 
         val descriptor = context.getDescriptorForEntity(entity, partitionId)
-        val recordController = context.getRecordController(descriptor)
+        val recordInteractor = context.getRecordInteractor(descriptor)
 
-        return recordController.exists(entity)
+        return recordInteractor.exists(entity)
     }
 
     /**
@@ -521,10 +521,10 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         var entity = ReflectionUtil.createNewEntity(entityType)
         val descriptor = context.getDescriptorForEntity(entity, "")
-        val recordController = context.getRecordController(descriptor)
+        val recordInteractor = context.getRecordInteractor(descriptor)
 
         // Find the object
-        entity = recordController.getWithReferenceId(referenceId)
+        entity = recordInteractor.getWithReferenceId(referenceId)
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
         return entity as E
@@ -546,8 +546,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> getWithPartitionReference(entityType: Class<*>, partitionReference: PartitionReference): E? {
         val (_, _, partitionValue) = context.getPartitionWithId(partitionReference.partition) ?: return null
         val descriptor = context.getDescriptorForEntity(entityType, partitionValue)
-        val recordController = context.getRecordController(descriptor)
-        return recordController.getWithReferenceId(partitionReference.reference) as E
+        val recordInteractor = context.getRecordInteractor(descriptor)
+        return recordInteractor.getWithReferenceId(partitionReference.reference) as E
     }
 
     /**
@@ -568,10 +568,10 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         var entity = ReflectionUtil.createNewEntity(clazz)
         val descriptor = context.getDescriptorForEntity(entity, "")
         val partitionContext = PartitionContext(context, descriptor)
-        val recordController = partitionContext.getRecordControllerForPartition(partitionId)
+        val recordInteractor = partitionContext.getRecordInteractorForPartition(partitionId)
 
         // Find the object
-        entity = recordController.getWithId(id)
+        entity = recordInteractor.getWithId(id)
 
         RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
 
@@ -591,10 +591,10 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         val entity = ReflectionUtil.createNewEntity(entityType)
         val descriptor = context.getDescriptorForEntity(entity, "")
-        val recordController = context.getRecordController(descriptor)
+        val recordInteractor = context.getRecordInteractor(descriptor)
 
         // Find the object
-        return recordController.getMapWithReferenceId(reference)
+        return recordInteractor.getMapWithReferenceId(reference)
     }
 
     /**

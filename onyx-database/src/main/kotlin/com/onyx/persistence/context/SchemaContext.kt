@@ -12,7 +12,7 @@ import com.onyx.index.IndexController
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.QueryCacheController
-import com.onyx.record.RecordController
+import com.onyx.interactors.record.RecordInteractor
 import com.onyx.relationship.RelationshipController
 import com.onyx.transaction.TransactionController
 
@@ -204,7 +204,7 @@ interface SchemaContext {
      * @param descriptor Record's Entity Descriptor
      * @return Corresponding record controller for entity descriptor
      */
-    fun getRecordController(descriptor: EntityDescriptor): RecordController
+    fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor
 
     /**
      * Get Index Controller with Index descriptor

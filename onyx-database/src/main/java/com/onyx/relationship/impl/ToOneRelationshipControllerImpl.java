@@ -9,9 +9,9 @@ import com.onyx.helpers.RelationshipHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.annotations.values.CascadePolicy;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.record.AbstractRecordController;
-import com.onyx.record.RecordController;
-import com.onyx.record.impl.SequenceRecordControllerImpl;
+import com.onyx.interactors.record.RecordInteractor;
+import com.onyx.interactors.record.impl.DefaultRecordInteractor;
+import com.onyx.interactors.record.impl.SequenceRecordInteractor;
 import com.onyx.relationship.EntityRelationshipManager;
 import com.onyx.relationship.RelationshipController;
 import com.onyx.relationship.RelationshipReference;
@@ -59,15 +59,15 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         IManagedEntity relationshipObject = getRelationshipValue(entity);
 
         RelationshipReference currentInverseIdentifier = null;
-        final RelationshipReference entityIdentifier = new RelationshipReference(AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()), getPartitionId(entity));
+        final RelationshipReference entityIdentifier = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier()), getPartitionId(entity));
 
         // Hydrate the inverse identifier if it exists
         if (relationshipObject != null && currentInverseIdentifier == null)
         {
             // Get Inverse Partition ID
             long partitionID = getPartitionId(relationshipObject);
-            Object id = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
-            boolean exists = getRecordControllerForEntity(relationshipObject).existsWithId(id);
+            Object id = DefaultRecordInteractor.Companion.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
+            boolean exists = getRecordInteractorForEntity(relationshipObject).existsWithId(id);
             if(exists)
             {
                 currentInverseIdentifier = new RelationshipReference(id, partitionID);
@@ -83,12 +83,12 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
                 && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
         {
 
-            RecordController inverseRecordController = getRecordControllerForEntity(relationshipObject);
+            RecordInteractor inverseRecordInteractor = getRecordInteractorForEntity(relationshipObject);
 
-            Object id = AbstractRecordController.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
-            final long oldReference = (id != null) ? inverseRecordController.getReferenceId(id) : 0;
+            Object id = DefaultRecordInteractor.Companion.getIndexValueFromEntity(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier());
+            final long oldReference = (id != null) ? inverseRecordInteractor.getReferenceId(id) : 0;
 
-            newReference = new RelationshipReference(inverseRecordController.save(relationshipObject), getPartitionId(relationshipObject));
+            newReference = new RelationshipReference(inverseRecordInteractor.save(relationshipObject), getPartitionId(relationshipObject));
 
             // Make sure we put it on the saved list
             EntityRelationshipManager newManager = new EntityRelationshipManager();
@@ -112,14 +112,14 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
             if (existingReference != null && (!existingReference.equals(currentInverseIdentifier) || (newReference != null && !existingReference.equals(newReference))))
             {
-                final RecordController inverseRecordController = getRecordControllerForPartition(existingReference.partitionId);
-                relationshipObject = inverseRecordController.getWithId(existingReference.identifier);
+                final RecordInteractor inverseRecordInteractor = getRecordInteractorForPartition(existingReference.partitionId);
+                relationshipObject = inverseRecordInteractor.getWithId(existingReference.identifier);
 
                 if (relationshipObject != null && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
                 {
-                    IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(existingReference.identifier));
+                    IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordInteractor.getReferenceId(existingReference.identifier));
                     RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
-                    getRecordControllerForEntity(relationshipObject).deleteWithId(existingReference.identifier);
+                    getRecordInteractorForEntity(relationshipObject).deleteWithId(existingReference.identifier);
                 }
 
                 // Make sure we do not save the relationship again
@@ -183,8 +183,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
                 && (relationshipDescriptor.getCascadePolicy() == CascadePolicy.DELETE || relationshipDescriptor.getCascadePolicy() == CascadePolicy.ALL))
         {
 
-            RecordController inverseRecordController = getRecordControllerForPartition(inverseIdentifier.partitionId);
-            IManagedEntity relationshipObject = getRecordControllerForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+            RecordInteractor inverseRecordInteractor = getRecordInteractorForPartition(inverseIdentifier.partitionId);
+            IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
             if(relationshipObject == null)
                 return;
 
@@ -193,10 +193,10 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
             {
                 manager.add(relationshipObject, inverseDescriptor.getIdentifier());
 
-                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordController.getReferenceId(inverseIdentifier.identifier));
+                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordInteractor.getReferenceId(inverseIdentifier.identifier));
                 RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
 
-                inverseRecordController.deleteWithId(inverseIdentifier.identifier);
+                inverseRecordInteractor.deleteWithId(inverseIdentifier.identifier);
             }
         }
         // Only delete the relationship Reference
@@ -218,7 +218,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      */
     private boolean isSequenceIdentifier(RelationshipReference identifier) throws OnyxException
     {
-        return (getRecordControllerForPartition(identifier.partitionId) instanceof SequenceRecordControllerImpl);
+        return (getRecordInteractorForPartition(identifier.partitionId) instanceof SequenceRecordInteractor);
     }
 
     /**
@@ -241,7 +241,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         if (inverseIdentifier != null
                && (!isSequenceIdentifier(inverseIdentifier) || Long.valueOf(String.valueOf(inverseIdentifier.identifier)) > 0))
         {
-            IManagedEntity relationshipObject = getRecordControllerForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+            IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
 
             if (relationshipObject == null)
             {
@@ -281,8 +281,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     {
         List<RelationshipReference> results = new ArrayList<>();
 
-        IManagedEntity entity = recordController.getWithReferenceId(referenceId);
-        Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
+        IManagedEntity entity = recordInteractor.getWithReferenceId(referenceId);
+        Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         // Get the identifier
         final RelationshipReference inverseIdentifier = toOneMap.get(new RelationshipReference(indexValue, 0));
@@ -306,8 +306,8 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     {
         List<RelationshipReference> results = new ArrayList<>();
 
-        IManagedEntity entity = getRecordControllerForPartition(referenceId.partition).getWithReferenceId(referenceId.reference);
-        Object indexValue = AbstractRecordController.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
+        IManagedEntity entity = getRecordInteractorForPartition(referenceId.partition).getWithReferenceId(referenceId.reference);
+        Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, entityDescriptor.getIdentifier());
 
         // Get the identifier
         final RelationshipReference inverseIdentifier = toOneMap.get(new RelationshipReference(indexValue, referenceId.partition));

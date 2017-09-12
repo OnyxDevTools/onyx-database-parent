@@ -11,7 +11,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.record.AbstractRecordController
+import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.request.pojo.*
 import com.onyx.stream.QueryStream
 import com.onyx.util.ReflectionUtil
@@ -409,7 +409,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val attributeType = relationshipDescriptor.inverseClass
 
         val body = EntityInitializeBody()
-        body.entityId = AbstractRecordController.getIndexValueFromEntity(entity, descriptor.identifier)
+        body.entityId = DefaultRecordInteractor.getIndexValueFromEntity(entity, descriptor.identifier)
         body.attribute = attribute
         body.entityType = entity.javaClass.name
         val partitionValue = PartitionHelper.getPartitionFieldValue(entity, context)
