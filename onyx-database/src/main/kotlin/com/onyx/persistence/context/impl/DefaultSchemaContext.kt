@@ -13,8 +13,8 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
-import com.onyx.extension.partitionValue
 import com.onyx.fetch.ScannerFactory
+import com.onyx.helpers.PartitionHelper
 import com.onyx.index.IndexController
 import com.onyx.index.impl.IndexControllerImpl
 import com.onyx.persistence.IManagedEntity
@@ -34,7 +34,7 @@ import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
-import com.onyx.relationship.RelationshipController
+import com.onyx.relationship.RelationshipInteractor
 import com.onyx.relationship.impl.ToManyRelationshipControllerImpl
 import com.onyx.relationship.impl.ToOneRelationshipControllerImpl
 import com.onyx.util.EntityClassLoader
@@ -531,14 +531,15 @@ open class DefaultSchemaContext : SchemaContext {
             throw EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND, entity.javaClass)
         }
 
-        return getDescriptorForEntity(entity, entity.partitionValue(this))
+        val partitionId = PartitionHelper.getPartitionFieldValue(entity, this)
+        return getDescriptorForEntity(entity, partitionId)
     }
 
     // endregion
 
     // region Relationship Controllers
 
-    private val relationshipControllers = HashMap<RelationshipDescriptor, RelationshipController>()
+    private val relationshipControllers = HashMap<RelationshipDescriptor, RelationshipInteractor>()
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -553,7 +554,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipController = synchronized(relationshipControllers) {
+    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor = synchronized(relationshipControllers) {
         relationshipControllers.getOrPut(relationshipDescriptor) {
             return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
                 ToManyRelationshipControllerImpl(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)

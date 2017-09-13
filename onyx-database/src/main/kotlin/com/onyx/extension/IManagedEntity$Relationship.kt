@@ -7,7 +7,7 @@ import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.relationship.EntityRelationshipManager
-import com.onyx.relationship.RelationshipController
+import com.onyx.relationship.RelationshipInteractor
 import com.onyx.relationship.RelationshipReference
 import java.util.ArrayList
 
@@ -18,7 +18,7 @@ import java.util.ArrayList
  * @param name Name of property that corresponds to the relationship
  * @return Corresponding relationship controller for an entity and specified property name
  */
-fun IManagedEntity.relationshipController(context: SchemaContext, name:String):RelationshipController {
+fun IManagedEntity.relationshipController(context: SchemaContext, name:String): RelationshipInteractor {
     val entityDescriptor = descriptor(context)
     return context.getRelationshipController(entityDescriptor.relationships[name]!!)
 }
@@ -35,8 +35,8 @@ fun IManagedEntity.relationshipController(context: SchemaContext, name:String):R
 fun IManagedEntity.saveRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager()) {
     val descriptor = descriptor(context)
     if (descriptor.hasRelationships) {
-        if (!manager.contains(this, descriptor.identifier)) {
-            manager.add(this, descriptor.identifier)
+        if (!manager.contains(this, context)) {
+            manager.add(this, context)
             descriptor.relationships.values.forEach { relationshipController(context, it.name).saveRelationshipForEntity(this, manager) }
         }
     }
@@ -87,18 +87,18 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
     }
 
     val relationshipController = context.getRelationshipController(relationshipDescriptor!!)
-    val relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(entityReference)
+    val relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(entityReference!!)
 
     val defaultRecordInteractor = context.getRecordInteractor(descriptor!!)
     val entities = ArrayList<IManagedEntity>()
 
     relationshipReferences.forEach {
         if (it.partitionId <= 0) {
-            val relationshipEntity = defaultRecordInteractor.getWithId(it.identifier)
+            val relationshipEntity = defaultRecordInteractor.getWithId(it.identifier!!)
             if (relationshipEntity != null)
                 entities.add(relationshipEntity)
         } else {
-            val relationshipEntity = recordInteractor(context).getWithId(it.identifier)
+            val relationshipEntity = recordInteractor(context).getWithId(it.identifier!!)
             if (relationshipEntity != null)
                 entities.add(relationshipEntity)
         }

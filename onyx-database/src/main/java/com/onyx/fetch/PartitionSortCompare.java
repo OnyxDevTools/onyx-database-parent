@@ -2,7 +2,7 @@ package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.interactors.record.RecordInteractor;
-import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
@@ -177,17 +177,17 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
     private Object getRelationshipValue(Object entry, ScannerProperties properties) throws OnyxException
     {
         // Get Relationship controller
-        final RelationshipController relationshipController = getContext().getRelationshipController(properties.relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipController(properties.relationshipDescriptor);
 
         List<RelationshipReference> relationshipReferences;
 
         // Get relationship references
         if (entry instanceof PartitionReference) {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)entry);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference)entry);
         }
         else
         {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((long)entry);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((long)entry);
         }
 
         if(relationshipReferences.size() == 0)
@@ -197,15 +197,15 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         final RelationshipReference ref = relationshipReferences.get(0);
         Object relationshipAttributeValue;
 
-        if(ref.partitionId > 0)
+        if(ref.getPartitionId() > 0)
         {
             final PartitionContext partitionContext = new PartitionContext(getContext(), properties.descriptor);
-            final RecordInteractor recordInteractor = partitionContext.getRecordInteractorForPartition(ref.partitionId);
-            relationshipAttributeValue = recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordInteractor.getReferenceId(ref.identifier));
+            final RecordInteractor recordInteractor = partitionContext.getRecordInteractorForPartition(ref.getPartitionId());
+            relationshipAttributeValue = recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordInteractor.getReferenceId(ref.getIdentifier()));
         }
         else
         {
-            relationshipAttributeValue = properties.recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordInteractor.getReferenceId(ref.identifier));
+            relationshipAttributeValue = properties.recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordInteractor.getReferenceId(ref.getIdentifier()));
         }
 
         return relationshipAttributeValue;

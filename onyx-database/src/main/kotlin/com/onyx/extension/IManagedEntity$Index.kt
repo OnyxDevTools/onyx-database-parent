@@ -39,7 +39,7 @@ fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long)
         // Save All Indexes
         descriptor.indexes.values.forEach {
             val indexController = indexController(context, it.name)
-            val indexValue = property(context, it.name)
+            val indexValue:Any? = get(context, descriptor, it.name)
             indexController.save(indexValue, previousReferenceId, newReferenceId)
         }
     }

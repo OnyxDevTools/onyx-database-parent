@@ -13,7 +13,7 @@ import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.interactors.record.impl.SequenceRecordInteractor;
 import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
@@ -28,7 +28,7 @@ import java.util.Set;
  * Handles actions on a to one relationship
  */
 @SuppressWarnings("unchecked")
-public class ToOneRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController {
+public class ToOneRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipInteractor {
 
     private DiskMap<RelationshipReference, RelationshipReference> toOneMap = null;
 
@@ -80,7 +80,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
         if ((relationshipDescriptor.getCascadePolicy() == CascadePolicy.ALL
                 || relationshipDescriptor.getCascadePolicy() == CascadePolicy.SAVE)
                 && relationshipObject != null
-                && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
+                && !manager.contains(relationshipObject, getContext()))
         {
 
             RecordInteractor inverseRecordInteractor = getRecordInteractorForEntity(relationshipObject);
@@ -92,9 +92,9 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
             // Make sure we put it on the saved list
             EntityRelationshipManager newManager = new EntityRelationshipManager();
-            newManager.add(entity, entityDescriptor.getIdentifier());
+            newManager.add(entity, getContext());
 
-            IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), newReference.identifier, oldReference, relationshipObject);
+            IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), newReference.getIdentifier(), oldReference, relationshipObject);
             RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, new EntityRelationshipManager(), getContext());
         }
 
@@ -112,14 +112,14 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
             if (existingReference != null && (!existingReference.equals(currentInverseIdentifier) || (newReference != null && !existingReference.equals(newReference))))
             {
-                final RecordInteractor inverseRecordInteractor = getRecordInteractorForPartition(existingReference.partitionId);
-                relationshipObject = inverseRecordInteractor.getWithId(existingReference.identifier);
+                final RecordInteractor inverseRecordInteractor = getRecordInteractorForPartition(existingReference.getPartitionId());
+                relationshipObject = inverseRecordInteractor.getWithId(existingReference.getIdentifier());
 
-                if (relationshipObject != null && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier()))
+                if (relationshipObject != null && !manager.contains(relationshipObject, getContext()))
                 {
-                    IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordInteractor.getReferenceId(existingReference.identifier));
+                    IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordInteractor.getReferenceId(existingReference.getIdentifier()));
                     RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
-                    getRecordInteractorForEntity(relationshipObject).deleteWithId(existingReference.identifier);
+                    getRecordInteractorForEntity(relationshipObject).deleteWithId(existingReference.getIdentifier());
                 }
 
                 // Make sure we do not save the relationship again
@@ -183,20 +183,20 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
                 && (relationshipDescriptor.getCascadePolicy() == CascadePolicy.DELETE || relationshipDescriptor.getCascadePolicy() == CascadePolicy.ALL))
         {
 
-            RecordInteractor inverseRecordInteractor = getRecordInteractorForPartition(inverseIdentifier.partitionId);
-            IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+            RecordInteractor inverseRecordInteractor = getRecordInteractorForPartition(inverseIdentifier.getPartitionId());
+            IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.getPartitionId()).getWithId(inverseIdentifier.getIdentifier());
             if(relationshipObject == null)
                 return;
 
             EntityDescriptor inverseDescriptor = getDescriptorForEntity(relationshipObject);
-            if(!manager.contains(relationshipObject, inverseDescriptor.getIdentifier()))
+            if(!manager.contains(relationshipObject, getContext()))
             {
-                manager.add(relationshipObject, inverseDescriptor.getIdentifier());
+                manager.add(relationshipObject, getContext());
 
-                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordInteractor.getReferenceId(inverseIdentifier.identifier));
+                IndexHelper.deleteAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), inverseRecordInteractor.getReferenceId(inverseIdentifier.getIdentifier()));
                 RelationshipHelper.deleteAllRelationshipsForEntity(relationshipObject, manager, getContext());
 
-                inverseRecordInteractor.deleteWithId(inverseIdentifier.identifier);
+                inverseRecordInteractor.deleteWithId(inverseIdentifier.getIdentifier());
             }
         }
         // Only delete the relationship Reference
@@ -218,7 +218,7 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
      */
     private boolean isSequenceIdentifier(RelationshipReference identifier) throws OnyxException
     {
-        return (getRecordInteractorForPartition(identifier.partitionId) instanceof SequenceRecordInteractor);
+        return (getRecordInteractorForPartition(identifier.getPartitionId()) instanceof SequenceRecordInteractor);
     }
 
     /**
@@ -232,16 +232,16 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
     @Override
     public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws OnyxException
     {
-        manager.add(entity, entityDescriptor.getIdentifier());
+        manager.add(entity, getContext());
 
         // Get the Identifier
         final RelationshipReference inverseIdentifier = toOneMap.get(entityIdentifier);
 
         // If there are results, lets assign the key and recursively hydrate entities
         if (inverseIdentifier != null
-               && (!isSequenceIdentifier(inverseIdentifier) || Long.valueOf(String.valueOf(inverseIdentifier.identifier)) > 0))
+               && (!isSequenceIdentifier(inverseIdentifier) || Long.valueOf(String.valueOf(inverseIdentifier.getIdentifier())) > 0))
         {
-            IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+            IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.getPartitionId()).getWithId(inverseIdentifier.getIdentifier());
 
             if (relationshipObject == null)
             {
@@ -251,9 +251,9 @@ public class ToOneRelationshipControllerImpl extends AbstractRelationshipControl
 
             EntityDescriptor inverseDescriptor = getDescriptorForEntity(relationshipObject);
             // If the manager contains, lets move on and dont hydrate recursively
-            if (manager.contains(relationshipObject, inverseDescriptor.getIdentifier()))
+            if (manager.contains(relationshipObject, getContext()))
             {
-                setRelationshipValue(relationshipDescriptor, entity, manager.get(relationshipObject, inverseDescriptor.getIdentifier()));
+                setRelationshipValue(relationshipDescriptor, entity, manager.get(relationshipObject, getContext()));
                 return;
             }
             else

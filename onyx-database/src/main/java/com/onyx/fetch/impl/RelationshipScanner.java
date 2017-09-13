@@ -19,7 +19,7 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.interactors.record.RecordInteractor;
-import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.ReflectionUtil;
 import com.onyx.util.map.CompatHashMap;
@@ -156,7 +156,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         }
 
         relationshipDescriptor = this.descriptor.getRelationships().get(attribute);
-        final RelationshipController relationshipController = getContext().getRelationshipController(relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipController(relationshipDescriptor);
         final RecordInteractor inverseRecordInteractor = getDefaultInverseRecordInteractor();
 
         List<RelationshipReference> relationshipIdentifiers;
@@ -171,23 +171,23 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
 
             if(keyValue instanceof PartitionReference)
             {
-                relationshipIdentifiers = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)keyValue);
+                relationshipIdentifiers = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference)keyValue);
             }
             else
             {
-                relationshipIdentifiers = relationshipController.getRelationshipIdentifiersWithReferenceId((long)keyValue);
+                relationshipIdentifiers = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((long)keyValue);
             }
             for(RelationshipReference id : relationshipIdentifiers)
             {
 
-                if(id.partitionId == 0)
+                if(id.getPartitionId() == 0)
                 {
-                    allResults.put(inverseRecordInteractor.getReferenceId(id.identifier), keyValue);
+                    allResults.put(inverseRecordInteractor.getReferenceId(id.getIdentifier()), keyValue);
                 }
                 else
                 {
-                    RecordInteractor recordInteractorForPartition = getRecordInteractorForPartition(id.partitionId);
-                    PartitionReference reference = new PartitionReference(id.partitionId, recordInteractorForPartition.getReferenceId(id.identifier));
+                    RecordInteractor recordInteractorForPartition = getRecordInteractorForPartition(id.getPartitionId());
+                    PartitionReference reference = new PartitionReference(id.getPartitionId(), recordInteractorForPartition.getReferenceId(id.getIdentifier()));
                     allResults.put(reference, keyValue);
                 }
 

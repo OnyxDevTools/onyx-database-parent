@@ -12,7 +12,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipInteractor;
 import com.onyx.relationship.RelationshipReference;
 
 import java.util.ArrayList;
@@ -44,17 +44,17 @@ public class RelationshipHelper
             return;
         }
 
-        if(!manager.contains(entity, descriptor.getIdentifier()))
+        if(!manager.contains(entity, context))
         {
-            manager.add(entity, descriptor.getIdentifier());
+            manager.add(entity, context);
             for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
             {
-                final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
-                if(relationshipController == null)
+                final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+                if(relationshipInteractor == null)
                 {
                     throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " Class:" + relationshipDescriptor.getParentClass().getName() + " Inverse:" + relationshipDescriptor.getInverse());
                 }
-                relationshipController.saveRelationshipForEntity(entity, manager);
+                relationshipInteractor.saveRelationshipForEntity(entity, manager);
             }
         }
     }
@@ -85,8 +85,8 @@ public class RelationshipHelper
 
         for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
         {
-            final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
-            relationshipController.deleteRelationshipForEntity(entityId, relationshipManager);
+            final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+            relationshipInteractor.deleteRelationshipForEntity(entityId, relationshipManager);
         }
     }
 
@@ -116,8 +116,8 @@ public class RelationshipHelper
 
         for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
         {
-            final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
-            relationshipController.hydrateRelationshipForEntity(entityId, entity, relationshipManager, false);
+            final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+            relationshipInteractor.hydrateRelationshipForEntity(entityId, entity, relationshipManager, false);
         }
     }
 
@@ -156,21 +156,21 @@ public class RelationshipHelper
         }
 
 
-        final RelationshipController relationshipController = context.getRelationshipController(relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
         List<RelationshipReference> relationshipReferences;
         RecordInteractor recordInteractor;
 
         // Get relationship references
         if (entityReference instanceof PartitionReference) {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference)entityReference);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference)entityReference);
         }
         else if(entityReference instanceof Long)
         {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((Long)entityReference);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((Long)entityReference);
         }
         else
         {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(((SkipListNode)entityReference).recordId);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(((SkipListNode)entityReference).recordId);
         }
 
         RecordInteractor defaultRecordInteractor = context.getRecordInteractor(descriptor);
@@ -180,8 +180,8 @@ public class RelationshipHelper
         List<IManagedEntity> entities = new ArrayList<>();
         for(RelationshipReference reference : relationshipReferences)
         {
-            if(reference.partitionId <= 0) {
-                IManagedEntity relationshipEntity = defaultRecordInteractor.getWithId(reference.identifier);
+            if(reference.getPartitionId() <= 0) {
+                IManagedEntity relationshipEntity = defaultRecordInteractor.getWithId(reference.getIdentifier());
                 if(relationshipEntity != null)
                     entities.add(relationshipEntity);
             }
@@ -190,8 +190,8 @@ public class RelationshipHelper
                 if(partitionContext == null)
                     partitionContext = new PartitionContext(context, descriptor);
 
-                recordInteractor = partitionContext.getRecordInteractorForPartition(reference.partitionId);
-                IManagedEntity relationshipEntity = recordInteractor.getWithId(reference.identifier);
+                recordInteractor = partitionContext.getRecordInteractorForPartition(reference.getPartitionId());
+                IManagedEntity relationshipEntity = recordInteractor.getWithId(reference.getIdentifier());
                 if(relationshipEntity != null)
                     entities.add(relationshipEntity);
             }

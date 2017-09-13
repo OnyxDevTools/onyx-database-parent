@@ -1,19 +1,15 @@
-package com.onyx.relationship;
+package com.onyx.relationship
 
-import com.onyx.exception.OnyxException;
-import com.onyx.fetch.PartitionReference;
-import com.onyx.persistence.IManagedEntity;
-
-import java.util.List;
-import java.util.Set;
+import com.onyx.exception.OnyxException
+import com.onyx.fetch.PartitionReference
+import com.onyx.persistence.IManagedEntity
 
 /**
  * Created by timothy.osborn on 2/5/15.
  *
  * Contract on how to manipulate relationships
  */
-public interface RelationshipController
-{
+interface RelationshipInteractor {
 
     /**
      * Saves a relationship for an entity
@@ -22,7 +18,8 @@ public interface RelationshipController
      * @param manager Prevents recursion
      * @throws OnyxException Error saving realationship object
      */
-    void saveRelationshipForEntity(IManagedEntity entity, EntityRelationshipManager manager) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun saveRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager)
 
     /**
      * Delete Relationship entity
@@ -31,7 +28,8 @@ public interface RelationshipController
      * @param manager prevents recursion
      * @throws OnyxException Error deleting relationship
      */
-    void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun deleteRelationshipForEntity(entityIdentifier: RelationshipReference, manager: EntityRelationshipManager)
 
     /**
      * Hydrate a relationship values.  Force the hydration if specified
@@ -42,21 +40,24 @@ public interface RelationshipController
      * @param force force hydrate
      * @throws OnyxException error hydrating relationship
      */
-    void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun hydrateRelationshipForEntity(entityIdentifier: RelationshipReference, entity: IManagedEntity, manager: EntityRelationshipManager, force: Boolean)
 
     /**
      * Retrieves the identifiers for a given entity
      *
      * @return List of realtionship references
      */
-    List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(Long referenceId) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getRelationshipIdentifiersWithReferenceId(referenceId: Long?): List<RelationshipReference>
 
     /**
      * Retrieves the identifiers for a given entity
      *
      * @return List of relationship references
      */
-    List<RelationshipReference> getRelationshipIdentifiersWithReferenceId(PartitionReference referenceId) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun getRelationshipIdentifiersWithReferenceId(referenceId: PartitionReference): List<RelationshipReference>
 
     /**
      * Batch Save all relationship ids
@@ -64,5 +65,6 @@ public interface RelationshipController
      * @param entity Entity to update
      * @param relationshipIdentifiers list of entity references
      */
-    void updateAll(IManagedEntity entity, Set<RelationshipReference> relationshipIdentifiers) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun updateAll(entity: IManagedEntity, relationshipIdentifiers: Set<RelationshipReference>)
 }

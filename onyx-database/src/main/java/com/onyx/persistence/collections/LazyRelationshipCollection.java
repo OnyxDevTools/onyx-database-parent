@@ -188,13 +188,13 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
             {
                 RelationshipReference ref = identifiers.get(index);
 
-                if(ref.partitionId > 0)
+                if(ref.getPartitionId() > 0)
                 {
-                    entity = persistenceManager.findByIdWithPartitionId(entityDescriptor.getEntityClass(), ref.identifier, ref.partitionId);
+                    entity = persistenceManager.findByIdWithPartitionId(entityDescriptor.getEntityClass(), ref.getIdentifier(), ref.getPartitionId());
                 }
                 else
                 {
-                    entity = persistenceManager.findById(entityDescriptor.getEntityClass(), ref.identifier);
+                    entity = persistenceManager.findById(entityDescriptor.getEntityClass(), ref.getIdentifier());
                 }
             } catch (OnyxException e)
             {

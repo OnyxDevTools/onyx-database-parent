@@ -22,7 +22,7 @@ fun IManagedEntity.isValid(context:SchemaContext):Boolean {
     val descriptor = descriptor(context)
 
     descriptor.attributes.values.forEach {
-        val attributeValue:Any? = this[context, it.name]
+        val attributeValue:Any? = this[context, descriptor, it.name]
 
         // Nullable
         if(!it.isNullable && attributeValue == null) throw AttributeNonNullException(AttributeNonNullException.ATTRIBUTE_NULL_EXCEPTION, it.name)

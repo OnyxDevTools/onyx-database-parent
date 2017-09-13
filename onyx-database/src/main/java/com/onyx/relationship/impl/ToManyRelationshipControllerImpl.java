@@ -17,7 +17,7 @@ import com.onyx.persistence.context.SchemaContext;
 import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
@@ -30,7 +30,7 @@ import java.util.*;
  * Handles the to many relationship persistence
  */
 @SuppressWarnings({"unchecked", "SynchronizationOnLocalVariableOrMethodParameter"})
-public class ToManyRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipController {
+public class ToManyRelationshipControllerImpl extends AbstractRelationshipController implements RelationshipInteractor {
 
     @SuppressWarnings("WeakerAccess")
     protected final DiskMap<Object, Set<RelationshipReference>> records;
@@ -114,11 +114,11 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 // Cascade save the entity
                 if ((relationshipDescriptor.getCascadePolicy() == CascadePolicy.ALL || relationshipDescriptor.getCascadePolicy() == CascadePolicy.SAVE)
-                        && !manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
+                        && !manager.contains(relationshipObject, getContext())) {
 
                     // The EntityRelationshipManager ensures we do not recursively save cascading objects
                     EntityRelationshipManager newManager = new EntityRelationshipManager();
-                    newManager.add(entity, entityDescriptor.getIdentifier());
+                    newManager.add(entity, getContext());
 
                     final RecordInteractor inverseRecordInteractor = getRecordInteractorForEntity(relationshipObject);
 
@@ -127,7 +127,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                     relationshipObjectIdentifier = new RelationshipReference(inverseRecordInteractor.save(relationshipObject), getPartitionId(relationshipObject));
 
-                    IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), relationshipObjectIdentifier.identifier, oldReference, relationshipObject);
+                    IndexHelper.saveAllIndexesForEntity(getContext(), getDescriptorForEntity(relationshipObject), relationshipObjectIdentifier.getIdentifier(), oldReference, relationshipObject);
                     RelationshipHelper.saveAllRelationshipsForEntity(relationshipObject, newManager, getContext());
 
                     // The record exists
@@ -135,7 +135,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
                 } else {
                     // Ensure the record exists
-                    saveRelationship = getRecordInteractorForPartition(relationshipObjectIdentifier.partitionId).existsWithId(relationshipObjectIdentifier.identifier);
+                    saveRelationship = getRecordInteractorForPartition(relationshipObjectIdentifier.getPartitionId()).existsWithId(relationshipObjectIdentifier.getIdentifier());
                 }
 
                 // The entity exists yay, that means we can save it
@@ -146,7 +146,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
                 }
 
                 // Save the inverse relationship
-                if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
+                if (!manager.contains(relationshipObject, getContext())) {
                     if (relationshipDescriptor.getInverse() != null && relationshipDescriptor.getInverse().length() > 0) {
                         saveInverseRelationship(entity, relationshipObject, entityIdentifier, relationshipObjectIdentifier);
                     }
@@ -183,8 +183,8 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
      */
     @Override
     public void deleteRelationshipForEntity(RelationshipReference entityIdentifier, EntityRelationshipManager manager) throws OnyxException {
-        IManagedEntity entity = recordInteractor.getWithId(entityIdentifier.identifier);
-        manager.add(entity, entityDescriptor.getIdentifier());
+        IManagedEntity entity = recordInteractor.getWithId(entityIdentifier.getIdentifier());
+        manager.add(entity, getContext());
 
         Set<RelationshipReference> existingRelationshipObjects;
         synchronized (records) {
@@ -219,7 +219,7 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     @Override
     public void hydrateRelationshipForEntity(RelationshipReference entityIdentifier, IManagedEntity entity, EntityRelationshipManager manager, boolean force) throws OnyxException {
-        manager.add(entity, entityDescriptor.getIdentifier());
+        manager.add(entity, getContext());
 
         Set<RelationshipReference> existingRelationshipObjects = null;
 
@@ -253,13 +253,13 @@ public class ToManyRelationshipControllerImpl extends AbstractRelationshipContro
 
             for (RelationshipReference existingRelationshipObject : existingRelationshipObjects) {
                 inverseIdentifier = existingRelationshipObject;
-                IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.partitionId).getWithId(inverseIdentifier.identifier);
+                IManagedEntity relationshipObject = getRecordInteractorForPartition(inverseIdentifier.getPartitionId()).getWithId(inverseIdentifier.getIdentifier());
 
                 if (relationshipObject == null) {
-                    throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.identifier);
+                    throw new RelationshipHydrationException(relationshipDescriptor.getParentClass().getName(), relationshipDescriptor.getInverse(), inverseIdentifier.getIdentifier());
                 }
 
-                if (!manager.contains(relationshipObject, getDescriptorForEntity(relationshipObject).getIdentifier())) {
+                if (!manager.contains(relationshipObject, getContext())) {
                     RelationshipHelper.hydrateAllRelationshipsForEntity(relationshipObject, manager, getContext());
                 }
                 synchronized (relationshipObjects) {

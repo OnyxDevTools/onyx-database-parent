@@ -9,7 +9,7 @@ import com.onyx.fetch.impl.FullTableScanner;
 import com.onyx.fetch.impl.PartitionFullTableScanner;
 import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.interactors.record.impl.DefaultRecordInteractor;
-import com.onyx.relationship.RelationshipController;
+import com.onyx.relationship.RelationshipInteractor;
 import com.onyx.relationship.RelationshipReference;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.OnyxException;
@@ -449,15 +449,15 @@ public class PartitionQueryController extends PartitionContext {
     @SuppressWarnings("unchecked")
     private List hydrateRelationshipToManyMap(Object entry, ScannerProperties properties) throws OnyxException {
         // Get Relationship controller
-        final RelationshipController relationshipController = getContext().getRelationshipController(properties.relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipController(properties.relationshipDescriptor);
 
         List<RelationshipReference> relationshipReferences;
 
         // Get relationship references
         if (entry instanceof PartitionReference) {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((PartitionReference) entry);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference) entry);
         } else {
-            relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId((long) entry);
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((long) entry);
         }
 
 
@@ -467,19 +467,19 @@ public class PartitionQueryController extends PartitionContext {
         for (RelationshipReference ref : relationshipReferences) {
             Object relationshipMapValue;
 
-            if (ref.partitionId > 0) {
+            if (ref.getPartitionId() > 0) {
                 final PartitionContext partitionContext = new PartitionContext(getContext(), properties.descriptor);
-                final RecordInteractor recordInteractor = partitionContext.getRecordInteractorForPartition(ref.partitionId);
+                final RecordInteractor recordInteractor = partitionContext.getRecordInteractorForPartition(ref.getPartitionId());
                 if (properties.attributeDescriptor != null) {
-                    relationshipMapValue = recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordInteractor.getReferenceId(ref.identifier));
+                    relationshipMapValue = recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), recordInteractor.getReferenceId(ref.getIdentifier()));
                 } else {
-                    relationshipMapValue = recordInteractor.getMapWithReferenceId(recordInteractor.getReferenceId(ref.identifier));
+                    relationshipMapValue = recordInteractor.getMapWithReferenceId(recordInteractor.getReferenceId(ref.getIdentifier()));
                 }
             } else {
                 if (properties.attributeDescriptor != null) {
-                    relationshipMapValue = properties.recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordInteractor.getReferenceId(ref.identifier));
+                    relationshipMapValue = properties.recordInteractor.getAttributeWithReferenceId(properties.attributeDescriptor.getField(), properties.recordInteractor.getReferenceId(ref.getIdentifier()));
                 } else {
-                    relationshipMapValue = properties.recordInteractor.getMapWithReferenceId(properties.recordInteractor.getReferenceId(ref.identifier));
+                    relationshipMapValue = properties.recordInteractor.getMapWithReferenceId(properties.recordInteractor.getReferenceId(ref.getIdentifier()));
                 }
             }
 

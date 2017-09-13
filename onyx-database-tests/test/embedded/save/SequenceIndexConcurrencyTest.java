@@ -502,7 +502,6 @@ public class SequenceIndexConcurrencyTest extends BaseTest {
     @Test
     public void concurrencySequenceDeleteBatchIntegrityTest() throws OnyxException, InterruptedException
     {
-        SecureRandom random = new SecureRandom();
         final InheritedLongAttributeEntity entity2 = new InheritedLongAttributeEntity();
         
         entity2.longValue = 4l;

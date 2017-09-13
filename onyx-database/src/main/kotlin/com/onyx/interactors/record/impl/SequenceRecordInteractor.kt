@@ -58,7 +58,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
             when {
                 identifierValue.toLong() == 0L -> {
                     identifierValue = sequenceValue.incrementAndGet().castTo(entityDescriptor.identifier!!.type) as Number
-                    entity[context, entityDescriptor.identifier!!.name] = identifierValue
+                    entity[context, entityDescriptor, entityDescriptor.identifier!!.name] = identifierValue
                     metadata.put(LAST_SEQUENCE_VALUE, identifierValue)
                 }
                 identifierValue.toLong() > sequenceValue.get() -> {
