@@ -4,11 +4,14 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.fetch.PartitionReference
+import com.onyx.helpers.PartitionHelper
+import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.relationship.EntityRelationshipManager
 import com.onyx.relationship.RelationshipInteractor
 import com.onyx.relationship.RelationshipReference
+import com.onyx.relationship.impl.AbstractRelationshipController
 import java.util.ArrayList
 
 /**
@@ -35,10 +38,9 @@ fun IManagedEntity.relationshipController(context: SchemaContext, name:String): 
 fun IManagedEntity.saveRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager()) {
     val descriptor = descriptor(context)
     if (descriptor.hasRelationships) {
-        if (!manager.contains(this, context)) {
-            manager.add(this, context)
+//        if (!manager.contains(this, context)) {
             descriptor.relationships.values.forEach { relationshipController(context, it.name).saveRelationshipForEntity(this, manager) }
-        }
+//        }
     }
 }
 
@@ -50,12 +52,18 @@ fun IManagedEntity.saveRelationships(context: SchemaContext, manager: EntityRela
  * @since 2.0.0
  */
 @JvmOverloads
-fun IManagedEntity.deleteRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager()) {
-    val descriptor      = descriptor(context)
+fun IManagedEntity.deleteRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager(), descriptor: EntityDescriptor = descriptor(context)) = descriptor.relationships.values.forEach { relationshipController(context, it.name).deleteRelationshipForEntity(this, manager) }
 
-    val entityId = RelationshipReference(identifier(context), partitionId(context))
-    descriptor.relationships.values.forEach { relationshipController(context, it.name).deleteRelationshipForEntity(entityId, manager) }
+fun IManagedEntity.relationshipDescriptor(context: SchemaContext, name:String?):RelationshipDescriptor? = descriptor(context).relationships[name]
+
+fun IManagedEntity.inverseRelationshipDescriptor(context: SchemaContext, name:String?):RelationshipDescriptor? {
+    val relationshipDescriptor = descriptor(context).relationships[name] ?: return null
+    return context.getDescriptorForEntity(relationshipDescriptor.inverseClass, "").relationships[relationshipDescriptor.inverse]
 }
+
+val RELATIONSHIP_MAP_LOAD_FACTOR = 2
+
+fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship: String):MutableMap<RelationshipReference, MutableSet<RelationshipReference>>? = getDataFile(context).getHashMap(this::class.java.name + relationship, RELATIONSHIP_MAP_LOAD_FACTOR) as MutableMap<RelationshipReference, MutableSet<RelationshipReference>>?
 
 /**
  * Gets hydrated relationships from the store.  Also note, this will pass 1 to 1 as a list.  It will require further
@@ -105,4 +113,11 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
     }
 
     return entities
+}
+
+fun IManagedEntity.hydrateRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager(), descriptor: EntityDescriptor = context.getDescriptorForEntity(this)) {
+    if(manager.contains(this, context))
+        return
+    manager.add(this, context)
+    descriptor.relationships.values.forEach { relationshipController(context, it.name).hydrateRelationshipForEntity(this, manager, false) }
 }

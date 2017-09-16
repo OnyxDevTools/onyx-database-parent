@@ -10,7 +10,7 @@ import java.io.IOException
  *
  * Reference of a relationship
  */
-class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Long = 0L) : ObjectSerializable, Comparable<RelationshipReference> {
+class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Long = 0L, var referenceId:Long = 0) : ObjectSerializable, Comparable<RelationshipReference> {
 
     @Throws(IOException::class)
     override fun writeObject(buffer: ObjectBuffer) {

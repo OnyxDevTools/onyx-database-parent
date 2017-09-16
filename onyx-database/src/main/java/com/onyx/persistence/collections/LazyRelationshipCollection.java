@@ -81,7 +81,7 @@ public class LazyRelationshipCollection<E> extends AbstractList<E> implements Li
      * @param context Schema Context
      */
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter unchecked")
-    public LazyRelationshipCollection(EntityDescriptor entityDescriptor, final Set<Object> identifiers, SchemaContext context)
+    public LazyRelationshipCollection(EntityDescriptor entityDescriptor, final Set<RelationshipReference> identifiers, SchemaContext context)
     {
         this.persistenceManager = context.getSystemPersistenceManager();
         this.identifiers = new ArrayList<>();

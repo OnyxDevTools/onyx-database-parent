@@ -4,7 +4,6 @@ import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.fetch.PartitionQueryController
 import com.onyx.fetch.PartitionReference
-import com.onyx.helpers.*
 import com.onyx.persistence.*
 import com.onyx.persistence.collections.LazyQueryCollection
 import com.onyx.persistence.context.SchemaContext
@@ -344,9 +343,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> find(entity: IManagedEntity): E {
         context.checkForKillSwitch()
 
-        val results = entity.recordInteractor(context).get(entity) ?: throw NoResultsException()
-
-        RelationshipHelper.hydrateAllRelationshipsForEntity(results, EntityRelationshipManager(), context)
+        val results = entity.recordInteractor(context)[entity] ?: throw NoResultsException()
+        results.hydrateRelationships(context)
         ReflectionUtil.copy(results, entity, entity.descriptor(context))
         return entity as E
     }
@@ -372,10 +370,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
-
-        if (entity != null) {
-            RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
-        }
+        entity?.hydrateRelationships(context)
         return entity as E?
     }
 
@@ -402,10 +397,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
-
-        if (entity != null) {
-            RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
-        }
+        entity?.hydrateRelationships(context)
 
 
         return entity as E?
@@ -463,19 +455,9 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         context.checkForKillSwitch()
 
         val descriptor = context.getDescriptorForEntity(entity)
-        val identifier = entity.identifier(context)
-        val partitionValue = entity.partitionValue(context)
-
-        val entityRelationshipReference = if (partitionValue !== PartitionHelper.NULL_PARTITION ) {
-            val partitionEntry = context.getPartitionWithValue(descriptor.entityClass, PartitionHelper.getPartitionFieldValue(entity, context))
-            RelationshipReference(identifier, partitionEntry!!.index)
-        } else {
-            RelationshipReference(identifier, 0)
-        }
-
         val relationshipDescriptor = descriptor.relationships[attribute] ?: throw RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.javaClass.name)
         val relationshipController = context.getRelationshipController(relationshipDescriptor)
-        relationshipController.hydrateRelationshipForEntity(entityRelationshipReference, entity, EntityRelationshipManager(), true)
+        relationshipController.hydrateRelationshipForEntity(entity, EntityRelationshipManager(), true)
     }
 
     /**
@@ -525,8 +507,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         // Find the object
         entity = recordInteractor.getWithReferenceId(referenceId)
+        entity?.hydrateRelationships(context)
 
-        RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
         return entity as E
     }
 
@@ -565,15 +547,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E {
         context.checkForKillSwitch()
 
-        var entity = ReflectionUtil.createNewEntity(clazz)
-        val descriptor = context.getDescriptorForEntity(entity, "")
-        val partitionContext = PartitionContext(context, descriptor)
-        val recordInteractor = partitionContext.getRecordInteractorForPartition(partitionId)
-
-        // Find the object
-        entity = recordInteractor.getWithId(id)
-
-        RelationshipHelper.hydrateAllRelationshipsForEntity(entity, EntityRelationshipManager(), context)
+        val entity = RelationshipReference(identifier = id, partitionId = partitionId).toManagedEntity(context, clazz)
+        entity?.hydrateRelationships(context)
 
         return entity as E
     }
@@ -627,7 +602,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         // We want to lock the index controller so that it does not do background indexing
         val descriptor = context.getDescriptorForEntity(clazz, query.partition)
-        ValidationHelper.validateQuery(descriptor, query, context)
+        query.validate(context, descriptor)
 
         val cachedResults = context.queryCacheController.getCachedQueryResults(query)
         if (cachedResults != null && cachedResults.references != null)
@@ -696,12 +671,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      */
     @Throws(OnyxException::class)
     override fun removeChangeListener(query: Query): Boolean {
-        val clazz = query.entityType
-
-        // We want to lock the index controller so that it does not do background indexing
-        val descriptor = context.getDescriptorForEntity(clazz, query.partition)
-        ValidationHelper.validateQuery(descriptor, query, context)
-
+        query.validate(context)
         return context.queryCacheController.unsubscribe(query)
     }
 
@@ -713,12 +683,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      */
     @Throws(OnyxException::class)
     override fun listen(query: Query) {
-        val clazz = query.entityType
-
-        // We want to lock the index controller so that it does not do background indexing
-        val descriptor = context.getDescriptorForEntity(clazz, query.partition)
-        ValidationHelper.validateQuery(descriptor, query, context)
-
+        query.validate(context)
         context.queryCacheController.subscribe(query)
     }
 

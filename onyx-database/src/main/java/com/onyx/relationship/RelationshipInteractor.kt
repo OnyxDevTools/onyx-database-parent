@@ -24,24 +24,23 @@ interface RelationshipInteractor {
     /**
      * Delete Relationship entity
      *
-     * @param entityIdentifier Relationship reference
+     * @param relationshipToRemove Relationship reference
      * @param manager prevents recursion
      * @throws OnyxException Error deleting relationship
      */
     @Throws(OnyxException::class)
-    fun deleteRelationshipForEntity(entityIdentifier: RelationshipReference, manager: EntityRelationshipManager)
+    fun deleteRelationshipForEntity(entity:IManagedEntity, manager: EntityRelationshipManager)
 
     /**
      * Hydrate a relationship values.  Force the hydration if specified
      *
-     * @param entityIdentifier entity relationship reference
      * @param entity Entity to hydrate
      * @param manager prevents infanite loop
      * @param force force hydrate
      * @throws OnyxException error hydrating relationship
      */
     @Throws(OnyxException::class)
-    fun hydrateRelationshipForEntity(entityIdentifier: RelationshipReference, entity: IManagedEntity, manager: EntityRelationshipManager, force: Boolean)
+    fun hydrateRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager, force: Boolean)
 
     /**
      * Retrieves the identifiers for a given entity
@@ -66,5 +65,5 @@ interface RelationshipInteractor {
      * @param relationshipIdentifiers list of entity references
      */
     @Throws(OnyxException::class)
-    fun updateAll(entity: IManagedEntity, relationshipIdentifiers: Set<RelationshipReference>)
+    fun updateAll(entity: IManagedEntity, relationshipIdentifiers: MutableSet<RelationshipReference>)
 }

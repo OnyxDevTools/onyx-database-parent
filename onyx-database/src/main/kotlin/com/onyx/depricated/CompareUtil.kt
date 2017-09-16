@@ -4,6 +4,8 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InvalidDataTypeForOperator
 import com.onyx.extension.common.castTo
+import com.onyx.extension.get
+import com.onyx.extension.getRelationshipFromStore
 import com.onyx.helpers.RelationshipHelper
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -227,25 +229,21 @@ object CompareUtil {
      */
     @Deprecated("Moved to Query\$Calculation")
     @Throws(OnyxException::class)
-    private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Any, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
+    private fun relationshipMeetsCriteria(entity: IManagedEntity, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
         var meetsCriteria = false
-        val operator = criteria.operator
+
+        val items = criteria.attribute!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val attribute = items[items.size - 1]
+        val relationship = items[items.size - 2]
 
         // Grab the relationship from the store
-        val relationshipEntities = RelationshipHelper.getRelationshipForValue(entity, entityReference, criteria.attribute, context)
+        val relationshipEntities = entity.getRelationshipFromStore(context, relationship = relationship)
 
         // If there are relationship values, check to see if they meet criteria
-        if (relationshipEntities!!.size > 0) {
-            val items = criteria.attribute!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            val attribute = items[items.size - 1]
-            val offsetField = ReflectionUtil.getOffsetField(relationshipEntities[0].javaClass, attribute)
-
-            // All we need is a single match.  If there is a relationship that meets the criteria, move along
-            for (relationshipEntity in relationshipEntities) {
-                meetsCriteria = compare(criteria.value, ReflectionUtil.getAny(relationshipEntity, offsetField), operator)
-                if (meetsCriteria)
-                    break
-            }
+        if (relationshipEntities!!.isNotEmpty()) {
+            meetsCriteria = relationshipEntities.find {
+                compare(criteria.value, it.get(context = context, name = attribute), criteria.operator)
+            } != null
         }
         return meetsCriteria
     }
@@ -277,7 +275,7 @@ object CompareUtil {
         allCriteria.forEach {
             if (it.attribute!!.contains(".")) {
                 // Compare operator for relationship object
-                subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
+                subCriteria = relationshipMeetsCriteria(entity, it, context)
             } else {
                 // Compare operator for attribute object
                 if (it.attributeDescriptor == null)

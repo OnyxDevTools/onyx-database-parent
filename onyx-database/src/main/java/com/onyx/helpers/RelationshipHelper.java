@@ -72,21 +72,10 @@ public class RelationshipHelper
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
 
-        RelationshipReference entityId;
-
-        if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
-        {
-            final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getEntityClass(), partitionValue);
-            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
-        } else
-        {
-            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), 0);
-        }
-
         for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
         {
             final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
-            relationshipInteractor.deleteRelationshipForEntity(entityId, relationshipManager);
+            relationshipInteractor.deleteRelationshipForEntity(entity, relationshipManager);
         }
     }
 
@@ -102,22 +91,10 @@ public class RelationshipHelper
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
 
-        RelationshipReference entityId;
-
-        if (!PartitionHelper.NULL_PARTITION.equals(partitionValue) && partitionValue != null)
-        {
-            final SystemPartitionEntry partition = context.getPartitionWithValue(descriptor.getEntityClass(), partitionValue);
-            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), partition.getIndex());
-        } else
-        {
-            entityId = new RelationshipReference(DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, descriptor.getIdentifier()), 0);
-        }
-
-
         for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
         {
             final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
-            relationshipInteractor.hydrateRelationshipForEntity(entityId, entity, relationshipManager, false);
+            relationshipInteractor.hydrateRelationshipForEntity(entity, relationshipManager, false);
         }
     }
 

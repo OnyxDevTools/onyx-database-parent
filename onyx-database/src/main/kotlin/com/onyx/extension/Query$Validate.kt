@@ -17,7 +17,7 @@ import com.onyx.persistence.query.QueryPartitionMode
  * @since 2.0.0
  */
 @Throws(OnyxException::class)
-fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor):Boolean {
+fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = context.getDescriptorForEntity(this.entityType, "")):Boolean {
     // If there are no criteria, add a dummy criteria to the list
     if (this.criteria == null) {
         this.criteria = QueryCriteria<Any>(descriptor.identifier!!.name, QueryCriteriaOperator.NOT_EQUAL)

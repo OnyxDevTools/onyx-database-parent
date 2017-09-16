@@ -41,4 +41,20 @@ data class RelationshipDescriptor(
 
         return true
     }
+
+    val isToMany:Boolean
+        get() = relationshipType === RelationshipType.MANY_TO_MANY || relationshipType === RelationshipType.ONE_TO_MANY
+
+    val isToOne:Boolean
+        get() = !isToMany
+
+    val shouldSaveEntity:Boolean
+        get() = cascadePolicy === CascadePolicy.SAVE || cascadePolicy === CascadePolicy.ALL
+
+    val shouldDeleteEntity:Boolean
+        get() = (cascadePolicy === CascadePolicy.DELETE || cascadePolicy === CascadePolicy.ALL) && isToOne
+
+    val shouldDeleteEntityReference:Boolean
+        get() = ((cascadePolicy === CascadePolicy.DELETE || cascadePolicy === CascadePolicy.ALL) && isToMany) || isToOne
+
 }

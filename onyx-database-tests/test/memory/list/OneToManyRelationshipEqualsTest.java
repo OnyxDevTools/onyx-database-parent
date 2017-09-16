@@ -210,13 +210,10 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     @Test
     public void testOneToOneHasRelationshipMeetsOne() throws OnyxException
     {
-        QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
-                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3");
+        QueryCriteria criteria = new QueryCriteria<>("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
+                                                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3");
 
-        long time = System.currentTimeMillis();
         List<OneToOneFetchEntity> results = manager.list(OneToOneFetchEntity.class, criteria);
-        long done = System.currentTimeMillis();
-
         Assert.assertEquals(1, results.size());
     }
 
@@ -224,8 +221,8 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
     public void testOneToOneHasRelationship() throws OnyxException
     {
 
-        QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some test strin")
-                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3");
+        QueryCriteria criteria = new QueryCriteria<>("stringValue", QueryCriteriaOperator.CONTAINS, "Some test strin")
+                                                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3");
 
         List<OneToOneFetchEntity> results = manager.list(OneToOneFetchEntity.class, criteria);
 
@@ -253,7 +250,7 @@ public class OneToManyRelationshipEqualsTest extends BaseTest
         idlist.add("FIRST ONE3");
         idlist.add("FIRST ONE2");
 
-        QueryCriteria criteria = new QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some test strin1")
+        QueryCriteria<String> criteria = new QueryCriteria<>("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some test strin1")
                 .and("children.id", QueryCriteriaOperator.IN, idlist);
 
         List<OneToOneFetchEntity> results = manager.list(OneToOneFetchEntity.class, criteria);

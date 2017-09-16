@@ -136,6 +136,7 @@ public class RelationshipPartitionTest extends memory.partition.BasePartitionTes
         parent.id = 23l;
         parent.partitionId = 3l;
 
+        find(parent);
         delete(parent);
 
         parent.child = new ManyToOnePartitionEntity();
