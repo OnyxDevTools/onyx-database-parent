@@ -230,13 +230,10 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
          */
         @Deprecated("Moved to entity extension")
         @Throws(AttributeMissingException::class)
-        fun getIndexValueFromEntity(entity: IManagedEntity, indexDescriptor: BaseDescriptor?): Any? {
-            try {
-                return ReflectionUtil.getAny(entity, indexDescriptor!!.field)
-            } catch (e: AttributeTypeMismatchException) {
-                throw AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e)
-            }
-
+        fun getIndexValueFromEntity(entity: IManagedEntity, indexDescriptor: BaseDescriptor?): Any? = try {
+            ReflectionUtil.getAny(entity, indexDescriptor!!.field)
+        } catch (e: AttributeTypeMismatchException) {
+            throw AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e)
         }
 
         /**

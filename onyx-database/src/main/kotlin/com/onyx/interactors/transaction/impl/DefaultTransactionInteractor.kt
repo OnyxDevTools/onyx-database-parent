@@ -48,10 +48,8 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      * @param entity Entity to save
      */
     @Throws(TransactionException::class)
-    override fun writeSave(entity: IManagedEntity) {
-        synchronized(this) {
-            writeTransaction(SAVE, BufferStream.toBuffer(entity))
-        }
+    override fun writeSave(entity: IManagedEntity) = synchronized(this) {
+        writeTransaction(SAVE, BufferStream.toBuffer(entity))
     }
 
     /**
@@ -60,10 +58,8 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      * @param query Query to update
      */
     @Throws(TransactionException::class)
-    override fun writeQueryUpdate(query: Query) {
-        synchronized(this) {
-            writeTransaction(UPDATE_QUERY, BufferStream.toBuffer(query))
-        }
+    override fun writeQueryUpdate(query: Query) = synchronized(this) {
+        writeTransaction(UPDATE_QUERY, BufferStream.toBuffer(query))
     }
 
     /**
@@ -72,10 +68,8 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      * @param entity Deleted entity
      */
     @Throws(TransactionException::class)
-    override fun writeDelete(entity: IManagedEntity) {
-        synchronized(this) {
-            writeTransaction(DELETE, BufferStream.toBuffer(entity))
-        }
+    override fun writeDelete(entity: IManagedEntity) = synchronized(this) {
+        writeTransaction(DELETE, BufferStream.toBuffer(entity))
     }
 
     /**
@@ -83,10 +77,8 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      * @param query Query to write transaction of
      */
     @Throws(TransactionException::class)
-    override fun writeDeleteQuery(query: Query) {
-        synchronized(this) {
-            writeTransaction(DELETE_QUERY, BufferStream.toBuffer(query))
-        }
+    override fun writeDeleteQuery(query: Query) = synchronized(this) {
+        writeTransaction(DELETE_QUERY, BufferStream.toBuffer(query))
     }
 
     /**

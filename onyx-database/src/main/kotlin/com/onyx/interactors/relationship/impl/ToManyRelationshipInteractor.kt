@@ -117,7 +117,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         var relationshipObjects: MutableList<IManagedEntity>? = entity[context, entityDescriptor, relationshipDescriptor.name]
 
         when {
-            relationshipDescriptor.fetchPolicy === FetchPolicy.LAZY && !force                    -> relationshipObjects = LazyRelationshipCollection(context.getDescriptorForEntity(relationshipDescriptor.inverseClass, ""), existingRelationshipReferenceObjects, context)
+            relationshipDescriptor.fetchPolicy === FetchPolicy.LAZY && !force                    -> relationshipObjects = LazyRelationshipCollection(context.getDescriptorForEntity(relationshipDescriptor.inverseClass, ""), ArrayList(existingRelationshipReferenceObjects), context)
             relationshipObjects == null && relationshipObjects !is LazyRelationshipCollection<*> -> relationshipObjects = ArrayList()
             force && relationshipObjects is LazyRelationshipCollection<*>                        -> relationshipObjects = ArrayList()
             else -> relationshipObjects.clear()

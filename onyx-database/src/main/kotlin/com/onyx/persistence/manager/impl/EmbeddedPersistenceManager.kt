@@ -301,7 +301,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
             if (cachedResults != null && cachedResults.references != null) {
                 results = cachedResults.references
                 query.resultsCount = results.size
-                return LazyQueryCollection<IManagedEntity>(descriptor, results, context) as List<E>
+                return LazyQueryCollection(descriptor, results as MutableMap<Any, IManagedEntity?>, context) as List<E>
             }
 
             // There were no cached results, load them from the store
@@ -319,7 +319,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                 synchronized(cachedResults) {
                     cachedResults!!.references = results
                 }
-            return LazyQueryCollection<IManagedEntity>(descriptor, results, context) as List<E>
+            return LazyQueryCollection(descriptor, results as MutableMap<Any, IManagedEntity?>, context) as List<E>
         } finally {
             if (query.changeListener != null) {
                 context.queryCacheController.subscribe(cachedResults, query.changeListener)
@@ -648,7 +648,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     @Throws(OnyxException::class)
     override fun stream(query: Query, queryStreamClass: Class<*>) {
         val streamer = try {
-            queryStreamClass.newInstance() as QueryStream<*>
+            ReflectionUtil.instantiate(queryStreamClass) as QueryStream<*>
         } catch (e: InstantiationException) {
             throw StreamException(StreamException.CANNOT_INSTANTIATE_STREAM)
         } catch (e: IllegalAccessException) {

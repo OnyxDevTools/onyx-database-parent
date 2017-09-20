@@ -6,7 +6,6 @@ import com.onyx.exception.InvalidDataTypeForOperator
 import com.onyx.extension.common.castTo
 import com.onyx.extension.get
 import com.onyx.extension.getRelationshipFromStore
-import com.onyx.helpers.RelationshipHelper
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryCriteria

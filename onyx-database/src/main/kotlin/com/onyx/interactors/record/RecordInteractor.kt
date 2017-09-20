@@ -14,7 +14,7 @@ interface RecordInteractor {
     /**
      * Save an entity and persist it to the data file
      * @param entity Entity to save
-     * @return ENtity id
+     * @return Entity id
      * @throws OnyxException Attribute missing
      */
     @Throws(OnyxException::class)
@@ -107,20 +107,20 @@ interface RecordInteractor {
      * @return entity attribute
      * @throws OnyxException Attribute does not exist
      *
-     * @since 1.3.0 Changed to include the reflection field in order to optimze
+     * @since 1.3.0 Changed to include the reflection field in order to optimize
      * and not instantiate new reflection fields
      */
     @Throws(OnyxException::class)
     fun getAttributeWithReferenceId(attribute: OffsetField, referenceId: Long): Any?
 
     /**
-     * For sorted indexs, you can find all the entity references above the value.  The index value must impelement comparable
+     * For sorted indexes, you can find all the entity references above the value.  The index value must implement comparable
      *
      * @param indexValue Index value to compare
      * @param includeValue whether it is above and including
      * @return Set of references
      *
-     * @throws OnyxException Exception ocurred while iterating index
+     * @throws OnyxException Exception occurred while iterating index
      *
      * @since 1.2.0
      */
@@ -128,13 +128,13 @@ interface RecordInteractor {
     fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long>
 
     /**
-     * For sorted indexs, you can find all the entity references below the value.  The index value must impelement comparable
+     * For sorted indexes, you can find all the entity references below the value.  The index value must implement comparable
      *
      * @param indexValue Index value to compare
      * @param includeValue whether it is below and including
      * @return Set of references
      *
-     * @throws OnyxException Exception ocurred while iterating index
+     * @throws OnyxException Exception occurred while iterating index
      *
      * @since 1.2.0
      */
