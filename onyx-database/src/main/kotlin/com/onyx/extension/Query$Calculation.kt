@@ -2,12 +2,12 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.OnyxException
-import com.onyx.helpers.RelationshipHelper
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.depricated.CompareUtil
+import com.onyx.fetch.PartitionReference
 import com.onyx.util.ReflectionUtil
 
 /**
@@ -102,10 +102,10 @@ private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityRefere
     val operator = criteria.operator
 
     // Grab the relationship from the store
-    val relationshipEntities = RelationshipHelper.getRelationshipForValue(entity, entityReference, criteria.attribute, context)
+    val relationshipEntities = entity.getRelationshipFromStore(context, criteria.attribute!!, entityReference = entityReference as PartitionReference)
 
     // If there are relationship values, check to see if they meet criteria
-    if (relationshipEntities!!.size > 0) {
+    if (relationshipEntities!!.isNotEmpty()) {
         val items = criteria.attribute!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val attribute = items[items.size - 1]
         val offsetField = ReflectionUtil.getOffsetField(relationshipEntities[0].javaClass, attribute)

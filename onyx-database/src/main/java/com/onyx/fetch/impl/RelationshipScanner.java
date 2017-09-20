@@ -19,8 +19,8 @@ import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryPartitionMode;
 import com.onyx.interactors.record.RecordInteractor;
-import com.onyx.relationship.RelationshipInteractor;
-import com.onyx.relationship.RelationshipReference;
+import com.onyx.interactors.relationship.RelationshipInteractor;
+import com.onyx.interactors.relationship.data.RelationshipReference;
 import com.onyx.util.ReflectionUtil;
 import com.onyx.util.map.CompatHashMap;
 
@@ -156,7 +156,7 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
         }
 
         relationshipDescriptor = this.descriptor.getRelationships().get(attribute);
-        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipController(relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipInteractor(relationshipDescriptor);
         final RecordInteractor inverseRecordInteractor = getDefaultInverseRecordInteractor();
 
         List<RelationshipReference> relationshipIdentifiers;

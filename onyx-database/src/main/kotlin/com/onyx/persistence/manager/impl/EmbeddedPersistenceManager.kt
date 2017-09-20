@@ -10,8 +10,8 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.query.CachedResults
-import com.onyx.relationship.EntityRelationshipManager
-import com.onyx.relationship.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipTransaction
+import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
 import com.onyx.util.ReflectionUtil
@@ -456,8 +456,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         val descriptor = context.getDescriptorForEntity(entity)
         val relationshipDescriptor = descriptor.relationships[attribute] ?: throw RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.javaClass.name)
-        val relationshipController = context.getRelationshipController(relationshipDescriptor)
-        relationshipController.hydrateRelationshipForEntity(entity, EntityRelationshipManager(), true)
+        val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor)
+        relationshipInteractor.hydrateRelationshipForEntity(entity, RelationshipTransaction(), true)
     }
 
     /**
@@ -484,8 +484,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
             }
         }
 
-        val relationshipController = context.getRelationshipController(relationshipDescriptor)
-        relationshipController.updateAll(entity, references)
+        val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor)
+        relationshipInteractor.updateAll(entity, references)
     }
 
     /**

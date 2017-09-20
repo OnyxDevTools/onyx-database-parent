@@ -1,4 +1,4 @@
-package com.onyx.relationship.impl
+package com.onyx.interactors.relationship.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
@@ -8,8 +8,8 @@ import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
-import com.onyx.relationship.EntityRelationshipManager
-import com.onyx.relationship.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipTransaction
+import com.onyx.interactors.relationship.data.RelationshipReference
 
 import java.util.HashSet
 
@@ -23,9 +23,16 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
 
     protected var recordInteractor: RecordInteractor = context.getRecordInteractor(entityDescriptor)
 
+    /**
+     * Delete a relationship for an entity.  Go through and remove all the inverse relationships and handle the
+     * cascading.
+     *
+     * @param entity Entity to remove relationships from
+     * @param transaction Holder of the transaction information
+     */
     @Throws(OnyxException::class)
-    fun deleteRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager) {
-        manager.add(entity, context)
+    fun deleteRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
+        transaction.add(entity, context)
 
         val relationshipReferenceMap = entity.relationshipReferenceMap(context, relationship = relationshipDescriptor.name)!!
         val entityRelationshipReference = entity.toRelationshipReference(context)
@@ -39,9 +46,9 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
         relationshipsToRemove.forEach {
             val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
             deleteInverseRelationshipReference(entity, entityRelationshipReference, it)
-            if (relationshipDescriptor.shouldDeleteEntity && !manager.contains(entityToDelete!!, context)) {
+            if (relationshipDescriptor.shouldDeleteEntity && !transaction.contains(entityToDelete!!, context)) {
                 entityToDelete.deleteAllIndexes(context, it.referenceId)
-                entityToDelete.deleteRelationships(context, manager)
+                entityToDelete.deleteRelationships(context, transaction)
                 entityToDelete.recordInteractor(context).delete(entityToDelete)
             }
         }

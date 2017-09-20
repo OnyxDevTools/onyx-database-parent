@@ -1,13 +1,13 @@
-package com.onyx.relationship.impl
+package com.onyx.interactors.relationship.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.relationship.EntityRelationshipManager
-import com.onyx.relationship.RelationshipInteractor
-import com.onyx.relationship.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipTransaction
+import com.onyx.interactors.relationship.RelationshipInteractor
+import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
 
 /**
@@ -21,10 +21,10 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
      * Save Relationship for entity
      *
      * @param entity Entity to save relationships for
-     * @param manager Prevents recursion
+     * @param transaction Prevents recursion
      */
     @Throws(OnyxException::class)
-    override fun saveRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager) {
+    override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         val relationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]
         val relationshipReferenceMap:MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)!!
         val currentRelationshipReference: RelationshipReference? = relationshipObject?.toRelationshipReference(context)
@@ -33,10 +33,10 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
         // Cascade Save. Make sure it is either ALL, or SAVE.  Also ensure that we haven't already saved it before
         if (relationshipDescriptor.shouldSaveEntity
                 && relationshipObject != null
-                && !manager.contains(relationshipObject, context)) {
+                && !transaction.contains(relationshipObject, context)) {
             currentRelationshipReference!!.identifier = relationshipObject.save(context)
             relationshipObject.saveIndexes(context, currentRelationshipReference.referenceId)
-            relationshipObject.saveRelationships(context, EntityRelationshipManager(entity, context))
+            relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
         }
 
         val existingReference = relationshipReferenceMap[parentRelationshipReference]?.firstOrNull()
@@ -46,9 +46,9 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
             if (currentRelationshipReference == null && existingReference != null) {
                 val existingRefManagedObject = existingReference.toManagedEntity(context, relationshipDescriptor.inverseClass)
 
-                if (existingRefManagedObject != null && !manager.contains(existingRefManagedObject, context)) {
+                if (existingRefManagedObject != null && !transaction.contains(existingRefManagedObject, context)) {
                     existingRefManagedObject.deleteAllIndexes(context, existingRefManagedObject.referenceId(context))
-                    existingRefManagedObject.deleteRelationships(context, manager)
+                    existingRefManagedObject.deleteRelationships(context, transaction)
                     existingRefManagedObject.recordInteractor(context).deleteWithId(existingRefManagedObject.identifier(context)!!)
                 }
             }
@@ -68,18 +68,18 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
      * Hydrate relationship for entity
      *
      * @param entity           Entity to hydrate
-     * @param manager          Relationship manager prevents recursion
+     * @param transaction      Relationship transaction prevents recursion
      * @param force            Force hydrate
      */
     @Throws(OnyxException::class)
-    override fun hydrateRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager, force: Boolean) {
-        manager.add(entity, context)
+    override fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean) {
+        transaction.add(entity, context)
 
         val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context)) ?: HashSet()
 
         if(!existingRelationshipReferenceObjects.isEmpty()) {
             val relationshipEntity:IManagedEntity? = existingRelationshipReferenceObjects.first().toManagedEntity(context, relationshipDescriptor.inverseClass)
-            relationshipEntity?.hydrateRelationships(context, manager)
+            relationshipEntity?.hydrateRelationships(context, transaction)
             val existingRelationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]
             if(existingRelationshipObject != null && relationshipEntity != null)
                 existingRelationshipObject.copy(relationshipEntity, context)

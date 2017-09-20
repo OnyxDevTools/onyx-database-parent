@@ -3,17 +3,15 @@ package com.onyx.helpers;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
 import com.onyx.diskmap.node.SkipListNode;
-import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InvalidRelationshipTypeException;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.interactors.record.RecordInteractor;
-import com.onyx.interactors.record.impl.DefaultRecordInteractor;
-import com.onyx.relationship.EntityRelationshipManager;
-import com.onyx.relationship.RelationshipInteractor;
-import com.onyx.relationship.RelationshipReference;
+import com.onyx.interactors.relationship.data.RelationshipTransaction;
+import com.onyx.interactors.relationship.RelationshipInteractor;
+import com.onyx.interactors.relationship.data.RelationshipReference;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +32,7 @@ public class RelationshipHelper
      * @param manager Relationship manager keeping track of what was already done
      */
     @Deprecated
-    public static void saveAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager manager, SchemaContext context) throws OnyxException
+    public static void saveAllRelationshipsForEntity(IManagedEntity entity, RelationshipTransaction manager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
 
@@ -49,7 +47,7 @@ public class RelationshipHelper
             manager.add(entity, context);
             for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
             {
-                final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+                final RelationshipInteractor relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor);
                 if(relationshipInteractor == null)
                 {
                     throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " Class:" + relationshipDescriptor.getParentClass().getName() + " Inverse:" + relationshipDescriptor.getInverse());
@@ -67,14 +65,14 @@ public class RelationshipHelper
      * @param context Schema context
      */
     @Deprecated
-    public static void deleteAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws OnyxException
+    public static void deleteAllRelationshipsForEntity(IManagedEntity entity, RelationshipTransaction relationshipManager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
 
         for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
         {
-            final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+            final RelationshipInteractor relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor);
             relationshipInteractor.deleteRelationshipForEntity(entity, relationshipManager);
         }
     }
@@ -86,7 +84,7 @@ public class RelationshipHelper
      * @param relationshipManager Relationship manager keeping track of what was already done
      */
     @Deprecated
-    public static void hydrateAllRelationshipsForEntity(IManagedEntity entity, EntityRelationshipManager relationshipManager, SchemaContext context) throws OnyxException
+    public static void hydrateAllRelationshipsForEntity(IManagedEntity entity, RelationshipTransaction relationshipManager, SchemaContext context) throws OnyxException
     {
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
@@ -95,7 +93,7 @@ public class RelationshipHelper
             relationshipManager.add(entity, context);
 
             for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values()) {
-                final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+                final RelationshipInteractor relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor);
                 relationshipInteractor.hydrateRelationshipForEntity(entity, relationshipManager, false);
             }
         }
@@ -136,7 +134,7 @@ public class RelationshipHelper
         }
 
 
-        final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor);
         List<RelationshipReference> relationshipReferences;
         RecordInteractor recordInteractor;
 

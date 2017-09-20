@@ -9,8 +9,8 @@ import com.onyx.fetch.impl.FullTableScanner;
 import com.onyx.fetch.impl.PartitionFullTableScanner;
 import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.interactors.record.impl.DefaultRecordInteractor;
-import com.onyx.relationship.RelationshipInteractor;
-import com.onyx.relationship.RelationshipReference;
+import com.onyx.interactors.relationship.RelationshipInteractor;
+import com.onyx.interactors.relationship.data.RelationshipReference;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.OnyxException;
 import com.onyx.helpers.*;
@@ -21,7 +21,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.*;
 import com.onyx.persistence.query.AttributeUpdate;
 import com.onyx.interactors.record.RecordInteractor;
-import com.onyx.relationship.EntityRelationshipManager;
+import com.onyx.interactors.relationship.data.RelationshipTransaction;
 import com.onyx.depricated.CompareUtil;
 import com.onyx.util.ReflectionUtil;
 
@@ -222,7 +222,7 @@ public class PartitionQueryController extends PartitionContext {
                 }
 
                 if (value != null) {
-                    RelationshipHelper.hydrateAllRelationshipsForEntity(value, new EntityRelationshipManager(), getContext());
+                    RelationshipHelper.hydrateAllRelationshipsForEntity(value, new RelationshipTransaction(), getContext());
                 }
 
                 // Back fill for query cache
@@ -387,7 +387,7 @@ public class PartitionQueryController extends PartitionContext {
                 IndexHelper.deleteAllIndexesForEntity(getContext(), descriptor, (long) referenceId);
             }
 
-            RelationshipHelper.deleteAllRelationshipsForEntity(entity, new EntityRelationshipManager(), getContext());
+            RelationshipHelper.deleteAllRelationshipsForEntity(entity, new RelationshipTransaction(), getContext());
 
             if (referenceId instanceof PartitionReference) {
                 PartitionReference ref = (PartitionReference) referenceId;
@@ -449,7 +449,7 @@ public class PartitionQueryController extends PartitionContext {
     @SuppressWarnings("unchecked")
     private List hydrateRelationshipToManyMap(Object entry, ScannerProperties properties) throws OnyxException {
         // Get Relationship controller
-        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipController(properties.relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipInteractor(properties.relationshipDescriptor);
 
         List<RelationshipReference> relationshipReferences;
 

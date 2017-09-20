@@ -14,7 +14,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.QueryCacheController
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.transaction.TransactionInteractor
-import com.onyx.relationship.RelationshipInteractor
+import com.onyx.interactors.relationship.RelationshipInteractor
 
 
 /**
@@ -225,7 +225,7 @@ interface SchemaContext {
      * @return Relationship Controller for relationship descriptor
      */
     @Throws(OnyxException::class)
-    fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor
+    fun getRelationshipInteractor(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor
 
     /**
      * Create Temporary Map Builder

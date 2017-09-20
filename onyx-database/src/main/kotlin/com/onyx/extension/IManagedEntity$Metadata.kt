@@ -11,10 +11,5 @@ import com.onyx.persistence.context.SchemaContext
  *
  * @since 2.0.0
  */
-fun IManagedEntity.descriptor(context: SchemaContext):EntityDescriptor {
-    val descriptor = context.getDescriptorForEntity(this)
-    if(descriptor.partition != null) {
-        assert(partitionValue(context).equals(descriptor.partition!!.partitionValue))
-    }
-    return descriptor
-}
+fun IManagedEntity.descriptor(context: SchemaContext):EntityDescriptor = context.getDescriptorForEntity(this)
+

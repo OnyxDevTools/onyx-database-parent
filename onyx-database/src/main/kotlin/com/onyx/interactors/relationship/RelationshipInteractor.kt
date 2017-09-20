@@ -1,8 +1,10 @@
-package com.onyx.relationship
+package com.onyx.interactors.relationship
 
 import com.onyx.exception.OnyxException
 import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
+import com.onyx.interactors.relationship.data.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipTransaction
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -15,37 +17,38 @@ interface RelationshipInteractor {
      * Saves a relationship for an entity
      *
      * @param entity Entity being saved
-     * @param manager Prevents recursion
+     * @param transaction Prevents recursion
      * @throws OnyxException Error saving realationship object
      */
     @Throws(OnyxException::class)
-    fun saveRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager)
+    fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction)
 
     /**
      * Delete Relationship entity
      *
      * @param entity Entity to delete relationship for
-     * @param manager prevents recursion
+     * @param transaction prevents recursion
      * @throws OnyxException Error deleting relationship
      */
     @Throws(OnyxException::class)
-    fun deleteRelationshipForEntity(entity:IManagedEntity, manager: EntityRelationshipManager)
+    fun deleteRelationshipForEntity(entity:IManagedEntity, transaction: RelationshipTransaction)
 
     /**
      * Hydrate a relationship values.  Force the hydration if specified
      *
      * @param entity Entity to hydrate
-     * @param manager prevents infanite loop
+     * @param transaction keeps track of cyclical references and prevents infinite loop
      * @param force force hydrate
      * @throws OnyxException error hydrating relationship
      */
     @Throws(OnyxException::class)
-    fun hydrateRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager, force: Boolean)
+    fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean)
 
     /**
      * Retrieves the identifiers for a given entity
      *
-     * @return List of realtionship references
+     * @param referenceId reference of the entity with relationships
+     * @return List of relationship references
      */
     @Throws(OnyxException::class)
     fun getRelationshipIdentifiersWithReferenceId(referenceId: Long?): List<RelationshipReference>
@@ -53,6 +56,7 @@ interface RelationshipInteractor {
     /**
      * Retrieves the identifiers for a given entity
      *
+     * @param referenceId reference of the entity within partition with relationships
      * @return List of relationship references
      */
     @Throws(OnyxException::class)

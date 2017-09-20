@@ -1,4 +1,4 @@
-package com.onyx.relationship.impl
+package com.onyx.interactors.relationship.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
@@ -7,9 +7,9 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.values.FetchPolicy
 import com.onyx.persistence.collections.LazyRelationshipCollection
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.relationship.EntityRelationshipManager
-import com.onyx.relationship.RelationshipInteractor
-import com.onyx.relationship.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipTransaction
+import com.onyx.interactors.relationship.RelationshipInteractor
+import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
 import com.onyx.persistence.annotations.values.CascadePolicy
 
@@ -25,12 +25,14 @@ import kotlin.collections.HashSet
 class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(entityDescriptor: EntityDescriptor, relationshipDescriptor: RelationshipDescriptor, context: SchemaContext) : AbstractRelationshipInteractor(entityDescriptor, relationshipDescriptor, context), RelationshipInteractor {
 
     /**
+     * Save a relationship for an entity
+     *
      * @param entity  Entity to save relationship
-     * @param manager Relationship manager keeps track of actions already taken on entity relationships
+     * @param transaction Relationship transaction keeps track of actions already taken on entity relationships
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun saveRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager) {
+    override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         if (relationshipDescriptor.cascadePolicy === CascadePolicy.DEFER_SAVE) return
 
         val reflectionRelationshipObjects:Any? = entity[context, relationshipDescriptor.entityDescriptor, relationshipDescriptor.name]
@@ -57,10 +59,10 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 existingRelationshipReferencesCopy.remove(relationshipObjectIdentifier)
 
                 // Cascade save the entity
-                val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !manager.contains(it, context)) {
+                val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !transaction.contains(it, context)) {
                     it.save(context)
                     it.saveIndexes(context, relationshipObjectIdentifier.referenceId)
-                    it.saveRelationships(context, EntityRelationshipManager(entity, context))
+                    it.saveRelationships(context, RelationshipTransaction(entity, context))
                     true
                 } else {
                     relationshipObjectIdentifier.referenceId > 0L
@@ -72,7 +74,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 }
 
                 // Save the inverse relationship
-                if (!manager.contains(it, context) && relationshipDescriptor.inverse != null && !relationshipDescriptor.inverse!!.isEmpty()) {
+                if (!transaction.contains(it, context) && relationshipDescriptor.inverse != null && !relationshipDescriptor.inverse!!.isEmpty()) {
                     saveInverseRelationship(entity, it, parentRelationshipReference, relationshipObjectIdentifier)
                 }
             }
@@ -89,7 +91,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 if(relationshipDescriptor.shouldDeleteEntity) {
                     val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
                     entityToDelete?.deleteAllIndexes(context, it.referenceId)
-                    entityToDelete?.deleteRelationships(context, manager)
+                    entityToDelete?.deleteRelationships(context, transaction)
                     entityToDelete?.recordInteractor(context)?.delete(entityToDelete)
                 }
             }
@@ -104,12 +106,12 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
      * Hydrate relationship for entity
      *
      * @param entity           Entity to hydrate
-     * @param manager          Relationship manager prevents recursion
+     * @param transaction          Relationship transaction prevents recursion
      * @param force            Force hydrate
      */
     @Throws(OnyxException::class)
-    override fun hydrateRelationshipForEntity(entity: IManagedEntity, manager: EntityRelationshipManager, force: Boolean) {
-        manager.add(entity, context)
+    override fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean) {
+        transaction.add(entity, context)
 
         val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context)) ?: HashSet()
         var relationshipObjects: MutableList<IManagedEntity>? = entity[context, entityDescriptor, relationshipDescriptor.name]
@@ -124,7 +126,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         if (relationshipDescriptor.fetchPolicy !== FetchPolicy.LAZY || force) {
             existingRelationshipReferenceObjects.forEach {
                 val relationshipObject = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
-                relationshipObject?.hydrateRelationships(context, manager)
+                relationshipObject?.hydrateRelationships(context, transaction)
                 if(relationshipObject != null)
                     relationshipObjects!!.add(relationshipObject)
             }

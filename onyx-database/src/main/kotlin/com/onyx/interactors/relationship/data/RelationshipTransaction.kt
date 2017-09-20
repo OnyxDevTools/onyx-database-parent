@@ -1,7 +1,6 @@
-package com.onyx.relationship
+package com.onyx.interactors.relationship.data
 
 import com.onyx.exception.AttributeMissingException
-import com.onyx.extension.identifier
 import com.onyx.extension.toRelationshipReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -16,7 +15,7 @@ import com.onyx.persistence.context.SchemaContext
  * 1) When saving you can fetch the same reference for an inverse relationship and apply it
  * 2) When fetching recursive elements you do not have to re-fetch an element you have already fetched
  */
-class EntityRelationshipManager {
+class RelationshipTransaction {
     private val entities = HashMap<String, MutableMap<Any, IManagedEntity>>()
 
     constructor()

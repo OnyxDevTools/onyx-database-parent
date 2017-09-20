@@ -1,4 +1,4 @@
-package com.onyx.relationship
+package com.onyx.interactors.relationship.data
 
 import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.serializer.ObjectSerializable

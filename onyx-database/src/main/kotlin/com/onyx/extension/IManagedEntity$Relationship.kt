@@ -6,10 +6,12 @@ import com.onyx.exception.OnyxException
 import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.relationship.EntityRelationshipManager
-import com.onyx.relationship.RelationshipInteractor
-import com.onyx.relationship.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipTransaction
+import com.onyx.interactors.relationship.RelationshipInteractor
+import com.onyx.interactors.relationship.data.RelationshipReference
 import java.util.ArrayList
+
+val RELATIONSHIP_MAP_LOAD_FACTOR = 2
 
 /**
  * Get relationship controller
@@ -18,28 +20,22 @@ import java.util.ArrayList
  * @param name Name of property that corresponds to the relationship
  * @return Corresponding relationship controller for an entity and specified property name
  */
-fun IManagedEntity.relationshipController(context: SchemaContext, name:String): RelationshipInteractor {
-    val entityDescriptor = descriptor(context)
-    return context.getRelationshipController(entityDescriptor.relationships[name]!!)
-}
+fun IManagedEntity.relationshipInteractor(context: SchemaContext, name:String, descriptor: EntityDescriptor = descriptor(context)): RelationshipInteractor = context.getRelationshipInteractor(descriptor.relationships[name]!!)
 
 /**
  * Save all relationships within an entity
  *
  * @param context Schema Context entity belongs to
- * @param manager Determines and prevents recursive relationship persistence
+ * @param transaction Determines and prevents recursive relationship persistence
  *
  * @since 2.0.0
  */
 @JvmOverloads
-fun IManagedEntity.saveRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager()) {
-    val descriptor = descriptor(context)
+fun IManagedEntity.saveRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasRelationships) {
-        if(!manager.contains(this, context)) {
-            manager.add(this, context)
-//        if (!manager.contains(this, context)) {
-            descriptor.relationships.values.forEach { relationshipController(context, it.name).saveRelationshipForEntity(this, manager) }
-//        }
+        if(!transaction.contains(this, context)) {
+            transaction.add(this, context)
+            descriptor.relationships.values.forEach { relationshipInteractor(context, it.name, descriptor).saveRelationshipForEntity(this, transaction) }
         }
     }
 }
@@ -48,22 +44,57 @@ fun IManagedEntity.saveRelationships(context: SchemaContext, manager: EntityRela
  * Delete relationship references for an entity
  *
  * @param context Schema Context entity belongs to
- * @param manager Entity relationship manager prevents recursive deletes.  Not required
+ * @param transaction Entity relationship transaction prevents recursive deletes.  Not required
  * @since 2.0.0
  */
 @JvmOverloads
-fun IManagedEntity.deleteRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager(), descriptor: EntityDescriptor = descriptor(context)) = descriptor.relationships.values.forEach { relationshipController(context, it.name).deleteRelationshipForEntity(this, manager) }
+fun IManagedEntity.deleteRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = descriptor(context)) = descriptor.relationships.values.forEach { relationshipInteractor(context, it.name, descriptor).deleteRelationshipForEntity(this, transaction) }
 
-fun IManagedEntity.relationshipDescriptor(context: SchemaContext, name:String?):RelationshipDescriptor? = descriptor(context).relationships[name]
+/**
+ * Retrieve a relationship descriptor for an entity given the property name
+ * @param context Schema Context entity belongs to
+ * @param name Name of relationship
+ * @param descriptor Entity descriptor this entity
+ *
+ * @since 2.0.0
+ */
+fun IManagedEntity.relationshipDescriptor(context: SchemaContext, name:String?, descriptor: EntityDescriptor = descriptor(context)):RelationshipDescriptor? = descriptor.relationships[name]
 
-fun IManagedEntity.inverseRelationshipDescriptor(context: SchemaContext, name:String?):RelationshipDescriptor? {
-    val relationshipDescriptor = descriptor(context).relationships[name] ?: return null
+/**
+ * Get an inverse relationship descriptor based on the parent's relationship name
+ *
+ * @param context Schema Context entity belongs to
+ * @param name Name of relationship
+ * @param descriptor Entity descriptor this entity
+ *
+ * @since 2.0.0
+ */
+fun IManagedEntity.inverseRelationshipDescriptor(context: SchemaContext, name:String?, descriptor: EntityDescriptor = descriptor(context)):RelationshipDescriptor? {
+    val relationshipDescriptor = descriptor.relationships[name] ?: return null
     return context.getDescriptorForEntity(relationshipDescriptor.inverseClass, "").relationships[relationshipDescriptor.inverse]
 }
 
-val RELATIONSHIP_MAP_LOAD_FACTOR = 2
-
+/**
+ * Get the relationship references within the store
+ * @param context Schema Context entity belongs to
+ * @param relationship Name of relationship
+ * @since 2.0.0
+ */
 fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship: String):MutableMap<RelationshipReference, MutableSet<RelationshipReference>>? = getDataFile(context).getHashMap(this::class.java.name + relationship, RELATIONSHIP_MAP_LOAD_FACTOR) as MutableMap<RelationshipReference, MutableSet<RelationshipReference>>?
+
+/**
+ * Hydrate all relationships for this entity
+ *
+ * @param context Schema Context entity belongs to
+ * @param transaction Contains relationship transaction information in order to prevent recursive hydration
+ * @since 2.0.0
+ */
+fun IManagedEntity.hydrateRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = context.getDescriptorForEntity(this)) {
+    if(transaction.contains(this, context))
+        return
+    transaction.add(this, context)
+    descriptor.relationships.values.forEach { relationshipInteractor(context, it.name, descriptor).hydrateRelationshipForEntity(this, transaction, false) }
+}
 
 /**
  * Gets hydrated relationships from the store.  Also note, this will pass 1 to 1 as a list.  It will require further
@@ -94,8 +125,8 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
         return null
     }
 
-    val relationshipController = context.getRelationshipController(relationshipDescriptor!!)
-    val relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(entityReference!!)
+    val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor!!)
+    val relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(entityReference!!)
     val entities = ArrayList<IManagedEntity>()
 
     relationshipReferences.forEach {
@@ -106,11 +137,4 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
     }
 
     return entities
-}
-
-fun IManagedEntity.hydrateRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager(), descriptor: EntityDescriptor = context.getDescriptorForEntity(this)) {
-    if(manager.contains(this, context))
-        return
-    manager.add(this, context)
-    descriptor.relationships.values.forEach { relationshipController(context, it.name).hydrateRelationshipForEntity(this, manager, false) }
 }

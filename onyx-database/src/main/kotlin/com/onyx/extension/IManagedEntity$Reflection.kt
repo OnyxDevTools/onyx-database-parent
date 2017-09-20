@@ -17,6 +17,14 @@ val NULL_PARTITION = ""
  */
 fun IManagedEntity.identifier(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")):Any? = ReflectionUtil.getAny(this, descriptor!!.identifier!!.field)
 
+/**
+ * Copy an entity's properties from another entity of the same type
+ *
+ * @param from Entity to copy properties from
+ * @param context Schema Context, this is not required but either the descriptor or context is required
+ * @param descriptor Contains entity property information
+ * @since 2.0.0
+ */
 fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) = ReflectionUtil.copy(from, this, descriptor)
 
 /**

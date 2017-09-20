@@ -1,15 +1,8 @@
 package com.onyx.extension
 
+import com.onyx.descriptor.EntityDescriptor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-
-/**
- * This extension makes available the index resources for a managed entity.  It also contains methods for manipulating
- * index data for an entity
- *
- * @author Tim Osborn
- * @since 2.0.0 Refactored to remove helper methods
- */
 
 /**
  * Get an index controller.
@@ -19,7 +12,7 @@ import com.onyx.persistence.context.SchemaContext
  *
  * @since 2.0.0
  */
-fun IManagedEntity.indexController(context: SchemaContext, name:String) = context.getIndexController(descriptor(context).indexes[name]!!)
+fun IManagedEntity.indexController(context: SchemaContext, name:String, descriptor: EntityDescriptor = descriptor(context)) = context.getIndexController(descriptor.indexes[name]!!)
 
 /**
  * Save all indexes for an entity.  Sift through the indexed properties and update their references.  You must pass
@@ -31,14 +24,13 @@ fun IManagedEntity.indexController(context: SchemaContext, name:String) = contex
  * @since 2.0.0
  *
  */
-fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long) {
-    val descriptor = descriptor(context)
+fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
-        val newReferenceId = referenceId(context)
+        val newReferenceId = referenceId(context, descriptor)
 
         // Save All Indexes
         descriptor.indexes.values.forEach {
-            val indexController = indexController(context, it.name)
+            val indexController = indexController(context, it.name, descriptor)
             val indexValue:Any? = get(context, descriptor, it.name)
             indexController.save(indexValue, previousReferenceId, newReferenceId)
         }
@@ -54,11 +46,10 @@ fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long)
  *
  * @since 2.0.0
  */
-fun IManagedEntity.deleteAllIndexes(context: SchemaContext, referenceId:Long) {
-    val descriptor = descriptor(context)
+fun IManagedEntity.deleteAllIndexes(context: SchemaContext, referenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
         descriptor.indexes.values.forEach {
-            indexController(context, it.name).delete(referenceId)
+            indexController(context, it.name, descriptor).delete(referenceId)
         }
     }
 }

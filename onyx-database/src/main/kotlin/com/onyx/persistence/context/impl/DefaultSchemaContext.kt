@@ -34,9 +34,9 @@ import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
-import com.onyx.relationship.RelationshipInteractor
-import com.onyx.relationship.impl.ToManyRelationshipInteractor
-import com.onyx.relationship.impl.ToOneRelationshipInteractor
+import com.onyx.interactors.relationship.RelationshipInteractor
+import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
+import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.util.EntityClassLoader
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
@@ -190,7 +190,7 @@ open class DefaultSchemaContext : SchemaContext {
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors
         recordInteractors.clear() // Clear all Record Controllers
-        relationshipControllers.clear() // Clear all relationship controllers
+        relationshipInteractors.clear() // Clear all relationship controllers
         indexControllers.clear() // Clear all index controllers
 
         commitJob.cancel()
@@ -539,7 +539,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipControllers = HashMap<RelationshipDescriptor, RelationshipInteractor>()
+    private val relationshipInteractors = HashMap<RelationshipDescriptor, RelationshipInteractor>()
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -554,8 +554,8 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor = synchronized(relationshipControllers) {
-        relationshipControllers.getOrPut(relationshipDescriptor) {
+    override fun getRelationshipInteractor(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor = synchronized(relationshipInteractors) {
+        relationshipInteractors.getOrPut(relationshipDescriptor) {
             return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
                 ToManyRelationshipInteractor(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
             } else {

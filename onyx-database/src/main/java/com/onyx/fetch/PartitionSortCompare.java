@@ -2,8 +2,8 @@ package com.onyx.fetch;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.interactors.record.RecordInteractor;
-import com.onyx.relationship.RelationshipInteractor;
-import com.onyx.relationship.RelationshipReference;
+import com.onyx.interactors.relationship.RelationshipInteractor;
+import com.onyx.interactors.relationship.data.RelationshipReference;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.exception.OnyxException;
@@ -177,7 +177,7 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
     private Object getRelationshipValue(Object entry, ScannerProperties properties) throws OnyxException
     {
         // Get Relationship controller
-        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipController(properties.relationshipDescriptor);
+        final RelationshipInteractor relationshipInteractor = getContext().getRelationshipInteractor(properties.relationshipDescriptor);
 
         List<RelationshipReference> relationshipReferences;
 

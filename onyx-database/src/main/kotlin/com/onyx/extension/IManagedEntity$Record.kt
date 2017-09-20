@@ -6,7 +6,7 @@ import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
-import com.onyx.relationship.RelationshipReference
+import com.onyx.interactors.relationship.data.RelationshipReference
 
 /**
  * Get the entity's reference ID from the store.
@@ -18,17 +18,25 @@ import com.onyx.relationship.RelationshipReference
  *
  * @since 2.0.0
  */
-fun IManagedEntity.referenceId(context: SchemaContext):Long {
+fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Long {
     val identifier = identifier(context)
-    return if(identifier == null) 0L else recordInteractor(context).getReferenceId(identifier)
+    return if(identifier == null) 0L else recordInteractor(context, descriptor).getReferenceId(identifier)
 }
 
 /**
  * Returns the full reference object including the partition for the entity
+ * @param context Schema context entity belongs to
+ * @since 2.0.0
  */
 fun IManagedEntity.reference(context: SchemaContext):PartitionReference = PartitionReference(partitionId(context), referenceId(context))
 
-fun IManagedEntity.toRelationshipReference(context: SchemaContext):RelationshipReference = RelationshipReference(identifier(context), partitionId(context), referenceId(context))
+/**
+ * Generate a relationship reference based on the entity's record information
+ * @param context Schema context entity belongs to
+ * @param descriptor Default the descriptor to the entity descriptor
+ * @since 2.0.0
+ */
+fun IManagedEntity.toRelationshipReference(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): RelationshipReference = RelationshipReference(identifier(context, descriptor), partitionId(context, descriptor), referenceId(context, descriptor))
 
 /**
  * Get the record controller associated to this entity.
@@ -45,4 +53,4 @@ fun IManagedEntity.recordInteractor(context: SchemaContext, descriptor: EntityDe
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.save(context:SchemaContext):Any = recordInteractor(context).save(this)
+fun IManagedEntity.save(context:SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Any = recordInteractor(context, descriptor).save(this)
