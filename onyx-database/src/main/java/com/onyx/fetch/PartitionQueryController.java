@@ -14,7 +14,7 @@ import com.onyx.interactors.relationship.data.RelationshipReference;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.OnyxException;
 import com.onyx.helpers.*;
-import com.onyx.index.IndexController;
+import com.onyx.interactors.index.IndexInteractor;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -554,28 +554,28 @@ public class PartitionQueryController extends PartitionContext {
 
                 ReflectionUtil.setAny(entity, updateInstruction.getValue(), updateInstruction.getAttributeDescriptor().getField());
 
-                if (!updatedPartition && updateInstruction.getIndexController() != null) {
+                if (!updatedPartition && updateInstruction.getIndexInteractor() != null) {
                     // Save index values
 
                     if (referenceId instanceof PartitionReference && query.getPartition() == QueryPartitionMode.ALL) // This is in the case it is a mixed bag of partitioned data.  NOT EFFICIENT
                     {
                         EntityDescriptor oldDescriptor = getContext().getDescriptorForEntity(entity, PartitionHelper.getPartitionFieldValue(entity, getContext()));
-                        IndexController previousIndexController = getContext().getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
+                        IndexInteractor previousIndexInteractor = getContext().getIndexInteractor(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
-                        previousIndexController.delete(((PartitionReference) referenceId).reference);
+                        previousIndexInteractor.delete(((PartitionReference) referenceId).reference);
                     } else if (referenceId instanceof PartitionReference) {
-                        updateInstruction.getIndexController().delete(((PartitionReference) referenceId).reference);
+                        updateInstruction.getIndexInteractor().delete(((PartitionReference) referenceId).reference);
                     }
                     else
                     {
-                        updateInstruction.getIndexController().delete((long) referenceId);
+                        updateInstruction.getIndexInteractor().delete((long) referenceId);
                     }
-                } else if (updatedPartition && updateInstruction.getIndexController() != null && referenceId instanceof PartitionReference) {
+                } else if (updatedPartition && updateInstruction.getIndexInteractor() != null && referenceId instanceof PartitionReference) {
                     EntityDescriptor oldDescriptor = getContext().getDescriptorForEntity(entity, oldPartitionValue);
-                    IndexController previousIndexController = getContext().getIndexController(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
+                    IndexInteractor previousIndexInteractor = getContext().getIndexInteractor(oldDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                     // Delete old index key and insert new one in new partition
-                    previousIndexController.delete(((PartitionReference) referenceId).reference);
+                    previousIndexInteractor.delete(((PartitionReference) referenceId).reference);
                 }
             }
 
@@ -607,19 +607,19 @@ public class PartitionQueryController extends PartitionContext {
             // SAVE NEW INDEXES
             for (AttributeUpdate updateInstruction : query.getUpdates()) {
 
-                if (!updatedPartition && updateInstruction.getIndexController() != null) {
+                if (!updatedPartition && updateInstruction.getIndexInteractor() != null) {
                     // Save index values
-                    final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, updateInstruction.getIndexController().getIndexDescriptor());
-                    updateInstruction.getIndexController().save(indexValue, 0, newReferenceId);
-                } else if (updatedPartition && updateInstruction.getIndexController() != null && referenceId instanceof PartitionReference) {
+                    final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, updateInstruction.getIndexInteractor().getIndexDescriptor());
+                    updateInstruction.getIndexInteractor().save(indexValue, 0, newReferenceId);
+                } else if (updatedPartition && updateInstruction.getIndexInteractor() != null && referenceId instanceof PartitionReference) {
 
                     EntityDescriptor newDescriptor = getContext().getDescriptorForEntity(entity);
-                    IndexController newIndexController = getContext().getIndexController(newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
+                    IndexInteractor newIndexInteractor = getContext().getIndexInteractor(newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                     final Object indexValue = DefaultRecordInteractor.Companion.getIndexValueFromEntity(entity, newDescriptor.getIndexes().get(updateInstruction.getFieldName()));
 
                     // Delete old index key and insert new one in new partition
-                    newIndexController.save(indexValue, 0, newReferenceId);
+                    newIndexInteractor.save(indexValue, 0, newReferenceId);
                 }
             }
 

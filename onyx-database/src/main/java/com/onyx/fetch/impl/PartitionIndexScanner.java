@@ -14,7 +14,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.exception.OnyxExceptionWrapper;
 import com.onyx.fetch.PartitionReference;
 import com.onyx.fetch.TableScanner;
-import com.onyx.index.IndexController;
+import com.onyx.interactors.index.IndexInteractor;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
@@ -76,8 +76,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                     try
                     {
                         final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                        final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-                        Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
+                        final IndexInteractor partitionIndexInteractor = getContext().getIndexInteractor(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                        Map partitionResults = scanPartition(partitionIndexInteractor, partition.getIndex());
                         results.putAll(partitionResults);
                         countDownLatch.countDown();
                     } catch (OnyxException e)
@@ -114,8 +114,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 return new HashMap();
 
             final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
-            final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-            results.putAll(scanPartition(partitionIndexController, partitionId));
+            final IndexInteractor partitionIndexInteractor = getContext().getIndexInteractor(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+            results.putAll(scanPartition(partitionIndexInteractor, partitionId));
         }
 
         return results;
@@ -128,7 +128,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
      * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map scanPartition(IndexController partitionIndexController, long partitionId) throws OnyxException
+    private Map scanPartition(IndexInteractor partitionIndexInteractor, long partitionId) throws OnyxException
     {
         final CompatMap returnValue = new CompatHashMap();
         final List<Long> references = new ArrayList<>();
@@ -140,7 +140,7 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 if(query.isTerminated())
                     return returnValue;
 
-                references.addAll(partitionIndexController.findAll(idValue).keySet());
+                references.addAll((Collection<? extends Long>) partitionIndexInteractor.findAll(idValue).keySet());
             }
         }
         else
@@ -148,15 +148,15 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
             Set values;
 
             if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                values = partitionIndexController.findAllAbove(criteria.getValue(), false);
+                values = partitionIndexInteractor.findAllAbove(criteria.getValue(), false);
             else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                values = partitionIndexController.findAllAbove(criteria.getValue(), true);
+                values = partitionIndexInteractor.findAllAbove(criteria.getValue(), true);
             else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                values = partitionIndexController.findAllBelow(criteria.getValue(), false);
+                values = partitionIndexInteractor.findAllBelow(criteria.getValue(), false);
             else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                values = partitionIndexController.findAllBelow(criteria.getValue(), true);
+                values = partitionIndexInteractor.findAllBelow(criteria.getValue(), true);
             else
-                values =  partitionIndexController.findAll(criteria.getValue()).keySet();
+                values =  partitionIndexInteractor.findAll(criteria.getValue()).keySet();
 
             references.addAll(values);
         }
@@ -191,8 +191,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
             {
                 try {
                     final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
-                    final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-                    Map partitionResults = scanPartition(partitionIndexController, partition.getIndex());
+                    final IndexInteractor partitionIndexInteractor = getContext().getIndexInteractor(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+                    Map partitionResults = scanPartition(partitionIndexInteractor, partition.getIndex());
 
                     results.putAll(partitionResults);
 
@@ -230,8 +230,8 @@ public class PartitionIndexScanner extends IndexScanner implements TableScanner 
                 return new HashMap();
 
             final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
-            final IndexController partitionIndexController = getContext().getIndexController(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
-            results.putAll(scanPartition(partitionIndexController, partitionId));
+            final IndexInteractor partitionIndexInteractor = getContext().getIndexInteractor(partitionDescriptor.getIndexes().get(criteria.getAttribute()));
+            results.putAll(scanPartition(partitionIndexInteractor, partitionId));
 
             //noinspection Convert2streamapi
             for(PartitionReference reference : results.keySet())

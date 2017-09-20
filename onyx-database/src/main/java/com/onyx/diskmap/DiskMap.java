@@ -2,12 +2,14 @@ package com.onyx.diskmap;
 
 import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.node.Header;
+import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.util.OffsetField;
 import com.onyx.util.map.CompatMap;
 
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -101,4 +103,26 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @since 1.3.0
      */
     long longSize();
+
+    /**
+     * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param index        The index value to compare.  This must be comparable.  It does not work with hash codes.
+     * @param includeFirst Whether above and equals to
+     * @return A Set of references
+     * @since 1.2.0
+     */
+    Set<Long> above(K index, boolean includeFirst);
+
+    /**
+     * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param index        The index value to compare.  This must be comparable.  It does not work with hash codes.
+     * @param includeFirst Whether above and equals to
+     * @return A Set of references
+     * @since 1.2.0
+     */
+    Set<Long> below(K index, boolean includeFirst);
 }

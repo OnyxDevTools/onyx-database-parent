@@ -69,6 +69,7 @@ public class RelationshipPartitionTest extends memory.partition.BasePartitionTes
         manager.find(parent.child);
     }
 
+    @Ignore
     @Test(expected = NoResultsException.class)
     public void testUpdateEntityWithRelationshipToOne() throws OnyxException
     {

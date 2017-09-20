@@ -35,7 +35,7 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
         it.attributeDescriptor = attribute
 
         if (indexDescriptor != null) {
-            it.indexController = context.getIndexController(indexDescriptor)
+            it.indexInteractor = context.getIndexInteractor(indexDescriptor)
         }
 
         // Attribute is defined

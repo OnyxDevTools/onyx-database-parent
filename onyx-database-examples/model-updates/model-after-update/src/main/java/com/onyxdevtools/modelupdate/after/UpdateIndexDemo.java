@@ -51,9 +51,9 @@ class UpdateIndexDemo {
             /*
             final EntityDescriptor entityDescriptor = persistenceManager.getContext().getDescriptorForEntity(Account.class, "");
             final IndexDescriptor indexDescriptor = entityDescriptor.getIndexes().get("dueDate");
-            final IndexController indexController = persistenceManager.getContext().getIndexController(indexDescriptor);
+            final IndexInteractor indexInteractor = persistenceManager.getContext().getIndexInteractor(indexDescriptor);
 
-            indexController.rebuild();
+            indexInteractor.rebuild();
             */
 
             // This query uses the new index to execute the query.

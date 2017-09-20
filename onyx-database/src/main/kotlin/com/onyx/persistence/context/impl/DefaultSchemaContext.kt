@@ -15,8 +15,8 @@ import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
-import com.onyx.index.IndexController
-import com.onyx.index.impl.IndexControllerImpl
+import com.onyx.interactors.index.IndexInteractor
+import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.values.IdentifierGenerator
@@ -191,7 +191,7 @@ open class DefaultSchemaContext : SchemaContext {
         descriptors.clear() // Clear all descriptors
         recordInteractors.clear() // Clear all Record Controllers
         relationshipInteractors.clear() // Clear all relationship controllers
-        indexControllers.clear() // Clear all index controllers
+        indexInteractors.clear() // Clear all index controllers
 
         commitJob.cancel()
     }
@@ -207,10 +207,10 @@ open class DefaultSchemaContext : SchemaContext {
      */
     private fun initializePartitionSequence() {
         // Get the max partition index
-        val indexController = this.getIndexController(descriptors[SystemPartitionEntry::class.java.name]!!.indexes["index"]!!)
-        val values = indexController.findAllValues()
+        val indexInteractor = this.getIndexInteractor(descriptors[SystemPartitionEntry::class.java.name]!!.indexes["index"]!!)
+        val values = indexInteractor.findAllValues()
 
-        partitionCounter.set(if (values != null && !values.isEmpty()) values.maxBy { it as Long } as Long else 0L)
+        partitionCounter.set(if (!values.isEmpty()) values.maxBy { it as Long } as Long else 0L)
     }
 
     /**
@@ -367,7 +367,7 @@ open class DefaultSchemaContext : SchemaContext {
 
                 async {
                     catchAll {
-                        getIndexController(partitionEntityDescriptor.indexes[indexDescriptor!!.name]!!).rebuild()
+                        getIndexInteractor(partitionEntityDescriptor.indexes[indexDescriptor!!.name]!!).rebuild()
                     }
                 }
             }
@@ -375,7 +375,7 @@ open class DefaultSchemaContext : SchemaContext {
         } else {
             async {
                 catchAll {
-                    getIndexController(indexDescriptor!!).rebuild()
+                    getIndexInteractor(indexDescriptor!!).rebuild()
                 }
             }
         }
@@ -568,7 +568,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Index Controller
 
-    private val indexControllers = HashMap<IndexDescriptor, IndexController>()
+    private val indexInteractors = HashMap<IndexDescriptor, IndexInteractor>()
 
     /**
      * Get Index Controller with Index descriptor.
@@ -579,9 +579,9 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun getIndexController(indexDescriptor: IndexDescriptor): IndexController = synchronized(indexControllers) {
-        indexControllers.getOrPut(indexDescriptor) {
-            return@getOrPut IndexControllerImpl(indexDescriptor.entityDescriptor, indexDescriptor, this)
+    override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor = synchronized(indexInteractors) {
+        indexInteractors.getOrPut(indexDescriptor) {
+            return@getOrPut DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
         }
     }
 

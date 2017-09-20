@@ -5,7 +5,7 @@ import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.OnyxException;
 import com.onyx.fetch.TableScanner;
-import com.onyx.index.IndexController;
+import com.onyx.interactors.index.IndexInteractor;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
@@ -22,7 +22,7 @@ import java.util.*;
  */
 public class IndexScanner extends AbstractTableScanner implements TableScanner {
 
-    private IndexController indexController = null;
+    private IndexInteractor indexInteractor = null;
 
     /**
      * Constructor
@@ -38,7 +38,7 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
 
         final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(criteria.getAttribute());
-        indexController = context.getIndexController(indexDescriptor);
+        indexInteractor = context.getIndexInteractor(indexDescriptor);
     }
 
     /**
@@ -64,15 +64,15 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 Set<Long> values;
 
                 if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                    values = indexController.findAllAbove(idValue, false);
+                    values = indexInteractor.findAllAbove(idValue, false);
                 else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                    values = indexController.findAllAbove(idValue, true);
+                    values = indexInteractor.findAllAbove(idValue, true);
                 else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                    values = indexController.findAllBelow(idValue, false);
+                    values = indexInteractor.findAllBelow(idValue, false);
                 else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                    values = indexController.findAllBelow(idValue, true);
+                    values = indexInteractor.findAllBelow(idValue, true);
                 else
-                    values = indexController.findAll(idValue).keySet();
+                    values = indexInteractor.findAll(idValue).keySet();
 
                 references.addAll(values);
 
@@ -84,15 +84,15 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
             Set<Long> values;
 
             if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                values = indexController.findAllAbove(criteria.getValue(), false);
+                values = indexInteractor.findAllAbove(criteria.getValue(), false);
             else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                values = indexController.findAllAbove(criteria.getValue(), true);
+                values = indexInteractor.findAllAbove(criteria.getValue(), true);
             else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                values = indexController.findAllBelow(criteria.getValue(), false);
+                values = indexInteractor.findAllBelow(criteria.getValue(), false);
             else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                values = indexController.findAllBelow(criteria.getValue(), true);
+                values = indexInteractor.findAllBelow(criteria.getValue(), true);
             else
-                values = indexController.findAll(criteria.getValue()).keySet();
+                values = indexInteractor.findAll(criteria.getValue()).keySet();
 
             references.addAll(values);
 
@@ -127,15 +127,15 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 Set<Long> results;
 
                 if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                    results = indexController.findAllAbove(idValue, false);
+                    results = indexInteractor.findAllAbove(idValue, false);
                 else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                    results = indexController.findAllAbove(idValue, true);
+                    results = indexInteractor.findAllAbove(idValue, true);
                 else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                    results = indexController.findAllBelow(idValue, false);
+                    results = indexInteractor.findAllBelow(idValue, false);
                 else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                    results = indexController.findAllBelow(idValue, true);
+                    results = indexInteractor.findAllBelow(idValue, true);
                 else
-                    results = indexController.findAll(idValue).keySet();
+                    results = indexInteractor.findAll(idValue).keySet();
 
 
                 //noinspection Convert2streamapi
@@ -152,15 +152,15 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
             Set<Long> results;
 
             if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                results = indexController.findAllAbove(criteria.getValue(), false);
+                results = indexInteractor.findAllAbove(criteria.getValue(), false);
             else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                results = indexController.findAllAbove(criteria.getValue(), true);
+                results = indexInteractor.findAllAbove(criteria.getValue(), true);
             else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                results = indexController.findAllBelow(criteria.getValue(), false);
+                results = indexInteractor.findAllBelow(criteria.getValue(), false);
             else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                results = indexController.findAllBelow(criteria.getValue(), true);
+                results = indexInteractor.findAllBelow(criteria.getValue(), true);
             else
-                results = indexController.findAll(criteria.getValue()).keySet();
+                results = indexInteractor.findAll(criteria.getValue()).keySet();
 
 
             //noinspection Convert2streamapi

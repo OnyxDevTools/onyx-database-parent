@@ -1,7 +1,7 @@
 package com.onyx.persistence.query
 
 import com.onyx.descriptor.AttributeDescriptor
-import com.onyx.index.IndexController
+import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.serializer.ObjectSerializable
@@ -33,7 +33,7 @@ class AttributeUpdate @JvmOverloads constructor(var fieldName: String? = null, v
     @Transient
     var attributeDescriptor: AttributeDescriptor? = null
     @Transient
-    var indexController: IndexController? = null
+    var indexInteractor: IndexInteractor? = null
 
     @Throws(IOException::class)
     override fun writeObject(buffer: ObjectBuffer) {

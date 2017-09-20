@@ -133,7 +133,7 @@ public class ValidationHelper {
             instruction.setAttributeDescriptor(attribute);
 
             if (indexDescriptor != null) {
-                instruction.setIndexController(context.getIndexController(indexDescriptor));
+                instruction.setIndexInteractor(context.getIndexInteractor(indexDescriptor));
             }
 
             if (attribute == null) {

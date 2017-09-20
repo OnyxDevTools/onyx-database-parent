@@ -12,7 +12,7 @@ import com.onyx.persistence.context.SchemaContext
  *
  * @since 2.0.0
  */
-fun IManagedEntity.indexController(context: SchemaContext, name:String, descriptor: EntityDescriptor = descriptor(context)) = context.getIndexController(descriptor.indexes[name]!!)
+fun IManagedEntity.indexInteractor(context: SchemaContext, name:String, descriptor: EntityDescriptor = descriptor(context)) = context.getIndexInteractor(descriptor.indexes[name]!!)
 
 /**
  * Save all indexes for an entity.  Sift through the indexed properties and update their references.  You must pass
@@ -30,9 +30,9 @@ fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long,
 
         // Save All Indexes
         descriptor.indexes.values.forEach {
-            val indexController = indexController(context, it.name, descriptor)
+            val indexInteractor = indexInteractor(context, it.name, descriptor)
             val indexValue:Any? = get(context, descriptor, it.name)
-            indexController.save(indexValue, previousReferenceId, newReferenceId)
+            indexInteractor.save(indexValue, previousReferenceId, newReferenceId)
         }
     }
 }
@@ -49,7 +49,7 @@ fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long,
 fun IManagedEntity.deleteAllIndexes(context: SchemaContext, referenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
         descriptor.indexes.values.forEach {
-            indexController(context, it.name, descriptor).delete(referenceId)
+            indexInteractor(context, it.name, descriptor).delete(referenceId)
         }
     }
 }

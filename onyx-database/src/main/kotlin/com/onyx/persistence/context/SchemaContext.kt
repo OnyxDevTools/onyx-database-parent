@@ -8,7 +8,7 @@ import com.onyx.entity.SystemEntity
 import com.onyx.entity.SystemPartitionEntry
 import com.onyx.exception.InitializationException
 import com.onyx.exception.OnyxException
-import com.onyx.index.IndexController
+import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.QueryCacheController
@@ -214,7 +214,7 @@ interface SchemaContext {
      *
      * @return Corresponding record controller
      */
-    fun getIndexController(indexDescriptor: IndexDescriptor): IndexController
+    fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor
