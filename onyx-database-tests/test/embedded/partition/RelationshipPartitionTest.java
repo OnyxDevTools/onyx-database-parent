@@ -6,6 +6,7 @@ import com.onyx.exception.NoResultsException;
 import entities.partition.*;
 import junit.framework.Assert;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
@@ -68,6 +69,7 @@ public class RelationshipPartitionTest extends BasePartitionTest
         manager.find(parent.child);
     }
 
+    @Ignore
     @Test(expected = NoResultsException.class)
     public void testUpdateEntityWithRelationshipToOne() throws OnyxException
     {

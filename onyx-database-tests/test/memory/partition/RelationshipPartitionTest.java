@@ -6,6 +6,7 @@ import com.onyx.exception.NoResultsException;
 import entities.partition.*;
 import junit.framework.Assert;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.MethodSorters;
@@ -90,7 +91,7 @@ public class RelationshipPartitionTest extends memory.partition.BasePartitionTes
 
         ToOnePartitionEntityChild child = new ToOnePartitionEntityChild();
         child.id = parent.child.id;
-        child.partitionId = 34l;
+//        child.partitionId = null;
 
         manager.find(child);
     }
@@ -136,7 +137,6 @@ public class RelationshipPartitionTest extends memory.partition.BasePartitionTes
         parent.id = 23l;
         parent.partitionId = 3l;
 
-        find(parent);
         delete(parent);
 
         parent.child = new ManyToOnePartitionEntity();

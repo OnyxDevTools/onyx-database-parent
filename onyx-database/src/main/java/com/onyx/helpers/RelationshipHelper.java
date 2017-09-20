@@ -91,10 +91,13 @@ public class RelationshipHelper
         String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
         final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
 
-        for(RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
-        {
-            final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
-            relationshipInteractor.hydrateRelationshipForEntity(entity, relationshipManager, false);
+        if(!relationshipManager.contains(entity, context)) {
+            relationshipManager.add(entity, context);
+
+            for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values()) {
+                final RelationshipInteractor relationshipInteractor = context.getRelationshipController(relationshipDescriptor);
+                relationshipInteractor.hydrateRelationshipForEntity(entity, relationshipManager, false);
+            }
         }
     }
 

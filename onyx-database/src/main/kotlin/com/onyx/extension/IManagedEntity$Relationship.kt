@@ -4,14 +4,11 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.fetch.PartitionReference
-import com.onyx.helpers.PartitionHelper
-import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.relationship.EntityRelationshipManager
 import com.onyx.relationship.RelationshipInteractor
 import com.onyx.relationship.RelationshipReference
-import com.onyx.relationship.impl.AbstractRelationshipController
 import java.util.ArrayList
 
 /**
@@ -38,9 +35,12 @@ fun IManagedEntity.relationshipController(context: SchemaContext, name:String): 
 fun IManagedEntity.saveRelationships(context: SchemaContext, manager: EntityRelationshipManager = EntityRelationshipManager()) {
     val descriptor = descriptor(context)
     if (descriptor.hasRelationships) {
+        if(!manager.contains(this, context)) {
+            manager.add(this, context)
 //        if (!manager.contains(this, context)) {
             descriptor.relationships.values.forEach { relationshipController(context, it.name).saveRelationshipForEntity(this, manager) }
 //        }
+        }
     }
 }
 
@@ -96,20 +96,13 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
 
     val relationshipController = context.getRelationshipController(relationshipDescriptor!!)
     val relationshipReferences = relationshipController.getRelationshipIdentifiersWithReferenceId(entityReference!!)
-
-    val defaultRecordInteractor = context.getRecordInteractor(descriptor!!)
     val entities = ArrayList<IManagedEntity>()
 
     relationshipReferences.forEach {
-        if (it.partitionId <= 0) {
-            val relationshipEntity = defaultRecordInteractor.getWithId(it.identifier!!)
-            if (relationshipEntity != null)
-                entities.add(relationshipEntity)
-        } else {
-            val relationshipEntity = recordInteractor(context).getWithId(it.identifier!!)
-            if (relationshipEntity != null)
-                entities.add(relationshipEntity)
-        }
+        var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor!!.inverseClass)
+        relationshipEntity = relationshipEntity!!.recordInteractor(context).getWithId(it.identifier!!)
+        if (relationshipEntity != null)
+            entities.add(relationshipEntity)
     }
 
     return entities

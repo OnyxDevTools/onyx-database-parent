@@ -35,8 +35,8 @@ import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
 import com.onyx.relationship.RelationshipInteractor
-import com.onyx.relationship.impl.ToManyRelationshipControllerImpl
-import com.onyx.relationship.impl.ToOneRelationshipControllerImpl
+import com.onyx.relationship.impl.ToManyRelationshipInteractor
+import com.onyx.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.util.EntityClassLoader
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
@@ -557,9 +557,9 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getRelationshipController(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor = synchronized(relationshipControllers) {
         relationshipControllers.getOrPut(relationshipDescriptor) {
             return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
-                ToManyRelationshipControllerImpl(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
+                ToManyRelationshipInteractor(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
             } else {
-                ToOneRelationshipControllerImpl(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
+                ToOneRelationshipInteractor(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
             }
         }
     }

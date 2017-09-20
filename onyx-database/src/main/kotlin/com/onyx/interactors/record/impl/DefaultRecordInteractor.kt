@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * This controls the crud for a record
  */
-open class DefaultRecordInteractor(protected val entityDescriptor: EntityDescriptor, protected val context: SchemaContext) : RecordInteractor {
+open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, protected val context: SchemaContext) : RecordInteractor {
 
     protected val records: DiskMap<Any, IManagedEntity>
 
