@@ -15,6 +15,7 @@ import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
 import com.onyx.fetch.ScannerFactory
 import com.onyx.helpers.PartitionHelper
+import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.persistence.IManagedEntity
@@ -26,7 +27,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
-import com.onyx.persistence.query.impl.DefaultQueryCacheController
+import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.interactors.record.impl.SequenceRecordInteractor
@@ -74,7 +75,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // Controls the interaction of how the queries are cached.
     @Suppress("LeakingThis") // Does not matter there should always be a 1 - 1 on database factories and Schema Contexts
-    override var queryCacheController: QueryCacheController = DefaultQueryCacheController(this)
+    override var queryCacheInteractor: QueryCacheInteractor = DefaultQueryCacheInteractor(this)
 
     // Wait to initialize when the system persistence manager is set
     override lateinit var transactionInteractor: TransactionInteractor

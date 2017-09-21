@@ -4,8 +4,8 @@ import category.InMemoryDatabaseTests;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
-import com.onyx.query.CachedResults;
-import com.onyx.query.QueryListener;
+import com.onyx.interactors.cache.data.CachedResults;
+import com.onyx.persistence.query.QueryListener;
 import entities.SimpleEntity;
 import memory.base.BaseTest;
 import org.junit.After;
@@ -70,7 +70,7 @@ public class QueryListenerTest extends BaseTest {
 
         manager.executeQuery(query);
 
-        CachedResults results = manager.getContext().getQueryCacheController().getCachedQueryResults(query);
+        CachedResults results = manager.getContext().getQueryCacheInteractor().getCachedQueryResults(query);
         assert results.getListeners().size() == 1;
 
         // Ensure it is not duplicating listeners
@@ -105,7 +105,7 @@ public class QueryListenerTest extends BaseTest {
 
         manager.executeQuery(query);
 
-        CachedResults results = manager.getContext().getQueryCacheController().getCachedQueryResults(query);
+        CachedResults results = manager.getContext().getQueryCacheInteractor().getCachedQueryResults(query);
         assert results.getListeners().size() == 1;
 
         manager.removeChangeListener(query);
@@ -269,7 +269,7 @@ public class QueryListenerTest extends BaseTest {
 
         manager.listen(query);
 
-        CachedResults results = manager.getContext().getQueryCacheController().getCachedQueryResults(query);
+        CachedResults results = manager.getContext().getQueryCacheInteractor().getCachedQueryResults(query);
         assert results.getListeners().size() == 1;
 
         // Ensure it is not duplicating listeners
@@ -304,7 +304,7 @@ public class QueryListenerTest extends BaseTest {
 
         manager.listen(query);
 
-        CachedResults results = manager.getContext().getQueryCacheController().getCachedQueryResults(query);
+        CachedResults results = manager.getContext().getQueryCacheInteractor().getCachedQueryResults(query);
         assert results.getListeners().size() == 1;
 
         manager.removeChangeListener(query);

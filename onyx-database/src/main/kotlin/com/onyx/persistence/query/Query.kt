@@ -4,7 +4,6 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.query.QueryListener
 import java.io.IOException
 import java.io.Serializable
 import java.util.*
@@ -401,7 +400,7 @@ class Query : ObjectSerializable, Serializable {
      * @since 1.3.0
      *
      */
-    var changeListener: QueryListener<*>? = null
+     var changeListener: QueryListener<*>? = null
 
     // region Criteria Sorting
 

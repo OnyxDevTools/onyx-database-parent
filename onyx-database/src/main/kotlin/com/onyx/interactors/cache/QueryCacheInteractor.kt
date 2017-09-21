@@ -1,19 +1,29 @@
-package com.onyx.persistence.query;
+package com.onyx.interactors.cache
 
-import com.onyx.descriptor.EntityDescriptor;
-import com.onyx.persistence.IManagedEntity;
-import com.onyx.query.CachedResults;
-import com.onyx.query.QueryListener;
-import com.onyx.query.QueryListenerEvent;
-
-import java.util.Map;
+import com.onyx.descriptor.EntityDescriptor
+import com.onyx.persistence.IManagedEntity
+import com.onyx.interactors.cache.data.CachedResults
+import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryListener
+import com.onyx.persistence.query.QueryListenerEvent
 
 /**
  * Created by tosborn1 on 3/27/17.
  *
  * This controller handles how a query is cached.
  */
-public interface QueryCacheController {
+interface QueryCacheInteractor {
+
+    /**
+     * Cache query results from the closure.  If the query has already been cached, return the results
+     * of the cache.
+     *
+     * @param query Query results to cache
+     * @param body Closure to execute to retrieve the results of the query
+     *
+     * @since 2.0.0
+     */
+    fun <T : Map<Any, Any?>> cache(query: Query, body: () -> T): T
 
     /**
      * Get Cached results for a query. This method will return a cached query result if it exist.
@@ -23,7 +33,7 @@ public interface QueryCacheController {
      * @return The cached results or null
      * @since 1.3.0
      */
-    CachedResults getCachedQueryResults(Query query);
+    fun getCachedQueryResults(query: Query): CachedResults?
 
     /**
      * Set cached query results.  This is typically done on executeQuery and executeLazyQuery.
@@ -32,7 +42,7 @@ public interface QueryCacheController {
      *
      * @param results Result as references
      */
-    CachedResults setCachedQueryResults(Query query, Map results);
+    fun setCachedQueryResults(query: Query, results: Map<Any, Any?>): CachedResults?
 
     /**
      * Update all of the cached results if an entity has been modified.  It will re-check the criteria and
@@ -40,13 +50,12 @@ public interface QueryCacheController {
      *
      * @param entity Entity that was potentially inserted, updated, or deleted.
      * @param descriptor The entity's descriptor
-     * @param entityReference The entitity's reference
+     * @param entityReference The entity's reference
      * @param type Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
      *
      * @since 1.3.0
      */
-    void updateCachedQueryResultsForEntity(IManagedEntity entity, EntityDescriptor descriptor, final long entityReference, QueryListenerEvent type);
-
+    fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: Long, type: QueryListenerEvent)
 
     /**
      * Subscribe a query listener with associated cached results
@@ -56,7 +65,7 @@ public interface QueryCacheController {
      *
      * @since 1.3.0
      */
-    void subscribe(CachedResults results, QueryListener queryListener);
+    fun subscribe(results: CachedResults, queryListener: QueryListener<*>)
 
     /**
      * This method is used to subscribe irrespective of a query being ran.
@@ -64,14 +73,14 @@ public interface QueryCacheController {
      *
      * @since 1.3.1
      */
-    void subscribe(Query query);
+    fun subscribe(query: Query)
 
     /**
-     * Unsubscribe query
-     * @param query Query to unsubscribe from
+     * Un-subscribe query
+     * @param query Query to un-subscribe from
      * @return Whether the listener was listening to begin with
      *
      * @since 1.3.0
      */
-    boolean unsubscribe(Query query);
+    fun unSubscribe(query: Query): Boolean
 }

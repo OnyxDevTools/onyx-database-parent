@@ -11,7 +11,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.persistence.query.QueryCacheController
+import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.relationship.RelationshipInteractor
@@ -50,7 +50,7 @@ interface SchemaContext {
      *
      * @since 1.3.0
      */
-    val queryCacheController: QueryCacheController
+    val queryCacheInteractor: QueryCacheInteractor
 
     /**
      * @since 1.0.0

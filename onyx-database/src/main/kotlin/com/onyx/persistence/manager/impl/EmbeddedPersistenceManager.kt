@@ -9,7 +9,6 @@ import com.onyx.persistence.collections.LazyQueryCollection
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
-import com.onyx.query.CachedResults
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.persistence.stream.QueryMapStream
@@ -212,62 +211,26 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         context.checkForKillSwitch()
 
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
-
         query.validate(context, descriptor)
 
         val queryController = PartitionQueryController(descriptor, this, context)
-        var cachedResults: CachedResults? = null
 
         try {
-            // Check to see if there are cached query results
-            cachedResults = context.queryCacheController.getCachedQueryResults(query)
-            var results: Map<*, *>
-
-            // If there are, use the cache rather re-checking criteria
-            if (cachedResults != null && cachedResults.references != null) {
-                results = cachedResults.references
-                query.resultsCount = cachedResults.references.size
-
-                return if (query.selections != null) {
-                    ArrayList(queryController.hydrateQuerySelections(query, results).values) as List<E>
-                } else {
-                    queryController.hydrateResultsWithReferences(query, results) as List<E>
+            val results:Map<Any, IManagedEntity> = cache(query) {
+                var cachedResults = queryController.getReferencesForQuery(query)
+                if (query.shouldSortResults()) {
+                    cachedResults = queryController.sort(query, cachedResults)
                 }
-            }
-            results = queryController.getReferencesForQuery(query)
-
-            query.resultsCount = results.size
-
-            if (query.shouldSortResults()) {
-                results = queryController.sort(query, results)
+                return@cache cachedResults as Map<Any, IManagedEntity>
             }
 
-            // This will go through and get a subset of fields
-            if (query.selections != null) {
-
-                // Cache the query results
-                cachedResults = context.queryCacheController.setCachedQueryResults(query, results)
-
-                val attributeValues = queryController.hydrateQuerySelections(query, results)
-                if (query.isDistinct) {
-                    val linkedHashSet = LinkedHashSet(attributeValues.values)
-                    return ArrayList(linkedHashSet) as List<E>
-                }
-                return ArrayList(attributeValues.values) as List<E>
+            return if (query.selections != null) {
+                ArrayList(queryController.hydrateQuerySelections(query, results).values) as List<E>
             } else {
-                if (cachedResults == null)
-                    // Cache the query results
-                    cachedResults = context.queryCacheController.setCachedQueryResults(query, results)
-                else
-                    synchronized(cachedResults) {
-                        cachedResults!!.references = results
-                    }
-                return queryController.hydrateResultsWithReferences(query, results) as List<E>
+                queryController.hydrateResultsWithReferences(query, results) as List<E>
             }
+
         } finally {
-            if (query.changeListener != null) {
-                context.queryCacheController.subscribe(cachedResults, query.changeListener)
-            }
             queryController.cleanup()
         }
     }
@@ -290,40 +253,19 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         query.validate(context, descriptor)
 
         val queryController = PartitionQueryController(descriptor, this, context)
-        var cachedResults: CachedResults? = null
-
         try {
-            // Check for cached query results.
-            cachedResults = context.queryCacheController.getCachedQueryResults(query)
-            var results: Map<*, *>
+            val results:Map<Any,IManagedEntity?> = cache(query) {
+                // There were no cached results, load them from the store
+                var returnValue = queryController.getReferencesForQuery(query)
 
-            // If there are, hydrate the existing rather than looking to the store
-            if (cachedResults != null && cachedResults.references != null) {
-                results = cachedResults.references
-                query.resultsCount = results.size
-                return LazyQueryCollection(descriptor, results as MutableMap<Any, IManagedEntity?>, context) as List<E>
-            }
-
-            // There were no cached results, load them from the store
-            results = queryController.getReferencesForQuery(query)
-
-            query.resultsCount = results.size
-            if (query.shouldSortResults()) {
-                results = queryController.sort(query, results)
-            }
-
-            if (cachedResults == null)
-                // Cache the query results
-                cachedResults = context.queryCacheController.setCachedQueryResults(query, results)
-            else
-                synchronized(cachedResults) {
-                    cachedResults!!.references = results
+                if (query.shouldSortResults()) {
+                    returnValue = queryController.sort(query, returnValue)
                 }
+                return@cache returnValue as Map<Any, IManagedEntity?>
+            }
             return LazyQueryCollection(descriptor, results as MutableMap<Any, IManagedEntity?>, context) as List<E>
         } finally {
-            if (query.changeListener != null) {
-                context.queryCacheController.subscribe(cachedResults, query.changeListener)
-            }
+
             queryController.cleanup()
         }
     }
@@ -398,7 +340,6 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
         entity?.hydrateRelationships(context)
-
 
         return entity as E?
     }
@@ -604,9 +545,9 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         val descriptor = context.getDescriptorForEntity(clazz, query.partition)
         query.validate(context, descriptor)
 
-        val cachedResults = context.queryCacheController.getCachedQueryResults(query)
-        if (cachedResults != null && cachedResults.references != null)
-            return cachedResults.references.size.toLong()
+        val cachedResults = context.queryCacheInteractor.getCachedQueryResults(query)
+        if (cachedResults?.references != null)
+            return cachedResults.references!!.size.toLong()
 
         val queryController = PartitionQueryController(descriptor, this, context)
 
@@ -672,7 +613,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     @Throws(OnyxException::class)
     override fun removeChangeListener(query: Query): Boolean {
         query.validate(context)
-        return context.queryCacheController.unsubscribe(query)
+        return context.queryCacheInteractor.unSubscribe(query)
     }
 
     /**
@@ -684,7 +625,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     @Throws(OnyxException::class)
     override fun listen(query: Query) {
         query.validate(context)
-        context.queryCacheController.subscribe(query)
+        context.queryCacheInteractor.subscribe(query)
     }
 
     /**
@@ -696,4 +637,15 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         if(isJournalingEnabled)
             body.invoke()
     }
+
+    /**
+     * Cache query results from the closure.  If the query has already been cached, return the results
+     * of the cache.
+     *
+     * @param query Query results to cache
+     * @param body Closure to execute to retrieve the results of the query
+     *
+     * @since 2.0.0
+     */
+    private fun <T : Map<Any, Any?>> cache(query: Query, body: () -> T) = context.queryCacheInteractor.cache(query, body)
 }

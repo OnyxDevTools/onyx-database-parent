@@ -1,7 +1,7 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.client.push.PushPublisher;
-import com.onyx.persistence.query.impl.RemoteQueryCacheController;
+import com.onyx.persistence.query.impl.RemoteQueryCacheInteractor;
 
 /**
  * Created by tosborn1 on 3/27/17.
@@ -38,7 +38,7 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      */
     public ServerSchemaContext(String contextId, String location) {
         super(contextId, location);
-        this.setQueryCacheController(new RemoteQueryCacheController(this));
+        this.setQueryCacheInteractor(new RemoteQueryCacheInteractor(this));
     }
 
     /**
@@ -54,6 +54,6 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      * @since 1.3.0
      */
     public void setPushPublisher(PushPublisher pushPublisher) {
-        ((RemoteQueryCacheController)this.getQueryCacheController()).setPushPublisher(pushPublisher);
+        ((RemoteQueryCacheInteractor)this.getQueryCacheInteractor()).setPushPublisher(pushPublisher);
     }
 }

@@ -7,8 +7,8 @@ import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.client.push.PushConsumer;
 import com.onyx.exception.BufferingException;
-import com.onyx.query.QueryListener;
-import com.onyx.query.QueryListenerEvent;
+import com.onyx.persistence.query.QueryListener;
+import com.onyx.persistence.query.QueryListenerEvent;
 
 import java.nio.channels.SocketChannel;
 import java.util.Objects;

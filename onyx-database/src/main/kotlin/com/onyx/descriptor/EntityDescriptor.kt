@@ -250,4 +250,7 @@ constructor(
 
     val hasRelationships: Boolean
         get() = relationships.isNotEmpty()
+
+    val hasPartition:Boolean
+        get() = partition != null
 }

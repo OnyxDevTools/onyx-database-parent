@@ -4,7 +4,7 @@ import category.RemoteServerTests;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
-import com.onyx.query.QueryListener;
+import com.onyx.persistence.query.QueryListener;
 import entities.SimpleEntity;
 import org.junit.After;
 import org.junit.Before;

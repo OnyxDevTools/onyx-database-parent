@@ -11,7 +11,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.query.QueryListenerEvent
+import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.util.OffsetField
 import com.onyx.util.ReflectionUtil
@@ -59,7 +59,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
                         val recordId = records.getRecID(identifierValue)
                         if (recordId > 0L) {
                             // Update Cached queries
-                            context.queryCacheController.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE)
+                            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE)
                         }
                         entity.onPreUpdate(context, entityDescriptor)
                     }
@@ -73,7 +73,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
             if (recordId > 0L) {
                 isNew.set(false)
                 // Update Cached queries
-                context.queryCacheController.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE)
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE)
             } else {
                 isNew.set(true)
             }
@@ -88,7 +88,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
         }
 
         // Update Cached queries
-        context.queryCacheController.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue), if (isNew.get()) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
+        context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue), if (isNew.get()) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
 
         // Return the id
         return identifierValue!!
@@ -134,7 +134,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
         val recordId = records.getRecID(identifierValue)
         if (recordId > -1) {
             entity.onPreRemove(context, entityDescriptor)
-            context.queryCacheController.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.DELETE)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.DELETE)
             this.deleteWithId(identifierValue!!)
             entity.onPostRemove(context, entityDescriptor)
         }

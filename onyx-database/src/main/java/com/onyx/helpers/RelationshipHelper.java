@@ -26,38 +26,6 @@ public class RelationshipHelper
 {
 
     /**
-     * Save all relationships for an entity
-     *
-     * @param entity Entity to save relationships for
-     * @param manager Relationship manager keeping track of what was already done
-     */
-    @Deprecated
-    public static void saveAllRelationshipsForEntity(IManagedEntity entity, RelationshipTransaction manager, SchemaContext context) throws OnyxException
-    {
-        String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
-
-        final EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
-        if(descriptor.getRelationships().size() == 0)
-        {
-            return;
-        }
-
-        if(!manager.contains(entity, context))
-        {
-            manager.add(entity, context);
-            for (RelationshipDescriptor relationshipDescriptor : descriptor.getRelationships().values())
-            {
-                final RelationshipInteractor relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor);
-                if(relationshipInteractor == null)
-                {
-                    throw new InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " Class:" + relationshipDescriptor.getParentClass().getName() + " Inverse:" + relationshipDescriptor.getInverse());
-                }
-                relationshipInteractor.saveRelationshipForEntity(entity, manager);
-            }
-        }
-    }
-
-    /**
      * Delete all relationships for an entity
      *
      * @param entity Entity to save relationships for
@@ -97,85 +65,6 @@ public class RelationshipHelper
                 relationshipInteractor.hydrateRelationshipForEntity(entity, relationshipManager, false);
             }
         }
-    }
-
-    /**
-     * Helper method to grab a relationship value from the store
-     *
-     * @param entity Parent entity
-     * @param entityReference Parent entity reference
-     * @param attribute Relationship field name
-     * @param context Schema context
-     * @return A list of relationship entities
-     * @throws OnyxException Could not pull relationship
-     *
-     * @since 1.3.0 Used to dynamically pull a relationship regardless of relationship type and partition information
-     *              Supports insertion criteria checking.
-     */
-    @Deprecated
-    public static List<IManagedEntity> getRelationshipForValue(IManagedEntity entity, Object entityReference, String attribute, SchemaContext context) throws OnyxException
-    {
-        String[] slices = attribute.split("\\.");
-
-        String partitionValue = String.valueOf(PartitionHelper.getPartitionFieldValue(entity, context));
-        EntityDescriptor descriptor = context.getDescriptorForEntity(entity, partitionValue);
-
-        RelationshipDescriptor relationshipDescriptor = null;
-
-        // Iterate through and grab the right descriptor
-        try {
-            for (int i = 0; i < slices.length - 1; i++) {
-                relationshipDescriptor = descriptor.getRelationships().get(slices[i]);
-                descriptor = context.getBaseDescriptorForEntity(relationshipDescriptor.getInverseClass());
-            }
-        } catch (NullPointerException e)
-        {
-            return null;
-        }
-
-
-        final RelationshipInteractor relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor);
-        List<RelationshipReference> relationshipReferences;
-        RecordInteractor recordInteractor;
-
-        // Get relationship references
-        if (entityReference instanceof PartitionReference) {
-            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference)entityReference);
-        }
-        else if(entityReference instanceof Long)
-        {
-            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((Long)entityReference);
-        }
-        else
-        {
-            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(((SkipListNode)entityReference).recordId);
-        }
-
-        RecordInteractor defaultRecordInteractor = context.getRecordInteractor(descriptor);
-
-        PartitionContext partitionContext = null;
-
-        List<IManagedEntity> entities = new ArrayList<>();
-        for(RelationshipReference reference : relationshipReferences)
-        {
-            if(reference.getPartitionId() <= 0) {
-                IManagedEntity relationshipEntity = defaultRecordInteractor.getWithId(reference.getIdentifier());
-                if(relationshipEntity != null)
-                    entities.add(relationshipEntity);
-            }
-            else
-            {
-                if(partitionContext == null)
-                    partitionContext = new PartitionContext(context, descriptor);
-
-                recordInteractor = partitionContext.getRecordInteractorForPartition(reference.getPartitionId());
-                IManagedEntity relationshipEntity = recordInteractor.getWithId(reference.getIdentifier());
-                if(relationshipEntity != null)
-                    entities.add(relationshipEntity);
-            }
-        }
-
-        return entities;
     }
 
 }

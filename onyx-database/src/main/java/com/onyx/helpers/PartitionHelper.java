@@ -90,60 +90,6 @@ public class PartitionHelper
         }
         return val;
     }
-
-    /**
-     * Set the partition field on a query based on the query criteria
-     * @param query Query object
-     * @param context Schema context
-     */
-    @Deprecated
-    public static void setPartitionIdForQuery(Query query, SchemaContext context) throws OnyxException
-    {
-        if(hasPartitionField(query.getEntityType(), context) && (query.getPartition() == null || query.getPartition().equals("")))
-        {
-            Class queryClass = query.getEntityType();
-            IManagedEntity entity = ReflectionUtil.createNewEntity(queryClass);
-            final EntityDescriptor baseDescriptor = context.getDescriptorForEntity(entity, "");
-
-            QueryCriteria criteria = query.getCriteria();
-            setPartitionIdFromCriteria(criteria, query, baseDescriptor);
-        }
-    }
-
-    /**
-     * Recursive call to get and set the partition key from the query criteria
-     *
-     * @param criteria Query criteria
-     * @param query Query object
-     * @param baseDescriptor Entity descriptor
-     * @return whether the partition id was set in the query
-     */
-    @Deprecated
-    private static boolean setPartitionIdFromCriteria(QueryCriteria criteria, Query query, EntityDescriptor baseDescriptor)
-    {
-        if(baseDescriptor.getPartition() != null || query.getPartition().equals(""))
-        {
-            if(baseDescriptor.getPartition().getName().equals(criteria.getAttribute()))
-            {
-                query.setPartition(criteria.getValue());
-                return true;
-            } else {
-                for (Object andCriteriaObject : criteria.getSubCriteria()) {
-                    QueryCriteria<?> andCriteria = (QueryCriteria)andCriteriaObject;
-                    if (setPartitionIdFromCriteria(andCriteria, query, baseDescriptor))
-                        return true;
-                }
-            }
-        }
-
-        if(query.getPartition() == null || query.getPartition().equals(""))
-        {
-            query.setPartition(QueryPartitionMode.ALL);
-        }
-
-        return false;
-    }
-
     /**
      * Retrieves the index key from the entity using reflection
      *

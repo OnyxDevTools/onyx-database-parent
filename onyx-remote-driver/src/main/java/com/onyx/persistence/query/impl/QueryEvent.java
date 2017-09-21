@@ -3,7 +3,7 @@ package com.onyx.persistence.query.impl;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
-import com.onyx.query.QueryListenerEvent;
+import com.onyx.persistence.query.QueryListenerEvent;
 
 /**
  * Created by tosborn1 on 3/27/17.

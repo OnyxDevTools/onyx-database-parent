@@ -1,4 +1,4 @@
-package com.onyx.query;
+package com.onyx.persistence.query
 
 
 /**
@@ -9,8 +9,7 @@ package com.onyx.query;
  * that match the orignal query this listener is associated to, it will fire one
  * of these delegate methods.
  */
-@SuppressWarnings("unused")
-public interface QueryListener<T> {
+interface QueryListener<in T> {
 
     /**
      * Item has been modified.  This ocurres when an entity met the original criteria
@@ -20,7 +19,7 @@ public interface QueryListener<T> {
      *
      * @since 1.3.0
      */
-    void onItemUpdated(T item);
+    fun onItemUpdated(item: T)
 
     /**
      * Item has been inserted.  This ocurres when an entity was saved and it meets the query criteria.
@@ -29,7 +28,7 @@ public interface QueryListener<T> {
      *
      * @since 1.3.0
      */
-    void onItemAdded(T item);
+    fun onItemAdded(item: T)
 
     /**
      * Item has been deleted or no longer meets the critieria of the query.
@@ -38,6 +37,6 @@ public interface QueryListener<T> {
      *
      * @since 1.3.0
      */
-    void onItemRemoved(T item);
+    fun onItemRemoved(item: T)
 
 }

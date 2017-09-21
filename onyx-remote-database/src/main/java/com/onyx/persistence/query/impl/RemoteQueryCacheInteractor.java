@@ -2,21 +2,22 @@ package com.onyx.persistence.query.impl;
 
 import com.onyx.client.push.PushPublisher;
 import com.onyx.client.push.PushSubscriber;
+import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.Query;
-import com.onyx.query.CachedResults;
-import com.onyx.query.QueryListener;
+import com.onyx.interactors.cache.data.CachedResults;
+import com.onyx.persistence.query.QueryListener;
 
 /**
  * Created by tosborn1 on 3/27/17.
  *
  * This class is responsible for controlling the query cache for a remote server.
  */
-public class RemoteQueryCacheController extends DefaultQueryCacheController {
+public class RemoteQueryCacheInteractor extends DefaultQueryCacheInteractor {
 
     private PushPublisher pushPublisher;
 
-    public RemoteQueryCacheController(SchemaContext context) {
+    public RemoteQueryCacheInteractor(SchemaContext context) {
         super(context);
     }
 
@@ -55,13 +56,13 @@ public class RemoteQueryCacheController extends DefaultQueryCacheController {
      * @return Whether the listener was listening to begin with
      * @since 1.3.0
      */
-    public boolean unsubscribe(Query query) {
+    public boolean unSubscribe(Query query) {
         final RemoteQueryListener remoteQueryListener = (RemoteQueryListener) this.pushPublisher.getRegisteredSubscriberIdentity((PushSubscriber) query.getChangeListener());
         if (remoteQueryListener != null) {
             this.pushPublisher.deRegiserSubscriberIdentity(remoteQueryListener);
             final CachedResults cachedResults = getCachedQueryResults(query);
             if (cachedResults != null) {
-                return cachedResults != null && cachedResults.unsubscribe(remoteQueryListener);
+                return cachedResults != null && cachedResults.unSubscribe(remoteQueryListener);
             }
         }
         return false;

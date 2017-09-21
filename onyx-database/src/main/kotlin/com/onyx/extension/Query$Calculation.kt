@@ -8,7 +8,6 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.depricated.CompareUtil
 import com.onyx.fetch.PartitionReference
-import com.onyx.util.ReflectionUtil
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -25,7 +24,7 @@ import com.onyx.util.ReflectionUtil
  * @since 1.3.0 Simplified query criteria management
  */
 @Throws(OnyxException::class)
-fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Any, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
+fun Query.meetsCriteria(entity: IManagedEntity, entityReference: PartitionReference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
 
     var subCriteria: Boolean
 
@@ -38,8 +37,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Any, context: S
             // Compare operator for attribute object
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-            val offsetField = it.attributeDescriptor!!.field
-            subCriteria = CompareUtil.compare(it.value, ReflectionUtil.getAny(entity, offsetField), it.operator)
+            subCriteria = CompareUtil.compare(it.value, entity.get(context = context, name = it.attribute!!), it.operator)
         }
         it.meetsCriteria = subCriteria
     }
@@ -97,22 +95,21 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria<*>): Boolean {
  * to do a quick reference to see if newly saved entities meet the criteria
  */
 @Throws(OnyxException::class)
-private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Any, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
+private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityReference: PartitionReference, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
     var meetsCriteria = false
     val operator = criteria.operator
 
     // Grab the relationship from the store
-    val relationshipEntities = entity.getRelationshipFromStore(context, criteria.attribute!!, entityReference = entityReference as PartitionReference)
+    val relationshipEntities = entity.getRelationshipFromStore(context, criteria.attribute!!, entityReference = entityReference)
 
     // If there are relationship values, check to see if they meet criteria
     if (relationshipEntities!!.isNotEmpty()) {
         val items = criteria.attribute!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
         val attribute = items[items.size - 1]
-        val offsetField = ReflectionUtil.getOffsetField(relationshipEntities[0].javaClass, attribute)
 
         // All we need is a single match.  If there is a relationship that meets the criteria, move along
         for (relationshipEntity in relationshipEntities) {
-            meetsCriteria = CompareUtil.compare(criteria.value, ReflectionUtil.getAny(relationshipEntity, offsetField), operator)
+            meetsCriteria = CompareUtil.compare(criteria.value, relationshipEntity.get(context = context, name = attribute), operator)
             if (meetsCriteria)
                 break
         }

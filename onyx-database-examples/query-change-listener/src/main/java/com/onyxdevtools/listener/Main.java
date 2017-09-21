@@ -7,7 +7,7 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.query.QueryListener;
+import com.onyx.persistence.query.QueryListener;
 import com.onyxdevtools.listener.entities.Player;
 
 import java.io.File;
