@@ -1,6 +1,7 @@
 package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.OnyxException;
 import com.onyx.fetch.TableScanner;
@@ -19,23 +20,20 @@ import java.util.Set;
 
 /**
  * Created by timothy.osborn on 1/3/15.
- *
+ * <p>
  * Scan identifier values
  */
-public class IdentifierScanner extends AbstractTableScanner implements TableScanner
-{
+public class IdentifierScanner extends AbstractTableScanner implements TableScanner {
 
     /**
      * Constructor
      *
-     * @param criteria Query Criteria
+     * @param criteria    Query Criteria
      * @param classToScan Class type to scan
-     * @param descriptor Entity descriptor of entity type to scan
-     *
+     * @param descriptor  Entity descriptor of entity type to scan
      * @throws OnyxException Cannot find entity information
      */
-    public IdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException
-    {
+    public IdentifierScanner(QueryCriteria criteria, Class classToScan, EntityDescriptor descriptor, MapBuilder temporaryDataFile, Query query, SchemaContext context, PersistenceManager persistenceManager) throws OnyxException {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
     }
 
@@ -46,24 +44,21 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
      * @throws OnyxException Cannot scan records
      */
     @Override
-    public Map<Long, Long> scan() throws OnyxException
-    {
-        final Map<Long, Long> returnValue = new CompatHashMap<>();
+    public Map<PartitionReference, PartitionReference> scan() throws OnyxException {
+        final Map<PartitionReference, PartitionReference> returnValue = new CompatHashMap<>();
 
-        final RecordInteractor recordInteractor = getContext().getRecordInteractor(descriptor);
+        final RecordInteractor recordInteractor = getContext().getRecordInteractor(getDescriptor());
 
         // If it is an in clause
-        if(criteria.getValue() instanceof List)
-        {
-            for (Object idValue : (List)criteria.getValue())
-            {
-                if(query.isTerminated())
+        if (getCriteria().getValue() instanceof List) {
+            for (Object idValue : (List) getCriteria().getValue()) {
+                if (getQuery().isTerminated())
                     return returnValue;
 
-                long referenceId = recordInteractor.getReferenceId(idValue);
+                PartitionReference referenceId = new PartitionReference(getPartitionId(), recordInteractor.getReferenceId(idValue));
+
                 // The id does exist, lets add it to the results
-                if(referenceId > -1)
-                {
+                if (referenceId.reference > 0L) {
                     returnValue.put(referenceId, referenceId);
                 }
             }
@@ -71,31 +66,28 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
 
 
         // Its an equals, if the object exists, add it to the results
-        else
-        {
+        else {
 
             Set<Long> values = null;
 
-            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                values = recordInteractor.findAllAbove(criteria.getValue(), false);
-            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                values = recordInteractor.findAllAbove(criteria.getValue(), true);
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                values = recordInteractor.findAllBelow(criteria.getValue(), false);
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                values = recordInteractor.findAllBelow(criteria.getValue(), true);
-            else
-            {
-                long referenceId = recordInteractor.getReferenceId(criteria.getValue());
-                if(referenceId > -1)
-                {
+            if (getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                values = recordInteractor.findAllAbove(getCriteria().getValue(), false);
+            else if (getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                values = recordInteractor.findAllAbove(getCriteria().getValue(), true);
+            else if (getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN)
+                values = recordInteractor.findAllBelow(getCriteria().getValue(), false);
+            else if (getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                values = recordInteractor.findAllBelow(getCriteria().getValue(), true);
+            else {
+                PartitionReference referenceId = new PartitionReference(getPartitionId(), recordInteractor.getReferenceId(getCriteria().getValue()));
+                if (referenceId.reference > 0L) {
                     returnValue.put(referenceId, referenceId);
                 }
             }
 
-            if(values != null) {
+            if (values != null) {
                 for (Long aLong : values)
-                    returnValue.put(aLong, aLong);
+                    returnValue.put(new PartitionReference(getPartitionId(), aLong), new PartitionReference(getPartitionId(), aLong));
             }
 
         }
@@ -111,63 +103,55 @@ public class IdentifierScanner extends AbstractTableScanner implements TableScan
      * @throws OnyxException Cannot scan records
      */
     @Override
-    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws OnyxException
-    {
-        final Map<Long, Long> returnValue = new CompatHashMap<>();
+    public Map<PartitionReference, PartitionReference> scan(Map<PartitionReference, ? extends PartitionReference> existingValues) throws OnyxException {
+        final Map<PartitionReference, PartitionReference> returnValue = new CompatHashMap<>();
 
-        final RecordInteractor recordInteractor = getContext().getRecordInteractor(descriptor);
+        final RecordInteractor recordInteractor = getContext().getRecordInteractor(getDescriptor());
 
-        Iterator<Long> iterator = existingValues.keySet().iterator();
+        Iterator<PartitionReference> iterator = existingValues.keySet().iterator();
 
-        Long key;
+        PartitionReference key;
 
-        while (iterator.hasNext())
-        {
+        while (iterator.hasNext()) {
             key = iterator.next();
 
             // If it is an in clause
-            if(criteria.getValue() instanceof List)
-            {
-                for (Object idValue : (List)criteria.getValue())
-                {
-                    if(query.isTerminated())
+            if (getCriteria().getValue() instanceof List) {
+                for (Object idValue : (List) getCriteria().getValue()) {
+                    if (getQuery().isTerminated())
                         return returnValue;
 
-                    long referenceId = recordInteractor.getReferenceId(idValue);
+                    PartitionReference referenceId = new PartitionReference(getPartitionId(), recordInteractor.getReferenceId(idValue));
 
-                    if(referenceId == key)
-                    {
+                    if (key.equals(referenceId)) {
                         returnValue.put(referenceId, referenceId);
                     }
                 }
             }
             // Its an equals, if the object exists, add it to the results
-            else
-            {
+            else {
 
                 Set<Long> values = null;
 
-                if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                    values = recordInteractor.findAllAbove(criteria.getValue(), false);
-                else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                    values = recordInteractor.findAllAbove(criteria.getValue(), true);
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                    values = recordInteractor.findAllBelow(criteria.getValue(), false);
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                    values = recordInteractor.findAllBelow(criteria.getValue(), true);
-                else
-                {
-                    long referenceId = recordInteractor.getReferenceId(criteria.getValue());
-                    if(referenceId > -1)
-                    {
+                if (getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                    values = recordInteractor.findAllAbove(getCriteria().getValue(), false);
+                else if (getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                    values = recordInteractor.findAllAbove(getCriteria().getValue(), true);
+                else if (getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN)
+                    values = recordInteractor.findAllBelow(getCriteria().getValue(), false);
+                else if (getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                    values = recordInteractor.findAllBelow(getCriteria().getValue(), true);
+                else {
+                    PartitionReference referenceId = new PartitionReference(getPartitionId(), recordInteractor.getReferenceId(getCriteria().getValue()));
+
+                    if (referenceId.reference > 0L) {
                         returnValue.put(referenceId, referenceId);
                     }
                 }
 
-                if(values != null) {
-                    for (Long aLong : existingValues.values())
-                    {
-                        if(values.contains(aLong))
+                if (values != null) {
+                    for (PartitionReference aLong : existingValues.values()) {
+                        if (values.contains(aLong.reference))
                             returnValue.put(aLong, aLong);
                     }
                 }

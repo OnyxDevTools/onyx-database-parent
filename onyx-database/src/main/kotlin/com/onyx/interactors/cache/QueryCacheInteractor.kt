@@ -1,6 +1,7 @@
 package com.onyx.interactors.cache
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.Query
@@ -55,7 +56,7 @@ interface QueryCacheInteractor {
      *
      * @since 1.3.0
      */
-    fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: Long, type: QueryListenerEvent)
+    fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: PartitionReference, type: QueryListenerEvent)
 
     /**
      * Subscribe a query listener with associated cached results

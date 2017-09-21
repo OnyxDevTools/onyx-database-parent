@@ -9,6 +9,7 @@ import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.EntityCallbackException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
+import com.onyx.fetch.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
@@ -29,8 +30,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
 
     init {
         val dataFile = context.getDataFile(entityDescriptor)
-        @Suppress("UNCHECKED_CAST")
-        records = dataFile.getHashMap(entityDescriptor.entityClass.name, entityDescriptor.identifier!!.loadFactor.toInt()) as DiskMap<Any, IManagedEntity>
+        records = dataFile.getHashMap(entityDescriptor.entityClass.name, entityDescriptor.identifier!!.loadFactor.toInt())
     }
 
     /**
@@ -59,7 +59,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
                         val recordId = records.getRecID(identifierValue)
                         if (recordId > 0L) {
                             // Update Cached queries
-                            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE)
+                            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, PartitionReference(entity.partitionId(context), recordId) , QueryListenerEvent.PRE_UPDATE)
                         }
                         entity.onPreUpdate(context, entityDescriptor)
                     }
@@ -73,7 +73,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
             if (recordId > 0L) {
                 isNew.set(false)
                 // Update Cached queries
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.PRE_UPDATE)
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, PartitionReference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
             } else {
                 isNew.set(true)
             }
@@ -88,7 +88,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
         }
 
         // Update Cached queries
-        context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, records.getRecID(identifierValue), if (isNew.get()) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
+        context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, entity.reference(context), if (isNew.get()) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
 
         // Return the id
         return identifierValue!!
@@ -134,7 +134,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
         val recordId = records.getRecID(identifierValue)
         if (recordId > -1) {
             entity.onPreRemove(context, entityDescriptor)
-            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, recordId, QueryListenerEvent.DELETE)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, PartitionReference(entity.partitionId(context), recordId), QueryListenerEvent.DELETE)
             this.deleteWithId(identifierValue!!)
             entity.onPostRemove(context, entityDescriptor)
         }

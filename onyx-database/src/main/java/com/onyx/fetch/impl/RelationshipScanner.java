@@ -54,38 +54,38 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map<Long, Long> scan() throws OnyxException
+    public Map<PartitionReference, PartitionReference> scan() throws OnyxException
     {
 
-        Map startingPoint = new HashMap();
+        Map<PartitionReference, PartitionReference> startingPoint = new HashMap();
 
         // We do not support querying relationships by all partitions.
         // This would be about the most rediculous non optimized query
         // and is frowned upon
-        if (this.query.getPartition() == QueryPartitionMode.ALL)
+        if (this.getQuery().getPartition() == QueryPartitionMode.ALL)
         {
             throw new InvalidQueryException();
         }
 
         // Added the ability to start with a partition
-        if (this.descriptor.getPartition() != null) {
+        if (this.getDescriptor().getPartition() != null) {
             // Get the partition ID
             IManagedEntity temp;
             try {
-                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getEntityClass());
+                temp = (IManagedEntity) ReflectionUtil.instantiate(getDescriptor().getEntityClass());
             } catch (IllegalAccessException | InstantiationException e) {
                 throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
             }
-            PartitionHelper.setPartitionValueForEntity(temp, query.getPartition(), getContext());
+            PartitionHelper.setPartitionValueForEntity(temp, getQuery().getPartition(), getContext());
             long partitionId = getPartitionId(temp);
 
-            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) getRecords()).referenceSet()) {
                 startingPoint.put(new PartitionReference(partitionId, reference.recordId), new PartitionReference(partitionId, reference.recordId));
             }
         } else {
             // Hydrate the entire reference set of parent entity before scanning the relationship
-            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) records).referenceSet()) {
-                startingPoint.put(reference.recordId, reference.recordId);
+            for (SkipListNode reference : (Set<SkipListNode>) ((DiskMap) getRecords()).referenceSet()) {
+                startingPoint.put(new PartitionReference(0L, reference.recordId), new PartitionReference(0L, reference.recordId));
             }
         }
 
@@ -101,38 +101,38 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan(Map existingValues) throws OnyxException
+    public Map<PartitionReference, PartitionReference> scan(Map<PartitionReference, ? extends PartitionReference> existingValues) throws OnyxException
     {
         // Retain the original attribute
-        final String originalAttribute = criteria.getAttribute();
+        final String originalAttribute = getCriteria().getAttribute();
 
         // Get the attribute name.  If it has multiple tokens, that means it is another relationship.
         // If that is the case, we gotta find that one
         final String[] segments = originalAttribute.split("\\.");
 
         // Map <ChildIndex, ParentIndex> // Inverted list so we can use it to scan using an normal full table scanner or index scanner
-        final Map relationshipIndexes = getRelationshipIndexes(segments[0], existingValues);
-        final Map returnValue = new CompatHashMap();
+        final Map<PartitionReference, PartitionReference> relationshipIndexes = getRelationshipIndexes(segments[0], existingValues);
+        final Map<PartitionReference,PartitionReference> returnValue = new CompatHashMap();
 
         // We are going to set the attribute name so we can continue going down the chain.  We are going to remove the
         // processed token through
-        criteria.setAttribute(criteria.getAttribute().replaceFirst(segments[0] + "\\.", ""));
+        getCriteria().setAttribute(getCriteria().getAttribute().replaceFirst(segments[0] + "\\.", ""));
 
         // Get the next scanner because we are not at the end of the line.  Otherwise, we would not have gotten to this place
-        final TableScanner tableScanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(criteria, relationshipDescriptor.getInverseClass(), temporaryDataFile, query, persistenceManager);
+        final TableScanner tableScanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(getCriteria(), relationshipDescriptor.getInverseClass(), getTemporaryDataFile(), getQuery(), getPersistenceManager());
 
         // Sweet, lets get the scanner.  Note, this very well can be recursive, but sooner or later it will get to the
         // other scanners
-        final Map childIndexes = tableScanner.scan(relationshipIndexes);
+        final Map<PartitionReference,PartitionReference> childIndexes = tableScanner.scan(relationshipIndexes);
 
         // Swap parent / child after getting results.  This is because we can use the child when hydrating stuff
-        for (Object childIndex : childIndexes.keySet())
+        for (PartitionReference childIndex : childIndexes.keySet())
         {
             // Gets the parent
             returnValue.put(relationshipIndexes.get(childIndex), childIndex);
         }
 
-        criteria.setAttribute(originalAttribute);
+        getCriteria().setAttribute(originalAttribute);
 
         return returnValue;
     }
@@ -145,52 +145,37 @@ public class RelationshipScanner extends AbstractTableScanner implements TableSc
      * @return References that match criteria
      */
     @SuppressWarnings("unchecked")
-    private Map getRelationshipIndexes(String attribute, Map existingValues) throws OnyxException
-    {
-        final Map allResults = new CompatHashMap();
+    private Map<PartitionReference, PartitionReference> getRelationshipIndexes(String attribute, Map<PartitionReference, ? extends PartitionReference> existingValues) throws OnyxException {
+        final Map<PartitionReference, PartitionReference> allResults = new CompatHashMap();
 
-        final Iterator iterator = existingValues.keySet().iterator();
+        final Iterator<PartitionReference> iterator = existingValues.keySet().iterator();
 
-        if (this.query.getPartition() == QueryPartitionMode.ALL) {
+        if (this.getQuery().getPartition() == QueryPartitionMode.ALL) {
             throw new InvalidQueryException();
         }
 
-        relationshipDescriptor = this.descriptor.getRelationships().get(attribute);
+        relationshipDescriptor = this.getDescriptor().getRelationships().get(attribute);
         final RelationshipInteractor relationshipInteractor = getContext().getRelationshipInteractor(relationshipDescriptor);
-        final RecordInteractor inverseRecordInteractor = getDefaultInverseRecordInteractor();
 
         List<RelationshipReference> relationshipIdentifiers;
-        Object keyValue;
+        PartitionReference keyValue;
 
-        while(iterator.hasNext())
-        {
-            if(query.isTerminated())
+        while (iterator.hasNext()) {
+            if (getQuery().isTerminated())
                 return allResults;
 
             keyValue = iterator.next();
 
-            if(keyValue instanceof PartitionReference)
-            {
-                relationshipIdentifiers = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference)keyValue);
-            }
-            else
-            {
-                relationshipIdentifiers = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((long)keyValue);
-            }
-            for(RelationshipReference id : relationshipIdentifiers)
-            {
-
-                if(id.getPartitionId() == 0)
-                {
-                    allResults.put(inverseRecordInteractor.getReferenceId(id.getIdentifier()), keyValue);
-                }
+            relationshipIdentifiers = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference) keyValue);
+            for (RelationshipReference id : relationshipIdentifiers) {
+                RecordInteractor recordInteractorForPartition = null;
+                if(id.getPartitionId() == 0L)
+                    recordInteractorForPartition= getDefaultInverseRecordInteractor();
                 else
-                {
-                    RecordInteractor recordInteractorForPartition = getRecordInteractorForPartition(id.getPartitionId());
-                    PartitionReference reference = new PartitionReference(id.getPartitionId(), recordInteractorForPartition.getReferenceId(id.getIdentifier()));
-                    allResults.put(reference, keyValue);
-                }
+                    recordInteractorForPartition = getRecordInteractorForPartition(id.getPartitionId());
 
+                PartitionReference reference = new PartitionReference(id.getPartitionId(), recordInteractorForPartition.getReferenceId(id.getIdentifier()));
+                allResults.put(reference, keyValue);
             }
         }
 

@@ -54,16 +54,16 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      * @throws OnyxException Cannot scan partition
      */
     @SuppressWarnings("unchecked")
-    private Map scanPartition(RecordInteractor recordInteractor, long partitionId) throws OnyxException
+    private Map<PartitionReference, PartitionReference> scanPartition(RecordInteractor recordInteractor, long partitionId) throws OnyxException
     {
-        final Map returnValue = new CompatHashMap();
+        final Map<PartitionReference, PartitionReference> returnValue = new CompatHashMap();
 
         // If it is an in clause
-        if(criteria.getValue() instanceof List)
+        if(getCriteria().getValue() instanceof List)
         {
-            for (Object idValue : (List)criteria.getValue())
+            for (Object idValue : (List) getCriteria().getValue())
             {
-                if(query.isTerminated())
+                if(getQuery().isTerminated())
                     return returnValue;
 
                 long referenceId = recordInteractor.getReferenceId(idValue);
@@ -79,7 +79,7 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
         // Its an equals, if the object exists, add it to the results
         else
         {
-            long referenceId = recordInteractor.getReferenceId(criteria.getValue());
+            long referenceId = recordInteractor.getReferenceId(getCriteria().getValue());
             if(referenceId > -1)
             {
                 final PartitionReference reference = new PartitionReference(partitionId, referenceId);
@@ -98,17 +98,17 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan() throws OnyxException
+    public Map<PartitionReference, PartitionReference> scan() throws OnyxException
     {
         final OnyxExceptionWrapper wrapper = new OnyxExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
-        if(query.getPartition() == QueryPartitionMode.ALL)
+        if(getQuery().getPartition() == QueryPartitionMode.ALL)
         {
             for(SystemPartitionEntry partition : systemEntity.getPartition().getEntries())
             {
                 try {
-                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                    final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(getQuery().getEntityType(), partition.getValue());
                     final RecordInteractor recordInteractor = getContext().getRecordInteractor(partitionDescriptor);
                     Map partitionResults = scanPartition(recordInteractor, partition.getIndex());
                     results.putAll(partitionResults);
@@ -126,12 +126,12 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
         {
             IManagedEntity entity;
             try {
-                entity = (IManagedEntity) ReflectionUtil.instantiate(query.getEntityType());
+                entity = (IManagedEntity) ReflectionUtil.instantiate(getQuery().getEntityType());
             } catch (InstantiationException | IllegalAccessException e) {
-                throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, query.getEntityType());
+                throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, getQuery().getEntityType());
             }
 
-            PartitionHelper.setPartitionValueForEntity(entity, query.getPartition(), getContext());
+            PartitionHelper.setPartitionValueForEntity(entity, getQuery().getPartition(), getContext());
             long partitionId = getPartitionId(entity);
             if(partitionId < 1)
                 return new HashMap();
@@ -152,77 +152,43 @@ public class PartitionIdentifierScanner extends IdentifierScanner implements Tab
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map scan(Map existingValues) throws OnyxException
+    public Map<PartitionReference, PartitionReference> scan(Map<PartitionReference, ? extends PartitionReference> existingValues) throws OnyxException
     {
         final CompatMap returnValue = new CompatHashMap();
 
-        final RecordInteractor recordInteractor = getContext().getRecordInteractor(descriptor);
+        Iterator<PartitionReference> iterator = existingValues.keySet().iterator();
 
-        Iterator iterator = existingValues.keySet().iterator();
-
-        Object key;
+        PartitionReference key;
 
         while (iterator.hasNext())
         {
             key = iterator.next();
 
-            if(key instanceof PartitionReference)
+            RecordInteractor recordInteractorForPartition = this.getRecordInteractorForPartition(((PartitionReference) key).partition);
+            // If it is an in clause
+            if(getCriteria().getValue() instanceof List)
             {
-                RecordInteractor recordInteractorForPartition = this.getRecordInteractorForPartition(((PartitionReference) key).partition);
-                // If it is an in clause
-                if(criteria.getValue() instanceof List)
+                for (Object idValue : (List) getCriteria().getValue())
                 {
-                    for (Object idValue : (List)criteria.getValue())
-                    {
-                        if(query.isTerminated())
-                            return returnValue;
+                    if(getQuery().isTerminated())
+                        return returnValue;
 
-                        long referenceId = recordInteractorForPartition.getReferenceId(idValue);
+                    long referenceId = recordInteractorForPartition.getReferenceId(idValue);
 
-                        if(referenceId == ((PartitionReference)key).reference)
-                        {
-                            returnValue.put(key, key);
-                        }
-                    }
-                }
-                // Its an equals, if the object exists, add it to the results
-                else
-                {
-                    long referenceId = recordInteractorForPartition.getReferenceId(criteria.getValue());
-
-                    if(referenceId ==  ((PartitionReference)key).reference)
+                    if(referenceId == ((PartitionReference)key).reference)
                     {
                         returnValue.put(key, key);
                     }
                 }
             }
+            // Its an equals, if the object exists, add it to the results
             else
             {
-                // If it is an in clause
-                if(criteria.getValue() instanceof List)
+                long referenceId = recordInteractorForPartition.getReferenceId(getCriteria().getValue());
+
+                if(referenceId ==  ((PartitionReference)key).reference)
                 {
-                    for (Object idValue : (List)criteria.getValue())
-                    {
-                        if(query.isTerminated())
-                            return returnValue;
-
-                        long referenceId = recordInteractor.getReferenceId(idValue);
-
-                        if(referenceId == (Long)key)
-                        {
-                            returnValue.put(referenceId, referenceId);
-                        }
-                    }
-                }
-                // Its an equals, if the object exists, add it to the results
-                else
-                {
-                    long referenceId = recordInteractor.getReferenceId(criteria.getValue());
-
-                    if(referenceId ==  (Long)key)
-                    {
-                        returnValue.put(referenceId, referenceId);
-                    }
+                    returnValue.put(key, key);
                 }
             }
         }

@@ -67,7 +67,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
         final SchemaContext context = getContext();
 
         while (iterator.hasNext()) {
-            if (query.isTerminated())
+            if (getQuery().isTerminated())
                 return allResults;
 
             node = (SkipListNode)iterator.next();
@@ -78,7 +78,7 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
                 continue;
             }
 
-            if(CompareUtil.meetsCriteria(query.getAllCriteria(), criteria, entity, new PartitionReference(partitionId, node.recordId), context, descriptor))
+            if(CompareUtil.meetsCriteria(getQuery().getAllCriteria(), getCriteria(), entity, new PartitionReference(partitionId, node.recordId), context, getDescriptor()))
             {
                 allResults.put(new PartitionReference(partitionId, node.recordId), new PartitionReference(partitionId, node.recordId));
             }
@@ -99,16 +99,16 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
         final OnyxExceptionWrapper wrapper = new OnyxExceptionWrapper();
         CompatMap<PartitionReference, PartitionReference> results = new SynchronizedMap();
 
-        if (query.getPartition() == QueryPartitionMode.ALL) {
+        if (getQuery().getPartition() == QueryPartitionMode.ALL) {
 
             Iterator<SystemPartitionEntry> it = systemEntity.getPartition().getEntries().iterator();
             CountDownLatch partitionScanCountDown = new CountDownLatch(systemEntity.getPartition().getEntries().size());
             while (it.hasNext()) {
                 final SystemPartitionEntry partition = it.next();
 
-                executorService.execute(() -> {
+                getExecutorService().execute(() -> {
                     try {
-                        final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), partition.getValue());
+                        final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(getQuery().getEntityType(), partition.getValue());
 
                         final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
                         DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
@@ -135,8 +135,8 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
         }
 
         // Since 1.2.3 Added a fix for querying upon a relationship partition that is not ALL
-        else if (query.getPartition() != null) {
-            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(query.getEntityType(), query.getPartition());
+        else if (getQuery().getPartition() != null) {
+            final EntityDescriptor partitionDescriptor = getContext().getDescriptorForEntity(getQuery().getEntityType(), getQuery().getPartition());
 
             final MapBuilder dataFile = getContext().getDataFile(partitionDescriptor);
             DiskMap recs = (DiskMap) dataFile.getHashMap(partitionDescriptor.getEntityClass().getName(), partitionDescriptor.getIdentifier().getLoadFactor());
@@ -144,11 +144,11 @@ public class PartitionFullTableScanner extends FullTableScanner implements Table
             // Get the partition ID
             IManagedEntity temp;
             try {
-                temp = (IManagedEntity) ReflectionUtil.instantiate(descriptor.getEntityClass());
+                temp = (IManagedEntity) ReflectionUtil.instantiate(getDescriptor().getEntityClass());
             } catch (IllegalAccessException | InstantiationException e) {
                 throw new InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e);
             }
-            PartitionHelper.setPartitionValueForEntity(temp, query.getPartition(), getContext());
+            PartitionHelper.setPartitionValueForEntity(temp, getQuery().getPartition(), getContext());
 
             Map partitionResults = scanPartition(recs, getPartitionId(temp));
             results.putAll(partitionResults);

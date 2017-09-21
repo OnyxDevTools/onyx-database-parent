@@ -85,7 +85,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * Get the set of references.  Not values nor keys
      * @return Set of references.
      */
-    Set referenceSet();
+    Set<SkipListNode> referenceSet();
 
     /**
      * Get the level read write lock implementation.

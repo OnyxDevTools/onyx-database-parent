@@ -29,7 +29,7 @@ public class DefaultMapBuilder implements MapBuilder {
 
     private static final AtomicInteger storeIdCounter = new AtomicInteger(0);
 
-    private static volatile Boolean memMapIsSupprted = null;
+    private static volatile Boolean memMapIsSupported = null;
 
     // Contains all initialized maps
     @SuppressWarnings("WeakerAccess")
@@ -291,16 +291,16 @@ public class DefaultMapBuilder implements MapBuilder {
      * @since 1.2.2 Add additional check to ensure DirectBuffers exist
      */
     private static boolean isMemmapSupported() {
-        if (memMapIsSupprted != null)
-            return memMapIsSupprted;
-        memMapIsSupprted = false;
+        if (memMapIsSupported != null)
+            return memMapIsSupported;
+        memMapIsSupported = false;
         String prop = System.getProperty("os.arch");
         try {
-            memMapIsSupprted = prop != null && prop.contains("64") && Class.forName("sun.nio.ch.DirectBuffer") != null;
+            memMapIsSupported = prop != null && prop.contains("64") && Class.forName("sun.nio.ch.DirectBuffer") != null;
         } catch (ClassNotFoundException e) {
-            memMapIsSupprted = false;
+            memMapIsSupported = false;
         }
-        return memMapIsSupprted;
+        return memMapIsSupported;
     }
 
     /**

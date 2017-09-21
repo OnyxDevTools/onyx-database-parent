@@ -74,18 +74,18 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @since 1.3.0
      */
-    override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: Long, type: QueryListenerEvent) {
+    override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, reference: PartitionReference, type: QueryListenerEvent) {
         val queryCacheMap = synchronized(cachedQueriesByClass) { cachedQueriesByClass[entity::class.java] } ?: return
-        var reference:Any = entityReference
+//        var reference:Any = entityReference
 
-        if(descriptor.hasPartition)
-            reference = PartitionReference(entity.partitionId(context, descriptor), entityReference)
+//        if(descriptor.hasPartition)
+//            reference = PartitionReference(entity.partitionId(context, descriptor), entityReference)
 
         queryCacheMap.forEach { query, cachedResults ->
             // If indicated to remove the record, delete it and move on
             if (type != QueryListenerEvent.INSERT && type != QueryListenerEvent.UPDATE) {
                 synchronized(cachedResults!!) {
-                    cachedResults.remove(entityReference, entity, type, CompareUtil.meetsCriteria(query.getAllCriteria(), query.criteria!!, entity, reference, context, descriptor))
+                    cachedResults.remove(reference, entity, type, CompareUtil.meetsCriteria(query.getAllCriteria(), query.criteria!!, entity, reference, context, descriptor))
                 }
             } else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.criteria!!, entity, reference, context, descriptor)) {
 

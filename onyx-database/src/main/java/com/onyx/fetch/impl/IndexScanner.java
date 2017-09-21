@@ -2,6 +2,7 @@ package com.onyx.fetch.impl;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
+import com.onyx.fetch.PartitionReference;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.exception.OnyxException;
 import com.onyx.fetch.TableScanner;
@@ -23,6 +24,7 @@ import java.util.*;
 public class IndexScanner extends AbstractTableScanner implements TableScanner {
 
     private IndexInteractor indexInteractor = null;
+    private long partitionId = 0L;
 
     /**
      * Constructor
@@ -37,6 +39,9 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
     {
         super(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager);
 
+        if(descriptor.getHasPartition())
+            partitionId = context.getPartitionWithValue(classToScan, descriptor.getPartition().getPartitionValue()).getPrimaryKey();
+
         final IndexDescriptor indexDescriptor = descriptor.getIndexes().get(criteria.getAttribute());
         indexInteractor = context.getIndexInteractor(indexDescriptor);
     }
@@ -49,27 +54,27 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map<Long, Long> scan() throws OnyxException
+    public Map<PartitionReference, PartitionReference> scan() throws OnyxException
     {
-        final Map<Long, Long> returnValue = new CompatHashMap<>();
+        final Map<PartitionReference, PartitionReference> returnValue = new CompatHashMap<>();
         final List<Long> references = new ArrayList<>();
 
-        if(criteria.getValue() instanceof List)
+        if(getCriteria().getValue() instanceof List)
         {
-            for(Object idValue : (List<Object>) criteria.getValue())
+            for(Object idValue : (List<Object>) getCriteria().getValue())
             {
-                if(query.isTerminated())
+                if(getQuery().isTerminated())
                     return returnValue;
 
                 Set<Long> values;
 
-                if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                if(getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN)
                     values = indexInteractor.findAllAbove(idValue, false);
-                else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                else if(getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
                     values = indexInteractor.findAllAbove(idValue, true);
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
+                else if(getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN)
                     values = indexInteractor.findAllBelow(idValue, false);
-                else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                else if(getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
                     values = indexInteractor.findAllBelow(idValue, true);
                 else
                     values = indexInteractor.findAll(idValue).keySet();
@@ -83,23 +88,23 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
 
             Set<Long> values;
 
-            if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN)
-                values = indexInteractor.findAllAbove(criteria.getValue(), false);
-            else if(criteria.getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
-                values = indexInteractor.findAllAbove(criteria.getValue(), true);
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN)
-                values = indexInteractor.findAllBelow(criteria.getValue(), false);
-            else if(criteria.getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
-                values = indexInteractor.findAllBelow(criteria.getValue(), true);
+            if(getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN)
+                values = indexInteractor.findAllAbove(getCriteria().getValue(), false);
+            else if(getCriteria().getOperator() == QueryCriteriaOperator.GREATER_THAN_EQUAL)
+                values = indexInteractor.findAllAbove(getCriteria().getValue(), true);
+            else if(getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN)
+                values = indexInteractor.findAllBelow(getCriteria().getValue(), false);
+            else if(getCriteria().getOperator() == QueryCriteriaOperator.LESS_THAN_EQUAL)
+                values = indexInteractor.findAllBelow(getCriteria().getValue(), true);
             else
-                values = indexInteractor.findAll(criteria.getValue()).keySet();
+                values = indexInteractor.findAll(getCriteria().getValue()).keySet();
 
             references.addAll(values);
 
         }
 
         for(Long val : references)
-            returnValue.put(val, val);
+            returnValue.put(new PartitionReference(partitionId,val), new PartitionReference(partitionId,val));
 
         return returnValue;
     }
@@ -113,26 +118,26 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
      */
     @Override
     @SuppressWarnings("unchecked")
-    public Map<Long, Long> scan(Map<Long, Long> existingValues) throws OnyxException
+    public Map<PartitionReference, PartitionReference> scan(Map<PartitionReference, ? extends PartitionReference> existingValues) throws OnyxException
     {
-        final Map<Long, Long> returnValue = new CompatHashMap<>();
+        final Map<PartitionReference, PartitionReference> returnValue = new CompatHashMap<>();
 
-        if(criteria.getValue() instanceof List)
+        if(getCriteria().getValue() instanceof List)
         {
-            for(Object idValue : (List<Object>) criteria.getValue())
+            for(Object idValue : (List<Object>) getCriteria().getValue())
             {
-                if(query.isTerminated())
+                if(getQuery().isTerminated())
                     return returnValue;
 
                 Set<Long> results;
 
-                if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
+                if(QueryCriteriaOperator.GREATER_THAN.equals(getCriteria().getOperator()))
                     results = indexInteractor.findAllAbove(idValue, false);
-                else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
+                else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(getCriteria().getOperator()))
                     results = indexInteractor.findAllAbove(idValue, true);
-                else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
+                else if(QueryCriteriaOperator.LESS_THAN.equals(getCriteria().getOperator()))
                     results = indexInteractor.findAllBelow(idValue, false);
-                else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
+                else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(getCriteria().getOperator()))
                     results = indexInteractor.findAllBelow(idValue, true);
                 else
                     results = indexInteractor.findAll(idValue).keySet();
@@ -141,8 +146,8 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
                 //noinspection Convert2streamapi
                 for(Long reference : results)
                 {
-                    if (existingValues.containsKey(reference)) {
-                        returnValue.put(reference, reference);
+                    if (existingValues.containsKey(new PartitionReference(partitionId,reference))) {
+                        returnValue.put(new PartitionReference(partitionId,reference), new PartitionReference(partitionId,reference));
                     }
                 }
             }
@@ -151,23 +156,23 @@ public class IndexScanner extends AbstractTableScanner implements TableScanner {
         {
             Set<Long> results;
 
-            if(QueryCriteriaOperator.GREATER_THAN.equals(criteria.getOperator()))
-                results = indexInteractor.findAllAbove(criteria.getValue(), false);
-            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(criteria.getOperator()))
-                results = indexInteractor.findAllAbove(criteria.getValue(), true);
-            else if(QueryCriteriaOperator.LESS_THAN.equals(criteria.getOperator()))
-                results = indexInteractor.findAllBelow(criteria.getValue(), false);
-            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(criteria.getOperator()))
-                results = indexInteractor.findAllBelow(criteria.getValue(), true);
+            if(QueryCriteriaOperator.GREATER_THAN.equals(getCriteria().getOperator()))
+                results = indexInteractor.findAllAbove(getCriteria().getValue(), false);
+            else if(QueryCriteriaOperator.GREATER_THAN_EQUAL.equals(getCriteria().getOperator()))
+                results = indexInteractor.findAllAbove(getCriteria().getValue(), true);
+            else if(QueryCriteriaOperator.LESS_THAN.equals(getCriteria().getOperator()))
+                results = indexInteractor.findAllBelow(getCriteria().getValue(), false);
+            else if(QueryCriteriaOperator.LESS_THAN_EQUAL.equals(getCriteria().getOperator()))
+                results = indexInteractor.findAllBelow(getCriteria().getValue(), true);
             else
-                results = indexInteractor.findAll(criteria.getValue()).keySet();
+                results = indexInteractor.findAll(getCriteria().getValue()).keySet();
 
 
             //noinspection Convert2streamapi
             for(Long reference : results)
             {
-                if (existingValues.containsKey(reference)) {
-                    returnValue.put(reference, reference);
+                if (existingValues.containsKey(new PartitionReference(partitionId,reference))) {
+                    returnValue.put(new PartitionReference(partitionId,reference), new PartitionReference(partitionId,reference));
                 }
             }
 

@@ -1,16 +1,13 @@
-package com.onyx.fetch;
+package com.onyx.fetch
 
-import com.onyx.exception.OnyxException;
-
-import java.util.Map;
+import com.onyx.exception.OnyxException
 
 /**
  * Created by timothy.osborn on 1/6/15.
  *
  * Contact used to scan entities
  */
-public interface TableScanner
-{
+interface TableScanner {
 
     /**
      * Full scan
@@ -18,7 +15,8 @@ public interface TableScanner
      * @return Matching references meeting criteria
      * @throws OnyxException Cannot scan entity
      */
-    Map<Long, Long> scan() throws OnyxException;
+    @Throws(OnyxException::class)
+    fun scan(): Map<PartitionReference, PartitionReference>
 
     /**
      * Scan with indexes
@@ -27,6 +25,7 @@ public interface TableScanner
      * @return Matching references meeting criteria
      * @throws OnyxException Cannot scan entity
      */
-    Map<Long, Long> scan(Map<Long, Long> existingValues) throws OnyxException;
+    @Throws(OnyxException::class)
+    fun scan(existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference>
 
 }

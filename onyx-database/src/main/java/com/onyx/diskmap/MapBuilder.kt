@@ -1,13 +1,12 @@
-package com.onyx.diskmap;
+package com.onyx.diskmap
 
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.serializer.Serializers;
-
-import java.util.Map;
+import com.onyx.diskmap.node.Header
+import com.onyx.diskmap.serializer.Serializers
 
 /**
  * Created by tosborn1 on 7/30/15.
- * <p>
+ *
+ *
  * This is the contract a map builder must obey.
  * This class is responsible for building all maps.  There is one map builder per file and or storage
  *
@@ -17,7 +16,7 @@ import java.util.Map;
  *
  * @since 1.0.0
  */
-public interface MapBuilder {
+interface MapBuilder {
 
     /**
      * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
@@ -37,9 +36,8 @@ public interface MapBuilder {
      *
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
      * It is now an implemenation of an inter changable index followed by a skip list.
-     *
      */
-    Map getHashMap(String name, int loadFactor);
+    fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T
 
     /**
      * Get Hash Map by Name.  This will default the map with a loadFactor of 10.  In that case, it will return an
@@ -49,8 +47,7 @@ public interface MapBuilder {
      * @return Disk Map implementation
      * @since 1.2.0
      */
-    @SuppressWarnings("unused")
-    Map getHashMap(String name);
+    fun <T : Map<*,*>> getHashMap(name: String): T
 
     /**
      * Get Skip list map.  This will return a map with a bare bones skip list index.  This usually is for unit
@@ -60,8 +57,7 @@ public interface MapBuilder {
      * @return Implementation of a disk map using a skip list index
      * @since 1.2.0
      */
-    @SuppressWarnings("unused")
-    Map getSkipListMap(String name);
+    fun <T : Map<*,*>> getSkipListMap(name: String): T
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
@@ -80,7 +76,7 @@ public interface MapBuilder {
      *
      * @since 1.0.0
      */
-    Map getHashMap(Header header, int loadFactor);
+    fun <T : Map<*,*>> getHashMap(header: Header, loadFactor: Int): T
 
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless
@@ -96,27 +92,25 @@ public interface MapBuilder {
      *
      * @since 1.2.0
      */
-    DiskMap newHashMap(Header header, @SuppressWarnings("SameParameterValue") int loadFactor);
+    fun <T : Map<*,*>> newHashMap(header: Header, loadFactor: Int): T
 
     /**
      * Close Map Builder.  Flush the file writes
      * @since 1.0.0
      */
-    void close();
+    fun close()
 
     /**
      * Commit Map Builder file synchronize file writes
      * @since 1.0.0
      */
-    @SuppressWarnings("unused")
-    void commit();
+    fun commit()
 
     /**
      * Delete file
      * @since 1.0.0
      */
-    @SuppressWarnings("unused")
-    void delete();
+    fun delete()
 
     /**
      * Getter for serializers
@@ -124,8 +118,7 @@ public interface MapBuilder {
      * @return Custom serializes shared within the data structures
      * @since 1.0.0
      */
-    @SuppressWarnings("unused")
-    Serializers getSerializers();
+    val serializers: Serializers
 
     /**
      * Create a new Map reference header
@@ -133,7 +126,7 @@ public interface MapBuilder {
      *
      * @since 1.2.0
      */
-    Header newMapHeader();
+    fun newMapHeader(): Header
 
     /**
      * Clear storage and rest it to its original state.
@@ -141,5 +134,5 @@ public interface MapBuilder {
      *
      * @since 1.3.0
      */
-    void reset();
+    fun reset()
 }
