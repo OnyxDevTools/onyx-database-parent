@@ -1,7 +1,7 @@
 package com.onyx.interactors.relationship
 
 import com.onyx.exception.OnyxException
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.interactors.relationship.data.RelationshipTransaction

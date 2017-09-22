@@ -9,7 +9,7 @@ import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.EntityCallbackException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent

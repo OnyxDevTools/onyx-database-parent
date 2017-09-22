@@ -2,19 +2,11 @@ package com.onyx.helpers;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.RelationshipDescriptor;
-import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.exception.OnyxException;
-import com.onyx.exception.InvalidRelationshipTypeException;
-import com.onyx.fetch.PartitionReference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.interactors.record.RecordInteractor;
 import com.onyx.interactors.relationship.data.RelationshipTransaction;
 import com.onyx.interactors.relationship.RelationshipInteractor;
-import com.onyx.interactors.relationship.data.RelationshipReference;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by timothy.osborn on 12/23/14.

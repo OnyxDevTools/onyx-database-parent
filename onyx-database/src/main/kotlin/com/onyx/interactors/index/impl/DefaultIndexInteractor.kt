@@ -94,7 +94,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @return References matching that index value
      */
     @Throws(OnyxException::class)
-    override fun findAll(indexValue: Any): Map<Long, Any?> {
+    override fun findAll(indexValue: Any?): Map<Long, Any?> {
         val header = references[indexValue] ?: return HashMap()
         val dataFile = context.getDataFile(descriptor)
 
@@ -124,7 +124,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    override fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long> {
+    override fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long> {
         val allReferences = HashSet<Long>()
         val diskReferences = references.above(indexValue, includeValue)
 
@@ -153,7 +153,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long> {
+    override fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long> {
         val allReferences = HashSet<Long>()
         val diskReferences = references.below(indexValue, includeValue)
         val dataFile = context.getDataFile(descriptor)

@@ -35,7 +35,7 @@ interface IndexInteractor {
      * @return References matching that index value
      */
     @Throws(OnyxException::class)
-    fun findAll(indexValue: Any): Map<Long, *>
+    fun findAll(indexValue: Any?): Map<Long, *>
 
     /**
      * Find all the references above and perhaps equal to the key parameter
@@ -48,7 +48,7 @@ interface IndexInteractor {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long>
+    fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long>
 
     /**
      * Find all the references blow and perhaps equal to the key parameter
@@ -61,7 +61,7 @@ interface IndexInteractor {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long>
+    fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long>
 
     /**
      * Get Index descriptor

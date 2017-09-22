@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.OnyxException;
-import com.onyx.fetch.PartitionReference;
+import com.onyx.scan.PartitionReference;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;

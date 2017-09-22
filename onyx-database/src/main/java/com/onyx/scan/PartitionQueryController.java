@@ -1,12 +1,13 @@
-package com.onyx.fetch;
+package com.onyx.scan;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.MapBuilder;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
-import com.onyx.fetch.impl.FullTableScanner;
-import com.onyx.fetch.impl.PartitionFullTableScanner;
+import com.onyx.interactors.scanner.TableScanner;
+import com.onyx.interactors.scanner.impl.FullTableScanner;
+import com.onyx.interactors.scanner.impl.PartitionFullTableScanner;
 import com.onyx.persistence.annotations.values.RelationshipType;
 import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.interactors.relationship.RelationshipInteractor;
@@ -61,7 +62,7 @@ public class PartitionQueryController extends PartitionContext {
     }
 
     @SuppressWarnings("unchecked")
-    private Map getReferencesForCritieria(Query query, QueryCriteria criteria, Map filteredReferences, boolean forceFullScan) throws OnyxException {
+    private Map getReferencesForCriteria(Query query, QueryCriteria criteria, Map filteredReferences, boolean forceFullScan) throws OnyxException {
         // Ensure query is still valid
         if (query.isTerminated()) {
             return new CompatHashMap();
@@ -102,8 +103,8 @@ public class PartitionQueryController extends PartitionContext {
         // Go through and ensure all the sub criteria is met
         for (Object subCriteriaObject : criteria.getSubCriteria()) {
             QueryCriteria<?> subCriteria = (QueryCriteria)subCriteriaObject;
-            Map subCritieriaResults = getReferencesForCritieria(query, subCriteria, criteriaResults, false);
-            aggrigateFilteredReferences(subCriteria, criteriaResults, subCritieriaResults);
+            Map subCritieriaResults = getReferencesForCriteria(query, subCriteria, criteriaResults, false);
+            aggregateFilteredReferences(subCriteria, criteriaResults, subCritieriaResults);
         }
 
         return criteriaResults;
@@ -120,7 +121,7 @@ public class PartitionQueryController extends PartitionContext {
      *
      */
     @SuppressWarnings("unchecked")
-    private void aggrigateFilteredReferences(QueryCriteria criteria, Map totalResults, Map criteriaResults)
+    private void aggregateFilteredReferences(QueryCriteria criteria, Map totalResults, Map criteriaResults)
     {
         if(criteria.isNot())
         {
@@ -162,7 +163,7 @@ public class PartitionQueryController extends PartitionContext {
      */
     @SuppressWarnings("unchecked")
     public Map getReferencesForQuery(Query query) throws OnyxException {
-        return getReferencesForCritieria(query, query.getCriteria(), null, query.getCriteria().isNot());
+        return getReferencesForCriteria(query, query.getCriteria(), null, query.getCriteria().isNot());
     }
 
     /**
@@ -498,7 +499,7 @@ public class PartitionQueryController extends PartitionContext {
      * @throws OnyxException Cannot update entity
      */
     @SuppressWarnings("unchecked")
-    public int performUpdatsForQuery(Query query, Map results) throws OnyxException {
+    public int purformUpdatesForQuery(Query query, Map results) throws OnyxException {
         final Iterator<Object> iterator = results.keySet().iterator();
         Object referenceId;
         IManagedEntity entity;

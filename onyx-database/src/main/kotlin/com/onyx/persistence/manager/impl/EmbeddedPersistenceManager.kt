@@ -2,8 +2,8 @@ package com.onyx.persistence.manager.impl
 
 import com.onyx.exception.*
 import com.onyx.extension.*
-import com.onyx.fetch.PartitionQueryController
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionQueryController
+import com.onyx.scan.PartitionReference
 import com.onyx.persistence.*
 import com.onyx.persistence.collections.LazyQueryCollection
 import com.onyx.persistence.context.SchemaContext
@@ -191,7 +191,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                 context.transactionInteractor.writeQueryUpdate(query)
             }
 
-            queryController.performUpdatsForQuery(query, results)
+            queryController.purformUpdatesForQuery(query, results)
         } finally {
             queryController.cleanup()
         }

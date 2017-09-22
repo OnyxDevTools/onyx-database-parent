@@ -1,11 +1,12 @@
-package com.onyx.fetch;
+package com.onyx.scan;
 
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.descriptor.IndexDescriptor;
 import com.onyx.exception.AttributeMissingException;
 import com.onyx.exception.OnyxException;
-import com.onyx.fetch.impl.*;
+import com.onyx.interactors.scanner.TableScanner;
+import com.onyx.interactors.scanner.impl.*;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;

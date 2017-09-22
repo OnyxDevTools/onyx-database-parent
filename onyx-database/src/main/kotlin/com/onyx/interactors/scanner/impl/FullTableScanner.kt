@@ -1,11 +1,11 @@
-package com.onyx.fetch.impl
+package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.MapBuilder
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
-import com.onyx.fetch.PartitionReference
-import com.onyx.fetch.TableScanner
+import com.onyx.scan.PartitionReference
+import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -29,7 +29,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     override fun scan(): Map<PartitionReference, PartitionReference> {
-        val allResults = HashMap<PartitionReference, PartitionReference>()
+        val matching = HashMap<PartitionReference, PartitionReference>()
         val context = Contexts.get(contextId)!!
 
         records.referenceSet().filter {
@@ -38,10 +38,10 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
             query.meetsCriteria(entity, reference, context, descriptor)
         }.forEach {
             val reference = PartitionReference(partitionId, it.recordId)
-            allResults.put(reference, reference)
+            matching.put(reference, reference)
         }
 
-        return allResults
+        return matching
     }
 
     /**

@@ -7,7 +7,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.depricated.CompareUtil
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the

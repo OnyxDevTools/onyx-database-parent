@@ -2,7 +2,7 @@ package com.onyx.persistence.manager.impl
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.onyx.exception.*
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 import com.onyx.helpers.PartitionHelper
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext

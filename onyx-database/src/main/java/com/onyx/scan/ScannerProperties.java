@@ -1,4 +1,4 @@
-package com.onyx.fetch;
+package com.onyx.scan;
 
 import com.onyx.descriptor.AttributeDescriptor;
 import com.onyx.descriptor.EntityDescriptor;

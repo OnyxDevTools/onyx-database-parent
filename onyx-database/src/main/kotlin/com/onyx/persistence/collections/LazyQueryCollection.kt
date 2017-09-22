@@ -6,7 +6,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.BufferingException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.identifier
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext

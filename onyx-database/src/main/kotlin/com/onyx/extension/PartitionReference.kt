@@ -1,7 +1,7 @@
 package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.util.ReflectionUtil

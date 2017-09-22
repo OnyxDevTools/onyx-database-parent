@@ -13,7 +13,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
-import com.onyx.fetch.ScannerFactory
+import com.onyx.scan.ScannerFactory
 import com.onyx.helpers.PartitionHelper
 import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.index.IndexInteractor

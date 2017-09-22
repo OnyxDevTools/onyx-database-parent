@@ -1,6 +1,7 @@
-package com.onyx.fetch
+package com.onyx.interactors.scanner
 
 import com.onyx.exception.OnyxException
+import com.onyx.scan.PartitionReference
 
 /**
  * Created by timothy.osborn on 1/6/15.

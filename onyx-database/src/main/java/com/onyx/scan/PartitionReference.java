@@ -1,4 +1,4 @@
-package com.onyx.fetch;
+package com.onyx.scan;
 
 import java.io.Externalizable;
 import java.io.IOException;

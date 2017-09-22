@@ -1,7 +1,7 @@
 package com.onyx.persistence.manager
 
 import com.onyx.exception.OnyxException
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.*

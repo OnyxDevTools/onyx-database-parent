@@ -1,4 +1,4 @@
-package com.onyx.fetch;
+package com.onyx.scan;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.interactors.record.RecordInteractor;

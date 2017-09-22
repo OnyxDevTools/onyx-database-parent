@@ -10,8 +10,7 @@ import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.depricated.CompareUtil
-import com.onyx.extension.partitionId
-import com.onyx.fetch.PartitionReference
+import com.onyx.scan.PartitionReference
 
 /**
  * Created by tosborn1 on 3/27/17.
