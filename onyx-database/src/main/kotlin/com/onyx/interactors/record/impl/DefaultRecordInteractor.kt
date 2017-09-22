@@ -9,7 +9,7 @@ import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.EntityCallbackException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
@@ -59,7 +59,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
                         val recordId = records.getRecID(identifierValue)
                         if (recordId > 0L) {
                             // Update Cached queries
-                            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, PartitionReference(entity.partitionId(context), recordId) , QueryListenerEvent.PRE_UPDATE)
+                            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
                         }
                         entity.onPreUpdate(context, entityDescriptor)
                     }
@@ -73,7 +73,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
             if (recordId > 0L) {
                 isNew.set(false)
                 // Update Cached queries
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, PartitionReference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
             } else {
                 isNew.set(true)
             }
@@ -134,7 +134,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
         val recordId = records.getRecID(identifierValue)
         if (recordId > -1) {
             entity.onPreRemove(context, entityDescriptor)
-            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, PartitionReference(entity.partitionId(context), recordId), QueryListenerEvent.DELETE)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.DELETE)
             this.deleteWithId(identifierValue!!)
             entity.onPostRemove(context, entityDescriptor)
         }
@@ -181,7 +181,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Entity as a map
      */
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(referenceId: Long): Map<*, *> = records.getMapWithRecID(referenceId)
+    override fun getMapWithReferenceId(referenceId: Long): Map<String, Any?> = records.getMapWithRecID(referenceId)
 
     /**
      * Get a specific attribute with reference Id

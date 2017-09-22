@@ -5,7 +5,7 @@ import com.onyx.diskmap.MapBuilder
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InvalidQueryException
 import com.onyx.extension.*
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.scan.ScannerFactory
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.IManagedEntity
@@ -30,9 +30,9 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      *
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
+    override fun scan(): Map<Reference, Reference> {
 
-        val startingPoint = HashMap<PartitionReference, PartitionReference>()
+        val startingPoint = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
         // We do not support querying relationships by all partitions.  That would be horribly inefficient
@@ -46,7 +46,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
             partitionId = temporaryManagedEntity.partitionId(context, descriptor)
         }
 
-        records.referenceSet().map { PartitionReference(partitionId, it.recordId) }.forEach { startingPoint.put(it, it) }
+        records.referenceSet().map { Reference(partitionId, it.recordId) }.forEach { startingPoint.put(it, it) }
 
         return scan(startingPoint)
     }
@@ -59,7 +59,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      * @throws OnyxException Cannot scan relationship values
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference> {
+    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
         val context = Contexts.get(contextId)!!
 
         // Retain the original attribute
@@ -71,7 +71,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
 
         // Map <ChildIndex, ParentIndex> // Inverted list so we can use it to scan using an normal full table scanner or index scanner
         val relationshipIndexes = getRelationshipIndexes(segments[0], existingValues)
-        val returnValue = HashMap<PartitionReference, PartitionReference>()
+        val returnValue = HashMap<Reference, Reference>()
         val relationshipDescriptor = this.descriptor.relationships[segments[0]]!!
 
         // We are going to set the attribute name so we can continue going down the chain.  We are going to remove the
@@ -101,11 +101,11 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      * @return References that match criteria
      */
     @Throws(OnyxException::class)
-    private fun getRelationshipIndexes(attribute: String, existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference> {
+    private fun getRelationshipIndexes(attribute: String, existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
         if (this.query.partition === QueryPartitionMode.ALL) throw InvalidQueryException()
 
         val context = Contexts.get(contextId)!!
-        val relationshipIndexes = HashMap<PartitionReference,PartitionReference>()
+        val relationshipIndexes = HashMap<Reference, Reference>()
 
         existingValues.keys.forEach { parentReference ->
             val entity = parentReference.toManagedEntity(context, descriptor)
@@ -115,7 +115,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
             relationshipIdentifiers.forEach { relationshipReference ->
                 val referenceId = context.getRecordInteractor(inverseRelationshipDescriptor!!.entityDescriptor).getReferenceId(relationshipReference.identifier!!)
                 if(referenceId > 0L) {
-                    val childReference = PartitionReference(relationshipReference.partitionId, referenceId)
+                    val childReference = Reference(relationshipReference.partitionId, referenceId)
                     relationshipIndexes.put(childReference, parentReference)
                 }
             }

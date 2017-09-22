@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.OnyxException;
-import com.onyx.scan.PartitionReference;
+import com.onyx.interactors.record.data.Reference;
 import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
@@ -91,8 +91,8 @@ final public class WebPersistenceEndpoint
             throw new EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, clazz);
         }
         long partitionId = Long.valueOf(request.getPartitionId());
-        final PartitionReference partitionReference = new PartitionReference(partitionId, (long) request.getId());
-        return persistenceManager.getWithPartitionReference(clazz, partitionReference);
+        final Reference reference = new Reference(partitionId, (long) request.getId());
+        return persistenceManager.getWithReference(clazz, reference);
     }
 
 

@@ -1,7 +1,7 @@
 package com.onyx.interactors.cache
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.Query
@@ -24,7 +24,7 @@ interface QueryCacheInteractor {
      *
      * @since 2.0.0
      */
-    fun <T : Map<Any, Any?>> cache(query: Query, body: () -> T): T
+    fun <T : Map<Reference, Any?>> cache(query: Query, body: () -> T): T
 
     /**
      * Get Cached results for a query. This method will return a cached query result if it exist.
@@ -43,7 +43,7 @@ interface QueryCacheInteractor {
      *
      * @param results Result as references
      */
-    fun setCachedQueryResults(query: Query, results: Map<Any, Any?>): CachedResults?
+    fun setCachedQueryResults(query: Query, results: Map<Reference, Any?>): CachedResults?
 
     /**
      * Update all of the cached results if an entity has been modified.  It will re-check the criteria and
@@ -56,7 +56,7 @@ interface QueryCacheInteractor {
      *
      * @since 1.3.0
      */
-    fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: PartitionReference, type: QueryListenerEvent)
+    fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: Reference, type: QueryListenerEvent)
 
     /**
      * Subscribe a query listener with associated cached results

@@ -2,7 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.recordInteractor
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
@@ -28,7 +28,7 @@ fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescrip
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.reference(context: SchemaContext):PartitionReference = PartitionReference(partitionId(context), referenceId(context))
+fun IManagedEntity.reference(context: SchemaContext): Reference = Reference(partitionId(context), referenceId(context))
 
 /**
  * Generate a relationship reference based on the entity's record information

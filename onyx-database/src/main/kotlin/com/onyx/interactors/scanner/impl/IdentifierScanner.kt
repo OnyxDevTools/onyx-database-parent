@@ -1,7 +1,7 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.context.SchemaContext
@@ -28,19 +28,19 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      * @throws OnyxException Cannot scan records
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
+    override fun scan(): Map<Reference, Reference> {
         val context = Contexts.get(contextId)!!
         val recordInteractor = context.getRecordInteractor(descriptor)
         return scan(recordInteractor)
     }
 
-    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):Map<PartitionReference,PartitionReference> {
-        val matching = HashMap<PartitionReference, PartitionReference>()
+    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):Map<Reference, Reference> {
+        val matching = HashMap<Reference, Reference>()
 
         // If it is an in clause
         if (criteria.value is List<*>) {
             (criteria.value as List<*>)
-                    .map { PartitionReference(partitionId, recordInteractor.getReferenceId(it!!)) }
+                    .map { Reference(partitionId, recordInteractor.getReferenceId(it!!)) }
                     .filter { it.reference > 0L }
                     .forEach { matching.put(it, it) }
         } else {
@@ -53,7 +53,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
             }
 
             values.filter { it > 0L }
-                    .map { PartitionReference(partitionId, it) }
+                    .map { Reference(partitionId, it) }
                     .forEach { matching.put(it, it) }
         }
 
@@ -68,7 +68,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      * @throws OnyxException Cannot scan records
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference> {
+    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
         val matching = scan()
         return existingValues.filter { matching.containsKey(it.key) }
     }

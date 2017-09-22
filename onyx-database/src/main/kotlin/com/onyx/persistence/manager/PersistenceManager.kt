@@ -1,7 +1,8 @@
 package com.onyx.persistence.manager
 
 import com.onyx.exception.OnyxException
-import com.onyx.scan.PartitionReference
+import com.onyx.extension.get
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.*
@@ -301,9 +302,10 @@ interface PersistenceManager {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun getRelationship(entity: IManagedEntity, attribute: String): Any {
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Any?> getRelationship(entity: IManagedEntity, attribute: String): T {
         initialize(entity, attribute)
-        return ReflectionUtil.getAny(entity, context.getDescriptorForEntity(entity).relationships[attribute]!!.field)
+        return entity.get<T>(context = context, name = attribute) as T
     }
 
     /**
@@ -531,6 +533,7 @@ interface PersistenceManager {
      * @throws OnyxException The reference does not exist for that type
      */
     @Throws(OnyxException::class)
+    @Deprecated("Should use entire reference")
     fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E?
 
     /**
@@ -539,13 +542,13 @@ interface PersistenceManager {
      * hydrate objects in random partitions.
      *
      * @param entityType         Type of managed entity
-     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param reference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
      * @throws OnyxException The reference does not exist for that type
     </E> */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> getWithPartitionReference(entityType: Class<*>, partitionReference: PartitionReference): E?
+    fun <E : IManagedEntity> getWithReference(entityType: Class<*>, reference: Reference): E?
 
     /**
      * Retrieves an entity using the primaryKey and partition
@@ -598,7 +601,7 @@ interface PersistenceManager {
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     @Throws(OnyxException::class)
-    fun getMapWithReferenceId(entityType: Class<*>, reference: Long): Map<*, *>?
+    fun getMapWithReferenceId(entityType: Class<*>, reference: Reference): Map<String, *>?
 
     /**
      * Retrieve the quantity of entities that match the query criteria.

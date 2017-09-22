@@ -2,6 +2,7 @@ package com.onyx.scan;
 
 import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.interactors.record.RecordInteractor;
+import com.onyx.interactors.record.data.Reference;
 import com.onyx.interactors.relationship.RelationshipInteractor;
 import com.onyx.interactors.relationship.data.RelationshipReference;
 import com.onyx.util.map.CompatMap;
@@ -156,10 +157,10 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         if(scannerProperties.relationshipDescriptor != null)
             return getRelationshipValue(reference, scannerProperties);
 
-        if(reference instanceof PartitionReference)
+        if(reference instanceof Reference)
         {
-            PartitionReference ref = (PartitionReference) reference;
-            return getRecordInteractorForPartition(ref.partition).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.reference);
+            Reference ref = (Reference) reference;
+            return getRecordInteractorForPartition(ref.getPartition()).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.getReference());
         }
 
         return scannerProperties.recordInteractor.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) reference);
@@ -182,8 +183,8 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         List<RelationshipReference> relationshipReferences;
 
         // Get relationship references
-        if (entry instanceof PartitionReference) {
-            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((PartitionReference)entry);
+        if (entry instanceof Reference) {
+            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((Reference)entry);
         }
         else
         {

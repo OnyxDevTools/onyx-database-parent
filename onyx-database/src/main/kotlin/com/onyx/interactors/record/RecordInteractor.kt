@@ -1,6 +1,7 @@
 package com.onyx.interactors.record
 
 import com.onyx.exception.OnyxException
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.util.OffsetField
 
@@ -93,11 +94,11 @@ interface RecordInteractor {
     /**
      * Returns a structure of the entity with a reference id
      *
-     * @param referenceId entity reference
+     * @param reference entity reference
      * @return entity as a map
      */
     @Throws(OnyxException::class)
-    fun getMapWithReferenceId(referenceId: Long): Map<*, *>
+    fun getMapWithReferenceId(reference: Long): Map<String, *>?
 
     /**
      * Returns a specific attribute of an entity

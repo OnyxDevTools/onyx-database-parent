@@ -3,7 +3,8 @@ package com.onyx.persistence.manager.impl
 import com.onyx.client.push.PushRegistrar
 import com.onyx.exception.OnyxException
 import com.onyx.exception.StreamException
-import com.onyx.scan.PartitionReference
+import com.onyx.extension.set
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -334,8 +335,8 @@ open class RemotePersistenceManager : PersistenceManager {
      */
     @Throws(OnyxException::class)
     override fun initialize(entity: IManagedEntity, attribute: String) {
-        val relationship = proxy.getRelationship(entity, attribute)
-        ReflectionUtil.setAny(entity, relationship, context.getDescriptorForEntity(entity).relationships[attribute]!!.field)
+        val relationship:Any? = proxy.getRelationship(entity, attribute)
+        entity.set(context = context, name = attribute, value = relationship)
     }
 
     /**
@@ -369,13 +370,13 @@ open class RemotePersistenceManager : PersistenceManager {
      * hydrate objects in random partitions.
      *
      * @param entityType         Type of managed entity
-     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param reference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
      * @throws OnyxException The reference does not exist for that type
      */
     @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> getWithPartitionReference(entityType: Class<*>, partitionReference: PartitionReference): E? = proxy.getWithPartitionReference(entityType, partitionReference)
+    override fun <E : IManagedEntity> getWithReference(entityType: Class<*>, reference: Reference): E? = proxy.getWithReference(entityType, reference)
 
     /**
      * Retrieves an entity using the primaryKey and partition
@@ -432,7 +433,7 @@ open class RemotePersistenceManager : PersistenceManager {
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(entityType: Class<*>, reference: Long): Map<*, *> = throw StreamException(StreamException.UNSUPPORTED_FUNCTION)
+    override fun getMapWithReferenceId(entityType: Class<*>, reference: Reference): Map<String, *>? = proxy.getMapWithReferenceId(entityType, reference)
 
     /**
      * Retrieve the quantity of entities that match the query criteria.

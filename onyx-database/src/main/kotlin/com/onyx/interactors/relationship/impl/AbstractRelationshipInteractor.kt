@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
@@ -114,7 +114,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      * @return List of relationship references
      */
     @Throws(OnyxException::class)
-    fun getRelationshipIdentifiersWithReferenceId(referenceId: PartitionReference): List<RelationshipReference> {
+    fun getRelationshipIdentifiersWithReferenceId(referenceId: Reference): List<RelationshipReference> {
         val entity = referenceId.toManagedEntity(context, relationshipDescriptor.entityDescriptor)
         val existingReferences = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context))
         return existingReferences?.toList() ?: ArrayList()

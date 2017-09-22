@@ -1,7 +1,7 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.interactors.index.IndexInteractor
@@ -29,8 +29,8 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      * @throws OnyxException Cannot scan index
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
-        val matching = HashMap<PartitionReference, PartitionReference>()
+    override fun scan(): Map<Reference, Reference> {
+        val matching = HashMap<Reference, Reference>()
 
         // If it is an in clause
         if (criteria.value is List<*>) {
@@ -50,7 +50,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      * @throws OnyxException Cannot scan index
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference> {
+    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
         val matching = scan()
         return existingValues.filter { matching.containsKey(it.key) }
     }
@@ -62,11 +62,11 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      *
      * @since 2.0.0
      */
-    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<PartitionReference> = when {
+    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<Reference> = when {
         criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         interactor.findAllAbove(indexValue, false)
         criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL ->   interactor.findAllAbove(indexValue, true)
         criteria.operator === QueryCriteriaOperator.LESS_THAN ->            interactor.findAllBelow(indexValue, false)
         criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->      interactor.findAllBelow(indexValue, true)
         else ->                                                             interactor.findAll(indexValue).keys
-    }.map { PartitionReference(partition, it) }
+    }.map { Reference(partition, it) }
 }

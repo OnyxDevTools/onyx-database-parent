@@ -1,7 +1,7 @@
 package com.onyx.interactors.relationship
 
 import com.onyx.exception.OnyxException
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.interactors.relationship.data.RelationshipTransaction
@@ -60,7 +60,7 @@ interface RelationshipInteractor {
      * @return List of relationship references
      */
     @Throws(OnyxException::class)
-    fun getRelationshipIdentifiersWithReferenceId(referenceId: PartitionReference): List<RelationshipReference>
+    fun getRelationshipIdentifiersWithReferenceId(referenceId: Reference): List<RelationshipReference>
 
     /**
      * Batch Save all relationship ids

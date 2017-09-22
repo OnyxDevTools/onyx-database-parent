@@ -179,7 +179,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
         }
 
         // Placeholder to indicate the persistence manager is uninitialized
-        object UNINITIALIZED_PERSISTENCE_MANAGER:RemotePersistenceManager()
+        val UNINITIALIZED_PERSISTENCE_MANAGER = RemotePersistenceManager()
 
         // Placeholder for schema context that is not initialized.  This is a workaround
         // so we can have it as non nullable

@@ -6,7 +6,7 @@ import com.onyx.diskmap.MapBuilder
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -38,16 +38,16 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): Map<PartitionReference, PartitionReference> {
-        val matching = HashMap<PartitionReference, PartitionReference>()
+    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): Map<Reference, Reference> {
+        val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
         records.referenceSet().filter {
             val entity = records.getWithRecID(it.recordId)
-            val reference = PartitionReference(partitionId, it.recordId)
+            val reference = Reference(partitionId, it.recordId)
             query.meetsCriteria(entity, reference, context, descriptor)
         }.forEach {
-            val reference = PartitionReference(partitionId, it.recordId)
+            val reference = Reference(partitionId, it.recordId)
             matching.put(reference, reference)
         }
 
@@ -61,12 +61,12 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
+    override fun scan(): Map<Reference, Reference> {
         val context = Contexts.get(contextId)!!
 
         if (query.partition === QueryPartitionMode.ALL) {
-            val matching = HashMap<PartitionReference,PartitionReference>()
-            val units = ArrayList<Deferred<Map<PartitionReference,PartitionReference>>>()
+            val matching = HashMap<Reference, Reference>()
+            val units = ArrayList<Deferred<Map<Reference, Reference>>>()
 
             systemEntity.partition!!.entries.forEach {
                 units.add(

@@ -3,7 +3,7 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.context.SchemaContext
@@ -36,14 +36,14 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
+    override fun scan(): Map<Reference, Reference> {
         val context = Contexts.get(contextId)!!
 
         if (query.partition === QueryPartitionMode.ALL) {
 
-            val matching = HashMap<PartitionReference,PartitionReference>()
+            val matching = HashMap<Reference, Reference>()
 
-            val units = ArrayList<Deferred<Map<PartitionReference, PartitionReference>>>()
+            val units = ArrayList<Deferred<Map<Reference, Reference>>>()
             systemEntity.partition!!.entries.forEach {
                 units.add(
                     async {
@@ -79,8 +79,8 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): Map<PartitionReference, PartitionReference> {
-        val matching = HashMap<PartitionReference,PartitionReference>()
+    private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): Map<Reference, Reference> {
+        val matching = HashMap<Reference, Reference>()
 
         if (criteria.value is List<*>)
             (criteria.value as List<Any>).forEach { find(it, indexInteractor, partitionId).forEach { matching.put(it, it) } }

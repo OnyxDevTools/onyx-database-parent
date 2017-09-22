@@ -1,7 +1,7 @@
 package com.onyx.interactors.scanner
 
 import com.onyx.exception.OnyxException
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 
 /**
  * Created by timothy.osborn on 1/6/15.
@@ -17,7 +17,7 @@ interface TableScanner {
      * @throws OnyxException Cannot scan entity
      */
     @Throws(OnyxException::class)
-    fun scan(): Map<PartitionReference, PartitionReference>
+    fun scan(): Map<Reference, Reference>
 
     /**
      * Scan with indexes
@@ -27,6 +27,6 @@ interface TableScanner {
      * @throws OnyxException Cannot scan entity
      */
     @Throws(OnyxException::class)
-    fun scan(existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference>
+    fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference>
 
 }

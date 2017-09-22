@@ -12,6 +12,10 @@ import java.util.Map;
  */
 public class BasicQueryMapStream implements QueryMapStream<Map<String, ? >> {
 
+    public BasicQueryMapStream(){
+
+    }
+
     @Override
     public void accept(Map entityMap, PersistenceManager persistenceManager) {
 

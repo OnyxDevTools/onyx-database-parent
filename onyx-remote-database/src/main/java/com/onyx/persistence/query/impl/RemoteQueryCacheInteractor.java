@@ -46,7 +46,9 @@ public class RemoteQueryCacheInteractor extends DefaultQueryCacheInteractor {
      */
     public void subscribe(CachedResults results, QueryListener queryListener) {
         RemoteQueryListener remoteQueryListener = (RemoteQueryListener) this.pushPublisher.getRegisteredSubscriberIdentity((PushSubscriber) queryListener);
-        results.subscribe(remoteQueryListener);
+        if(remoteQueryListener != null) {
+            results.subscribe(remoteQueryListener);
+        }
     }
 
     /**

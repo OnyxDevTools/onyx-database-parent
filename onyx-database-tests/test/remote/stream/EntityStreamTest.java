@@ -1,6 +1,7 @@
 package remote.stream;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.StreamException;
 import com.onyx.persistence.query.Query;
@@ -28,6 +29,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Category({ RemoteServerTests.class })
 public class EntityStreamTest extends RemoteBaseTest
 {
+
+
+    @BeforeClass
+    public static void beforeClass() throws InterruptedException {
+        deleteDatabase();
+        databaseServer = new DatabaseServer();
+        databaseServer.setPort(8080);
+        databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
+        databaseServer.start();
+        Thread.sleep(500);
+    }
 
     @Before
     public void before() throws OnyxException

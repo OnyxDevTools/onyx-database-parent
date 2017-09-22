@@ -2,7 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.recordInteractor
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.persistence.context.SchemaContext
 
@@ -17,7 +17,7 @@ import com.onyx.persistence.context.SchemaContext
  *
  * @since 2.0.0
  */
-fun PartitionReference.recordInteractor(context: SchemaContext, clazz: Class<*>, descriptor:EntityDescriptor):RecordInteractor {
+fun Reference.recordInteractor(context: SchemaContext, clazz: Class<*>, descriptor:EntityDescriptor = context.getBaseDescriptorForEntity(clazz)!!):RecordInteractor {
     if(partition == 0L)
         return descriptor.recordInteractor()
 

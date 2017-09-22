@@ -10,7 +10,7 @@ import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.depricated.CompareUtil
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 
 /**
  * Created by tosborn1 on 3/27/17.
@@ -44,7 +44,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @param results Result as references
      */
-    override fun setCachedQueryResults(query: Query, results: Map<Any, Any?>): CachedResults {
+    override fun setCachedQueryResults(query: Query, results: Map<Reference, Any?>): CachedResults {
         val queryCachedResultsMap = synchronized(cachedQueriesByClass) { cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) } }
 
         return synchronized(queryCachedResultsMap) {
@@ -68,17 +68,13 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @param entity Entity that was potentially inserted, updated, or deleted.
      * @param descriptor The entity's descriptor
-     * @param entityReference The entity's reference
-     * @param type Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
+     * @param reference The entity's reference
+     * @param type Whether or not to remove it from the cache.  In this case, it would be if an entity was deleted.
      *
      * @since 1.3.0
      */
-    override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, reference: PartitionReference, type: QueryListenerEvent) {
+    override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, reference: Reference, type: QueryListenerEvent) {
         val queryCacheMap = synchronized(cachedQueriesByClass) { cachedQueriesByClass[entity::class.java] } ?: return
-//        var reference:Any = entityReference
-
-//        if(descriptor.hasPartition)
-//            reference = PartitionReference(entity.partitionId(context, descriptor), entityReference)
 
         queryCacheMap.forEach { query, cachedResults ->
             // If indicated to remove the record, delete it and move on
@@ -156,7 +152,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      * @since 2.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Map<Any, Any?>> cache(query: Query, body: () -> T): T {
+    override fun <T : Map<Reference, Any?>> cache(query: Query, body: () -> T): T {
         var cachedResults:CachedResults? = null
         try {
 
@@ -171,10 +167,10 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
                 // There were no cached results, load them from the store
                 results = body.invoke()
                 if(cachedResults == null)
-                    cachedResults = setCachedQueryResults(query, results as Map<Any, Any?>)
+                    cachedResults = setCachedQueryResults(query, results as Map<Reference, Any?>)
                 else
                     synchronized(cachedResults) {
-                        cachedResults!!.references = results as MutableMap<Any, Any?>
+                        cachedResults!!.references = results as MutableMap<Reference, Any?>
                     }
             }
 

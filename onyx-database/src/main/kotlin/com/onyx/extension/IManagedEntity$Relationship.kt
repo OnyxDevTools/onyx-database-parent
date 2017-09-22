@@ -3,7 +3,7 @@ package com.onyx.extension
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.relationship.data.RelationshipTransaction
@@ -108,7 +108,7 @@ fun IManagedEntity.hydrateRelationships(context: SchemaContext, transaction: Rel
  * @since 2.0.0
  */
 @Throws(OnyxException::class)
-fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference:PartitionReference? = reference(context)): List<IManagedEntity>? {
+fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference: Reference? = reference(context)): List<IManagedEntity>? {
     val slices = relationship.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
     var descriptor: EntityDescriptor? = descriptor(context)
     var relationshipDescriptor: RelationshipDescriptor? = null

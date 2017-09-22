@@ -1,5 +1,6 @@
 package com.onyx.interactors.cache.data
 
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
@@ -12,7 +13,7 @@ import java.util.HashSet
  *
  * @since 1.3.0 When query caching was implemented
  */
-class CachedResults(var references: MutableMap<Any, Any?>?) {
+class CachedResults(var references: MutableMap<Reference, Any?>?) {
 
     val listeners = HashSet<QueryListener<Any>>()
 
@@ -85,7 +86,7 @@ class CachedResults(var references: MutableMap<Any, Any?>?) {
      *
      * @since 1.3.0
      */
-    fun put(reference: Any, value: Any, event: QueryListenerEvent) {
+    fun put(reference: Reference, value: Any, event: QueryListenerEvent) {
         if (references != null)
             references!!.put(reference, value)
         listeners.remove(NULL_LISTENER)

@@ -6,6 +6,7 @@ import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
+import com.onyx.interactors.record.data.Reference;
 import com.onyx.util.OffsetField;
 import com.onyx.util.map.CompatMap;
 
@@ -43,7 +44,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @param recordId Position within Store
      * @return Record in format of a Map
      */
-    Map getMapWithRecID(long recordId);
+    Map<String, Object> getMapWithRecID(long recordId);
 
     /**
      * Get Attribute with record id

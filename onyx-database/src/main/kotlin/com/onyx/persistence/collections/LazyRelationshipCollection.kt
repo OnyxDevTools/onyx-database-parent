@@ -126,12 +126,7 @@ class LazyRelationshipCollection<E : IManagedEntity>()  : AbstractList<E>(), Mut
         if (entity == null) {
             entity = try {
                 val ref = identifiers[index]
-
-                if (ref.partitionId > 0) {
-                    persistenceManager!!.findByIdWithPartitionId(entityDescriptor.entityClass, ref.identifier!!, ref.partitionId)
-                } else {
-                    persistenceManager!!.findById(entityDescriptor.entityClass, ref.identifier!!)
-                }
+                persistenceManager!!.findByIdWithPartitionId(entityDescriptor.entityClass, ref.identifier!!, ref.partitionId)
             } catch (e: OnyxException) {
                 null
             }

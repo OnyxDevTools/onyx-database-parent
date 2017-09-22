@@ -2,7 +2,7 @@ package com.onyx.persistence.manager.impl
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.onyx.exception.*
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.helpers.PartitionHelper
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -471,17 +471,17 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      * hydrate objects in random partitions.
      *
      * @param entityType         Type of managed entity
-     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param reference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
      * @throws OnyxException The reference does not exist for that type
     */
     @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> getWithPartitionReference(entityType: Class<*>, partitionReference: PartitionReference): E {
+    override fun <E : IManagedEntity> getWithReference(entityType: Class<*>, reference: Reference): E {
         val body = EntityRequestBody()
-        body.id = partitionReference.reference
+        body.id = reference.reference
         body.type = entityType.name
-        body.partitionId = partitionReference.partition.toString()
+        body.partitionId = reference.partition.toString()
         return this.performCall(url + AbstractWebPersistenceManager.FIND_BY_PARTITION_REFERENCE, null, entityType, body) as E
     }
 
@@ -534,7 +534,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
     }
 
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(entityType: Class<*>, reference: Long): Map<*, *>? = null
+    override fun getMapWithReferenceId(entityType: Class<*>, reference: Reference): Map<String,Any?>? = null
 
     /**
      * Retrieve the quantity of entities that match the query criterium.

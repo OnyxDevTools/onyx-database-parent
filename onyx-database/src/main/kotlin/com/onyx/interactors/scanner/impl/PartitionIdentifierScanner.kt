@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.recordInteractor
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -34,12 +34,12 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
+    override fun scan(): Map<Reference, Reference> {
         val context = Contexts.get(contextId)!!
-        val matching = HashMap<PartitionReference,PartitionReference>()
+        val matching = HashMap<Reference, Reference>()
 
         if (query.partition === QueryPartitionMode.ALL) {
-            val units = ArrayList<Deferred<Map<PartitionReference,PartitionReference>>>()
+            val units = ArrayList<Deferred<Map<Reference, Reference>>>()
             systemEntity.partition!!.entries.forEach {
                 units.add(
                     async {

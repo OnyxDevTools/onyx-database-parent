@@ -6,7 +6,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.BufferingException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.identifier
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
@@ -39,11 +39,11 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     @Transient private var persistenceManager: PersistenceManager? = null
     @Transient lateinit var entityDescriptor: EntityDescriptor
 
-    private lateinit var identifiers: MutableList<Any>
+    private lateinit var identifiers: MutableList<Reference>
 
     private var hasSelections = false
 
-    constructor(entityDescriptor: EntityDescriptor, references: MutableMap<Any, E?>, context: SchemaContext):this() {
+    constructor(entityDescriptor: EntityDescriptor, references: MutableMap<Reference, E?>, context: SchemaContext):this() {
         this.entityDescriptor = entityDescriptor
         this.contextId = context.contextId
         this.persistenceManager = context.serializedPersistenceManager
@@ -114,11 +114,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
         if (entity == null) {
             entity = try {
                 val reference = identifiers[index]
-                if (reference is PartitionReference) {
-                    persistenceManager!!.getWithPartitionReference(entityDescriptor.entityClass, reference)
-                } else {
-                    persistenceManager!!.getWithReferenceId(entityDescriptor.entityClass, reference as Long)
-                }
+                persistenceManager!!.getWithReference(entityDescriptor.entityClass, reference)
 
             } catch (e: OnyxException) {
                 null
@@ -140,7 +136,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     @Suppress("UNCHECKED_CAST")
     fun getDict(index: Int): Map<String, Any?>? {
         return try {
-            persistenceManager!!.getMapWithReferenceId(entityDescriptor.entityClass, identifiers[index] as Long) as Map<String, Any?>?
+            persistenceManager!!.getMapWithReferenceId(entityDescriptor.entityClass, identifiers[index])
         } catch (e: OnyxException) {
             null
         }
@@ -196,7 +192,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     @Suppress("UNCHECKED_CAST")
     override fun read(bufferStream: BufferStream) {
         this.values = WeakHashMap()
-        this.identifiers = bufferStream.collection as MutableList<Any>
+        this.identifiers = bufferStream.collection as MutableList<Reference>
         val className = bufferStream.string
         this.contextId = bufferStream.string
         this.hasSelections = bufferStream.boolean

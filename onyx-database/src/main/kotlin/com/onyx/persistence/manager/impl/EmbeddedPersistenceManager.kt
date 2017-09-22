@@ -3,7 +3,7 @@ package com.onyx.persistence.manager.impl
 import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.scan.PartitionQueryController
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.*
 import com.onyx.persistence.collections.LazyQueryCollection
 import com.onyx.persistence.context.SchemaContext
@@ -216,12 +216,12 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         val queryController = PartitionQueryController(descriptor, this, context)
 
         try {
-            val results:Map<Any, IManagedEntity> = cache(query) {
+            val results:Map<Reference, IManagedEntity> = cache(query) {
                 var cachedResults = queryController.getReferencesForQuery(query)
                 if (query.shouldSortResults()) {
                     cachedResults = queryController.sort(query, cachedResults)
                 }
-                return@cache cachedResults as Map<Any, IManagedEntity>
+                return@cache cachedResults as Map<Reference, IManagedEntity>
             }
 
             return if (query.selections != null) {
@@ -254,16 +254,16 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         val queryController = PartitionQueryController(descriptor, this, context)
         try {
-            val results:Map<Any,IManagedEntity?> = cache(query) {
+            val results:Map<Reference,IManagedEntity?> = cache(query) {
                 // There were no cached results, load them from the store
                 var returnValue = queryController.getReferencesForQuery(query)
 
                 if (query.shouldSortResults()) {
                     returnValue = queryController.sort(query, returnValue)
                 }
-                return@cache returnValue as Map<Any, IManagedEntity?>
+                return@cache returnValue as Map<Reference, IManagedEntity?>
             }
-            return LazyQueryCollection(descriptor, results as MutableMap<Any, IManagedEntity?>, context) as List<E>
+            return LazyQueryCollection(descriptor, results as MutableMap<Reference, IManagedEntity?>, context) as List<E>
         } finally {
 
             queryController.cleanup()
@@ -459,19 +459,14 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      * hydrate objects in random partitions.
      *
      * @param entityType         Type of managed entity
-     * @param partitionReference Partition reference holding both the partition id and reference id
+     * @param reference Partition reference holding both the partition id and reference id
      * @param <E>                The managed entity implementation class
      * @return Managed Entity
      * @throws OnyxException The reference does not exist for that type
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity> getWithPartitionReference(entityType: Class<*>, partitionReference: PartitionReference): E? {
-        val (_, _, partitionValue) = context.getPartitionWithId(partitionReference.partition) ?: return null
-        val descriptor = context.getDescriptorForEntity(entityType, partitionValue)
-        val recordInteractor = context.getRecordInteractor(descriptor)
-        return recordInteractor.getWithReferenceId(partitionReference.reference) as E
-    }
+    override fun <E : IManagedEntity> getWithReference(entityType: Class<*>, reference: Reference): E? = reference.toManagedEntity(context, entityType)?.hydrateRelationships(context) as E
 
     /**
      * Retrieves an entity using the primaryKey and partition
@@ -502,15 +497,9 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      * @return Map of key key pair of the entity.  Key being the attribute name.
      */
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(entityType: Class<*>, reference: Long): Map<*, *> {
+    override fun getMapWithReferenceId(entityType: Class<*>, reference: Reference): Map<String, *>? {
         context.checkForKillSwitch()
-
-        val entity = ReflectionUtil.createNewEntity(entityType)
-        val descriptor = context.getDescriptorForEntity(entity, "")
-        val recordInteractor = context.getRecordInteractor(descriptor)
-
-        // Find the object
-        return recordInteractor.getMapWithReferenceId(reference)
+        return reference.recordInteractor(context, entityType).getMapWithReferenceId(reference.reference)
     }
 
     /**
@@ -647,5 +636,5 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      *
      * @since 2.0.0
      */
-    private fun <T : Map<Any, Any?>> cache(query: Query, body: () -> T) = context.queryCacheInteractor.cache(query, body)
+    private fun <T : Map<Reference, Any?>> cache(query: Query, body: () -> T) = context.queryCacheInteractor.cache(query, body)
 }

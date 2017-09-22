@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.MapBuilder
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
@@ -28,16 +28,16 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<PartitionReference, PartitionReference> {
-        val matching = HashMap<PartitionReference, PartitionReference>()
+    override fun scan(): Map<Reference, Reference> {
+        val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
         records.referenceSet().filter {
             val entity = records.getWithRecID(it.recordId)
-            val reference = PartitionReference(partitionId, it.recordId)
+            val reference = Reference(partitionId, it.recordId)
             query.meetsCriteria(entity, reference, context, descriptor)
         }.forEach {
-            val reference = PartitionReference(partitionId, it.recordId)
+            val reference = Reference(partitionId, it.recordId)
             matching.put(reference, reference)
         }
 
@@ -53,7 +53,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<PartitionReference, PartitionReference>): Map<PartitionReference, PartitionReference> {
+    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
         val context = Contexts.get(contextId)!!
         return existingValues.filter {
             val entity = it.key.toManagedEntity(context, descriptor)

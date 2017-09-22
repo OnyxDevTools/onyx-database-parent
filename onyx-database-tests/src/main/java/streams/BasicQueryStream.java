@@ -11,6 +11,10 @@ import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
  */
 public class BasicQueryStream implements QueryStream {
 
+    public BasicQueryStream() {
+
+    }
+
     @Override
     public void accept(Object entity, PersistenceManager persistenceManager) {
         ((ImmutableSequenceIdentifierEntityForDelete)entity).correlation = 99;

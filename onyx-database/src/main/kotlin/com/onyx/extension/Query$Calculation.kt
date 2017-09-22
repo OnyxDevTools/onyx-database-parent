@@ -7,7 +7,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.depricated.CompareUtil
-import com.onyx.scan.PartitionReference
+import com.onyx.interactors.record.data.Reference
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -24,7 +24,7 @@ import com.onyx.scan.PartitionReference
  * @since 1.3.0 Simplified query criteria management
  */
 @Throws(OnyxException::class)
-fun Query.meetsCriteria(entity: IManagedEntity, entityReference: PartitionReference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
+fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
 
     var subCriteria: Boolean
 
@@ -95,7 +95,7 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria<*>): Boolean {
  * to do a quick reference to see if newly saved entities meet the criteria
  */
 @Throws(OnyxException::class)
-private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityReference: PartitionReference, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
+private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Reference, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
     var meetsCriteria = false
     val operator = criteria.operator
 
