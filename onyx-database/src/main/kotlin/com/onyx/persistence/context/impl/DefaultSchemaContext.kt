@@ -13,7 +13,6 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
-import com.onyx.scan.ScannerFactory
 import com.onyx.helpers.PartitionHelper
 import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.index.IndexInteractor
@@ -185,8 +184,6 @@ open class DefaultSchemaContext : SchemaContext {
 
         // Close transaction file
         transactionStore.close()
-
-        ScannerFactory.getInstance(this).reset()
 
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors

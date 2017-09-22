@@ -6,7 +6,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.exception.InvalidQueryException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
-import com.onyx.scan.ScannerFactory
+import com.onyx.interactors.scanner.ScannerFactory
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -79,7 +79,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         criteria.attribute = criteria.attribute!!.replaceFirst((segments[0] + "\\.").toRegex(), "")
 
         // Get the next scanner because we are not at the end of the line.  Otherwise, we would not have gotten to this place
-        val tableScanner = ScannerFactory.getInstance(context).getScannerForQueryCriteria(criteria, relationshipDescriptor.inverseClass, temporaryDataFile, query, persistenceManager)
+        val tableScanner = ScannerFactory.getScannerForQueryCriteria(context, criteria, relationshipDescriptor.inverseClass, temporaryDataFile, query, persistenceManager)
 
         // Sweet, lets get the scanner.  Note, this very well can be recursive, but sooner or later it will get to the
         // other scanners

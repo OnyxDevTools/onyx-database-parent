@@ -6,6 +6,7 @@ import com.onyx.diskmap.MapBuilder;
 import com.onyx.entity.SystemEntity;
 import com.onyx.entity.SystemPartitionEntry;
 import com.onyx.interactors.record.data.Reference;
+import com.onyx.interactors.scanner.ScannerFactory;
 import com.onyx.interactors.scanner.TableScanner;
 import com.onyx.interactors.scanner.impl.FullTableScanner;
 import com.onyx.interactors.scanner.impl.PartitionFullTableScanner;
@@ -72,11 +73,11 @@ public class PartitionQueryController extends PartitionContext {
         TableScanner scanner;
         if(forceFullScan)
         {
-            scanner = ScannerFactory.getInstance(getContext()).getFullTableScanner(criteria, query.getEntityType(), temporaryDataFile, query, persistenceManager);
+            scanner = ScannerFactory.INSTANCE.getFullTableScanner(getContext(), criteria, query.getEntityType(), temporaryDataFile, query, persistenceManager);
         }
         else
         {
-            scanner = ScannerFactory.getInstance(getContext()).getScannerForQueryCriteria(criteria, query.getEntityType(), temporaryDataFile, query, persistenceManager);
+            scanner = ScannerFactory.INSTANCE.getScannerForQueryCriteria(getContext(), criteria, query.getEntityType(), temporaryDataFile, query, persistenceManager);
         }
         // Scan for records
         Map criteriaResults;
