@@ -28,13 +28,13 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      * @throws OnyxException Cannot scan records
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
         val recordInteractor = context.getRecordInteractor(descriptor)
         return scan(recordInteractor)
     }
 
-    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):Map<Reference, Reference> {
+    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):MutableMap<Reference, Reference> {
         val matching = HashMap<Reference, Reference>()
 
         // If it is an in clause
@@ -68,8 +68,8 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      * @throws OnyxException Cannot scan records
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
+    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
         val matching = scan()
-        return existingValues.filter { matching.containsKey(it.key) }
+        return existingValues.filterTo(HashMap()) { matching.containsKey(it.key) }
     }
 }

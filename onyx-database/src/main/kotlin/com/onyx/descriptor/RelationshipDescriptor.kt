@@ -42,7 +42,7 @@ data class RelationshipDescriptor(
         return true
     }
 
-    private val isToMany:Boolean
+    val isToMany:Boolean
         get() = relationshipType === RelationshipType.MANY_TO_MANY || relationshipType === RelationshipType.ONE_TO_MANY
 
     val isToOne:Boolean

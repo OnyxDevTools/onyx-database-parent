@@ -22,7 +22,7 @@ import java.util.*;
  * Created by timothy.osborn on 2/11/15.
  * This class sorts query results only hydrating what it needs without putting attributes and entities in memory.
  */
-class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
+public class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
 {
     @SuppressWarnings("unused")
     protected final Query query;
@@ -43,7 +43,7 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
      *
      */
     @SuppressWarnings("unchecked")
-    PartitionSortCompare(Query query, QueryOrder[] orderBy, EntityDescriptor descriptor, SchemaContext context)
+    public PartitionSortCompare(Query query, QueryOrder[] orderBy, EntityDescriptor descriptor, SchemaContext context)
     {
         super(context, descriptor);
 
@@ -157,13 +157,8 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         if(scannerProperties.relationshipDescriptor != null)
             return getRelationshipValue(reference, scannerProperties);
 
-        if(reference instanceof Reference)
-        {
-            Reference ref = (Reference) reference;
-            return getRecordInteractorForPartition(ref.getPartition()).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.getReference());
-        }
-
-        return scannerProperties.recordInteractor.getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), (long) reference);
+        Reference ref = (Reference) reference;
+        return getRecordInteractorForPartition(ref.getPartition()).getAttributeWithReferenceId(scannerProperties.attributeDescriptor.getField(), ref.getReference());
     }
 
     /**
@@ -183,13 +178,8 @@ class PartitionSortCompare<T> extends PartitionContext implements Comparator<T>
         List<RelationshipReference> relationshipReferences;
 
         // Get relationship references
-        if (entry instanceof Reference) {
-            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((Reference)entry);
-        }
-        else
-        {
-            relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((long)entry);
-        }
+        relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId((Reference)entry);
+
 
         if(relationshipReferences.size() == 0)
             return null;

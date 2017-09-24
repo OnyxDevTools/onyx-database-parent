@@ -36,7 +36,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
 
         if (query.partition === QueryPartitionMode.ALL) {
@@ -79,7 +79,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): Map<Reference, Reference> {
+    private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): MutableMap<Reference, Reference> {
         val matching = HashMap<Reference, Reference>()
 
         if (criteria.value is List<*>)

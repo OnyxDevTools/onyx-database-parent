@@ -516,7 +516,11 @@ class Query : ObjectSerializable, Serializable {
 
     // endregion
 
-    fun shouldSortResults(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty() || this.firstRow > 0 || this.maxResults != -1
+    fun shouldSortResults(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty()
+
+    fun shouldSortForUpdate():Boolean = (this.firstRow > 0 || this.maxResults != -1 && this.updates.isNotEmpty())
+
+    fun shouldSortForDelete():Boolean = (this.firstRow > 0 || this.maxResults != -1)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

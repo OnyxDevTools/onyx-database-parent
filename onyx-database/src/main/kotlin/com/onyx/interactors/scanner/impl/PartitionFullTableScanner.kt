@@ -38,7 +38,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): Map<Reference, Reference> {
+    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): MutableMap<Reference, Reference> {
         val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
@@ -61,7 +61,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
 
         if (query.partition === QueryPartitionMode.ALL) {

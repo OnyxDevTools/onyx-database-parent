@@ -34,7 +34,7 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
         val matching = HashMap<Reference, Reference>()
 

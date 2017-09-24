@@ -30,7 +30,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      *
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
 
         val startingPoint = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
@@ -59,7 +59,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      * @throws OnyxException Cannot scan relationship values
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
+    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
 
         // Retain the original attribute
@@ -101,7 +101,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      * @return References that match criteria
      */
     @Throws(OnyxException::class)
-    private fun getRelationshipIndexes(attribute: String, existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
+    private fun getRelationshipIndexes(attribute: String, existingValues: Map<Reference, Reference>): MutableMap<Reference, Reference> {
         if (this.query.partition === QueryPartitionMode.ALL) throw InvalidQueryException()
 
         val context = Contexts.get(contextId)!!

@@ -107,8 +107,8 @@ public class SelectPerformanceTest extends memory.base.PrePopulatedForSelectPerf
 
         System.out.println("Took " + (after - time) + " milliseconds to Query 300k indexed records");
 
-        org.junit.Assert.assertTrue((after - time) < 60);
         org.junit.Assert.assertTrue(results.size() == 20);
+        org.junit.Assert.assertTrue((after - time) < 60);
     }
 
     /**

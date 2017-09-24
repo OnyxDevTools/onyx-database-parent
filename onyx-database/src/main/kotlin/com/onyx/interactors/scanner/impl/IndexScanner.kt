@@ -12,6 +12,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.diskmap.MapBuilder
 import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 2/10/15.
@@ -29,7 +30,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      * @throws OnyxException Cannot scan index
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
         val matching = HashMap<Reference, Reference>()
 
         // If it is an in clause
@@ -50,9 +51,9 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      * @throws OnyxException Cannot scan index
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
+    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
         val matching = scan()
-        return existingValues.filter { matching.containsKey(it.key) }
+        return existingValues.filterTo(HashMap()) { matching.containsKey(it.key) }
     }
 
     /**

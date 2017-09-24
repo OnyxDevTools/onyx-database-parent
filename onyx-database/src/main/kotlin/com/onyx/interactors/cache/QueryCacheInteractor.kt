@@ -24,7 +24,7 @@ interface QueryCacheInteractor {
      *
      * @since 2.0.0
      */
-    fun <T : Map<Reference, Any?>> cache(query: Query, body: () -> T): T
+    fun <T : Any?> cache(query: Query, body: () -> MutableMap<Reference, T>): MutableMap<Reference, T>
 
     /**
      * Get Cached results for a query. This method will return a cached query result if it exist.
@@ -43,7 +43,7 @@ interface QueryCacheInteractor {
      *
      * @param results Result as references
      */
-    fun setCachedQueryResults(query: Query, results: Map<Reference, Any?>): CachedResults?
+    fun setCachedQueryResults(query: Query, results: MutableMap<Reference, Any?>): CachedResults?
 
     /**
      * Update all of the cached results if an entity has been modified.  It will re-check the criteria and

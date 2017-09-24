@@ -94,3 +94,11 @@ fun Query.definePartition(context: SchemaContext) {
  */
 @Throws(OnyxException::class)
 fun Query.hasPartitionField(context: SchemaContext): Boolean = context.getBaseDescriptorForEntity(entityType!!)?.partition != null
+
+/**
+ * Indicates whether the query is a query all type or not
+ *
+ * @param descriptor Descriptor for entity type to query
+ */
+fun Query.isDefaultQuery(descriptor: EntityDescriptor): Boolean = this.criteria == null || this.criteria!!.subCriteria.size <= 0 && this.criteria!!.operator === QueryCriteriaOperator.NOT_NULL && this.criteria!!.attribute == descriptor.identifier!!.name
+

@@ -28,7 +28,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(): Map<Reference, Reference> {
+    override fun scan(): MutableMap<Reference, Reference> {
         val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
@@ -53,9 +53,9 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference> {
+    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
-        return existingValues.filter {
+        return existingValues.filterTo(HashMap()) {
             val entity = it.key.toManagedEntity(context, descriptor)
             query.meetsCriteria(entity, it.key, context, descriptor)
         }

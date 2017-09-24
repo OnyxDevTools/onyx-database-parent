@@ -19,13 +19,13 @@ import java.util.List;
  *
  * Properties to use to scan an entity
  */
-class ScannerProperties
+public class ScannerProperties
 {
     @SuppressWarnings("unused")
     public EntityDescriptor descriptor = null;
     public RecordInteractor recordInteractor = null;
-    AttributeDescriptor attributeDescriptor = null;
-    RelationshipDescriptor relationshipDescriptor = null;
+    public AttributeDescriptor attributeDescriptor = null;
+    public RelationshipDescriptor relationshipDescriptor = null;
 
     @SuppressWarnings("unused")
     protected Query query;
@@ -59,7 +59,7 @@ class ScannerProperties
      * @param attributes Attributes to scan
      * @return List of scanner properties
      */
-    static List<ScannerProperties> getScannerProperties(String[] attributes, EntityDescriptor descriptor, Query query, SchemaContext context) throws OnyxException
+    public static List<ScannerProperties> getScannerProperties(String[] attributes, EntityDescriptor descriptor, Query query, SchemaContext context) throws OnyxException
     {
         // Get the attribute names so that we can hydrate them later on
         final List<ScannerProperties> scanObjects = new ArrayList<>();

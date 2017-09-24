@@ -17,7 +17,7 @@ interface TableScanner {
      * @throws OnyxException Cannot scan entity
      */
     @Throws(OnyxException::class)
-    fun scan(): Map<Reference, Reference>
+    fun scan(): MutableMap<Reference, Reference>
 
     /**
      * Scan with indexes
@@ -27,6 +27,6 @@ interface TableScanner {
      * @throws OnyxException Cannot scan entity
      */
     @Throws(OnyxException::class)
-    fun scan(existingValues: Map<Reference, Reference>): Map<Reference, Reference>
+    fun  scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference>
 
 }

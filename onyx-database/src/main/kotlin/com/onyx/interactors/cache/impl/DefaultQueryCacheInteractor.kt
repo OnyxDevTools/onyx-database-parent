@@ -44,11 +44,11 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @param results Result as references
      */
-    override fun setCachedQueryResults(query: Query, results: Map<Reference, Any?>): CachedResults {
+    override fun setCachedQueryResults(query: Query, results: MutableMap<Reference, Any?>): CachedResults {
         val queryCachedResultsMap = synchronized(cachedQueriesByClass) { cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) } }
 
         return synchronized(queryCachedResultsMap) {
-            val cachedResults = CachedResults(results.toMutableMap())
+            val cachedResults = CachedResults(results)
 
             // Set a strong reference if this is a query listener.  In that
             // case we do not want it to get cleaned up.
@@ -152,22 +152,22 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      * @since 2.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Map<Reference, Any?>> cache(query: Query, body: () -> T): T {
+    override fun <T : Any?> cache(query: Query, body: () -> MutableMap<Reference, T>): MutableMap<Reference, T> {
         var cachedResults:CachedResults? = null
         try {
 
             // Check for cached query results.
             cachedResults = getCachedQueryResults(query)
-            val results: T
+            val results: MutableMap<Reference, T>
 
             // The query has already been cached.  Return the results from the cache
             if (cachedResults?.references != null) {
-                results = cachedResults.references as T
+                results = cachedResults.references as MutableMap<Reference, T>
             } else {
                 // There were no cached results, load them from the store
                 results = body.invoke()
                 if(cachedResults == null)
-                    cachedResults = setCachedQueryResults(query, results as Map<Reference, Any?>)
+                    cachedResults = setCachedQueryResults(query, results as MutableMap<Reference, Any?>)
                 else
                     synchronized(cachedResults) {
                         cachedResults!!.references = results as MutableMap<Reference, Any?>
