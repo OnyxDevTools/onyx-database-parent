@@ -43,9 +43,9 @@ public class BenchmarkRunner {
     public static void main(@SuppressWarnings("ParameterCanBeLocal") String args[]) throws Exception {
 
         //Default values to run via the IDE
-        /*args = new String[2];
+        args = new String[2];
         args[0] = "1";
-        args[1] = "RandomTransactionBenchmarkTest";*/
+        args[1] = "RandomTransactionBenchmarkTest";
 
         // Delete the existing database so we start with a clean slate
         deleteDirectory(new File(DatabaseProvider.DATABASE_LOCATION));

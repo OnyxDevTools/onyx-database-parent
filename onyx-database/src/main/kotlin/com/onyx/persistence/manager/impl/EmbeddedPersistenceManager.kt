@@ -487,7 +487,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E {
+    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E {
         context.checkForKillSwitch()
 
         val entity = RelationshipReference(identifier = id, partitionId = partitionId).toManagedEntity(context, clazz)

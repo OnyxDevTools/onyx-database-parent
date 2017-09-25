@@ -37,8 +37,8 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
 
         val reflectionRelationshipObjects:Any? = entity[context, relationshipDescriptor.entityDescriptor, relationshipDescriptor.name]
 
-        val relationshipObjects: MutableList<IManagedEntity>? = when (reflectionRelationshipObjects) {
-            is List<*> -> reflectionRelationshipObjects as MutableList<IManagedEntity>
+        val relationshipObjects: MutableList<IManagedEntity?>? = when (reflectionRelationshipObjects) {
+            is List<*> -> reflectionRelationshipObjects as MutableList<IManagedEntity?>
             else -> null
         }
 
@@ -51,9 +51,10 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         if (relationshipObjects != null) {
             existingRelationshipReferencesCopy = HashSet(existingRelationshipReferences)
 
-            relationshipObjects.forEach {
+            relationshipObjects.filter { it != null }.forEach {
+
                 // Get the inverse identifier
-                val relationshipObjectIdentifier = it.toRelationshipReference(context)
+                val relationshipObjectIdentifier = it!!.toRelationshipReference(context)
 
                 // If it is in the list, it is accounted for, lets continue
                 existingRelationshipReferencesCopy.remove(relationshipObjectIdentifier)

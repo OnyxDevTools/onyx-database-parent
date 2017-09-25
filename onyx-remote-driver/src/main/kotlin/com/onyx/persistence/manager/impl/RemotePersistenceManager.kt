@@ -393,7 +393,7 @@ open class RemotePersistenceManager : PersistenceManager {
      * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E? = proxy.findByIdWithPartitionId(clazz, id, partitionId)
+    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E = proxy.findByIdWithPartitionId<E>(clazz, id, partitionId)
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.

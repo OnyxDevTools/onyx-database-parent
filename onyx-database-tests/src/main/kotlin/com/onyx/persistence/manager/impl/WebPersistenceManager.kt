@@ -331,7 +331,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E? {
+    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E {
         val body = EntityRequestBody()
         body.id = id
         body.partitionId = partitionId.toString()

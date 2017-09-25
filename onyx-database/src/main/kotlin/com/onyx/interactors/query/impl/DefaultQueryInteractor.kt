@@ -17,8 +17,8 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.extension.*
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
-import com.onyx.scan.PartitionSortCompare
-import com.onyx.scan.ScannerProperties
+import com.onyx.interactors.query.data.QuerySortComparator
+import com.onyx.interactors.query.data.QueryAttributeResource
 
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -55,7 +55,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @throws OnyxException Error sorting objects
      */
     @Throws(OnyxException::class)
-    override fun <T : Any?> sort(query: Query, referenceValues: MutableMap<Reference, T>): MutableMap<Reference, T> = referenceValues.toSortedMap(PartitionSortCompare(query, if (query.queryOrders == null) arrayOfNulls<QueryOrder>(0) else query.queryOrders!!.toTypedArray(), descriptor, Contexts.get(contextId)!!))
+    override fun <T : Any?> sort(query: Query, referenceValues: MutableMap<Reference, T>): MutableMap<Reference, T> = referenceValues.toSortedMap(QuerySortComparator(query, if (query.queryOrders == null) arrayOf() else query.queryOrders!!.toTypedArray(), descriptor, Contexts.get(contextId)!!))
 
     /**
      * Hydrate a subset of records with the given identifiers
@@ -96,7 +96,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
     @Throws(OnyxException::class)
     override fun <T : Any?> referencesToSelectionResults(query: Query, references: Map<Reference, T>): List<T> {
         val context = Contexts.get(contextId)!!
-        val scanObjects = ScannerProperties.getScannerProperties(query.selections!!.toTypedArray(), descriptor, query, context)
+        val scanObjects = QueryAttributeResource.create(query.selections!!.toTypedArray(), descriptor, query, context)
 
         val lower = query.firstRow
         val upper = lower + if(query.maxResults > 0) query.maxResults else references.size

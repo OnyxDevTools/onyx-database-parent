@@ -46,10 +46,10 @@ import java.util.function.Consumer
  * entity.children; // Instance of LazyRelationshipCollection
  *
  */
-class LazyRelationshipCollection<E : IManagedEntity>()  : AbstractList<E>(), MutableList<E>, BufferStreamable {
+class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), MutableList<E>, BufferStreamable {
 
 
-    @Transient private var values: MutableMap<Int, E?> = WeakHashMap()
+    @Transient private var values: MutableMap<Int, IManagedEntity?> = WeakHashMap()
     @Transient private var persistenceManager: PersistenceManager? = null
     @Transient lateinit var entityDescriptor: EntityDescriptor
     private var contextId: String? = null
@@ -90,7 +90,7 @@ class LazyRelationshipCollection<E : IManagedEntity>()  : AbstractList<E>(), Mut
      * @param element Record to check
      * @return Flag indicating record exists within collection
      */
-    override operator fun contains(element: E): Boolean = identifiers.contains(element.toRelationshipReference(Contexts.get(contextId!!)!!))
+    override operator fun contains(element: E): Boolean = identifiers.contains(element?.toRelationshipReference(Contexts.get(contextId!!)!!))
 
     /**
      * Add an element to the lazy collection
@@ -121,19 +121,20 @@ class LazyRelationshipCollection<E : IManagedEntity>()  : AbstractList<E>(), Mut
      * @param index Record index
      * @return ManagedEntity
      */
+    @Suppress("UNCHECKED_CAST")
     override fun get(index: Int): E {
-        var entity: E? = values[index]
+        var entity: IManagedEntity? = values[index]
         if (entity == null) {
             entity = try {
                 val ref = identifiers[index]
-                persistenceManager!!.findByIdWithPartitionId(entityDescriptor.entityClass, ref.identifier!!, ref.partitionId)
+                persistenceManager!!.findByIdWithPartitionId(clazz = entityDescriptor.entityClass, id = ref.identifier!!, partitionId = ref.partitionId)
             } catch (e: OnyxException) {
                 null
             }
 
-            values.put(index, entity)
+            values.put(index, entity as E)
         }
-        return entity!!
+        return entity as E
     }
 
     /**

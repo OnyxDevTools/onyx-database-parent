@@ -565,7 +565,7 @@ interface PersistenceManager {
      * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E?
+    fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
