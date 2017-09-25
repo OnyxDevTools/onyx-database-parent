@@ -8,7 +8,6 @@ import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
 import com.onyx.application.DatabaseServer;
 import entities.SimpleEntity;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
@@ -160,7 +159,6 @@ public class TestDatabaseInitialization extends RemoteBaseTest
      *
      * @throws Exception
      */
-    @Ignore
     @Test(expected=InitializationException.class)
     public void testDataFileIsNotAccessible() throws Exception
     {

@@ -13,7 +13,7 @@ import com.onyx.util.ReflectionUtil
  * @since 2.0.0
  */
 fun Reference.toManagedEntity(context: SchemaContext, descriptor: EntityDescriptor):IManagedEntity {
-    val entity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass) as IManagedEntity
+    val entity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass)
     val records = entity.records(context = context, descriptor = descriptor, partitionId = partition)
     return records.getWithRecID(reference)
 }
@@ -26,7 +26,7 @@ fun Reference.toManagedEntity(context: SchemaContext, descriptor: EntityDescript
  * @since 2.0.0
  */
 fun Reference.toManagedEntity(context: SchemaContext, clazz: Class<*>, descriptor: EntityDescriptor = context.getBaseDescriptorForEntity(clazz)!!):IManagedEntity? {
-    val entity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass) as IManagedEntity
+    val entity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass)
     val records = entity.records(context = context, descriptor = descriptor, partitionId = partition)
     return records.getWithRecID(reference)
 }

@@ -133,6 +133,8 @@ open class FileChannelStore() : Store {
      */
     override fun commit() { this.channel?.force(true) }
 
+    override fun write(buffer: ByteBuffer, position: Long): Int = this.channel?.write(buffer, position)!!
+
     /**
      * Write an Object Buffer
      *

@@ -11,7 +11,7 @@ import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.depricated.CompareUtil;
-import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionField;
 import com.onyx.util.ReflectionUtil;
 
 import java.util.HashSet;
@@ -254,13 +254,13 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @since 1.2.0
      * @since 1.3.0 Optimized to require the reflection field so it does not have to re-instantiate one.
      */
-    public Object getAttributeWithRecID(final OffsetField attribute, final long recordId) throws AttributeTypeMismatchException {
+    public Object getAttributeWithRecID(final ReflectionField attribute, final long recordId) throws AttributeTypeMismatchException {
 
         final SkipListNode node = (SkipListNode<K>) findNodeAtPosition(recordId);
 
         V value = findValueAtPosition(node.recordPosition, node.recordSize);
         if (value != null) {
-            return ReflectionUtil.getAny(value, attribute);
+            return ReflectionUtil.INSTANCE.getAny(value, attribute);
         }
 
         return null;
@@ -268,7 +268,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
     }
 
     @Override
-    public Object getAttributeWithRecID(OffsetField attributeField, SkipListNode node) throws
+    public Object getAttributeWithRecID(ReflectionField attributeField, SkipListNode node) throws
             AttributeTypeMismatchException {
         if(node == null)
             return null;
@@ -276,7 +276,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
         V value = findValueAtPosition(node.recordPosition, node.recordSize);
 
         if (value != null) {
-            return ReflectionUtil.getAny(value, attributeField);
+            return ReflectionUtil.INSTANCE.getAny(value, attributeField);
         }
 
         return null;

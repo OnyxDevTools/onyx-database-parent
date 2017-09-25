@@ -1,10 +1,11 @@
 package com.onyx.interactors.transaction.impl
 
 import com.onyx.exception.TransactionException
+import com.onyx.extension.common.closeAndFlush
 import com.onyx.extension.common.Block
 import com.onyx.extension.common.catchAll
+import com.onyx.extension.common.openFileChannel
 import com.onyx.interactors.transaction.TransactionStore
-import com.onyx.util.FileUtil
 import java.io.File
 import java.io.IOException
 import java.nio.channels.FileChannel
@@ -66,7 +67,7 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
                 }
 
                 // Open file channel
-                lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.path)
+                lastWalFileChannel = lastWalFile.path.openFileChannel()
             }
 
             // If the last wal file exceeds longSize limit threshold, create a new one
@@ -80,7 +81,7 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
                 val lastWalFile = File(directory + journalFileIndex.addAndGet(1) + ".wal")
                 lastWalFile.createNewFile()
 
-                lastWalFileChannel = FileUtil.openFileChannel(lastWalFile.path)
+                lastWalFileChannel = lastWalFile.path.openFileChannel()
             }
 
             return lastWalFileChannel!!
@@ -99,7 +100,7 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
     override fun close() {
         if (lastWalFileChannel != null) {
             catchAll {
-                FileUtil.closeFileChannel(lastWalFileChannel)
+                lastWalFileChannel!!.closeAndFlush()
             }
         }
     }

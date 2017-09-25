@@ -63,7 +63,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     @Throws(OnyxException::class)
     protected fun saveInverseRelationship(parentEntity: IManagedEntity, childEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
-        val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name)!!
+        val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name) ?: return
 
         synchronized(relationshipMap) {
             val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
@@ -85,7 +85,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     @Throws(OnyxException::class)
     protected fun deleteInverseRelationshipReference(parentEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
-        val relationshipMap = childIdentifier.toManagedEntity(context, inverseRelationshipDescriptor.entityDescriptor.entityClass, inverseRelationshipDescriptor.entityDescriptor)?.relationshipReferenceMap(context, inverseRelationshipDescriptor.name)!!
+        val relationshipMap = childIdentifier.toManagedEntity(context, inverseRelationshipDescriptor.entityDescriptor.entityClass, inverseRelationshipDescriptor.entityDescriptor)?.relationshipReferenceMap(context, inverseRelationshipDescriptor.name) ?: return
 
         // Synchronized since we are saving the entire set
         synchronized(relationshipMap) {

@@ -82,7 +82,7 @@ public class PartitionHelper
             return NULL_PARTITION;
         }
 
-        final Object val = ReflectionUtil.getAny(entity, baseDescriptor.getPartition().getField());
+        final Object val = ReflectionUtil.INSTANCE.getAny(entity, baseDescriptor.getPartition().getField());
 
         if(val == null)
         {
@@ -106,7 +106,7 @@ public class PartitionHelper
                 return;
 
             // Use reflection to get the key
-            final Field field = ReflectionUtil.getField(entity.getClass(), context.getDescriptorForEntity(entity).getPartition().getName());
+            final Field field = ReflectionUtil.INSTANCE.getField(entity.getClass(), context.getDescriptorForEntity(entity).getPartition().getName());
             // If it is a private field, lets set it accessible
             if (!field.isAccessible())
                 field.setAccessible(true);

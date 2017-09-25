@@ -113,7 +113,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position position within store to write to
      * @return how many bytes were written
      */
-    protected fun write(byteBuffer: ByteBuffer, position: Long): Int {
+    override fun write(byteBuffer: ByteBuffer, position: Long): Int {
 
         val slice = getBuffer(position)
 
@@ -279,7 +279,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             when {
                 serializerId > 0 -> ObjectBuffer.unwrap(buffer, serializers, serializerId)
                 ObjectSerializable::class.java.isAssignableFrom(type) -> {
-                    val serializable = ReflectionUtil.instantiate(type)//type.newInstance();
+                    val serializable = ReflectionUtil.instantiate<ObjectSerializable>(type)
                     val objectBuffer = ObjectBuffer(buffer, serializers)
                     (serializable as ObjectSerializable).readObject(objectBuffer, position)
                     serializable
@@ -310,7 +310,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
         return try {
             if (ObjectSerializable::class.java.isAssignableFrom(type)) {
-                val serializable = ReflectionUtil.instantiate(type)//type.newInstance();
+                val serializable = ReflectionUtil.instantiate<ObjectSerializable>(type)//type.newInstance();
                 val objectBuffer = ObjectBuffer(buffer, serializers)
                 (serializable as ObjectSerializable).readObject(objectBuffer, position)
                 serializable
@@ -351,9 +351,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
         * Any error is silently ignored (for example SUN API does not exist on Android).
         */
         fun flush() {
-            if (buffer is MappedByteBuffer) {
-                (buffer as sun.nio.ch.DirectBuffer).cleaner().clean()
-            }
+
         }
     }
 

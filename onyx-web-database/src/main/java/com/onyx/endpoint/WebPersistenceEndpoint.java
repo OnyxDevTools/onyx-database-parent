@@ -221,7 +221,7 @@ final public class WebPersistenceEndpoint
 
 
         persistenceManager.initialize(entity, request.getAttribute());
-        return (List<IManagedEntity>)ReflectionUtil.getObject(entity, context.getDescriptorForEntity(entity).getRelationships().get(request.getAttribute()).getField());
+        return (List<IManagedEntity>) ReflectionUtil.INSTANCE.getObject(entity, context.getDescriptorForEntity(entity).getRelationships().get(request.getAttribute()).getField());
     }
 
     /**

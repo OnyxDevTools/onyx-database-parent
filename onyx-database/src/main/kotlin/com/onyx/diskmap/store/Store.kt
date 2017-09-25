@@ -30,6 +30,16 @@ interface Store {
     fun write(serializable: ObjectBuffer, position: Long): Int
 
     /**
+     * Write an Byte Buffer to the store.  The buffer must be flipped or the position must be set prior to
+     * sending to this method.
+     *
+     * @param buffer Bytes to write
+     * @param position Position within the volume to write to.
+     * @return How many bytes were written
+     */
+    fun write(buffer: ByteBuffer, position: Long): Int
+
+    /**
      * Write a serializable object
      *
      * @param position Position to read from

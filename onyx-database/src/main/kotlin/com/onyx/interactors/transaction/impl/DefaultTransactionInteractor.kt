@@ -2,6 +2,7 @@ package com.onyx.interactors.transaction.impl
 
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.TransactionException
+import com.onyx.extension.common.openFileChannel
 import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.data.*
 import com.onyx.persistence.IManagedEntity
@@ -9,7 +10,6 @@ import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.interactors.transaction.TransactionStore
-import com.onyx.util.FileUtil
 
 import java.io.File
 import java.io.IOException
@@ -121,7 +121,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      */
     @Throws(TransactionException::class)
     override fun applyTransactionLog(walTransactionFile: String, executeTransaction:  (Transaction) -> Boolean): Boolean {
-        val channel = FileUtil.openFileChannel(walTransactionFile)
+        val channel = walTransactionFile.openFileChannel()
 
         if (channel == null || !channel.isOpen) {
             throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)

@@ -25,7 +25,7 @@ fun IManagedEntity.identifier(context: SchemaContext? = null, descriptor: Entity
  * @param descriptor Contains entity property information
  * @since 2.0.0
  */
-fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) = ReflectionUtil.copy(from, this, descriptor)
+fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) = ReflectionUtil.copy(from, this, descriptor!!)
 
 /**
  * Get the partition field value from the entity.  If the partition field does not exist it will return an empty value
@@ -46,10 +46,10 @@ fun IManagedEntity.partitionValue(context: SchemaContext? = null, descriptor: En
  * @since 2.0.0
  */
 @Suppress("UNCHECKED_CAST")
-operator fun <T : Any?> IManagedEntity.get(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name:String): T? = ReflectionUtil.getAny(this, descriptor?.reflectionFields!![name]) as T?
+operator fun <T> IManagedEntity.get(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name:String): T? = ReflectionUtil.getAny<T>(this, descriptor!!.reflectionFields!![name]!!) as T?
 
 /**
  * Overload operator to use entity[context, property] = value syntax
  * @since 2.0.0
  */
-operator fun <T : Any?> IManagedEntity.set(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name: String, value:T):T  { ReflectionUtil.setAny(this, value, descriptor?.reflectionFields!![name]); return value }
+operator fun <T> IManagedEntity.set(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name: String, value:T):T  { ReflectionUtil.setAny(this, value, descriptor!!.reflectionFields!![name]!!); return value }

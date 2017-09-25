@@ -5,7 +5,6 @@ import com.onyx.exception.InitializationException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -65,7 +64,6 @@ public class TestDatabaseInitialization extends BaseTest
      *
      * @throws Exception
      */
-    @Ignore
     @Test(expected=InitializationException.class)
     public void testDataFileIsNotAccessible() throws Exception
     {

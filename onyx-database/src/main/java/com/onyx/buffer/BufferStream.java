@@ -3,7 +3,7 @@ package com.onyx.buffer;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.exception.BufferingException;
-import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionField;
 import com.onyx.util.ReflectionUtil;
 
 import java.lang.reflect.Array;
@@ -422,30 +422,30 @@ public class BufferStream {
         addReference(object);
 
         // Iterate through the fields and put them on the expandableByteBuffer
-        for (OffsetField field : ReflectionUtil.getFields(object)) {
+        for (ReflectionField field : ReflectionUtil.INSTANCE.getFields(object)) {
             try {
-                if (field.type == int.class)
-                    putInt(ReflectionUtil.getInt(object, field));
-                else if (field.type == long.class)
-                    putLong(ReflectionUtil.getLong(object, field));
-                else if (field.type == byte.class)
-                    putByte(ReflectionUtil.getByte(object, field));
-                else if (field.type == float.class)
-                    putFloat(ReflectionUtil.getFloat(object, field));
-                else if (field.type == double.class)
-                    putDouble(ReflectionUtil.getDouble(object, field));
-                else if (field.type == boolean.class)
-                    putBoolean(ReflectionUtil.getBoolean(object, field));
-                else if (field.type == short.class)
-                    putShort(ReflectionUtil.getShort(object, field));
-                else if (field.type == char.class)
-                    putChar(ReflectionUtil.getChar(object, field));
+                if (field.getType() == int.class)
+                    putInt(ReflectionUtil.INSTANCE.getInt(object, field));
+                else if (field.getType() == long.class)
+                    putLong(ReflectionUtil.INSTANCE.getLong(object, field));
+                else if (field.getType() == byte.class)
+                    putByte(ReflectionUtil.INSTANCE.getByte(object, field));
+                else if (field.getType() == float.class)
+                    putFloat(ReflectionUtil.INSTANCE.getFloat(object, field));
+                else if (field.getType() == double.class)
+                    putDouble(ReflectionUtil.INSTANCE.getDouble(object, field));
+                else if (field.getType() == boolean.class)
+                    putBoolean(ReflectionUtil.INSTANCE.getBoolean(object, field));
+                else if (field.getType() == short.class)
+                    putShort(ReflectionUtil.INSTANCE.getShort(object, field));
+                else if (field.getType() == char.class)
+                    putChar(ReflectionUtil.INSTANCE.getChar(object, field));
                 else {
-                    final Object attributeObject = ReflectionUtil.getObject(object, field);
+                    final Object attributeObject = ReflectionUtil.INSTANCE.getObject(object, field);
                     putObject(attributeObject);
                 }
             } catch (IllegalAccessException e) {
-                throw new BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + field.name);
+                throw new BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + field.getName());
             }
         }
     }
@@ -689,7 +689,7 @@ public class BufferStream {
     @SuppressWarnings("WeakerAccess")
     public Object instantiate(Class type) throws BufferingException {
         try {
-            return ReflectionUtil.instantiate(type);
+            return ReflectionUtil.INSTANCE.instantiate(type);
         } catch (InstantiationException | IllegalAccessException e) {
             throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, type);
         }
@@ -900,26 +900,26 @@ public class BufferStream {
             instance = instantiate(objectType);
             addReference(instance);
 
-            for (OffsetField offsetField : ReflectionUtil.getFields(instance)) {
+            for (ReflectionField reflectionField : ReflectionUtil.INSTANCE.getFields(instance)) {
 
-                if (offsetField.type == long.class)
-                    ReflectionUtil.setLong(instance, offsetField, getLong());
-                else if (offsetField.type == int.class)
-                    ReflectionUtil.setInt(instance, offsetField, getInt());
-                else if (offsetField.type == double.class)
-                    ReflectionUtil.setDouble(instance, offsetField, getDouble());
-                else if (offsetField.type == float.class)
-                    ReflectionUtil.setFloat(instance, offsetField, getFloat());
-                else if (offsetField.type == byte.class)
-                    ReflectionUtil.setByte(instance, offsetField, getByte());
-                else if (offsetField.type == char.class)
-                    ReflectionUtil.setChar(instance, offsetField, getChar());
-                else if (offsetField.type == short.class)
-                    ReflectionUtil.setShort(instance, offsetField, getShort());
-                else if (offsetField.type == boolean.class)
-                    ReflectionUtil.setBoolean(instance, offsetField, getBoolean());
+                if (reflectionField.getType() == long.class)
+                    ReflectionUtil.INSTANCE.setLong(instance, reflectionField, getLong());
+                else if (reflectionField.getType() == int.class)
+                    ReflectionUtil.INSTANCE.setInt(instance, reflectionField, getInt());
+                else if (reflectionField.getType() == double.class)
+                    ReflectionUtil.INSTANCE.setDouble(instance, reflectionField, getDouble());
+                else if (reflectionField.getType() == float.class)
+                    ReflectionUtil.INSTANCE.setFloat(instance, reflectionField, getFloat());
+                else if (reflectionField.getType() == byte.class)
+                    ReflectionUtil.INSTANCE.setByte(instance, reflectionField, getByte());
+                else if (reflectionField.getType() == char.class)
+                    ReflectionUtil.INSTANCE.setChar(instance, reflectionField, getChar());
+                else if (reflectionField.getType() == short.class)
+                    ReflectionUtil.INSTANCE.setShort(instance, reflectionField, getShort());
+                else if (reflectionField.getType() == boolean.class)
+                    ReflectionUtil.INSTANCE.setBoolean(instance, reflectionField, getBoolean());
                 else
-                    ReflectionUtil.setObject(instance, offsetField, getObject());
+                    ReflectionUtil.INSTANCE.setObject(instance, reflectionField, getObject());
             }
         }
         catch (Exception e)

@@ -41,7 +41,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         var partitionId = 0L
 
         if (this.descriptor.hasPartition) {
-            val temporaryManagedEntity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass) as IManagedEntity
+            val temporaryManagedEntity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass)
             temporaryManagedEntity[context, descriptor, descriptor.partition!!.name] = query.partition.toString()
             partitionId = temporaryManagedEntity.partitionId(context, descriptor)
         }

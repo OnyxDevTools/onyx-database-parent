@@ -2,15 +2,12 @@ package com.onyx.diskmap;
 
 import com.onyx.diskmap.base.concurrent.DispatchLock;
 import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
-import com.onyx.interactors.record.data.Reference;
-import com.onyx.util.OffsetField;
+import com.onyx.util.ReflectionField;
 import com.onyx.util.map.CompatMap;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -54,7 +51,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      *
      * @return Attribute key of record
      */
-    Object getAttributeWithRecID(OffsetField attribute, long reference) throws AttributeTypeMismatchException;
+    Object getAttributeWithRecID(ReflectionField attribute, long reference) throws AttributeTypeMismatchException;
 
     /**
      * Get Attribute with record id
@@ -65,7 +62,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @return Attribute key of record
      */
     @SuppressWarnings("unused")
-    Object getAttributeWithRecID(OffsetField field, SkipListNode reference) throws AttributeTypeMismatchException;
+    Object getAttributeWithRecID(ReflectionField field, SkipListNode reference) throws AttributeTypeMismatchException;
 
     /**
      * Get Storage mechanism for a dismap

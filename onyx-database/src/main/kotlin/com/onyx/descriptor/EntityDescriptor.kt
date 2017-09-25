@@ -5,7 +5,7 @@ import com.onyx.persistence.annotations.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.extension.validate
 import com.onyx.extension.validateIsManagedEntity
-import com.onyx.util.OffsetField
+import com.onyx.util.ReflectionField
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -77,8 +77,8 @@ constructor(
     /**
      * Reflection fields used to get all fields for an entity including attributes and relationships
      */
-    val reflectionFields: Map<String, OffsetField> by lazy {
-        val returnValue = LinkedHashMap<String,OffsetField>()
+    val reflectionFields: Map<String, ReflectionField> by lazy {
+        val returnValue = LinkedHashMap<String, ReflectionField>()
         attributes.values.forEach { returnValue[it.name] = it.field }
         relationships.values.forEach { returnValue[it.name] = it.field }
         return@lazy returnValue

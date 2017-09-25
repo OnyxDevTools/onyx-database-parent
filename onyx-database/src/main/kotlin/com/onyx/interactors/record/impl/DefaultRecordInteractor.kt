@@ -14,7 +14,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
-import com.onyx.util.OffsetField
+import com.onyx.util.ReflectionField
 import com.onyx.util.ReflectionUtil
 
 import java.util.concurrent.atomic.AtomicBoolean
@@ -191,7 +191,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Attribute key
      */
     @Throws(AttributeTypeMismatchException::class)
-    override fun getAttributeWithReferenceId(attribute: OffsetField, referenceId: Long): Any? = records.getAttributeWithRecID(attribute, referenceId)
+    override fun getAttributeWithReferenceId(attribute: ReflectionField, referenceId: Long): Any? = records.getAttributeWithRecID(attribute, referenceId)
 
     /**
      * Find all objects greater than the key parameter.  The underlying data

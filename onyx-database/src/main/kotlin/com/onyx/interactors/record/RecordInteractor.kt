@@ -1,9 +1,8 @@
 package com.onyx.interactors.record
 
 import com.onyx.exception.OnyxException
-import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
-import com.onyx.util.OffsetField
+import com.onyx.util.ReflectionField
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -112,7 +111,7 @@ interface RecordInteractor {
      * and not instantiate new reflection fields
      */
     @Throws(OnyxException::class)
-    fun getAttributeWithReferenceId(attribute: OffsetField, referenceId: Long): Any?
+    fun getAttributeWithReferenceId(attribute: ReflectionField, referenceId: Long): Any?
 
     /**
      * For sorted indexes, you can find all the entity references above the value.  The index value must implement comparable

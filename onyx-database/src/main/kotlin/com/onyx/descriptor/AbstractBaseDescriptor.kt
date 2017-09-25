@@ -1,6 +1,6 @@
 package com.onyx.descriptor
 
-import com.onyx.util.OffsetField
+import com.onyx.util.ReflectionField
 import com.onyx.util.ReflectionUtil
 
 import java.lang.reflect.Field
@@ -16,7 +16,7 @@ abstract class AbstractBaseDescriptor {
      * Get Reflection field
      */
     @Transient
-    lateinit var field: OffsetField
+    lateinit var field: ReflectionField
 
     /**
      * Set field and derive a reflection field
@@ -25,6 +25,6 @@ abstract class AbstractBaseDescriptor {
      * @since 1.3.0 - Effort to cleanup reflection
      */
     fun setReflectionField(field: Field) {
-        this.field = ReflectionUtil.getOffsetField(field)
+        this.field = ReflectionUtil.getReflectionField(field)
     }
 }

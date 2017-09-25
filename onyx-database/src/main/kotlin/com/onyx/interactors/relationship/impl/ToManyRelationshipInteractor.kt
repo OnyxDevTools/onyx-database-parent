@@ -46,15 +46,15 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         val relationshipReferenceMap        = entity.relationshipReferenceMap(context, relationshipDescriptor.name)
         val existingRelationshipReferences: MutableSet<RelationshipReference> = synchronized(relationshipReferenceMap!!) { HashSet(relationshipReferenceMap[parentRelationshipReference] ?: HashSet()) }
 
-        var existingRelationshipReferencesCopy: MutableSet<RelationshipReference> = java.util.HashSet()
+        var existingRelationshipReferencesCopy: MutableSet<RelationshipReference?> = java.util.HashSet()
 
         if (relationshipObjects != null) {
             existingRelationshipReferencesCopy = HashSet(existingRelationshipReferences)
 
-            relationshipObjects.filter { it != null }.forEach {
+            relationshipObjects.forEach {
 
                 // Get the inverse identifier
-                val relationshipObjectIdentifier = it!!.toRelationshipReference(context)
+                val relationshipObjectIdentifier = it?.toRelationshipReference(context) ?: return@forEach
 
                 // If it is in the list, it is accounted for, lets continue
                 existingRelationshipReferencesCopy.remove(relationshipObjectIdentifier)
@@ -85,7 +85,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         if (relationshipDescriptor.shouldDeleteEntityReference) {
             existingRelationshipReferencesCopy.forEach {
                 // Delete the actual relationship
-                existingRelationshipReferences.remove(it)
+                existingRelationshipReferences.remove(it!!)
 
                 // Delete the inverse
                 deleteInverseRelationshipReference(entity, parentRelationshipReference, it)
