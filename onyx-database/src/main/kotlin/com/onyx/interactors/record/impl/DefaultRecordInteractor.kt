@@ -3,7 +3,7 @@ package com.onyx.interactors.record.impl
 import com.onyx.descriptor.BaseDescriptor
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
-import com.onyx.diskmap.OrderedDiskMap
+import com.onyx.diskmap.SortedDiskMap
 import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.EntityCallbackException
@@ -204,7 +204,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long> = (records as OrderedDiskMap<Any, IManagedEntity>).above(indexValue, includeValue)
+    override fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).above(indexValue, includeValue)
 
     /**
      * Find all objects less than the key parameter.  The underlying data
@@ -217,7 +217,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long> = (records as OrderedDiskMap<Any, IManagedEntity>).below(indexValue, includeValue)
+    override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).below(indexValue, includeValue)
 
     companion object {
 

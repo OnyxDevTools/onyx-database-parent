@@ -10,7 +10,7 @@ import java.util.Set;
  *
  * @since 1.2.0
  */
-public interface OrderedDiskMap<K,V> extends Map<K,V> {
+public interface SortedDiskMap<K,V> extends Map<K,V> {
 
     /**
      * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure

@@ -1,6 +1,7 @@
 package com.onyx.buffer;
 
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
 
 import java.io.Serializable;
 
@@ -32,4 +33,11 @@ public interface BufferStreamable extends Serializable {
     @SuppressWarnings("unused")
     void write(BufferStream buffer) throws BufferingException;
 
+    default void write(BufferStream buffer, SchemaContext context) throws BufferingException{
+        write(buffer);
+    }
+
+    default void read(BufferStream buffer, SchemaContext context) throws BufferingException{
+        read(buffer);
+    }
 }

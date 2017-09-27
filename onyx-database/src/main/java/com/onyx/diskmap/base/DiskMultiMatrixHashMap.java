@@ -1,7 +1,7 @@
 package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.OrderedDiskMap;
+import com.onyx.diskmap.SortedDiskMap;
 import com.onyx.diskmap.base.concurrent.*;
 import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
 import com.onyx.diskmap.node.CombinedIndexHashMatrixNode;
@@ -38,7 +38,7 @@ import java.util.Set;
  * @since 1.2.0 This was re-factored not to have a dependent sub map.
  */
 @SuppressWarnings("unchecked")
-public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K,V> {
+public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, SortedDiskMap<K,V> {
 
     private DispatchLock dispatchLock = new DefaultDispatchLock();
 

@@ -1,9 +1,9 @@
 package com.onyx.diskmap.base;
 
+import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.node.HashMatrixNode;
 import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
 import com.onyx.util.map.AbstractCompatMap;
 
@@ -49,10 +49,15 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("WeakerAccess")
     void updateHeaderRecordCount() {
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(header.recordCount.get());
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Long.BYTES);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        try {
+            buffer.putLong(header.recordCount.get());
+            buffer.flip();
+            fileStore.write(buffer, header.position + Long.BYTES);
+        }
+        finally {
+            BufferStream.recycle(buffer);
+        }
     }
 
     /**
@@ -63,11 +68,15 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("unused")
     protected void updateHeaderFirstNode(Header header, long firstNode) {
-        this.header.firstNode = firstNode;
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(firstNode);
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        try {
+            buffer.putLong(firstNode);
+            buffer.flip();
+            fileStore.write(buffer, header.position);
+        }
+        finally {
+            BufferStream.recycle(buffer);
+        }
     }
 
     /**

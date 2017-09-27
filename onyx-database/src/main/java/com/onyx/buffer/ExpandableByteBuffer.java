@@ -13,7 +13,7 @@ class ExpandableByteBuffer
 {
 
     // Default Buffer Size
-    static final int BUFFER_ALLOCATION = 1024 * 5; // Initial Buffer allocation size 5kb
+    static final int BUFFER_ALLOCATION = 1024 * 6; // Initial Buffer allocation size 6KB
 
     public ByteBuffer buffer;
     private int maxBufferSize = 0;
@@ -73,6 +73,7 @@ class ExpandableByteBuffer
             buffer.limit(buffer.position());
             buffer.rewind();
             tempBuffer.put(buffer);
+            BufferStream.recycle(buffer);
             buffer = tempBuffer;
         }
     }

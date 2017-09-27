@@ -1,8 +1,8 @@
 package com.onyx.diskmap.store
 
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
-import com.onyx.diskmap.serializer.Serializers
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
+import com.onyx.persistence.context.SchemaContext
 import java.nio.ByteBuffer
 
 /**
@@ -13,21 +13,24 @@ import java.nio.ByteBuffer
 interface Store {
 
     /**
+     * Getter for file path for store.  If this is in memory, this will be null
+     *
+     * @return File path
+     */
+    val filePath: String
+
+    /**
+     * Get the Database context for integration with Onyx Database components and serialization
+     */
+    val context:SchemaContext?
+
+    /**
      * Write a serializable object to
      *
      * @param serializable Object serializable to write to store
      * @param position location to write to
      */
-    fun write(serializable: ObjectSerializable, position: Long): Int
-
-    /**
-     * Write an Object Buffer
-     *
-     * @param serializable Object to write
-     * @param position Position within the volume to write to.
-     * @return How many bytes were written
-     */
-    fun write(serializable: ObjectBuffer, position: Long): Int
+    fun write(serializable: BufferStreamable, position: Long): Int
 
     /**
      * Write a serializable object
@@ -36,7 +39,7 @@ interface Store {
      * @param size Amount of bytes to read.
      * @return Object Buffer contains bytes read
      */
-    fun read(position: Long, size: Int): ObjectBuffer?
+    fun read(position: Long, size: Int): BufferStream?
 
     /**
      * Read the file channel and put it into a buffer at a position
@@ -45,6 +48,15 @@ interface Store {
      * @param position position in store to read
      */
     fun read(buffer: ByteBuffer, position: Long)
+
+    /**
+     * Write an Object Buffer
+     *
+     * @param buffer Byte buffer to write
+     * @param position Position within the volume to write to.
+     * @return How many bytes were written
+     */
+    fun write(buffer: ByteBuffer, position: Long): Int
 
     /**
      * Read a serializable object from the store
@@ -64,17 +76,7 @@ interface Store {
      * @param serializable object to read into
      * @return same object instance that was sent in.
      */
-    fun read(position: Long, size: Int, serializable: ObjectSerializable): Any?
-
-    /**
-     * Read a serializable object
-     *
-     * @param position Position to read from
-     * @param size Amount of bytes to read.
-     * @param serializerId Key to the serializer version that was used when written to the store
-     * @return Object read from the store
-     */
-    fun read(position: Long, size: Int, type: Class<*>, serializerId: Int): Any?
+    fun read(position: Long, size: Int, serializable: BufferStreamable): Any?
 
     /**
      * Allocates a spot in the file
@@ -83,12 +85,6 @@ interface Store {
      * @return position of started allocated bytes
      */
     fun allocate(size: Int): Long
-
-    /**
-     * Getter for serializers
-     * @return Serializers used to serialize Object Buffers
-     */
-    val serializers: Serializers?
 
     /**
      * Getter for file longSize
@@ -110,24 +106,10 @@ interface Store {
     fun commit()
 
     /**
-     * Initialize
-     * @param mapById Serializers by id
-     * @param mapByName Serializers by name
-     */
-    fun assignSerializers(mapById: Map<Short, String>, mapByName: Map<String, Short>)
-
-    /**
      * Delete File
      *
      */
     fun delete()
-
-    /**
-     * Getter for file path for store.  If this is in memory, this will be null
-     *
-     * @return File path
-     */
-    val filePath: String
 
     /**
      * Reset the storage so that it has a clean slate
@@ -136,4 +118,5 @@ interface Store {
      * @since 1.3.0
      */
     fun reset()
+
 }

@@ -1,5 +1,8 @@
 package com.onyx.buffer;
 
+import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.SchemaContext;
+
 import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
@@ -7,7 +10,7 @@ import java.util.Map;
 /**
  * This Enum indicates all of the different types of objects that can be serialized
  */
-enum BufferObjectType {
+public enum BufferObjectType {
 
     NULL(null),
     REFERENCE(null),
@@ -76,7 +79,7 @@ enum BufferObjectType {
      * @return The serializer type that correlates to that class.
      */
     @SuppressWarnings("unchecked")
-    public static BufferObjectType getTypeCodeForClass(Object object) {
+    public static BufferObjectType getTypeCodeForClass(Object object, SchemaContext context) {
 
         if(object == null)
             return NULL;
@@ -85,6 +88,9 @@ enum BufferObjectType {
 
         if(type.isEnum())
             return ENUM;
+
+        if(object instanceof IManagedEntity && context == null)
+                return BufferObjectType.OTHER;
 
         for (BufferObjectType bufferObjectType : BufferObjectType.values()) {
             if (bufferObjectType.type != null && bufferObjectType.type.isAssignableFrom(type)) {

@@ -1,7 +1,7 @@
 package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.OrderedDiskMap;
+import com.onyx.diskmap.SortedDiskMap;
 import com.onyx.diskmap.base.concurrent.*;
 import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
 import com.onyx.diskmap.node.CombinedIndexHashNode;
@@ -34,7 +34,7 @@ import java.util.*;
  * @since 1.2.0 This was added to offer a more efficient version of the DiskMultiMatrixHashMap for smaller data sets.
  */
 @SuppressWarnings("unchecked")
-public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, OrderedDiskMap<K, V> {
+public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, SortedDiskMap<K, V> {
 
     private DispatchLock dispatchLock = new DefaultDispatchLock();
 

@@ -1,15 +1,19 @@
 package com.onyx.buffer;
 
+import com.onyx.entity.SystemAttribute;
+import com.onyx.entity.SystemEntity;
+import com.onyx.exception.OnyxException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.CompatMap;
 import com.onyx.exception.BufferingException;
 import com.onyx.util.OffsetField;
 import com.onyx.util.ReflectionUtil;
+import sun.nio.ch.DirectBuffer;
 
 import java.lang.reflect.Array;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.*;
 
 /**
@@ -21,6 +25,18 @@ import java.util.*;
  */
 @SuppressWarnings("unchecked")
 public class BufferStream {
+
+    private SchemaContext context;
+
+    /**
+     * Default constructor with no buffer
+     */
+    @SuppressWarnings("WeakerAccess")
+    public BufferStream(SchemaContext context)
+    {
+        this(allocate(ExpandableByteBuffer.BUFFER_ALLOCATION));
+        this.context = context;
+    }
 
     /**
      * Default constructor with no buffer
@@ -40,6 +56,15 @@ public class BufferStream {
         this.expandableByteBuffer = new ExpandableByteBuffer(buffer);
     }
 
+    /**
+     * Constructor with underlying byte buffer
+     * @param size Size of buffer to allocate
+     */
+    public BufferStream(int size)
+    {
+        this(allocateAndLimit(size));
+    }
+
     // Number of references to retain the index number of the said reference
     private int referenceCount = 0;
 
@@ -49,17 +74,11 @@ public class BufferStream {
     // Indicates whether we are pulling from the expandableByteBuffer or putting into the expandableByteBuffer.
     private boolean isComingFromBuffer = false;
 
-    // Buffer pool to pick from existing so that we can avoid re-allocation
-    private final static TreeSet<RecycledBuffer> buffers = new TreeSet<>();
-
     // References by class and object hash.
     private final CompatMap<Class, CompatMap<Object, Integer>> references = new CompatHashMap<>();
 
     // References by index number ordered by first used
     private final CompatMap<Integer, Object> referencesByIndex = new CompatHashMap<>();
-
-    // 5 Megabytes of allocated memory max that can be sitting in stale unused buffers waiting to be used
-    private static final int MAX_MEMORY_USE = 1024 * 1024 * 5;
 
     /**
      * Add a reference by class and sequential order by which it was used
@@ -123,26 +142,34 @@ public class BufferStream {
      * Convert an object to the byte buffer representation
      *
      * @param object Object to convert to a byte buffer
+     * @param context Schema Context for managed entities
+     * @return The ByteBuffer the object was serialized into
+     * @since 1.1.0
+     * @throws BufferingException Generic serialization exception when buffering
+     */
+    public static ByteBuffer toBuffer(Object object, SchemaContext context) throws BufferingException {
+
+        BufferStream bufferStream = new BufferStream(context);
+        bufferStream.getByteBuffer().position(Integer.BYTES);
+        bufferStream.putObject(object);
+        bufferStream.getByteBuffer().flip();
+        bufferStream.getByteBuffer().putInt(bufferStream.getByteBuffer().limit());
+        bufferStream.getByteBuffer().rewind();
+
+        return bufferStream.getByteBuffer();
+    }
+
+    /**
+     * Convert an object to the byte buffer representation
+     *
+     * @param object Object to convert to a byte buffer
+     * @param context Schema Context for managed entities
      * @return The ByteBuffer the object was serialized into
      * @since 1.1.0
      * @throws BufferingException Generic serialization exception when buffering
      */
     public static ByteBuffer toBuffer(Object object) throws BufferingException {
-        ByteBuffer buffer = allocate(ExpandableByteBuffer.BUFFER_ALLOCATION);
-
-        BufferStream bufferStream = new BufferStream();
-        bufferStream.expandableByteBuffer = new ExpandableByteBuffer(buffer);
-        buffer.putInt(0);
-
-        bufferStream.putObject(object);
-
-        buffer = bufferStream.expandableByteBuffer.buffer;
-        buffer.limit(buffer.position());
-        buffer.rewind();
-        buffer.putInt(buffer.limit());
-        buffer.rewind();
-
-        return buffer;
+        return toBuffer(object, null);
     }
 
     /**
@@ -150,18 +177,30 @@ public class BufferStream {
      * @param buffer Buffer to read from
      * @return The object read from the buffer
      * @since 1.1.0
-     * @throws BufferingException Generic de-serialization exception ocurred when trying to generate
+     * @throws BufferingException Generic de-serialization exception occurred when trying to generate
      */
     public static Object fromBuffer(ByteBuffer buffer) throws BufferingException {
+        return fromBuffer(buffer, null);
+    }
 
-        BufferStream bufferStream = new BufferStream();
+    /**
+     * Convert a buffer to an object by de-serializing the bytes in the buffer
+     * @param buffer Buffer to read from
+     * @param context Schema context for managed entities
+     * @return The object read from the buffer
+     * @since 1.1.0
+     * @throws BufferingException Generic de-serialization exception occurred when trying to generate
+     */
+    public static Object fromBuffer(ByteBuffer buffer, SchemaContext context) throws BufferingException {
+
+        BufferStream bufferStream = new BufferStream(context);
 
         int bufferStartingPosition = buffer.position();
         int maxBufferSize = buffer.getInt();
 
+        bufferStream.recycle(); // Recycle the allocated before re-defining buffer
         bufferStream.expandableByteBuffer = new ExpandableByteBuffer(buffer, bufferStartingPosition, maxBufferSize);
         bufferStream.isComingFromBuffer = true;
-
         Object returnValue;
 
         try {
@@ -173,8 +212,6 @@ public class BufferStream {
             buffer.position(maxBufferSize + bufferStartingPosition);
             if(e instanceof BufferUnderflowException)
                 throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW);
-            else if(e instanceof BufferingException)
-                throw (BufferingException)e;
             else
                 throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE);
         }
@@ -219,7 +256,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    private void putArray(Object array) throws BufferingException {
+    public void putArray(Object array) throws BufferingException {
 
         if (array.getClass() == long[].class) {
             final long[] arr = (long[]) array;
@@ -394,7 +431,10 @@ public class BufferStream {
      */
     private void putBuffered(BufferStreamable bufferStreamable) throws BufferingException {
         putObject(bufferStreamable.getClass());
-        bufferStreamable.write(this);
+        if(context == null)
+            bufferStreamable.write(this);
+        else
+            bufferStreamable.write(this, context);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -416,7 +456,7 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    private void putOther(Object object) throws BufferingException {
+    public void putOther(Object object) throws BufferingException {
 
         putObject(object.getClass());
         addReference(object);
@@ -568,6 +608,11 @@ public class BufferStream {
         expandableByteBuffer.buffer.putChar(value);
     }
 
+    public int putObject(Object object, SchemaContext context) throws BufferingException {
+        this.context = context;
+        return putObject(object);
+    }
+
     /**
      * Put a generic object to the buffer.  Note this is less efficient because it has to abstract the type and add that to
      * the packet.  For primitives, I recommend using the primitive put methods.
@@ -577,9 +622,11 @@ public class BufferStream {
      *
      * @throws BufferingException Generic Buffer Exception
      */
-    public void putObject(Object object) throws BufferingException {
+    public int putObject(Object object) throws BufferingException {
 
-        BufferObjectType bufferObjectType = BufferObjectType.getTypeCodeForClass(object);
+        int position = getByteBuffer().position();
+
+        BufferObjectType bufferObjectType = BufferObjectType.getTypeCodeForClass(object, context);
         short referenceNumber = (short) referenceIndex(object);
         if (referenceNumber > -1) bufferObjectType = BufferObjectType.REFERENCE;
 
@@ -590,7 +637,7 @@ public class BufferStream {
 
             switch (bufferObjectType) {
                 case NULL:
-                    return;
+                    return getByteBuffer().position() -  position;
                 case REFERENCE:
                     putShort(referenceNumber);
                     break;
@@ -668,9 +715,13 @@ public class BufferStream {
                 throw new com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, (object != null) ? object.getClass() : null);
             else if(e instanceof BufferingException)
                 throw (BufferingException)e;
+            else if(e instanceof OnyxException)
+                throw e;
             else
                 throw new BufferingException(BufferingException.UNKNOWN_DESERIALIZE, (object != null) ? object.getClass() : null);
         }
+
+        return  getByteBuffer().position() -  position;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////
@@ -810,6 +861,19 @@ public class BufferStream {
     // Get Object Methods
     //
     ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Get a generic object.  Note: This must have been wrapped to ensure the type was added to the buffer so we know what we are
+     * getting.  This will read the object detect if it is null, a reference, and gather the type to read it into.
+     *
+     * @since  1.1.0
+     * @return Object read from the buffer
+     * @throws BufferingException Generic Buffer Exception
+     */
+    public Object getObject(SchemaContext context) throws BufferingException {
+        this.context = context;
+        return getObject();
+    }
 
     /**
      * Get a generic object.  Note: This must have been wrapped to ensure the type was added to the buffer so we know what we are
@@ -1051,7 +1115,7 @@ public class BufferStream {
      * @return An Array
      * @throws BufferingException Generic Buffer Exception
      */
-    private Object getArray(BufferObjectType type) throws BufferingException {
+    public Object getArray(BufferObjectType type) throws BufferingException {
         if (type == BufferObjectType.LONG_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
             final long[] arr = new long[expandableByteBuffer.buffer.getInt()];
@@ -1150,76 +1214,24 @@ public class BufferStream {
      * @throws BufferingException Generic Buffer Exception
      */
     private BufferStreamable getBuffered() throws BufferingException {
-        final BufferStreamable bufferStreamable;
         Class classToInstantiate = (Class) getObject();
-        bufferStreamable = (BufferStreamable) instantiate(classToInstantiate);
-        bufferStreamable.read(this);
+        BufferStreamable bufferStreamable = (BufferStreamable) instantiate(classToInstantiate);
+        if (context == null)
+            bufferStreamable.read(this);
+        else
+            bufferStreamable.read(this, context);
         return bufferStreamable;
     }
 
-    /**
-     * Allocation that will encapsulate the endian as well as the allocation method
-     *
-     * @param count Size to allocate
-     * @return An Allocated ByteBuffer
-     */
-    public static ByteBuffer allocate(int count) {
-        synchronized (buffers) {
-            if (buffers.size() > 0) {
-                RecycledBuffer reclaimedBuffer = buffers.higher(new RecycledBuffer(count));
-                if (reclaimedBuffer != null) {
-                    staleBufferMemory -= reclaimedBuffer.getBuffer().capacity();
-                    buffers.remove(reclaimedBuffer);
-                    return reclaimedBuffer.getBuffer();
-                }
-            }
-            final ByteBuffer buffer = ByteBuffer.allocate(count);
-            buffer.order(ByteOrder.BIG_ENDIAN);
-            return buffer;
-        }
+    public void clear() {
+        getByteBuffer().clear();
+        references.clear();
+        referencesByIndex.clear();
     }
 
-    /**
-     * Allocation that will encapsulate the endian as well as the allocation method
-     *
-     * @param count Size to allocate
-     * @return An Allocated ByteBuffer and limit to the amount of bytes
-     */
-    public static ByteBuffer allocateAndLimit(int count) {
-        ByteBuffer buffer = allocate(count);
-        buffer.limit(count);
-        return buffer;
-    }
-
-    private static volatile int staleBufferMemory = 0;
-
-    /**
-     * Recycle a byte buffer to be reused
-     * @param buffer byte buffer to recycle and reuse
-     */
-    public static void recycle(ByteBuffer buffer) {
-        synchronized (buffers) {
-            buffer.limit(buffer.capacity());
-            buffers.add(new RecycledBuffer(buffer));
-            staleBufferMemory += buffer.capacity();
-
-            // Remove the upper and lower bounds to clean up memory
-            while(staleBufferMemory > MAX_MEMORY_USE
-                    && buffers.size() > 0)
-            {
-                if(buffers.size() > 0)
-                {
-                    RecycledBuffer recycledBuffer = buffers.pollLast();
-                    buffers.remove(recycledBuffer);
-                    staleBufferMemory-=recycledBuffer.capacity();
-                }
-                if(buffers.size() > 0) {
-                    RecycledBuffer recycledBuffer = buffers.pollFirst();
-                    buffers.remove(recycledBuffer);
-                    staleBufferMemory -= recycledBuffer.capacity();
-                }
-            }
-        }
+    public void clearReferences() {
+        references.clear();
+        referencesByIndex.clear();
     }
 
     /**
@@ -1239,5 +1251,111 @@ public class BufferStream {
     public void flip()
     {
         this.expandableByteBuffer.buffer.flip();
+    }
+
+
+    /**
+     * Converts the buffer to a key key structure.  Note this is intended to use only with ManagedEntities
+     *
+     * @param context Schema context
+     * @return Map representation of the object
+     */
+    @SuppressWarnings("unchecked")
+    public Map toMap(SchemaContext context)
+    {
+        HashMap results = new HashMap();
+
+        SystemEntity systemEntity = null;
+        try {
+            getByte();  // Read the buffer object metadata
+            getObject(); // Read the entity type
+            systemEntity = context.getSystemEntityById(getInt());
+        } catch (BufferingException e) {
+            e.printStackTrace();
+        }
+
+        for (SystemAttribute attribute : systemEntity.getAttributes())
+        {
+            Object obj = null;
+            try {
+                obj = this.getObject();
+            } catch (BufferingException e) {
+                e.printStackTrace();
+            }
+            results.put(attribute.getName(), obj);
+        }
+
+        return results;
+    }
+
+    private static ArrayDeque<ByteBuffer> SMALL_BUFFER_POOL = new ArrayDeque(200);
+    private static ArrayDeque<ByteBuffer> MEDIUM_BUFFER_POOL = new ArrayDeque(100);
+    private static ArrayDeque<ByteBuffer> LARGE_BUFFER_POOL = new ArrayDeque(50);
+
+    static {
+        for(int i = 0; i < 50; i++){
+            LARGE_BUFFER_POOL.add(ByteBuffer.allocate(18 * 1024));
+        }
+        for(int i = 0; i < 100; i++) {
+            MEDIUM_BUFFER_POOL.add(ByteBuffer.allocate(1024*6));
+        }
+        for(int i = 0; i < 200; i++){
+            SMALL_BUFFER_POOL.add(ByteBuffer.allocate(512));
+        }
+    }
+
+    public void recycle() {
+        recycle(getByteBuffer());
+    }
+
+    /**
+     * Recycle a byte buffer to be reused
+     * @param buffer byte buffer to recycle and reuse
+     */
+    public static void recycle(ByteBuffer buffer) {
+        buffer.clear();
+        synchronized (SMALL_BUFFER_POOL) {
+            if (buffer.capacity() >= 18 * 1024 && LARGE_BUFFER_POOL.size() < 50)
+                LARGE_BUFFER_POOL.offer(buffer);
+            else if (buffer.capacity() >= 1024 * 6 && MEDIUM_BUFFER_POOL.size() < 100)
+                MEDIUM_BUFFER_POOL.offer(buffer);
+            else if (buffer.capacity() >= 512 && SMALL_BUFFER_POOL.size() < 200)
+                SMALL_BUFFER_POOL.offer(buffer);
+        }
+    }
+
+    /**
+     * Allocation that will encapsulate the endian as well as the allocation method
+     *
+     * @param count Size to allocate
+     * @return An Allocated ByteBuffer
+     */
+    public static ByteBuffer allocate(int count) {
+        ByteBuffer returnValue = null;
+
+        synchronized (SMALL_BUFFER_POOL) {
+            if (count <= 512)
+                returnValue = SMALL_BUFFER_POOL.poll();
+            else if (count <= 1024 * 6)
+                returnValue = MEDIUM_BUFFER_POOL.poll();
+            else if (count <= 18 * 1024)
+                returnValue = LARGE_BUFFER_POOL.poll();
+        }
+
+        if(returnValue == null)
+            returnValue = ByteBuffer.allocate(count);
+        return returnValue;
+    }
+
+    /**
+     * Allocation that will encapsulate the endian as well as the allocation method
+     *
+     * @param count Size to allocate
+     * @return An Allocated ByteBuffer and limit to the amount of bytes
+     */
+    public static ByteBuffer allocateAndLimit(int count) {
+        ByteBuffer buffer = allocate(count);
+        buffer.limit(count);
+        return buffer;
     }
 }

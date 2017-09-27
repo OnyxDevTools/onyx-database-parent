@@ -1,7 +1,6 @@
 package com.onyx.diskmap
 
 import com.onyx.diskmap.node.Header
-import com.onyx.diskmap.serializer.Serializers
 
 /**
  * Created by tosborn1 on 7/30/15.
@@ -111,14 +110,6 @@ interface MapBuilder {
      * @since 1.0.0
      */
     fun delete()
-
-    /**
-     * Getter for serializers
-     *
-     * @return Custom serializes shared within the data structures
-     * @since 1.0.0
-     */
-    val serializers: Serializers
 
     /**
      * Create a new Map reference header

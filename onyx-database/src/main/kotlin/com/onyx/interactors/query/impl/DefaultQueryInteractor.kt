@@ -240,8 +240,8 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * The most important part of this is to recycle the temporary map builders.
      */
     override fun cleanup() {
-        val context = Contexts.get(contextId)!!
-        context.releaseMapBuilder(this.temporaryDataFile)
+        val context = Contexts.get(contextId)
+        context?.releaseMapBuilder(this.temporaryDataFile)
     }
 
     /**

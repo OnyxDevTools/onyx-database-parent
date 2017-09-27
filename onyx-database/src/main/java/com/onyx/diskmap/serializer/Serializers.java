@@ -20,15 +20,14 @@ public class Serializers {
     @SuppressWarnings("unchecked")
     final private CompatMap<Short, Class> mapCache = new SynchronizedMap(new CompatWeakHashMap());
 
-    public SchemaContext context;
-
     /**
      * Constructor with no parameters
      */
-    @SuppressWarnings("unused")
     public Serializers() {
 
     }
+
+    public SchemaContext context;
 
     /**
      * Constructor

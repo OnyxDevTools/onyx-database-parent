@@ -3,8 +3,8 @@ package com.onyx.diskmap.base.hashmap;
 import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.DiskSkipListMap;
 import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
+import com.onyx.exception.BufferingException;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
 
     @SuppressWarnings("WeakerAccess")
-    final AtomicInteger mapCount; // Count of allocated hash table used
+    AtomicInteger mapCount = new AtomicInteger(0); // Count of allocated hash table used
     private final int referenceOffset; // Offest of the references
     private final int listReferenceOffset; // Offest of the iteration list reference
 
@@ -57,8 +57,13 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
         {
             // It already exist.  Get the map count.  It is located within the first 4 bytes of the allocated hash table space.
             long position = header.firstNode;
-            final ObjectBuffer objectBuffer = fileStore.read(position, Integer.BYTES);
-            mapCount = new AtomicInteger(objectBuffer.readInt());
+            final BufferStream stream = fileStore.read(position, Integer.BYTES);
+            try {
+                mapCount = new AtomicInteger(stream.getInt());
+            } catch (BufferingException e) {
+            } finally {
+                stream.recycle();
+            }
         }
 
         referenceOffset = countBytes;
@@ -79,18 +84,23 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     {
         ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
 
-        // Update count
-        int count = incrementMapCount();
-        buffer.putInt(count);
-        fileStore.write(new ObjectBuffer(buffer, null), header.firstNode);
+        try {
+            // Update count
+            int count = incrementMapCount();
+            buffer.putInt(count);
+            buffer.flip();
+            fileStore.write(buffer, header.firstNode);
 
-        buffer.clear();
-        buffer.putLong(reference);
-        fileStore.write(new ObjectBuffer(buffer, null), (header.firstNode + referenceOffset + (hash*8)));
+            buffer.clear();
+            buffer.putLong(reference);
+            buffer.flip();
+            fileStore.write(buffer, (header.firstNode + referenceOffset + (hash * 8)));
 
-        addIterationList(buffer, hash, count-1);
+            addIterationList(buffer, hash, count - 1);
+        } finally {
+            BufferStream.recycle(buffer);
+        }
 
-        BufferStream.recycle(buffer);
         return reference;
     }
 
@@ -109,7 +119,8 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
         // Add list reference for iterating
         buffer.clear();
         buffer.putInt(hash);
-        fileStore.write(new ObjectBuffer(buffer, null), (header.firstNode + listReferenceOffset + (count * Integer.BYTES)));
+        buffer.flip();
+        fileStore.write(buffer, (header.firstNode + listReferenceOffset + (count * Integer.BYTES)));
     }
 
     /**
@@ -124,10 +135,15 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     protected long updateReference(int hash, long reference)
     {
         long position = (header.firstNode + referenceOffset + (hash*8));
-        ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
-        buffer.putLong(reference);
-        fileStore.write(new ObjectBuffer(buffer, null), position);
-        BufferStream.recycle(buffer);
+        ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        try {
+            buffer.putLong(reference);
+            buffer.flip();
+            fileStore.write(buffer, position);
+        }
+        finally {
+            BufferStream.recycle(buffer);
+        }
         return reference;
     }
 
@@ -141,8 +157,15 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     protected int getMapIdentifier(int index)
     {
         long position = header.firstNode + listReferenceOffset + (index * Integer.BYTES);
-        final ObjectBuffer objectBuffer = fileStore.read(position, Integer.BYTES);
-        return objectBuffer.readInt();
+        final BufferStream stream = fileStore.read(position, Integer.BYTES);
+        try {
+            return stream.getInt();
+        } catch (BufferingException e){
+            return 0;
+        }
+        finally {
+            stream.recycle();
+        }
     }
 
     /**
@@ -156,8 +179,15 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     protected long getReference(int hash)
     {
         long position = (hash*8) + referenceOffset + header.firstNode;
-        final ObjectBuffer objectBuffer = fileStore.read(position, Long.BYTES);
-        return objectBuffer.readLong();
+        final BufferStream stream = fileStore.read(position, Long.BYTES);
+        try {
+            return stream.getLong();
+        } catch (BufferingException e){
+            return 0;
+        }
+        finally {
+            stream.recycle();
+        }
     }
 
     /**

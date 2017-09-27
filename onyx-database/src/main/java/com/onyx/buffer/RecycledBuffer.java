@@ -1,6 +1,8 @@
 package com.onyx.buffer;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by tosborn1 on 8/2/16.
@@ -11,7 +13,9 @@ import java.nio.ByteBuffer;
 class RecycledBuffer implements Comparable<RecycledBuffer> {
 
     private ByteBuffer buffer;
-    private final int capacity;
+    private long bufferId;
+    private static final AtomicLong bufferIdGenerator = new AtomicLong(0L);
+    private int capacity;
 
     /**
      * Constructor with ByteBuffer
@@ -20,10 +24,13 @@ class RecycledBuffer implements Comparable<RecycledBuffer> {
      */
     @SuppressWarnings("unused")
     RecycledBuffer(ByteBuffer buffer) {
-        buffer.limit(buffer.capacity());
-        buffer.rewind();
         this.buffer = buffer;
+        this.bufferId = bufferIdGenerator.getAndIncrement();
         this.capacity = buffer.capacity();
+    }
+
+    RecycledBuffer(int capacity) {
+        this.capacity = capacity;
     }
 
     /**
@@ -36,22 +43,12 @@ class RecycledBuffer implements Comparable<RecycledBuffer> {
     }
 
     /**
-     * Constructor with capacity.  This is used when just wanting to compare capacity and not the bytebuffer.
-     * Used by the higher method.
-     * @param capacity The size of the buffer required.
-     */
-    @SuppressWarnings("unused")
-    RecycledBuffer(int capacity) {
-        this.capacity = capacity;
-    }
-
-    /**
      * Hash Code of the buffer
      * @return The buffer hash code
      */
     @Override
     public int hashCode() {
-        return buffer.hashCode();
+        return Objects.hashCode(bufferId);
     }
 
     /**
@@ -63,7 +60,7 @@ class RecycledBuffer implements Comparable<RecycledBuffer> {
     @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     @Override
     public boolean equals(Object obj) {
-        return buffer instanceof ByteBuffer && buffer.equals(obj);
+        return obj instanceof RecycledBuffer && ((RecycledBuffer) obj).bufferId == this.bufferId;
     }
 
     /**
@@ -74,7 +71,8 @@ class RecycledBuffer implements Comparable<RecycledBuffer> {
      */
     @Override
     public int compareTo(RecycledBuffer o) {
-        return new Integer(capacity).compareTo(o.capacity);
+        if(o.bufferId == bufferId) return 0;
+        return (capacity >= o.capacity) ? 1 : -1;
     }
 
     /**

@@ -1,11 +1,12 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferStream
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
+import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
+import com.onyx.extension.perform
+import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.util.ReflectionUtil
 
@@ -95,51 +96,39 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Write an Object Buffer
-     *
-     * @param serializable Object buffer to write
-     * @param position position within store to write to
-     * @return How many bytes were written
-     */
-    override fun write(serializable: ObjectBuffer, position: Long): Int {
-        val byteBuffer = serializable.byteBuffer
-        return this.write(byteBuffer, position)
-    }
-
-    /**
      * Write a buffer.  This is a helper function to work with a buffer rather than a FileChannel
      *
-     * @param byteBuffer Byte buffer to write
+     * @param buffer Byte buffer to write
      * @param position position within store to write to
      * @return how many bytes were written
      */
-    protected fun write(byteBuffer: ByteBuffer, position: Long): Int {
+    override fun write(buffer: ByteBuffer, position: Long): Int {
 
         val slice = getBuffer(position)
 
         val bufLocation = getBufferLocation(position)
-        val endBufLocation = bufLocation + byteBuffer.limit()
+        val endBufLocation = bufLocation + buffer.limit()
 
         // This occurs when we bridge from one slice to another
         if (endBufLocation > bufferSliceSize) {
-            val overflowSlice = getBuffer(position + byteBuffer.limit())
+            val overflowSlice = getBuffer(position + buffer.limit())
 
             synchronized(slice) {
                 slice.buffer.position(bufLocation)
                 for (i in 0 until bufferSliceSize - bufLocation)
-                    slice.buffer.put(byteBuffer.get())
+                    slice.buffer.put(buffer.get())
             }
             synchronized(overflowSlice) {
                 overflowSlice.buffer.position(0)
                 for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
-                    overflowSlice.buffer.put(byteBuffer.get())
+                    overflowSlice.buffer.put(buffer.get())
             }
-            return byteBuffer.position()
+            return buffer.position()
         } else {
             return synchronized(slice) {
                 slice.buffer.position(getBufferLocation(position))
-                slice.buffer.put(byteBuffer)
-                return@synchronized byteBuffer.position()
+                slice.buffer.put(buffer)
+                return@synchronized buffer.position()
             }
         }
     }
@@ -177,8 +166,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
                 val bytesToRead = buffer.limit()
                 for (i in 0 until bytesToRead)
                     buffer.put(slice.buffer.get())
-
-                buffer.flip()
             }
         }
     }
@@ -190,32 +177,15 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param size Amount of bytes to read
      * @return Object buffer that was read
      */
-    override fun read(position: Long, size: Int): ObjectBuffer? {
+    override fun read(position: Long, size: Int): BufferStream? {
         if (!validateFileSize(position))
             return null
 
-        val buffer = ObjectBuffer.allocate(size)
+        val buffer = BufferStream.allocateAndLimit(size)
         this.read(buffer, position)
-        buffer.rewind()
+        buffer.flip()
 
-        return ObjectBuffer(buffer, serializers)
-    }
-
-    /**
-     * Read a from the store and put it into the serializable object that is already instantiated
-     *
-     * @param position position to read from the store
-     * @param size     how many bytes to read
-     * @param serializable   object to map the results to
-     * @return the object you sent in
-     */
-    override fun read(position: Long, size: Int, serializable: ObjectSerializable): Any? {
-        if (!validateFileSize(position))
-            return null
-
-        val buffer = read(position, size)
-        serializable.readObject(buffer!!)
-        return serializable
+        return BufferStream(buffer)
     }
 
     /**
@@ -249,45 +219,16 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param serializable Object serializable to write to store
      * @param position location to write to
      */
-    override fun write(serializable: ObjectSerializable, position: Long): Int {
-        val objectBuffer = ObjectBuffer(serializers)
-        serializable.writeObject(objectBuffer)
+    override fun write(serializable: BufferStreamable, position: Long): Int {
+        val stream = BufferStream()
 
-        return this.write(objectBuffer.byteBuffer, position)
-    }
-
-    /**
-     * Write a serializable object
-     *
-     * @since 1.2.0 This was migrated to use the Buffer stream.
-     *
-     * @param position Position within store
-     * @param size Size of object to read
-     * @param serializerId Serializer version
-     * @return instantiated serialized object read from store
-     */
-    override fun read(position: Long, size: Int, type: Class<*>, serializerId: Int): Any? {
-        if (!validateFileSize(position))
-            return null
-
-        val buffer = BufferStream.allocate(size)
-
-        this.read(buffer, position)
-        buffer.rewind()
-
-        return try {
-            when {
-                serializerId > 0 -> ObjectBuffer.unwrap(buffer, serializers, serializerId)
-                ObjectSerializable::class.java.isAssignableFrom(type) -> {
-                    val serializable = ReflectionUtil.instantiate(type)//type.newInstance();
-                    val objectBuffer = ObjectBuffer(buffer, serializers)
-                    (serializable as ObjectSerializable).readObject(objectBuffer, position)
-                    serializable
-                }
-                else -> ObjectBuffer.unwrap(buffer, serializers)
-            }
-        } finally {
-            BufferStream.recycle(buffer)
+        try {
+            serializable.write(stream)
+            stream.flip()
+            return this.write(stream.byteBuffer, position)
+        }
+        finally {
+            stream.recycle()
         }
     }
 
@@ -303,22 +244,20 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferStream.allocate(size)
+        val buffer = BufferStream(size)
 
-        this.read(buffer, position)
-        buffer.rewind()
+        return buffer.perform {
+            this.read(buffer.byteBuffer, position)
+            buffer.flip()
 
-        return try {
-            if (ObjectSerializable::class.java.isAssignableFrom(type)) {
-                val serializable = ReflectionUtil.instantiate(type)//type.newInstance();
-                val objectBuffer = ObjectBuffer(buffer, serializers)
-                (serializable as ObjectSerializable).readObject(objectBuffer, position)
-                serializable
-            } else {
-                ObjectBuffer.unwrap(buffer, serializers)
+            return@perform when {
+                BufferStreamable::class.java.isAssignableFrom(type) -> {
+                    val streamable = ReflectionUtil.instantiate(type) as BufferStreamable
+                    streamable.read(buffer, context)
+                    streamable
+                }
+                else -> buffer.`object`
             }
-        } finally {
-            BufferStream.recycle(buffer)
         }
     }
 
@@ -334,6 +273,27 @@ open class MemoryMappedStore : FileChannelStore, Store {
             index = (position % bufferSliceSize).toInt()
         }
         return index
+    }
+
+    /**
+     * Read a serializable object
+     *
+     * @param position Position to read from
+     * @param size Amount of bytes to read.
+     * @param serializable object to read into
+     * @return same object instance that was sent in.
+     */
+    override fun read(position: Long, size: Int, serializable: BufferStreamable): Any? {
+        if (!validateFileSize(position))
+            return null
+
+        val buffer = BufferStream.allocateAndLimit(size)
+        return withBuffer(buffer) {
+            read(buffer, position)
+            buffer.flip()
+            serializable.read(BufferStream(buffer))
+            return@withBuffer serializable
+        }
     }
 
     /**

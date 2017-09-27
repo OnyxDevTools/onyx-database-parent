@@ -1,27 +1,22 @@
 package com.onyx.interactors.relationship.data
 
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
-
-import java.io.IOException
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
 
 /**
  * Created by timothy.osborn on 3/19/15.
  *
  * Reference of a relationship
  */
-class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Long = 0L, var referenceId:Long = 0) : ObjectSerializable, Comparable<RelationshipReference> {
-
-    @Throws(IOException::class)
-    override fun writeObject(buffer: ObjectBuffer) {
-        buffer.writeLong(partitionId)
-        buffer.writeObject(identifier)
+class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Long = 0L, var referenceId:Long = 0) : BufferStreamable, Comparable<RelationshipReference> {
+    override fun read(buffer: BufferStream?) {
+        partitionId = buffer!!.long
+        identifier = buffer.`object`
     }
 
-    @Throws(IOException::class)
-    override fun readObject(buffer: ObjectBuffer) {
-        partitionId = buffer.readLong()
-        identifier = buffer.readObject()
+    override fun write(buffer: BufferStream?) {
+        buffer!!.putLong(partitionId)
+        buffer.putObject(identifier)
     }
 
     override fun compareTo(other: RelationshipReference): Int = when {

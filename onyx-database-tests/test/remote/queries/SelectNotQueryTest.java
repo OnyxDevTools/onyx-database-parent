@@ -10,6 +10,7 @@ import entities.AllAttributeForFetch;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import remote.base.RemotePrePopulatedBaseTest;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ import java.util.List;
  * This test was created to support the new operators in V1.3.0
  */
 @Category({RemoteServerTests.class})
-public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
+public class SelectNotQueryTest extends RemotePrePopulatedBaseTest {
 
     /**
      * This test simply checks the NOT_EQUAL operator agains a full table scan

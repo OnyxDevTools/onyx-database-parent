@@ -58,7 +58,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
 
     // region Private Values
 
-    private val onyxRMIClient = OnyxRMIClient()
+    private val onyxRMIClient:OnyxRMIClient by lazy { OnyxRMIClient() }
 
     // endregion
 

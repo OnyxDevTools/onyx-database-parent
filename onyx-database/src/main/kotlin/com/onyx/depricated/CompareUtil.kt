@@ -110,7 +110,7 @@ object CompareUtil {
      */
     @JvmStatic
     @JvmOverloads
-    fun forceCompare(compare: Any, compareTo: Any, operator: QueryCriteriaOperator = QueryCriteriaOperator.EQUAL): Boolean = try {
+    fun forceCompare(compare: Any?, compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteriaOperator.EQUAL): Boolean = try {
         compare(compare, compareTo, operator)
         } catch (invalidDataTypeForOperator: InvalidDataTypeForOperator) {
             false

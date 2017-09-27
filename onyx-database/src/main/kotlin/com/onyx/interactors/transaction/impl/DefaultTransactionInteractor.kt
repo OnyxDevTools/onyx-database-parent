@@ -2,6 +2,7 @@ package com.onyx.interactors.transaction.impl
 
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.TransactionException
+import com.onyx.extension.withBuffer
 import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.data.*
 import com.onyx.persistence.IManagedEntity
@@ -25,20 +26,21 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
     private fun writeTransaction(transactionType:Byte, buffer: ByteBuffer) {
 
         val file = transactionStore.getTransactionFile()
-        var totalBuffer:ByteBuffer? = null
+        val totalBuffer:ByteBuffer?
 
         try {
-            totalBuffer = BufferStream.allocate(buffer.limit() + 5)
-            totalBuffer!!.put(transactionType)
-            totalBuffer.putInt(buffer.limit())
-            totalBuffer.put(buffer)
-            totalBuffer.flip()
-            file.write(totalBuffer)
+            totalBuffer = BufferStream.allocateAndLimit(buffer.limit() + 5)
+            withBuffer(totalBuffer) {
+                it.put(transactionType)
+                it.putInt(buffer.limit())
+                it.put(buffer)
+                it.flip()
+                file.write(it)
+            }
         } catch (e: Exception) {
             throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE)
         } finally {
             BufferStream.recycle(buffer)
-            BufferStream.recycle(totalBuffer)
         }
     }
 
@@ -49,7 +51,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      */
     @Throws(TransactionException::class)
     override fun writeSave(entity: IManagedEntity) = synchronized(this) {
-        writeTransaction(SAVE, BufferStream.toBuffer(entity))
+        writeTransaction(SAVE, BufferStream.toBuffer(entity, persistenceManager.context))
     }
 
     /**
@@ -59,7 +61,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      */
     @Throws(TransactionException::class)
     override fun writeQueryUpdate(query: Query) = synchronized(this) {
-        writeTransaction(UPDATE_QUERY, BufferStream.toBuffer(query))
+        writeTransaction(UPDATE_QUERY, BufferStream.toBuffer(query, persistenceManager.context))
     }
 
     /**
@@ -69,7 +71,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      */
     @Throws(TransactionException::class)
     override fun writeDelete(entity: IManagedEntity) = synchronized(this) {
-        writeTransaction(DELETE, BufferStream.toBuffer(entity))
+        writeTransaction(DELETE, BufferStream.toBuffer(entity, persistenceManager.context))
     }
 
     /**
@@ -78,7 +80,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
      */
     @Throws(TransactionException::class)
     override fun writeDeleteQuery(query: Query) = synchronized(this) {
-        writeTransaction(DELETE_QUERY, BufferStream.toBuffer(query))
+        writeTransaction(DELETE_QUERY, BufferStream.toBuffer(query, persistenceManager.context))
     }
 
     /**
@@ -127,70 +129,71 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
             throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
         }
 
-        val metadataBuffer = BufferStream.allocateAndLimit(5)
         var transaction: Transaction? = null
+        val metadataBuffer = BufferStream.allocateAndLimit(5)
 
-        try {
-            channel.position(0)
-            while (channel.position() < channel.size()) {
+        withBuffer(metadataBuffer) {
+            try {
+                channel.position(0)
+                while (channel.position() < channel.size()) {
 
-                try {
-                    channel.read(metadataBuffer)
-                    metadataBuffer.flip()
+                    try {
+                        channel.read(metadataBuffer)
+                        metadataBuffer.flip()
 
-                    val transactionType = metadataBuffer.get()
-                    val transactionDataLength = metadataBuffer.int
+                        val transactionType = metadataBuffer.get()
+                        val transactionDataLength = metadataBuffer.int
 
-                    val transactionBuffer = BufferStream.allocate(transactionDataLength)
-                    channel.read(transactionBuffer)
-                    transactionBuffer.rewind()
+                        val tBuffer = BufferStream.allocateAndLimit(transactionDataLength)
+                        withBuffer(tBuffer) { transactionBuffer ->
+                            channel.read(transactionBuffer)
+                            transactionBuffer.rewind()
 
-                    when(transactionType) {
-                        SAVE -> {
-                            val entity = BufferStream.fromBuffer(transactionBuffer) as IManagedEntity
-                            transaction = SaveTransaction(entity)
-                            if (executeTransaction.invoke(transaction)) {
-                                (entity as ManagedEntity).ignoreListeners = true
-                                this.persistenceManager.saveEntity<IManagedEntity>(entity)
-                                entity.ignoreListeners = false
+                            when (transactionType) {
+                                SAVE -> {
+                                    val entity = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as IManagedEntity
+                                    transaction = SaveTransaction(entity)
+                                    if (executeTransaction.invoke(transaction!!)) {
+                                        (entity as ManagedEntity).ignoreListeners = true
+                                        this.persistenceManager.saveEntity<IManagedEntity>(entity)
+                                        entity.ignoreListeners = false
+                                    }
+                                }
+                                DELETE -> {
+                                    val entity = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as IManagedEntity
+                                    transaction = DeleteTransaction(entity)
+                                    if (executeTransaction.invoke(transaction!!)) {
+                                        (entity as ManagedEntity).ignoreListeners = true
+                                        this.persistenceManager.deleteEntity(entity)
+                                        entity.ignoreListeners = false
+                                    }
+                                }
+                                UPDATE_QUERY -> {
+                                    val query = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Query
+                                    transaction = UpdateQueryTransaction(query)
+                                    if (executeTransaction.invoke(transaction!!)) {
+                                        this.persistenceManager.executeUpdate(query)
+                                    }
+                                }
+                                DELETE_QUERY -> {
+                                    val query = BufferStream.fromBuffer(transactionBuffer, persistenceManager.context) as Query
+                                    transaction = DeleteQueryTransaction(query)
+                                    if (executeTransaction.invoke(transaction!!)) {
+                                        this.persistenceManager.executeDelete(query)
+                                    }
+                                }
                             }
+
+                            transactionBuffer.clear()
                         }
-                        DELETE -> {
-                            val entity = BufferStream.fromBuffer(transactionBuffer) as IManagedEntity
-                            transaction = DeleteTransaction(entity)
-                            if (executeTransaction.invoke(transaction)) {
-                                (entity as ManagedEntity).ignoreListeners = true
-                                this.persistenceManager.deleteEntity(entity)
-                                entity.ignoreListeners = false
-                            }
-                        }
-                        UPDATE_QUERY -> {
-                            val query = BufferStream.fromBuffer(transactionBuffer) as Query
-                            transaction = UpdateQueryTransaction(query)
-                            if (executeTransaction.invoke(transaction)) {
-                                this.persistenceManager.executeUpdate(query)
-                            }
-                        }
-                        DELETE_QUERY -> {
-                            val query = BufferStream.fromBuffer(transactionBuffer) as Query
-                            transaction = DeleteQueryTransaction(query)
-                            if (executeTransaction.invoke(transaction)) {
-                                this.persistenceManager.executeDelete(query)
-                            }
-                        }
+                        metadataBuffer.flip()
+                    } catch (cause: Exception) {
+                        throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction!!, cause)
                     }
-
-                    transactionBuffer.clear()
-                    BufferStream.recycle(transactionBuffer)
-                    metadataBuffer.flip()
-                } catch (cause: Exception) {
-                    throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_EXECUTE, transaction, cause)
                 }
+            } catch (e: IOException) {
+                throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
             }
-        } catch (e: IOException) {
-            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_READ_FILE)
-        } finally {
-            BufferStream.recycle(metadataBuffer)
         }
 
         return true

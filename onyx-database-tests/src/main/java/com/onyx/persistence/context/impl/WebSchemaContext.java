@@ -1,10 +1,8 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.diskmap.DefaultMapBuilder;
 import com.onyx.diskmap.MapBuilder;
-import com.onyx.diskmap.serializer.Serializers;
 import com.onyx.diskmap.store.StoreType;
 
 import java.io.IOException;
@@ -37,8 +35,6 @@ import java.nio.file.Files;
 public class WebSchemaContext extends DefaultSchemaContext implements SchemaContext
 {
     private MapBuilder metadataMapBuilder = null;
-
-    private Serializers serializers = null;
 
     private String remoteEndpoint;
 
@@ -75,7 +71,6 @@ public class WebSchemaContext extends DefaultSchemaContext implements SchemaCont
                 e.printStackTrace();
             }
             metadataMapBuilder = new DefaultMapBuilder(location + "/local", StoreType.MEMORY_MAPPED_FILE, this);
-            serializers = metadataMapBuilder.getSerializers();
         }
         super.start();
     }

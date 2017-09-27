@@ -1,15 +1,13 @@
 package com.onyx.persistence
 
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.extension.common.catchAll
-import com.onyx.extension.descriptor
 import com.onyx.extension.get
 import com.onyx.extension.set
-
-import java.io.IOException
+import com.onyx.persistence.context.Contexts
 
 /**
  * All managed entities should extend this class
@@ -20,7 +18,7 @@ import java.io.IOException
  *
  * @since 1.0.0
  */
-abstract class ManagedEntity : IManagedEntity, ObjectSerializable {
+abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
     @Transient private var descriptor: EntityDescriptor? = null
     @Transient internal var ignoreListeners = false
@@ -33,58 +31,47 @@ abstract class ManagedEntity : IManagedEntity, ObjectSerializable {
      */
     private fun getDescriptor(context: SchemaContext):EntityDescriptor {
         if (descriptor == null) {
-            descriptor = descriptor(context)
+            descriptor = context.getDescriptorForEntity(this, "")
         }
         return descriptor!!
     }
 
-    /**
-     * Write this entity to an object buffer
-     * @param buffer Object buffer to write to
-     */
-    @Throws(IOException::class)
-    override fun writeObject(buffer: ObjectBuffer) {
-        val descriptor = getDescriptor(buffer.serializers.context)
+    override fun write(buffer: BufferStream) {
+        val descriptor = getDescriptor(Contexts.first())
+        descriptor.reflectionFields.forEach { name, _ ->
+            buffer.putOther(this.get(descriptor = descriptor, name = name))
+        }
+    }
 
-        descriptor.attributes.values.forEach {
+    override fun read(buffer: BufferStream?) {
+        val descriptor = getDescriptor(Contexts.first())
+        descriptor.reflectionFields.forEach { name, _ ->
+            this.set(descriptor = descriptor, name = name, value = buffer!!.other)
+        }
+    }
+
+    override fun write(buffer: BufferStream, context: SchemaContext) {
+
+        val systemEntity = context.getSystemEntityByName(this::class.java.name)
+        buffer.putInt(systemEntity!!.primaryKey)
+
+        systemEntity.attributes.forEach {
             catchAll {
-                buffer.writeObject(this[buffer.serializers.context, descriptor, it.name])
+                buffer.putObject(this.get(context = context, name = it.name))
             }
         }
     }
 
-    /**
-     * Read attributes from buffer
-     */
-    override fun readObject(buffer: ObjectBuffer) = readObject(buffer, 0L, 0)
+    override fun read(buffer: BufferStream, context: SchemaContext) {
+        val serializerId = buffer.int
+        val systemEntity = context.getSystemEntityById(serializerId)
 
-    /**
-     * Read attributes from buffer with a specific serializer id
-     *
-     * @param buffer Object buffer to read
-     * @param position Ignored
-     * @param serializerId Version of managed entity
-     */
-    @Throws(IOException::class)
-    override fun readObject(buffer: ObjectBuffer, position: Long, serializerId: Int) {
-
-        val descriptor = getDescriptor(buffer.serializers.context)
-
-        // If System Entity does not exist, read by entity descriptor
-        if (serializerId == 0) {
-            descriptor.attributes.values.forEach {
-                catchAll {
-                    this[buffer.serializers.context, descriptor, it.name] = buffer.readObject()
-                }
-            }
-        } else {
-            val systemEntity = buffer.serializers.context.getSystemEntityById(serializerId)
-            systemEntity!!.attributes.forEach {
-                catchAll {
-                    this[buffer.serializers.context, descriptor, it.name] = buffer.readObject()
-                }
+        systemEntity!!.attributes.forEach {
+            catchAll {
+                this.set(context = context, name = it.name, value = buffer.`object`)
             }
         }
+
     }
 
     /**
@@ -98,7 +85,7 @@ abstract class ManagedEntity : IManagedEntity, ObjectSerializable {
             catchAll {
                 if (mapObj.containsKey(it.name)) {
                     val attributeValueWithinMap = mapObj[it.name]
-                    this[context, descriptor, it.name] = attributeValueWithinMap
+                    this.set(context = context, descriptor = descriptor, name = it.name, value = attributeValueWithinMap)
                 }
             }
         }

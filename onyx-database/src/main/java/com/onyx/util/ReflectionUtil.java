@@ -131,6 +131,9 @@ public class ReflectionUtil {
      * @throws IllegalAccessException Exception thrown when using regular reflection
      */
     public static Object instantiate(Class type) throws InstantiationException, IllegalAccessException {
+        if(type == InvocationTargetException.class) {
+            return new InvocationTargetException(null);
+        }
         try {
             return type.newInstance();
         }

@@ -13,6 +13,7 @@ import com.onyx.client.exception.OnyxServerException;
 import com.onyx.client.exception.RequestTimeoutException;
 import com.onyx.client.push.PushRegistrar;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.SynchronizedMap;
 import org.jetbrains.annotations.NotNull;
@@ -62,14 +63,6 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
 
     // Keeps track of a unique token.  There can only be about 64 K concurrent requests for a client.
     private volatile short tokenCount = Short.MIN_VALUE+1; // +1 because Short.MIN_VALUE denotes a push event
-
-    /**
-     * Default Constructor
-     */
-    @SuppressWarnings("unused")
-    protected CommunicationPeer() {
-
-    }
 
     /**
      * Handle an response message

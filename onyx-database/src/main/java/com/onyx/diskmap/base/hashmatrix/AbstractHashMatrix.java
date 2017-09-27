@@ -1,12 +1,14 @@
 package com.onyx.diskmap.base.hashmatrix;
 
+import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.DiskSkipListMap;
 import com.onyx.diskmap.node.HashMatrixNode;
 import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
 
 import java.nio.ByteBuffer;
+
+import static com.onyx.diskmap.node.HashMatrixNode.DEFAULT_BITMAP_ITERATIONS;
 
 /**
  * This class is responsible for the store i/o that writes and reads the hash matrix nodes.  It inherits all of the
@@ -48,10 +50,14 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
     @SuppressWarnings("WeakerAccess")
     public void updateHashMatrixReference(HashMatrixNode node, int index, long value) {
         node.next[index] = value;
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(value);
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, node.position + (Long.BYTES * index) + Long.BYTES);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        try {
+            buffer.putLong(value);
+            buffer.flip();
+            fileStore.write(buffer, node.position + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
+        } finally {
+            BufferStream.recycle(buffer);
+        }
     }
 
     /**
@@ -87,6 +93,6 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
      * @return Number of levels + position
      */
     protected int getHashMatrixNodeSize() {
-        return Long.BYTES * (11);
+        return (Long.BYTES * (DEFAULT_BITMAP_ITERATIONS+1)) + Integer.SIZE;
     }
 }

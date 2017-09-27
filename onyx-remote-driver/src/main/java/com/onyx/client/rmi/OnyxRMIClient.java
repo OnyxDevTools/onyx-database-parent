@@ -2,6 +2,7 @@ package com.onyx.client.rmi;
 
 import com.onyx.client.CommunicationPeer;
 import com.onyx.client.OnyxClient;
+import com.onyx.persistence.context.SchemaContext;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;

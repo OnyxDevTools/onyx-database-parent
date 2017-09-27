@@ -4,9 +4,11 @@ import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.client.base.ConnectionProperties;
 import com.onyx.client.exception.MethodInvocationException;
 import com.onyx.client.handlers.RequestHandler;
+import com.onyx.client.rmi.OnyxRMIClient;
 import com.onyx.client.rmi.RMIRequest;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.server.base.CommunicationServer;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.SynchronizedMap;
@@ -42,7 +44,6 @@ public class OnyxRMIServer extends CommunicationServer {
      * Set the message handler to my own fancy RMI Proxy handler
      */
     public OnyxRMIServer() {
-        super();
         /*
           RMI Request handler.  This will grab the correct proxy object,
           execute the method on the proxy object and return the result

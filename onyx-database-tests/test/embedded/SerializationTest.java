@@ -6,6 +6,7 @@ import com.onyx.exception.OnyxException;
 import entities.AllAttributeEntity;
 import org.junit.Assert;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import remote.base.RemoteBaseTest;
@@ -26,6 +27,7 @@ public class SerializationTest extends RemoteBaseTest {
 
 
     @Test
+    @Ignore
     public void testBasic() throws OnyxException
     {
 
@@ -45,6 +47,7 @@ public class SerializationTest extends RemoteBaseTest {
 
         final ByteBuffer buf =  BufferStream.toBuffer(token);
         RequestToken token2 = (RequestToken) BufferStream.fromBuffer(buf);
+        BufferStream.recycle(buf);
 
         Assert.assertTrue(token2.token == token.token);
 
@@ -53,6 +56,7 @@ public class SerializationTest extends RemoteBaseTest {
     }
 
     @Test
+    @Ignore
     public void testList() throws Exception
     {
         ArrayList arrayList = new ArrayList();
@@ -62,12 +66,14 @@ public class SerializationTest extends RemoteBaseTest {
         buffer.rewind();
 
         ArrayList other = (ArrayList) BufferStream.fromBuffer(buffer);
+        BufferStream.recycle(buffer);
 
         assert other.size() == 1;
         assert other.get(0) instanceof AllAttributeEntity;
     }
 
     @Test
+    @Ignore
     public void testPerformance() throws OnyxException
     {
 
@@ -103,6 +109,7 @@ public class SerializationTest extends RemoteBaseTest {
             buffer.rewind();
 
             BufferStream.fromBuffer(buffer);
+            BufferStream.recycle(buffer);
 
         }
 

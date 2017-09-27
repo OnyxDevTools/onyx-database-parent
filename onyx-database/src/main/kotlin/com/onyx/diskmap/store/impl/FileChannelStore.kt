@@ -1,14 +1,16 @@
 package com.onyx.diskmap.store.impl
 
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.base.concurrent.AtomicCounter
 import com.onyx.diskmap.base.concurrent.DefaultAtomicCounter
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
-import com.onyx.diskmap.serializer.Serializers
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
+import com.onyx.extension.perform
+import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
+import com.onyx.util.ReflectionUtil
 
 import java.io.File
 import java.io.FileNotFoundException
@@ -29,7 +31,8 @@ import java.nio.channels.FileChannel
  */
 open class FileChannelStore() : Store {
 
-    override var serializers: Serializers? = null // Legacy serializer uses this to get the serial version
+    override val context by lazy { if(contextId != null) Contexts.get(contextId!!) else null }
+
     final override var filePath: String = ""
     var deleteOnClose: Boolean = false // Whether to delete this file upon closing database or JVM
     var bufferSliceSize = LARGE_FILE_SLICE_SIZE // Size of each slice
@@ -46,16 +49,6 @@ open class FileChannelStore() : Store {
 
         this.open(filePath = filePath)
         this.determineSize()
-    }
-
-    /**
-     * Assign serializers based on what context id
-     *
-     * @param mapById Serializers with serializer id indexed
-     * @param mapByName Serializers by class name
-     */
-    override fun assignSerializers(mapById: Map<Short, String>, mapByName: Map<String, Short>) {
-        serializers = Serializers(mapById, mapByName, if (contextId == null) null else Contexts.get(contextId!!))
     }
 
     /**
@@ -99,12 +92,14 @@ open class FileChannelStore() : Store {
      */
     protected fun determineSize() {
         val buffer = this.read(0, 8)
-
-        if (buffer == null || channel?.size() == 0L) {
-            this.allocate(8)
-        } else {
-            val fSize = buffer.readLong()
-            this.fileSizeCounter.set(fSize)
+        buffer?.byteBuffer?.rewind()
+        buffer.perform {
+            if (buffer == null || channel?.size() == 0L) {
+                this.allocate(8)
+            } else {
+                val fSize = buffer.long
+                this.fileSizeCounter.set(fSize)
+            }
         }
     }
 
@@ -136,22 +131,27 @@ open class FileChannelStore() : Store {
     /**
      * Write an Object Buffer
      *
-     * @param serializable Object buffer to write
+     * @param buffer Byte buffer to write
      * @param position Position within the volume to write to.
      * @return How many bytes were written
      */
-    override fun write(serializable: ObjectBuffer, position: Long): Int = channel!!.write(serializable.byteBuffer, position)
+    override fun write(buffer: ByteBuffer, position: Long): Int = channel!!.write(buffer)
 
     /**
-     * Write a serializable object to a volume.  This uses the ObjectBuffer for serialization
+     * Write a serializable object to a volume.  This uses the BufferStream for serialization
      *
      * @param serializable Object
      * @param position Position to write to
      */
-    override fun write(serializable: ObjectSerializable, position: Long): Int {
-        val objectBuffer = ObjectBuffer(serializers)
-        serializable.writeObject(objectBuffer)
-        return channel!!.write(objectBuffer.byteBuffer, position)
+    override fun write(serializable: BufferStreamable, position: Long): Int {
+        val stream = BufferStream()
+        try {
+            serializable.write(stream)
+            stream.byteBuffer.flip()
+            return channel!!.write(stream.byteBuffer, position)
+        } finally {
+            stream.recycle()
+        }
     }
 
     /**
@@ -165,19 +165,20 @@ open class FileChannelStore() : Store {
     override fun read(position: Long, size: Int, type: Class<*>): Any? {
         if (!validateFileSize(position)) return null
 
-        val buffer = ObjectBuffer.allocate(size)
+        val buffer = BufferStream(size)
+        return buffer.perform {
+            channel!!.read(buffer.byteBuffer, position)
+            buffer.byteBuffer.rewind()
 
-        channel!!.read(buffer, position)
-        buffer.rewind()
-
-        return if (ObjectSerializable::class.java.isAssignableFrom(type)) {
-            val serializable = type.newInstance()
-            val objectBuffer = ObjectBuffer(buffer, serializers)
-            (serializable as ObjectSerializable).readObject(objectBuffer, position)
-            serializable
-        } else {
-            ObjectBuffer.unwrap(buffer, serializers)
+            return@perform if (BufferStreamable::class.java.isAssignableFrom(type)) {
+                val serializable:BufferStreamable = ReflectionUtil.instantiate(type) as BufferStreamable
+                serializable.read(buffer)
+                serializable
+            } else {
+                buffer.`object`
+            }
         }
+
     }
 
     /**
@@ -188,45 +189,16 @@ open class FileChannelStore() : Store {
      * @param serializable object to read into
      * @return same object instance that was sent in.
      */
-    override fun read(position: Long, size: Int, serializable: ObjectSerializable): Any? {
+    override fun read(position: Long, size: Int, serializable: BufferStreamable): Any? {
         if (!validateFileSize(position))
             return null
 
-        val buffer = ObjectBuffer.allocate(size)
-
-        channel!!.read(buffer, position)
-        buffer.rewind()
-        serializable.readObject(ObjectBuffer(buffer, serializers), position)
-
-        return serializable
-    }
-
-    /**
-     * Read a serializable object
-     *
-     * @param position Position to read from
-     * @param size Amount of bytes to read.
-     * @param serializerId Key to the serializer version that was used when written to the store
-     * @return Object read from the store
-     */
-    override fun read(position: Long, size: Int, type: Class<*>, serializerId: Int): Any? {
-        if (!validateFileSize(position))
-            return null
-
-        val buffer = ObjectBuffer.allocate(size)
-
-        channel!!.read(buffer, position)
-        buffer.rewind()
-
-        return when {
-            serializerId > 0 -> ObjectBuffer.unwrap(buffer, serializers, serializerId)
-            ObjectSerializable::class.java.isAssignableFrom(type) -> {
-                val serializable = type.newInstance()
-                val objectBuffer = ObjectBuffer(buffer, serializers)
-                (serializable as ObjectSerializable).readObject(objectBuffer, position)
-                serializable
-            }
-            else -> ObjectBuffer.unwrap(buffer, serializers)
+        val buffer = BufferStream.allocateAndLimit(size)
+        return withBuffer(buffer) {
+            channel!!.read(buffer, position)
+            buffer.flip()
+            serializable.read(BufferStream(buffer))
+            return@withBuffer serializable
         }
     }
 
@@ -237,16 +209,16 @@ open class FileChannelStore() : Store {
      * @param size Amount of bytes to read.
      * @return Object Buffer contains bytes read
      */
-    override fun read(position: Long, size: Int): ObjectBuffer? {
+    override fun read(position: Long, size: Int): BufferStream? {
         if (!validateFileSize(position))
             return null
 
-        val buffer = ObjectBuffer.allocate(size)
+        val buffer = BufferStream.allocateAndLimit(size)
 
         channel!!.read(buffer, position)
         buffer.rewind()
 
-        return ObjectBuffer(buffer, serializers)
+        return BufferStream(buffer)
 
     }
 
@@ -275,13 +247,16 @@ open class FileChannelStore() : Store {
      * @return position of started allocated bytes
      */
     override fun allocate(size: Int): Long {
-        val buffer = ObjectBuffer(serializers)
-        val newFileSize = fileSizeCounter.getAndAdd(size)
-        buffer.writeLong(newFileSize + size)
-
-        this.write(buffer, 0)
-        return newFileSize
+        val buffer = BufferStream.allocateAndLimit(8)
+        return withBuffer(buffer) {
+            val newFileSize = fileSizeCounter.getAndAdd(size)
+            it.putLong(newFileSize + size)
+            it.flip()
+            this.write(it, 0)
+            return@withBuffer newFileSize
+        }
     }
+
 
     /**
      * Delete File
@@ -306,4 +281,5 @@ open class FileChannelStore() : Store {
         val SMALL_FILE_SLICE_SIZE = 1024 * 256 // 256K
         val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
     }
+
 }
