@@ -52,6 +52,7 @@ public class ScaledDiskMapTest
     public void testDelete()
     {
 
+
         MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getHashMap("second", 10);
 

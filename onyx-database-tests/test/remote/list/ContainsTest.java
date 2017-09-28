@@ -1,16 +1,14 @@
 package remote.list;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.AllAttributeEntity;
 import entities.AllAttributeForFetch;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import remote.base.RemotePrePopulatedBaseTest;
 
@@ -23,7 +21,6 @@ import java.util.List;
 @Category({ RemoteServerTests.class })
 public class ContainsTest extends RemotePrePopulatedBaseTest
 {
-
     @Before
     public void before() throws InitializationException
     {

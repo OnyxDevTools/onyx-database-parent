@@ -3,6 +3,7 @@ package com.onyx.client.serialization;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
 
 import java.nio.ByteBuffer;
 

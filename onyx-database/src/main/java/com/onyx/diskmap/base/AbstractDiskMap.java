@@ -49,12 +49,13 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("WeakerAccess")
     void updateHeaderRecordCount() {
-        final ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(header.recordCount.get());
             buffer.flip();
             fileStore.write(buffer, header.position + Long.BYTES);
-        } finally {
+        }
+        finally {
             BufferStream.recycle(buffer);
         }
     }
@@ -67,13 +68,13 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("unused")
     protected void updateHeaderFirstNode(Header header, long firstNode) {
-        this.header.firstNode = firstNode;
-        final ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(firstNode);
             buffer.flip();
             fileStore.write(buffer, header.position);
-        } finally {
+        }
+        finally {
             BufferStream.recycle(buffer);
         }
     }

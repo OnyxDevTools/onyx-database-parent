@@ -3,6 +3,7 @@ package embedded.base;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.IManagedEntity;
+import com.onyx.persistence.context.Contexts;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
@@ -34,6 +35,7 @@ public class BaseTest {
      */
     protected void initialize() throws InitializationException {
         if (context == null) {
+            Contexts.clear();
             factory = new EmbeddedPersistenceManagerFactory(DATABASE_LOCATION);
             factory.initialize();
 
@@ -63,6 +65,7 @@ public class BaseTest {
             delete(database);
         }
         database.delete();
+        Contexts.clear();
     }
 
     public void save(IManagedEntity entity) {

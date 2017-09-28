@@ -53,25 +53,12 @@ data class SystemEntity @JvmOverloads constructor(
             fileName = descriptor.fileName) {
 
         this.identifier = SystemIdentifier(descriptor.identifier!!)
-
-        descriptor.attributes.values.forEach {
-            this.attributes.add(SystemAttribute(it))
-        }
-
-        descriptor.relationships.values.forEach {
-            this.relationships.add(SystemRelationship(it))
-        }
-
-        descriptor.indexes.values.forEach {
-            this.indexes.add(SystemIndex(it))
-        }
+        this.attributes = descriptor.attributes.values.map { SystemAttribute(it) }.sortedBy { it.name }.toMutableList()
+        this.relationships = descriptor.relationships.values.map { SystemRelationship(it) }.sortedBy { it.name }.toMutableList()
+        this.indexes = descriptor.indexes.values.map { SystemIndex(it) }.sortedBy { it.name }.toMutableList()
 
         if (descriptor.partition != null) {
             this.partition = SystemPartition(descriptor.partition!!, this)
         }
-
-        this.attributes.sortBy { it.name }
-        this.relationships.sortBy { it.name }
-        this.indexes.sortBy { it.name }
     }
 }

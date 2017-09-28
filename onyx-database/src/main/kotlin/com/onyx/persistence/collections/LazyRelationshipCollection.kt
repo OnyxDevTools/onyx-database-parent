@@ -53,7 +53,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     @Transient private var persistenceManager: PersistenceManager? = null
     @Transient lateinit var entityDescriptor: EntityDescriptor
     private var contextId: String? = null
-    lateinit var identifiers: MutableList<RelationshipReference>
+    var identifiers: MutableList<RelationshipReference> = ArrayList()
 
     constructor(entityDescriptor: EntityDescriptor, identifiers: MutableList<RelationshipReference>, context: SchemaContext):this() {
         this.persistenceManager = context.systemPersistenceManager

@@ -43,4 +43,7 @@ object Contexts {
      */
     @JvmStatic
     fun first() = synchronized(contexts) { contexts.values.first() }
+
+    @JvmStatic
+    fun clear() = contexts.clear()
 }

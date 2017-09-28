@@ -401,6 +401,9 @@ open class DefaultSchemaContext : SchemaContext {
 
             val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
             if (result != null) {
+                synchronized(systemEntityByIDMap) {
+                    systemEntityByIDMap.put(result.primaryKey, result)
+                }
                 result.attributes.sortBy { it.name }
                 result.relationships.sortBy { it.name }
                 result.indexes.sortBy { it.name }
@@ -420,6 +423,10 @@ open class DefaultSchemaContext : SchemaContext {
             val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
 
             if (entity != null) {
+                synchronized(defaultSystemEntities) {
+                    defaultSystemEntities.put(entity.name, entity)
+                }
+
                 entity.attributes.sortBy { it.name }
                 entity.relationships.sortBy { it.name }
                 entity.indexes.sortBy { it.name }

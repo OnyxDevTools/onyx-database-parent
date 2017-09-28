@@ -1,16 +1,16 @@
 package com.onyx.diskmap.base.skiplist;
 
+import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.AbstractDiskMap;
 import com.onyx.diskmap.node.Header;
 import com.onyx.diskmap.node.SkipListHeadNode;
 import com.onyx.diskmap.node.SkipListNode;
-import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.diskmap.store.Store;
 import com.onyx.depricated.CompareUtil;
+import com.onyx.exception.BufferingException;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.WriteSynchronizedMap;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Random;
@@ -452,8 +452,12 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     protected Map getRecordValueAsDictionary(SkipListNode<K> node) {
-        ObjectBuffer buffer = fileStore.read(node.recordPosition, node.recordSize);
-        return buffer.toMap(node.serializerId);
+        BufferStream buffer = fileStore.read(node.recordPosition, node.recordSize);
+        try {
+            return buffer.toMap(fileStore.getContext());
+        } finally {
+            buffer.recycle();
+        }
     }
 
     /**
@@ -469,11 +473,14 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         if(position == 0L)
             return null;
 
-        final ObjectBuffer buffer = fileStore.read(position, recordSize);
+        final BufferStream buffer = fileStore.read(position, recordSize);
+
         try {
-            return (V) buffer.readObject();
-        } catch (IOException e) {
+            return (V) buffer.getObject(fileStore.getContext());
+        } catch (BufferingException e) {
             e.printStackTrace();
+        } finally {
+            buffer.recycle();
         }
 
         return null;
@@ -490,29 +497,34 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      */
     @SuppressWarnings("WeakerAccess")
     protected void updateNodeValue(SkipListNode<K> node, V value, boolean cache) {
-        final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
+        final BufferStream stream = new BufferStream();
+
         try {
             // Write the record value to the buffer and allocate the space in the store
-            int sizeOfRecord = buffer.writeObject(value);
+            int sizeOfRecord = stream.putObject(value, fileStore.getContext());
             long recordPosition = fileStore.allocate(sizeOfRecord);
 
-            fileStore.write(buffer, recordPosition);
+            stream.flip();
+            fileStore.write(stream.getByteBuffer(), recordPosition);
 
             // Set the node values and lets write only the updated values to the store.  No need to write the key and
             // all the other junk
             node.recordSize = sizeOfRecord;
             node.recordPosition = recordPosition;
 
-            final ObjectBuffer nodeBuffer = new ObjectBuffer(fileStore.getSerializers());
-            nodeBuffer.writeLong(node.recordPosition);
-            nodeBuffer.writeInt(node.recordSize);
+            stream.clear();
+            stream.putLong(node.recordPosition);
+            stream.putInt(node.recordSize);
+
+            stream.flip();
 
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // node so we want to skip over that
-            fileStore.write(nodeBuffer, node.position + Integer.BYTES);
-
-        } catch (IOException e) {
+            fileStore.write(stream.getByteBuffer(), node.position + Integer.BYTES);
+        } catch (BufferingException e) {
             e.printStackTrace();
+        } finally {
+            stream.recycle();
         }
     }
 
@@ -526,22 +538,24 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     private void updateNodeDown(SkipListHeadNode node, long position) {
-        final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(Long.BYTES), fileStore.getSerializers());
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
         try {
 
             node.down = position;
-            buffer.writeLong(node.down);
+            buffer.putLong(node.down);
 
             int offset = Integer.BYTES + Long.BYTES;
             if(node instanceof SkipListNode)
                 offset = Integer.BYTES + Long.BYTES + Integer.BYTES + Long.BYTES;
 
+            buffer.flip();
+
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // node so we want to skip over that
             fileStore.write(buffer, node.position + offset);
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } finally {
+            BufferStream.recycle(buffer);
         }
     }
 
@@ -556,22 +570,24 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      */
     @SuppressWarnings("WeakerAccess")
     protected void updateNodeNext(SkipListHeadNode node, long position) {
-        final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(Long.BYTES), fileStore.getSerializers());
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
         try {
 
             node.next = position;
-            buffer.writeLong(node.next);
+            buffer.putLong(node.next);
 
             int offset = Integer.BYTES;
             if(node instanceof SkipListNode)
                 offset = Integer.BYTES + Long.BYTES + Integer.BYTES;
 
+            buffer.flip();
+
             // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // node so we want to skip over that
             fileStore.write(buffer, node.position + offset);
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } finally {
+            BufferStream.recycle(buffer);
         }
     }
 
@@ -590,20 +606,22 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      */
     @SuppressWarnings({"unchecked", "WeakerAccess"})
     protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down, boolean cache, long recordId) {
-        final ObjectBuffer buffer = new ObjectBuffer(fileStore.getSerializers());
+        BufferStream stream = new BufferStream();
 
         SkipListNode<K> newNode = null;
 
         try {
             // Write the key to the buffer just to see how big it is.  Afterwards just reset it
-            int keySize = buffer.writeObject(key);
-            buffer.reset();
+            int keySize = stream.putObject(key);
+            stream.clear();
 
             // Write the record to the buffer first and keep track of how big it is
             int recordSize = 0;
             if (value != null) {
-                recordSize = buffer.writeObject(value);
+                recordSize = stream.putObject(value, fileStore.getContext());
             }
+
+            stream.clearReferences();
 
             int sizeOfNode = keySize + SkipListNode.BASE_SKIP_LIST_NODE_SIZE;
 
@@ -613,25 +631,25 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
             // Take note of the position of the node so we can indicate that within the node
             long position = recordPosition + recordSize;
 
-            int serializerId = buffer.getSerializerId(value); // Get the serializer id.  Note: This only applies to Managed Entities in order to version
-
             if (recordId < 0) {
                 recordId = position;
             }
             // Instantiate the new node and write it to the buffer
-            newNode = new SkipListNode(key, position, (value == null) ? 0L : recordPosition, level, next, down, recordSize, serializerId, recordId);
+            newNode = new SkipListNode(key, position, (value == null) ? 0L : recordPosition, level, next, down, recordSize, recordId);
 
             // Jot down the size of the node so that we know how much data to pull
-            buffer.writeInt(sizeOfNode);
-            newNode.writeObject(buffer);
+            stream.putInt(sizeOfNode);
+            newNode.write(stream);
 
             // Write the node and record if it exists to the store
-            fileStore.write(buffer, recordPosition);
+            stream.flip();
+            fileStore.write(stream.getByteBuffer(), recordPosition);
 
-
-        } catch (IOException e) {
+        } catch (BufferingException e) {
             // TODO: Handle exceptions
             e.printStackTrace();
+        } finally {
+            stream.recycle();
         }
 
         return newNode;
@@ -652,30 +670,32 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     protected SkipListHeadNode createHeadNode(byte level, long next, long down) {
         SkipListHeadNode newNode = null;
 
-        try {
+        int sizeOfNode = SkipListNode.HEAD_SKIP_LIST_NODE_SIZE;
+        BufferStream stream = new BufferStream(sizeOfNode + Integer.BYTES);
 
-            int sizeOfNode = SkipListNode.HEAD_SKIP_LIST_NODE_SIZE;
+        try {
 
             // Allocate the space on the file.  Size of the node, record size, and size indicator as Integer.BYTES
             long position = fileStore.allocate(sizeOfNode + Integer.BYTES);
-
-            final ObjectBuffer buffer = new ObjectBuffer(ObjectBuffer.allocate(sizeOfNode + Integer.BYTES),fileStore.getSerializers());
 
             // Instantiate the new node and write it to the buffer
             newNode = new SkipListHeadNode(level, next, down);
             newNode.position = position;
 
             // Jot down the size of the node so that we know how much data to pull
-            buffer.writeInt(sizeOfNode);
-            newNode.writeObject(buffer);
+            stream.putInt(sizeOfNode);
+            newNode.write(stream);
+
+            stream.flip();
 
             // Write the node and record if it exists to the store
-            fileStore.write(buffer, position);
+            fileStore.write(stream.getByteBuffer(), position);
 
-
-        } catch (IOException e) {
+        } catch (BufferingException e) {
             // TODO: Handle exceptions
             e.printStackTrace();
+        } finally {
+            stream.recycle();
         }
 
         return newNode;
@@ -695,8 +715,14 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
             return null;
 
         // First get the size of the node since it may be variable due to the size of the key
-        final ObjectBuffer buffer = fileStore.read(position, Integer.SIZE);
-        int sizeOfNode = buffer.readInt();
+        final BufferStream buffer = fileStore.read(position, Integer.SIZE);
+        int sizeOfNode = 0;
+        try {
+            sizeOfNode = buffer.getInt();
+        } catch (BufferingException e) {}
+        finally {
+            buffer.recycle();
+        }
 
         SkipListHeadNode node;
 
@@ -726,10 +752,14 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * This method will only update the record count rather than the entire header
      */
     protected void updateHeaderRecordCount() {
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(header.recordCount.get());
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position + Long.BYTES);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        try {
+            buffer.putLong(header.recordCount.get());
+            buffer.flip();
+            fileStore.write(buffer, header.position + Long.BYTES);
+        } finally {
+            BufferStream.recycle(buffer);
+        }
     }
 
     /**
@@ -753,9 +783,13 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      */
     protected void forceUpdateHeaderFirstNode(Header header, long firstNode) {
         this.header.firstNode = firstNode;
-        final ByteBuffer buffer = ObjectBuffer.allocate(Long.BYTES);
-        buffer.putLong(firstNode);
-        final ObjectBuffer objectBuffer = new ObjectBuffer(buffer, fileStore.getSerializers());
-        fileStore.write(objectBuffer, header.position);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        try {
+            buffer.putLong(firstNode);
+            buffer.flip();
+            fileStore.write(buffer, header.position);
+        } finally {
+            BufferStream.recycle(buffer);
+        }
     }
 }

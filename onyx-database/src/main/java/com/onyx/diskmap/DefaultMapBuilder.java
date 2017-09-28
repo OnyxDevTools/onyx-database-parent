@@ -2,7 +2,6 @@ package com.onyx.diskmap;
 
 import com.onyx.diskmap.base.*;
 import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.serializer.Serializers;
 import com.onyx.diskmap.store.*;
 import com.onyx.diskmap.store.impl.FileChannelStore;
 import com.onyx.diskmap.store.impl.InMemoryStore;
@@ -134,28 +133,17 @@ public class DefaultMapBuilder implements MapBuilder {
             this.storage = new InMemoryStore(context, storeId);
         }
 
-        // Create default maps.  Thes locations indicate the spacing between initial map allocations.  In this case,
+        // Create default maps.  These locations indicate the spacing between initial map allocations.  In this case,
         // it indicates a load factor map with a load factor of 1.  If the allocation changes such as the header
         // or the default allocation within the maps' constructors and/or the serializer map types, this will need
         // to be changed.
         int initialSize = 8;
-        int mapByIdLocation = 156;
-        int internalMapLocation = 304;
 
-        Map mapByName;
-        Map mapById;
         if (storage.getFileSize() == initialSize) {
-            mapByName = newScalableMap(this.storage, newMapHeader(), 1);
-            mapById = newScalableMap(this.storage, newMapHeader(), 1);
             internalMaps = newScalableMap(this.storage, newMapHeader(), 1);
         } else {
-            mapByName = getHashMap((Header) storage.read(initialSize, Header.HEADER_SIZE, Header.class), 1);
-            mapById = getHashMap((Header) storage.read(mapByIdLocation, Header.HEADER_SIZE, Header.class), 1);
-            internalMaps = getHashMap((Header) storage.read(internalMapLocation, Header.HEADER_SIZE, Header.class), 1);
+            internalMaps = getHashMap((Header) storage.read(initialSize, Header.HEADER_SIZE, Header.class), 1);
         }
-
-        if (this.storage != null)
-            this.storage.assignSerializers(mapById, mapByName);
 
     }
 
@@ -312,15 +300,6 @@ public class DefaultMapBuilder implements MapBuilder {
     }
 
     /**
-     * Getter for serializers
-     *
-     * @return Serializers the storage file uses to serialize
-     */
-    public Serializers getSerializers() {
-        return this.storage.getSerializers();
-    }
-
-    /**
      * Get the file store in order to re-attach a data structure
      *
      * @return The store the map builder uses
@@ -412,23 +391,12 @@ public class DefaultMapBuilder implements MapBuilder {
 
         // Re-create the internal maps
         int initialSize = 8;
-        int mapByIdLocation = 156;
-        int internalMapLocation = 304;
 
-        Map mapByName;
-        Map mapById;
         if (storage.getFileSize() == initialSize) {
-            mapByName = newScalableMap(this.storage, newMapHeader(), 1);
-            mapById = newScalableMap(this.storage, newMapHeader(), 1);
             internalMaps = newScalableMap(this.storage, newMapHeader(), 1);
         } else {
-            mapByName = getHashMap((Header) storage.read(initialSize, Header.HEADER_SIZE, Header.class), 1);
-            mapById = getHashMap((Header) storage.read(mapByIdLocation, Header.HEADER_SIZE, Header.class), 1);
-            internalMaps = getHashMap((Header) storage.read(internalMapLocation, Header.HEADER_SIZE, Header.class), 1);
+            internalMaps = getHashMap((Header) storage.read(initialSize, Header.HEADER_SIZE, Header.class), 1);
         }
 
-        // Re-initialize the storage
-        if (this.storage != null)
-            this.storage.assignSerializers(mapById, mapByName);
     }
 }

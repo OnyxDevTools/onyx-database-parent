@@ -1,12 +1,10 @@
 package com.onyx.persistence.query
 
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.AttributeDescriptor
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
-
-import java.io.IOException
 
 /**
  * Used to specify what attributes to update.
@@ -28,22 +26,20 @@ import java.io.IOException
  * @see PersistenceManager.executeQuery
  */
 @Suppress("UNCHECKED_CAST")
-class AttributeUpdate @JvmOverloads constructor(var fieldName: String? = null, var value: Any? = null): ObjectSerializable {
+class AttributeUpdate @JvmOverloads constructor(var fieldName: String? = null, var value: Any? = null): BufferStreamable {
 
     @Transient
     var attributeDescriptor: AttributeDescriptor? = null
     @Transient
     var indexInteractor: IndexInteractor? = null
 
-    @Throws(IOException::class)
-    override fun writeObject(buffer: ObjectBuffer) {
-        buffer.writeObject(fieldName)
-        buffer.writeObject(value)
+    override fun write(buffer: BufferStream) {
+        buffer.putObject(fieldName)
+        buffer.putObject(value)
     }
 
-    @Throws(IOException::class)
-    override fun readObject(buffer: ObjectBuffer) {
-        fieldName = buffer.readObject() as String
-        value = buffer.readObject()
+    override fun read(buffer: BufferStream) {
+        fieldName = buffer.`object` as String
+        value = buffer.`object`
     }
 }

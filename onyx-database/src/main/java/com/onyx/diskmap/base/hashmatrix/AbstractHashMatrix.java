@@ -8,6 +8,8 @@ import com.onyx.diskmap.store.Store;
 
 import java.nio.ByteBuffer;
 
+import static com.onyx.diskmap.node.HashMatrixNode.DEFAULT_BITMAP_ITERATIONS;
+
 /**
  * This class is responsible for the store i/o that writes and reads the hash matrix nodes.  It inherits all of the
  * disk skip list functionaltiy but, should only be responsible for the hash matrix i/o
@@ -48,11 +50,11 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
     @SuppressWarnings("WeakerAccess")
     public void updateHashMatrixReference(HashMatrixNode node, int index, long value) {
         node.next[index] = value;
-        final ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
+        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(value);
             buffer.flip();
-            fileStore.write(buffer, node.position + (Long.BYTES * index) + Long.BYTES);
+            fileStore.write(buffer, node.position + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
         } finally {
             BufferStream.recycle(buffer);
         }
@@ -91,6 +93,6 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
      * @return Number of levels + position
      */
     protected int getHashMatrixNodeSize() {
-        return Long.BYTES * (11);
+        return (Long.BYTES * (DEFAULT_BITMAP_ITERATIONS+1)) + Integer.SIZE;
     }
 }

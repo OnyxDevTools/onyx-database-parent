@@ -1,7 +1,6 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferStream
-import com.onyx.diskmap.serializer.ObjectBuffer
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
 import com.onyx.persistence.context.SchemaContext
@@ -33,7 +32,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
 
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
         // using an int for position.  We are gonna bust that.
-        val buffer = ObjectBuffer.allocate(bufferSliceSize)
+        val buffer = BufferStream.allocateAndLimit(bufferSliceSize)
         synchronized(slices) {
             slices.put(0, FileSlice(buffer))
         }
@@ -56,7 +55,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
 
         return synchronized(slices) {
             slices.getOrPut(index) {
-                FileSlice(BufferStream.allocate(bufferSliceSize))
+                FileSlice(BufferStream.allocateAndLimit(bufferSliceSize))
             }
         }
     }

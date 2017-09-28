@@ -1,16 +1,14 @@
 package remote.list;
 
 import category.RemoteServerTests;
+import com.onyx.application.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.AllAttributeV2Entity;
 import entities.AllAttributeForFetch;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
 
@@ -24,7 +22,6 @@ import java.util.List;
 @Category({ RemoteServerTests.class })
 public class EqualsTest extends RemoteBaseTest
 {
-
 
     @Before
     public void seedData() throws InitializationException

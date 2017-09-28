@@ -14,6 +14,7 @@ import com.onyx.client.handlers.RequestHandler;
 import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.exception.InitializationException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.SynchronizedMap;
 
@@ -69,14 +70,6 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
                 t.setDaemon(true);
                 return t;
             });
-    /**
-     * Constructor
-     *
-     * @since 1.2.0
-     */
-    protected CommunicationServer() {
-
-    }
 
     /**
      * Retrieve a round robin buffer pool.  This is used to sparse the connections

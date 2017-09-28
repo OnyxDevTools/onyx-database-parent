@@ -2,12 +2,8 @@ package com.onyx.diskmap.node;
 
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
-import com.onyx.diskmap.exception.SerializationException;
-import com.onyx.diskmap.serializer.ObjectBuffer;
-import com.onyx.diskmap.serializer.ObjectSerializable;
 import com.onyx.exception.BufferingException;
 
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -16,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * This class is to represent the starting place for a structure implementation.  This is serialized first
  *
  */
-public class Header implements ObjectSerializable, BufferStreamable
+public class Header implements BufferStreamable
 {
     public static final int HEADER_SIZE = (Long.BYTES * 3);
 
@@ -44,53 +40,6 @@ public class Header implements ObjectSerializable, BufferStreamable
     @Override
     public int hashCode() {
         return (int)(position ^ (position >>> 32));
-    }
-
-
-    /**
-     * ObjectSerializable Interface
-     *
-     * Write to an Object Output Stream
-     *
-     * @param buffer Buffer to write to
-     * @throws java.io.IOException Serialization exception
-     */
-    public void writeObject(ObjectBuffer buffer) throws IOException
-    {
-        buffer.writeLong(firstNode);
-        buffer.writeLong(recordCount.get());
-        buffer.writeLong(position);
-    }
-
-    /**
-     * Read from an Object Buffer
-     *
-     * @param buffer Object buffer to read from
-     * @throws java.io.IOException Serialization exception
-     */
-    public void readObject(ObjectBuffer buffer) throws IOException
-    {
-        firstNode = buffer.readLong();
-
-        if(recordCount == null)
-            recordCount = new AtomicLong(buffer.readLong());
-        else
-            recordCount.set(buffer.readLong());
-
-        position = buffer.readLong();
-    }
-
-    @Override
-    public void readObject(ObjectBuffer buffer, long checksum) throws IOException
-    {
-        readObject(buffer);
-        if(this.position != checksum)
-            throw new SerializationException();
-    }
-
-    @Override
-    public void readObject(ObjectBuffer buffer, long position, int serializerId) throws IOException {
-
     }
 
     @Override
