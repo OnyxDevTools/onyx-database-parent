@@ -1,10 +1,7 @@
 package com.onyx.buffer
 
-import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.util.map.CompatHashMap
-import com.onyx.util.map.CompatMap
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.getFields
 import com.onyx.util.ReflectionUtil
@@ -59,19 +56,19 @@ class BufferStream(buffer: ByteBuffer) {
      * Constructor with underlying byte buffer
      * @param size Size of buffer to allocate
      */
-    constructor(size: Int) : this(BufferPool.allocateAndLimit(size)) {}
+    constructor(size: Int) : this(BufferPool.allocateAndLimit(size))
 
     /**
      * Default constructor with no buffer
      */
-    constructor(context: SchemaContext) : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION)) {
+    constructor(context: SchemaContext?) : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION)) {
         this.context = context
     }
 
     /**
      * Default constructor with no buffer
      */
-    constructor() : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION)) {}
+    constructor() : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION))
 
     init {
         this.expandableByteBuffer = ExpandableByteBuffer(buffer)
@@ -79,10 +76,86 @@ class BufferStream(buffer: ByteBuffer) {
 
     // endregion
 
-    //region cleanup
+    // region Reference Tracking
 
+    /**
+     * Add a reference by class and sequential order by which it was used
+     *
+     * @param reference Object reference
+     */
+    private fun addReference(reference: Any) {
+        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the value references
+        // especially since they are not fully hydrated and may not have valid hashes yet.
+        if (isComingFromBuffer) {
+            referenceCount++
+            referencesByIndex.put(referenceCount, reference)
+        } else {
+            references.getOrPut(reference.javaClass) { HashMap() }
+                    .getOrPut(reference) {
+                        referenceCount++
+                        referencesByIndex.put(referenceCount, reference)
+                        referenceCount
+                    }
+        }
+    }
+
+    /**
+     * Get the reference index of an value
+     * @param reference Reference of an value
+     * @return if it exists it will return the index number otherwise -1
+     */
+    private fun referenceIndex(reference: Any?): Int {
+        if (reference == null)
+            return -1
+
+        val classMap = references[reference.javaClass] ?: return -1
+        return classMap[reference] ?: return -1
+    }
+
+    /**
+     * Reference of the reference index
+     * @param index Index to seek to
+     * @return The actual value referenced
+     */
+    private fun referenceOf(index: Int): Any = referencesByIndex[index]!!
+
+    //endregion
+
+    //region Cleanup
+
+    /**
+     * Recycle the underlying byte buffer in order to prevent un-necessary re-allocation of byte buffers
+     *
+     */
     fun recycle() {
         BufferPool.recycle(byteBuffer)
+    }
+
+    /**
+     * Clear byte buffer and references
+     */
+    fun clear() {
+        byteBuffer.clear()
+        references.clear()
+        referencesByIndex.clear()
+    }
+
+    /**
+     * Clear references so that it forces the re-serialization of objects rather than inserting reference
+     * placeholders into the buffer.
+     *
+     * @since 2.0.0
+     */
+    fun clearReferences() {
+        references.clear()
+        referencesByIndex.clear()
+    }
+
+    /**
+     * Flip the underlying byte buffer
+     */
+    fun flip() {
+        this.expandableByteBuffer!!.buffer.flip()
     }
 
     // endregion
@@ -251,7 +324,7 @@ class BufferStream(buffer: ByteBuffer) {
             val objectType = value as Class<*>
             val instance: Any
             try {
-                instance = instantiate(objectType)
+                instance = ReflectionUtil.instantiate(objectType)
                 addReference(instance)
 
                 instance.getFields().forEach {
@@ -286,6 +359,7 @@ class BufferStream(buffer: ByteBuffer) {
      * @return class type read from the buffer
      * @throws BufferingException Generic Buffer Exception
      */
+    @Suppress("MemberVisibilityCanPrivate")
     val objectClass: Class<*>
         @Throws(BufferingException::class)
         get() {
@@ -350,10 +424,8 @@ class BufferStream(buffer: ByteBuffer) {
 
             val collection = try {
                 ReflectionUtil.instantiate<MutableCollection<Any?>>(collectionClass!!)
-            } catch (e: InstantiationException) {
+            } catch (e: Exception) {
                 ArrayList<Any?>()
-            } catch (e: IllegalAccessException) {
-                throw BufferingException(BufferingException.CANNOT_INSTANTIATE, collectionClass)
             }
 
             for (i in 0 until size)
@@ -415,6 +487,7 @@ class BufferStream(buffer: ByteBuffer) {
      * @return An instantiated BufferStreamable value
      * @throws BufferingException Generic Buffer Exception
      */
+    @Suppress("MemberVisibilityCanPrivate")
     val buffered: BufferStreamable
         @Throws(BufferingException::class)
         get() {
@@ -427,58 +500,118 @@ class BufferStream(buffer: ByteBuffer) {
             return streamable
         }
 
-    // endregion
-
-    // region Reference Tracking
 
     /**
-     * Add a reference by class and sequential order by which it was used
+     * Get a generic value.  Note: This must have been wrapped to ensure the type was added to the buffer so we know what we are
+     * getting.  This will read the value detect if it is null, a reference, and gather the type to read it into.
      *
-     * @param reference Object reference
+     * @since  1.1.0
+     * @return Object read from the buffer
+     * @throws BufferingException Generic Buffer Exception
      */
-    private fun addReference(reference: Any) {
-        // If we are pulling from the expandableByteBuffer there is no reason to maintain a hash structure of the value references
-        // especially since they are not fully hydrated and may not have valid hashes yet.
-        if (isComingFromBuffer) {
-            referenceCount++
-            referencesByIndex.put(referenceCount, reference)
-        } else {
-            references.getOrPut(reference.javaClass) { HashMap() }
-                      .getOrPut(reference) {
-                          referenceCount++
-                          referencesByIndex.put(referenceCount, reference)
-                          referenceCount
-                       }
+    @Throws(BufferingException::class)
+    fun getObject(context: SchemaContext): Any? {
+        this.context = context
+        return value
+    }
+
+    /**
+     * Get Array of primitives or objects
+     *
+     * @since 1.1.0
+     * @param type The serializer type that specifies which type of array to de-serialize
+     * @return An Array
+     * @throws BufferingException Generic Buffer Exception
+     */
+    @Throws(BufferingException::class)
+    fun getArray(type: BufferObjectType): Any {
+        when {
+            type === BufferObjectType.LONG_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = LongArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(java.lang.Long.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.long
+                return arr
+            }
+            type === BufferObjectType.INT_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = IntArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.int
+                return arr
+            }
+            type === BufferObjectType.FLOAT_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = FloatArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(java.lang.Float.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.float
+                return arr
+            }
+            type === BufferObjectType.BYTE_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = ByteArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.get()
+                return arr
+            }
+            type === BufferObjectType.CHAR_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = CharArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(Character.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.char
+                return arr
+            }
+            type === BufferObjectType.SHORT_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = ShortArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(java.lang.Short.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.short
+                return arr
+            }
+            type === BufferObjectType.BOOLEAN_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = BooleanArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.get().toInt() == 1
+                return arr
+            }
+            type === BufferObjectType.DOUBLE_ARRAY -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = DoubleArray(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(java.lang.Double.BYTES * arr.size)
+                for (i in arr.indices)
+                    arr[i] = expandableByteBuffer!!.buffer.double
+                return arr
+            }
+            type === BufferObjectType.OTHER_ARRAY -> {
+                val arr = Array.newInstance(objectClass, int)
+                for (i in 0 until Array.getLength(arr)) {
+                    val value = value
+                    Array.set(arr, i, value)
+                }
+                return arr
+            }
+            else -> {
+                expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
+                val arr = arrayOfNulls<Any>(expandableByteBuffer!!.buffer.int)
+                expandableByteBuffer!!.ensureRequiredSize(3 * arr.size)
+                for (i in arr.indices)
+                    arr[i] = value
+                return arr
+            }
         }
     }
 
-    /**
-     * Get the reference index of an value
-     * @param reference Reference of an value
-     * @return if it exists it will return the index number otherwise -1
-     */
-    private fun referenceIndex(reference: Any?): Int {
-        if (reference == null)
-            return -1
+    // endregion
 
-        val classMap = references[reference.javaClass] ?: return -1
-        return classMap[reference] ?: return -1
-    }
-
-    /**
-     * Reference of the reference index
-     * @param index Index to seek to
-     * @return The actual value referenced
-     */
-    private fun referenceOf(index: Int): Any = referencesByIndex[index]!!
-
-    //endregion
-
-    ///////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Put Preset Objects
-    //
-    ///////////////////////////////////////////////////////////////////////////////////////
+    // region Write Buffer
 
     /**
      * Put an enum key to the buffer
@@ -507,63 +640,65 @@ class BufferStream(buffer: ByteBuffer) {
 
         when {
             array!!.javaClass == LongArray::class.java -> {
-                val arr = array as LongArray?
-                putInt(arr!!.size)
+                val arr = array as LongArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
             }
             array.javaClass == IntArray::class.java -> {
-                val arr = array as IntArray?
-                putInt(arr!!.size)
+                val arr = array as IntArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
             }
             array.javaClass == FloatArray::class.java -> {
-                val arr = array as FloatArray?
-                putInt(arr!!.size)
+                val arr = array as FloatArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
             }
             array.javaClass == ByteArray::class.java -> {
-                val arr = array as ByteArray?
-                putInt(arr!!.size)
+                val arr = array as ByteArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.put(anArr)
             }
             array.javaClass == CharArray::class.java -> {
-                val arr = array as CharArray?
-                putInt(arr!!.size)
+                val arr = array as CharArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
             }
             array.javaClass == ShortArray::class.java -> {
-                val arr = array as ShortArray?
-                putInt(arr!!.size)
+                val arr = array as ShortArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
             }
             array.javaClass == BooleanArray::class.java -> {
-                val arr = array as BooleanArray?
-                putInt(arr!!.size)
+                val arr = array as BooleanArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
             }
             array.javaClass == DoubleArray::class.java -> {
-                val arr = array as DoubleArray?
-                putInt(arr!!.size)
+                val arr = array as DoubleArray
+                putInt(arr.size)
                 expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
                 for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
             }
-            array.javaClass == Array<Any>::class.java -> {
-                val arr = array as Array<Any>?
-                putInt(arr!!.size)
-                for (anArr in arr!!) putObject(anArr)
+            array.javaClass == kotlin.Array<Any?>::class.java -> {
+                @Suppress("UNCHECKED_CAST")
+                val arr = array as kotlin.Array<Any?>
+                putInt(arr.size)
+                for (anArr in arr) putObject(anArr)
             }
             else -> {
                 putObjectClass(array.javaClass.componentType)
-                val arr = array as Array<Any>?
-                putInt(arr!!.size)
-                for (anArr in arr!!) putObject(anArr)
+                @Suppress("UNCHECKED_CAST")
+                val arr = array as kotlin.Array<Any?>
+                putInt(arr.size)
+                for (anArr in arr) putObject(anArr)
             }
         }
     }
@@ -593,10 +728,9 @@ class BufferStream(buffer: ByteBuffer) {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @Suppress("MemberVisibilityCanPrivate")
     @Throws(BufferingException::class)
-    private fun putDate(value: Date) {
-        putLong(value.time)
-    }
+    fun putDate(value: Date) = putLong(value.time)
 
     /**
      * Put a Class to the buffer
@@ -635,15 +769,12 @@ class BufferStream(buffer: ByteBuffer) {
             val clazz = Class.forName(collection.javaClass.name)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
-            putObject(ArrayList<*>::class.java)
+            putObject(ArrayList::class.java)
         }
 
         putInt(collection.size)
 
-        for (aCollection in collection) {
-            putObject(aCollection)
-        }
-
+        for (aCollection in collection) putObject(aCollection)
     }
 
     /**
@@ -654,6 +785,7 @@ class BufferStream(buffer: ByteBuffer) {
      *
      * @throws BufferingException Generic Buffer Exception
      */
+    @Suppress("MemberVisibilityCanPrivate")
     @Throws(BufferingException::class)
     fun putMap(map: Map<*, *>) {
 
@@ -661,26 +793,16 @@ class BufferStream(buffer: ByteBuffer) {
             val clazz = Class.forName(map.javaClass.name)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
-            putObject(HashMap<*, *>::class.java)
+            putObject(HashMap::class.java)
         }
 
         putInt(map.size)
 
-        val iterator = map.entries.iterator()
-        var entry: Entry<*, *>
-
-        while (iterator.hasNext()) {
-            entry = iterator.next()
-            putObject(entry.key)
-            putObject(entry.value)
+        map.forEach {
+            putObject(it.key)
+            putObject(it.value)
         }
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Put Custom Logic Objects
-    //
-    ///////////////////////////////////////////////////////////////////////////////////////
 
     /**
      * Put an value that implements BufferStreamable to the buffer.
@@ -699,12 +821,6 @@ class BufferStream(buffer: ByteBuffer) {
             bufferStreamable.write(this, context)
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Put All other types
-    //
-    ///////////////////////////////////////////////////////////////////////////////////////
-
     /**
      * For all mutable objects that are not pre-defined, use this method to put that to the buffer
      *
@@ -714,51 +830,39 @@ class BufferStream(buffer: ByteBuffer) {
      * sure we can identify the value and is unique.
      *
      * @since 1.1.0
-     * @param object Generic mutable value to write to the buffer
+     * @param `value` Generic mutable value to write to the buffer
      *
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    fun putOther(`object`: Any?) {
+    fun putOther(value: Any?) {
 
-        putObject(`object`!!.javaClass)
-        addReference(`object`)
+        putObject(value!!.javaClass)
+        addReference(value)
 
         // Iterate through the fields and put them on the expandableByteBuffer
-        for (field in ReflectionUtil.getFields(`object`)) {
+        value.getFields().forEach {
             try {
-                if (field.type == Int::class.javaPrimitiveType)
-                    putInt(ReflectionUtil.getInt(`object`, field))
-                else if (field.type == Long::class.javaPrimitiveType)
-                    putLong(ReflectionUtil.getLong(`object`, field))
-                else if (field.type == Byte::class.javaPrimitiveType)
-                    putByte(ReflectionUtil.getByte(`object`, field))
-                else if (field.type == Float::class.javaPrimitiveType)
-                    putFloat(ReflectionUtil.getFloat(`object`, field))
-                else if (field.type == Double::class.javaPrimitiveType)
-                    putDouble(ReflectionUtil.getDouble(`object`, field))
-                else if (field.type == Boolean::class.javaPrimitiveType)
-                    putBoolean(ReflectionUtil.getBoolean(`object`, field))
-                else if (field.type == Short::class.javaPrimitiveType)
-                    putShort(ReflectionUtil.getShort(`object`, field))
-                else if (field.type == Char::class.javaPrimitiveType)
-                    putChar(ReflectionUtil.getChar(`object`, field))
-                else {
-                    val attributeObject = ReflectionUtil.getObject<Any>(`object`, field)
-                    putObject(attributeObject)
+                when {
+                    it.type == Int::class.javaPrimitiveType -> putInt(ReflectionUtil.getInt(value, it))
+                    it.type == Long::class.javaPrimitiveType -> putLong(ReflectionUtil.getLong(value, it))
+                    it.type == Byte::class.javaPrimitiveType -> putByte(ReflectionUtil.getByte(value, it))
+                    it.type == Float::class.javaPrimitiveType -> putFloat(ReflectionUtil.getFloat(value, it))
+                    it.type == Double::class.javaPrimitiveType -> putDouble(ReflectionUtil.getDouble(value, it))
+                    it.type == Boolean::class.javaPrimitiveType -> putBoolean(ReflectionUtil.getBoolean(value, it))
+                    it.type == Short::class.javaPrimitiveType -> putShort(ReflectionUtil.getShort(value, it))
+                    it.type == Char::class.javaPrimitiveType -> putChar(ReflectionUtil.getChar(value, it))
+                    else -> {
+                        val attributeObject = ReflectionUtil.getObject<Any>(value, it)
+                        putObject(attributeObject)
+                    }
                 }
             } catch (e: IllegalAccessException) {
-                throw BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + field.name)
+                throw BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + it.name)
             }
 
         }
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Put Primitives
-    //
-    ///////////////////////////////////////////////////////////////////////////////////////
 
     /**
      * Put byte to the buffer
@@ -872,10 +976,16 @@ class BufferStream(buffer: ByteBuffer) {
         expandableByteBuffer!!.buffer.putChar(value)
     }
 
+    /**
+     * Put object with a context
+     *
+     * @param value Object to put into buffer
+     * @param context Schema context
+     */
     @Throws(BufferingException::class)
-    fun putObject(`object`: Any, context: SchemaContext): Int {
+    fun putObject(value: Any, context: SchemaContext): Int {
         this.context = context
-        return putObject(`object`)
+        return putObject(value)
     }
 
     /**
@@ -883,17 +993,17 @@ class BufferStream(buffer: ByteBuffer) {
      * the packet.  For primitives, I recommend using the primitive put methods.
      *
      * @since 1.1.0
-     * @param object value to write
+     * @param `value` value to write
      *
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    fun putObject(`object`: Any?): Int {
+    fun putObject(value: Any?): Int {
 
         val position = byteBuffer.position()
 
-        var bufferObjectType = BufferObjectType.getTypeCodeForClass(`object`, context)
-        val referenceNumber = referenceIndex(`object`).toShort()
+        var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
+        val referenceNumber = referenceIndex(value).toShort()
         if (referenceNumber > -1) bufferObjectType = BufferObjectType.REFERENCE
 
         try {
@@ -904,184 +1014,37 @@ class BufferStream(buffer: ByteBuffer) {
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return byteBuffer.position() - position
                 BufferObjectType.REFERENCE -> putShort(referenceNumber)
-                BufferObjectType.ENUM -> putEnum(`object` as Enum<*>?)
-                BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> putByte(`object` as Byte)
-                BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> putInt(`object` as Int)
-                BufferObjectType.LONG, BufferObjectType.MUTABLE_LONG -> putLong(`object` as Long)
-                BufferObjectType.SHORT, BufferObjectType.MUTABLE_SHORT -> putShort(`object` as Short)
-                BufferObjectType.FLOAT, BufferObjectType.MUTABLE_FLOAT -> putFloat(`object` as Float)
-                BufferObjectType.DOUBLE, BufferObjectType.MUTABLE_DOUBLE -> putDouble(`object` as Double)
-                BufferObjectType.BOOLEAN, BufferObjectType.MUTABLE_BOOLEAN -> putBoolean(`object` as Boolean)
-                BufferObjectType.CHAR, BufferObjectType.MUTABLE_CHAR -> putChar(`object` as Char)
-                BufferObjectType.BYTE_ARRAY, BufferObjectType.INT_ARRAY, BufferObjectType.LONG_ARRAY, BufferObjectType.SHORT_ARRAY, BufferObjectType.FLOAT_ARRAY, BufferObjectType.DOUBLE_ARRAY, BufferObjectType.BOOLEAN_ARRAY, BufferObjectType.CHAR_ARRAY, BufferObjectType.OBJECT_ARRAY, BufferObjectType.OTHER_ARRAY -> putArray(`object`)
-                BufferObjectType.BUFFERED -> putBuffered(`object` as BufferStreamable?)
-                BufferObjectType.DATE -> putDate(`object` as Date?)
-                BufferObjectType.STRING -> putString(`object` as String?)
-                BufferObjectType.CLASS -> putObjectClass(`object` as Class<*>?)
-                BufferObjectType.COLLECTION -> putCollection(`object` as Collection<*>?)
-                BufferObjectType.MAP -> putMap(`object` as Map<*, *>?)
-                BufferObjectType.OTHER -> putOther(`object`)
+                BufferObjectType.ENUM -> putEnum(value as Enum<*>)
+                BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> putByte(value as Byte)
+                BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> putInt(value as Int)
+                BufferObjectType.LONG, BufferObjectType.MUTABLE_LONG -> putLong(value as Long)
+                BufferObjectType.SHORT, BufferObjectType.MUTABLE_SHORT -> putShort(value as Short)
+                BufferObjectType.FLOAT, BufferObjectType.MUTABLE_FLOAT -> putFloat(value as Float)
+                BufferObjectType.DOUBLE, BufferObjectType.MUTABLE_DOUBLE -> putDouble(value as Double)
+                BufferObjectType.BOOLEAN, BufferObjectType.MUTABLE_BOOLEAN -> putBoolean(value as Boolean)
+                BufferObjectType.CHAR, BufferObjectType.MUTABLE_CHAR -> putChar(value as Char)
+                BufferObjectType.BYTE_ARRAY, BufferObjectType.INT_ARRAY, BufferObjectType.LONG_ARRAY, BufferObjectType.SHORT_ARRAY, BufferObjectType.FLOAT_ARRAY, BufferObjectType.DOUBLE_ARRAY, BufferObjectType.BOOLEAN_ARRAY, BufferObjectType.CHAR_ARRAY, BufferObjectType.OBJECT_ARRAY, BufferObjectType.OTHER_ARRAY -> putArray(value)
+                BufferObjectType.BUFFERED -> putBuffered(value as BufferStreamable)
+                BufferObjectType.DATE -> putDate(value as Date)
+                BufferObjectType.STRING -> putString(value as String)
+                BufferObjectType.CLASS -> putObjectClass(value as Class<*>)
+                BufferObjectType.COLLECTION -> putCollection(value as Collection<*>)
+                BufferObjectType.MAP -> putMap(value as Map<*, *>)
+                BufferObjectType.OTHER -> putOther(value)
             }
         } catch (e: Exception) {
-            if (e is BufferUnderflowException)
-                throw com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, `object`?.javaClass)
-            else if (e is BufferingException)
-                throw e
-            else if (e is OnyxException)
-                throw e
-            else
-                throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE, `object`?.javaClass)
+            when (e) {
+                is BufferUnderflowException -> throw com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW, value!!.javaClass)
+                is BufferingException -> throw e
+                is OnyxException -> throw e
+                else -> throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE, value?.javaClass, e)
+            }
         }
 
         return byteBuffer.position() - position
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////
-    //
-    // Reflection Helpers
-    //
-    ///////////////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Instantiate an value
-     *
-     * @param type The type of class to instantiate
-     * @return The instantiated value.
-     * @throws BufferingException Instantiation failure
-     */
-    @Throws(BufferingException::class)
-    fun instantiate(type: Class<*>): Any {
-        try {
-            return ReflectionUtil.instantiate(type)
-        } catch (e: InstantiationException) {
-            throw BufferingException(BufferingException.CANNOT_INSTANTIATE, type)
-        } catch (e: IllegalAccessException) {
-            throw BufferingException(BufferingException.CANNOT_INSTANTIATE, type)
-        }
-
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    //
-    // Get Object Methods
-    //
-    ////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Get a generic value.  Note: This must have been wrapped to ensure the type was added to the buffer so we know what we are
-     * getting.  This will read the value detect if it is null, a reference, and gather the type to read it into.
-     *
-     * @since  1.1.0
-     * @return Object read from the buffer
-     * @throws BufferingException Generic Buffer Exception
-     */
-    @Throws(BufferingException::class)
-    fun getObject(context: SchemaContext): Any? {
-        this.context = context
-        return value
-    }
-
-    /**
-     * Get Array of primitives or objects
-     *
-     * @since 1.1.0
-     * @param type The serializer type that specifies which type of array to de-serialize
-     * @return An Array
-     * @throws BufferingException Generic Buffer Exception
-     */
-    @Throws(BufferingException::class)
-    fun getArray(type: BufferObjectType): Any {
-        if (type === BufferObjectType.LONG_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = LongArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(java.lang.Long.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.long
-            return arr
-        } else if (type === BufferObjectType.INT_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = IntArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.int
-            return arr
-        } else if (type === BufferObjectType.FLOAT_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = FloatArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(java.lang.Float.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.float
-            return arr
-        } else if (type === BufferObjectType.BYTE_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = ByteArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.get()
-            return arr
-        } else if (type === BufferObjectType.CHAR_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = CharArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(Character.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.char
-            return arr
-        } else if (type === BufferObjectType.SHORT_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = ShortArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(java.lang.Short.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.short
-            return arr
-        } else if (type === BufferObjectType.BOOLEAN_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = BooleanArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.get().toInt() == 1
-            return arr
-        } else if (type === BufferObjectType.DOUBLE_ARRAY) {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = DoubleArray(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(java.lang.Double.BYTES * arr.size)
-            for (i in arr.indices)
-                arr[i] = expandableByteBuffer!!.buffer.double
-            return arr
-        } else if (type === BufferObjectType.OTHER_ARRAY) {
-            val arr = Array.newInstance(objectClass, int)
-            for (i in 0 until Array.getLength(arr)) {
-                val value = value
-                Array.set(arr, i, value)
-            }
-            return arr
-        } else {
-            expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
-            val arr = arrayOfNulls<Any>(expandableByteBuffer!!.buffer.int)
-            expandableByteBuffer!!.ensureRequiredSize(3 * arr.size)
-            for (i in arr.indices)
-                arr[i] = value
-            return arr
-        }
-    }
-
-    fun clear() {
-        byteBuffer.clear()
-        references.clear()
-        referencesByIndex.clear()
-    }
-
-    fun clearReferences() {
-        references.clear()
-        referencesByIndex.clear()
-    }
-
-    /**
-     * Flip the underlying byte buffer
-     */
-    fun flip() {
-        this.expandableByteBuffer!!.buffer.flip()
-    }
-
+    // endregion
 
     /**
      * Converts the buffer to a key key structure.  Note this is intended to use only with ManagedEntities
@@ -1089,28 +1052,14 @@ class BufferStream(buffer: ByteBuffer) {
      * @param context Schema context
      * @return Map representation of the value
      */
-    fun toMap(context: SchemaContext): Map<*, *> {
-        val results = HashMap()
+    fun toMap(context: SchemaContext): Map<String, Any?> {
+        val results = HashMap<String, Any?>()
 
-        var systemEntity: SystemEntity? = null
-        try {
-            byte  // Read the buffer value metadata
-            value // Read the entity type
-            systemEntity = context.getSystemEntityById(int)
-        } catch (e: BufferingException) {
-            e.printStackTrace()
-        }
+        byte  // Read the buffer value metadata
+        value // Read the entity type
+        val systemEntity = context.getSystemEntityById(int)!!
 
-        for ((name) in systemEntity!!.attributes) {
-            var obj: Any? = null
-            try {
-                obj = this.value
-            } catch (e: BufferingException) {
-                e.printStackTrace()
-            }
-
-            results.put(name, obj)
-        }
+        for ((name) in systemEntity.attributes) results.put(name, value)
 
         return results
     }
@@ -1120,7 +1069,7 @@ class BufferStream(buffer: ByteBuffer) {
         /**
          * Convert an value to the byte buffer representation
          *
-         * @param object Object to convert to a byte buffer
+         * @param `any` Object to convert to a byte buffer
          * @param context Schema Context for managed entities
          * @return The ByteBuffer the value was serialized into
          * @since 1.1.0
@@ -1128,11 +1077,12 @@ class BufferStream(buffer: ByteBuffer) {
          */
         @Throws(BufferingException::class)
         @JvmOverloads
-        fun toBuffer(`object`: Any, context: SchemaContext? = null): ByteBuffer {
+        @JvmStatic
+        fun toBuffer(any: Any, context: SchemaContext? = null): ByteBuffer {
 
             val bufferStream = BufferStream(context)
             bufferStream.byteBuffer.position(Integer.BYTES)
-            bufferStream.putObject(`object`)
+            bufferStream.putObject(any)
             bufferStream.byteBuffer.flip()
             bufferStream.byteBuffer.putInt(bufferStream.byteBuffer.limit())
             bufferStream.byteBuffer.rewind()
@@ -1150,6 +1100,7 @@ class BufferStream(buffer: ByteBuffer) {
          */
         @Throws(BufferingException::class)
         @JvmOverloads
+        @JvmStatic
         fun fromBuffer(buffer: ByteBuffer, context: SchemaContext? = null): Any? {
 
             val bufferStream = BufferStream(context)
@@ -1172,7 +1123,7 @@ class BufferStream(buffer: ByteBuffer) {
                 if (e is BufferUnderflowException)
                     throw com.onyx.exception.BufferUnderflowException(com.onyx.exception.BufferUnderflowException.BUFFER_UNDERFLOW)
                 else
-                    throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE)
+                    throw BufferingException(BufferingException.UNKNOWN_DESERIALIZE, null, e)
             }
 
             if (buffer.position() - bufferStartingPosition != maxBufferSize) {
@@ -1188,19 +1139,3 @@ class BufferStream(buffer: ByteBuffer) {
         }
     }
 }
-/**
- * Convert an value to the byte buffer representation
- *
- * @param value Object to convert to a byte buffer
- * @param context Schema Context for managed entities
- * @return The ByteBuffer the value was serialized into
- * @since 1.1.0
- * @throws BufferingException Generic serialization exception when buffering
- */
-/**
- * Convert a buffer to an value by de-serializing the bytes in the buffer
- * @param buffer Buffer to read from
- * @return The value read from the buffer
- * @since 1.1.0
- * @throws BufferingException Generic de-serialization exception occurred when trying to generate
- */

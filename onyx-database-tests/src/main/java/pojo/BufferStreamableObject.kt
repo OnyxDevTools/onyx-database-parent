@@ -21,7 +21,7 @@ class BufferStreamableObject : BufferStreamable {
 
     @Throws(BufferingException::class)
     override fun write(buffer: BufferStream) {
-        buffer.putString(myString)
+        buffer.putString(myString!!)
         buffer.putInt(myInt)
         buffer.putObject(simple)
     }

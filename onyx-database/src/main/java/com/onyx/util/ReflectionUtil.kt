@@ -140,7 +140,6 @@ object ReflectionUtil {
             }
         } catch (e:Exception)
         {
-            e.printStackTrace()
             throw e
         }
     }

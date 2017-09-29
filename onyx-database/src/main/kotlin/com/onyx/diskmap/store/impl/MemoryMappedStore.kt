@@ -324,7 +324,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             synchronized(slices) {
                 this.slices.values
                         .filter { it.buffer is MappedByteBuffer }
-                        .forEach { (it.buffer as MappedByteBuffer).force() }
+                        .forEach { catchAll { (it.buffer as MappedByteBuffer).force()  } }
             }
         }
     }

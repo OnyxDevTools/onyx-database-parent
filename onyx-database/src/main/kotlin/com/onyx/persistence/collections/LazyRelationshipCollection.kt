@@ -187,11 +187,11 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
 
     @Suppress("UNCHECKED_CAST")
     @Throws(BufferingException::class)
-    override fun read(bufferStream: BufferStream) {
+    override fun read(buffer: BufferStream) {
         this.values = CompatWeakHashMap()
-        this.identifiers = bufferStream.collection as MutableList<RelationshipReference>
-        val className = bufferStream.string
-        this.contextId = bufferStream.string
+        this.identifiers = buffer.collection as MutableList<RelationshipReference>
+        val className = buffer.string
+        this.contextId = buffer.string
 
         val context = Contexts.get(contextId!!) ?: Contexts.first()
         this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className))!!
@@ -199,10 +199,10 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     }
 
     @Throws(BufferingException::class)
-    override fun write(bufferStream: BufferStream) {
-        bufferStream.putCollection(identifiers)
-        bufferStream.putString(this.entityDescriptor.entityClass.name)
-        bufferStream.putString(this.contextId)
+    override fun write(buffer: BufferStream) {
+        buffer.putCollection(identifiers)
+        buffer.putString(this.entityDescriptor.entityClass.name)
+        buffer.putString(this.contextId!!)
     }
 
     /**
