@@ -172,7 +172,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Write a serializable object
+     * Write a serializable value
      *
      * @param position within the store
      * @param size Amount of bytes to read
@@ -215,7 +215,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Write a serializable object to
+     * Write a serializable value to
      *
      * @param serializable Object serializable to write to store
      * @param position location to write to
@@ -234,12 +234,12 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Read a serializable object
+     * Read a serializable value
      *
      * @param position position within store
-     * @param size size of object to read
-     * @param type Type of object to assign object to
-     * @return Instantiated object of type
+     * @param size size of value to read
+     * @param type Type of value to assign value to
+     * @return Instantiated value of type
      */
     override fun read(position: Long, size: Int, type: Class<*>): Any? {
         if (!validateFileSize(position))
@@ -257,7 +257,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
                     streamable.read(buffer, context)
                     streamable
                 }
-                else -> buffer.`object`
+                else -> buffer.value
             }
         }
     }
@@ -277,12 +277,12 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Read a serializable object
+     * Read a serializable value
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
-     * @param serializable object to read into
-     * @return same object instance that was sent in.
+     * @param serializable value to read into
+     * @return same value instance that was sent in.
      */
     override fun read(position: Long, size: Int, serializable: BufferStreamable): Any? {
         if (!validateFileSize(position))

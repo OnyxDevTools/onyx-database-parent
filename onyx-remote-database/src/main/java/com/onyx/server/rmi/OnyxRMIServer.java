@@ -45,8 +45,8 @@ public class OnyxRMIServer extends CommunicationServer {
      */
     public OnyxRMIServer() {
         /*
-          RMI Request handler.  This will grab the correct proxy object,
-          execute the method on the proxy object and return the result
+          RMI Request handler.  This will grab the correct proxy value,
+          execute the method on the proxy value and return the result
          */
         this.requestHandler = new RequestHandler() {
 
@@ -77,7 +77,7 @@ public class OnyxRMIServer extends CommunicationServer {
              * Check to see if it is the authentication RPC.  If so, set the result onto the connection properties so
              * we can keep track of the session.
              *
-             * @param registeredObject Proxy object
+             * @param registeredObject Proxy value
              * @param connectionProperties Connection information holding authentication information
              *
              * @since 1.2.0
@@ -105,7 +105,7 @@ public class OnyxRMIServer extends CommunicationServer {
 
                     final Class registeredInterface = registeredInterfaces.get(rmiRequest.getInstance());
 
-                    // Get the registered object.  If it does not exist, return an exception
+                    // Get the registered value.  If it does not exist, return an exception
                     if (registeredObject == null) {
                         return new MethodInvocationException();
                     }
@@ -144,7 +144,7 @@ public class OnyxRMIServer extends CommunicationServer {
     private final CompatMap<Class, List<Method>> methodCache = new SynchronizedMap<>();
 
     /**
-     * Find the corresponding method to the proxy object
+     * Find the corresponding method to the proxy value
      *
      * @param clazz  Class to get from
      * @param method Method.  This is a string value.  This can prolly be optimized in the future but, its better than
@@ -164,9 +164,9 @@ public class OnyxRMIServer extends CommunicationServer {
     }
 
     /**
-     * Register an object within the server as a remote object that can be proxy'd by the clienst
+     * Register an value within the server as a remote value that can be proxy'd by the clienst
      *
-     * @param remoteId Instance name of the remote object
+     * @param remoteId Instance name of the remote value
      * @param object   instance
      * @since 1.2.0
      */
@@ -176,7 +176,7 @@ public class OnyxRMIServer extends CommunicationServer {
     }
 
     /**
-     * Remove the registered proxy object
+     * Remove the registered proxy value
      *
      * @param name instance name
      * @since 1.2.0

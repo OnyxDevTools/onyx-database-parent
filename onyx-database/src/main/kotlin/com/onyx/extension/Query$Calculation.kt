@@ -31,10 +31,10 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
     // Iterate through
     this.getAllCriteria().forEach {
         if (it.attribute!!.contains(".")) {
-            // Compare operator for relationship object
+            // Compare operator for relationship value
             subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
         } else {
-            // Compare operator for attribute object
+            // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
             subCriteria = CompareUtil.compare(it.value, entity.get(context = context, name = it.attribute!!), it.operator)

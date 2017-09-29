@@ -39,7 +39,7 @@ public class SkipListNode<K> extends SkipListHeadNode {
         recordSize = buffer.getInt();
         super.read(buffer);
         recordId = buffer.getLong();
-        key = (K)buffer.getObject();
+        key = (K)buffer.getValue();
     }
 
     @Override

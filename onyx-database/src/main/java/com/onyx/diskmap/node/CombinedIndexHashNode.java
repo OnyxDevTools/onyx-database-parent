@@ -34,7 +34,7 @@ public class CombinedIndexHashNode implements BufferStreamable {
 
     @Override
     public void read(BufferStream buffer) throws BufferingException {
-        head = (SkipListHeadNode) buffer.getObject();
+        head = (SkipListHeadNode) buffer.getValue();
         mapId = buffer.getInt();
     }
 

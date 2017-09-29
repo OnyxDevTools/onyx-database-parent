@@ -16,7 +16,7 @@ class BufferStreamableObject : BufferStreamable {
     override fun read(buffer: BufferStream) {
         myString = buffer.string
         myInt = buffer.int
-        simple = buffer.`object` as Simple
+        simple = buffer.value as Simple
     }
 
     @Throws(BufferingException::class)

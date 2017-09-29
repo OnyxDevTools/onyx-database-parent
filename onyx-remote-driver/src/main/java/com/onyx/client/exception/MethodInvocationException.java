@@ -14,7 +14,7 @@ import com.onyx.persistence.context.SchemaContext;
 public class MethodInvocationException extends OnyxServerException implements BufferStreamable {
 
     public static final String NO_SUCH_METHOD = "No Such Method";
-    private static final String NO_REGISTERED_OBJECT = "The remote object you are request does not exist!";
+    private static final String NO_REGISTERED_OBJECT = "The remote value you are request does not exist!";
     public static final String UNHANDLED_EXCEPTION = "Unhandled exception occurred when making RMI request.";
 
     /**
@@ -40,7 +40,7 @@ public class MethodInvocationException extends OnyxServerException implements Bu
 
     @Override
     public void read(BufferStream buffer) throws BufferingException {
-        this.cause = (Throwable) buffer.getObject();
+        this.cause = (Throwable) buffer.getValue();
         this.message = buffer.getString();
         this.stackTrace = buffer.getString();
     }

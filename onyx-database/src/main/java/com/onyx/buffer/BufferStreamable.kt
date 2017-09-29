@@ -9,13 +9,13 @@ import java.io.Serializable
 /**
  * Created by tosborn1 on 7/30/16.
  *
- * This interface is intended to enable an object for expandableByteBuffer io.  It works much like the Externalizable interface
+ * This interface is intended to enable an value for expandableByteBuffer io.  It works much like the Externalizable interface
  * except without using input and output streams it uses a ByteBuffer.  The IO is wrapped within the BufferStream.
  */
 interface BufferStreamable : Serializable {
 
     /**
-     * Read from buffer stream.  By default this will use fields and read the buffer default object types
+     * Read from buffer stream.  By default this will use fields and read the buffer default value types
      *
      * @param buffer Buffer Stream to read from
      * @throws BufferingException Generic IO Exception from the expandableByteBuffer
@@ -24,12 +24,12 @@ interface BufferStreamable : Serializable {
     @Throws(BufferingException::class)
     fun read(buffer: BufferStream) {
         val fields = getFields()
-        fields.forEach { it.field.set(this, buffer.`object`) }
+        fields.forEach { it.field.set(this, buffer.value) }
     }
 
     /**
-     * Write to a buffer stream.  By default this will iterate through an object's fields and
-     * write each as an object
+     * Write to a buffer stream.  By default this will iterate through an value's fields and
+     * write each as an value
      *
      * @param buffer Buffer IO Stream to write to
      * @throws BufferingException Generic IO Exception from the expandableByteBuffer

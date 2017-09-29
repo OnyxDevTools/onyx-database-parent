@@ -214,7 +214,7 @@ public class JSONDatabaseMessageListener implements HttpHandler {
      * Send a generic response back to client
      *
      * @param exchange HttpServerExchange contains the connection
-     * @param response Serializable response object
+     * @param response Serializable response value
      * @throws JsonProcessingException Error parsing json
      */
     private void sendResponse(final HttpServerExchange exchange, final Object response, int responseCode) throws JsonProcessingException {

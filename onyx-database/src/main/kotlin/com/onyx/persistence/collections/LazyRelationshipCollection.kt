@@ -83,7 +83,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     override fun isEmpty(): Boolean = identifiers.size == 0
 
     /**
-     * Contains an object and is initialized
+     * Contains an value and is initialized
      *
      * @since 1.0.0
      *
@@ -114,7 +114,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     }
 
     /**
-     * Get object at index and initialize it if it does not exist
+     * Get value at index and initialize it if it does not exist
      *
      * @since 1.0.0
      *
@@ -138,7 +138,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     }
 
     /**
-     * Set object at index
+     * Set value at index
      *
      * @since 1.0.0
      *
@@ -149,7 +149,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     override fun set(index: Int, element: E): E = throw RuntimeException("Method unsupported, hydrate relationship using initialize before modifying")
 
     /**
-     * Add object at index
+     * Add value at index
      *
      * @since 1.0.0
      *
@@ -161,7 +161,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     }
 
     /**
-     * Remove object at index
+     * Remove value at index
      *
      * @since 1.0.0
      *
@@ -176,7 +176,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     }
 
     /**
-     * Remove object at index
+     * Remove value at index
      *
      * @since 1.0.0
      *

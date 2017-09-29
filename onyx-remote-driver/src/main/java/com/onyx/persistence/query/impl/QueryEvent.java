@@ -38,14 +38,14 @@ public class QueryEvent<T> implements BufferStreamable {
     private T entity;
 
     /**
-     * Read object from buffer
+     * Read value from buffer
      * @param buffer Buffer Stream to read from
      * @throws BufferingException Hmmm, you messed up
      */
     @Override
     public void read(BufferStream buffer) throws BufferingException {
         this.type = QueryListenerEvent.values()[buffer.getByte()];
-        this.entity = (T)buffer.getObject();
+        this.entity = (T)buffer.getValue();
     }
 
     /**

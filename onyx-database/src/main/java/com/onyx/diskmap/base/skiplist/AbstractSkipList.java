@@ -278,7 +278,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Update the object if it already exists.  The purpose of this method is because the Skip List must start
+     * Update the value if it already exists.  The purpose of this method is because the Skip List must start
      * is search from the root head.  That is why the put is insufficient.
      *
      * @param key   Key identifier
@@ -407,8 +407,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      *
      * @param hash  Hash Code of key 1
      * @param hash2 Hash code of key 2
-     * @param key   The actual key of object 1
-     * @param key2  The actual key of object 2
+     * @param key   The actual key of value 1
+     * @param key2  The actual key of value 2
      * @return If the keys are comparable return the result of that.  Othwerwise return the comparison of hash codes
      * @since 1.2.0
      */
@@ -465,7 +465,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * Find the value at a position.
      *
      * @param position   The position within the file structure to pull it from
-     * @param recordSize How many bytes we must read to get the object
+     * @param recordSize How many bytes we must read to get the value
      * @return The value as long as it serialized ok.
      * @since 1.2.0
      */

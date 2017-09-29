@@ -69,7 +69,7 @@ public class RMIRequest implements BufferStreamable
     public void read(BufferStream buffer) throws BufferingException {
         instance = buffer.getString();
         method = buffer.getByte();
-        params = (Object[]) buffer.getObject();
+        params = (Object[]) buffer.getValue();
     }
 
     @Override

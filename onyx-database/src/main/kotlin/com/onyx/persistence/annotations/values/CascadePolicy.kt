@@ -6,9 +6,9 @@ package com.onyx.persistence.annotations.values
  * @author Tim Osborn
  * @since 1.0.0
  *
- * SAVE - Save child relationship object(s) upon saving parent
- * DELETE - Delete child relationship object(s) upon deleting parent
- * ALL - Delete or Save relationship object(s) upon performing Save or Delete
+ * SAVE - Save child relationship value(s) upon saving parent
+ * DELETE - Delete child relationship value(s) upon deleting parent
+ * ALL - Delete or Save relationship value(s) upon performing Save or Delete
  * DEFER_SAVE - Defer save relationships is used to optimize persistence upon batch saving.
  * NONE - Do not perform cascading on related entities
  *

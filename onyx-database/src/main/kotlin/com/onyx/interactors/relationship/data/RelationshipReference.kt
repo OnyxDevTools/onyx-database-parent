@@ -12,7 +12,7 @@ class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "",
 
     override fun read(buffer: BufferStream) {
         partitionId = buffer.long
-        identifier = buffer.`object`
+        identifier = buffer.value
     }
 
     override fun write(buffer: BufferStream) {

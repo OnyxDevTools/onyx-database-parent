@@ -44,7 +44,7 @@ public class RequestToken implements BufferStreamable
     @Override
     public void read(BufferStream buffer) throws BufferingException {
         token = buffer.getShort();
-        packet = (Serializable)buffer.getObject();
+        packet = (Serializable)buffer.getValue();
     }
 
     @Override

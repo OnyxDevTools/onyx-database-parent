@@ -70,7 +70,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     override fun isEmpty(): Boolean = identifiers.isEmpty()
 
     /**
-     * Contains an object and is initialized
+     * Contains an value and is initialized
      *
      * @since 1.0.0
      *
@@ -102,7 +102,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     }
 
     /**
-     * Get object at index and initialize it if it does not exist
+     * Get value at index and initialize it if it does not exist
      *
      * @since 1.0.0
      *
@@ -126,7 +126,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     }
 
     /**
-     * Get object at index and initialize it if it does not exist
+     * Get value at index and initialize it if it does not exist
      *
      * @since 1.0.0
      *
@@ -143,7 +143,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     }
 
     /**
-     * Set object at index
+     * Set value at index
      *
      * @since 1.0.0
      *
@@ -156,7 +156,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     }
 
     /**
-     * Add object at index
+     * Add value at index
      *
      * @since 1.0.0
      *
@@ -168,7 +168,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     }
 
     /**
-     * Remove object at index
+     * Remove value at index
      *
      *
      * @since 1.0.0

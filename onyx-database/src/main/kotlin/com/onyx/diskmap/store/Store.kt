@@ -25,7 +25,7 @@ interface Store {
     val context:SchemaContext?
 
     /**
-     * Write a serializable object to
+     * Write a serializable value to
      *
      * @param serializable Object serializable to write to store
      * @param position location to write to
@@ -43,7 +43,7 @@ interface Store {
     fun write(buffer: ByteBuffer, position: Long): Int
 
     /**
-     * Write a serializable object
+     * Write a serializable value
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
@@ -60,22 +60,22 @@ interface Store {
     fun read(buffer: ByteBuffer, position: Long)
 
     /**
-     * Read a serializable object from the store
+     * Read a serializable value from the store
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
      * @param type class type
-     * @return The object that was read from the store
+     * @return The value that was read from the store
      */
     fun read(position: Long, size: Int, type: Class<*>): Any?
 
     /**
-     * Read a serializable object
+     * Read a serializable value
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
-     * @param serializable object to read into
-     * @return same object instance that was sent in.
+     * @param serializable value to read into
+     * @return same value instance that was sent in.
      */
     fun read(position: Long, size: Int, serializable: BufferStreamable): Any?
 

@@ -34,7 +34,7 @@ object ReflectionUtil {
     /**
      * Get all the fields to serialize
      *
-     * @param object The object to read the fields from
+     * @param object The value to read the fields from
      * @return Fields with their offsets
      */
     fun getFields(`object`: Any): List<ReflectionField> {
@@ -113,7 +113,7 @@ object ReflectionUtil {
      * Note: If using the unsafe API, this will bypass the constructor
      *
      * @param type the type of class to instantiate
-     * @return the fully instantiated object
+     * @return the fully instantiated value
      * @throws InstantiationException Exception thrown when using unsafe to allocate an instance
      * @throws IllegalAccessException Exception thrown when using regular reflection
      */
@@ -149,7 +149,7 @@ object ReflectionUtil {
      * Instantiate a managed entity
      * @param type Type of class
      * @return New Instance
-     * @throws InvalidConstructorException Exception occurred while creating new object
+     * @throws InvalidConstructorException Exception occurred while creating new value
      *
      * @since 2.0.0 Moved from Entity Descriptor class since it should not be creating new objects
      */
@@ -171,7 +171,7 @@ object ReflectionUtil {
     // region Copy
 
     /**
-     * Returns a copy of the object, or null if the object cannot
+     * Returns a copy of the value, or null if the value cannot
      * be serialized.
      */
     fun copy(orig: IManagedEntity, dest: IManagedEntity, descriptor: EntityDescriptor) {
@@ -187,9 +187,9 @@ object ReflectionUtil {
     // region Get Methods
 
     /**
-     * Get Int for an object and a field
+     * Get Int for an value and a field
      *
-     * @param parent      The object to get the int field from
+     * @param parent      The value to get the int field from
      * @param reflectionField The field to reflect on
      * @return a primitive int
      */
@@ -197,9 +197,9 @@ object ReflectionUtil {
     fun getInt(parent: Any, reflectionField: ReflectionField): Int = reflectionField.field.getInt(parent)
 
     /**
-     * Get byte for an object and a field
+     * Get byte for an value and a field
      *
-     * @param parent      The object to get the byte field from
+     * @param parent      The value to get the byte field from
      * @param reflectionField The field to reflect on
      * @return a primitive byte
      */
@@ -207,9 +207,9 @@ object ReflectionUtil {
     fun getByte(parent: Any, reflectionField: ReflectionField): Byte = reflectionField.field.getByte(parent)
 
     /**
-     * Get long for an object and a field
+     * Get long for an value and a field
      *
-     * @param parent      The object to get the long field from
+     * @param parent      The value to get the long field from
      * @param reflectionField The field to reflect on
      * @return a primitive long
      */
@@ -217,9 +217,9 @@ object ReflectionUtil {
     fun getLong(parent: Any, reflectionField: ReflectionField): Long = reflectionField.field.getLong(parent)
 
     /**
-     * Get float for an object and a field
+     * Get float for an value and a field
      *
-     * @param parent      The object to get the float field from
+     * @param parent      The value to get the float field from
      * @param reflectionField The field to reflect on
      * @return a primitive float
      */
@@ -227,9 +227,9 @@ object ReflectionUtil {
     fun getFloat(parent: Any, reflectionField: ReflectionField): Float = reflectionField.field.getFloat(parent)
 
     /**
-     * Get double for an object and a field
+     * Get double for an value and a field
      *
-     * @param parent      The object to get the double field from
+     * @param parent      The value to get the double field from
      * @param reflectionField The field to reflect on
      * @return a primitive double
      */
@@ -237,9 +237,9 @@ object ReflectionUtil {
     fun getDouble(parent: Any, reflectionField: ReflectionField): Double = reflectionField.field.getDouble(parent)
 
     /**
-     * Get short for an object and a field
+     * Get short for an value and a field
      *
-     * @param parent      The object to get the boolean field from
+     * @param parent      The value to get the boolean field from
      * @param reflectionField The field to reflect on
      * @return a primitive boolean
      */
@@ -247,9 +247,9 @@ object ReflectionUtil {
     fun getBoolean(parent: Any, reflectionField: ReflectionField): Boolean = reflectionField.field.getBoolean(parent)
 
     /**
-     * Get short for an object and a field
+     * Get short for an value and a field
      *
-     * @param parent      The object to get the short field from
+     * @param parent      The value to get the short field from
      * @param reflectionField The field to reflect on
      * @return a primitive short
      */
@@ -257,9 +257,9 @@ object ReflectionUtil {
     fun getShort(parent: Any, reflectionField: ReflectionField): Short = reflectionField.field.getShort(parent)
 
     /**
-     * Get char for an object and a field
+     * Get char for an value and a field
      *
-     * @param parent      The object to get the char field from
+     * @param parent      The value to get the char field from
      * @param reflectionField The field to reflect on
      * @return a primitive char
      */
@@ -267,11 +267,11 @@ object ReflectionUtil {
     fun getChar(parent: Any, reflectionField: ReflectionField): Char = reflectionField.field.getChar(parent)
 
     /**
-     * Get object for an object and a field
+     * Get value for an value and a field
      *
-     * @param parent      The object to get the object field from
+     * @param parent      The value to get the value field from
      * @param reflectionField The field to reflect on
-     * @return a mutable object of any kind
+     * @return a mutable value of any kind
      */
     @Throws(IllegalAccessException::class)
     @Suppress("UNCHECKED_CAST")
@@ -279,10 +279,10 @@ object ReflectionUtil {
 
     /**
      * This method is to return any key from a field using reflection.  It
-     * can either return a primitive or an object.  Note: If inteneded to get a
+     * can either return a primitive or an value.  Note: If inteneded to get a
      * primitive, I recommend using the other api methods to avoid autoboxing.
      *
-     * @param object      Parent object
+     * @param object      Parent value
      * @param reflectionField field to get
      * @return field key
      */
@@ -299,9 +299,9 @@ object ReflectionUtil {
     // region Set Methods
 
     /**
-     * Put an int on an parent object
+     * Put an int on an parent value
      *
-     * @param parent      The object to put the int on
+     * @param parent      The value to put the int on
      * @param reflectionField The field to reflect on
      * @param value       int key to set
      */
@@ -309,9 +309,9 @@ object ReflectionUtil {
     fun setInt(parent: Any, reflectionField: ReflectionField, value: Int) = reflectionField.field.setInt(parent, value)
 
     /**
-     * Put an long on an parent object
+     * Put an long on an parent value
      *
-     * @param parent      The object to put the long on
+     * @param parent      The value to put the long on
      * @param reflectionField The field to reflect on
      * @param value       long key to set
      */
@@ -319,9 +319,9 @@ object ReflectionUtil {
     fun setLong(parent: Any, reflectionField: ReflectionField, value: Long) = reflectionField.field.setLong(parent, value)
 
     /**
-     * Put an byte on an parent object
+     * Put an byte on an parent value
      *
-     * @param parent      The object to put the byte on
+     * @param parent      The value to put the byte on
      * @param reflectionField The field to reflect on
      * @param value       byte key to set
      */
@@ -329,9 +329,9 @@ object ReflectionUtil {
     fun setByte(parent: Any, reflectionField: ReflectionField, value: Byte) = reflectionField.field.setByte(parent, value)
 
     /**
-     * Put an float on an parent object
+     * Put an float on an parent value
      *
-     * @param parent      The object to put the float on
+     * @param parent      The value to put the float on
      * @param reflectionField The field to reflect on
      * @param value       float key to set
      */
@@ -339,9 +339,9 @@ object ReflectionUtil {
     fun setFloat(parent: Any, reflectionField: ReflectionField, value: Float) = reflectionField.field.setFloat(parent, value)
 
     /**
-     * Put an double on an parent object
+     * Put an double on an parent value
      *
-     * @param parent      The object to put the double on
+     * @param parent      The value to put the double on
      * @param reflectionField The field to reflect on
      * @param value       double key to set
      */
@@ -349,9 +349,9 @@ object ReflectionUtil {
     fun setDouble(parent: Any, reflectionField: ReflectionField, value: Double) = reflectionField.field.setDouble(parent, value)
 
     /**
-     * Put an short on an parent object
+     * Put an short on an parent value
      *
-     * @param parent      The object to put the short on
+     * @param parent      The value to put the short on
      * @param reflectionField The field to reflect on
      * @param value       short key to set
      */
@@ -359,9 +359,9 @@ object ReflectionUtil {
     fun setShort(parent: Any, reflectionField: ReflectionField, value: Short) = reflectionField.field.setShort(parent, value)
 
     /**
-     * Put an boolean on an parent object
+     * Put an boolean on an parent value
      *
-     * @param parent      The object to put the boolean on
+     * @param parent      The value to put the boolean on
      * @param reflectionField The field to reflect on
      * @param value       boolean key to set
      */
@@ -369,9 +369,9 @@ object ReflectionUtil {
     fun setBoolean(parent: Any, reflectionField: ReflectionField, value: Boolean) = reflectionField.field.setBoolean(parent, value)
 
     /**
-     * Put an char on an parent object
+     * Put an char on an parent value
      *
-     * @param parent      The object to put the char on
+     * @param parent      The value to put the char on
      * @param reflectionField The field to reflect on
      * @param value       char key to set
      */
@@ -379,11 +379,11 @@ object ReflectionUtil {
     fun setChar(parent: Any, reflectionField: ReflectionField, value: Char) = reflectionField.field.setChar(parent, value)
 
     /**
-     * Put an object on an parent object
+     * Put an value on an parent value
      *
-     * @param parent      The object to put the object on
+     * @param parent      The value to put the value on
      * @param reflectionField The field to reflect on
-     * @param value       object key to set
+     * @param value       value key to set
      */
     @Throws(IllegalAccessException::class)
     fun setObject(parent: Any, reflectionField: ReflectionField, value: Any?) = reflectionField.field.set(parent, value)
@@ -391,8 +391,8 @@ object ReflectionUtil {
     /**
      * Reflection utility for setting an attribute
      *
-     * @param parent Parent object to set property on
-     * @param child  Child object that is the property value
+     * @param parent Parent value to set property on
+     * @param child  Child value that is the property value
      * @param field  Field to set on the parent
      */
     @Throws(AttributeMissingException::class)

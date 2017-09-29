@@ -139,7 +139,7 @@ open class FileChannelStore() : Store {
     override fun write(buffer: ByteBuffer, position: Long): Int = channel!!.write(buffer)
 
     /**
-     * Write a serializable object to a volume.  This uses the BufferStream for serialization
+     * Write a serializable value to a volume.  This uses the BufferStream for serialization
      *
      * @param serializable Object
      * @param position Position to write to
@@ -154,12 +154,12 @@ open class FileChannelStore() : Store {
     }
 
     /**
-     * Read a serializable object from the store
+     * Read a serializable value from the store
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
      * @param type class type
-     * @return The object that was read from the store
+     * @return The value that was read from the store
      */
     override fun read(position: Long, size: Int, type: Class<*>): Any? {
         if (!validateFileSize(position)) return null
@@ -174,19 +174,19 @@ open class FileChannelStore() : Store {
                 serializable.read(buffer)
                 serializable
             } else {
-                buffer.`object`
+                buffer.value
             }
         }
 
     }
 
     /**
-     * Read a serializable object
+     * Read a serializable value
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
-     * @param serializable object to read into
-     * @return same object instance that was sent in.
+     * @param serializable value to read into
+     * @return same value instance that was sent in.
      */
     override fun read(position: Long, size: Int, serializable: BufferStreamable): Any? {
         if (!validateFileSize(position))
@@ -202,7 +202,7 @@ open class FileChannelStore() : Store {
     }
 
     /**
-     * Write a serializable object
+     * Write a serializable value
      *
      * @param position Position to read from
      * @param size Amount of bytes to read.
@@ -235,7 +235,7 @@ open class FileChannelStore() : Store {
     /**
      * Validate we are not going to read beyond the allocated file storage.  This would be bad
      * @param position Position to validate
-     * @return whether the object you seek is in a valid position
+     * @return whether the value you seek is in a valid position
      */
     protected fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
 

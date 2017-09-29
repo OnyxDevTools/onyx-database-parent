@@ -39,7 +39,7 @@ class AttributeUpdate @JvmOverloads constructor(var fieldName: String? = null, v
     }
 
     override fun read(buffer: BufferStream) {
-        fieldName = buffer.`object` as String
-        value = buffer.`object`
+        fieldName = buffer.value as String
+        value = buffer.value
     }
 }

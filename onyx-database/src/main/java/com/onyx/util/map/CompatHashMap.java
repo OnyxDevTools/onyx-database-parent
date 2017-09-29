@@ -357,7 +357,7 @@ public class CompatHashMap<K,V>  extends HashMap<K,V> implements CompatMap<K,V> 
      * <p>If the function returns {@code null} no mapping is recorded. If
      * the function itself throws an (unchecked) exception, the
      * exception is rethrown, and no mapping is recorded.  The most
-     * common usage is to construct a new object serving as an initial
+     * common usage is to construct a new value serving as an initial
      * mapped value or memoized result, as in:
      *
      * <pre> {@code

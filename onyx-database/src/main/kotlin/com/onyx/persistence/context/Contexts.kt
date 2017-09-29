@@ -5,7 +5,7 @@ package com.onyx.persistence.context
  * Created by tosborn1 on 9/6/17.
  *
  * This class tracks all of the open contexts.  This was moved out to
- * take advantage of Kotlin's object
+ * take advantage of Kotlin's value
  *
  * @since 2.0.0
  */

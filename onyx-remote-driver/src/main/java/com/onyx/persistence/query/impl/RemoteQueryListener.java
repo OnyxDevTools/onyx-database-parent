@@ -10,7 +10,6 @@ import com.onyx.exception.BufferingException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.QueryListener;
 import com.onyx.persistence.query.QueryListenerEvent;
-import org.jetbrains.annotations.NotNull;
 
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
@@ -35,7 +34,7 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
     private transient SocketChannel socketChannel;
     private transient PushPublisher pushPublisher;
 
-    // Responder object
+    // Responder value
     private transient QueryListener baseListener;
 
     /**
@@ -64,7 +63,7 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
     @Override
     public void read(BufferStream buffer) throws BufferingException {
         listenerId = buffer.getLong();
-        packet = buffer.getObject();
+        packet = buffer.getValue();
         subscribeEvent = buffer.getByte();
     }
 
@@ -125,8 +124,8 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
     }
 
     /**
-     * Subscriber object id
-     * @param pushObjectId Unique subscriber object id
+     * Subscriber value id
+     * @param pushObjectId Unique subscriber value id
      */
     @Override
     public void setPushObjectId(long pushObjectId) {

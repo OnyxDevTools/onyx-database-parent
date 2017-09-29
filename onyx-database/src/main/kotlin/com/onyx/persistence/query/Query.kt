@@ -51,7 +51,7 @@ class Query : BufferStreamable {
     var updates: List<AttributeUpdate> = arrayListOf()
 
     /**
-     * Gets the criteria object that is used to filter when doing a fetch
+     * Gets the criteria value that is used to filter when doing a fetch
      * @since 1.0.0
      */
     var criteria: QueryCriteria<*>? = null
@@ -108,13 +108,13 @@ class Query : BufferStreamable {
     var isTerminated:Boolean = false
 
     /**
-     * Constructor creates an empty Query object
+     * Constructor creates an empty Query value
      * @since 1.0.0
      */
     constructor()
 
     /**
-     * Constructor creates a query object and initializes the criteria object used for filtering results
+     * Constructor creates a query value and initializes the criteria value used for filtering results
      * @since 1.0.0
      *
      * @param entityType Managed Entity Type
@@ -131,7 +131,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the criteria object used for filtering results
+     * Constructor creates a query value and initializes the criteria value used for filtering results
      *
      * @since 1.0.0
      *
@@ -151,7 +151,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the queryOrders used for sorting results
+     * Constructor creates a query value and initializes the queryOrders used for sorting results
      *
      * @since 1.0.0
      *
@@ -169,7 +169,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the queryOrders used for sorting results
+     * Constructor creates a query value and initializes the queryOrders used for sorting results
      *
      * @since 1.0.0
      *
@@ -186,7 +186,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the queryOrders used for sorting results
+     * Constructor creates a query value and initializes the queryOrders used for sorting results
      *
      * @since 1.0.0
      *
@@ -203,7 +203,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the criteria used for filtering and the queryOrders used for sorting results
+     * Constructor creates a query value and initializes the criteria used for filtering and the queryOrders used for sorting results
      *
      *
      * @since 1.0.0
@@ -224,7 +224,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the criteria object used for filtering results along with a list of selection fields
+     * Constructor creates a query value and initializes the criteria value used for filtering results along with a list of selection fields
      * @since 1.0.0
      * @param entityType Managed Entity Type
      * @param selections List of attributes to return in query results
@@ -241,7 +241,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the criteria object used for filtering results along with an array of update details. The array of sections fields are parameters 2..n
+     * Constructor creates a query value and initializes the criteria value used for filtering results along with an array of update details. The array of sections fields are parameters 2..n
      * @since 1.0.0
      * @param entityType Managed Entity Type
      * @param criteria   Query filter criteria
@@ -257,7 +257,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * creates a query object and initializes the criteria object used for filtering results along with a list of updates that can be used to update all rows returned from the query
+     * creates a query value and initializes the criteria value used for filtering results along with a list of updates that can be used to update all rows returned from the query
      * @since 1.0.0
      *
      * Query query = new Query(Person.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"), Arrays.asList(new AttributeUpdate("name", "Jim"));
@@ -274,7 +274,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the criteria object used for filtering results along with a list of selection fields and a list of queryOrders that can be used for sorting
+     * Constructor creates a query value and initializes the criteria value used for filtering results along with a list of selection fields and a list of queryOrders that can be used for sorting
      * @since 1.0.0
      * @param entityType  Entity Type
      * @param selections  List of attributes to return in query results
@@ -297,7 +297,7 @@ class Query : BufferStreamable {
     }
 
     /**
-     * Constructor creates a query object and initializes the criteria object used for filtering results along with a list of selection fields and a list of queryOrders that can be used for sorting
+     * Constructor creates a query value and initializes the criteria value used for filtering results along with a list of selection fields and a list of queryOrders that can be used for sorting
      * @since 1.0.0
      * @param entityType Entity Type
      * @param selections List of attributes to return in query results

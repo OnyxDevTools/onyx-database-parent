@@ -8,7 +8,7 @@ import java.util.function.BiConsumer;
 /**
  * Created by tosborn1 on 3/24/17.
  *
- * This map will retain object that are most recently used.  If an object has expired, it will
+ * This map will retain value that are most recently used.  If an value has expired, it will
  * eject the last recently used object.
  */
 public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements CompatMap<K,V> {

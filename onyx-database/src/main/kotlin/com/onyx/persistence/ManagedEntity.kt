@@ -68,7 +68,7 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
         systemEntity!!.attributes.forEach {
             catchAll {
-                this.set(context = context, name = it.name, value = buffer.`object`)
+                this.set(context = context, name = it.name, value = buffer.value)
             }
         }
 

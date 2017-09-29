@@ -22,6 +22,13 @@ open class BufferingException : OnyxException {
      */
     constructor(message: String, clazz: Class<*>?) : super(message + if (clazz != null) clazz.name else "null")
 
+    /**
+     * Constructor with message and class attempted to expandableByteBuffer
+     * @param message error message
+     * @param clazz class to add to error message
+     */
+    constructor(message: String, clazz: Class<*>?, cause:Exception) : super(message + if (clazz != null) clazz.name else "null", cause)
+
     companion object {
 
         @JvmField val UNKNOWN_DESERIALIZE = "Unknown exception occurred while de-serializing "

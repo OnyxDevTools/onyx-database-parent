@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by tosborn1 on 8/26/16.
  *
- * This test inserts several records.  To demonstrate a valid test, we insert a base level object, and an object with
+ * This test inserts several records.  To demonstrate a valid test, we insert a base level value, and an value with
  * a relationships.  This illustrates not just the speed of the database but the ORM as well.
  */
 @SuppressWarnings("WeakerAccess")

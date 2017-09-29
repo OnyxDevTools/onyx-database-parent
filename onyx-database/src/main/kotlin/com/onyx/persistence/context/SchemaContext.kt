@@ -65,7 +65,7 @@ interface SchemaContext {
      * to use a contract so we can tell which persistence manager pertains the
      * how we are using it.
      *
-     * Returns what persistence manager should be de-serialized when attaching this context to an object through the network.  Or lack of network
+     * Returns what persistence manager should be de-serialized when attaching this context to an value through the network.  Or lack of network
      *
      * @return Serialized Persistence Manager.
      */

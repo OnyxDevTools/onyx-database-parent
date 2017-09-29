@@ -114,10 +114,10 @@ interface PersistenceManager {
     fun executeDelete(query: Query): Int
 
     /**
-     * Execute a delete query and return a result object.  This is so that it will play nicely as a proxy object
+     * Execute a delete query and return a result value.  This is so that it will play nicely as a proxy value
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
-     * @return The results including the original result from the query execute and the updated query object
+     * @return The results including the original result from the query execute and the updated query value
      * @throws OnyxException Exception when deleting entities
      */
     @Throws(OnyxException::class)
@@ -140,10 +140,10 @@ interface PersistenceManager {
     fun executeUpdate(query: Query): Int
 
     /**
-     * Execute an update query and return a result object.  This is so that it will play nicely as a proxy object
+     * Execute an update query and return a result value.  This is so that it will play nicely as a proxy value
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
-     * @return The results including the original result from the query execute and the updated query object
+     * @return The results including the original result from the query execute and the updated query value
      * @throws OnyxException when an update query failed
      */
     @Throws(OnyxException::class)
@@ -164,10 +164,10 @@ interface PersistenceManager {
     fun <E> executeQuery(query: Query): List<E>
 
     /**
-     * Execute a query and return a result object.  This is so that it will play nicely as a proxy object
+     * Execute a query and return a result value.  This is so that it will play nicely as a proxy value
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
-     * @return The results including the original result from the query execute and the updated query object
+     * @return The results including the original result from the query execute and the updated query value
      * @throws OnyxException when the query is mal formed or general exception
      */
     @Throws(OnyxException::class)
@@ -188,10 +188,10 @@ interface PersistenceManager {
     fun <E : IManagedEntity> executeLazyQuery(query: Query): List<E>
 
     /**
-     * Execute a lazy query and return a result object.  This is so that it will play nicely as a proxy object
+     * Execute a lazy query and return a result value.  This is so that it will play nicely as a proxy value
      * @param query Query used to filter entities with criteria
      * @since 1.2.0
-     * @return The results including the original result from the query execute and the updated query object
+     * @return The results including the original result from the query execute and the updated query value
      * @throws OnyxException General exception happened when the query.
      */
     @Throws(OnyxException::class)

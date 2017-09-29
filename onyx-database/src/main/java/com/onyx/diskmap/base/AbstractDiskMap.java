@@ -37,7 +37,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
     protected AbstractDiskMap(Store fileStore, Header header, boolean headless) {
         this.fileStore = fileStore;
         // Clone the header so that we do not have a cross reference
-        // This was preventing WeakHashMaps from ejecting the entire map object
+        // This was preventing WeakHashMaps from ejecting the entire map value
         this.header = new Header();
         this.header.firstNode = header.firstNode;
         this.header.position = header.position;
