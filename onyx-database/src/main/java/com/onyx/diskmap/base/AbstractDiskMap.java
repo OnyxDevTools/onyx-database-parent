@@ -1,5 +1,6 @@
 package com.onyx.diskmap.base;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.node.HashMatrixNode;
@@ -49,14 +50,14 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("WeakerAccess")
     void updateHeaderRecordCount() {
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(header.recordCount.get());
             buffer.flip();
             fileStore.write(buffer, header.position + Long.BYTES);
         }
         finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 
@@ -68,14 +69,14 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("unused")
     protected void updateHeaderFirstNode(Header header, long firstNode) {
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(firstNode);
             buffer.flip();
             fileStore.write(buffer, header.position);
         }
         finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 

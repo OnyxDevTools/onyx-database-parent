@@ -10,6 +10,7 @@ import com.onyx.exception.BufferingException;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.QueryListener;
 import com.onyx.persistence.query.QueryListenerEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
@@ -242,4 +243,5 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
         else if(event.getType() == QueryListenerEvent.DELETE)
             baseListener.onItemRemoved(event.getEntity());
     }
+
 }

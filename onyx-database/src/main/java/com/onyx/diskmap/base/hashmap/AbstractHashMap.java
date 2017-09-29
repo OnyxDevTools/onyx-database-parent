@@ -1,5 +1,6 @@
 package com.onyx.diskmap.base.hashmap;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.DiskSkipListMap;
 import com.onyx.diskmap.node.Header;
@@ -82,7 +83,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     @SuppressWarnings({"UnusedReturnValue", "WeakerAccess"})
     protected long insertReference(int hash, long reference)
     {
-        ByteBuffer buffer = BufferStream.allocate(Long.BYTES);
+        ByteBuffer buffer = BufferPool.INSTANCE.allocate(Long.BYTES);
 
         try {
             // Update count
@@ -98,7 +99,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
 
             addIterationList(buffer, hash, count - 1);
         } finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
 
         return reference;
@@ -135,14 +136,14 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     protected long updateReference(int hash, long reference)
     {
         long position = (header.firstNode + referenceOffset + (hash*8));
-        ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(reference);
             buffer.flip();
             fileStore.write(buffer, position);
         }
         finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
         return reference;
     }

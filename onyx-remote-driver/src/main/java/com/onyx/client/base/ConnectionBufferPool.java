@@ -1,5 +1,6 @@
 package com.onyx.client.base;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 
 import java.nio.ByteBuffer;
@@ -41,10 +42,10 @@ public class ConnectionBufferPool {
      */
     public ConnectionBufferPool(int applicationBufferSize, int packetSize)
     {
-        writeApplicationData = BufferStream.allocate(applicationBufferSize);
-        writeNetworkData = BufferStream.allocate(packetSize);
-        readApplicationData = BufferStream.allocate(applicationBufferSize);
-        readNetworkData = BufferStream.allocate(packetSize);
+        writeApplicationData = BufferPool.INSTANCE.allocate(applicationBufferSize);
+        writeNetworkData = BufferPool.INSTANCE.allocate(packetSize);
+        readApplicationData = BufferPool.INSTANCE.allocate(applicationBufferSize);
+        readNetworkData = BufferPool.INSTANCE.allocate(packetSize);
         readThread = Executors.newSingleThreadExecutor();
         writeThread = Executors.newSingleThreadExecutor();
     }

@@ -1,5 +1,6 @@
 package com.onyx.diskmap.store.impl
 
+import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.base.concurrent.AtomicCounter
@@ -145,12 +146,10 @@ open class FileChannelStore() : Store {
      */
     override fun write(serializable: BufferStreamable, position: Long): Int {
         val stream = BufferStream()
-        try {
+        return stream.perform {
             serializable.write(stream)
             stream.byteBuffer.flip()
-            return channel!!.write(stream.byteBuffer, position)
-        } finally {
-            stream.recycle()
+            channel!!.write(stream.byteBuffer, position)
         }
     }
 
@@ -193,7 +192,7 @@ open class FileChannelStore() : Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferStream.allocateAndLimit(size)
+        val buffer = BufferPool.allocateAndLimit(size)
         return withBuffer(buffer) {
             channel!!.read(buffer, position)
             buffer.flip()
@@ -213,7 +212,7 @@ open class FileChannelStore() : Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferStream.allocateAndLimit(size)
+        val buffer = BufferPool.allocateAndLimit(size)
 
         channel!!.read(buffer, position)
         buffer.rewind()
@@ -247,7 +246,7 @@ open class FileChannelStore() : Store {
      * @return position of started allocated bytes
      */
     override fun allocate(size: Int): Long {
-        val buffer = BufferStream.allocateAndLimit(8)
+        val buffer = BufferPool.allocateAndLimit(8)
         return withBuffer(buffer) {
             val newFileSize = fileSizeCounter.getAndAdd(size)
             it.putLong(newFileSize + size)

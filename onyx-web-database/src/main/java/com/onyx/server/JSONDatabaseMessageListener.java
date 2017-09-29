@@ -3,6 +3,7 @@ package com.onyx.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.endpoint.WebPersistenceEndpoint;
 import com.onyx.exception.OnyxException;
@@ -151,7 +152,7 @@ public class JSONDatabaseMessageListener implements HttpHandler {
                         final String stringPath = exchange.getRelativePath();
                         final RestServicePath path = RestServicePath.Companion.valueOfPath(stringPath);
                         final Class bodyType = getClassForEndpoint(path);
-                        final ByteBuffer buffer = BufferStream.allocateAndLimit((int) exchange.getRequestContentLength());
+                        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit((int) exchange.getRequestContentLength());
                         byte[] bytes = null;
 
                         try {
@@ -169,7 +170,7 @@ public class JSONDatabaseMessageListener implements HttpHandler {
                             buffer.rewind();
                             buffer.get(bytes);
                         } finally {
-                            BufferStream.recycle(buffer);
+                            BufferPool.INSTANCE.recycle(buffer);
                         }
 
                         final Object requestBody = objectMapper.readValue(bytes, bodyType);

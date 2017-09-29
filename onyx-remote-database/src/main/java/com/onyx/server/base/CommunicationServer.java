@@ -1,6 +1,7 @@
 package com.onyx.server.base;
 
 import com.onyx.application.OnyxServer;
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.client.AbstractCommunicationPeer;
 import com.onyx.client.base.*;
@@ -228,7 +229,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
             workerThreadPool.execute(() -> {
                 final RequestToken useThisRequestToken = (isInLargePacket) ? parseRequestToken(socketChannel, connectionProperties, buffer) : threadPoolMessage;
                 if (isInLargePacket) {
-                    BufferStream.recycle(buffer);
+                    BufferPool.INSTANCE.recycle(buffer);
                 }
                 if (useThisRequestToken.packet != null) {
                     try {

@@ -1,5 +1,6 @@
 package com.onyx.client;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.client.base.ConnectionProperties;
@@ -116,7 +117,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                                         // Since that is the case, we will combine multiple reads onto a single buffer.
                                         // This buffer is a throw away since we want to keep memory management sane.
                                         else if (packetType == MULTI_PACKET_START) {
-                                            readMultiPacketData = BufferStream.allocate(MULTI_PACKET_BUFFER_ALLOCATION); // Allocate using the Buffer Stream since it encapsulates the endian and potential use of recycled buffers
+                                            readMultiPacketData = BufferPool.INSTANCE.allocate(MULTI_PACKET_BUFFER_ALLOCATION); // Allocate using the Buffer Stream since it encapsulates the endian and potential use of recycled buffers
                                             readMultiPacketData.put(connectionProperties.readApplicationData);
                                         }
                                         // A Packet in the middle
@@ -242,10 +243,10 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      */
     private ByteBuffer ensureBufferCapacity(ByteBuffer buffer, int additional) {
         if (buffer.capacity() < buffer.position() + additional) {
-            ByteBuffer temporaryBuffer = BufferStream.allocate(buffer.capacity() + additional);
+            ByteBuffer temporaryBuffer = BufferPool.INSTANCE.allocate(buffer.capacity() + additional);
             buffer.flip();
             temporaryBuffer.put(buffer);
-            BufferStream.recycle(buffer); // Be sure to recycle so we can use another time
+            BufferPool.INSTANCE.recycle(buffer); // Be sure to recycle so we can use another time
             buffer = temporaryBuffer;
         }
 
@@ -262,7 +263,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      */
     protected void write(SocketChannel socketChannel, ConnectionProperties connectionProperties, Serializable message) {
 
-        ByteBuffer buffer = BufferStream.allocate(SERIALIZATION_BUFFER_SIZE);
+        ByteBuffer buffer = BufferPool.INSTANCE.allocate(SERIALIZATION_BUFFER_SIZE);
 
         buffer.position(1);
 
@@ -325,7 +326,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                     messageBuffer.put(SINGLE_PACKET); // Put packet type
                     messageBuffer.rewind();
                     writePacket(socketChannel, connectionProperties, messageBuffer);
-                    BufferStream.recycle(messageBuffer);
+                    BufferPool.INSTANCE.recycle(messageBuffer);
                 }
             } catch (Exception exception) {
                 if (message instanceof RequestToken) {
@@ -362,10 +363,10 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
         SSLEngineResult result;
         HandshakeStatus handshakeStatus;
 
-        ByteBuffer writeHandshakeBuffer = BufferStream.allocate(connectionProperties.writeApplicationData.capacity());
-        ByteBuffer writeHandshakeApplicationBuffer = BufferStream.allocate(connectionProperties.writeApplicationData.capacity());
-        ByteBuffer readHandshakeData = BufferStream.allocate(connectionProperties.writeNetworkData.capacity());
-        ByteBuffer readHandshakeApplicationData = BufferStream.allocate(connectionProperties.writeApplicationData.capacity());
+        ByteBuffer writeHandshakeBuffer = BufferPool.INSTANCE.allocate(connectionProperties.writeApplicationData.capacity());
+        ByteBuffer writeHandshakeApplicationBuffer = BufferPool.INSTANCE.allocate(connectionProperties.writeApplicationData.capacity());
+        ByteBuffer readHandshakeData = BufferPool.INSTANCE.allocate(connectionProperties.writeNetworkData.capacity());
+        ByteBuffer readHandshakeApplicationData = BufferPool.INSTANCE.allocate(connectionProperties.writeApplicationData.capacity());
 
         handshakeStatus = connectionProperties.packetTransportEngine.getHandshakeStatus();
         try {
@@ -469,10 +470,10 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
                 }
             }
         } finally {
-            BufferStream.recycle(readHandshakeData);
-            BufferStream.recycle(readHandshakeApplicationData);
-            BufferStream.recycle(writeHandshakeBuffer);
-            BufferStream.recycle(writeHandshakeApplicationBuffer);
+            BufferPool.INSTANCE.recycle(readHandshakeData);
+            BufferPool.INSTANCE.recycle(readHandshakeApplicationData);
+            BufferPool.INSTANCE.recycle(writeHandshakeBuffer);
+            BufferPool.INSTANCE.recycle(writeHandshakeApplicationBuffer);
         }
 
         return true;

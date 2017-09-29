@@ -1,5 +1,6 @@
 package embedded;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.client.base.RequestToken;
 import com.onyx.exception.OnyxException;
@@ -47,7 +48,7 @@ public class SerializationTest extends RemoteBaseTest {
 
         final ByteBuffer buf =  BufferStream.toBuffer(token);
         RequestToken token2 = (RequestToken) BufferStream.fromBuffer(buf);
-        BufferStream.recycle(buf);
+        BufferPool.INSTANCE.recycle(buf);
 
         Assert.assertTrue(token2.token == token.token);
 
@@ -66,7 +67,7 @@ public class SerializationTest extends RemoteBaseTest {
         buffer.rewind();
 
         ArrayList other = (ArrayList) BufferStream.fromBuffer(buffer);
-        BufferStream.recycle(buffer);
+        BufferPool.INSTANCE.recycle(buffer);
 
         assert other.size() == 1;
         assert other.get(0) instanceof AllAttributeEntity;
@@ -109,7 +110,7 @@ public class SerializationTest extends RemoteBaseTest {
             buffer.rewind();
 
             BufferStream.fromBuffer(buffer);
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
 
         }
 

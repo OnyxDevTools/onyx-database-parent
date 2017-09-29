@@ -1,5 +1,6 @@
 package com.onyx.diskmap.base.hashmatrix;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.DiskSkipListMap;
 import com.onyx.diskmap.node.HashMatrixNode;
@@ -50,13 +51,13 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
     @SuppressWarnings("WeakerAccess")
     public void updateHashMatrixReference(HashMatrixNode node, int index, long value) {
         node.next[index] = value;
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(value);
             buffer.flip();
             fileStore.write(buffer, node.position + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
         } finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 

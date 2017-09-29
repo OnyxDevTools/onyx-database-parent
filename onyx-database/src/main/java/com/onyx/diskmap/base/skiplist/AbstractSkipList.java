@@ -1,5 +1,6 @@
 package com.onyx.diskmap.base.skiplist;
 
+import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.AbstractDiskMap;
 import com.onyx.diskmap.node.Header;
@@ -538,7 +539,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     private void updateNodeDown(SkipListHeadNode node, long position) {
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
 
             node.down = position;
@@ -555,7 +556,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
             fileStore.write(buffer, node.position + offset);
 
         } finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 
@@ -570,7 +571,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      */
     @SuppressWarnings("WeakerAccess")
     protected void updateNodeNext(SkipListHeadNode node, long position) {
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
 
             node.next = position;
@@ -587,7 +588,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
             fileStore.write(buffer, node.position + offset);
 
         } finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 
@@ -752,13 +753,13 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * This method will only update the record count rather than the entire header
      */
     protected void updateHeaderRecordCount() {
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(header.recordCount.get());
             buffer.flip();
             fileStore.write(buffer, header.position + Long.BYTES);
         } finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 
@@ -783,13 +784,13 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      */
     protected void forceUpdateHeaderFirstNode(Header header, long firstNode) {
         this.header.firstNode = firstNode;
-        final ByteBuffer buffer = BufferStream.allocateAndLimit(Long.BYTES);
+        final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(firstNode);
             buffer.flip();
             fileStore.write(buffer, header.position);
         } finally {
-            BufferStream.recycle(buffer);
+            BufferPool.INSTANCE.recycle(buffer);
         }
     }
 }

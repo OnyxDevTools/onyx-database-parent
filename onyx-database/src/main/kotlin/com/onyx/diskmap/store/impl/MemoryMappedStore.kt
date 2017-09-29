@@ -1,5 +1,6 @@
 package com.onyx.diskmap.store.impl
 
+import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
@@ -181,7 +182,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferStream.allocateAndLimit(size)
+        val buffer = BufferPool.allocateAndLimit(size)
         this.read(buffer, position)
         buffer.flip()
 
@@ -287,7 +288,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferStream.allocateAndLimit(size)
+        val buffer = BufferPool.allocateAndLimit(size)
         return withBuffer(buffer) {
             read(buffer, position)
             buffer.flip()

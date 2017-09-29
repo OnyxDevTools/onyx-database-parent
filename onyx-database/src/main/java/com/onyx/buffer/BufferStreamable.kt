@@ -2,9 +2,6 @@ package com.onyx.buffer
 
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.getFields
-import com.onyx.extension.get
-import com.onyx.extension.set
-import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 
 import java.io.Serializable
@@ -18,7 +15,7 @@ import java.io.Serializable
 interface BufferStreamable : Serializable {
 
     /**
-     * Read from the expandableByteBuffer expandableByteBuffer to get the objects.
+     * Read from buffer stream.  By default this will use fields and read the buffer default object types
      *
      * @param buffer Buffer Stream to read from
      * @throws BufferingException Generic IO Exception from the expandableByteBuffer
@@ -31,11 +28,13 @@ interface BufferStreamable : Serializable {
     }
 
     /**
-     * Write to the expandableByteBuffer expandableByteBuffer
+     * Write to a buffer stream.  By default this will iterate through an object's fields and
+     * write each as an object
      *
      * @param buffer Buffer IO Stream to write to
      * @throws BufferingException Generic IO Exception from the expandableByteBuffer
      * @since 1.1.0
+     * @since 2.0.0 Take advantage of default interface implementation
      */
     @Throws(BufferingException::class)
     fun write(buffer: BufferStream) {
@@ -43,13 +42,27 @@ interface BufferStreamable : Serializable {
         fields.forEach { buffer.putObject(it.field.get(this)) }
     }
 
+    /**
+     * Write to a buffer stream with a schema context.  This is used for persisting entities to a store.  The purpose
+     * is to enable versioning of entities.  The schema context is used to find the SystemEntity version.
+     *
+     * @param buffer Buffer stream to write to
+     * @param context Schema context used to pull system entity version
+     *
+     * @since 2.0.0
+     */
     @Throws(BufferingException::class)
-    fun write(buffer: BufferStream, context: SchemaContext?) {
-        write(buffer)
-    }
+    fun write(buffer: BufferStream, context: SchemaContext?) = write(buffer)
 
+    /**
+     * Read from a buffer stream with a schema context.
+     *
+     * @param buffer Buffer stream to read from
+     * @param context Schema context used to pull system entity version
+     *
+     * @since 2.0.0
+     */
     @Throws(BufferingException::class)
-    fun read(buffer: BufferStream, context: SchemaContext?) {
-        read(buffer)
-    }
+    fun read(buffer: BufferStream, context: SchemaContext?) = read(buffer)
+
 }

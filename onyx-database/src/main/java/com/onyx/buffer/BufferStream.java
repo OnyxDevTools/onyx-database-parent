@@ -33,7 +33,7 @@ public class BufferStream {
     @SuppressWarnings("WeakerAccess")
     public BufferStream(SchemaContext context)
     {
-        this(allocate(ExpandableByteBuffer.BUFFER_ALLOCATION));
+        this(BufferPool.INSTANCE.allocate(ExpandableByteBuffer.Companion.getBUFFER_ALLOCATION()));
         this.context = context;
     }
 
@@ -43,7 +43,7 @@ public class BufferStream {
     @SuppressWarnings("WeakerAccess")
     public BufferStream()
     {
-        this(allocate(ExpandableByteBuffer.BUFFER_ALLOCATION));
+        this(BufferPool.INSTANCE.allocate(ExpandableByteBuffer.Companion.getBUFFER_ALLOCATION()));
     }
 
     /**
@@ -61,7 +61,7 @@ public class BufferStream {
      */
     public BufferStream(int size)
     {
-        this(allocateAndLimit(size));
+        this(BufferPool.INSTANCE.allocateAndLimit(size));
     }
 
     // Number of references to retain the index number of the said reference
@@ -105,6 +105,10 @@ public class BufferStream {
                 return objectIntegerMap;
             });
         }
+    }
+
+    public void recycle() {
+        BufferPool.INSTANCE.recycle(getByteBuffer());
     }
 
     /**
@@ -197,7 +201,7 @@ public class BufferStream {
         int bufferStartingPosition = buffer.position();
         int maxBufferSize = buffer.getInt();
 
-        bufferStream.recycle(); // Recycle the allocated before re-defining buffer
+        BufferPool.INSTANCE.recycle(bufferStream.getByteBuffer());
         bufferStream.expandableByteBuffer = new ExpandableByteBuffer(buffer, bufferStartingPosition, maxBufferSize);
         bufferStream.isComingFromBuffer = true;
         Object returnValue;
@@ -261,42 +265,42 @@ public class BufferStream {
             final long[] arr = (long[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Long.BYTES * arr.length);
-            for (long anArr : arr) expandableByteBuffer.buffer.putLong(anArr);
+            for (long anArr : arr) expandableByteBuffer.getBuffer().putLong(anArr);
         } else if (array.getClass() == int[].class) {
             final int[] arr = (int[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Integer.BYTES * arr.length);
-            for (int anArr : arr) expandableByteBuffer.buffer.putInt(anArr);
+            for (int anArr : arr) expandableByteBuffer.getBuffer().putInt(anArr);
         } else if (array.getClass() == float[].class) {
             final float[] arr = (float[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Float.BYTES * arr.length);
-            for (float anArr : arr) expandableByteBuffer.buffer.putFloat(anArr);
+            for (float anArr : arr) expandableByteBuffer.getBuffer().putFloat(anArr);
         } else if (array.getClass() == byte[].class) {
             final byte[] arr = (byte[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Byte.BYTES * arr.length);
-            for (byte anArr : arr) expandableByteBuffer.buffer.put(anArr);
+            for (byte anArr : arr) expandableByteBuffer.getBuffer().put(anArr);
         } else if (array.getClass() == char[].class) {
             final char[] arr = (char[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Character.BYTES * arr.length);
-            for (char anArr : arr) expandableByteBuffer.buffer.putChar(anArr);
+            for (char anArr : arr) expandableByteBuffer.getBuffer().putChar(anArr);
         } else if (array.getClass() == short[].class) {
             final short[] arr = (short[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Short.BYTES * arr.length);
-            for (short anArr : arr) expandableByteBuffer.buffer.putShort(anArr);
+            for (short anArr : arr) expandableByteBuffer.getBuffer().putShort(anArr);
         } else if (array.getClass() == boolean[].class) {
             final boolean[] arr = (boolean[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Byte.BYTES * arr.length);
-            for (boolean anArr : arr) expandableByteBuffer.buffer.put((byte) ((anArr) ? 1 : 0));
+            for (boolean anArr : arr) expandableByteBuffer.getBuffer().put((byte) ((anArr) ? 1 : 0));
         } else if (array.getClass() == double[].class) {
             final double[] arr = (double[]) array;
             putInt(arr.length);
             expandableByteBuffer.ensureSize(Double.BYTES * arr.length);
-            for (double anArr : arr) expandableByteBuffer.buffer.putDouble(anArr);
+            for (double anArr : arr) expandableByteBuffer.getBuffer().putDouble(anArr);
         } else if(array.getClass() == Object[].class){
             final Object[] arr = (Object[]) array;
             putInt(arr.length);
@@ -323,7 +327,7 @@ public class BufferStream {
 
         putInt(stringBytes.length);
         expandableByteBuffer.ensureSize(stringBytes.length);
-        expandableByteBuffer.buffer.put(stringBytes);
+        expandableByteBuffer.getBuffer().put(stringBytes);
     }
 
     /**
@@ -356,7 +360,7 @@ public class BufferStream {
         putInt(stringBytes.length);
 
         expandableByteBuffer.ensureSize(stringBytes.length);
-        expandableByteBuffer.buffer.put(stringBytes);
+        expandableByteBuffer.getBuffer().put(stringBytes);
     }
 
     /**
@@ -506,7 +510,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public void putByte(byte value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
-        expandableByteBuffer.buffer.put(value);
+        expandableByteBuffer.getBuffer().put(value);
     }
 
     /**
@@ -520,7 +524,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public void putInt(int value) throws BufferingException {
         expandableByteBuffer.ensureSize(Integer.BYTES);
-        expandableByteBuffer.buffer.putInt(value);
+        expandableByteBuffer.getBuffer().putInt(value);
     }
 
     /**
@@ -534,7 +538,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public void putLong(long value) throws BufferingException {
         expandableByteBuffer.ensureSize(Long.BYTES);
-        expandableByteBuffer.buffer.putLong(value);
+        expandableByteBuffer.getBuffer().putLong(value);
     }
 
     /**
@@ -548,7 +552,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public void putShort(short value) throws BufferingException {
         expandableByteBuffer.ensureSize(Short.BYTES);
-        expandableByteBuffer.buffer.putShort(value);
+        expandableByteBuffer.getBuffer().putShort(value);
     }
 
     /**
@@ -562,7 +566,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     private void putFloat(float value) throws BufferingException {
         expandableByteBuffer.ensureSize(Float.BYTES);
-        expandableByteBuffer.buffer.putFloat(value);
+        expandableByteBuffer.getBuffer().putFloat(value);
     }
 
     /**
@@ -576,7 +580,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     private void putDouble(double value) throws BufferingException {
         expandableByteBuffer.ensureSize(Double.BYTES);
-        expandableByteBuffer.buffer.putDouble(value);
+        expandableByteBuffer.getBuffer().putDouble(value);
     }
 
     /**
@@ -590,7 +594,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public void putBoolean(boolean value) throws BufferingException {
         expandableByteBuffer.ensureSize(Byte.BYTES);
-        expandableByteBuffer.buffer.put((value) ? (byte) 1 : (byte) 0);
+        expandableByteBuffer.getBuffer().put((value) ? (byte) 1 : (byte) 0);
     }
 
     /**
@@ -604,7 +608,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     private void putChar(char value) throws BufferingException {
         expandableByteBuffer.ensureSize(Character.BYTES);
-        expandableByteBuffer.buffer.putChar(value);
+        expandableByteBuffer.getBuffer().putChar(value);
     }
 
     public int putObject(Object object, SchemaContext context) throws BufferingException {
@@ -625,7 +629,7 @@ public class BufferStream {
 
         int position = getByteBuffer().position();
 
-        BufferObjectType bufferObjectType = BufferObjectType.getTypeCodeForClass(object, context);
+        BufferObjectType bufferObjectType = BufferObjectType.Companion.getTypeCodeForClass(object, context);
         short referenceNumber = (short) referenceIndex(object);
         if (referenceNumber > -1) bufferObjectType = BufferObjectType.REFERENCE;
 
@@ -761,7 +765,7 @@ public class BufferStream {
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public long getLong() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Long.BYTES);
-        return expandableByteBuffer.buffer.getLong();
+        return expandableByteBuffer.getBuffer().getLong();
     }
 
     /**
@@ -774,7 +778,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public int getInt() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-        return expandableByteBuffer.buffer.getInt();
+        return expandableByteBuffer.getBuffer().getInt();
     }
 
     /**
@@ -787,7 +791,7 @@ public class BufferStream {
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public float getFloat() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Float.BYTES);
-        return expandableByteBuffer.buffer.getFloat();
+        return expandableByteBuffer.getBuffer().getFloat();
     }
 
     /**
@@ -800,7 +804,7 @@ public class BufferStream {
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public double getDouble() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Double.BYTES);
-        return expandableByteBuffer.buffer.getDouble();
+        return expandableByteBuffer.getBuffer().getDouble();
     }
 
     /**
@@ -813,7 +817,7 @@ public class BufferStream {
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public byte getByte() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
-        return expandableByteBuffer.buffer.get();
+        return expandableByteBuffer.getBuffer().get();
     }
 
     /**
@@ -826,7 +830,7 @@ public class BufferStream {
     @SuppressWarnings("RedundantThrows")
     public short getShort() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Short.BYTES);
-        return expandableByteBuffer.buffer.getShort();
+        return expandableByteBuffer.getBuffer().getShort();
     }
 
     /**
@@ -839,7 +843,7 @@ public class BufferStream {
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public boolean getBoolean() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
-        return (expandableByteBuffer.buffer.get() == 1);
+        return (expandableByteBuffer.getBuffer().get() == 1);
     }
 
     /**
@@ -852,7 +856,7 @@ public class BufferStream {
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public char getChar() throws BufferingException {
         expandableByteBuffer.ensureRequiredSize(Character.BYTES);
-        return expandableByteBuffer.buffer.getChar();
+        return expandableByteBuffer.getBuffer().getChar();
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -885,7 +889,7 @@ public class BufferStream {
     public Object getObject() throws BufferingException {
 
         expandableByteBuffer.ensureRequiredSize(Byte.BYTES);
-        BufferObjectType bufferObjectType = BufferObjectType.values()[expandableByteBuffer.buffer.get()];
+        BufferObjectType bufferObjectType = BufferObjectType.values()[expandableByteBuffer.getBuffer().get()];
 
         switch (bufferObjectType) {
             case NULL:
@@ -1007,9 +1011,9 @@ public class BufferStream {
      */
     private Class getObjectClass() throws BufferingException {
 
-        final int stringSize = expandableByteBuffer.buffer.getInt();
+        final int stringSize = expandableByteBuffer.getBuffer().getInt();
         byte[] stringBytes = new byte[stringSize];
-        expandableByteBuffer.buffer.get(stringBytes);
+        expandableByteBuffer.getBuffer().get(stringBytes);
         final String className = new String(stringBytes);
 
         try {
@@ -1030,9 +1034,9 @@ public class BufferStream {
      */
     @SuppressWarnings("RedundantThrows")
     public String getString() throws BufferingException {
-        final int stringSize = expandableByteBuffer.buffer.getInt();
+        final int stringSize = expandableByteBuffer.getBuffer().getInt();
         byte[] stringBytes = new byte[stringSize];
-        expandableByteBuffer.buffer.get(stringBytes);
+        expandableByteBuffer.getBuffer().get(stringBytes);
         return new String(stringBytes);
     }
 
@@ -1045,7 +1049,7 @@ public class BufferStream {
      */
     @SuppressWarnings({"WeakerAccess", "RedundantThrows"})
     public Date getDate() throws BufferingException {
-        final long epoch = expandableByteBuffer.buffer.getLong();
+        final long epoch = expandableByteBuffer.getBuffer().getLong();
         return new Date(epoch);
     }
 
@@ -1061,7 +1065,7 @@ public class BufferStream {
     public Collection getCollection() throws BufferingException {
 
         Class collectionClass = (Class) getObject();
-        int size = expandableByteBuffer.buffer.getInt();
+        int size = expandableByteBuffer.getBuffer().getInt();
 
         Collection collection;
         try {
@@ -1098,7 +1102,7 @@ public class BufferStream {
             throw new BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass);
         }
 
-        int mapSize = expandableByteBuffer.buffer.getInt();
+        int mapSize = expandableByteBuffer.getBuffer().getInt();
 
         for (int i = 0; i < mapSize; i++) {
             map.put(getObject(), getObject());
@@ -1117,59 +1121,59 @@ public class BufferStream {
     public Object getArray(BufferObjectType type) throws BufferingException {
         if (type == BufferObjectType.LONG_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final long[] arr = new long[expandableByteBuffer.buffer.getInt()];
+            final long[] arr = new long[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Long.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.getLong();
+                arr[i] = expandableByteBuffer.getBuffer().getLong();
             return arr;
         } else if (type == BufferObjectType.INT_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final int[] arr = new int[expandableByteBuffer.buffer.getInt()];
+            final int[] arr = new int[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.getInt();
+                arr[i] = expandableByteBuffer.getBuffer().getInt();
             return arr;
         } else if (type == BufferObjectType.FLOAT_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final float[] arr = new float[expandableByteBuffer.buffer.getInt()];
+            final float[] arr = new float[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Float.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.getFloat();
+                arr[i] = expandableByteBuffer.getBuffer().getFloat();
             return arr;
         } else if (type == BufferObjectType.BYTE_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final byte[] arr = new byte[expandableByteBuffer.buffer.getInt()];
+            final byte[] arr = new byte[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Byte.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.get();
+                arr[i] = expandableByteBuffer.getBuffer().get();
             return arr;
         } else if (type == BufferObjectType.CHAR_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final char[] arr = new char[expandableByteBuffer.buffer.getInt()];
+            final char[] arr = new char[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Character.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.getChar();
+                arr[i] = expandableByteBuffer.getBuffer().getChar();
             return arr;
         } else if (type == BufferObjectType.SHORT_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final short[] arr = new short[expandableByteBuffer.buffer.getInt()];
+            final short[] arr = new short[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Short.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.getShort();
+                arr[i] = expandableByteBuffer.getBuffer().getShort();
             return arr;
         } else if (type == BufferObjectType.BOOLEAN_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final boolean[] arr = new boolean[expandableByteBuffer.buffer.getInt()];
+            final boolean[] arr = new boolean[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Byte.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.get() == 1;
+                arr[i] = expandableByteBuffer.getBuffer().get() == 1;
             return arr;
         } else if (type == BufferObjectType.DOUBLE_ARRAY) {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final double[] arr = new double[expandableByteBuffer.buffer.getInt()];
+            final double[] arr = new double[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(Double.BYTES * arr.length);
             for (int i = 0; i < arr.length; i++)
-                arr[i] = expandableByteBuffer.buffer.getDouble();
+                arr[i] = expandableByteBuffer.getBuffer().getDouble();
             return arr;
         }
         else if (type == BufferObjectType.OTHER_ARRAY) {
@@ -1181,7 +1185,7 @@ public class BufferStream {
             return arr;
         } else {
             expandableByteBuffer.ensureRequiredSize(Integer.BYTES);
-            final Object[] arr = new Object[expandableByteBuffer.buffer.getInt()];
+            final Object[] arr = new Object[expandableByteBuffer.getBuffer().getInt()];
             expandableByteBuffer.ensureRequiredSize(3 * arr.length);
             for (int i = 0; i < arr.length; i++)
                 arr[i] = getObject();
@@ -1240,7 +1244,7 @@ public class BufferStream {
     @SuppressWarnings("unused")
     public ByteBuffer getByteBuffer()
     {
-        return expandableByteBuffer.buffer;
+        return expandableByteBuffer.getBuffer();
     }
 
     /**
@@ -1249,7 +1253,7 @@ public class BufferStream {
     @SuppressWarnings("unused")
     public void flip()
     {
-        this.expandableByteBuffer.buffer.flip();
+        this.expandableByteBuffer.getBuffer().flip();
     }
 
 
@@ -1285,76 +1289,5 @@ public class BufferStream {
         }
 
         return results;
-    }
-
-    private static ArrayDeque<ByteBuffer> SMALL_BUFFER_POOL = new ArrayDeque(200);
-    private static ArrayDeque<ByteBuffer> MEDIUM_BUFFER_POOL = new ArrayDeque(100);
-    private static ArrayDeque<ByteBuffer> LARGE_BUFFER_POOL = new ArrayDeque(50);
-
-    static {
-        for(int i = 0; i < 50; i++){
-            LARGE_BUFFER_POOL.add(ByteBuffer.allocate(18 * 1024));
-        }
-        for(int i = 0; i < 100; i++) {
-            MEDIUM_BUFFER_POOL.add(ByteBuffer.allocate(1024*6));
-        }
-        for(int i = 0; i < 200; i++){
-            SMALL_BUFFER_POOL.add(ByteBuffer.allocate(512));
-        }
-    }
-
-    public void recycle() {
-        recycle(getByteBuffer());
-    }
-
-    /**
-     * Recycle a byte buffer to be reused
-     * @param buffer byte buffer to recycle and reuse
-     */
-    public static void recycle(ByteBuffer buffer) {
-        buffer.clear();
-        synchronized (SMALL_BUFFER_POOL) {
-            if (buffer.capacity() >= 18 * 1024 && LARGE_BUFFER_POOL.size() < 50)
-                LARGE_BUFFER_POOL.offer(buffer);
-            else if (buffer.capacity() >= 1024 * 6 && MEDIUM_BUFFER_POOL.size() < 100)
-                MEDIUM_BUFFER_POOL.offer(buffer);
-            else if (buffer.capacity() >= 512 && SMALL_BUFFER_POOL.size() < 200)
-                SMALL_BUFFER_POOL.offer(buffer);
-        }
-    }
-
-    /**
-     * Allocation that will encapsulate the endian as well as the allocation method
-     *
-     * @param count Size to allocate
-     * @return An Allocated ByteBuffer
-     */
-    public static ByteBuffer allocate(int count) {
-        ByteBuffer returnValue = null;
-
-        synchronized (SMALL_BUFFER_POOL) {
-            if (count <= 512)
-                returnValue = SMALL_BUFFER_POOL.poll();
-            else if (count <= 1024 * 6)
-                returnValue = MEDIUM_BUFFER_POOL.poll();
-            else if (count <= 18 * 1024)
-                returnValue = LARGE_BUFFER_POOL.poll();
-        }
-
-        if(returnValue == null)
-            returnValue = ByteBuffer.allocate(count);
-        return returnValue;
-    }
-
-    /**
-     * Allocation that will encapsulate the endian as well as the allocation method
-     *
-     * @param count Size to allocate
-     * @return An Allocated ByteBuffer and limit to the amount of bytes
-     */
-    public static ByteBuffer allocateAndLimit(int count) {
-        ByteBuffer buffer = allocate(count);
-        buffer.limit(count);
-        return buffer;
     }
 }

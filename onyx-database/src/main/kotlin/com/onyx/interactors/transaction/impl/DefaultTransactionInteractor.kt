@@ -1,5 +1,6 @@
 package com.onyx.interactors.transaction.impl
 
+import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.TransactionException
 import com.onyx.extension.withBuffer
@@ -29,7 +30,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
         val totalBuffer:ByteBuffer?
 
         try {
-            totalBuffer = BufferStream.allocateAndLimit(buffer.limit() + 5)
+            totalBuffer = BufferPool.allocateAndLimit(buffer.limit() + 5)
             withBuffer(totalBuffer) {
                 it.put(transactionType)
                 it.putInt(buffer.limit())
@@ -40,7 +41,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
         } catch (e: Exception) {
             throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE)
         } finally {
-            BufferStream.recycle(buffer)
+            BufferPool.recycle(buffer)
         }
     }
 
@@ -130,7 +131,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
         }
 
         var transaction: Transaction? = null
-        val metadataBuffer = BufferStream.allocateAndLimit(5)
+        val metadataBuffer = BufferPool.allocateAndLimit(5)
 
         withBuffer(metadataBuffer) {
             try {
@@ -144,7 +145,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
                         val transactionType = metadataBuffer.get()
                         val transactionDataLength = metadataBuffer.int
 
-                        val tBuffer = BufferStream.allocateAndLimit(transactionDataLength)
+                        val tBuffer = BufferPool.allocateAndLimit(transactionDataLength)
                         withBuffer(tBuffer) { transactionBuffer ->
                             channel.read(transactionBuffer)
                             transactionBuffer.rewind()
