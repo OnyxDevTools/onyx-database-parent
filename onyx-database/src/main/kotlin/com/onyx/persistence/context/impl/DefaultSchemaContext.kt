@@ -10,10 +10,11 @@ import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.NULL_PARTITION
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
-import com.onyx.helpers.PartitionHelper
+import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
@@ -45,6 +46,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -402,7 +404,7 @@ open class DefaultSchemaContext : SchemaContext {
             val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
             if (result != null) {
                 synchronized(systemEntityByIDMap) {
-                    systemEntityByIDMap.put(result.primaryKey, result)
+                systemEntityByIDMap.put(result.primaryKey, result)
                 }
                 result.attributes.sortBy { it.name }
                 result.relationships.sortBy { it.name }
@@ -424,7 +426,7 @@ open class DefaultSchemaContext : SchemaContext {
 
             if (entity != null) {
                 synchronized(defaultSystemEntities) {
-                    defaultSystemEntities.put(entity.name, entity)
+                defaultSystemEntities.put(entity.name, entity)
                 }
 
                 entity.attributes.sortBy { it.name }
@@ -536,7 +538,11 @@ open class DefaultSchemaContext : SchemaContext {
             throw EntityClassNotFoundException(EntityClassNotFoundException.PERSISTED_NOT_FOUND, entity.javaClass)
         }
 
-        val partitionId = PartitionHelper.getPartitionFieldValue(entity, this)
+        val baseDescriptor = getDescriptorForEntity(entity, "")
+        if(baseDescriptor.partition == null)
+            return baseDescriptor
+
+        val partitionId = entity.get<Any?>(context = this, descriptor = baseDescriptor, name = baseDescriptor.partition!!.name) ?: NULL_PARTITION
         return getDescriptorForEntity(entity, partitionId)
     }
 
@@ -544,7 +550,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipInteractors = HashMap<RelationshipDescriptor, RelationshipInteractor>()
+    private val relationshipInteractors = ConcurrentHashMap<RelationshipDescriptor, RelationshipInteractor>()
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -559,7 +565,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun getRelationshipInteractor(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor = synchronized(relationshipInteractors) {
+    override fun getRelationshipInteractor(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor =
         relationshipInteractors.getOrPut(relationshipDescriptor) {
             return@getOrPut if (relationshipDescriptor.relationshipType == RelationshipType.MANY_TO_MANY || relationshipDescriptor.relationshipType == RelationshipType.ONE_TO_MANY) {
                 ToManyRelationshipInteractor(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
@@ -567,13 +573,13 @@ open class DefaultSchemaContext : SchemaContext {
                 ToOneRelationshipInteractor(relationshipDescriptor.entityDescriptor, relationshipDescriptor, this)
             }
         }
-    }
+
 
     // endregion
 
     // region Index Controller
 
-    private val indexInteractors = HashMap<IndexDescriptor, IndexInteractor>()
+    private val indexInteractors = ConcurrentHashMap<IndexDescriptor, IndexInteractor>()
 
     /**
      * Get Index Controller with Index descriptor.
@@ -584,17 +590,16 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor = synchronized(indexInteractors) {
+    override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor =
         indexInteractors.getOrPut(indexDescriptor) {
             return@getOrPut DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
         }
-    }
 
     // endregion
 
     // region Record Controller
 
-    private val recordInteractors = HashMap<EntityDescriptor, RecordInteractor>()
+    private val recordInteractors = ConcurrentHashMap<EntityDescriptor, RecordInteractor>()
 
     /**
      * Get Record Controller.
@@ -603,17 +608,16 @@ open class DefaultSchemaContext : SchemaContext {
      * @return get Record Controller.
      * @since 1.0.0
      */
-    override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor = synchronized(recordInteractors) {
+    override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor =
         recordInteractors.getOrPut(descriptor) {
             if (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE) SequenceRecordInteractor(descriptor, this@DefaultSchemaContext) else DefaultRecordInteractor(descriptor, this@DefaultSchemaContext)
         }
-    }
 
     // endregion
 
     // region Data Files
 
-    @JvmField internal val dataFiles = HashMap<String, MapBuilder>()
+    @JvmField internal val dataFiles = ConcurrentHashMap<String, MapBuilder>()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -627,12 +631,10 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): MapBuilder {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        return synchronized(dataFiles) {
-            dataFiles.getOrPut(key) {
+        return dataFiles.getOrPut(key) {
                 return@getOrPut DefaultMapBuilder("$location/$key", this@DefaultSchemaContext)
             }
         }
-    }
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.

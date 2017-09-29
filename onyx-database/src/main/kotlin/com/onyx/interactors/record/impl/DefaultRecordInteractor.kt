@@ -1,10 +1,8 @@
 package com.onyx.interactors.record.impl
 
-import com.onyx.descriptor.BaseDescriptor
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.SortedDiskMap
-import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.EntityCallbackException
 import com.onyx.exception.OnyxException
@@ -15,7 +13,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.util.ReflectionField
-import com.onyx.util.ReflectionUtil
 
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -219,41 +216,4 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
     @Suppress("UNCHECKED_CAST")
     override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).below(indexValue, includeValue)
 
-    companion object {
-
-        /**
-         * Retrieves the index key from the entity using reflection
-         *
-         * @param entity Entity to retrieve index value of
-         * @return Index value of entity
-         * @throws com.onyx.exception.AttributeMissingException Attribute does not exist
-         */
-        @Deprecated("Moved to entity extension")
-        @Throws(AttributeMissingException::class)
-        fun getIndexValueFromEntity(entity: IManagedEntity, indexDescriptor: BaseDescriptor?): Any? = try {
-            ReflectionUtil.getAny(entity, indexDescriptor!!.field)
-        } catch (e: AttributeTypeMismatchException) {
-            throw AttributeMissingException(AttributeMissingException.ILLEGAL_ACCESS_ATTRIBUTE, e)
-        }
-
-        /**
-         * Retrieves the index key from the entity using reflection
-         *
-         * @param entity Entity to set attribute
-         * @throws AttributeMissingException Attribute does not exist
-         */
-        @Throws(OnyxException::class)
-        @Deprecated("Moved to entity extension")
-        fun setIndexValueForEntity(entity: IManagedEntity, value: Any, context: SchemaContext) {
-
-            // Use reflection to get the key
-            val field = context.getDescriptorForEntity(entity).identifier!!.field
-
-            try {
-                ReflectionUtil.setAny(entity, value, field)
-            } catch (e: ClassCastException) {
-                throw AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, field.type, value.javaClass, field.name)
-            }
-        }
-    }
 }

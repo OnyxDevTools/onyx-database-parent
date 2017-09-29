@@ -1,7 +1,4 @@
-package com.onyx.diskmap;
-
-import java.util.Map;
-import java.util.Set;
+package com.onyx.diskmap
 
 /**
  * Created by tosborn1 on 2/16/17.
@@ -10,7 +7,7 @@ import java.util.Set;
  *
  * @since 1.2.0
  */
-public interface SortedDiskMap<K,V> extends Map<K,V> {
+interface SortedDiskMap<K, out V> : Map<K, V> {
 
     /**
      * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
@@ -21,7 +18,7 @@ public interface SortedDiskMap<K,V> extends Map<K,V> {
      * @since 1.2.0
      * @return A Set of references
      */
-    Set<Long> above(K index, boolean includeFirst);
+    fun above(index: K, includeFirst: Boolean): Set<Long>
 
     /**
      * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
@@ -32,5 +29,5 @@ public interface SortedDiskMap<K,V> extends Map<K,V> {
      * @return A Set of references
      * @since 1.2.0
      */
-    Set<Long> below(K index, boolean includeFirst);
+    fun below(index: K, includeFirst: Boolean): Set<Long>
 }

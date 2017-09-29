@@ -60,7 +60,19 @@ fun Any?.castTo(clazz: Class<*>): Any? {
             Short::class -> if (this) 1.toShort() else 0.toShort()
             else -> null
         }
-        this is Date -> return when (clazz) {
+        this is String -> return when (kotlinClass) {
+            Int::class -> this.toInt()
+            Long::class -> this.toLong()
+            Double::class -> this.toDouble()
+            Float::class -> this.toFloat()
+            Boolean::class -> this.toInt() != 0
+            Char::class -> this.chars().findFirst()
+            Byte::class -> this.toByte()
+            Short::class -> this.toShort()
+            Date::class -> Date(this.toLong())
+            else -> null
+        }
+        this is Date -> return when (kotlinClass) {
             Long::class -> this.time
             else -> null
         }

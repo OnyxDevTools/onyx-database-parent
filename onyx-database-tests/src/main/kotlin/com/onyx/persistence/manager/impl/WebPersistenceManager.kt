@@ -2,8 +2,10 @@ package com.onyx.persistence.manager.impl
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.onyx.exception.*
+import com.onyx.extension.NULL_PARTITION
+import com.onyx.extension.identifier
+import com.onyx.extension.partitionValue
 import com.onyx.interactors.record.data.Reference
-import com.onyx.helpers.PartitionHelper
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.WebSchemaContext
@@ -11,7 +13,6 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.request.pojo.*
 import com.onyx.persistence.stream.QueryStream
 import com.onyx.util.ReflectionUtil
@@ -69,11 +70,8 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val body = EntityRequestBody()
         body.entity = entity
         body.type = entity.javaClass.name
+        body.partitionId = entity.partitionValue(context)
 
-        val partitionValue = PartitionHelper.getPartitionFieldValue(entity, context)
-        if (partitionValue != null) {
-            body.partitionId = partitionValue.toString()
-        }
         ReflectionUtil.copy(this.performCall(url + AbstractWebPersistenceManager.SAVE, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
         return entity as T
     }
@@ -261,10 +259,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val body = EntityRequestBody()
         body.entity = entity
         body.type = entity.javaClass.name
-        val partitionValue = PartitionHelper.getPartitionFieldValue(entity, context)
-        if (partitionValue != null) {
-            body.partitionId = partitionValue.toString()
-        }
+        body.partitionId = entity.partitionValue(context)
 
         ReflectionUtil.copy(this.performCall(url + AbstractWebPersistenceManager.FIND, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
 
@@ -357,10 +352,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val body = EntityRequestBody()
         body.entity = entity
         body.type = entity.javaClass.name
-        val partitionValue = PartitionHelper.getPartitionFieldValue(entity, context)
-        if (partitionValue != null) {
-            body.partitionId = partitionValue.toString()
-        }
+        body.partitionId = entity.partitionValue(context)
         return this.performCall(url + AbstractWebPersistenceManager.EXISTS, null, Boolean::class.java, body) as Boolean
     }
 
@@ -409,13 +401,11 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val attributeType = relationshipDescriptor.inverseClass
 
         val body = EntityInitializeBody()
-        body.entityId = DefaultRecordInteractor.getIndexValueFromEntity(entity, descriptor.identifier)
+        body.entityId = entity.identifier(context)
         body.attribute = attribute
         body.entityType = entity.javaClass.name
-        val partitionValue = PartitionHelper.getPartitionFieldValue(entity, context)
-        if (partitionValue != null) {
-            body.partitionId = partitionValue.toString()
-        }
+        body.partitionId = entity.partitionValue(context)
+
         val relationship = this.performCall(url + AbstractWebPersistenceManager.INITIALIZE, attributeType, List::class.java, body) as List<IManagedEntity>
 
         ReflectionUtil.setAny(entity, relationship, relationshipDescriptor.field)

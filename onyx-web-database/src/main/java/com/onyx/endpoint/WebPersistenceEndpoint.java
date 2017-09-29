@@ -2,14 +2,16 @@ package com.onyx.endpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
+import com.onyx.descriptor.EntityDescriptor;
 import com.onyx.exception.EntityClassNotFoundException;
 import com.onyx.exception.OnyxException;
+import com.onyx.extension.IManagedEntity_MetadataKt;
+import com.onyx.extension.IManagedEntity_ReflectionKt;
+import com.onyx.extension.common.Any_CastKt;
 import com.onyx.interactors.record.data.Reference;
-import com.onyx.helpers.PartitionHelper;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.interactors.record.impl.DefaultRecordInteractor;
 import com.onyx.request.pojo.*;
 import com.onyx.util.ReflectionUtil;
 
@@ -117,11 +119,8 @@ final public class WebPersistenceEndpoint
 
         if(request.getId() != null)
         {
-            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, request.getId(), context);
-        }
-        if(request.getPartitionId() != null && !request.getPartitionId().equals(""))
-        {
-            PartitionHelper.setPartitionValueForEntity(entity, request.getPartitionId(), context);
+            EntityDescriptor descriptor = IManagedEntity_MetadataKt.descriptor(entity, context);
+            IManagedEntity_ReflectionKt.set(entity, context, descriptor, descriptor.getIdentifier().getName(), Any_CastKt.castTo(request.getId(), descriptor.getIdentifier().getType()));
         }
 
         entity = persistenceManager.find(entity);
@@ -162,20 +161,7 @@ final public class WebPersistenceEndpoint
     public boolean delete(EntityRequestBody request) throws ClassNotFoundException, IllegalAccessException, InstantiationException, OnyxException {
         Class clazz = Class.forName(request.getType());
         IManagedEntity entity;
-
-        if(request.getEntity() == null)
-            entity = (IManagedEntity)clazz.newInstance();
-        else
-            entity = (IManagedEntity)objectMapper.convertValue(request.getEntity(), clazz);
-
-        if(request.getId() != null)
-        {
-            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, request.getId(), context);
-        }
-        if(request.getPartitionId() != null && !request.getPartitionId().equals(""))
-        {
-            PartitionHelper.setPartitionValueForEntity(entity, request.getPartitionId(), context);
-        }
+        entity = (IManagedEntity)objectMapper.convertValue(request.getEntity(), clazz);
 
         return persistenceManager.deleteEntity(entity);
     }
@@ -211,12 +197,14 @@ final public class WebPersistenceEndpoint
 
         if(request.getEntityId() != null)
         {
-            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, request.getEntityId(), context);
+            EntityDescriptor descriptor = IManagedEntity_MetadataKt.descriptor(entity, context);
+            IManagedEntity_ReflectionKt.set(entity, context, descriptor, descriptor.getIdentifier().getName(), Any_CastKt.castTo(request.getEntityId(), descriptor.getIdentifier().getType()));
         }
 
         if(request.getPartitionId() != null && !request.getPartitionId().equals(""))
         {
-            PartitionHelper.setPartitionValueForEntity(entity, request.getPartitionId(), context);
+            EntityDescriptor descriptor = IManagedEntity_MetadataKt.descriptor(entity, context);
+            IManagedEntity_ReflectionKt.set(entity, context, descriptor, descriptor.getPartition().field.getName(), Any_CastKt.castTo(request.getPartitionId(), descriptor.getPartition().field.getType()));
         }
 
 
@@ -313,21 +301,7 @@ final public class WebPersistenceEndpoint
     public boolean exists(EntityRequestBody body) throws ClassNotFoundException, IllegalAccessException, InstantiationException, OnyxException {
         Class clazz = Class.forName(body.getType());
 
-        IManagedEntity entity;
-        if(body.getEntity() != null)
-            entity = (IManagedEntity)objectMapper.convertValue(body.getEntity(), clazz);
-        else
-            entity = (IManagedEntity)clazz.newInstance();
-
-        if(body.getId() != null)
-        {
-            DefaultRecordInteractor.Companion.setIndexValueForEntity(entity, body.getId(), context);
-        }
-
-        if(body.getPartitionId() != null && !body.getPartitionId().equals(""))
-        {
-            PartitionHelper.setPartitionValueForEntity(entity, body.getPartitionId(), context);
-        }
+        IManagedEntity entity = (IManagedEntity)objectMapper.convertValue(body.getEntity(), clazz);
 
         return persistenceManager.exists(entity);
     }

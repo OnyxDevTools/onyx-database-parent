@@ -197,7 +197,7 @@ public class DefaultMapBuilder implements MapBuilder {
 
             CompatMap retVal = null;
             switch (type) {
-                case SKIPLIST:
+                case SKIP_LIST:
                     retVal = newSkipListMap(storage, header);
                     break;
                 case LOAD:
@@ -254,7 +254,7 @@ public class DefaultMapBuilder implements MapBuilder {
      */
     @Override
     public Map getSkipListMap(String name) {
-        return getMapWithType(name, MapType.SKIPLIST, 10);
+        return getMapWithType(name, MapType.SKIP_LIST, 10);
     }
 
     /**

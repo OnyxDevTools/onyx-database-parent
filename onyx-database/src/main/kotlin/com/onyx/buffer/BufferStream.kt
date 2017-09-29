@@ -510,7 +510,7 @@ class BufferStream(buffer: ByteBuffer) {
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    fun getObject(context: SchemaContext): Any? {
+    fun getObject(context: SchemaContext?): Any? {
         this.context = context
         return value
     }
@@ -837,11 +837,12 @@ class BufferStream(buffer: ByteBuffer) {
     @Throws(BufferingException::class)
     fun putOther(value: Any?) {
 
-        putObject(value!!.javaClass)
-        addReference(value)
+        putObject(value?.javaClass)
+        if(value != null)
+            addReference(value)
 
         // Iterate through the fields and put them on the expandableByteBuffer
-        value.getFields().forEach {
+        value?.getFields()?.forEach {
             try {
                 when {
                     it.type == Int::class.javaPrimitiveType -> putInt(ReflectionUtil.getInt(value, it))
@@ -982,24 +983,18 @@ class BufferStream(buffer: ByteBuffer) {
      * @param value Object to put into buffer
      * @param context Schema context
      */
-    @Throws(BufferingException::class)
-    fun putObject(value: Any, context: SchemaContext): Int {
+    fun putObject(value:Any?, context: SchemaContext?):Int {
         this.context = context
         return putObject(value)
     }
 
     /**
-     * Put a generic value to the buffer.  Note this is less efficient because it has to abstract the type and add that to
-     * the packet.  For primitives, I recommend using the primitive put methods.
+     * Put object into the buffer stream
      *
-     * @since 1.1.0
-     * @param `value` value to write
-     *
-     * @throws BufferingException Generic Buffer Exception
+     * @param value Object to put into buffer
      */
     @Throws(BufferingException::class)
     fun putObject(value: Any?): Int {
-
         val position = byteBuffer.position()
 
         var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
@@ -1043,6 +1038,7 @@ class BufferStream(buffer: ByteBuffer) {
 
         return byteBuffer.position() - position
     }
+
 
     // endregion
 
