@@ -14,7 +14,6 @@ import com.onyx.client.handlers.RequestHandler;
 import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.exception.InitializationException;
-import com.onyx.persistence.context.SchemaContext;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.SynchronizedMap;
 

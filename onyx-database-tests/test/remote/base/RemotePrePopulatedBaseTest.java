@@ -1,6 +1,8 @@
 package remote.base;
 
 import com.onyx.exception.InitializationException;
+import com.onyx.exception.OnyxException;
+import com.onyx.persistence.query.Query;
 import entities.AllAttributeForFetch;
 import entities.AllAttributeForFetchChild;
 import org.junit.After;
@@ -21,9 +23,12 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
     }
 
     @Before
-    public void seedData() throws InitializationException
+    public void seedData() throws OnyxException
     {
         initialize();
+
+        Query deleteQuery = new Query(AllAttributeForFetch.class);
+        manager.executeDelete(deleteQuery);
 
         AllAttributeForFetch entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE";
@@ -38,7 +43,6 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 3;
         entity.intPrimitive = 3;
         save(entity);
-        find(entity);
 
         entity.child = new AllAttributeForFetchChild();
         entity.child.someOtherField = "HIYA";
@@ -57,7 +61,6 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 2;
         entity.intPrimitive = 4;
         save(entity);
-        find(entity);
 
         entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE2";
@@ -72,7 +75,6 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 2;
         entity.intPrimitive = 4;
         save(entity);
-        find(entity);
 
         entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE3";
@@ -87,7 +89,6 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 5;
         entity.intPrimitive = 6;
         save(entity);
-        find(entity);
 
         entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE4";
@@ -102,7 +103,6 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 6;
         entity.intPrimitive = 3;
         save(entity);
-        find(entity);
 
         entity = new AllAttributeForFetch();
         entity.id = "FIRST ONE5";
@@ -117,10 +117,9 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 6;
         entity.intPrimitive = 3;
         save(entity);
-        find(entity);
 
         entity = new AllAttributeForFetch();
-        entity.id = "FIRST ONE3";
+        entity.id = "FIRST ONE6";
         entity.stringValue = "Some test strin3";
         entity.dateValue = new Date(1022);
         entity.doublePrimitive = 3.35;
@@ -132,23 +131,18 @@ public class RemotePrePopulatedBaseTest extends RemoteBaseTest {
         entity.intValue = 6;
         entity.intPrimitive = 3;
         save(entity);
-        find(entity);
 
         entity = new AllAttributeForFetch();
-        entity.id = "FIRST ONE4";
+        entity.id = "FIRST ONE7";
         save(entity);
-        find(entity);
 
         entity.child = new AllAttributeForFetchChild();
         entity.child.someOtherField = "HIYA DOS";
         save(entity);
 
         entity = new AllAttributeForFetch();
-        entity.id = "FIRST ONE5";
+        entity.id = "FIRST ONE8";
         save(entity);
-        find(entity);
-
-
     }
 
 }

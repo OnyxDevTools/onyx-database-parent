@@ -1,11 +1,8 @@
 package com.onyx.persistence.query
 
+import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.persistence.manager.PersistenceManager
-import java.io.IOException
-import java.io.Serializable
 import java.util.*
 import kotlin.collections.LinkedHashSet
 
@@ -39,7 +36,7 @@ import kotlin.collections.LinkedHashSet
  * @see PersistenceManager.executeDelete
  * @see PersistenceManager.executeQuery
  */
-class Query : ObjectSerializable, Serializable {
+class Query : BufferStreamable {
 
     /**
      * Gets the selection fields used to limit the result fields when doing a fetch
@@ -318,54 +315,6 @@ class Query : ObjectSerializable, Serializable {
         this.entityType = entityType
         this.selections = Arrays.asList(*selections)
         this.criteria = criteria
-    }
-
-    /**
-     * Custom serialization to write object to a buffer
-     *
-     * @param buffer Off-heap Buffer
-     * @throws IOException Failure to serialize query
-     */
-    @Throws(IOException::class)
-    override fun writeObject(buffer: ObjectBuffer) {
-        buffer.writeObject(selections)
-        buffer.writeObject(updates)
-        buffer.writeObject(criteria)
-        buffer.writeObject(queryOrders)
-        buffer.writeObject(entityType!!.name)
-        buffer.writeObject(partition)
-        buffer.writeInt(firstRow)
-        buffer.writeInt(maxResults)
-        buffer.writeInt(resultsCount)
-        buffer.writeObject(changeListener)
-        buffer.writeBoolean(isDistinct)
-    }
-
-    /**
-     * Custom serialization to read an object from a buffer
-     *
-     * @param buffer ObjectBuffer
-     * @throws IOException failure to deserialize query
-     */
-    @Throws(IOException::class)
-    @Suppress("UNCHECKED_CAST")
-    override fun readObject(buffer: ObjectBuffer) {
-        selections = buffer.readObject() as List<String>
-        updates = buffer.readObject() as List<AttributeUpdate>
-        criteria = buffer.readObject() as QueryCriteria<*>
-        queryOrders = buffer.readObject() as List<QueryOrder>
-        entityType = try {
-            Class.forName(buffer.readObject() as String)
-        } catch (e: ClassNotFoundException) {
-            null
-        }
-
-        partition = buffer.readObject()
-        firstRow = buffer.readInt()
-        maxResults = buffer.readInt()
-        resultsCount = buffer.readInt()
-        changeListener = buffer.readObject() as QueryListener<*>
-        isDistinct = buffer.readBoolean()
     }
 
     /**

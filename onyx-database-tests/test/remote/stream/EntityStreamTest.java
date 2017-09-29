@@ -30,17 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class EntityStreamTest extends RemoteBaseTest
 {
 
-
-    @BeforeClass
-    public static void beforeClass() throws InterruptedException {
-        deleteDatabase();
-        databaseServer = new DatabaseServer();
-        databaseServer.setPort(8080);
-        databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
-        databaseServer.start();
-        Thread.sleep(500);
-    }
-
     @Before
     public void before() throws OnyxException
     {

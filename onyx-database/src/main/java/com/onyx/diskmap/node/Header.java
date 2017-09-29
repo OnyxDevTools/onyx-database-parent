@@ -3,6 +3,9 @@ package com.onyx.diskmap.node;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -59,5 +62,15 @@ public class Header implements BufferStreamable
         buffer.putLong(firstNode);
         buffer.putLong(recordCount.get());
         buffer.putLong(position);
+    }
+
+    @Override
+    public void write(@NotNull BufferStream buffer, @Nullable SchemaContext context) throws BufferingException {
+        write(buffer);
+    }
+
+    @Override
+    public void read(@NotNull BufferStream buffer, @Nullable SchemaContext context) throws BufferingException {
+        read(buffer);
     }
 }

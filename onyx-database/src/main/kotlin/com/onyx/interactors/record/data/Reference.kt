@@ -18,13 +18,13 @@ data class Reference(var partition: Long, var reference: Long) : Comparable<Refe
         else -> 0
     }
 
-    override fun read(buffer: BufferStream?) {
-        partition = buffer!!.long
+    override fun read(buffer: BufferStream) {
+        partition = buffer.long
         reference = buffer.long
     }
 
-    override fun write(buffer: BufferStream?) {
-        buffer!!.putLong(partition)
+    override fun write(buffer: BufferStream) {
+        buffer.putLong(partition)
         buffer.putLong(reference)
     }
 

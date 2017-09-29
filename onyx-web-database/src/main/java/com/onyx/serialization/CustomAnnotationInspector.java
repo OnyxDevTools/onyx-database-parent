@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.PropertyName;
 import com.fasterxml.jackson.databind.introspect.Annotated;
 import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.databind.introspect.ObjectIdInfo;
-import com.onyx.diskmap.serializer.ObjectSerializable;
+import com.onyx.buffer.BufferStreamable;
 
 /**
  * Created by tosborn1 on 2/14/17.
@@ -22,7 +22,7 @@ public class CustomAnnotationInspector extends JacksonAnnotationIntrospector {
      */
     @Override
     public ObjectIdInfo findObjectIdInfo(final Annotated annotated) {
-        if (ObjectSerializable.class.isAssignableFrom(annotated.getRawType())) {
+        if (BufferStreamable.class.isAssignableFrom(annotated.getRawType())) {
             return new ObjectIdInfo(
                     PropertyName.construct("@id", null),
                     null,

@@ -3,6 +3,7 @@ package com.onyx.client.base;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
 
 import java.io.Serializable;
 
@@ -11,7 +12,7 @@ import java.io.Serializable;
  *
  * This class is a token that is sent back and fourth between the client and server.
  */
-public class RequestToken implements Serializable, BufferStreamable
+public class RequestToken implements BufferStreamable
 {
     public boolean reTry;
     public short token;
@@ -50,6 +51,16 @@ public class RequestToken implements Serializable, BufferStreamable
     public void write(BufferStream buffer) throws BufferingException {
         buffer.putShort(token);
         buffer.putObject(packet);
+    }
+
+    @Override
+    public void read(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        read(bufferStream);
+    }
+
+    @Override
+    public void write(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        write(bufferStream);
     }
 
 }

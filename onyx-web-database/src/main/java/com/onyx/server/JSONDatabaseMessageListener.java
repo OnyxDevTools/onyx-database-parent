@@ -3,7 +3,7 @@ package com.onyx.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.onyx.diskmap.serializer.ObjectBuffer;
+import com.onyx.buffer.BufferStream;
 import com.onyx.endpoint.WebPersistenceEndpoint;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.UnknownDatabaseException;
@@ -149,23 +149,28 @@ public class JSONDatabaseMessageListener implements HttpHandler {
                 final Runnable runnable = () -> {
                     try {
                         final String stringPath = exchange.getRelativePath();
-                        final RestServicePath path = RestServicePath.valueOfPath(stringPath);
+                        final RestServicePath path = RestServicePath.Companion.valueOfPath(stringPath);
                         final Class bodyType = getClassForEndpoint(path);
-                        final ByteBuffer buffer = ObjectBuffer.allocate((int) exchange.getRequestContentLength());
+                        final ByteBuffer buffer = BufferStream.allocateAndLimit((int) exchange.getRequestContentLength());
+                        byte[] bytes = null;
 
-                        long time = System.currentTimeMillis();
-                        while (buffer.remaining() > 0) {
-                            myChannel.read(buffer);
-                            if (buffer.remaining() > 0
-                                    && (time + READ_TIMEOUT) > System.currentTimeMillis()) {
-                                LockSupport.parkNanos(100);
-                            } else
-                                break;
+                        try {
+                            long time = System.currentTimeMillis();
+                            while (buffer.remaining() > 0) {
+                                myChannel.read(buffer);
+                                if (buffer.remaining() > 0
+                                        && (time + READ_TIMEOUT) > System.currentTimeMillis()) {
+                                    LockSupport.parkNanos(100);
+                                } else
+                                    break;
+                            }
+
+                            bytes = new byte[buffer.limit()];
+                            buffer.rewind();
+                            buffer.get(bytes);
+                        } finally {
+                            BufferStream.recycle(buffer);
                         }
-
-                        byte[] bytes = new byte[buffer.limit()];
-                        buffer.rewind();
-                        buffer.get(bytes);
 
                         final Object requestBody = objectMapper.readValue(bytes, bodyType);
                         final Object response = invokeHandler(path, requestBody);

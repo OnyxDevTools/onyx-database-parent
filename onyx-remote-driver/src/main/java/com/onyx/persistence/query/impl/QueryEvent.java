@@ -3,6 +3,7 @@ package com.onyx.persistence.query.impl;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.QueryListenerEvent;
 
 /**
@@ -55,6 +56,16 @@ public class QueryEvent<T> implements BufferStreamable {
     public void write(BufferStream buffer) throws BufferingException {
         buffer.putByte((byte)this.type.ordinal());
         buffer.putObject(this.entity);
+    }
+
+    @Override
+    public void read(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        read(bufferStream);
+    }
+
+    @Override
+    public void write(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        write(bufferStream);
     }
 
     /**

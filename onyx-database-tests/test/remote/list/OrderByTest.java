@@ -129,11 +129,11 @@ public class OrderByTest extends RemoteBaseTest
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
         Assert.assertEquals(results.get(0).id, "FIRST ONE");
-        Assert.assertEquals(results.get(1).id, "FIRST ONE3");
-        Assert.assertEquals(results.get(2).id, "FIRST ONE2");
-        Assert.assertEquals(results.get(3).id, "FIRST ONE1");
-        Assert.assertEquals(results.get(4).id, "FIRST ONE5");
-        Assert.assertEquals(results.get(5).id, "FIRST ONE4");
+        Assert.assertEquals(results.get(1).id, "FIRST ONE6");
+        Assert.assertEquals(results.get(2).id, "FIRST ONE3");
+        Assert.assertEquals(results.get(3).id, "FIRST ONE2");
+        Assert.assertEquals(results.get(4).id, "FIRST ONE1");
+        Assert.assertEquals(results.get(5).id, "FIRST ONE8");
     }
 
     @Test
@@ -153,7 +153,7 @@ public class OrderByTest extends RemoteBaseTest
         QueryOrder[] orderList = {new QueryOrder("doubleValue", false)};
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
-        Assert.assertEquals(results.get(0).id, "FIRST ONE3");
+        Assert.assertEquals(results.get(0).id, "FIRST ONE6");
     }
 
     @Test
@@ -174,7 +174,7 @@ public class OrderByTest extends RemoteBaseTest
         QueryOrder[] orderList = {new QueryOrder("intValue", false)};
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
-        Assert.assertEquals(results.get(0).id, "FIRST ONE3");
+        Assert.assertEquals(results.get(0).id, "FIRST ONE6");
     }
 
     @Test
@@ -184,7 +184,7 @@ public class OrderByTest extends RemoteBaseTest
         QueryOrder[] orderList = {new QueryOrder("intValue", true), new QueryOrder("id", true)};
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
-        Assert.assertEquals(results.get(2).id, "FIRST ONE1");
+        Assert.assertEquals(results.get(2).id, "FIRST ONE7");
     }
 
     @Test
@@ -205,6 +205,6 @@ public class OrderByTest extends RemoteBaseTest
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
         Assert.assertEquals(results.get(0).id, "FIRST ONE4");
-        Assert.assertEquals(results.get(2).id, "FIRST ONE");
+        Assert.assertEquals(results.get(2).id, "FIRST ONE7");
     }
 }

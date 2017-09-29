@@ -130,7 +130,7 @@ public class NotInTest extends RemoteBaseTest
         stringArray.add("Some test strin3");
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.NOT_IN, stringArray);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
         Assert.assertNotEquals(results.get(0).stringValue, "Some test strin1");
         Assert.assertNotEquals(results.get(0).stringValue, "Some test strin1");
     }
@@ -143,7 +143,7 @@ public class NotInTest extends RemoteBaseTest
         stringArray.add(321l);
         QueryCriteria criteriaList = new QueryCriteria("longValue", QueryCriteriaOperator.NOT_IN, stringArray);
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
     @Test
@@ -154,7 +154,7 @@ public class NotInTest extends RemoteBaseTest
         stringArray.add(new Date(1001));
         QueryCriteria criteriaList = new QueryCriteria("dateValue", QueryCriteriaOperator.NOT_IN, stringArray);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(6, results.size());
         Assert.assertNotEquals(results.get(0).dateValue, new Date(1000));
         Assert.assertNotEquals(results.get(0).dateValue, new Date(1001));
     }
@@ -167,7 +167,7 @@ public class NotInTest extends RemoteBaseTest
         stringArray.add(1.11);
         QueryCriteria criteriaList = new QueryCriteria("doubleValue", QueryCriteriaOperator.NOT_IN, stringArray);
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
 
     }
 }

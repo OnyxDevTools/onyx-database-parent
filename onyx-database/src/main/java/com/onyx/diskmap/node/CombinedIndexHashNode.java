@@ -3,6 +3,9 @@ package com.onyx.diskmap.node;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Created by tosborn1 on 2/16/17.
@@ -39,5 +42,15 @@ public class CombinedIndexHashNode implements BufferStreamable {
     public void write(BufferStream buffer) throws BufferingException {
         buffer.putObject(head);
         buffer.putInt(mapId);
+    }
+
+    @Override
+    public void write(@NotNull BufferStream buffer, @Nullable SchemaContext context) throws BufferingException {
+        write(buffer);
+    }
+
+    @Override
+    public void read(@NotNull BufferStream buffer, @Nullable SchemaContext context) throws BufferingException {
+        read(buffer);
     }
 }

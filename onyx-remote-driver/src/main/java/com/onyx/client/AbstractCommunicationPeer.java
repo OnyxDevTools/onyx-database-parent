@@ -4,11 +4,9 @@ import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.client.base.ConnectionProperties;
 import com.onyx.client.base.RequestToken;
-import com.onyx.client.exception.ServerReadException;
 import com.onyx.client.exception.ServerWriteException;
 import com.onyx.client.serialization.DefaultServerSerializer;
 import com.onyx.client.serialization.ServerSerializer;
-import com.onyx.diskmap.serializer.ObjectBuffer;
 import com.onyx.exception.BufferingException;
 import com.onyx.exception.InitializationException;
 
@@ -264,7 +262,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      */
     protected void write(SocketChannel socketChannel, ConnectionProperties connectionProperties, Serializable message) {
 
-        ByteBuffer buffer = ObjectBuffer.allocate(SERIALIZATION_BUFFER_SIZE);
+        ByteBuffer buffer = BufferStream.allocate(SERIALIZATION_BUFFER_SIZE);
 
         buffer.position(1);
 

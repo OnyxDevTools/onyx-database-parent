@@ -125,7 +125,7 @@ public class MutableEqualsNullTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -133,7 +133,7 @@ public class MutableEqualsNullTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -141,7 +141,7 @@ public class MutableEqualsNullTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -149,7 +149,7 @@ public class MutableEqualsNullTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -157,7 +157,7 @@ public class MutableEqualsNullTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -165,6 +165,6 @@ public class MutableEqualsNullTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("booleanValue",QueryCriteriaOperator.IS_NULL);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 }

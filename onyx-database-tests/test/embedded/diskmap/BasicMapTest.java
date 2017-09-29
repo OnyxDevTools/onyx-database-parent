@@ -294,23 +294,23 @@ public class BasicMapTest extends AbstractTest
         for(int i = 0; i < 100000; i++)
         {
             entityYo = new EntityYo();
-            entityYo.id = "OOO, this is an id" + i;
-            entityYo.longValue = 23l;
-            entityYo.dateValue = new Date(1433233222);
-            entityYo.longStringValue = "This is a really long string key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string text";
-            entityYo.otherStringValue = "Normal text but still has some kind of content";
-            entityYo.mutableInteger = 23;
-            entityYo.mutableLong = 42l;
-            entityYo.mutableBoolean = false;
-            entityYo.mutableFloat = 23.2f;
-            entityYo.mutableDouble = 23.1;
-            entityYo.immutableInteger = 77;
-            entityYo.immutableLong = 653356l;
-            entityYo.immutableBoolean = true;
-            entityYo.immutableFloat = 23.45f;
-            entityYo.immutableDouble = 232.232;
+            entityYo.setId("OOO, this is an id" + i);
+            entityYo.setLongValue(23l);
+            entityYo.setDateValue(new Date(1433233222));
+            entityYo.setLongStringValue("This is a really long string key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string text");
+            entityYo.setOtherStringValue("Normal text but still has some kind of content");
+            entityYo.setMutableInteger(23);
+            entityYo.setMutableLong(42l);
+            entityYo.setMutableBoolean(false);
+            entityYo.setMutableFloat(23.2f);
+            entityYo.setMutableDouble(23.1);
+            entityYo.setImmutableInteger(77);
+            entityYo.setImmutableLong(653356l);
+            entityYo.setImmutableBoolean(true);
+            entityYo.setImmutableFloat(23.45f);
+            entityYo.setImmutableDouble(232.232);
 
-            myMap.put(entityYo.id, entityYo);
+            myMap.put(entityYo.getId(), entityYo);
         }
 
         store.commit();
@@ -323,20 +323,20 @@ public class BasicMapTest extends AbstractTest
         for(int i = 0; i < 100000; i++)
         {
             another = myMap.get("OOO, this is an id" + i);
-            Assert.assertTrue(entityYo.longValue.equals(another.longValue));
-            Assert.assertTrue(entityYo.dateValue.equals(another.dateValue));
-            Assert.assertTrue(entityYo.longStringValue.equals(another.longStringValue));
-            Assert.assertTrue(entityYo.otherStringValue.equals(another.otherStringValue));
-            Assert.assertTrue(entityYo.mutableInteger.equals(another.mutableInteger));
-            Assert.assertTrue(entityYo.mutableLong.equals(another.mutableLong));
-            Assert.assertTrue(entityYo.mutableBoolean.equals(another.mutableBoolean));
-            Assert.assertTrue(entityYo.mutableFloat.equals(another.mutableFloat));
-            Assert.assertTrue(entityYo.mutableDouble.equals(another.mutableDouble));
-            Assert.assertTrue(entityYo.immutableInteger == another.immutableInteger);
-            Assert.assertTrue(entityYo.immutableLong == another.immutableLong);
-            Assert.assertTrue(entityYo.immutableBoolean == another.immutableBoolean);
-            Assert.assertTrue(entityYo.immutableFloat == another.immutableFloat);
-            Assert.assertTrue(entityYo.immutableDouble == another.immutableDouble);
+            Assert.assertTrue(entityYo.getLongValue().equals(another.getLongValue()));
+            Assert.assertTrue(entityYo.getDateValue().equals(another.getDateValue()));
+            Assert.assertTrue(entityYo.getLongStringValue().equals(another.getLongStringValue()));
+            Assert.assertTrue(entityYo.getOtherStringValue().equals(another.getOtherStringValue()));
+            Assert.assertTrue(entityYo.getMutableInteger().equals(another.getMutableInteger()));
+            Assert.assertTrue(entityYo.getMutableLong().equals(another.getMutableLong()));
+            Assert.assertTrue(entityYo.getMutableBoolean().equals(another.getMutableBoolean()));
+            Assert.assertTrue(entityYo.getMutableFloat().equals(another.getMutableFloat()));
+            Assert.assertTrue(entityYo.getMutableDouble().equals(another.getMutableDouble()));
+            Assert.assertTrue(entityYo.getImmutableInteger() == another.getImmutableInteger());
+            Assert.assertTrue(entityYo.getImmutableLong() == another.getImmutableLong());
+            Assert.assertTrue(entityYo.getImmutableBoolean() == another.getImmutableBoolean());
+            Assert.assertTrue(entityYo.getImmutableFloat() == another.getImmutableFloat());
+            Assert.assertTrue(entityYo.getImmutableDouble() == another.getImmutableDouble());
         }
 
 

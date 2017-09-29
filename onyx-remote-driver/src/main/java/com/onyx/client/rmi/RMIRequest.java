@@ -3,6 +3,7 @@ package com.onyx.client.rmi;
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
 
 /**
  * Created by tosborn1 on 7/1/16.
@@ -76,5 +77,15 @@ public class RMIRequest implements BufferStreamable
         buffer.putString(instance);
         buffer.putByte(method);
         buffer.putObject(params);
+    }
+
+    @Override
+    public void read(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        read(bufferStream);
+    }
+
+    @Override
+    public void write(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        write(bufferStream);
     }
 }

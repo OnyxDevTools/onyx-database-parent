@@ -125,7 +125,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("id",QueryCriteriaOperator.GREATER_THAN, "FIRST ONE1");
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(7, results.size());
     }
 
     @Test
@@ -133,7 +133,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.GREATER_THAN, "Some test strin2");
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
 
@@ -150,7 +150,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("longPrimitive",QueryCriteriaOperator.GREATER_THAN, 1002l);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
     @Test
@@ -158,7 +158,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.GREATER_THAN, 3);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
     @Test
@@ -175,7 +175,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.GREATER_THAN, 1.11);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
     @Test
@@ -183,7 +183,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("doublePrimitive",QueryCriteriaOperator.GREATER_THAN, 3.32);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
     @Test
@@ -191,7 +191,7 @@ public class GreaterThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.GREATER_THAN, new Date(1001));
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
 }

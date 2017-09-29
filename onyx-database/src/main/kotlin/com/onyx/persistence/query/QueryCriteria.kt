@@ -1,8 +1,7 @@
 package com.onyx.persistence.query
 
+import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.AttributeDescriptor
-import com.onyx.diskmap.serializer.ObjectBuffer
-import com.onyx.diskmap.serializer.ObjectSerializable
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 
@@ -38,7 +37,7 @@ import java.util.*
  *
  * @see com.onyx.persistence.query.Query
  */
-class QueryCriteria<T> : ObjectSerializable, Serializable {
+class QueryCriteria<T> : BufferStreamable {
 
     constructor()
 
@@ -262,75 +261,6 @@ class QueryCriteria<T> : ObjectSerializable, Serializable {
                 else -> null
             }
         }
-
-    @Throws(IOException::class)
-    override fun writeObject(buffer: ObjectBuffer) {
-        buffer.writeObject(attribute)
-        buffer.writeInt(operator!!.ordinal)
-        buffer.writeInt(type!!.ordinal)
-        buffer.writeObject(dateValue)
-        buffer.writeObject(longValue)
-        buffer.writeObject(integerValue)
-        buffer.writeObject(booleanValue)
-        buffer.writeObject(doubleValue)
-        buffer.writeObject(stringValue)
-        buffer.writeObject(dateValueList)
-        buffer.writeObject(longValueList)
-        buffer.writeObject(integerValueList)
-        buffer.writeObject(doubleValueList)
-        buffer.writeObject(stringValueList)
-        buffer.writeObject(subCriteria)
-
-        buffer.writeObject(enumValue)
-        buffer.writeObject(floatValue)
-        buffer.writeObject(characterValue)
-        buffer.writeObject(byteValue)
-        buffer.writeObject(shortValue)
-        buffer.writeObject(entityValue)
-        buffer.writeObject(floatValueList)
-        buffer.writeObject(characterValueList)
-        buffer.writeObject(byteValueList)
-        buffer.writeObject(shortValueList)
-        buffer.writeObject(entityValueList)
-        buffer.writeBoolean(isNot)
-        buffer.writeBoolean(isAnd)
-        buffer.writeBoolean(isOr)
-
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    @Throws(IOException::class)
-    override fun readObject(buffer: ObjectBuffer) {
-        attribute = buffer.readObject() as String
-        operator = QueryCriteriaOperator.values()[buffer.readInt()]
-        type = QueryCriteriaType.values()[buffer.readInt()]
-        dateValue = buffer.readObject() as Date
-        longValue = buffer.readObject() as Long
-        integerValue = buffer.readObject() as Int
-        booleanValue = buffer.readObject() as Boolean
-        doubleValue = buffer.readObject() as Double
-        stringValue = buffer.readObject() as String
-        dateValueList = buffer.readObject() as List<Date>
-        integerValueList = buffer.readObject() as List<Int>
-        doubleValueList = buffer.readObject() as List<Double>
-        stringValueList = buffer.readObject() as List<String>
-        subCriteria = buffer.readObject() as MutableList<QueryCriteria<*>>
-
-        enumValue = buffer.readObject() as Enum<*>
-        floatValue = buffer.readObject() as Float
-        characterValue = buffer.readObject() as Char
-        byteValue = buffer.readObject() as Byte
-        shortValue = buffer.readObject() as Short
-        entityValue = buffer.readObject() as ManagedEntity
-        floatValueList = buffer.readObject() as List<Float>
-        characterValueList = buffer.readObject() as List<Char>
-        byteValueList = buffer.readObject() as List<Byte>
-        shortValueList = buffer.readObject() as List<Short>
-        entityValueList = buffer.readObject() as List<ManagedEntity>
-        isNot = buffer.readBoolean()
-        isAnd = buffer.readBoolean()
-        isOr = buffer.readBoolean()
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

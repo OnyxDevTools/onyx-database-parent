@@ -25,7 +25,7 @@ public class ContainsTest extends PrePopulatedDatabaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.CONTAINS, "Some test strin");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
     @Test
@@ -33,7 +33,7 @@ public class ContainsTest extends PrePopulatedDatabaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("id",QueryCriteriaOperator.STARTS_WITH, "FIRST ONE");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(9, results.size());
     }
 
     @Test
@@ -41,7 +41,7 @@ public class ContainsTest extends PrePopulatedDatabaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.CONTAINS, "ome test strin");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
     @Test
@@ -49,7 +49,7 @@ public class ContainsTest extends PrePopulatedDatabaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("id",QueryCriteriaOperator.CONTAINS, "IRST ONE");
         List<AllAttributeEntity> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(9, results.size());
     }
 }
 

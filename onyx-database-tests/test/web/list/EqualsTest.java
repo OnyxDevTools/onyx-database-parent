@@ -203,12 +203,12 @@ public class EqualsTest extends BaseTest
         final QueryCriteria criteria = new QueryCriteria("longValue", QueryCriteriaOperator.EQUAL, 322l);
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(4, results.size());
         Assert.assertEquals(results.get(0).longValue, Long.valueOf(322l));
 
         final QueryCriteria criteria2 = new QueryCriteria("longPrimitive", QueryCriteriaOperator.EQUAL, 1301l);
         results = manager.list(AllAttributeForFetch.class, criteria2);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
         Assert.assertEquals(results.get(0).longPrimitive, 1301l);
     }
 
@@ -235,12 +235,12 @@ public class EqualsTest extends BaseTest
     {
         final QueryCriteria criteria = new QueryCriteria("doubleValue", QueryCriteriaOperator.EQUAL, 1.126);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
         Assert.assertEquals(results.get(0).doubleValue, Double.valueOf(1.126));
 
         final QueryCriteria criteria2 = new QueryCriteria("doublePrimitive", QueryCriteriaOperator.EQUAL, 3.35);
         results = manager.list(AllAttributeForFetch.class, criteria2);
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
         Assert.assertEquals(Double.valueOf(results.get(0).doublePrimitive), Double.valueOf(3.35));
     }
 
@@ -249,12 +249,12 @@ public class EqualsTest extends BaseTest
     {
         final QueryCriteria criteria = new QueryCriteria("booleanValue", QueryCriteriaOperator.EQUAL, false);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(3, results.size());
         Assert.assertEquals(results.get(0).booleanValue, Boolean.valueOf(false));
 
         final QueryCriteria criteria2 = new QueryCriteria("booleanPrimitive", QueryCriteriaOperator.EQUAL, true);
         List<AllAttributeForFetch> results2 = manager.list(AllAttributeForFetch.class, criteria2);
-        Assert.assertEquals(2, results2.size());
+        Assert.assertEquals(3, results2.size());
         Assert.assertEquals(results2.get(0).booleanPrimitive, true);
     }
 

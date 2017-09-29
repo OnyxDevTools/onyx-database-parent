@@ -138,6 +138,10 @@ object ReflectionUtil {
             } catch (e1: InvocationTargetException) {
                 throw InstantiationException("Cannot instantiate class " + type.canonicalName)
             }
+        } catch (e:Exception)
+        {
+            e.printStackTrace()
+            throw e
         }
     }
 

@@ -517,19 +517,19 @@ public class BufferStreamTest {
     public void testBufferable() throws BufferingException
     {
         BufferStreamableObject bufferableObject = new BufferStreamableObject();
-        bufferableObject.myInt = 33;
-        bufferableObject.myString = "This";
-        bufferableObject.simple = new Simple();
-        bufferableObject.simple.hiya = 2;
+        bufferableObject.setMyInt(33);
+        bufferableObject.setMyString("This");
+        bufferableObject.setSimple(new Simple());
+        bufferableObject.getSimple().hiya = 2;
 
         ByteBuffer buffer = serialize(bufferableObject);
         BufferStreamableObject bufferableObject1 = (BufferStreamableObject) deserialize(buffer);
         BufferStream.recycle(buffer);
 
         assert bufferableObject1 != null;
-        assert bufferableObject1.myInt == 33;
-        assert bufferableObject1.myString.equals("This");
-        assert bufferableObject1.simple.hiya == 2;
+        assert bufferableObject1.getMyInt() == 33;
+        assert bufferableObject1.getMyString().equals("This");
+        assert bufferableObject1.getSimple().hiya == 2;
 
     }
 

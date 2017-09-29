@@ -7,6 +7,7 @@ import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.client.push.PushConsumer;
 import com.onyx.exception.BufferingException;
+import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.query.QueryListener;
 import com.onyx.persistence.query.QueryListenerEvent;
 
@@ -75,6 +76,16 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
         buffer.putLong(listenerId);
         buffer.putObject(packet);
         buffer.putByte(subscribeEvent);
+    }
+
+    @Override
+    public void read(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        read(bufferStream);
+    }
+
+    @Override
+    public void write(BufferStream bufferStream, SchemaContext context) throws BufferingException {
+        write(bufferStream);
     }
 
     /**

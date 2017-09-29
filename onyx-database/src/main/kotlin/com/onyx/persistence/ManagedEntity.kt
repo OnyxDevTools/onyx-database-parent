@@ -43,16 +43,16 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
         }
     }
 
-    override fun read(buffer: BufferStream?) {
+    override fun read(buffer: BufferStream) {
         val descriptor = getDescriptor(Contexts.first())
         descriptor.reflectionFields.forEach { name, _ ->
-            this.set(descriptor = descriptor, name = name, value = buffer!!.other)
+            this.set(descriptor = descriptor, name = name, value = buffer.other)
         }
     }
 
-    override fun write(buffer: BufferStream, context: SchemaContext) {
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
 
-        val systemEntity = context.getSystemEntityByName(this::class.java.name)
+        val systemEntity = context!!.getSystemEntityByName(this::class.java.name)
         buffer.putInt(systemEntity!!.primaryKey)
 
         systemEntity.attributes.forEach {
@@ -62,9 +62,9 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
         }
     }
 
-    override fun read(buffer: BufferStream, context: SchemaContext) {
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
         val serializerId = buffer.int
-        val systemEntity = context.getSystemEntityById(serializerId)
+        val systemEntity = context!!.getSystemEntityById(serializerId)
 
         systemEntity!!.attributes.forEach {
             catchAll {

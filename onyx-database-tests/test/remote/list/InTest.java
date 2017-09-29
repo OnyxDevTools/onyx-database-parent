@@ -127,7 +127,7 @@ public class InTest extends RemoteBaseTest
         stringArray.add("Some test strin3");
         QueryCriteria criteriaList = new QueryCriteria("stringValue", QueryCriteriaOperator.IN, stringArray);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -149,7 +149,7 @@ public class InTest extends RemoteBaseTest
         stringArray.add(321l);
         QueryCriteria criteriaList = new QueryCriteria("longValue", QueryCriteriaOperator.IN, stringArray);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(4, results.size());
         Assert.assertEquals(Long.valueOf(results.get(0).longValue), Long.valueOf(322l));
     }
 
@@ -172,7 +172,7 @@ public class InTest extends RemoteBaseTest
         stringArray.add(1.11);
         QueryCriteria criteriaList = new QueryCriteria("doubleValue", QueryCriteriaOperator.IN, stringArray);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
 }

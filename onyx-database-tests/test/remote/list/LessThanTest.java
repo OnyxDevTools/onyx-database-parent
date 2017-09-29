@@ -133,7 +133,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("stringValue",QueryCriteriaOperator.LESS_THAN, "Some test strin2");
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(5, results.size());
+        Assert.assertEquals(7, results.size());
     }
 
 
@@ -142,7 +142,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("longValue",QueryCriteriaOperator.LESS_THAN, 323l);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(5, results.size());
+        Assert.assertEquals(8, results.size());
     }
 
     @Test
@@ -150,7 +150,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("longPrimitive",QueryCriteriaOperator.LESS_THAN, 3l);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(2, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
     @Test
@@ -158,7 +158,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("intValue",QueryCriteriaOperator.LESS_THAN, 3);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(6, results.size());
     }
 
     @Test
@@ -166,7 +166,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("intPrimitive",QueryCriteriaOperator.LESS_THAN, 4);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(7, results.size());
     }
 
 
@@ -175,7 +175,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("doubleValue",QueryCriteriaOperator.LESS_THAN, 1.11);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
     @Test
@@ -183,7 +183,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("doublePrimitive",QueryCriteriaOperator.LESS_THAN, 3.32);
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(5, results.size());
+        Assert.assertEquals(7, results.size());
     }
 
     @Test
@@ -191,7 +191,7 @@ public class LessThanTest extends RemoteBaseTest
     {
         QueryCriteria criteriaList = new QueryCriteria("dateValue",QueryCriteriaOperator.LESS_THAN, new Date(1001));
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(5, results.size());
     }
 
 

@@ -142,7 +142,7 @@ public class FullTableScanTest extends RemoteBaseTest
                 .or("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3");
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteria);
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(4, results.size());
     }
 
 
@@ -152,7 +152,7 @@ public class FullTableScanTest extends RemoteBaseTest
         QueryCriteria containsSubTes = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some tes");
         QueryCriteria containsSubTestStrin1 = new QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some test strin1");
 
-        Assert.assertEquals(4, manager.list(AllAttributeForFetch.class, containsSubTes.or(containsSubTestStrin1)).size());
+        Assert.assertEquals(5, manager.list(AllAttributeForFetch.class, containsSubTes.or(containsSubTestStrin1)).size());
     }
 
     @Test
@@ -174,7 +174,7 @@ public class FullTableScanTest extends RemoteBaseTest
         QueryCriteria intValueNotEqual2 = new QueryCriteria("intValue", QueryCriteriaOperator.NOT_EQUAL, 2);
         QueryCriteria orStringValueEqualsSomeTest = new QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin2");
 
-        Assert.assertEquals(6, manager.list(AllAttributeForFetch.class, stringValueEqualsValue.or(containsSubTes.or(intValueNotEqual2)).or(orStringValueEqualsSomeTest)).size());
+        Assert.assertEquals(9, manager.list(AllAttributeForFetch.class, stringValueEqualsValue.or(containsSubTes.or(intValueNotEqual2)).or(orStringValueEqualsSomeTest)).size());
     }
 
 }

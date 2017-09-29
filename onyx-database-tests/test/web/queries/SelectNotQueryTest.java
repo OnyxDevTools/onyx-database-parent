@@ -19,7 +19,7 @@ import java.util.List;
  * This test was created to support the new operators in V1.3.0
  */
 @Category({WebServerTests.class})
-public class SelectNotQueryTest extends PrePopulatedDatabaseTest {
+public class SelectNotQueryTest extends web.base.PrePopulatedDatabaseTest {
 
     /**
      * This test simply checks the NOT_EQUAL operator agains a full table scan
