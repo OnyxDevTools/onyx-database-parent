@@ -1,7 +1,7 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
@@ -18,7 +18,7 @@ import kotlin.collections.HashMap
  *
  * It can either scan the entire table or a subset of index values
  */
-open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria<*>, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: MapBuilder, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria<*>, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
 
     /**
      * Full Table Scan

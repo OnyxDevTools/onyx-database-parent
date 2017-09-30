@@ -3,8 +3,8 @@ package com.onyx.persistence.context.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
-import com.onyx.diskmap.DefaultMapBuilder
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
@@ -179,7 +179,7 @@ open class DefaultSchemaContext : SchemaContext {
         temporaryDiskMapQueue.clear()
 
         // Added to ensure all builders are closed whether they are checked out or not
-        temporaryMaps.forEach {
+        temporaryDiskMaps.forEach {
             it.close()
             it.delete()
         }
@@ -617,7 +617,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = ConcurrentHashMap<String, MapBuilder>()
+    @JvmField internal val dataFiles = ConcurrentHashMap<String, DiskMapFactory>()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -629,10 +629,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun getDataFile(descriptor: EntityDescriptor): MapBuilder {
+    override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
         return dataFiles.getOrPut(key) {
-                return@getOrPut DefaultMapBuilder("$location/$key", this@DefaultSchemaContext)
+                return@getOrPut DefaultDiskMapFactory("$location/$key", this@DefaultSchemaContext)
             }
         }
 
@@ -646,7 +646,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): MapBuilder {
+    override fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): DiskMapFactory {
 
         if (partitionId == 0L) {
             return getDataFile(descriptor)
@@ -664,10 +664,10 @@ open class DefaultSchemaContext : SchemaContext {
     // region Map Builder Queue
 
     @JvmField
-    protected val temporaryMaps: MutableSet<MapBuilder> = HashSet()
+    protected val temporaryDiskMaps: MutableSet<DiskMapFactory> = HashSet()
 
     @JvmField
-    protected val temporaryDiskMapQueue = ArrayBlockingQueue<MapBuilder>(32, false)
+    protected val temporaryDiskMapQueue = ArrayBlockingQueue<DiskMapFactory>(32, false)
 
     /**
      * This method will create a pool of map builders.  They are used to run queries
@@ -686,9 +686,9 @@ open class DefaultSchemaContext : SchemaContext {
             file.createNewFile()
             file.deleteOnExit() // Must delete since there is no more functionality to delete from references
 
-            val builder = DefaultMapBuilder(file.path, StoreType.MEMORY_MAPPED_FILE, this, true)
+            val builder = DefaultDiskMapFactory(file.path, StoreType.MEMORY_MAPPED_FILE, this, true)
             temporaryDiskMapQueue.add(builder)
-            temporaryMaps.add(builder)
+            temporaryDiskMaps.add(builder)
         }
     }
 
@@ -701,17 +701,17 @@ open class DefaultSchemaContext : SchemaContext {
      * issue with map builders being destroyed invoking the DirectBuffer cleanup.
      * That did not perform well
      */
-    override fun createTemporaryMapBuilder(): MapBuilder = temporaryDiskMapQueue.take()
+    override fun createTemporaryMapBuilder(): DiskMapFactory = temporaryDiskMapQueue.take()
 
     /**
-     * Recycle a temporary map builder so that it may be re-used
+     * Recycle a temporary map factory so that it may be re-used
      *
-     * @param mapBuilder Discarded map builder
+     * @param diskMapFactory Discarded map factory
      * @since 1.3.0
      */
-    override fun releaseMapBuilder(mapBuilder: MapBuilder) {
-        mapBuilder.reset()
-        temporaryDiskMapQueue.offer(mapBuilder)
+    override fun releaseMapBuilder(diskMapFactory: DiskMapFactory) {
+        diskMapFactory.reset()
+        temporaryDiskMapQueue.offer(diskMapFactory)
     }
 
     // endregion

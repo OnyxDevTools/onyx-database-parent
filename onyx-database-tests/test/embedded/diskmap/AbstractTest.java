@@ -1,16 +1,10 @@
 package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.Externalizable;
 import java.io.File;
-import java.util.Map;
 
 /**
  * Created by timothy.osborn on 3/21/15.

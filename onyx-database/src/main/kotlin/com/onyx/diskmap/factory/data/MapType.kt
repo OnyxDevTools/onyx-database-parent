@@ -1,4 +1,4 @@
-package com.onyx.diskmap
+package com.onyx.diskmap.factory.data
 
 /**
  * Created by tosborn1 on 1/8/17.

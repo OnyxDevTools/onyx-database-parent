@@ -1,19 +1,21 @@
 package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.base.concurrent.DispatchLock;
-import com.onyx.diskmap.base.concurrent.EmptyReadWriteLock;
+import com.onyx.concurrent.DispatchLock;
+import com.onyx.concurrent.impl.EmptyReadWriteLock;
 import com.onyx.diskmap.base.skiplist.AbstractIterableSkipList;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
-import com.onyx.diskmap.node.SkipListNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
+import com.onyx.diskmap.data.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.exception.AttributeTypeMismatchException;
 import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.depricated.CompareUtil;
 import com.onyx.util.ReflectionField;
 import com.onyx.util.ReflectionUtil;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -169,9 +171,9 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
 
             if (!this.detached) {
                 setHead(createHeadNode(Byte.MIN_VALUE, 0L, 0L));
-                this.header.firstNode = getHead().position;
-                updateHeaderFirstNode(header, this.header.firstNode);
-                header.recordCount.set(0L);
+                this.header.setFirstNode(getHead().getPosition());
+                updateHeaderFirstNode(header, this.header.getFirstNode());
+                header.getRecordCount().set(0L);
                 updateHeaderRecordCount();
             }
 
@@ -181,7 +183,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
     }
 
     /**
-     * Get the record id of a corresponding node.  Note, this points to the SkipListNode position.  Not the actual
+     * Get the record id of a corresponding data.  Note, this points to the SkipListNode position.  Not the actual
      * record position.
      *
      * @param key Identifier
@@ -196,7 +198,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             SkipListNode<K> node = find((K) key);
             if (node == null)
                 return -1;
-            return node.recordId;
+            return node.getRecordId();
         } finally {
             readWriteLock.readLock().unlock();
         }
@@ -217,7 +219,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             return null;
         try {
             SkipListNode<K> node = (SkipListNode<K>) findNodeAtPosition(recordId);
-            return findValueAtPosition(node.recordPosition, node.recordSize);
+            return findValueAtPosition(node.getRecordPosition(), node.getRecordSize());
         } finally {
             readWriteLock.readLock().unlock();
         }
@@ -235,7 +237,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
 
         try {
             SkipListNode<K> node = (SkipListNode<K>) findNodeAtPosition(recordId);
-            if (node != null && node.recordId == recordId) {
+            if (node != null && node.getRecordId() == recordId) {
                 return getRecordValueAsDictionary(node);
             }
             return null;
@@ -258,7 +260,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
 
         final SkipListNode node = (SkipListNode<K>) findNodeAtPosition(recordId);
 
-        V value = findValueAtPosition(node.recordPosition, node.recordSize);
+        V value = findValueAtPosition(node.getRecordPosition(), node.getRecordSize());
         if (value != null) {
             return ReflectionUtil.INSTANCE.getAny(value, attribute);
         }
@@ -273,7 +275,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
         if(node == null)
             return null;
 
-        V value = findValueAtPosition(node.recordPosition, node.recordSize);
+        V value = findValueAtPosition(node.getRecordPosition(), node.getRecordSize());
 
         if (value != null) {
             return ReflectionUtil.INSTANCE.getAny(value, attributeField);
@@ -282,6 +284,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
         return null;
     }
 
+    @NotNull
     @Override
     public DispatchLock getReadWriteLock() {
         return null;
@@ -296,6 +299,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @return A Set of references
      * @since 1.2.0
      */
+    @NotNull
     @SuppressWarnings("WeakerAccess")
     public Set<Long> above(K index, boolean includeFirst) {
         readWriteLock.readLock().lock();
@@ -308,29 +312,29 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
 
                 do {
 
-                    while (node.down != 0L)
-                        node = findNodeAtPosition(node.down);
+                    while (node.getDown() != 0L)
+                        node = findNodeAtPosition(node.getDown());
 
                     if (node instanceof SkipListNode) {
-                        if (((SkipListNode) node).key.equals(index) && !includeFirst) {
-                            if (node.next > 0L)
-                                node = findNodeAtPosition(node.next);
+                        if (((SkipListNode) node).getKey().equals(index) && !includeFirst) {
+                            if (node.getNext() > 0L)
+                                node = findNodeAtPosition(node.getNext());
                             else
                                 break;
 
                             continue;
                         }
 
-                        if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && includeFirst) {
-                            results.add(((SkipListNode) node).recordId);
+                        if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey()) && includeFirst) {
+                            results.add(((SkipListNode) node).getRecordId());
                         }
-                        else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.GREATER_THAN)) {
-                            results.add(((SkipListNode) node).recordId);
+                        else if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey(), QueryCriteriaOperator.GREATER_THAN)) {
+                            results.add(((SkipListNode) node).getRecordId());
                         }
                     }
 
-                    if (node.next > 0L)
-                        node = findNodeAtPosition(node.next);
+                    if (node.getNext() > 0L)
+                        node = findNodeAtPosition(node.getNext());
                     else
                         node = null;
                 } while (node != null);
@@ -350,6 +354,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
      * @return A Set of references
      * @since 1.2.0
      */
+    @NotNull
     @SuppressWarnings("WeakerAccess")
     public Set<Long> below(K index, boolean includeFirst) {
         readWriteLock.readLock().lock();
@@ -358,26 +363,26 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
             Set results = new HashSet();
 
             SkipListHeadNode node = getHead();
-            while (node.down != 0L)
-                node = findNodeAtPosition(node.down);
+            while (node.getDown() != 0L)
+                node = findNodeAtPosition(node.getDown());
 
-            while (node.next != 0L) {
-                node = findNodeAtPosition(node.next);
+            while (node.getNext() != 0L) {
+                node = findNodeAtPosition(node.getNext());
                 if (node instanceof SkipListNode) {
-                    if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && !includeFirst)
+                    if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey()) && !includeFirst)
                         break;
-                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key) && includeFirst) {
-                        results.add(((SkipListNode) node).recordId);
+                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey()) && includeFirst) {
+                        results.add(((SkipListNode) node).getRecordId());
                         continue;
                     }
-                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.LESS_THAN)) {
-                        results.add(((SkipListNode) node).recordId);
+                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey(), QueryCriteriaOperator.LESS_THAN)) {
+                        results.add(((SkipListNode) node).getRecordId());
                         continue;
                     }
-                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).key, QueryCriteriaOperator.GREATER_THAN))
+                    else if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey(), QueryCriteriaOperator.GREATER_THAN))
                         break;
 
-                    if (this.shouldMoveDown(0, 0, index, (K) ((SkipListNode) node).key))
+                    if (this.shouldMoveDown(0, 0, index, (K) ((SkipListNode) node).getKey()))
                         break;
                 }
             }
@@ -385,5 +390,21 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
         } finally {
             readWriteLock.readLock().unlock();
         }
+    }
+
+    public int getSize() {
+        return (int)longSize();
+    }
+
+    public Set<K> getKeys() {
+        return keySet();
+    }
+
+    public Collection<V> getValues() {
+        return values();
+    }
+
+    public Set<Map.Entry<K, V>> getEntries() {
+        return entrySet();
     }
 }

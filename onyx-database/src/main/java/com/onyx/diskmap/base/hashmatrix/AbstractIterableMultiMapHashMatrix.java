@@ -1,8 +1,8 @@
 package com.onyx.diskmap.base.hashmatrix;
 
-import com.onyx.diskmap.node.HashMatrixNode;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
+import com.onyx.diskmap.data.HashMatrixNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
 import com.onyx.diskmap.store.Store;
 
 import java.util.*;
@@ -57,7 +57,7 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
     }
 
     @Override
-    public Set<Entry<K, V>> entrySet() {
+    public Set<Map.Entry<K, V>> entrySet() {
         return new MultiMapEntrySet();
     }
 
@@ -133,7 +133,7 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
     private class ValueIterator extends AbstractMultiMapIterator implements Iterator {
         @Override
         public Object next() {
-            final Entry<K,V> entry = (Entry<K,V> )super.next();
+            final Map.Entry<K,V> entry = (Map.Entry<K,V>)super.next();
             if (entry != null) {
                 return entry.getValue();
             }
@@ -144,7 +144,7 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
     private class KeyIterator extends AbstractMultiMapIterator implements Iterator {
         @Override
         public Object next() {
-            final Entry<K,V> entry = (Entry<K,V> )super.next();
+            final Map.Entry<K,V> entry = (Map.Entry<K,V>)super.next();
             if (entry != null) {
                 return entry.getKey();
             }
@@ -218,8 +218,8 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
          */
         AbstractMultiMapIterator(boolean isDictionary) {
             this.isDictionary = isDictionary;
-            if (header.firstNode > 0) {
-                nodeStack.push(new AbstractIterableMultiMapHashMatrix.NodeEntry(header.firstNode, (short) -1));
+            if (header.getFirstNode() > 0) {
+                nodeStack.push(new AbstractIterableMultiMapHashMatrix.NodeEntry(header.getFirstNode(), (short) -1));
             }
             queueUpNext();
         }
@@ -258,7 +258,7 @@ public abstract class AbstractIterableMultiMapHashMatrix<K,V> extends AbstractCa
 
                 // Add all the other related nodes in the bitmap
                 for (int i = 0; i < 10; i++) {
-                    reference = node.next[i];
+                    reference = node.getNext()[i];
                     if (reference > 0) {
                         if (nodeEntry.level < (loadFactor - 2)) {
                             newEntry = new NodeEntry(reference, (short) (nodeEntry.level + 1));

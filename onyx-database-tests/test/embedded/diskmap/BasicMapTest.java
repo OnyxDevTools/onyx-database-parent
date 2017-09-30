@@ -1,8 +1,8 @@
 package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory;
+import com.onyx.diskmap.factory.DiskMapFactory;
 import entities.EntityYo;
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,7 +25,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void putTest()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, Object> myMap = store.getHashMap("first");
 
         myMap.put("MY NEW STRING", "Hi1ya1");
@@ -35,7 +35,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void getTest()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, Object> myMap = store.getHashMap("first");
 
         myMap.put("MY NEW STRING", "Hi1ya1");
@@ -49,7 +49,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void deleteTest()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Object> myMap = store.getHashMap("second");
 
         long time = System.currentTimeMillis();
@@ -85,7 +85,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void deleteRoot()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Object> myMap = store.getHashMap("second");
 
         long time = System.currentTimeMillis();
@@ -115,7 +115,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void jumboTest()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Object> myMap = store.getHashMap("seconds");
 
         System.out.println("Starting Jumbo");
@@ -158,7 +158,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void updateTest()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Object> myMap = store.getHashMap("second");
 
         long time = System.currentTimeMillis();
@@ -206,7 +206,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void testPushMultipleObjects()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
 
         ExecutorService service = Executors.newFixedThreadPool(3);
 
@@ -257,7 +257,7 @@ public class BasicMapTest extends AbstractTest
     @Test
     public void testPushSingleObjects()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
 
         ExecutorService service = Executors.newFixedThreadPool(3);
 
@@ -283,7 +283,7 @@ public class BasicMapTest extends AbstractTest
 
     }
 
-    public void testPushObjects(MapBuilder store, int hashMapId)
+    public void testPushObjects(DiskMapFactory store, int hashMapId)
     {
         Map<String, EntityYo> myMap = store.getHashMap("objectos" + hashMapId);
 

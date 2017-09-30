@@ -1,15 +1,12 @@
 package com.onyx.diskmap.base.hashmatrix;
 
 import com.onyx.buffer.BufferPool;
-import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.DiskSkipListMap;
-import com.onyx.diskmap.node.HashMatrixNode;
-import com.onyx.diskmap.node.Header;
+import com.onyx.diskmap.data.HashMatrixNode;
+import com.onyx.diskmap.data.Header;
 import com.onyx.diskmap.store.Store;
 
 import java.nio.ByteBuffer;
-
-import static com.onyx.diskmap.node.HashMatrixNode.DEFAULT_BITMAP_ITERATIONS;
 
 /**
  * This class is responsible for the store i/o that writes and reads the hash matrix nodes.  It inherits all of the
@@ -38,24 +35,24 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
     }
 
     /**
-     * Update hash matrix reference.  This will not write the entire node, it will only update one of the sub references.
+     * Update hash matrix reference.  This will not write the entire data, it will only update one of the sub references.
      *
-     * Pre-requisite, the value must be defined within the node.  It will update the cache.
+     * Pre-requisite, the value must be defined within the data.  It will update the cache.
      *
-     * @param node Hash Matrix node.
-     * @param index Index of the reference within the next[] property for a node.
+     * @param node Hash Matrix data.
+     * @param index Index of the reference within the next[] property for a data.
      * @param value New reference value
      *
      * @since 1.2.0
      */
     @SuppressWarnings("WeakerAccess")
     public void updateHashMatrixReference(HashMatrixNode node, int index, long value) {
-        node.next[index] = value;
+        node.getNext()[index] = value;
         final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(value);
             buffer.flip();
-            fileStore.write(buffer, node.position + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
+            fileStore.write(buffer, node.getPosition() + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
         } finally {
             BufferPool.INSTANCE.recycle(buffer);
         }
@@ -64,7 +61,7 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
     /**
      * Get Hash Matrix Node.  Return the deserialized value from the store
      *
-     * @param position Position to find the node
+     * @param position Position to find the data
      * @return Node retrieved from the cache or the volume
      *
      * @since 1.2.0
@@ -75,25 +72,25 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
     }
 
     /**
-     * Write the hash matrix node to the store.
+     * Write the hash matrix data to the store.
      *
-     * @param position  Position to write the node to
+     * @param position  Position to write the data to
      * @param node Node to write to disk
      *
      * @since 1.2.0
      */
     @SuppressWarnings("WeakerAccess")
     protected void writeHashMatrixNode(long position, HashMatrixNode node) {
-        fileStore.write(node, node.position);
+        fileStore.write(node, node.getPosition());
     }
 
     /**
-     * Get the size of a hash matrix node.
+     * Get the size of a hash matrix data.
      *
      * @since 1.2.0
      * @return Number of levels + position
      */
     protected int getHashMatrixNodeSize() {
-        return (Long.BYTES * (DEFAULT_BITMAP_ITERATIONS+1)) + Integer.SIZE;
+        return (Long.BYTES * (HashMatrixNode.Companion.getDEFAULT_BITMAP_ITERATIONS() +1)) + Integer.SIZE;
     }
 }

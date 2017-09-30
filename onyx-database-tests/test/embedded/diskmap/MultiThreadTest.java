@@ -1,8 +1,8 @@
 package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory;
+import com.onyx.diskmap.factory.DiskMapFactory;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -24,7 +24,7 @@ public class MultiThreadTest extends AbstractTest {
     @Test
     public void testMultiThread()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Object> myMap = store.getHashMap("second");
 
         long time = System.currentTimeMillis();

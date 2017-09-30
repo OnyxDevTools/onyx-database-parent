@@ -3,9 +3,9 @@ package com.onyx.diskmap.base.skiplist;
 import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.base.AbstractDiskMap;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
-import com.onyx.diskmap.node.SkipListNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
+import com.onyx.diskmap.data.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.depricated.CompareUtil;
 import com.onyx.exception.BufferingException;
@@ -28,9 +28,9 @@ import java.util.Random;
  * @since 1.2.0
  */
 @SuppressWarnings("unchecked")
-abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Map<K, V> {
+abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Map<K,V> {
 
-    private static final Random random = new Random(60); //To choose the threadLocalHead level node randomly; // Random number generator from 0.0 to 1.0
+    private static final Random random = new Random(60); //To choose the threadLocalHead level data randomly; // Random number generator from 0.0 to 1.0
 
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
     private ThreadLocal<SkipListHeadNode> threadLocalHead; // Default threadLocalHead of the SkipList
@@ -68,13 +68,13 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         }
         else
         {
-            if (header.firstNode > 0L) {
-                setHead(findNodeAtPosition(header.firstNode));
+            if (header.getFirstNode() > 0L) {
+                setHead(findNodeAtPosition(header.getFirstNode()));
             } else {
                 SkipListHeadNode newHead = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
                 setHead(newHead);
-                this.header.firstNode = newHead.position;
-                updateHeaderFirstNode(this.header, this.header.firstNode);
+                this.header.setFirstNode(newHead.getPosition());
+                updateHeaderFirstNode(this.header, this.header.getFirstNode());
             }
         }
     }
@@ -85,7 +85,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      *
      * @since 1.2.0
      *
-     * @return The head node.
+     * @return The head data.
      */
     protected SkipListHeadNode getHead()
     {
@@ -97,7 +97,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Set the head node.  If the map is detached, it will set the node as a thread local parameter since it is throw away.
+     * Set the head data.  If the map is detached, it will set the data as a thread local parameter since it is throw away.
      *
      * @param head Head of the skip list
      */
@@ -134,10 +134,10 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         SkipListHeadNode head = getHead();
 
         final byte level = selectHeadLevel();
-        if (level > head.level) {
-            head = createHeadNode(level, 0L, head.position);
+        if (level > head.getLevel()) {
+            head = createHeadNode(level, 0L, head.getPosition());
             setHead(head);
-            updateHeaderFirstNode(header, head.position);
+            updateHeaderFirstNode(header, head.getPosition());
         }
 
         SkipListHeadNode current = head;
@@ -148,12 +148,12 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         boolean cache = true;
         while (current != null) {
 
-            next = findNodeAtPosition(current.next);
+            next = findNodeAtPosition(current.getNext());
 
-            if (current.next == 0L ||
-                    shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), key, ((SkipListNode<K>)next).key)) {
-                if (level >= current.level) {
-                    SkipListNode<K> newNode = createNewNode(key, value, current.level, next == null ? 0L : next.position, 0L, cache, (recordIndicatorNode == null) ? -1 : recordIndicatorNode.recordId);
+            if (current.getNext() == 0L ||
+                    shouldMoveDown(hash, hash(((SkipListNode<K>) next).getKey()), key, ((SkipListNode<K>) next).getKey())) {
+                if (level >= current.getLevel()) {
+                    SkipListNode<K> newNode = createNewNode(key, value, current.getLevel(), next == null ? 0L : next.getPosition(), 0L, cache, (recordIndicatorNode == null) ? -1 : recordIndicatorNode.getRecordId());
                     if (recordIndicatorNode == null) {
                         recordIndicatorNode = newNode;
                     }
@@ -162,13 +162,13 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
                     // intial reference
                     cache = false;
                     if (last != null) {
-                        updateNodeDown(last, newNode.position);
+                        updateNodeDown(last, newNode.getPosition());
                     }
 
-                    updateNodeNext(current, newNode.position);
+                    updateNodeNext(current, newNode.getPosition());
                     last = newNode;
                 }
-                current = findNodeAtPosition(current.down);
+                current = findNodeAtPosition(current.getDown());
                 continue;
             }
 
@@ -190,8 +190,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     @SuppressWarnings("unchecked")
-    @Override
     public V remove(Object key) {
+
 
         V value = null;
 
@@ -202,16 +202,16 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         SkipListHeadNode current = getHead();
         while (current != null) {
 
-            SkipListHeadNode next = findNodeAtPosition(current.next);
+            SkipListHeadNode next = findNodeAtPosition(current.getNext());
 
-            if (current.next == 0L ||
-                    (shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), (K)key, ((SkipListNode<K>)next).key))) {
+            if (current.getNext() == 0L ||
+                    (shouldMoveDown(hash, hash(((SkipListNode<K>) next).getKey()), (K)key, ((SkipListNode<K>) next).getKey()))) {
 
                 // We found the record we want
-                if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
+                if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>) next).getKey())) {
                     // Get the return value
-                    value = findValueAtPosition(((SkipListNode<K>)next).recordPosition, ((SkipListNode<K>)next).recordSize);
-                    updateNodeNext(current, next.next);
+                    value = findValueAtPosition(((SkipListNode<K>) next).getRecordPosition(), ((SkipListNode<K>) next).getRecordSize());
+                    updateNodeNext(current, next.getNext());
 
                     removeNode(next);
                     removeNode(current);
@@ -223,7 +223,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
                 }
 
                 // We must continue on.  There could be multiple references within the SkipList
-                current = findNodeAtPosition(current.down);
+                current = findNodeAtPosition(current.getDown());
                 continue;
             }
 
@@ -243,7 +243,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Perform cleanup once the node has been removed
+     * Perform cleanup once the data has been removed
      * @param node Node that is to be removed
      */
     abstract void removeNode(SkipListHeadNode node);
@@ -260,7 +260,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     public V get(Object key) {
 
         final SkipListNode<K> node = find((K) key);
-        return (node != null) ? findValueAtPosition(node.recordPosition, node.recordSize) : null;
+        return (node != null) ? findValueAtPosition(node.getRecordPosition(), node.getRecordSize()) : null;
 
     }
 
@@ -295,26 +295,26 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         SkipListHeadNode current = getHead();
         while (current != null) {
 
-            SkipListHeadNode next = findNodeAtPosition(current.next);
+            SkipListHeadNode next = findNodeAtPosition(current.getNext());
 
-            if ((current.next == 0L) || ((next instanceof SkipListNode) &&
-                    (shouldMoveDown(hash, hash(((SkipListNode<K>) next).key), key, ((SkipListNode<K>) next).key)))) {
+            if ((current.getNext() == 0L) || ((next instanceof SkipListNode) &&
+                    (shouldMoveDown(hash, hash(((SkipListNode<K>) next).getKey()), key, ((SkipListNode<K>) next).getKey())))) {
 
                 // We found the record we want
-                if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
+                if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>) next).getKey())) {
                     // Get the return value
 
                     // There can be multiple nodes for a single record
                     // We do not want to cache because it will stomp all over our
                     // intial reference.  We use the victory flag to identify
-                    // if we have already updated a node
+                    // if we have already updated a data
 
                     updateNodeValue((SkipListNode) next, value, !victory);
                     victory = true;
                 }
 
                 // We must continue on.  There could be multiple references within the SkipList
-                current = findNodeAtPosition(current.down);
+                current = findNodeAtPosition(current.getDown());
                 continue;
             }
 
@@ -325,10 +325,10 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Find the node associated to the key.  This must have an exact match.
+     * Find the data associated to the key.  This must have an exact match.
      *
      * @param key The Key identifier
-     * @return Its corresponding node
+     * @return Its corresponding data
      * @since 1.2.0
      */
     @SuppressWarnings("WeakerAccess")
@@ -341,15 +341,15 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         SkipListHeadNode current = getHead();
 
         while (current != null) {
-            SkipListHeadNode next = findNodeAtPosition(current.next);
-            if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
+            SkipListHeadNode next = findNodeAtPosition(current.getNext());
+            if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>) next).getKey())) {
                 return (SkipListNode<K>)next;
             }
 
-            // Next node does not have values so we must move on down and continue the loop.
-            else if (current.next == 0L
-                    || (next != null && shouldMoveDown(hash, hash(((SkipListNode<K>)next).key), key, ((SkipListNode<K>)next).key))) {
-                current = findNodeAtPosition(current.down);
+            // Next data does not have values so we must move on down and continue the loop.
+            else if (current.getNext() == 0L
+                    || (next != null && shouldMoveDown(hash, hash(((SkipListNode<K>) next).getKey()), key, ((SkipListNode<K>) next).getKey()))) {
+                current = findNodeAtPosition(current.getDown());
                 continue;
             }
 
@@ -362,10 +362,10 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Find the nearest node associated to the key.  This does not work with hash values.  Only comparable values
+     * Find the nearest data associated to the key.  This does not work with hash values.  Only comparable values
      *
      * @param key The Key identifier
-     * @return Its closes node
+     * @return Its closes data
      * @since 1.2.0
      */
     protected SkipListHeadNode nearest(K key) {
@@ -376,15 +376,15 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         SkipListHeadNode previous = current;
 
         while (current != null) {
-            SkipListHeadNode next = findNodeAtPosition(current.next);
-            if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>)next).key)) {
+            SkipListHeadNode next = findNodeAtPosition(current.getNext());
+            if (next != null && CompareUtil.forceCompare(key, ((SkipListNode<K>) next).getKey())) {
                 return next;
             }
 
-            // Next node does not have values so we must move on down and continue the loop.
-            else if (current.next == 0L
-                    || (next != null && shouldMoveDown(0, 0, key, ((SkipListNode<K>)next).key))) {
-                current = findNodeAtPosition(current.down);
+            // Next data does not have values so we must move on down and continue the loop.
+            else if (current.getNext() == 0L
+                    || (next != null && shouldMoveDown(0, 0, key, ((SkipListNode<K>) next).getKey()))) {
+                current = findNodeAtPosition(current.getDown());
                 continue;
             }
 
@@ -423,7 +423,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Select an arbitrary head of the data structure to start inserting the node.  This is based on a continuous coin
+     * Select an arbitrary head of the data structure to start inserting the data.  This is based on a continuous coin
      * toss.  The maximum value is the max of a byte.  It is set as the minimum to offset it so that we can have a
      * maximum level of 256.  This should provide sufficient height.  I think the chances of that is ridiculously rare.
      * Something like .000...75 0s...76.  So, we set the max to a Byte.MAX_VALUE
@@ -453,7 +453,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
      * @since 1.2.0
      */
     protected Map getRecordValueAsDictionary(SkipListNode<K> node) {
-        BufferStream buffer = fileStore.read(node.recordPosition, node.recordSize);
+        BufferStream buffer = fileStore.read(node.getRecordPosition(), node.getRecordSize());
         try {
             return buffer.toMap(fileStore.getContext());
         } finally {
@@ -488,9 +488,9 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Update the node's value.  The node acts as a record reference.  It must be changed
+     * Update the data's value.  The data acts as a record reference.  It must be changed
      * if the value is re-defined.  This is in the event of an update.  This is optimized only to write part of the
-     * node.  Only re-write the record size and position after it writes the record.
+     * data.  Only re-write the record size and position after it writes the record.
      *
      * @param node  Record reference
      * @param value The value of the reference
@@ -508,20 +508,20 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
             stream.flip();
             fileStore.write(stream.getByteBuffer(), recordPosition);
 
-            // Set the node values and lets write only the updated values to the store.  No need to write the key and
+            // Set the data values and lets write only the updated values to the store.  No need to write the key and
             // all the other junk
-            node.recordSize = sizeOfRecord;
-            node.recordPosition = recordPosition;
+            node.setRecordSize(sizeOfRecord);
+            node.setRecordPosition(recordPosition);
 
             stream.clear();
-            stream.putLong(node.recordPosition);
-            stream.putInt(node.recordSize);
+            stream.putLong(node.getRecordPosition());
+            stream.putInt(node.getRecordSize());
 
             stream.flip();
 
-            // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
-            // node so we want to skip over that
-            fileStore.write(stream.getByteBuffer(), node.position + Integer.BYTES);
+            // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
+            // data so we want to skip over that
+            fileStore.write(stream.getByteBuffer(), node.getPosition() + Integer.BYTES);
         } catch (BufferingException e) {
             e.printStackTrace();
         } finally {
@@ -530,11 +530,11 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Update the down reference of a node.  This is done during insertion.  This will also take into account if the SkipListNode
-     * is a head node or a record node.
+     * Update the down reference of a data.  This is done during insertion.  This will also take into account if the SkipListNode
+     * is a head data or a record data.
      *
      * @param node Node to update
-     * @param position position to set the node.down to
+     * @param position position to set the data.down to
      *
      * @since 1.2.0
      */
@@ -542,8 +542,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
 
-            node.down = position;
-            buffer.putLong(node.down);
+            node.setDown(position);
+            buffer.putLong(node.getDown());
 
             int offset = Integer.BYTES + Long.BYTES;
             if(node instanceof SkipListNode)
@@ -551,9 +551,9 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
             buffer.flip();
 
-            // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
-            // node so we want to skip over that
-            fileStore.write(buffer, node.position + offset);
+            // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
+            // data so we want to skip over that
+            fileStore.write(buffer, node.getPosition() + offset);
 
         } finally {
             BufferPool.INSTANCE.recycle(buffer);
@@ -561,11 +561,11 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Update the next reference of a node.  This is done during insertion.  This will also take into account if the SkipListNode
-     * is a head node or a record node.
+     * Update the next reference of a data.  This is done during insertion.  This will also take into account if the SkipListNode
+     * is a head data or a record data.
      *
      * @param node Node to update
-     * @param position position to set the node.down to
+     * @param position position to set the data.down to
      *
      * @since 1.2.0
      */
@@ -574,8 +574,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
 
-            node.next = position;
-            buffer.putLong(node.next);
+            node.setNext(position);
+            buffer.putLong(node.getNext());
 
             int offset = Integer.BYTES;
             if(node instanceof SkipListNode)
@@ -583,9 +583,9 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
             buffer.flip();
 
-            // Write the node values to the store.  The extra Integer.BYTES is used to indicate the size of the
-            // node so we want to skip over that
-            fileStore.write(buffer, node.position + offset);
+            // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
+            // data so we want to skip over that
+            fileStore.write(buffer, node.getPosition() + offset);
 
         } finally {
             BufferPool.INSTANCE.recycle(buffer);
@@ -593,8 +593,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Instantiate and create a new node.  This will insert it into the file store.  This will also configure the
-     * node and set all of the necessary information it needs to refer other parts of this class
+     * Instantiate and create a new data.  This will insert it into the file store.  This will also configure the
+     * data and set all of the necessary information it needs to refer other parts of this class
      * to the data elements it needs.
      *
      * @param key   Key Identifier
@@ -624,25 +624,25 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
             stream.clearReferences();
 
-            int sizeOfNode = keySize + SkipListNode.BASE_SKIP_LIST_NODE_SIZE;
+            int sizeOfNode = keySize + SkipListNode.Companion.getBASE_SKIP_LIST_NODE_SIZE();
 
-            // Allocate the space on the file.  Size of the node, record size, and size indicator as Integer.BYTES
+            // Allocate the space on the file.  Size of the data, record size, and size indicator as Integer.BYTES
             long recordPosition = fileStore.allocate(sizeOfNode + recordSize + Integer.BYTES);
 
-            // Take note of the position of the node so we can indicate that within the node
+            // Take note of the position of the data so we can indicate that within the data
             long position = recordPosition + recordSize;
 
             if (recordId < 0) {
                 recordId = position;
             }
-            // Instantiate the new node and write it to the buffer
+            // Instantiate the new data and write it to the buffer
             newNode = new SkipListNode(key, position, (value == null) ? 0L : recordPosition, level, next, down, recordSize, recordId);
 
-            // Jot down the size of the node so that we know how much data to pull
+            // Jot down the size of the data so that we know how much data to pull
             stream.putInt(sizeOfNode);
             newNode.write(stream);
 
-            // Write the node and record if it exists to the store
+            // Write the data and record if it exists to the store
             stream.flip();
             fileStore.write(stream.getByteBuffer(), recordPosition);
 
@@ -657,8 +657,8 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Instantiate and create a new node.  This will insert it into the file store.  This will also configure the
-     * node and set all of the necessary information it needs to refer other parts of this class
+     * Instantiate and create a new data.  This will insert it into the file store.  This will also configure the
+     * data and set all of the necessary information it needs to refer other parts of this class
      * to the data elements it needs.
      *
      * @param level What level it exists within the skip list
@@ -671,25 +671,25 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     protected SkipListHeadNode createHeadNode(byte level, long next, long down) {
         SkipListHeadNode newNode = null;
 
-        int sizeOfNode = SkipListNode.HEAD_SKIP_LIST_NODE_SIZE;
+        int sizeOfNode = SkipListNode.Companion.getBASE_SKIP_LIST_NODE_SIZE();
         BufferStream stream = new BufferStream(sizeOfNode + Integer.BYTES);
 
         try {
 
-            // Allocate the space on the file.  Size of the node, record size, and size indicator as Integer.BYTES
+            // Allocate the space on the file.  Size of the data, record size, and size indicator as Integer.BYTES
             long position = fileStore.allocate(sizeOfNode + Integer.BYTES);
 
-            // Instantiate the new node and write it to the buffer
+            // Instantiate the new data and write it to the buffer
             newNode = new SkipListHeadNode(level, next, down);
-            newNode.position = position;
+            newNode.setPosition(position);
 
-            // Jot down the size of the node so that we know how much data to pull
+            // Jot down the size of the data so that we know how much data to pull
             stream.putInt(sizeOfNode);
             newNode.write(stream);
 
             stream.flip();
 
-            // Write the node and record if it exists to the store
+            // Write the data and record if it exists to the store
             fileStore.write(stream.getByteBuffer(), position);
 
         } catch (BufferingException e) {
@@ -703,10 +703,10 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     }
 
     /**
-     * Pull a node from the store.  Since we do not know the size of the node, we must first look that up.
-     * This will also return null if the node position is 0L.
+     * Pull a data from the store.  Since we do not know the size of the data, we must first look that up.
+     * This will also return null if the data position is 0L.
      *
-     * @param position Last known location of the node
+     * @param position Last known location of the data
      * @return The Hydrated Skip List Node from the file store
      * @since 1.2.0
      */
@@ -715,7 +715,7 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
         if (position == 0L)
             return null;
 
-        // First get the size of the node since it may be variable due to the size of the key
+        // First get the size of the data since it may be variable due to the size of the key
         final BufferStream buffer = fileStore.read(position, Integer.SIZE);
         int sizeOfNode = 0;
         try {
@@ -727,12 +727,12 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
         SkipListHeadNode node;
 
-        // Read the node
-        if(sizeOfNode == SkipListNode.HEAD_SKIP_LIST_NODE_SIZE)
+        // Read the data
+        if(sizeOfNode == SkipListNode.Companion.getBASE_SKIP_LIST_NODE_SIZE())
             node = (SkipListHeadNode)fileStore.read(position + Integer.BYTES, sizeOfNode, new SkipListHeadNode());
         else
             node = (SkipListHeadNode)fileStore.read(position + Integer.BYTES, sizeOfNode, new SkipListNode());
-        node.position = position;
+        node.setPosition(position);
         return node;
     }
 
@@ -755,9 +755,9 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
     protected void updateHeaderRecordCount() {
         final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
-            buffer.putLong(header.recordCount.get());
+            buffer.putLong(header.getRecordCount().get());
             buffer.flip();
-            fileStore.write(buffer, header.position + Long.BYTES);
+            fileStore.write(buffer, header.getPosition() + Long.BYTES);
         } finally {
             BufferPool.INSTANCE.recycle(buffer);
         }
@@ -777,18 +777,18 @@ abstract class AbstractSkipList<K, V> extends AbstractDiskMap<K,V> implements Ma
 
     /**
      * This method is designed to bypass the detached check.  It is for use in disk maps that are detached and override
-     * the logic of calculating the node position.
+     * the logic of calculating the data position.
      *
      * @param header Disk Map Header
-     * @param firstNode First node location within store
+     * @param firstNode First data location within store
      */
     protected void forceUpdateHeaderFirstNode(Header header, long firstNode) {
-        this.header.firstNode = firstNode;
+        this.header.setFirstNode(firstNode);
         final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(firstNode);
             buffer.flip();
-            fileStore.write(buffer, header.position);
+            fileStore.write(buffer, header.getPosition());
         } finally {
             BufferPool.INSTANCE.recycle(buffer);
         }

@@ -1,8 +1,8 @@
 package embedded.diskmap;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory;
+import com.onyx.diskmap.factory.DiskMapFactory;
 import entities.EntityYo;
 import org.junit.Assert;
 import org.junit.Test;
@@ -19,7 +19,7 @@ public class ObjectSerializationTest extends AbstractTest
     @Test
     public void testPushObject()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, EntityYo> myMap = store.getHashMap("objectos");
 
         EntityYo entityYo = new EntityYo();
@@ -64,7 +64,7 @@ public class ObjectSerializationTest extends AbstractTest
     @Test
     public void testNullObject()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, EntityYo> myMap = store.getHashMap("objectos");
 
         EntityYo entityYo = new EntityYo();
@@ -96,7 +96,7 @@ public class ObjectSerializationTest extends AbstractTest
     @Test
     public void testSet()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, List> myMap = store.getHashMap("objectos");
 
         List<String> list = new ArrayList<>();
@@ -118,7 +118,7 @@ public class ObjectSerializationTest extends AbstractTest
     @Test
     public void testHashSet()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, Set> myMap = store.getHashMap("objectos");
 
         Set<String> list = new HashSet<>();
@@ -139,7 +139,7 @@ public class ObjectSerializationTest extends AbstractTest
     @Test
     public void testMap()
     {
-        MapBuilder store = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory store = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<String, Map> myMap = store.getHashMap("objectos");
 
 

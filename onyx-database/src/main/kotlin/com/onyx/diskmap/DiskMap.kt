@@ -1,15 +1,11 @@
-package com.onyx.diskmap;
+package com.onyx.diskmap
 
-import com.onyx.diskmap.base.concurrent.DispatchLock;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListNode;
-import com.onyx.diskmap.store.Store;
-import com.onyx.exception.AttributeTypeMismatchException;
-import com.onyx.util.ReflectionField;
-import com.onyx.util.map.CompatMap;
-
-import java.util.Map;
-import java.util.Set;
+import com.onyx.concurrent.DispatchLock
+import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.SkipListNode
+import com.onyx.diskmap.store.Store
+import com.onyx.exception.AttributeTypeMismatchException
+import com.onyx.util.ReflectionField
 
 /**
  * Created by tosborn1 on 7/30/15.
@@ -17,7 +13,29 @@ import java.util.Set;
  * This is the an interface that extends the functionality of a Map.  It also contains methods that assist in finding
  * records by references within a store / volume.
  */
-public interface DiskMap<K,V> extends CompatMap<K,V> {
+interface DiskMap<K, V> : MutableMap<K, V> {
+
+    /**
+     * Get Storage mechanism for a DiskMap
+     *
+     * @return The physical file store
+     */
+    val fileStore: Store
+
+    /**
+     * Gets the reference of where the disk structure is located within the storage
+     * @since 1.0.2
+     * @return Header reference item
+     */
+    val reference: Header
+
+    /**
+     * Get the level read write lock implementation.
+     *
+     * @since 1.2.0
+     * @return Null if it does not apply.
+     */
+    val readWriteLock: DispatchLock
 
     /**
      * Get the record id for a key
@@ -25,7 +43,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @param key Record Key
      * @return The position within a store/volume
      */
-    long getRecID(Object key);
+    fun getRecID(key: K): Long
 
     /**
      * Get key with record id
@@ -33,7 +51,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @param recordId Position within store
      * @return Record value
      */
-    V getWithRecID(long recordId);
+    fun getWithRecID(recordId: Long): V
 
     /**
      * Get structure key with record id
@@ -41,7 +59,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @param recordId Position within Store
      * @return Record in format of a Map
      */
-    Map<String, Object> getMapWithRecID(long recordId);
+    fun getMapWithRecID(recordId: Long): Map<String, Any?>
 
     /**
      * Get Attribute with record id
@@ -51,7 +69,8 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      *
      * @return Attribute key of record
      */
-    Object getAttributeWithRecID(ReflectionField attribute, long reference) throws AttributeTypeMismatchException;
+    @Throws(AttributeTypeMismatchException::class)
+    fun <T : Any?> getAttributeWithRecID(attribute: ReflectionField, reference: Long): T
 
     /**
      * Get Attribute with record id
@@ -61,38 +80,14 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      *
      * @return Attribute key of record
      */
-    @SuppressWarnings("unused")
-    Object getAttributeWithRecID(ReflectionField field, SkipListNode reference) throws AttributeTypeMismatchException;
-
-    /**
-     * Get Storage mechanism for a dismap
-     *
-     * @return The physical file store
-     */
-    @SuppressWarnings("unused")
-    Store getFileStore();
-
-    /**
-     * Gets the reference of where the disk structure is located within the storage
-     * @since 1.0.2
-     * @return Header reference item
-     */
-    Header getReference();
+    @Throws(AttributeTypeMismatchException::class)
+    fun <T : Any?> getAttributeWithRecID(field: ReflectionField, reference: SkipListNode<*>): T
 
     /**
      * Get the set of references.  Not values nor keys
      * @return Set of references.
      */
-    Set<SkipListNode> referenceSet();
-
-    /**
-     * Get the level read write lock implementation.
-     *
-     * @since 1.2.0
-     * @return Null if it does not apply.
-     */
-    @SuppressWarnings("unused")
-    DispatchLock getReadWriteLock();
+    fun referenceSet(): Set<SkipListNode<*>>
 
     /**
      * Returns the record count as a long rather than an integer.
@@ -100,7 +95,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @return size in format of a long
      * @since 1.3.0
      */
-    long longSize();
+    fun longSize(): Long
 
     /**
      * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
@@ -111,7 +106,7 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @return A Set of references
      * @since 1.2.0
      */
-    Set<Long> above(K index, boolean includeFirst);
+    fun above(index: K, includeFirst: Boolean): Set<Long>
 
     /**
      * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
@@ -122,5 +117,5 @@ public interface DiskMap<K,V> extends CompatMap<K,V> {
      * @return A Set of references
      * @since 1.2.0
      */
-    Set<Long> below(K index, boolean includeFirst);
+    fun below(index: K, includeFirst: Boolean): Set<Long>
 }

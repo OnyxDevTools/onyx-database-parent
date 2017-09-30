@@ -1,6 +1,4 @@
-package com.onyx.diskmap.base.concurrent;
-
-import java.util.function.Function;
+package com.onyx.concurrent
 
 /**
  * Created by timothy.osborn on 4/7/15.
@@ -11,8 +9,7 @@ import java.util.function.Function;
  *
  * @since 1.2.0 This was changed to use a stamp lock for additional performance gains.  Since it cannot be used recursively.
  */
-public interface DispatchLock
-{
+interface DispatchLock {
 
     /**
      * This method performs a lambda function by locking on whatever object you pass in.
@@ -21,5 +18,5 @@ public interface DispatchLock
      * @param consumer Function to invoke
      * @return The result from the function
      */
-    Object performWithLock(Object lock, Function consumer);
+    fun <T> performWithLock(lock: Any, consumer: (lock:Any) -> T): T
 }

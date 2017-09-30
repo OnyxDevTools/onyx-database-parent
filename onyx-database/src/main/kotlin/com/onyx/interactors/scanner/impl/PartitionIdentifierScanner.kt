@@ -11,7 +11,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.extension.common.async
 import com.onyx.persistence.context.Contexts
 import kotlinx.coroutines.experimental.Deferred
@@ -23,7 +23,7 @@ import kotlin.collections.HashMap
  *
  * This scans a partition for matching identifiers
  */
-class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria<*>, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: MapBuilder, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : IdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria<*>, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : IdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
 
     private var systemEntity: SystemEntity = context.getSystemEntityByName(query.entityType!!.name)!!
 

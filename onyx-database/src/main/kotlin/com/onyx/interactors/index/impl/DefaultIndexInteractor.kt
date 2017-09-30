@@ -8,7 +8,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.diskmap.DiskMap
-import com.onyx.diskmap.node.Header
+import com.onyx.diskmap.data.Header
 import com.onyx.extension.identifier
 
 import java.util.*
@@ -51,7 +51,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
 
         val dataFile = context.getDataFile(descriptor)
 
-        references.compute(indexValue) { _, existingHeader ->
+        references.compute(indexValue!!) { _, existingHeader ->
             val header = existingHeader ?: dataFile.newMapHeader()
             val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR)
             indexes.put(newReferenceId, null)
@@ -126,12 +126,12 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
     @Throws(OnyxException::class)
     override fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long> {
         val allReferences = HashSet<Long>()
-        val diskReferences = references.above(indexValue, includeValue)
+        val diskReferences = references.above(indexValue!!, includeValue)
 
         val dataFile = context.getDataFile(descriptor)
 
         diskReferences
-                .map { references.getWithRecID(it!!) as Header }
+                .map { references.getWithRecID(it) }
                 .map { dataFile.getHashMap<Map<Long, Set<Long>>>(it, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 
@@ -155,10 +155,10 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
     @Throws(OnyxException::class)
     override fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long> {
         val allReferences = HashSet<Long>()
-        val diskReferences = references.below(indexValue, includeValue)
+        val diskReferences = references.below(indexValue!!, includeValue)
         val dataFile = context.getDataFile(descriptor)
         diskReferences
-                .map { references.getWithRecID(it!!) as Header }
+                .map { references.getWithRecID(it) }
                 .map { dataFile.getHashMap<DiskMap<Long, Any?>>(it, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 

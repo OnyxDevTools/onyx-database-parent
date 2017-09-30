@@ -1,6 +1,6 @@
-package com.onyx.diskmap.base.concurrent;
+package com.onyx.concurrent.impl
 
-import java.util.function.Function;
+import com.onyx.concurrent.DispatchLock
 
 /**
  * Created by tosborn1 on 2/20/17.
@@ -9,7 +9,7 @@ import java.util.function.Function;
  *
  * The purpose is so that it can be injected into a stateless implementation of a map.
  */
-public class EmptyDispatchLock implements DispatchLock {
+class EmptyDispatchLock : DispatchLock {
 
     /**
      * This method does not perform any blocking it is an empty implemented method that invokes the consumer
@@ -18,9 +18,5 @@ public class EmptyDispatchLock implements DispatchLock {
      * @param consumer Function to invoke
      * @return The result from the function
      */
-    @Override
-    @SuppressWarnings("unchecked")
-    public Object performWithLock(Object lock, Function consumer) {
-        return consumer.apply(lock);
-    }
+    override fun <T> performWithLock(lock: Any, consumer: (lock:Any) -> T): T = consumer.invoke(lock)
 }

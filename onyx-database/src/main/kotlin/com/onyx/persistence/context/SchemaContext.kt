@@ -3,7 +3,7 @@ package com.onyx.persistence.context
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.entity.SystemEntity
 import com.onyx.entity.SystemPartitionEntry
 import com.onyx.exception.InitializationException
@@ -156,7 +156,7 @@ interface SchemaContext {
      * @since 1.0.0
      * @return Underlying data storage factory
      */
-    fun getDataFile(descriptor: EntityDescriptor): MapBuilder
+    fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID
@@ -170,7 +170,7 @@ interface SchemaContext {
      * @throws OnyxException Generic Exception
      */
     @Throws(OnyxException::class)
-    fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): MapBuilder
+    fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): DiskMapFactory
 
     /**
      * Get Partition Entry for entity
@@ -233,7 +233,7 @@ interface SchemaContext {
      *
      * @return Create new storage mechanism factory
      */
-    fun createTemporaryMapBuilder(): MapBuilder
+    fun createTemporaryMapBuilder(): DiskMapFactory
 
     /**
      * Get System Entity By Name
@@ -254,15 +254,15 @@ interface SchemaContext {
     fun getSystemEntityById(systemEntityId: Int): SystemEntity?
 
     /**
-     * Release a map builder and prepare it for re-use
+     * Release a map factory and prepare it for re-use
      * This was added to prevent direct buffers from being destroyed.
      * That caused performance issues
      *
-     * @param mapBuilder Map builder to recycle
+     * @param diskMapFactory Map factory to recycle
      *
      * @since 1.3.0
      */
-    fun releaseMapBuilder(mapBuilder: MapBuilder)
+    fun releaseMapBuilder(diskMapFactory: DiskMapFactory)
 
     @Throws(InitializationException::class)
     fun checkForKillSwitch() {

@@ -3,7 +3,7 @@ package com.onyx.interactors.query.impl
 import com.onyx.depricated.CompareUtil
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.ScannerFactory
 import com.onyx.interactors.scanner.impl.FullTableScanner
@@ -32,7 +32,7 @@ import kotlin.collections.HashMap
 class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private var persistenceManager: PersistenceManager, context: SchemaContext) : QueryInteractor {
 
     private val contextId = context.contextId
-    private var temporaryDataFile: MapBuilder = context.createTemporaryMapBuilder()
+    private var temporaryDataFile: DiskMapFactory = context.createTemporaryMapBuilder()
 
     /**
      * Find object ids that match the criteria

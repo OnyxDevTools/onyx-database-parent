@@ -1,8 +1,8 @@
 package com.onyx.diskmap.base.skiplist;
 
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
-import com.onyx.diskmap.node.SkipListNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
+import com.onyx.diskmap.data.SkipListNode;
 import com.onyx.diskmap.store.Store;
 
 import java.util.*;
@@ -21,7 +21,7 @@ import java.util.*;
  * @param <V> Value Object Type
  */
 @SuppressWarnings("unchecked")
-public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V> implements Map<K,V> {
+public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipList<K,V>{
 
     /**
      * Constructor with store.  Initialize the collection types
@@ -183,12 +183,12 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         /**
          * Next Get the next value
          *
-         * @return The value from the node
+         * @return The value from the data
          */
         @Override
         public Object next() {
             final SkipListNode<K> next = (SkipListNode<K>)super.next();
-            return findValueAtPosition(next.recordPosition, next.recordSize);
+            return findValueAtPosition(next.getRecordPosition(), next.getRecordSize());
         }
     }
 
@@ -203,7 +203,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         @Override
         public Object next() {
             final SkipListNode<K> next = (SkipListNode<K>)super.next();
-            return next.key;
+            return next.getKey();
         }
     }
 
@@ -219,7 +219,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         /**
          * Next Entry
          *
-         * @return Next Entry based on the next node
+         * @return Next Entry based on the next data
          */
         @Override
         public Object next() {
@@ -268,14 +268,14 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         @SuppressWarnings("unused")
         AbstractNodeIterator() {
             current = getHead();
-            while (current.down != 0L)
-                current = findNodeAtPosition(current.down);
+            while (current.getDown() != 0L)
+                current = findNodeAtPosition(current.getDown());
 
-            // Lets find a non header node
+            // Lets find a non header data
             while(current != null && !(current instanceof SkipListNode))
             {
-                if (current.next != 0L)
-                    current = findNodeAtPosition(current.next);
+                if (current.getNext() != 0L)
+                    current = findNodeAtPosition(current.getNext());
                 else
                     current = null;
             }
@@ -284,7 +284,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         /**
          * Has next.  Only if there are remaining objects
          *
-         * @return Whether the node has a record or not
+         * @return Whether the data has a record or not
          */
         @Override
         public boolean hasNext() {
@@ -292,9 +292,9 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         }
 
         /**
-         * Next, find the next node with a record associated to it.
+         * Next, find the next data with a record associated to it.
          *
-         * @return Nex node with a record value.
+         * @return Nex data with a record value.
          */
         @Override
         public Object next()
@@ -305,8 +305,8 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
             SkipListHeadNode previous = current;
             while(current != null)
             {
-                if (current.next != 0L)
-                    current = findNodeAtPosition(current.next);
+                if (current.getNext() != 0L)
+                    current = findNodeAtPosition(current.getNext());
                 else
                     current = null;
 
@@ -319,7 +319,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
     }
 
     /**
-     * Abstract SkipListNode Collection.  Holds onto references to all the nodes and fills the node values
+     * Abstract SkipListNode Collection.  Holds onto references to all the nodes and fills the data values
      * based on the Bitmap nodes
      *
      */
@@ -339,7 +339,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
      * Disk Map Entry
      *
      */
-    private class SkipListEntry implements Entry {
+    private class SkipListEntry implements Map.Entry {
         @SuppressWarnings("WeakerAccess")
         protected SkipListNode node = null;
         @SuppressWarnings("unused")
@@ -350,7 +350,7 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         /**
          * Constructor
          *
-         * @param node Underlying node for the entry
+         * @param node Underlying data for the entry
          */
         SkipListEntry(SkipListNode<K> node) {
             this.node = node;
@@ -359,22 +359,22 @@ public abstract class AbstractIterableSkipList<K,V> extends AbstractCachedSkipLi
         /**
          * Get Key
          *
-         * @return Key from the node
+         * @return Key from the data
          */
         @Override
         public Object getKey() {
-            return node.key;
+            return node.getKey();
         }
 
         /**
          * Get Value
          *
-         * @return Value from the node position
+         * @return Value from the data position
          */
         @Override
         public Object getValue() {
             if (value == null) // Lazy load the key
-                value = findValueAtPosition(node.recordPosition, node.recordSize);
+                value = findValueAtPosition(node.getRecordPosition(), node.getRecordSize());
             return value;
         }
 

@@ -2,12 +2,14 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.SortedDiskMap;
-import com.onyx.diskmap.base.concurrent.*;
+import com.onyx.concurrent.*;
+import com.onyx.concurrent.impl.DefaultDispatchLock;
+import com.onyx.concurrent.impl.EmptyMap;
 import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
-import com.onyx.diskmap.node.CombinedIndexHashMatrixNode;
-import com.onyx.diskmap.node.HashMatrixNode;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
+import com.onyx.diskmap.data.CombinedIndexHashMatrixNode;
+import com.onyx.diskmap.data.HashMatrixNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
@@ -86,9 +88,9 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
         final CombinedIndexHashMatrixNode combinedNode = getHeadReferenceForKey(key, true);
 
         // Set the selected skip list
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        if (combinedNode.head != null) {
+        if (combinedNode.getHead() != null) {
             return super.get(key);
         }
         return null;
@@ -106,21 +108,21 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     public V put(K key, V value) {
 
         final CombinedIndexHashMatrixNode combinedNode = getHeadReferenceForKey(key, true);
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        final SkipListHeadNode head = combinedNode.head;
+        final SkipListHeadNode head = combinedNode.getHead();
 
         if (head != null) {
 
-            return (V) this.getReadWriteLock().performWithLock(head, o -> {
+            return (V)this.getReadWriteLock().performWithLock(head, o -> {
                 Object returnValue = DiskMultiMatrixHashMap.super.put(key, value);
                 final SkipListHeadNode newHead = getHead();
 
-                // Only update the node if the head of the skip list has changed
-                if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != newHead.position) {
-                    combinedNode.head = newHead;
-                    DiskMultiMatrixHashMap.this.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position);
-                    DiskMultiMatrixHashMap.this.nodeCache.remove(combinedNode.bitMapNode.position);
+                // Only update the data if the head of the skip list has changed
+                if (combinedNode.getBitMapNode().getNext()[combinedNode.getHashDigit()] != newHead.getPosition()) {
+                    combinedNode.setHead(newHead);
+                    DiskMultiMatrixHashMap.this.updateHashMatrixReference(combinedNode.getBitMapNode(), combinedNode.getHashDigit(), newHead.getPosition());
+                    DiskMultiMatrixHashMap.this.nodeCache.remove(combinedNode.getBitMapNode().getPosition());
                 }
                 return returnValue;
             });
@@ -139,8 +141,8 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     @Override
     public V remove(Object key) {
         final CombinedIndexHashMatrixNode combinedNode = getHeadReferenceForKey(key, true);
-        setHead(combinedNode.head);
-        SkipListHeadNode head = combinedNode.head;
+        setHead(combinedNode.getHead());
+        SkipListHeadNode head = combinedNode.getHead();
 
         if (head != null) {
 
@@ -148,11 +150,11 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
                 Object returnValue = DiskMultiMatrixHashMap.super.remove(key);
                 final SkipListHeadNode newHead = getHead();
 
-                // Only update the node if the head of the skip list has changed
-                if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != newHead.position) {
-                    combinedNode.head = newHead;
-                    DiskMultiMatrixHashMap.this.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position);
-                    DiskMultiMatrixHashMap.this.nodeCache.remove(combinedNode.bitMapNode.position);
+                // Only update the data if the head of the skip list has changed
+                if (combinedNode.getBitMapNode().getNext()[combinedNode.getHashDigit()] != newHead.getPosition()) {
+                    combinedNode.setHead(newHead);
+                    DiskMultiMatrixHashMap.this.updateHashMatrixReference(combinedNode.getBitMapNode(), combinedNode.getHashDigit(), newHead.getPosition());
+                    DiskMultiMatrixHashMap.this.nodeCache.remove(combinedNode.getBitMapNode().getPosition());
                 }
                 return returnValue;
             });
@@ -172,9 +174,9 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     @Override
     public boolean containsKey(Object key) {
         final CombinedIndexHashMatrixNode combinedNode = getHeadReferenceForKey(key, true);
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        return combinedNode.head != null && super.containsKey(key);
+        return combinedNode.getHead() != null && super.containsKey(key);
     }
 
     /**
@@ -203,8 +205,8 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      */
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        final Iterator<? extends Entry<? extends K, ? extends V>> iterator = m.entrySet().iterator();
-        Entry<? extends K, ? extends V> entry;
+        final Iterator<? extends Map.Entry<? extends K, ? extends V>> iterator = m.entrySet().iterator();
+        Map.Entry<? extends K, ? extends V> entry;
 
         while (iterator.hasNext()) {
             entry = iterator.next();
@@ -213,7 +215,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     }
 
     /**
-     * Clear this map.  In order to do that.  All we have to do is remove the first node reference and it will
+     * Clear this map.  In order to do that.  All we have to do is remove the first data reference and it will
      * orphan the entire data structure
      *
      * @since 1.2.0
@@ -227,7 +229,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     }
 
     /**
-     * Get the record id of a corresponding node.  Note, this points to the SkipListNode position.  Not the actual
+     * Get the record id of a corresponding data.  Note, this points to the SkipListNode position.  Not the actual
      * record position.
      *
      * @param key Identifier
@@ -239,9 +241,9 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
         final CombinedIndexHashMatrixNode combinedNode = getHeadReferenceForKey(key, false);
         if(combinedNode == null)
             return -1;
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        if (combinedNode.head != null) {
+        if (combinedNode.getHead() != null) {
             return super.getRecID(key);
         }
         return 0;
@@ -253,7 +255,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      *
      * @param key       Unique identifier that is changed to a non unique key in order to generify the skip list
      * @param forInsert Whether we should insert the bitmap index.
-     * @return The Combined Index node of the skip list and it contains the bitmap node information.
+     * @return The Combined Index data of the skip list and it contains the bitmap data information.
      * @since 1.2.0
      */
     private CombinedIndexHashMatrixNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
@@ -311,18 +313,18 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         HashMatrixNode node;
 
-        if (this.header.firstNode > 0) {
-            node = this.getHashMatrixNode(this.header.firstNode); // Get Root node
+        if (this.header.getFirstNode() > 0) {
+            node = this.getHashMatrixNode(this.header.getFirstNode()); // Get Root data
         } else {
-            // No default node, lets create one // It must mean we are inserting
+            // No default data, lets create one // It must mean we are inserting
             node = new HashMatrixNode();
-            node.position = fileStore.allocate(this.getHashMatrixNodeSize());
+            node.setPosition(fileStore.allocate(this.getHashMatrixNodeSize()));
 
-            this.writeHashMatrixNode(node.position, node);
-            this.forceUpdateHeaderFirstNode(header, node.position);
+            this.writeHashMatrixNode(node.getPosition(), node);
+            this.forceUpdateHeaderFirstNode(header, node.getPosition());
         }
 
-        // There is no default node return -1 because it was not found
+        // There is no default data return -1 because it was not found
         if (!forInsert && node == null)
             return null;
 
@@ -331,22 +333,22 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
         int hashDigit;
 
         // Not we are using this load factor rather than what is on the Bitmap disk map
-        // Break down the nodes and iterate through them.  We should be left with the remaining node which should point us to the record
+        // Break down the nodes and iterate through them.  We should be left with the remaining data which should point us to the record
         for (int level = 0; level < loadFactor; level++) {
 
             hashDigit = hashDigits[level];
-            nodePosition = previousNode.next[hashDigit];
+            nodePosition = previousNode.getNext()[hashDigit];
 
             if (nodePosition == 0 && forInsert) {
                 if (level == loadFactor - 1) {
                     SkipListHeadNode headNode = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
-                    this.updateHashMatrixReference(previousNode, hashDigit, headNode.position);
+                    this.updateHashMatrixReference(previousNode, hashDigit, headNode.getPosition());
                     return new CombinedIndexHashMatrixNode(headNode, previousNode, hashDigit);
                 } else {
                     node = new HashMatrixNode();
-                    node.position = fileStore.allocate(this.getHashMatrixNodeSize());
-                    this.writeHashMatrixNode(node.position, node);
-                    this.updateHashMatrixReference(previousNode, hashDigit, node.position);
+                    node.setPosition(fileStore.allocate(this.getHashMatrixNodeSize()));
+                    this.writeHashMatrixNode(node.getPosition(), node);
+                    this.updateHashMatrixReference(previousNode, hashDigit, node.getPosition());
                 }
 
                 previousNode = node;

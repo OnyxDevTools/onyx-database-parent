@@ -1,0 +1,70 @@
+package com.onyx.concurrent.impl
+
+import com.onyx.buffer.BufferStream
+import com.onyx.buffer.BufferStreamable
+import com.onyx.concurrent.AtomicCounter
+import com.onyx.exception.BufferingException
+
+import java.util.concurrent.atomic.AtomicLong
+
+/**
+ * Created by tosborn1 on 3/2/17.
+ *
+ *
+ * Default implementation of the atomic counter
+ *
+ * @since 1.3.0
+ */
+class DefaultAtomicCounter(initialValue: Long) : AtomicCounter, BufferStreamable {
+
+    private var aLong: AtomicLong = AtomicLong(0)
+
+    init {
+        this.aLong = AtomicLong(initialValue)
+    }
+
+    /**
+     * Set long value
+     *
+     * @param value count
+     */
+    override fun set(value: Long) = this.aLong.set(value)
+
+    /**
+     * Get counter value
+     *
+     * @return current value
+     */
+    override fun get(): Long = this.aLong.get()
+
+    /**
+     * Add value and add more
+     *
+     * @param more How many more bytes
+     * @return The current value
+     */
+    override fun getAndAdd(more: Int): Long = this.aLong.getAndAdd(more.toLong())
+
+    /**
+     * Read from buffer
+     *
+     * @param buffer Buffer Stream to read from
+     * @throws BufferingException General exception
+     */
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream) {
+        this.aLong = AtomicLong(buffer.long)
+    }
+
+    /**
+     * Write to a buffer
+     *
+     * @param buffer Buffer IO Stream to write to
+     * @throws BufferingException cannot write
+     */
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream) {
+        buffer.putLong(aLong.get())
+    }
+
+}

@@ -9,7 +9,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.DiskMapFactory
 
 /**
  * Created by timothy.osborn on 1/6/15.
@@ -36,7 +36,7 @@ object ScannerFactory {
      * @since 1.3.0
      */
     @Throws(OnyxException::class)
-    fun getFullTableScanner(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: MapBuilder, query: Query, persistenceManager: PersistenceManager): TableScanner {
+    fun getFullTableScanner(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")
         } else {
@@ -63,7 +63,7 @@ object ScannerFactory {
      * @return Scanner implementation
      */
     @Throws(OnyxException::class)
-    fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: MapBuilder, query: Query, persistenceManager: PersistenceManager): TableScanner {
+    fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")
         } else {

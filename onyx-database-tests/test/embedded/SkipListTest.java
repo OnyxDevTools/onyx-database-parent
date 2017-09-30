@@ -1,8 +1,8 @@
 package embedded;
 
 import com.onyx.exception.InitializationException;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory;
+import com.onyx.diskmap.factory.DiskMapFactory;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -26,7 +26,7 @@ public class SkipListTest
     public void testInsert() throws InitializationException
     {
 
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("first");
 
         Map keyValues = new HashMap();
@@ -51,7 +51,7 @@ public class SkipListTest
     {
 
 
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("second");
 
         Map keyValues = new HashMap();
@@ -96,7 +96,7 @@ public class SkipListTest
     @Test
     public void testUpdate()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("third");
 
         Map keyValues = new HashMap();
@@ -115,7 +115,7 @@ public class SkipListTest
     @Test
     public void testForEach()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("third");
 
         Map keyValues = new HashMap();
@@ -155,7 +155,7 @@ public class SkipListTest
     @Test
     public void testKeyIterator()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("fourth");
 
         Map keyValues = new HashMap();
@@ -196,7 +196,7 @@ public class SkipListTest
     @Test
     public void testValueIterator()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getSkipListMap("fifth");
 
         Map keyValues = new HashMap();

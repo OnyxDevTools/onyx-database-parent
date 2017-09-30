@@ -47,7 +47,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
 
         if (this.entityDescriptor.preInsertCallback != null || this.entityDescriptor.preUpdateCallback != null) {
 
-            records.compute(identifierValue) { _, current ->
+            records.compute(identifierValue!!) { _, current ->
                 try {
                     if (current == null) {
                         isNew.set(true)
@@ -66,7 +66,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
             }
         } else {
             entity.onPrePersist(context, entityDescriptor)
-            val recordId = records.getRecID(identifierValue)
+            val recordId = records.getRecID(identifierValue!!)
             if (recordId > 0L) {
                 isNew.set(false)
                 // Update Cached queries
@@ -128,11 +128,11 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
     override fun delete(entity: IManagedEntity) {
         val identifierValue = entity.identifier(context)
         // Update Cached queries
-        val recordId = records.getRecID(identifierValue)
+        val recordId = records.getRecID(identifierValue!!)
         if (recordId > -1) {
             entity.onPreRemove(context, entityDescriptor)
             context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.DELETE)
-            this.deleteWithId(identifierValue!!)
+            this.deleteWithId(identifierValue)
             entity.onPostRemove(context, entityDescriptor)
         }
     }

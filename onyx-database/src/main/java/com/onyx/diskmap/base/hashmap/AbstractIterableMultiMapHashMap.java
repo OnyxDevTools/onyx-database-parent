@@ -1,8 +1,8 @@
 package com.onyx.diskmap.base.hashmap;
 
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
-import com.onyx.diskmap.node.SkipListNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
+import com.onyx.diskmap.data.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import java.util.*;
 
@@ -40,11 +40,11 @@ public abstract class AbstractIterableMultiMapHashMap<K, V> extends AbstractIter
     }
 
     /**
-     * Set of references.  In this case, the record pointer which is a skip list node.
+     * Set of references.  In this case, the record pointer which is a skip list data.
      * @return Set of skip list nodes
      * @since 1.2.0
      */
-    public Set<SkipListNode> referenceSet() {
+    public Set<SkipListNode<?>> referenceSet() {
         return new ReferenceSet();
     }
 
@@ -83,7 +83,7 @@ public abstract class AbstractIterableMultiMapHashMap<K, V> extends AbstractIter
      * @since 1.2.0
      */
     @Override
-    public Set<Entry<K, V>> entrySet() {
+    public Set<Map.Entry<K, V>> entrySet() {
         return new EntrySet();
     }
 
@@ -155,14 +155,14 @@ public abstract class AbstractIterableMultiMapHashMap<K, V> extends AbstractIter
     private class MultiMapKeyIterator extends MultiMapIterator {
         @Override
         public Object next() {
-            return ((Entry) super.next()).getKey();
+            return ((Map.Entry) super.next()).getKey();
         }
     }
 
     private class MultiMapValueIterator extends MultiMapIterator {
         @Override
         public Object next() {
-            return ((Entry) super.next()).getValue();
+            return ((Map.Entry) super.next()).getValue();
         }
     }
 

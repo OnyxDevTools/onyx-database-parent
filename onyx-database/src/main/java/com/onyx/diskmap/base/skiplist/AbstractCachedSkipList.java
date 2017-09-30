@@ -1,8 +1,8 @@
 package com.onyx.diskmap.base.skiplist;
 
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
-import com.onyx.diskmap.node.SkipListNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
+import com.onyx.diskmap.data.SkipListNode;
 import com.onyx.diskmap.store.Store;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.WriteSynchronizedMap;
@@ -52,40 +52,40 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
     }
 
     /**
-     * Creates and caches the new node as well as its value.
+     * Creates and caches the new data as well as its value.
      *
      * @param key   Key Identifier
      * @param value Record value
      * @param level What level it exists within the skip list
      * @param next  The next value in the skip list
      * @param down  Reference to the next level
-     * @return The instantiated and configured node.
+     * @return The instantiated and configured data.
      * @since 1.2.0
      */
     @Override
     protected SkipListNode<K> createNewNode(K key, V value, byte level, long next, long down, boolean cache, long recordId) {
         final SkipListNode<K> newNode = super.createNewNode(key, value, level, next, down, cache, recordId);
-        nodeCache.put(newNode.position, newNode);
+        nodeCache.put(newNode.getPosition(), newNode);
         if (cache) {
             keyCache.put(key, newNode);
-            valueByPositionCache.put(newNode.recordPosition, value);
+            valueByPositionCache.put(newNode.getRecordPosition(), value);
         }
         return newNode;
     }
 
     /**
-     * Creates and caches the new node as well as its value.
+     * Creates and caches the new data as well as its value.
      *
      * @param level What level it exists within the skip list
      * @param next  The next value in the skip list
      * @param down  Reference to the next level
-     * @return The instantiated and configured node.
+     * @return The instantiated and configured data.
      * @since 1.2.0
      */
     @Override
     protected SkipListHeadNode createHeadNode(byte level, long next, long down) {
         final SkipListHeadNode newNode = super.createHeadNode(level, next, down);
-        nodeCache.put(newNode.position, newNode);
+        nodeCache.put(newNode.getPosition(), newNode);
         return newNode;
     }
 
@@ -110,10 +110,10 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
     }
 
     /**
-     * Find a node at a position.  First check the cache.  If it is in there great return it otherwise go the the
+     * Find a data at a position.  First check the cache.  If it is in there great return it otherwise go the the
      * store to find it.
      *
-     * @param position Position the node can be found at.
+     * @param position Position the data can be found at.
      * @return The SkipListNode at that position.
      * @since 1.2.0
      */
@@ -135,7 +135,7 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
      * Find the record reference based on the key
      *
      * @param key The Key identifier
-     * @return Record reference node for corresponding key
+     * @return Record reference data for corresponding key
      *
      * @since 1.2.0
      */
@@ -152,16 +152,16 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
     }
 
     /**
-     * Remove the node from the cache before updating.  Apparantly the reference of the node is not sufficient and
+     * Remove the data from the cache before updating.  Apparantly the reference of the data is not sufficient and
      * it needs to be removed so that it can be refreshed from disk.
      *
      * @param node Node to update
-     * @param position position to set the node.down to
+     * @param position position to set the data.down to
      *
      */
     @Override
     protected void updateNodeNext(SkipListHeadNode node, long position) {
-        nodeCache.remove(node.position);
+        nodeCache.remove(node.getPosition());
         super.updateNodeNext(node, position);
     }
 
@@ -177,20 +177,20 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
     {
         // Remove the old value before updating
         if (cache) {
-            valueByPositionCache.remove(node.recordPosition);
+            valueByPositionCache.remove(node.getRecordPosition());
         }
         // Update and cache the new value
-        nodeCache.put(node.position, node);
+        nodeCache.put(node.getPosition(), node);
         super.updateNodeValue(node, value, cache);
 
         if (cache) {
-            keyCache.put(node.key, node);
-            valueByPositionCache.put(node.recordPosition, value);
+            keyCache.put(node.getKey(), node);
+            valueByPositionCache.put(node.getRecordPosition(), value);
         }
     }
 
     /**
-     * Perform cleanup once the node has been removed
+     * Perform cleanup once the data has been removed
      * @param node Node that is to be removed
      *
      * @since 1.2.0
@@ -199,11 +199,11 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
     @SuppressWarnings("SuspiciousMethodCalls")
     protected void removeNode(SkipListHeadNode node)
     {
-        nodeCache.remove(node.position);
+        nodeCache.remove(node.getPosition());
         if(node instanceof SkipListNode)
         {
-            keyCache.remove(((SkipListNode) node).key);
-            valueByPositionCache.remove(((SkipListNode) node).recordPosition);
+            keyCache.remove(((SkipListNode) node).getKey());
+            valueByPositionCache.remove(((SkipListNode) node).getRecordPosition());
         }
     }
 

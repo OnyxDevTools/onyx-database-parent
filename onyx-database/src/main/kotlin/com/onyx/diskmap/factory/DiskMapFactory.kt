@@ -1,21 +1,21 @@
-package com.onyx.diskmap
+package com.onyx.diskmap.factory
 
-import com.onyx.diskmap.node.Header
+import com.onyx.diskmap.data.Header
 
 /**
  * Created by tosborn1 on 7/30/15.
  *
  *
- * This is the contract a map builder must obey.
- * This class is responsible for building all maps.  There is one map builder per file and or storage
+ * This is the contract a map factory must obey.
+ * This class is responsible for building all maps.  There is one map factory per file and or storage
  *
  * This contract has been consoladated in v1.2.0.  The different map implementations has been reduced only to use
- * the best rather than having an option.  The DefaultMapBuilder will decide which map impmentation is better
+ * the best rather than having an option.  The DefaultDiskMapFactory will decide which map impmentation is better
  * based on the loadFactor.
  *
  * @since 1.0.0
  */
-interface MapBuilder {
+interface DiskMapFactory {
 
     /**
      * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
@@ -97,7 +97,7 @@ interface MapBuilder {
      * Close Map Builder.  Flush the file writes
      * @since 1.0.0
      */
-    fun close()
+    fun close():Boolean
 
     /**
      * Commit Map Builder file synchronize file writes

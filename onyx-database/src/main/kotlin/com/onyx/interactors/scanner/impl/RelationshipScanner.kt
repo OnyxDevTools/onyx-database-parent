@@ -1,7 +1,7 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.diskmap.MapBuilder
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InvalidQueryException
 import com.onyx.extension.*
@@ -23,7 +23,7 @@ import kotlin.collections.HashMap
  *
  * Scan relationships for matching criteria
  */
-class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria<*>, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: MapBuilder, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria<*>, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
 
     /**
      * Full Table get all relationships

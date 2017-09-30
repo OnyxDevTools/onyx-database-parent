@@ -2,12 +2,16 @@ package com.onyx.diskmap.base;
 
 import com.onyx.diskmap.DiskMap;
 import com.onyx.diskmap.SortedDiskMap;
-import com.onyx.diskmap.base.concurrent.*;
+import com.onyx.concurrent.*;
+import com.onyx.concurrent.impl.DefaultDispatchLock;
+import com.onyx.concurrent.impl.EmptyDispatchLock;
+import com.onyx.concurrent.impl.EmptyMap;
 import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
-import com.onyx.diskmap.node.CombinedIndexHashNode;
-import com.onyx.diskmap.node.Header;
-import com.onyx.diskmap.node.SkipListHeadNode;
+import com.onyx.diskmap.data.CombinedIndexHashNode;
+import com.onyx.diskmap.data.Header;
+import com.onyx.diskmap.data.SkipListHeadNode;
 import com.onyx.diskmap.store.Store;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -34,7 +38,7 @@ import java.util.*;
  * @since 1.2.0 This was added to offer a more efficient version of the DiskMultiMatrixHashMap for smaller data sets.
  */
 @SuppressWarnings("unchecked")
-public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements Map<K, V>, DiskMap<K, V>, SortedDiskMap<K, V> {
+public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V> implements DiskMap<K, V>, SortedDiskMap<K, V> {
 
     private DispatchLock dispatchLock = new DefaultDispatchLock();
 
@@ -103,9 +107,9 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
 
         // Set the selected skip list
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        if (combinedNode.head != null) {
+        if (combinedNode.getHead() != null) {
             return super.get(key);
         }
         return null;
@@ -122,19 +126,19 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     @Override
     public V put(K key, V value) {
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        final SkipListHeadNode head = combinedNode.head;
+        final SkipListHeadNode head = combinedNode.getHead();
         if (head != null) {
-            final long headPosition = head.position;
+            final long headPosition = head.getPosition();
 
             return (V) dispatchLock.performWithLock(head, o -> {
 
                 V returnValue = DiskMultiHashMap.super.put(key, value);
                 SkipListHeadNode newHead = getHead();
-                combinedNode.head = newHead;
-                if (newHead.position != headPosition) {
-                    updateReference(combinedNode.mapId, newHead.position);
+                combinedNode.setHead(newHead);
+                if (newHead.getPosition() != headPosition) {
+                    updateReference(combinedNode.getMapId(), newHead.getPosition());
                 }
                 return returnValue;
 
@@ -153,18 +157,18 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     @Override
     public V remove(Object key) {
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        final SkipListHeadNode head = combinedNode.head;
+        final SkipListHeadNode head = combinedNode.getHead();
 
         if (head != null) {
-            final long headPosition = head.position;
+            final long headPosition = head.getPosition();
             return (V) dispatchLock.performWithLock(head, o -> {
                 V returnValue = DiskMultiHashMap.super.remove(key);
                 SkipListHeadNode newHead = getHead();
-                combinedNode.head = newHead;
-                if (newHead.position != headPosition) {
-                    updateReference(combinedNode.mapId, newHead.position);
+                combinedNode.setHead(newHead);
+                if (newHead.getPosition() != headPosition) {
+                    updateReference(combinedNode.getMapId(), newHead.getPosition());
                 }
                 return returnValue;
             });
@@ -182,9 +186,9 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     @Override
     public boolean containsKey(Object key) {
         final CombinedIndexHashNode combinedNode = getHeadReferenceForKey(key, true);
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        return combinedNode.head != null && super.containsKey(key);
+        return combinedNode.getHead() != null && super.containsKey(key);
     }
 
     /**
@@ -206,7 +210,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     }
 
     /**
-     * Get the record id of a corresponding node.  Note, this points to the SkipListNode position.  Not the actual
+     * Get the record id of a corresponding data.  Note, this points to the SkipListNode position.  Not the actual
      * record position.
      *
      * @param key Identifier
@@ -219,9 +223,9 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         if (combinedNode == null)
             return -1;
 
-        setHead(combinedNode.head);
+        setHead(combinedNode.getHead());
 
-        if (combinedNode.head != null) {
+        if (combinedNode.getHead() != null) {
             return super.getRecID(key);
         }
 
@@ -236,8 +240,8 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      */
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        final Iterator<? extends Entry<? extends K, ? extends V>> iterator = m.entrySet().iterator();
-        Entry<? extends K, ? extends V> entry;
+        final Iterator<? extends Map.Entry<? extends K, ? extends V>> iterator = m.entrySet().iterator();
+        Map.Entry<? extends K, ? extends V> entry;
 
         while (iterator.hasNext()) {
             entry = iterator.next();
@@ -246,7 +250,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     }
 
     /**
-     * Clear this map.  In order to do that.  All we have to do is remove the first node reference and it will
+     * Clear this map.  In order to do that.  All we have to do is remove the first data reference and it will
      * orphan the entire data structure
      *
      * @since 1.2.0
@@ -265,7 +269,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      *
      * @param key       Unique identifier that is changed to a non unique key in order to generify the skip list
      * @param forInsert Whether we should insert the bitmap index.
-     * @return The Combined Index node of the skip list and it contains the bitmap node information.
+     * @return The Combined Index data of the skip list and it contains the bitmap data information.
      * @since 1.2.0
      *
      * @since 1.2.2 There is no use for the caching map so it was removed.  This should be
@@ -282,7 +286,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
                 long reference = DiskMultiHashMap.super.getReference(skipListMapId);
                 if (reference == 0) {
                     headNode1 = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
-                    insertReference(skipListMapId, headNode1.position);
+                    insertReference(skipListMapId, headNode1.getPosition());
                     return new CombinedIndexHashNode(headNode1, skipListMapId);
                 } else {
                     return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
@@ -325,6 +329,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @return A Set of references
      * @since 1.2.0
      */
+    @NotNull
     public Set<Long> above(K index, boolean includeFirst) {
         Set returnValue = new HashSet();
 
@@ -345,6 +350,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      * @return A Set of references
      * @since 1.2.0
      */
+    @NotNull
     public Set<Long> below(K index, boolean includeFirst) {
         Set returnValue = new HashSet();
 
@@ -358,6 +364,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     /**
      * Return the Level read write lock implementation
      */
+    @NotNull
     @Override
     public DispatchLock getReadWriteLock() {
         return this.dispatchLock;

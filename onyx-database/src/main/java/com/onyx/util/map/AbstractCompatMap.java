@@ -1,5 +1,6 @@
 package com.onyx.util.map;
 
+
 import java.util.ConcurrentModificationException;
 import java.util.Map;
 import java.util.Objects;
@@ -18,7 +19,7 @@ import java.util.function.Function;
  * @since 1.2.2
  *
  */
-public abstract class AbstractCompatMap<K,V> implements Map<K,V>, CompatMap<K,V> {
+public abstract class AbstractCompatMap<K,V> implements Map<K,V> {
 
     /**
      * Returns the value to which the specified key is mapped, or

@@ -218,7 +218,7 @@ class Encryption {
         private IvParameterSpec mIvParameterSpec;
 
         /**
-         * @return an default builder with the follow defaults:
+         * @return an default factory with the follow defaults:
          * the default char set is UTF-8
          * the default base mode is Base64
          * the Secret Key Type is the PBKDF2WithHmacSHA1

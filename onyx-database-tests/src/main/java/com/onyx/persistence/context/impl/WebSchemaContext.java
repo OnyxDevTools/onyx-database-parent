@@ -1,8 +1,8 @@
 package com.onyx.persistence.context.impl;
 
 import com.onyx.persistence.context.SchemaContext;
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory;
+import com.onyx.diskmap.factory.DiskMapFactory;
 import com.onyx.diskmap.store.StoreType;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ import java.nio.file.Files;
  */
 public class WebSchemaContext extends DefaultSchemaContext implements SchemaContext
 {
-    private MapBuilder metadataMapBuilder = null;
+    private DiskMapFactory metadataDiskMapFactory = null;
 
     private String remoteEndpoint;
 
@@ -70,7 +70,7 @@ public class WebSchemaContext extends DefaultSchemaContext implements SchemaCont
             {
                 e.printStackTrace();
             }
-            metadataMapBuilder = new DefaultMapBuilder(location + "/local", StoreType.MEMORY_MAPPED_FILE, this);
+            metadataDiskMapFactory = new DefaultDiskMapFactory(location + "/local", StoreType.MEMORY_MAPPED_FILE, this);
         }
         super.start();
     }
@@ -81,9 +81,9 @@ public class WebSchemaContext extends DefaultSchemaContext implements SchemaCont
      */
     public void shutdown()
     {
-        if(metadataMapBuilder != null)
+        if(metadataDiskMapFactory != null)
         {
-            metadataMapBuilder.close();
+            metadataDiskMapFactory.close();
         }
         super.shutdown();
     }

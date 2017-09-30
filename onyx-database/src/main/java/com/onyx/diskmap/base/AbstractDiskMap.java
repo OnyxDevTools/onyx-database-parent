@@ -1,12 +1,11 @@
 package com.onyx.diskmap.base;
 
 import com.onyx.buffer.BufferPool;
-import com.onyx.buffer.BufferStream;
 import com.onyx.diskmap.DiskMap;
-import com.onyx.diskmap.node.HashMatrixNode;
-import com.onyx.diskmap.node.Header;
+import com.onyx.diskmap.data.HashMatrixNode;
+import com.onyx.diskmap.data.Header;
 import com.onyx.diskmap.store.Store;
-import com.onyx.util.map.AbstractCompatMap;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
@@ -23,25 +22,22 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 1.2.0
  *
  */
-public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> implements DiskMap<K, V> {
+public abstract class AbstractDiskMap<K, V>  implements DiskMap<K, V> {
 
-    protected AbstractDiskMap()
-    {
 
-    }
     protected Store fileStore; // Underlying storage mechanism
     protected Header header = null;
     protected boolean detached = false;
-    protected byte loadFactor = HashMatrixNode.DEFAULT_BITMAP_ITERATIONS;
+    protected byte loadFactor = (byte)HashMatrixNode.Companion.getDEFAULT_BITMAP_ITERATIONS();
 
     protected AbstractDiskMap(Store fileStore, Header header, boolean headless) {
         this.fileStore = fileStore;
         // Clone the header so that we do not have a cross reference
         // This was preventing WeakHashMaps from ejecting the entire map value
         this.header = new Header();
-        this.header.firstNode = header.firstNode;
-        this.header.position = header.position;
-        this.header.recordCount = new AtomicLong(header.recordCount.get());
+        this.header.setFirstNode(header.getFirstNode());
+        this.header.setPosition(header.getPosition());
+        this.header.setRecordCount(new AtomicLong(header.getRecordCount().get()));
         this.detached = headless;
     }
 
@@ -52,9 +48,9 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
     void updateHeaderRecordCount() {
         final ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
-            buffer.putLong(header.recordCount.get());
+            buffer.putLong(header.getRecordCount().get());
             buffer.flip();
-            fileStore.write(buffer, header.position + Long.BYTES);
+            fileStore.write(buffer, header.getPosition() + Long.BYTES);
         }
         finally {
             BufferPool.INSTANCE.recycle(buffer);
@@ -73,7 +69,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
         try {
             buffer.putLong(firstNode);
             buffer.flip();
-            fileStore.write(buffer, header.position);
+            fileStore.write(buffer, header.getPosition());
         }
         finally {
             BufferPool.INSTANCE.recycle(buffer);
@@ -110,7 +106,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      */
     @SuppressWarnings("WeakerAccess")
     public long longSize() {
-        return header.recordCount.get();
+        return header.getRecordCount().get();
     }
 
     /**
@@ -119,7 +115,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      * @since 1.2.0
      */
     protected void incrementSize() {
-        header.recordCount.addAndGet(1L);
+        header.getRecordCount().addAndGet(1L);
         updateHeaderRecordCount();
     }
 
@@ -129,7 +125,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      * @since 1.2.0
      */
     protected void decrementSize() {
-        header.recordCount.decrementAndGet();
+        header.getRecordCount().decrementAndGet();
         updateHeaderRecordCount();
     }
 
@@ -138,6 +134,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      * @return the file store that was assigned to this data structure
      * @since 1.0.1
      */
+    @NotNull
     @Override
     public Store getFileStore() {
         return fileStore;
@@ -148,6 +145,7 @@ public abstract class AbstractDiskMap<K, V> extends AbstractCompatMap<K,V> imple
      * @return Header that was assigned to this data structure
      * @since 1.0.0
      */
+    @NotNull
     @Override
     public Header getReference() {
         return header;

@@ -1,7 +1,7 @@
 package embedded;
 
-import com.onyx.diskmap.DefaultMapBuilder;
-import com.onyx.diskmap.MapBuilder;
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory;
+import com.onyx.diskmap.factory.DiskMapFactory;
 import com.onyx.diskmap.store.StoreType;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -25,7 +25,7 @@ public class ScaledDiskMapTest
     @Test
     public void testInsert()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE, StoreType.MEMORY_MAPPED_FILE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE, StoreType.MEMORY_MAPPED_FILE);
         Map<Integer, Integer> skipList = builder.getHashMap("first", 10);
 
         Map keyValues = new HashMap();
@@ -53,7 +53,7 @@ public class ScaledDiskMapTest
     {
 
 
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getHashMap("second", 10);
 
         Map keyValues = new HashMap();
@@ -98,7 +98,7 @@ public class ScaledDiskMapTest
     @Test
     public void testUpdate()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getHashMap("third", 10);
 
         Map keyValues = new HashMap();
@@ -117,7 +117,7 @@ public class ScaledDiskMapTest
     @Test
     public void testForEach()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getHashMap("third", 10);
 
         Map keyValues = new HashMap();
@@ -157,7 +157,7 @@ public class ScaledDiskMapTest
     @Test
     public void testKeyIterator()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getHashMap("fourth", 10);
 
         Map keyValues = new HashMap();
@@ -198,7 +198,7 @@ public class ScaledDiskMapTest
     @Test
     public void testValueIterator()
     {
-        MapBuilder builder = new DefaultMapBuilder(TEST_DATABASE);
+        DiskMapFactory builder = new DefaultDiskMapFactory(TEST_DATABASE);
         Map<Integer, Integer> skipList = builder.getHashMap("fifth", 10);
 
         Map keyValues = new HashMap();
