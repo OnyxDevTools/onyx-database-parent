@@ -938,7 +938,7 @@ public class CompatWeakHashMap<K,V> extends AbstractCompatMap<K,V> implements Co
      */
     static class WeakHashMapSpliterator<K,V> {
         final CompatWeakHashMap<K,V> map;
-        CompatWeakHashMap.Entry<K,V> current; // current node
+        CompatWeakHashMap.Entry<K,V> current; // current data
         int index;             // current index, modified on advance/split
         int fence;             // -1 until first use; then one past last index
         int est;               // size estimate

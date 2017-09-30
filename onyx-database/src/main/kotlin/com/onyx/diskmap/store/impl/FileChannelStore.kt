@@ -3,8 +3,8 @@ package com.onyx.diskmap.store.impl
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
-import com.onyx.diskmap.base.concurrent.AtomicCounter
-import com.onyx.diskmap.base.concurrent.DefaultAtomicCounter
+import com.onyx.concurrent.AtomicCounter
+import com.onyx.concurrent.impl.DefaultAtomicCounter
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
 import com.onyx.extension.perform

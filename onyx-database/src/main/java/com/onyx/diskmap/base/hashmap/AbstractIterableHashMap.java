@@ -1,6 +1,6 @@
 package com.onyx.diskmap.base.hashmap;
 
-import com.onyx.diskmap.node.Header;
+import com.onyx.diskmap.data.Header;
 import com.onyx.diskmap.store.Store;
 
 import java.util.AbstractCollection;
