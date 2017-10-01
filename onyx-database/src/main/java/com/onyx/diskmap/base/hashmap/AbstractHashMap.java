@@ -36,9 +36,9 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
      *
      * @since 1.2.0
      */
-    AbstractHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
+    public AbstractHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
         super(fileStore, header, headless);
-        this.loadFactor = (byte) loadFactor;
+        this.setLoadFactor((byte) loadFactor);
         int allocation = 1;
 
         // Figure out how many bytes to allocate
@@ -52,7 +52,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
 
         // Create the header if it does not exist.  Also allocate the hash table
         if (header.getFirstNode() == 0) {
-            forceUpdateHeaderFirstNode(this.header, fileStore.allocate(numberOfReferenceBytes + numberOfListReferenceBytes + countBytes));
+            forceUpdateHeaderFirstNode(this.getReference(), fileStore.allocate(numberOfReferenceBytes + numberOfListReferenceBytes + countBytes));
             this.mapCount = new AtomicInteger(0);
         } else
         {
@@ -90,12 +90,12 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
             int count = incrementMapCount();
             buffer.putInt(count);
             buffer.flip();
-            fileStore.write(buffer, header.getFirstNode());
+            getFileStore().write(buffer, getReference().getFirstNode());
 
             buffer.clear();
             buffer.putLong(reference);
             buffer.flip();
-            fileStore.write(buffer, (header.getFirstNode() + referenceOffset + (hash * 8)));
+            getFileStore().write(buffer, (getReference().getFirstNode() + referenceOffset + (hash * 8)));
 
             addIterationList(buffer, hash, count - 1);
         } finally {
@@ -121,7 +121,7 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
         buffer.clear();
         buffer.putInt(hash);
         buffer.flip();
-        fileStore.write(buffer, (header.getFirstNode() + listReferenceOffset + (count * Integer.BYTES)));
+        getFileStore().write(buffer, (getReference().getFirstNode() + listReferenceOffset + (count * Integer.BYTES)));
     }
 
     /**
@@ -135,12 +135,12 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     @SuppressWarnings({"UnusedReturnValue", "WeakerAccess"})
     protected long updateReference(int hash, long reference)
     {
-        long position = (header.getFirstNode() + referenceOffset + (hash*8));
+        long position = (getReference().getFirstNode() + referenceOffset + (hash*8));
         ByteBuffer buffer = BufferPool.INSTANCE.allocateAndLimit(Long.BYTES);
         try {
             buffer.putLong(reference);
             buffer.flip();
-            fileStore.write(buffer, position);
+            getFileStore().write(buffer, position);
         }
         finally {
             BufferPool.INSTANCE.recycle(buffer);
@@ -157,8 +157,8 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     @SuppressWarnings("WeakerAccess")
     protected int getMapIdentifier(int index)
     {
-        long position = header.getFirstNode() + listReferenceOffset + (index * Integer.BYTES);
-        final BufferStream stream = fileStore.read(position, Integer.BYTES);
+        long position = getReference().getFirstNode() + listReferenceOffset + (index * Integer.BYTES);
+        final BufferStream stream = getFileStore().read(position, Integer.BYTES);
         try {
             return stream.getInt();
         } catch (BufferingException e){
@@ -179,8 +179,8 @@ abstract class AbstractHashMap<K, V> extends DiskSkipListMap<K,V> {
     @SuppressWarnings("WeakerAccess")
     protected long getReference(int hash)
     {
-        long position = (hash*8) + referenceOffset + header.getFirstNode();
-        final BufferStream stream = fileStore.read(position, Long.BYTES);
+        long position = (hash*8) + referenceOffset + getReference().getFirstNode();
+        final BufferStream stream = getFileStore().read(position, Long.BYTES);
         try {
             return stream.getLong();
         } catch (BufferingException e){

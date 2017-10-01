@@ -15,7 +15,7 @@ import java.util.Map;
  *
  * @since 1.2.0
  */
-abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
+public abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
 
     protected Map<Integer, Long> cache;
     protected Map<Integer, Integer> mapCache;
@@ -30,7 +30,7 @@ abstract class AbstractCachedHashMap<K,V> extends AbstractHashMap<K,V> {
      *
      * @since 1.2.0
      */
-    AbstractCachedHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
+    public AbstractCachedHashMap(Store fileStore, Header header, boolean headless, int loadFactor) {
         super(fileStore, header, headless, loadFactor);
         cache = new SynchronizedMap<>(new CompatWeakHashMap<>());
         mapCache = new SynchronizedMap<>(new CompatWeakHashMap<>());

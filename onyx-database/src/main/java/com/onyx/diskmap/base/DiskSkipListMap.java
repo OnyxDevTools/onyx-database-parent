@@ -3,7 +3,7 @@ package com.onyx.diskmap.base;
 import com.onyx.diskmap.DiskMap;
 import com.onyx.concurrent.DispatchLock;
 import com.onyx.concurrent.impl.EmptyReadWriteLock;
-import com.onyx.diskmap.base.skiplist.AbstractIterableSkipList;
+import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList;
 import com.onyx.diskmap.data.Header;
 import com.onyx.diskmap.data.SkipListHeadNode;
 import com.onyx.diskmap.data.SkipListNode;
@@ -15,7 +15,6 @@ import com.onyx.util.ReflectionField;
 import com.onyx.util.ReflectionUtil;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -169,11 +168,11 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
 
             super.clear();
 
-            if (!this.detached) {
+            if (!this.getDetached()) {
                 setHead(createHeadNode(Byte.MIN_VALUE, 0L, 0L));
-                this.header.setFirstNode(getHead().getPosition());
-                updateHeaderFirstNode(header, this.header.getFirstNode());
-                header.getRecordCount().set(0L);
+                this.getReference().setFirstNode(getHead().getPosition());
+                updateHeaderFirstNode(getReference(), this.getReference().getFirstNode());
+                getReference().getRecordCount().set(0L);
                 updateHeaderRecordCount();
             }
 
@@ -392,19 +391,8 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
         }
     }
 
+    @Override
     public int getSize() {
         return (int)longSize();
-    }
-
-    public Set<K> getKeys() {
-        return keySet();
-    }
-
-    public Collection<V> getValues() {
-        return values();
-    }
-
-    public Set<Map.Entry<K, V>> getEntries() {
-        return entrySet();
     }
 }

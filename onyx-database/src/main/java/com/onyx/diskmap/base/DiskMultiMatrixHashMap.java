@@ -5,7 +5,7 @@ import com.onyx.diskmap.SortedDiskMap;
 import com.onyx.concurrent.*;
 import com.onyx.concurrent.impl.DefaultDispatchLock;
 import com.onyx.concurrent.impl.EmptyMap;
-import com.onyx.diskmap.base.hashmatrix.AbstractIterableMultiMapHashMatrix;
+import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix;
 import com.onyx.diskmap.data.CombinedIndexHashMatrixNode;
 import com.onyx.diskmap.data.HashMatrixNode;
 import com.onyx.diskmap.data.Header;
@@ -15,10 +15,7 @@ import com.onyx.util.map.CompatMap;
 import com.onyx.util.map.CompatWeakHashMap;
 import com.onyx.util.map.SynchronizedMap;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by tosborn1 on 1/8/17.
@@ -40,7 +37,7 @@ import java.util.Set;
  * @since 1.2.0 This was re-factored not to have a dependent sub map.
  */
 @SuppressWarnings("unchecked")
-public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, SortedDiskMap<K,V> {
+public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, V> implements Map<K, V>, DiskMap<K, V>, SortedDiskMap<K,V> {
 
     private DispatchLock dispatchLock = new DefaultDispatchLock();
 
@@ -56,7 +53,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      */
     public DiskMultiMatrixHashMap(Store fileStore, Header header, int loadFactor) {
         super(fileStore, header, true);
-        this.loadFactor = (byte)loadFactor;
+        this.setLoadFactor((byte) loadFactor);
     }
 
     /**
@@ -70,7 +67,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     public DiskMultiMatrixHashMap(Store fileStore, Header header, int loadFactor, DispatchLock dispatchLock) {
         super(fileStore, header, true);
         this.dispatchLock = dispatchLock;
-        this.loadFactor = (byte) loadFactor;
+        this.setLoadFactor((byte) loadFactor);
         this.nodeCache = new EmptyMap();
         this.valueByPositionCache = new EmptyMap();
         this.keyCache = new EmptyMap();
@@ -189,7 +186,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      */
     @Override
     public boolean containsValue(Object value) {
-        for (DiskSkipListMap<K, V> kvDiskSkipListMap : (Iterable<DiskSkipListMap<K, V>>) this.mapSet()) {
+        for (DiskSkipListMap<K, V> kvDiskSkipListMap : (Iterable<DiskSkipListMap<K, V>>) this.getMaps()) {
             if (kvDiskSkipListMap.containsValue(value))
                 return true;
         }
@@ -222,7 +219,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
      */
     @Override
     public void clear() {
-        dispatchLock.performWithLock(header, o -> {
+        dispatchLock.performWithLock(getReference(), o -> {
             DiskMultiMatrixHashMap.super.clear();
             return null;
         });
@@ -268,7 +265,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
             CombinedIndexHashMatrixNode retVal = skipListMapCache.get(skipListMapId);
             if (retVal != null)
                 return retVal;
-            return (CombinedIndexHashMatrixNode) this.getReadWriteLock().performWithLock(header, o -> skipListMapCache.computeIfAbsent(skipListMapId, integer -> seek(forInsert, hashDigits)));
+            return (CombinedIndexHashMatrixNode) this.getReadWriteLock().performWithLock(getReference(), o -> skipListMapCache.computeIfAbsent(skipListMapId, integer -> seek(forInsert, hashDigits)));
         } else {
             CombinedIndexHashMatrixNode node = skipListMapCache.get(skipListMapId);
             if (node != null)
@@ -313,15 +310,15 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         HashMatrixNode node;
 
-        if (this.header.getFirstNode() > 0) {
-            node = this.getHashMatrixNode(this.header.getFirstNode()); // Get Root data
+        if (this.getReference().getFirstNode() > 0) {
+            node = this.getHashMatrixNode(this.getReference().getFirstNode()); // Get Root data
         } else {
             // No default data, lets create one // It must mean we are inserting
             node = new HashMatrixNode();
-            node.setPosition(fileStore.allocate(this.getHashMatrixNodeSize()));
+            node.setPosition(getFileStore().allocate(this.getHashMatrixNodeSize()));
 
             this.writeHashMatrixNode(node.getPosition(), node);
-            this.forceUpdateHeaderFirstNode(header, node.getPosition());
+            this.forceUpdateHeaderFirstNode(getReference(), node.getPosition());
         }
 
         // There is no default data return -1 because it was not found
@@ -334,19 +331,19 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
 
         // Not we are using this load factor rather than what is on the Bitmap disk map
         // Break down the nodes and iterate through them.  We should be left with the remaining data which should point us to the record
-        for (int level = 0; level < loadFactor; level++) {
+        for (int level = 0; level < getLoadFactor(); level++) {
 
             hashDigit = hashDigits[level];
             nodePosition = previousNode.getNext()[hashDigit];
 
             if (nodePosition == 0 && forInsert) {
-                if (level == loadFactor - 1) {
+                if (level == getLoadFactor() - 1) {
                     SkipListHeadNode headNode = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
                     this.updateHashMatrixReference(previousNode, hashDigit, headNode.getPosition());
                     return new CombinedIndexHashMatrixNode(headNode, previousNode, hashDigit);
                 } else {
                     node = new HashMatrixNode();
-                    node.setPosition(fileStore.allocate(this.getHashMatrixNodeSize()));
+                    node.setPosition(getFileStore().allocate(this.getHashMatrixNodeSize()));
                     this.writeHashMatrixNode(node.getPosition(), node);
                     this.updateHashMatrixReference(previousNode, hashDigit, node.getPosition());
                 }
@@ -357,7 +354,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
             // Not found because it is not in the
             else if (nodePosition == 0)
                 return null;
-            else if (level < loadFactor - 1)
+            else if (level < getLoadFactor() - 1)
                 previousNode = this.getHashMatrixNode(nodePosition);
             else {
                 return new CombinedIndexHashMatrixNode(findNodeAtPosition(nodePosition), previousNode, hashDigit);
@@ -380,7 +377,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     {
         Set returnValue = new HashSet();
 
-        for (Object o : mapSet()) {
+        for (Object o : getMaps()) {
             setHead((SkipListHeadNode) o);
             returnValue.addAll(super.above(index, includeFirst));
         }
@@ -401,7 +398,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     {
         Set returnValue = new HashSet();
 
-        for (Object o : mapSet()) {
+        for (Object o : getMaps()) {
             setHead((SkipListHeadNode) o);
             returnValue.addAll(super.below(index, includeFirst));
         }
@@ -417,4 +414,5 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableMultiMapHashMa
     {
         return dispatchLock;
     }
+
 }

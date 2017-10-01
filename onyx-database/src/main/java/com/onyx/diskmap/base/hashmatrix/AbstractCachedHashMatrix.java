@@ -17,7 +17,7 @@ import java.util.Map;
  *
  * @since 1.2.0
  */
-abstract class AbstractCachedHashMatrix<K, V> extends AbstractHashMatrix<K, V> {
+public abstract class AbstractCachedHashMatrix<K, V> extends AbstractHashMatrix<K, V> {
 
     protected Map<Long, HashMatrixNode> nodeCache;
 
@@ -31,7 +31,7 @@ abstract class AbstractCachedHashMatrix<K, V> extends AbstractHashMatrix<K, V> {
      *
      * @since 1.2.0
      */
-    AbstractCachedHashMatrix(Store fileStore, Header header, boolean detached) {
+    public AbstractCachedHashMatrix(Store fileStore, Header header, boolean detached) {
         super(fileStore, header, detached);
         nodeCache = new SynchronizedMap<>(new CompatWeakHashMap<>());
     }

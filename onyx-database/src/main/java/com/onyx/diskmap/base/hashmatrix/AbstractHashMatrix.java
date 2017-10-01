@@ -30,7 +30,7 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
      *
      * @since 1.2.0
      */
-    AbstractHashMatrix(Store fileStore, Header header, boolean detached) {
+    public AbstractHashMatrix(Store fileStore, Header header, boolean detached) {
         super(fileStore, header, detached);
     }
 
@@ -52,7 +52,7 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
         try {
             buffer.putLong(value);
             buffer.flip();
-            fileStore.write(buffer, node.getPosition() + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
+            getFileStore().write(buffer, node.getPosition() + (Long.BYTES * index) + Long.BYTES + Integer.BYTES);
         } finally {
             BufferPool.INSTANCE.recycle(buffer);
         }
@@ -68,7 +68,7 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
      */
     @SuppressWarnings("WeakerAccess")
     protected HashMatrixNode getHashMatrixNode(long position) {
-        return (HashMatrixNode) fileStore.read(position, getHashMatrixNodeSize(), HashMatrixNode.class);
+        return (HashMatrixNode) getFileStore().read(position, getHashMatrixNodeSize(), HashMatrixNode.class);
     }
 
     /**
@@ -81,7 +81,7 @@ abstract class AbstractHashMatrix<K, V> extends DiskSkipListMap<K, V> {
      */
     @SuppressWarnings("WeakerAccess")
     protected void writeHashMatrixNode(long position, HashMatrixNode node) {
-        fileStore.write(node, node.getPosition());
+        getFileStore().write(node, node.getPosition());
     }
 
     /**

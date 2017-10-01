@@ -32,7 +32,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
         val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
-        records.referenceSet().filter {
+        records.references.filter {
             val entity = records.getWithRecID(it.recordId)
             val reference = Reference(partitionId, it.recordId)
             query.meetsCriteria(entity, reference, context, descriptor)

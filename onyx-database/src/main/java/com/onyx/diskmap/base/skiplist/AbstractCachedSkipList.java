@@ -22,7 +22,7 @@ import java.util.Map;
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
+public abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
 
     // Caching maps
     protected Map<K, SkipListNode> keyCache = new WriteSynchronizedMap<>(new CompatWeakHashMap<>());
@@ -35,7 +35,7 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
      * @param header    Header location of the skip list
      * @since 1.2.0
      */
-    AbstractCachedSkipList(Store fileStore, Header header) {
+    public AbstractCachedSkipList(Store fileStore, Header header) {
         super(fileStore, header);
     }
 
@@ -47,7 +47,7 @@ abstract class AbstractCachedSkipList<K, V> extends AbstractSkipList<K, V> {
      * @param headless  Whether the header should be ignored or not
      * @since 1.2.0
      */
-    AbstractCachedSkipList(Store fileStore, Header header, boolean headless) {
+    public AbstractCachedSkipList(Store fileStore, Header header, boolean headless) {
         super(fileStore, header, headless);
     }
 

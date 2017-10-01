@@ -38,6 +38,12 @@ interface DiskMap<K, V> : MutableMap<K, V> {
     val readWriteLock: DispatchLock
 
     /**
+     * Get the set of references.  Not values nor keys
+     * @return Set of references.
+     */
+    val references: Set<SkipListNode<K>>
+
+    /**
      * Get the record id for a key
      *
      * @param key Record Key
@@ -82,12 +88,6 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      */
     @Throws(AttributeTypeMismatchException::class)
     fun <T : Any?> getAttributeWithRecID(field: ReflectionField, reference: SkipListNode<*>): T
-
-    /**
-     * Get the set of references.  Not values nor keys
-     * @return Set of references.
-     */
-    fun referenceSet(): Set<SkipListNode<*>>
 
     /**
      * Returns the record count as a long rather than an integer.

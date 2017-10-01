@@ -6,7 +6,7 @@ import com.onyx.concurrent.*;
 import com.onyx.concurrent.impl.DefaultDispatchLock;
 import com.onyx.concurrent.impl.EmptyDispatchLock;
 import com.onyx.concurrent.impl.EmptyMap;
-import com.onyx.diskmap.base.hashmap.AbstractIterableMultiMapHashMap;
+import com.onyx.diskmap.impl.base.hashmap.AbstractIterableMultiMapHashMap;
 import com.onyx.diskmap.data.CombinedIndexHashNode;
 import com.onyx.diskmap.data.Header;
 import com.onyx.diskmap.data.SkipListHeadNode;
@@ -257,7 +257,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
      */
     @Override
     public void clear() {
-        dispatchLock.performWithLock(header, o -> {
+        dispatchLock.performWithLock(getReference(), o -> {
             DiskMultiHashMap.super.clear();
             return null;
         });
@@ -280,7 +280,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     private CombinedIndexHashNode getHeadReferenceForKey(Object key, @SuppressWarnings("SameParameterValue") boolean forInsert) {
         int skipListMapId = getSkipListKey(key);
 
-        return (CombinedIndexHashNode) this.dispatchLock.performWithLock(this.header, o -> {
+        return (CombinedIndexHashNode) this.dispatchLock.performWithLock(this.getReference(), o -> {
             if (forInsert) {
                 SkipListHeadNode headNode1;
                 long reference = DiskMultiHashMap.super.getReference(skipListMapId);
@@ -333,7 +333,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     public Set<Long> above(K index, boolean includeFirst) {
         Set returnValue = new HashSet();
 
-        for (Object o : mapSet()) {
+        for (Object o : getMaps()) {
             setHead((SkipListHeadNode) o);
             returnValue.addAll(super.above(index, includeFirst));
         }
@@ -354,7 +354,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     public Set<Long> below(K index, boolean includeFirst) {
         Set returnValue = new HashSet();
 
-        for (Object o : mapSet()) {
+        for (Object o : getMaps()) {
             setHead((SkipListHeadNode) o);
             returnValue.addAll(super.below(index, includeFirst));
         }
