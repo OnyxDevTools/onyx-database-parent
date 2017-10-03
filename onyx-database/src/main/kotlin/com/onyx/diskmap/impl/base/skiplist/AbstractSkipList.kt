@@ -24,7 +24,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "LeakingThis")
 abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fileStore: Store, header: Header,  detached:Boolean = false) : AbstractDiskMap<K, V>(fileStore, header, detached) {
 
     companion object {
@@ -107,7 +107,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             next = findNodeAtPosition(current.next)
 
-            if (current.next == 0L || shouldMoveDown(hash, hash((next as SkipListNode<K>).key), key, next.key)) {
+            if (current.next == 0L || shouldMoveDown(key, next.key)) {
                 if (level >= current.level) {
                     val newNode = createNewNode(key, value, current.level, if (next == null) 0L else next.position, 0L, cache, if (recordIndicatorNode == null) -1 else recordIndicatorNode.recordId)
                     if (recordIndicatorNode == null) {
@@ -156,7 +156,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             val next = findNodeAtPosition(current.next)
 
-            if (current.next == 0L || shouldMoveDown(hash, hash((next as SkipListNode<K>).key), key, next.key)) {
+            if (current.next == 0L || shouldMoveDown(key, next.key)) {
 
                 // We found the record we want
                 if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
@@ -231,7 +231,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             val next = findNodeAtPosition(current.next)
 
-            if (current.next == 0L || next is SkipListNode<*> && shouldMoveDown(hash, hash((next as SkipListNode<K>).key), key, next.key as K)) {
+            if (current.next == 0L || next is SkipListNode<*> && shouldMoveDown(key, next.key as K)) {
 
                 // We found the record we want
                 if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
@@ -276,7 +276,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             val next = findNodeAtPosition(current.next)
             if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
                 return next
-            } else if (current.next == 0L || next != null && shouldMoveDown(hash, hash((next as SkipListNode<K>).key), key, next.key)) {
+            } else if (current.next == 0L || next != null && shouldMoveDown(key, next.key)) {
                 current = findNodeAtPosition(current.down)
                 continue
             }// Next data does not have values so we must move on down and continue the loop.
@@ -307,7 +307,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             val next = findNodeAtPosition(current.next)
             if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
                 return next
-            } else if (current.next == 0L || next != null && shouldMoveDown(0, 0, key, (next as SkipListNode<K>).key)) {
+            } else if (current.next == 0L || next != null && shouldMoveDown(key, (next as SkipListNode<K>).key)) {
                 current = findNodeAtPosition(current.down)
                 continue
             }// Next data does not have values so we must move on down and continue the loop.
@@ -335,7 +335,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @return If the keys are comparable return the result of that.  Othwerwise return the comparison of hash codes
      * @since 1.2.0
      */
-    protected fun shouldMoveDown(hash: Int, hash2: Int, key: K, key2: K): Boolean = CompareUtil.forceCompare(key, key2, QueryCriteriaOperator.GREATER_THAN_EQUAL)
+    protected fun shouldMoveDown(key: K, key2: K): Boolean = CompareUtil.forceCompare(key, key2, QueryCriteriaOperator.GREATER_THAN_EQUAL)
 
     /**
      * Select an arbitrary head of the data structure to start inserting the data.  This is based on a continuous coin

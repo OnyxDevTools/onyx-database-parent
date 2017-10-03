@@ -381,7 +381,7 @@ public class DiskSkipListMap<K, V> extends AbstractIterableSkipList<K, V> implem
                     else if (CompareUtil.forceCompare(index, ((SkipListNode) node).getKey(), QueryCriteriaOperator.GREATER_THAN))
                         break;
 
-                    if (this.shouldMoveDown(0, 0, index, (K) ((SkipListNode) node).getKey()))
+                    if (this.shouldMoveDown(index, (K) ((SkipListNode) node).getKey()))
                         break;
                 }
             }
