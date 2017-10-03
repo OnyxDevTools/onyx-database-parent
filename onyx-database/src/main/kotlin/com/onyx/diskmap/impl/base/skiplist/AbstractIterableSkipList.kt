@@ -149,7 +149,7 @@ abstract class AbstractIterableSkipList<K, V> : AbstractCachedSkipList<K, V> {
          * @return The next dictionary object
          */
         override fun next(): V {
-            val next = nodeIterator.next()!!
+            val next = nodeIterator.next()
             return findValueAtPosition(next.recordPosition, next.recordSize) as V
         }
 
@@ -177,7 +177,7 @@ abstract class AbstractIterableSkipList<K, V> : AbstractCachedSkipList<K, V> {
          * @return The next dictionary object
          */
         override fun next(): V {
-            val node = nodeIterator.next()!!
+            val node = nodeIterator.next()
             return node.key as V
         }
     }
@@ -204,7 +204,7 @@ abstract class AbstractIterableSkipList<K, V> : AbstractCachedSkipList<K, V> {
          */
         override fun next(): SkipListEntry<K, V> {
             val node = nodeIterator.next()
-            return SkipListEntry(node!!)
+            return SkipListEntry(node)
         }
     }
 
@@ -243,7 +243,7 @@ abstract class AbstractIterableSkipList<K, V> : AbstractCachedSkipList<K, V> {
      * Iterates through nodes and gets the left, right, next values
      */
     inner class NodeIterator : MutableIterator<SkipListNode<K>?> {
-        override fun remove() { removeNode(current) }
+        override fun remove() { removeNode(current!!) }
 
         private var current: SkipListHeadNode? = null
 
@@ -273,10 +273,7 @@ abstract class AbstractIterableSkipList<K, V> : AbstractCachedSkipList<K, V> {
          *
          * @return Nex data with a record value.
          */
-        override fun next(): SkipListNode<K>? {
-
-            if (current == null)
-                return null
+        override fun next(): SkipListNode<K> {
 
             val previous = current
             while (current != null) {

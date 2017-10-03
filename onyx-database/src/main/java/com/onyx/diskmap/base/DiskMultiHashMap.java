@@ -64,7 +64,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
     public DiskMultiHashMap(Store fileStore, Header header, int loadFactor, DispatchLock dispatchLock) {
         super(fileStore, header, true, loadFactor);
         this.dispatchLock = dispatchLock;
-        this.nodeCache = new EmptyMap();
+        this.setNodeCache(new EmptyMap());
         this.mapCache = new EmptyMap();
         this.cache = new EmptyMap();
         this.valueByPositionCache = new EmptyMap();
@@ -90,7 +90,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
             mapCache = new EmptyMap();
             keyCache = new EmptyMap();
             valueByPositionCache = new EmptyMap();
-            nodeCache = new EmptyMap();
+            setNodeCache(new EmptyMap());
             dispatchLock = new EmptyDispatchLock();
         }
     }

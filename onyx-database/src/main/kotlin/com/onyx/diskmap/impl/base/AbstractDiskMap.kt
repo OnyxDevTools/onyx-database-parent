@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.2.0
  */
-abstract class AbstractDiskMap<K, V> protected constructor(override val fileStore: Store, header: Header, val detached: Boolean) : DiskMap<K, V> {
+abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val detached: Boolean) : DiskMap<K, V> {
 
     final override val reference: Header = Header()
     var loadFactor = HashMatrixNode.DEFAULT_BITMAP_ITERATIONS.toByte()

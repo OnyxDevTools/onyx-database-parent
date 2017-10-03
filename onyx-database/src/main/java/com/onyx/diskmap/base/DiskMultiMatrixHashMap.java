@@ -48,7 +48,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
      * Constructor
      *
      * @param fileStore File storage mechanism
-     * @param header    Pointer to the DiskMap
+     * @param header    Pointer to the DiskMap˚
      * @since 1.2.0
      */
     public DiskMultiMatrixHashMap(Store fileStore, Header header, int loadFactor) {
@@ -68,7 +68,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
         super(fileStore, header, true);
         this.dispatchLock = dispatchLock;
         this.setLoadFactor((byte) loadFactor);
-        this.nodeCache = new EmptyMap();
+        this.setHashMatrixNodeCache(new EmptyMap());
         this.valueByPositionCache = new EmptyMap();
         this.keyCache = new EmptyMap();
     }
@@ -119,7 +119,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
                 if (combinedNode.getBitMapNode().getNext()[combinedNode.getHashDigit()] != newHead.getPosition()) {
                     combinedNode.setHead(newHead);
                     DiskMultiMatrixHashMap.this.updateHashMatrixReference(combinedNode.getBitMapNode(), combinedNode.getHashDigit(), newHead.getPosition());
-                    DiskMultiMatrixHashMap.this.nodeCache.remove(combinedNode.getBitMapNode().getPosition());
+                    DiskMultiMatrixHashMap.this.getHashMatrixNodeCache().remove(combinedNode.getBitMapNode().getPosition());
                 }
                 return returnValue;
             });
@@ -151,7 +151,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
                 if (combinedNode.getBitMapNode().getNext()[combinedNode.getHashDigit()] != newHead.getPosition()) {
                     combinedNode.setHead(newHead);
                     DiskMultiMatrixHashMap.this.updateHashMatrixReference(combinedNode.getBitMapNode(), combinedNode.getHashDigit(), newHead.getPosition());
-                    DiskMultiMatrixHashMap.this.nodeCache.remove(combinedNode.getBitMapNode().getPosition());
+                    DiskMultiMatrixHashMap.this.getHashMatrixNodeCache().remove(combinedNode.getBitMapNode().getPosition());
                 }
                 return returnValue;
             });
@@ -186,7 +186,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
      */
     @Override
     public boolean containsValue(Object value) {
-        for (DiskSkipListMap<K, V> kvDiskSkipListMap : (Iterable<DiskSkipListMap<K, V>>) this.getMaps()) {
+        for (DiskSkipListMap<K, V> kvDiskSkipListMap : this.getMaps()) {
             if (kvDiskSkipListMap.containsValue(value))
                 return true;
         }

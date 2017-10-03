@@ -120,7 +120,7 @@ abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Sto
          *
          * @return Returns the nex sub map
          */
-        override fun next(): Any = findNodeAtPosition(referenceStack.pop())
+        override fun next(): Any = findNodeAtPosition(referenceStack.pop())!!
     }
 
     /**
