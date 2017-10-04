@@ -1,6 +1,5 @@
 package com.onyx.diskmap.impl.base.skiplist
 
-import com.onyx.diskmap.base.skiplist.AbstractCachedSkipList
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
