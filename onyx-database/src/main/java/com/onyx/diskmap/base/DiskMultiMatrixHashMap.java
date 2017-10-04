@@ -5,6 +5,7 @@ import com.onyx.diskmap.SortedDiskMap;
 import com.onyx.concurrent.*;
 import com.onyx.concurrent.impl.DefaultDispatchLock;
 import com.onyx.concurrent.impl.EmptyMap;
+import com.onyx.diskmap.impl.DiskSkipListMap;
 import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix;
 import com.onyx.diskmap.data.CombinedIndexHashMatrixNode;
 import com.onyx.diskmap.data.HashMatrixNode;
@@ -31,7 +32,7 @@ import java.util.*;
  * maximum of 9999999999 Skip list heads.
  *
  * The difference between this and the DiskMultiHashMap is that this does not pre define the allocated space for the hash matrix
- * It does not becuase, if the loadFactor were to be 10, that would be a massive amount of storage space.  For smaller loadFactors
+ * It does not because, if the loadFactor were to be 10, that would be a massive amount of storage space.  For smaller loadFactors
  * where you can afford the allocation, the DiskMultiHashMap will perform better.
  *
  * @since 1.2.0 This was re-factored not to have a dependent sub map.
@@ -241,7 +242,7 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
         setHead(combinedNode.getHead());
 
         if (combinedNode.getHead() != null) {
-            return super.getRecID(key);
+            return super.getRecID((K)key);
         }
         return 0;
     }

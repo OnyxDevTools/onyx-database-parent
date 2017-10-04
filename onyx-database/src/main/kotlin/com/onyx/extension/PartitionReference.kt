@@ -4,7 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 /**
  * Hydrate a managed entity based on this partition reference
@@ -15,7 +15,7 @@ import com.onyx.util.ReflectionUtil
 fun Reference.toManagedEntity(context: SchemaContext, descriptor: EntityDescriptor):IManagedEntity {
     val entity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass)
     val records = entity.records(context = context, descriptor = descriptor, partitionId = partition)
-    return records.getWithRecID(reference)
+    return records.getWithRecID(reference)!!
 }
 
 /**

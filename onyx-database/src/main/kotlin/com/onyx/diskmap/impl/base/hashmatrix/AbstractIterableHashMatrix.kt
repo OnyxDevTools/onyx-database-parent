@@ -1,6 +1,6 @@
 package com.onyx.diskmap.impl.base.hashmatrix
 
-import com.onyx.diskmap.base.DiskSkipListMap
+import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListNode

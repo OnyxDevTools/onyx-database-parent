@@ -15,7 +15,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.context.Contexts
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 import kotlin.collections.HashMap
 
 /**

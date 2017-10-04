@@ -1,7 +1,7 @@
 package com.onyx.descriptor
 
 import com.onyx.util.ReflectionField
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 import java.lang.reflect.Field
 

@@ -6,7 +6,7 @@ import com.onyx.interactors.record.RecordInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.relationship.data.RelationshipReference
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 /**
  * Retrieve an entity based on this relationship reference information

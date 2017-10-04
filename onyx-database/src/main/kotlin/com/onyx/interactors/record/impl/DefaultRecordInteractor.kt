@@ -169,7 +169,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Hydrated entity
      */
     @Throws(OnyxException::class)
-    override fun getWithReferenceId(referenceId: Long): IManagedEntity = records.getWithRecID(referenceId)
+    override fun getWithReferenceId(referenceId: Long): IManagedEntity = records.getWithRecID(referenceId)!!
 
     /**
      * Returns a structure of the entity with a reference id
@@ -178,7 +178,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Entity as a map
      */
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(referenceId: Long): Map<String, Any?> = records.getMapWithRecID(referenceId)
+    override fun getMapWithReferenceId(referenceId: Long): Map<String, Any?> = records.getMapWithRecID(referenceId)!!
 
     /**
      * Get a specific attribute with reference Id

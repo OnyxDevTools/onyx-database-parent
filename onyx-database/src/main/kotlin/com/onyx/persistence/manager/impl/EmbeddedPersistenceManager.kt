@@ -13,7 +13,7 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 import java.util.*
 
 /**

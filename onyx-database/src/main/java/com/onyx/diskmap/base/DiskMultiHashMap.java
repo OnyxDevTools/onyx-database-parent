@@ -226,7 +226,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         setHead(combinedNode.getHead());
 
         if (combinedNode.getHead() != null) {
-            return super.getRecID(key);
+            return super.getRecID((K)key);
         }
 
         return 0;

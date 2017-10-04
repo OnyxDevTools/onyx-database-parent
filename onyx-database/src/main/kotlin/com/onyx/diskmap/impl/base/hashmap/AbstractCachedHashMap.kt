@@ -2,6 +2,7 @@ package com.onyx.diskmap.impl.base.hashmap
 
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
+import com.onyx.util.map.OptimisticLockingMap
 
 import java.nio.ByteBuffer
 import java.util.*
@@ -15,8 +16,8 @@ import java.util.*
  */
 abstract class AbstractCachedHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int) : AbstractHashMap<K, V>(fileStore, header, headless, loadFactor) {
 
-    protected var cache: MutableMap<Int, Long> = Collections.synchronizedMap(WeakHashMap())
-    protected var mapCache: MutableMap<Int, Int> = Collections.synchronizedMap(WeakHashMap())
+    protected var cache: MutableMap<Int, Long> = OptimisticLockingMap(WeakHashMap())
+    protected var mapCache: MutableMap<Int, Int> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * Insert nodeReference into the hash array.  This will add it to a cache before writing it to the store.

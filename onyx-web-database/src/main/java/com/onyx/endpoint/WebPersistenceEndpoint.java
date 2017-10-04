@@ -13,7 +13,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;
-import com.onyx.util.ReflectionUtil;
+import com.onyx.depricated.ReflectionUtil;
 
 import java.io.IOException;
 import java.util.List;

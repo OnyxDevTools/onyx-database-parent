@@ -21,28 +21,7 @@ import java.util.*
  * @param <V> Value Object Type
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableSkipList<K, V> : AbstractCachedSkipList<K, V> {
-
-    // region Constructors
-
-    /**
-     * Constructor with store.  Initialize the collection types
-     * @param store Underlying storage mechanism
-     * @param header Header location of the skip list
-     * @since 1.2.0
-     */
-    protected constructor(store: Store, header: Header) : super(store, header)
-
-    /**
-     * Constructor with store.  Initialize the collection types
-     * @param store Underlying storage mechanism
-     * @param header Header location of the skip list
-     * @param headless Whether the header should be ignored
-     * @since 1.2.0
-     */
-    protected constructor(store: Store, header: Header, headless: Boolean) : super(store, header, headless)
-
-    // endregion
+abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, headless: Boolean = false) : AbstractCachedSkipList<K, V>(store, header, headless) {
 
     // region Iterable Collections
 

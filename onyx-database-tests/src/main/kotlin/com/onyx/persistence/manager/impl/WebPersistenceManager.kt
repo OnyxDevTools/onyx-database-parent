@@ -2,7 +2,6 @@ package com.onyx.persistence.manager.impl
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.onyx.exception.*
-import com.onyx.extension.NULL_PARTITION
 import com.onyx.extension.identifier
 import com.onyx.extension.partitionValue
 import com.onyx.interactors.record.data.Reference
@@ -15,7 +14,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.request.pojo.*
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 import java.util.*
 

@@ -4,6 +4,7 @@ import com.onyx.diskmap.factory.data.MapType
 import com.onyx.diskmap.base.*
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.diskmap.store.impl.InMemoryStore
@@ -213,7 +214,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @param header Reference Node
      * @return Instantiated disk map
      */
-    private fun <T : Map<*,*>> newSkipListMap(store: Store, header: Header): T = DiskSkipListMap<Any,Any?>(store, header) as T
+    private fun <T : Map<*,*>> newSkipListMap(store: Store, header: Header): T = DiskSkipListMap<Any, Any?>(store, header) as T
 
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless

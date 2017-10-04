@@ -11,7 +11,7 @@ import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 import java.io.File
 import java.io.FileNotFoundException

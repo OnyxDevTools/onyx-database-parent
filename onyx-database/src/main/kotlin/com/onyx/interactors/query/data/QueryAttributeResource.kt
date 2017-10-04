@@ -7,7 +7,7 @@ import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 import java.util.ArrayList
 

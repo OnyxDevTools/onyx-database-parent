@@ -3,6 +3,7 @@ package com.onyx.diskmap.impl.base.hashmatrix
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
+import com.onyx.util.map.OptimisticLockingMap
 import java.util.*
 
 /**
@@ -16,7 +17,7 @@ import java.util.*
  */
 abstract class AbstractCachedHashMatrix<K, V>(fileStore: Store, header: Header, detached: Boolean) : AbstractHashMatrix<K, V>(fileStore, header, detached) {
 
-    protected var hashMatrixNodeCache: MutableMap<Long, HashMatrixNode> = Collections.synchronizedMap(WeakHashMap<Long, HashMatrixNode>())
+    protected var hashMatrixNodeCache: MutableMap<Long, HashMatrixNode> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * Get Hash Matrix Node.  This will check the cache first.  If it does not exist in the cache, check the volume

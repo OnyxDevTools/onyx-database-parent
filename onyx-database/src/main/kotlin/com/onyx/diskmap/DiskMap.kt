@@ -57,7 +57,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @param recordId Position within store
      * @return Record value
      */
-    fun getWithRecID(recordId: Long): V
+    fun getWithRecID(recordId: Long): V?
 
     /**
      * Get structure key with record id
@@ -65,7 +65,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @param recordId Position within Store
      * @return Record in format of a Map
      */
-    fun getMapWithRecID(recordId: Long): Map<String, Any?>
+    fun getMapWithRecID(recordId: Long): Map<String, Any?>?
 
     /**
      * Get Attribute with record id

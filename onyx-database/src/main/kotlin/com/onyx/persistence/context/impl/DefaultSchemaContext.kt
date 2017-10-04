@@ -39,7 +39,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.util.EntityClassLoader
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
 import java.io.File

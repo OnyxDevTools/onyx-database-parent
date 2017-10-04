@@ -4,8 +4,8 @@ import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
-import com.onyx.util.map.CompatWeakHashMap
-import com.onyx.util.map.WriteSynchronizedMap
+import com.onyx.util.map.OptimisticLockingMap
+import java.util.*
 
 /**
  * Created by tosborn1 on 1/7/17.
@@ -24,8 +24,8 @@ import com.onyx.util.map.WriteSynchronizedMap
 abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore: Store, header: Header, headless: Boolean = false) : AbstractSkipList<K, V>(fileStore, header, headless) {
 
     // Caching maps
-    protected var keyCache: MutableMap<K, SkipListNode<K>> = WriteSynchronizedMap(CompatWeakHashMap())
-    protected var valueByPositionCache: MutableMap<Long, V?> = WriteSynchronizedMap(CompatWeakHashMap())
+    protected var keyCache: MutableMap<K, SkipListNode<K>> = OptimisticLockingMap(WeakHashMap())
+    protected var valueByPositionCache: MutableMap<Long, V?> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * Creates and caches the new data as well as its value.

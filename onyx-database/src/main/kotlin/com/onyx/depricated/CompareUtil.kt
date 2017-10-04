@@ -10,7 +10,6 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.util.ReflectionUtil
 
 import java.util.*
 import kotlin.reflect.KClass

@@ -1,4 +1,4 @@
-package com.onyx.util
+package com.onyx.depricated
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.AttributeMissingException
@@ -8,6 +8,7 @@ import com.onyx.extension.common.castTo
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.*
+import com.onyx.util.ReflectionField
 
 import java.lang.reflect.*
 import java.util.*
@@ -176,7 +177,7 @@ object ReflectionUtil {
     fun copy(orig: IManagedEntity, dest: IManagedEntity, descriptor: EntityDescriptor) {
         descriptor.reflectionFields.values.forEach {
             catchAll {
-                ReflectionUtil.setAny(dest, ReflectionUtil.getAny(orig, it), it)
+                setAny(dest, getAny(orig, it), it)
             }
         }
     }

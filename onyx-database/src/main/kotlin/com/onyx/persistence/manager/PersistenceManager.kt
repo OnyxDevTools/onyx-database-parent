@@ -8,7 +8,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.*
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.util.ReflectionUtil
 import java.util.*
 
 /**

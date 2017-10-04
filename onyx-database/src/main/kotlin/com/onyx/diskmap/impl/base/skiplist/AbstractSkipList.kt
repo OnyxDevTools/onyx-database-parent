@@ -11,8 +11,7 @@ import com.onyx.diskmap.store.Store
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.util.map.CompatWeakHashMap
-import com.onyx.util.map.WriteSynchronizedMap
+import com.onyx.util.map.OptimisticLockingMap
 import java.util.*
 
 /**
@@ -35,7 +34,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
     private lateinit var threadLocalHead: ThreadLocal<SkipListHeadNode> // Default threadLocalHead of the SkipList
-    protected var nodeCache: MutableMap<Long, SkipListHeadNode> = WriteSynchronizedMap(CompatWeakHashMap())
+    protected var nodeCache: MutableMap<Long, SkipListHeadNode> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * If the map is detached it means there could be any number of threads using it as a different map.  For that
@@ -353,7 +352,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      *
      * @since 1.2.0
      */
-    protected fun getRecordValueAsDictionary(node: SkipListNode<K>): Map<*, *> {
+    protected fun getRecordValueAsDictionary(node: SkipListNode<K>): Map<String, Any?> {
         val buffer = fileStore.read(node.recordPosition, node.recordSize)
         return buffer.perform {
             it!!.toMap(fileStore.context!!)

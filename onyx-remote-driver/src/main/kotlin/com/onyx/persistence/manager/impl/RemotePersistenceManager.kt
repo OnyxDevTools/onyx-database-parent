@@ -13,7 +13,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.impl.RemoteQueryListener
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an remote database.

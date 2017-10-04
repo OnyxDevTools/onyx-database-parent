@@ -3,7 +3,7 @@ package com.onyx.extension
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 // Indicates null value for a partition
 val NULL_PARTITION = ""

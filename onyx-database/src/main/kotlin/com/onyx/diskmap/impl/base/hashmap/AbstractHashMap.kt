@@ -1,7 +1,7 @@
 package com.onyx.diskmap.impl.base.hashmap
 
 import com.onyx.buffer.BufferPool
-import com.onyx.diskmap.base.DiskSkipListMap
+import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.perform
@@ -47,7 +47,7 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
             val position = header.firstNode
             val stream = fileStore.read(position, Integer.BYTES)
             stream.perform {
-                mapCount = AtomicInteger(stream!!.int)
+                mapCount = AtomicInteger(it!!.int)
             }
         }
 

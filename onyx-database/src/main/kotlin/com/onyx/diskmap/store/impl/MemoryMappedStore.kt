@@ -9,7 +9,7 @@ import com.onyx.extension.common.catchAll
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.util.ReflectionUtil
+import com.onyx.depricated.ReflectionUtil
 
 import java.io.FileNotFoundException
 import java.io.IOException
