@@ -85,9 +85,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         // The reason for this is because the rest of the put logic will not start from the root level
         if (updateValue(key, value))
             return value
-
-        val hash = hash(key)
-
         var head = head
 
         val level = selectHeadLevel()
@@ -107,7 +104,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             next = findNodeAtPosition(current.next)
 
-            if (current.next == 0L || shouldMoveDown(key, next.key)) {
+            if (current.next == 0L || shouldMoveDown(key, (next as SkipListNode<K>).key)) {
                 if (level >= current.level) {
                     val newNode = createNewNode(key, value, current.level, if (next == null) 0L else next.position, 0L, cache, if (recordIndicatorNode == null) -1 else recordIndicatorNode.recordId)
                     if (recordIndicatorNode == null) {
@@ -150,13 +147,12 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         // Whether we found the corresponding reference or not.
         var victory = false
 
-        val hash = hash(key)
         var current: SkipListHeadNode? = head
         while (current != null) {
 
             val next = findNodeAtPosition(current.next)
 
-            if (current.next == 0L || shouldMoveDown(key, next.key)) {
+            if (current.next == 0L || shouldMoveDown(key, (next as SkipListNode<K>).key)) {
 
                 // We found the record we want
                 if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
@@ -225,7 +221,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         // Whether we found the corresponding reference or not.
         var victory = false
 
-        val hash = hash(key)
         var current: SkipListHeadNode? = head
         while (current != null) {
 
@@ -268,15 +263,13 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         if (key == null)
             return null
 
-        val hash = hash(key)
-
         var current: SkipListHeadNode? = head
 
         while (current != null) {
             val next = findNodeAtPosition(current.next)
             if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
                 return next
-            } else if (current.next == 0L || next != null && shouldMoveDown(key, next.key)) {
+            } else if (current.next == 0L || next != null && shouldMoveDown(key, (next as SkipListNode<K>).key)) {
                 current = findNodeAtPosition(current.down)
                 continue
             }// Next data does not have values so we must move on down and continue the loop.
@@ -328,8 +321,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * The purpose of this method is to either utilize comparable so that the data set can be ordered.  If not,
      * it is based on the hash code of the keys
      *
-     * @param hash  Hash Code of key 1
-     * @param hash2 Hash code of key 2
      * @param key   The actual key of value 1
      * @param key2  The actual key of value 2
      * @return If the keys are comparable return the result of that.  Othwerwise return the comparison of hash codes
@@ -582,6 +573,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         return newNode!!
     }
 
+    // TODO: Change this to pull a minimum size
     /**
      * Pull a data from the store.  Since we do not know the size of the data, we must first look that up.
      * This will also return null if the data position is 0L.
