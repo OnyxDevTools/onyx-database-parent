@@ -10,7 +10,7 @@ import java.util.ArrayDeque
  */
 object BufferPool {
 
-    private val NUMBER_SMALL_BUFFERS = 100
+    private val NUMBER_SMALL_BUFFERS = 200
     private val NUMBER_MEDIUM_BUFFERS = 50
     private val NUMBER_LARGE_BUFFERS = 25
 

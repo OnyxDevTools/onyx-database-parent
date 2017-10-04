@@ -2,6 +2,7 @@ package com.onyx.diskmap.impl.base.skiplist
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
+import com.onyx.concurrent.impl.EmptyMap
 import com.onyx.depricated.CompareUtil
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
@@ -11,6 +12,8 @@ import com.onyx.diskmap.store.Store
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.util.map.CompatWeakHashMap
+import com.onyx.util.map.WriteSynchronizedMap
 import java.util.*
 
 /**
@@ -33,7 +36,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
     // Head.  If the map is detached i.e. does not point to a specific head, a thread local list of heads are provided
     private lateinit var threadLocalHead: ThreadLocal<SkipListHeadNode> // Default threadLocalHead of the SkipList
-    protected var nodeCache: MutableMap<Long, SkipListHeadNode> = Collections.synchronizedMap(WeakHashMap())//WriteSynchronizedMap(CompatWeakHashMap())
+    protected var nodeCache: MutableMap<Long, SkipListHeadNode> = WriteSynchronizedMap(CompatWeakHashMap())
 
     /**
      * If the map is detached it means there could be any number of threads using it as a different map.  For that
@@ -259,10 +262,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @return Its corresponding data
      * @since 1.2.0
      */
-    protected open fun find(key: K?): SkipListNode<K>? {
-        if (key == null)
-            return null
-
+    protected open fun find(key: K): SkipListNode<K>? {
         var current: SkipListHeadNode? = head
 
         while (current != null) {
@@ -506,7 +506,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             stream.clearReferences() // Make sure we do not track previous references such as the value.  They need to be on different paths so they can be individually hydrated from store
 
-            val sizeOfNode = keySize + SkipListNode.BASE_SKIP_LIST_NODE_SIZE
+            val sizeOfNode = keySize + SkipListNode.SKIP_LIST_NODE_SIZE
 
             // Allocate the space on the file.  Size of the data, record size, and size indicator as Integer.BYTES
             val recordPosition = fileStore.allocate(sizeOfNode + recordSize + Integer.BYTES)

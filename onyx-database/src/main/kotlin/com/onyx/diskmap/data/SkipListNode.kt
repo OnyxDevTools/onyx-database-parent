@@ -47,7 +47,8 @@ class SkipListNode<K> : SkipListHeadNode {
     }
 
     companion object {
-        val BASE_SKIP_LIST_NODE_SIZE = java.lang.Long.BYTES * 4 + java.lang.Byte.BYTES + Integer.BYTES
+        val BASE_SKIP_LIST_NODE_SIZE = java.lang.Long.BYTES * 2 + java.lang.Byte.BYTES
+        val SKIP_LIST_NODE_SIZE = java.lang.Long.BYTES * 4 + java.lang.Byte.BYTES + java.lang.Integer.BYTES
         object KEY
     }
 

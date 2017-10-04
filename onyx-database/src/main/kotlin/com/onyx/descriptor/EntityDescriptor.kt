@@ -52,7 +52,12 @@ constructor(
         var tmpClass: Class<*> = entityClass
 
         while (tmpClass != Any::class.java) {
-            fields.addAll(Arrays.asList(*tmpClass.declaredFields))
+            val newFields = Arrays.asList(*tmpClass.declaredFields)
+            // Only add ones that have not already been added
+            fields.addAll(newFields.filter { newField ->
+                fields.find { it.name == newField.name } == null
+            })
+
             tmpClass = tmpClass.superclass
         }
         return@lazy fields

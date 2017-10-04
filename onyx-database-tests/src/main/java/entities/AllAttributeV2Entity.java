@@ -1,5 +1,6 @@
 package entities;
 
+import com.onyx.depricated.CompareUtil;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
@@ -56,6 +57,11 @@ public class AllAttributeV2Entity extends AllAttributeEntity {
     @Override
     public boolean equals(Object o)
     {
-        return (o instanceof AllAttributeV2Entity && ((AllAttributeV2Entity) o).id.equals(id));
+        return (o instanceof AllAttributeV2Entity && CompareUtil.forceCompare(((AllAttributeV2Entity) o).id, id));
+    }
+
+    @Override
+    public int hashCode() {
+        if(id == null) return 0; else return id.hashCode();
     }
 }

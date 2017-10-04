@@ -1,4 +1,4 @@
-package com.onyx.diskmap.base.hashmatrix
+package com.onyx.diskmap.impl.base.hashmatrix
 
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header

@@ -41,8 +41,4 @@ open class SkipListHeadNode : BufferStreamable {
     override fun equals(other: Any?): Boolean = other is SkipListHeadNode && other.position == position
     override fun hashCode(): Int  = position.hashCode()
 
-    companion object {
-
-        val HEAD_SKIP_LIST_NODE_SIZE = java.lang.Long.BYTES * 2 + java.lang.Byte.BYTES
-    }
 }

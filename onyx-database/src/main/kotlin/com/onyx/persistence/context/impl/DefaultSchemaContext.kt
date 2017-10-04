@@ -39,6 +39,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.util.EntityClassLoader
+import com.onyx.util.ReflectionUtil
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
 import java.io.File
@@ -404,7 +405,7 @@ open class DefaultSchemaContext : SchemaContext {
             val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
             if (result != null) {
                 synchronized(systemEntityByIDMap) {
-                systemEntityByIDMap.put(result.primaryKey, result)
+                    systemEntityByIDMap.put(result.primaryKey, result)
                 }
                 result.attributes.sortBy { it.name }
                 result.relationships.sortBy { it.name }
@@ -426,7 +427,7 @@ open class DefaultSchemaContext : SchemaContext {
 
             if (entity != null) {
                 synchronized(defaultSystemEntities) {
-                defaultSystemEntities.put(entity.name, entity)
+                    defaultSystemEntities.put(entity.name, entity)
                 }
 
                 entity.attributes.sortBy { it.name }
@@ -515,6 +516,10 @@ open class DefaultSchemaContext : SchemaContext {
 
                 checkForValidDescriptorPartition(descriptor, systemEntity)
                 checkForEntityChanges(descriptor, systemEntity)
+
+                // Make sure entity attributes have loaded descriptors
+                descriptor.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
+                                            .forEach { getDescriptorForEntity(ReflectionUtil.createNewEntity<IManagedEntity>(it.field.type), "") }
 
                 EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
 

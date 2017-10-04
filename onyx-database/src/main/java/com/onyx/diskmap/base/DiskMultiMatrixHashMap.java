@@ -69,8 +69,8 @@ public class DiskMultiMatrixHashMap<K, V> extends AbstractIterableHashMatrix<K, 
         this.dispatchLock = dispatchLock;
         this.setLoadFactor((byte) loadFactor);
         this.setHashMatrixNodeCache(new EmptyMap());
-        this.valueByPositionCache = new EmptyMap();
-        this.keyCache = new EmptyMap();
+        this.setValueByPositionCache(new EmptyMap());
+        this.setKeyCache(new EmptyMap());
     }
 
     /**

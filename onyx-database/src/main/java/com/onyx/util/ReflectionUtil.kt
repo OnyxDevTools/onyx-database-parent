@@ -281,14 +281,14 @@ object ReflectionUtil {
      * can either return a primitive or an value.  Note: If inteneded to get a
      * primitive, I recommend using the other api methods to avoid autoboxing.
      *
-     * @param object      Parent value
+     * @param `value`      Parent value
      * @param reflectionField field to get
      * @return field key
      */
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
-    fun <T> getAny(`object`: Any, reflectionField: ReflectionField): T = try {
-        reflectionField.field.get(`object`)
+    fun <T> getAny(value: Any, reflectionField: ReflectionField): T = try {
+        reflectionField.field.get(value)
     } catch (e2: Exception) {
         null
     } as T
