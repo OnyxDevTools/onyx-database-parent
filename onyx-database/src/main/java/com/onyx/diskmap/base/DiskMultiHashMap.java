@@ -65,8 +65,8 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         super(fileStore, header, true, loadFactor);
         this.dispatchLock = dispatchLock;
         this.setNodeCache(new EmptyMap());
-        this.mapCache = new EmptyMap();
-        this.cache = new EmptyMap();
+        this.setMapCache(new EmptyMap());
+        this.setCache(new EmptyMap());
         this.setValueByPositionCache(new EmptyMap());
         this.setKeyCache(new EmptyMap());
     }
@@ -86,8 +86,8 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         super(fileStore, header, true, loadFactor);
 
         if (!stateless) {
-            cache = new EmptyMap();
-            mapCache = new EmptyMap();
+            setCache(new EmptyMap());
+            setMapCache(new EmptyMap());
             setKeyCache(new EmptyMap());
             setValueByPositionCache(new EmptyMap());
             setNodeCache(new EmptyMap());
@@ -138,7 +138,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
                 SkipListHeadNode newHead = getHead();
                 combinedNode.setHead(newHead);
                 if (newHead.getPosition() != headPosition) {
-                    updateReference(combinedNode.getMapId(), newHead.getPosition());
+                    updateSkipListReference(combinedNode.getMapId(), newHead.getPosition());
                 }
                 return returnValue;
 
@@ -168,7 +168,7 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
                 SkipListHeadNode newHead = getHead();
                 combinedNode.setHead(newHead);
                 if (newHead.getPosition() != headPosition) {
-                    updateReference(combinedNode.getMapId(), newHead.getPosition());
+                    updateSkipListReference(combinedNode.getMapId(), newHead.getPosition());
                 }
                 return returnValue;
             });
@@ -283,16 +283,16 @@ public class DiskMultiHashMap<K, V> extends AbstractIterableMultiMapHashMap<K, V
         return (CombinedIndexHashNode) this.dispatchLock.performWithLock(this.getReference(), o -> {
             if (forInsert) {
                 SkipListHeadNode headNode1;
-                long reference = DiskMultiHashMap.super.getReference(skipListMapId);
+                long reference = DiskMultiHashMap.super.getSkipListReference(skipListMapId);
                 if (reference == 0) {
                     headNode1 = createHeadNode(Byte.MIN_VALUE, 0L, 0L);
-                    insertReference(skipListMapId, headNode1.getPosition());
+                    insertSkipListReference(skipListMapId, headNode1.getPosition());
                     return new CombinedIndexHashNode(headNode1, skipListMapId);
                 } else {
                     return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
                 }
             } else {
-                long reference = DiskMultiHashMap.super.getReference(skipListMapId);
+                long reference = DiskMultiHashMap.super.getSkipListReference(skipListMapId);
                 if (reference > 0)
                     return new CombinedIndexHashNode(findNodeAtPosition(reference), skipListMapId);
                 else

@@ -2,7 +2,6 @@ package com.onyx.diskmap.impl.base.skiplist
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
-import com.onyx.concurrent.impl.EmptyMap
 import com.onyx.depricated.CompareUtil
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
@@ -167,9 +166,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                     removeNode(current)
 
                     victory = true
-
-                    if (value == null)
-                        value = java.lang.Boolean.TRUE as V
                 }
 
                 // We must continue on.  There could be multiple references within the SkipList
@@ -276,7 +272,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             current = next
         }
-
 
         // Boo it wasn't found.
         return null
@@ -573,7 +568,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         return newNode!!
     }
 
-    // TODO: Change this to pull a minimum size
     /**
      * Pull a data from the store.  Since we do not know the size of the data, we must first look that up.
      * This will also return null if the data position is 0L.

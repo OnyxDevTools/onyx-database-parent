@@ -1,6 +1,5 @@
 package com.onyx.diskmap.impl.base.hashmap
 
-import com.onyx.diskmap.base.hashmap.AbstractCachedHashMap
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
 
@@ -30,12 +29,12 @@ abstract class AbstractIterableHashMap<K, V>(fileStore: Store, header: Header, h
 
         internal var index = 0
 
-        override fun hasNext(): Boolean = index < mapCount
+        override fun hasNext(): Boolean = index < mapCount.get()
 
         override fun next(): Long {
             try {
-                val mapId = getMapIdentifier(index)
-                return getReference(mapId)
+                val mapId = getSkipListIdentifier(index)
+                return getSkipListReference(mapId)
             } finally {
                 index++
             }
@@ -45,6 +44,6 @@ abstract class AbstractIterableHashMap<K, V>(fileStore: Store, header: Header, h
     private inner class SkipListMapSet<T> : AbstractCollection<T>() {
         override fun iterator(): MutableIterator<T> = SkipListMapIterator() as MutableIterator<T>
         override val size: Int
-            get() = mapCount
+            get() = mapCount.get()
     }
 }
