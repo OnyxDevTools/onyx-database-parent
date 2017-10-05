@@ -11,10 +11,9 @@ import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.depricated.CompareUtil
-import com.onyx.reflection.ReflectionField
-import com.onyx.reflection.Reflection
-
+import com.onyx.extension.common.forceCompare
+import com.onyx.extension.common.getAny
+import java.lang.reflect.Field
 import java.util.HashSet
 
 /**
@@ -174,17 +173,17 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      */
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> getAttributeWithRecID(attribute: ReflectionField, reference: Long): T {
+    override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T {
         val node = findNodeAtPosition(reference) as SkipListNode<K>?
         val value = findValueAtPosition(node!!.recordPosition, node.recordSize) ?: return null as T
-        return Reflection.getAny<Any>(value, attribute) as T
+        return value.getAny<T>(attribute)
     }
 
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> getAttributeWithRecID(field: ReflectionField, reference: SkipListNode<*>): T {
+    override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipListNode<*>): T {
         val value = findValueAtPosition(reference.recordPosition, reference.recordSize) ?: return null as T
-        return Reflection.getAny<Any>(value, field) as T
+        return value.getAny<T>(field)
     }
 
     /**
@@ -217,8 +216,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
                     }
 
                     when {
-                        CompareUtil.forceCompare(index, node.key) && includeFirst -> results.add(node.recordId)
-                        CompareUtil.forceCompare(index, node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordId)
+                        index.forceCompare(node.key) && includeFirst -> results.add(node.recordId)
+                        index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordId)
                     }
                 }
 
@@ -251,18 +250,18 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
         loop@ while (node!!.next != 0L) {
             node = findNodeAtPosition(node.next)
             if (node is SkipListNode<*>) {
-                val isEqual = CompareUtil.forceCompare(index, node.key)
+                val isEqual = index.forceCompare(node.key)
                 when {
                     isEqual && !includeFirst -> break@loop
                     isEqual && includeFirst -> {
                         results.add(node.recordId)
                         continue@loop
                     }
-                    CompareUtil.forceCompare(index, node.key, QueryCriteriaOperator.LESS_THAN) -> {
+                    index.forceCompare(node.key, QueryCriteriaOperator.LESS_THAN) -> {
                         results.add(node.recordId)
                         continue@loop
                     }
-                    CompareUtil.forceCompare(index, node.key, QueryCriteriaOperator.GREATER_THAN) -> break@loop
+                    index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> break@loop
                     @Suppress("UNCHECKED_CAST")
                     this.shouldMoveDown(index, node.key as K) -> break@loop
                 }

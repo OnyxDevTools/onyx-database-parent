@@ -9,7 +9,7 @@ import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
-import com.onyx.depricated.CompareUtil
+import com.onyx.extension.meetsCriteria
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.map.OptimisticLockingMap
 
@@ -45,19 +45,16 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      */
     override fun setCachedQueryResults(query: Query, results: MutableMap<Reference, Any?>): CachedResults {
         val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }
+        val cachedResults = CachedResults(results)
 
-        return synchronized(queryCachedResultsMap) {
-            val cachedResults = CachedResults(results)
+        // Set a strong reference if this is a query listener.  In that
+        // case we do not want it to get cleaned up.
+        if (query.changeListener != null)
+            queryCachedResultsMap.putStrongReference(query, cachedResults)
+        else
+            queryCachedResultsMap.put(query, cachedResults)
 
-            // Set a strong reference if this is a query listener.  In that
-            // case we do not want it to get cleaned up.
-            if (query.changeListener != null)
-                queryCachedResultsMap.putStrongReference(query, cachedResults)
-            else
-                queryCachedResultsMap.put(query, cachedResults)
-
-            return@synchronized cachedResults
-        }
+        return cachedResults
 
     }
 
@@ -67,28 +64,23 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @param entity Entity that was potentially inserted, updated, or deleted.
      * @param descriptor The entity's descriptor
-     * @param reference The entity's reference
+     * @param entityReference The entity's reference
      * @param type Whether or not to remove it from the cache.  In this case, it would be if an entity was deleted.
      *
      * @since 1.3.0
      */
-    override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, reference: Reference, type: QueryListenerEvent) {
+    override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: Reference, type: QueryListenerEvent) {
         val queryCacheMap = cachedQueriesByClass[entity::class.java] ?: return
 
         queryCacheMap.forEach { query, cachedResults ->
             // If indicated to remove the record, delete it and move on
             if (type != QueryListenerEvent.INSERT && type != QueryListenerEvent.UPDATE) {
-                synchronized(cachedResults!!) {
-                    cachedResults.remove(reference, entity, type, CompareUtil.meetsCriteria(query.getAllCriteria(), query.criteria!!, entity, reference, context, descriptor))
-                }
-            } else if (CompareUtil.meetsCriteria(query.getAllCriteria(), query.criteria!!, entity, reference, context, descriptor)) {
-
-                synchronized(cachedResults!!) {
-                    if (query.selections != null && query.selections!!.isNotEmpty()) {
-                        cachedResults.put(reference, reference, type)
-                    } else {
-                        cachedResults.put(reference, entity, type)
-                    }
+                cachedResults!!.remove(entityReference, entity, type, query.meetsCriteria(entity, entityReference, context, descriptor))
+            } else if (query.meetsCriteria(entity, entityReference, context, descriptor)) {
+                if (query.selections != null && query.selections!!.isNotEmpty()) {
+                    cachedResults!!.put(entityReference, entityReference, type)
+                } else {
+                    cachedResults!!.put(entityReference, entity, type)
                 }
             }
         }
@@ -102,16 +94,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      */
     override fun subscribe(query: Query) {
         val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }
-        queryCachedResultsMap.compute(query) { _, results ->
-            return@compute if (results != null) {
-                results.subscribe(query.changeListener!!)
-                results
-            } else {
-                val newResults = CachedResults(null)
-                newResults.subscribe(query.changeListener!!)
-                newResults
-            }
-        }
+        queryCachedResultsMap.getOrPut(query) { CachedResults(null) }.subscribe(query.changeListener!!)
     }
 
     /**
@@ -124,7 +107,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @since 1.3.0
      */
-    override fun subscribe(results: CachedResults, queryListener: QueryListener<*>) = results.subscribe(queryListener)
+    override fun subscribe(results: CachedResults, queryListener: QueryListener<*>) { results.subscribe(queryListener) }
 
     /**
      * Un-subscribe query.  This must be done manually.  The un-subscribe will not
@@ -168,9 +151,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
                 if(cachedResults == null)
                     cachedResults = setCachedQueryResults(query, results as MutableMap<Reference, Any?>)
                 else
-                    synchronized(cachedResults) {
-                        cachedResults!!.references = results as MutableMap<Reference, Any?>
-                    }
+                    cachedResults.references = results as MutableMap<Reference, Any?>
             }
 
             query.resultsCount = results.size

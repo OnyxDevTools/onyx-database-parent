@@ -1,8 +1,5 @@
 package com.onyx.descriptor
 
-import com.onyx.reflection.ReflectionField
-import com.onyx.reflection.Reflection
-
 import java.lang.reflect.Field
 
 /**
@@ -16,15 +13,7 @@ abstract class AbstractBaseDescriptor {
      * Get Reflection field
      */
     @Transient
-    lateinit var field: ReflectionField
+    lateinit var field: Field
 
-    /**
-     * Set field and derive a reflection field
-     * @param field Field based on property
-     *
-     * @since 1.3.0 - Effort to cleanup reflection
-     */
-    fun setReflectionField(field: Field) {
-        this.field = Reflection.getReflectionField(field)
-    }
+
 }

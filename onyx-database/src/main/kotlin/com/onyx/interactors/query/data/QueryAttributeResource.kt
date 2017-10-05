@@ -5,9 +5,9 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.createNewEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
-import com.onyx.reflection.Reflection
 
 import java.util.ArrayList
 
@@ -59,7 +59,7 @@ class QueryAttributeResource private constructor(
                     for (p in 0 until attributeTokens.size - 1) {
                         val token = attributeTokens[p]
                         relationshipDescriptor = previousDescriptor.relationships[token]
-                        tmpObject = Reflection.createNewEntity(relationshipDescriptor!!.inverseClass) // Keep on getting the descriptors until we get what we need
+                        tmpObject = relationshipDescriptor!!.inverseClass.createNewEntity() // Keep on getting the descriptors until we get what we need
                         previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
                     }
 
@@ -73,7 +73,7 @@ class QueryAttributeResource private constructor(
                         if (relationshipDescriptor == null) {
                             throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.entityClass.name)
                         } else {
-                            tmpObject = Reflection.createNewEntity(relationshipDescriptor.inverseClass) // Keep on getting the descriptors until we get what we need
+                            tmpObject = relationshipDescriptor.inverseClass.createNewEntity() // Keep on getting the descriptors until we get what we need
                             previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
 
                             scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute))

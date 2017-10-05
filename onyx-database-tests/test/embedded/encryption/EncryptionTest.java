@@ -1,7 +1,7 @@
 package embedded.encryption;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.interactors.encryption.DefaultEncryptionInteractor;
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

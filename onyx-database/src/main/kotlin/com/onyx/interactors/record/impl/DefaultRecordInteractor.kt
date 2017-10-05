@@ -12,7 +12,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
-import com.onyx.reflection.ReflectionField
+import java.lang.reflect.Field
 
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -88,7 +88,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
         context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, entity.reference(context), if (isNew.get()) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
 
         // Return the id
-        return identifierValue!!
+        return identifierValue
     }
 
     /**
@@ -174,11 +174,11 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
     /**
      * Returns a structure of the entity with a reference id
      *
-     * @param referenceId Entity reference id
+     * @param reference Entity reference id
      * @return Entity as a map
      */
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(referenceId: Long): Map<String, Any?> = records.getMapWithRecID(referenceId)!!
+    override fun getMapWithReferenceId(reference: Long): Map<String, Any?> = records.getMapWithRecID(reference)!!
 
     /**
      * Get a specific attribute with reference Id
@@ -188,7 +188,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Attribute key
      */
     @Throws(AttributeTypeMismatchException::class)
-    override fun getAttributeWithReferenceId(attribute: ReflectionField, referenceId: Long): Any? = records.getAttributeWithRecID(attribute, referenceId)
+    override fun getAttributeWithReferenceId(attribute: Field, referenceId: Long): Any? = records.getAttributeWithRecID(attribute, referenceId)
 
     /**
      * Find all objects greater than the key parameter.  The underlying data

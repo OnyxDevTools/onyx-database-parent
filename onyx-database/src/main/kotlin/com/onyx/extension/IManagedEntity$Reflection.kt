@@ -1,9 +1,13 @@
 package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.exception.InvalidConstructorException
+import com.onyx.extension.common.catchAll
+import com.onyx.extension.common.getAny
+import com.onyx.extension.common.instance
+import com.onyx.extension.common.setAny
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.reflection.Reflection
 
 // Indicates null value for a partition
 val NULL_PARTITION = ""
@@ -15,7 +19,7 @@ val NULL_PARTITION = ""
  * @return Property value of the identifier field
  * @since 2.0.0
  */
-fun IManagedEntity.identifier(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")):Any? = Reflection.getAny(this, descriptor!!.identifier!!.field)
+fun IManagedEntity.identifier(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")):Any? = this.getAny(descriptor!!.identifier!!.field)
 
 /**
  * Copy an entity's properties from another entity of the same type
@@ -25,7 +29,13 @@ fun IManagedEntity.identifier(context: SchemaContext? = null, descriptor: Entity
  * @param descriptor Contains entity property information
  * @since 2.0.0
  */
-fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) = Reflection.copy(from, this, descriptor!!)
+fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) {
+    descriptor!!.reflectionFields.values.forEach {
+        catchAll {
+            this.setAny(it,from.getAny(it))
+        }
+    }
+}
 
 /**
  * Get the partition field value from the entity.  If the partition field does not exist it will return an empty value
@@ -46,10 +56,24 @@ fun IManagedEntity.partitionValue(context: SchemaContext? = null, descriptor: En
  * @since 2.0.0
  */
 @Suppress("UNCHECKED_CAST")
-operator fun <T> IManagedEntity.get(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name:String): T? = Reflection.getAny<T>(this, descriptor!!.reflectionFields!![name]!!) as T?
+operator fun <T> IManagedEntity.get(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name:String): T? = this.getAny(descriptor!!.reflectionFields[name]!!)
 
 /**
  * Overload operator to use entity[context, property] = value syntax
  * @since 2.0.0
  */
-operator fun <T> IManagedEntity.set(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name: String, value:T):T  { Reflection.setAny(this, value, descriptor!!.reflectionFields!![name]!!); return value }
+operator fun <T> IManagedEntity.set(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name: String, value:T):T  { this.setAny(descriptor!!.reflectionFields[name]!!, value); return value }
+
+/**
+ * Instantiate a managed entity.  The only difference with this method is the exception handling
+ * @return New Instance
+ * @throws InvalidConstructorException Exception occurred while creating new value
+ *
+ * @since 2.0.0 Moved from Entity Descriptor class since it should not be creating new objects
+ */
+@Throws(InvalidConstructorException::class)
+fun <T : IManagedEntity> Class<*>.createNewEntity(): T = try {
+    this.instance()
+} catch (e1: Exception) {
+    throw InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e1)
+}

@@ -1,6 +1,6 @@
 package com.onyx.descriptor
 
-import com.onyx.reflection.ReflectionField
+import java.lang.reflect.Field
 
 interface BaseDescriptor {
 
@@ -12,5 +12,5 @@ interface BaseDescriptor {
     /**
      * Get the reflection field associated to the descriptor
      */
-    val field: ReflectionField
+    val field: Field
 }

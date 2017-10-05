@@ -35,7 +35,7 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
 
 
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_UPDATES = 30000;
+    private int NUMBER_OF_UPDATES = 3000000;
     @SuppressWarnings("FieldCanBeLocalTe")
     private int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
 

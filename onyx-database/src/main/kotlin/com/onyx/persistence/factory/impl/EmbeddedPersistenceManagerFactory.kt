@@ -7,7 +7,7 @@ import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
-import com.onyx.interactors.encryption.DefaultEncryptionInteractor
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
 
 import java.io.*

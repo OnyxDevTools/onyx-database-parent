@@ -3,8 +3,7 @@ package com.onyx.buffer
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
-import com.onyx.extension.common.getFields
-import com.onyx.reflection.Reflection
+import com.onyx.extension.common.*
 
 import java.lang.reflect.Array
 import java.nio.BufferUnderflowException
@@ -320,20 +319,20 @@ class BufferStream(buffer: ByteBuffer) {
             val objectType = value as Class<*>
             val instance: Any
             try {
-                instance = Reflection.instantiate(objectType)
+                instance = objectType.instance()
                 addReference(instance)
 
                 instance.getFields().forEach {
                     when {
-                        it.type == Long::class.javaPrimitiveType -> Reflection.setLong(instance, it, long)
-                        it.type == Int::class.javaPrimitiveType -> Reflection.setInt(instance, it, int)
-                        it.type == Double::class.javaPrimitiveType -> Reflection.setDouble(instance, it, double)
-                        it.type == Float::class.javaPrimitiveType -> Reflection.setFloat(instance, it, float)
-                        it.type == Byte::class.javaPrimitiveType -> Reflection.setByte(instance, it, byte)
-                        it.type == Char::class.javaPrimitiveType -> Reflection.setChar(instance, it, char)
-                        it.type == Short::class.javaPrimitiveType -> Reflection.setShort(instance, it, short)
-                        it.type == Boolean::class.javaPrimitiveType -> Reflection.setBoolean(instance, it, boolean)
-                        else -> Reflection.setObject(instance, it, value)
+                        it.type == Long::class.javaPrimitiveType -> instance.setLong(it, long)
+                        it.type == Int::class.javaPrimitiveType -> instance.setInt(it, int)
+                        it.type == Double::class.javaPrimitiveType -> instance.setDouble(it, double)
+                        it.type == Float::class.javaPrimitiveType -> instance.setFloat(it, float)
+                        it.type == Byte::class.javaPrimitiveType -> instance.setByte(it, byte)
+                        it.type == Char::class.javaPrimitiveType -> instance.setChar(it, char)
+                        it.type == Short::class.javaPrimitiveType -> instance.setShort(it, short)
+                        it.type == Boolean::class.javaPrimitiveType -> instance.setBoolean(it, boolean)
+                        else -> instance.setObject(it, value)
                     }
                 }
 
@@ -419,7 +418,7 @@ class BufferStream(buffer: ByteBuffer) {
             val size = expandableByteBuffer!!.buffer.int
 
             val collection = try {
-                Reflection.instantiate<MutableCollection<Any?>>(collectionClass!!)
+                collectionClass!!.instance<MutableCollection<Any?>>()
             } catch (e: Exception) {
                 ArrayList<Any?>()
             }
@@ -443,8 +442,8 @@ class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             val mapClass = value as Class<*>
-            val map = try {
-                Reflection.instantiate<MutableMap<Any, Any?>>(mapClass)
+            val map:MutableMap<Any,Any?> = try {
+                mapClass.instance()
             } catch (e: InstantiationException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
             } catch (e: IllegalAccessException) {
@@ -488,7 +487,7 @@ class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             val classToInstantiate = value as Class<*>?
-            val streamable = Reflection.instantiate<BufferStreamable>(classToInstantiate!!)
+            val streamable = classToInstantiate!!.instance<BufferStreamable>()
             if (context == null)
                 streamable.read(this)
             else
@@ -841,18 +840,15 @@ class BufferStream(buffer: ByteBuffer) {
         value?.getFields()?.forEach {
             try {
                 when {
-                    it.type == Int::class.javaPrimitiveType -> putInt(Reflection.getInt(value, it))
-                    it.type == Long::class.javaPrimitiveType -> putLong(Reflection.getLong(value, it))
-                    it.type == Byte::class.javaPrimitiveType -> putByte(Reflection.getByte(value, it))
-                    it.type == Float::class.javaPrimitiveType -> putFloat(Reflection.getFloat(value, it))
-                    it.type == Double::class.javaPrimitiveType -> putDouble(Reflection.getDouble(value, it))
-                    it.type == Boolean::class.javaPrimitiveType -> putBoolean(Reflection.getBoolean(value, it))
-                    it.type == Short::class.javaPrimitiveType -> putShort(Reflection.getShort(value, it))
-                    it.type == Char::class.javaPrimitiveType -> putChar(Reflection.getChar(value, it))
-                    else -> {
-                        val attributeObject = Reflection.getObject<Any>(value, it)
-                        putObject(attributeObject)
-                    }
+                    it.type == Int::class.javaPrimitiveType -> putInt(value.getInt(it))
+                    it.type == Long::class.javaPrimitiveType -> putLong(value.getLong(it))
+                    it.type == Byte::class.javaPrimitiveType -> putByte(value.getByte(it))
+                    it.type == Float::class.javaPrimitiveType -> putFloat(value.getFloat(it))
+                    it.type == Double::class.javaPrimitiveType -> putDouble(value.getDouble(it))
+                    it.type == Boolean::class.javaPrimitiveType -> putBoolean(value.getBoolean(it))
+                    it.type == Short::class.javaPrimitiveType -> putShort(value.getShort(it))
+                    it.type == Char::class.javaPrimitiveType -> putChar(value.getChar(it))
+                    else -> putObject(value.getObject(it))
                 }
             } catch (e: IllegalAccessException) {
                 throw BufferingException(BufferingException.ILLEGAL_ACCESS_EXCEPTION + it.name)

@@ -20,6 +20,8 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -128,9 +130,9 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an insert listener
      */
     @Test
-    public void testInsert() throws OnyxException
+    public void testInsert() throws OnyxException, InterruptedException
     {
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
@@ -141,7 +143,7 @@ public class QueryListenerTest extends BaseTest {
 
             @Override
             public void onItemAdded(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
                 assert entity instanceof SimpleEntity;
                 assert ((SimpleEntity) entity).getSimpleId().equals("22");
                 assert ((SimpleEntity) entity).getName().equals("22");
@@ -160,7 +162,7 @@ public class QueryListenerTest extends BaseTest {
         simpleEntity.setName("22");
         manager.saveEntity(simpleEntity);
 
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
 
     }
 
@@ -168,15 +170,15 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an update listener
      */
     @Test
-    public void testUpdate() throws OnyxException
+    public void testUpdate() throws OnyxException, InterruptedException
     {
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
                 assert entity instanceof SimpleEntity;
                 assert ((SimpleEntity) entity).getSimpleId().equals("1");
                 assert ((SimpleEntity) entity).getName().equals("2");
@@ -200,21 +202,21 @@ public class QueryListenerTest extends BaseTest {
         simpleEntity.setName("2");
         manager.saveEntity(simpleEntity);
 
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
     }
 
     /**
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testDelete() throws OnyxException
+    public void testDelete() throws OnyxException, InterruptedException
     {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("55");
         simpleEntity.setName("2");
         manager.saveEntity(simpleEntity);
 
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
@@ -230,7 +232,7 @@ public class QueryListenerTest extends BaseTest {
 
             @Override
             public void onItemRemoved(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
                 assert entity instanceof SimpleEntity;
                 assert ((SimpleEntity) entity).getSimpleId().equals("55");
                 assert ((SimpleEntity) entity).getName().equals("2");
@@ -244,14 +246,14 @@ public class QueryListenerTest extends BaseTest {
         simpleEntity.setName("2");
         manager.deleteEntity(simpleEntity);
 
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
     }
 
     /**
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testExecuteDelete() throws OnyxException
+    public void testExecuteDelete() throws OnyxException, InterruptedException
     {
         PageAnalytic analytic = new PageAnalytic();
         analytic.setAgent("ME");
@@ -263,7 +265,7 @@ public class QueryListenerTest extends BaseTest {
 
         manager.saveEntity(analytic);
 
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
 
         Query query = new Query();
         query.setEntityType(PageAnalytic.class);
@@ -292,7 +294,7 @@ public class QueryListenerTest extends BaseTest {
 
             @Override
             public void onItemRemoved(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
             }
         });
 
@@ -301,7 +303,7 @@ public class QueryListenerTest extends BaseTest {
         List results = manager.executeQuery(query);
 
         assert results.size() == 0;
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
     }
 
 
@@ -384,9 +386,9 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an insert listener
      */
     @Test
-    public void testInsertListen() throws OnyxException
+    public void testInsertListen() throws OnyxException, InterruptedException
     {
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
@@ -397,7 +399,7 @@ public class QueryListenerTest extends BaseTest {
 
             @Override
             public void onItemAdded(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
                 assert entity instanceof SimpleEntity;
                 assert ((SimpleEntity) entity).getSimpleId().equals("220");
                 assert ((SimpleEntity) entity).getName().equals("22");
@@ -416,7 +418,7 @@ public class QueryListenerTest extends BaseTest {
         simpleEntity.setName("22");
         manager.saveEntity(simpleEntity);
 
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
 
     }
 
@@ -424,20 +426,19 @@ public class QueryListenerTest extends BaseTest {
      * Test an entity correctly hits an update listener
      */
     @Test
-    public void testUpdateListen() throws OnyxException
-    {
+    public void testUpdateListen() throws OnyxException, InterruptedException {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("11");
         simpleEntity.setName("2");
         manager.saveEntity(simpleEntity);
 
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
             @Override
             public void onItemUpdated(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
                 assert entity instanceof SimpleEntity;
                 assert ((SimpleEntity) entity).getSimpleId().equals("11");
                 assert ((SimpleEntity) entity).getName().equals("2");
@@ -461,21 +462,21 @@ public class QueryListenerTest extends BaseTest {
         simpleEntity.setName("2");
         manager.saveEntity(simpleEntity);
 
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
     }
 
     /**
      * Test an entity correctly hits an delete listener
      */
     @Test
-    public void testDeleteListen() throws OnyxException
-    {
+    public void testDeleteListen() throws OnyxException, InterruptedException {
         SimpleEntity simpleEntity = new SimpleEntity();
         simpleEntity.setSimpleId("12");
         simpleEntity.setName("2");
         manager.saveEntity(simpleEntity);
 
-        final AtomicBoolean pass = new AtomicBoolean(false);
+        final CountDownLatch pass = new CountDownLatch(1);
+
         Query query = new Query(SimpleEntity.class);
         query.setChangeListener(new QueryListener<IManagedEntity>() {
 
@@ -491,7 +492,7 @@ public class QueryListenerTest extends BaseTest {
 
             @Override
             public void onItemRemoved(IManagedEntity entity) {
-                pass.set(true);
+                pass.countDown();
                 assert entity instanceof SimpleEntity;
                 assert ((SimpleEntity) entity).getSimpleId().equals("12");
                 assert ((SimpleEntity) entity).getName().equals("2");
@@ -505,6 +506,6 @@ public class QueryListenerTest extends BaseTest {
         simpleEntity.setName("2");
         manager.deleteEntity(simpleEntity);
 
-        assert pass.get();
+        assert pass.await(1, TimeUnit.SECONDS);
     }
 }

@@ -2,6 +2,7 @@ package com.onyx.persistence.manager.impl
 
 import com.onyx.exception.*
 import com.onyx.extension.*
+import com.onyx.extension.common.instance
 import com.onyx.interactors.query.impl.DefaultQueryInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.*
@@ -13,7 +14,6 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.reflection.Reflection
 import java.util.*
 
 /**
@@ -290,7 +290,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         val results = entity.recordInteractor(context)[entity] ?: throw NoResultsException()
         results.hydrateRelationships(context)
-        Reflection.copy(results, entity, entity.descriptor(context))
+        entity.copy(results, context)
         return entity as E
     }
 
@@ -311,7 +311,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> findById(clazz: Class<*>, id: Any): E? {
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity? = Reflection.createNewEntity(clazz)!!
+        var entity: IManagedEntity? = clazz.createNewEntity()
 
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
@@ -338,7 +338,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity? = Reflection.createNewEntity(clazz)!!
+        var entity: IManagedEntity? = clazz.createNewEntity()
 
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
@@ -445,7 +445,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     override fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E {
         context.checkForKillSwitch()
 
-        var entity:IManagedEntity? = Reflection.createNewEntity(entityType)
+        var entity:IManagedEntity? = entityType.createNewEntity()
         val descriptor = context.getDescriptorForEntity(entity!!, "")
         val recordInteractor = context.getRecordInteractor(descriptor)
 
@@ -584,8 +584,8 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
      */
     @Throws(OnyxException::class)
     override fun stream(query: Query, queryStreamClass: Class<*>) {
-        val streamer = try {
-            Reflection.instantiate<QueryStream<*>>(queryStreamClass)
+        val streamer:QueryStream<*> = try {
+            queryStreamClass.instance()
         } catch (e: InstantiationException) {
             throw StreamException(StreamException.CANNOT_INSTANTIATE_STREAM)
         } catch (e: IllegalAccessException) {

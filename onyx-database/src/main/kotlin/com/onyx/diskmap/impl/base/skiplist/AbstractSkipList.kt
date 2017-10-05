@@ -2,12 +2,12 @@ package com.onyx.diskmap.impl.base.skiplist
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
-import com.onyx.depricated.CompareUtil
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
+import com.onyx.extension.common.forceCompare
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.query.QueryCriteriaOperator
@@ -156,7 +156,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             if (current.next == 0L || shouldMoveDown(key, (next as SkipListNode<K>).key)) {
 
                 // We found the record we want
-                if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
+                if (next != null && key.forceCompare((next as SkipListNode<K>).key)) {
                     // Get the return value
                     value = findValueAtPosition(next.recordPosition, next.recordSize)
                     updateNodeNext(current, next.next)
@@ -227,7 +227,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             if (current.next == 0L || next is SkipListNode<*> && shouldMoveDown(key, next.key as K)) {
 
                 // We found the record we want
-                if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
+                if (next != null && key.forceCompare((next as SkipListNode<K>).key)) {
                     // Get the return value
 
                     // There can be multiple nodes for a single record
@@ -262,7 +262,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
         while (current != null) {
             val next = findNodeAtPosition(current.next)
-            if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
+            if (next != null && key.forceCompare((next as SkipListNode<K>).key)) {
                 return next
             } else if (current.next == 0L || next != null && shouldMoveDown(key, (next as SkipListNode<K>).key)) {
                 current = findNodeAtPosition(current.down)
@@ -292,7 +292,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
         while (current != null) {
             val next = findNodeAtPosition(current.next)
-            if (next != null && CompareUtil.forceCompare(key, (next as SkipListNode<K>).key)) {
+            if (next != null && key.forceCompare((next as SkipListNode<K>).key)) {
                 return next
             } else if (current.next == 0L || next != null && shouldMoveDown(key, (next as SkipListNode<K>).key)) {
                 current = findNodeAtPosition(current.down)
@@ -317,10 +317,10 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      *
      * @param key   The actual key of value 1
      * @param key2  The actual key of value 2
-     * @return If the keys are comparable return the result of that.  Othwerwise return the comparison of hash codes
+     * @return If the keys are comparable return the result of that.  Otherwise return the comparison of hash codes
      * @since 1.2.0
      */
-    protected fun shouldMoveDown(key: K, key2: K): Boolean = CompareUtil.forceCompare(key, key2, QueryCriteriaOperator.GREATER_THAN_EQUAL)
+    protected fun shouldMoveDown(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.GREATER_THAN_EQUAL)
 
     /**
      * Select an arbitrary head of the data structure to start inserting the data.  This is based on a continuous coin

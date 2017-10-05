@@ -8,11 +8,26 @@ import com.onyx.interactors.encryption.data.Encryption
 interface EncryptionInteractor {
 
     /**
+     * Encryption Key
+     */
+    val key:String
+
+    /**
+     * Encryption Salt
+     */
+    val salt:String
+
+    /**
+     * Encryption IV
+     */
+    val iv:ByteArray
+
+    /**
      * Performs Decryption.
      * @param encryptedText Text to Decrypt
      * @return Decrypted Text
      */
-    fun decrypt(encryptedText: String): String? = DefaultEncryption.encrypt.decryptOrNull(encryptedText)
+    fun decrypt(encryptedText: String): String? = DefaultEncryption.encrypt(this).decryptOrNull(encryptedText)
 
     /**
      * Performs Encryption
@@ -24,13 +39,16 @@ interface EncryptionInteractor {
      *
      * @return Encrypted String
      */
-    fun encrypt(plainText: String): String? = DefaultEncryption.encrypt.encryptOrNull(plainText)
+    fun encrypt(plainText: String): String? = DefaultEncryption.encrypt(this).encryptOrNull(plainText)
 
 }
 
 object DefaultEncryption {
-    private val iv = byteArrayOf(-12, -19, 17, -32, 86, 106, -31, 48, -5, -111, 61, -75, -127, 95, 120, -53)
-    var encrypt: Encryption = Encryption.getDefault("M1fancyKey12$", "DeFAul1$&lT", iv)
+    var encryption:Encryption? = null
+
+    fun encrypt(interactor: EncryptionInteractor):Encryption {
+        if(encryption == null) encryption = Encryption.getDefault(interactor.key, interactor.salt, interactor.iv)
+        return encryption!!
+    }
 }
 
-object DefaultEncryptionInteractor: EncryptionInteractor

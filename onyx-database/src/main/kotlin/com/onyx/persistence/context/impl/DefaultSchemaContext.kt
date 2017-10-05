@@ -39,7 +39,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.classLoader.EntityClassLoader
-import com.onyx.reflection.Reflection
+import com.onyx.extension.createNewEntity
 import com.onyx.lang.map.OptimisticLockingMap
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
@@ -519,7 +519,7 @@ open class DefaultSchemaContext : SchemaContext {
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
-                                            .forEach { getDescriptorForEntity(Reflection.createNewEntity<IManagedEntity>(it.field.type), "") }
+                                            .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(), "") }
 
                 EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
 

@@ -24,7 +24,7 @@ interface BufferStreamable : Serializable {
     @Throws(BufferingException::class)
     fun read(buffer: BufferStream) {
         val fields = getFields()
-        fields.forEach { it.field.set(this, buffer.value) }
+        fields.forEach { it.set(this, buffer.value) }
     }
 
     /**
@@ -39,7 +39,7 @@ interface BufferStreamable : Serializable {
     @Throws(BufferingException::class)
     fun write(buffer: BufferStream) {
         val fields = getFields()
-        fields.forEach { buffer.putObject(it.field.get(this)) }
+        fields.forEach { buffer.putObject(it.get(this)) }
     }
 
     /**

@@ -8,12 +8,12 @@ import com.onyx.exception.OnyxException;
 import com.onyx.extension.IManagedEntity_MetadataKt;
 import com.onyx.extension.IManagedEntity_ReflectionKt;
 import com.onyx.extension.common.Any_CastKt;
+import com.onyx.extension.common.Any_ReflectionKt;
 import com.onyx.interactors.record.data.Reference;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.SchemaContext;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.request.pojo.*;
-import com.onyx.reflection.Reflection;
 
 import java.io.IOException;
 import java.util.List;
@@ -209,7 +209,8 @@ final public class WebPersistenceEndpoint
 
 
         persistenceManager.initialize(entity, request.getAttribute());
-        return (List<IManagedEntity>) Reflection.INSTANCE.getObject(entity, context.getDescriptorForEntity(entity).getRelationships().get(request.getAttribute()).getField());
+
+        return (List<IManagedEntity>) Any_ReflectionKt.getObject(entity,context.getDescriptorForEntity(entity).getRelationships().get(request.getAttribute()).getField());
     }
 
     /**

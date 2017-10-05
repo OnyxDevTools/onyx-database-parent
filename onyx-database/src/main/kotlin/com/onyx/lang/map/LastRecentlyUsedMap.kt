@@ -1,7 +1,6 @@
 package com.onyx.lang.map
 
 import java.util.LinkedHashMap
-import java.util.function.BiConsumer
 
 /**
  * Created by tosborn1 on 3/24/17.
@@ -16,11 +15,9 @@ open class LastRecentlyUsedMap<K, V> @JvmOverloads constructor(maxCapacity: Int,
     override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean = size >= maxCapacity || (eldest!!.value as ExpirationValue).lastTouched + timeToLive < System.currentTimeMillis()
 
     override fun put(key: K, value: V): V? {
-        synchronized(this) {
-            @Suppress("UNCHECKED_CAST")
-            super.put(key, ExpirationValue(System.currentTimeMillis(), value as Any) as V)
-            return value
-        }
+        @Suppress("UNCHECKED_CAST")
+        super.put(key, ExpirationValue(System.currentTimeMillis(), value as Any) as V)
+        return value
     }
 
     /**
@@ -31,32 +28,23 @@ open class LastRecentlyUsedMap<K, V> @JvmOverloads constructor(maxCapacity: Int,
      */
     @Suppress("UNCHECKED_CAST")
     override operator fun get(key: K): V? {
-        synchronized(this) {
-            val expirationValue = super.remove(key) as ExpirationValue?
-            if (expirationValue != null) {
-                expirationValue.lastTouched = System.currentTimeMillis()
-                super.put(key, expirationValue as V)
-            } else {
-                return null
-            }
-
-            return expirationValue.value as V
+        val expirationValue = super.remove(key) as ExpirationValue?
+        if (expirationValue != null) {
+            expirationValue.lastTouched = System.currentTimeMillis()
+            super.put(key, expirationValue as V)
+        } else {
+            return null
         }
+
+        return expirationValue.value as V
     }
 
     /**
      * Override to not return the expiration value but the actual value
      * @param action The action to be performed for each entry
      */
-    override fun forEach(action: BiConsumer<in K, in V>) {
-        synchronized(this) {
-            val entrySet = entries
-            for ((key, value) in entrySet) {
-                @Suppress("UNCHECKED_CAST")
-                action.accept(key, (value as ExpirationValue).value as V)
-            }
-        }
-    }
+    @Suppress("UNCHECKED_CAST")
+    open fun forEach(action: (K,V?) -> Unit) = entries.forEach { action.invoke(it.key, (it.value as ExpirationValue).value as V)}
 
     /**
      * POJO for tracking last touched

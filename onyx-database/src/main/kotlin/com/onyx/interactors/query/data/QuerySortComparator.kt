@@ -7,9 +7,9 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryOrder
-import com.onyx.depricated.CompareUtil
 import com.onyx.extension.attribute
 import com.onyx.extension.common.catchAll
+import com.onyx.extension.common.compare
 import com.onyx.extension.toManyRelationshipAsMap
 import com.onyx.extension.toOneRelationshipAsMap
 import com.onyx.persistence.context.Contexts
@@ -41,8 +41,8 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
             var compareValue = 0
             catchAll {
                 compareValue = when {
-                    CompareUtil.compare(attribute2, attribute1, QueryCriteriaOperator.GREATER_THAN) -> if (queryOrder.isAscending) 1 else -1
-                    CompareUtil.compare(attribute2, attribute1, QueryCriteriaOperator.LESS_THAN) -> if (queryOrder.isAscending) -1 else 1
+                    attribute2.compare(attribute1, QueryCriteriaOperator.GREATER_THAN) -> if (queryOrder.isAscending) 1 else -1
+                    attribute2.compare(attribute1, QueryCriteriaOperator.LESS_THAN) -> if (queryOrder.isAscending) -1 else 1
                     else -> 0
                 }
             }

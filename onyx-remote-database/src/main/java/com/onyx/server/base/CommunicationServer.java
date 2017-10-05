@@ -14,7 +14,7 @@ import com.onyx.client.handlers.RequestHandler;
 import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.exception.InitializationException;
-import com.onyx.interactors.encryption.DefaultEncryptionInteractor;
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor;
 import com.onyx.interactors.encryption.EncryptionInteractor;
 import com.onyx.lang.map.OptimisticLockingMap;
 import org.jetbrains.annotations.NotNull;

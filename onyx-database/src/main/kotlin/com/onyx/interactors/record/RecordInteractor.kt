@@ -2,7 +2,7 @@ package com.onyx.interactors.record
 
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
-import com.onyx.reflection.ReflectionField
+import java.lang.reflect.Field
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -111,7 +111,7 @@ interface RecordInteractor {
      * and not instantiate new reflection fields
      */
     @Throws(OnyxException::class)
-    fun getAttributeWithReferenceId(attribute: ReflectionField, referenceId: Long): Any?
+    fun getAttributeWithReferenceId(attribute: Field, referenceId: Long): Any?
 
     /**
      * For sorted indexes, you can find all the entity references above the value.  The index value must implement comparable

@@ -1,5 +1,6 @@
 package com.onyx.interactors.cache.data
 
+import com.onyx.extension.common.async
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryListener
@@ -13,7 +14,10 @@ import java.util.HashSet
  *
  * @since 1.3.0 When query caching was implemented
  */
-class CachedResults(var references: MutableMap<Reference, Any?>?) {
+class CachedResults(references: MutableMap<Reference, Any?>? = null) {
+
+    var references: MutableMap<Reference, Any?>? = references
+        set(value) { synchronized(this) { field = value} }
 
     val listeners = HashSet<QueryListener<Any>>()
 
@@ -24,9 +28,7 @@ class CachedResults(var references: MutableMap<Reference, Any?>?) {
      * @since 1.3.0
      */
     @Suppress("UNCHECKED_CAST")
-    fun subscribe(queryListener: QueryListener<*>) {
-        listeners.add(queryListener as QueryListener<Any>)
-    }
+    fun subscribe(queryListener: QueryListener<*>) = synchronized(listeners) { listeners.add(queryListener as QueryListener<Any>) }
 
     /**
      * Un-subscribe a query event listener
@@ -34,7 +36,7 @@ class CachedResults(var references: MutableMap<Reference, Any?>?) {
      * @return Whether it was subscribed to begin with
      * @since 1.3.0
      */
-    fun unSubscribe(queryListener: QueryListener<*>): Boolean = listeners.remove(queryListener)
+    fun unSubscribe(queryListener: QueryListener<*>): Boolean = synchronized(listeners) { listeners.remove(queryListener) }
 
     /**
      * Remove an entity from the query cache.  This will also
@@ -49,30 +51,37 @@ class CachedResults(var references: MutableMap<Reference, Any?>?) {
      * @since 1.3.0
      */
     fun remove(reference: Any, entity: IManagedEntity, event: QueryListenerEvent, meetsCriteria: Boolean) {
-        var removed: Any? = null
-        if (references != null)
-            removed = references!!.remove(reference)
-        listeners.remove(NULL_LISTENER) // Clean out old references
-        if (removed != null && (event === QueryListenerEvent.DELETE || !meetsCriteria && event === QueryListenerEvent.PRE_UPDATE)) {
-            val listenersToRemove = HashSet<QueryListener<*>>()
-            listeners.forEach {
-                try {
-                    it.onItemRemoved(entity)
-                } catch (e: Exception) {
-                    listenersToRemove.add(it)
+        val removed:Any? = synchronized(this) { references?.remove(reference) }
+        when {
+            removed != null && (event === QueryListenerEvent.DELETE || !meetsCriteria && event === QueryListenerEvent.PRE_UPDATE) -> dispatchRemoveEvent(entity)
+            event === QueryListenerEvent.DELETE && meetsCriteria -> dispatchRemoveEvent(entity)
+            else -> {}
+        }
+    }
+
+    private fun dispatchAddedEvent(entity:Any) = dispatchEvent(entity) { listener, any -> listener.onItemAdded(any) }
+    private fun dispatchRemoveEvent(entity:Any) = dispatchEvent(entity) { listener, any -> listener.onItemRemoved(any) }
+    private fun dispatchUpdateEvent(entity:Any) = dispatchEvent(entity) { listener, any -> listener.onItemUpdated(any) }
+
+    /**
+     * Dispatch event for all listeners.  If the listener is no longer valid remove it.
+     *
+     * @param entity Entity that was acted upon that matches listener criteria
+     */
+    private fun dispatchEvent(entity: Any, body:(QueryListener<Any>,Any) -> Unit) {
+        async {
+            synchronized(listeners) {
+                listeners.remove(NULL_LISTENER)
+                val listenersToRemove = HashSet<QueryListener<*>>()
+                listeners.forEach {
+                    try {
+                        body.invoke(it, entity)
+                    } catch (e: Exception) {
+                        listenersToRemove.add(it)
+                    }
                 }
+                listeners.removeAll(listenersToRemove)
             }
-            listeners.removeAll(listenersToRemove)
-        } else if (event === QueryListenerEvent.DELETE && meetsCriteria) {
-            val listenersToRemove = HashSet<QueryListener<*>>()
-            listeners.forEach {
-                try {
-                    it.onItemRemoved(entity)
-                } catch (e: Exception) {
-                    listenersToRemove.add(it)
-                }
-            }
-            listeners.removeAll(listenersToRemove)
         }
     }
 
@@ -87,22 +96,14 @@ class CachedResults(var references: MutableMap<Reference, Any?>?) {
      * @since 1.3.0
      */
     fun put(reference: Reference, value: Any, event: QueryListenerEvent) {
-        if (references != null)
-            references!!.put(reference, value)
-        listeners.remove(NULL_LISTENER)
-        val listenersToRemove = HashSet<QueryListener<Any>>()
-        listeners.forEach {
-            try {
-                if (event === QueryListenerEvent.INSERT) {
-                    it.onItemAdded(value)
-                } else if (event === QueryListenerEvent.UPDATE) {
-                    it.onItemUpdated(value)
-                }
-            } catch (e: Exception) {
-                listenersToRemove.add(it)
-            }
+        synchronized(this) {
+            references?.put(reference, value)
         }
-        listeners.removeAll(listenersToRemove)
+        when(event) {
+            QueryListenerEvent.UPDATE -> dispatchUpdateEvent(value)
+            QueryListenerEvent.INSERT -> dispatchAddedEvent(value)
+            else -> { }
+        }
     }
 
     companion object {

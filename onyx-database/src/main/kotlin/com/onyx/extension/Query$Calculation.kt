@@ -6,7 +6,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
-import com.onyx.depricated.CompareUtil
+import com.onyx.extension.common.compare
 import com.onyx.interactors.record.data.Reference
 
 /**
@@ -37,7 +37,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-            subCriteria = CompareUtil.compare(it.value, entity.get(context = context, name = it.attribute!!), it.operator)
+            subCriteria = it.value.compare(entity.get(context = context, name = it.attribute!!), it.operator)
         }
         it.meetsCriteria = subCriteria
     }
@@ -109,7 +109,7 @@ private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityRefere
 
         // All we need is a single match.  If there is a relationship that meets the criteria, move along
         for (relationshipEntity in relationshipEntities) {
-            meetsCriteria = CompareUtil.compare(criteria.value, relationshipEntity.get(context = context, name = attribute), operator)
+            meetsCriteria = criteria.value.compare(relationshipEntity.get(context = context, name = attribute), operator)
             if (meetsCriteria)
                 break
         }

@@ -7,12 +7,11 @@ import com.onyx.lang.concurrent.AtomicCounter
 import com.onyx.lang.concurrent.impl.DefaultAtomicCounter
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
+import com.onyx.extension.common.instance
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.reflection.Reflection
-
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -170,7 +169,7 @@ open class FileChannelStore() : Store {
             buffer.byteBuffer.rewind()
 
             return@perform if (BufferStreamable::class.java.isAssignableFrom(type)) {
-                val serializable:BufferStreamable = Reflection.instantiate(type)
+                val serializable:BufferStreamable = type.instance()
                 serializable.read(buffer)
                 serializable
             } else {

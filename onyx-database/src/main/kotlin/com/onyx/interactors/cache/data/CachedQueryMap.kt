@@ -1,4 +1,5 @@
 package com.onyx.interactors.cache.data
+import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import com.onyx.lang.map.LastRecentlyUsedMap
 
 /**
@@ -7,6 +8,8 @@ import com.onyx.lang.map.LastRecentlyUsedMap
  * This query build on top of the last recently used.  It also stores hard references that do not get removed
  */
 class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsedMap<K, V>(maxCapacity, timeToLive) {
+
+    private val lock = DefaultClosureReadWriteLock()
 
     private val hardReferenceSet = HashMap<K,V?>()
 
@@ -18,7 +21,7 @@ class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsed
      * @return the value just entered
      * @since 1.3.0
      */
-    fun putStrongReference(key: K, value: V): V = synchronized(this) { hardReferenceSet.put(key, value); value }
+    fun putStrongReference(key: K, value: V): V = lock.writeLock { hardReferenceSet.put(key, value); value }
 
     /**
      * Get the object for key.  Also indicate it as touched so it marks the record as recently used
@@ -26,14 +29,14 @@ class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsed
      * @param key Map entry key
      * @return Value null if it doesn't exist
      */
-    override operator fun get(key: K): V? = synchronized(this) { return hardReferenceSet[key] ?: return super.get(key) }
+    override operator fun get(key: K): V? = lock.optimisticReadLock { return@optimisticReadLock hardReferenceSet[key] ?: return@optimisticReadLock super.get(key) }
 
     /**
      * Override to not return the expiration value but the actual value
      *
      * @param action The action to be performed for each entry
      */
-    fun forEach(action: (K,V?) -> Unit) = synchronized(this) {
+    override fun forEach(action: (K,V?) -> Unit) = lock.readLock {
         hardReferenceSet.entries.forEach { action.invoke(it.key, it.value) }
         super.forEach(action)
     }
@@ -47,29 +50,44 @@ class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsed
      * (A <tt>null</tt> return can also indicate that the map
      * previously associated <tt>null</tt> with <tt>key</tt>.)
      */
-    override fun remove(key: K): V = synchronized(this) {
+    override fun remove(key: K): V = lock.writeLock {
         var value: V? = hardReferenceSet.remove(key)
         if (value == null)
             value = super.remove(key)
-        return value!!
+        return@writeLock value!!
     }
 
     /**
-     * The compute method only applies to hard references
-     *
-     * @param key key with which the specified value is to be associated
-     * @param remappingFunction the function to compute a value
-     * @return Value that was returned in the remapping function
+     * Override to ensure thread safety
      */
-    fun compute(key: K, remappingFunction: (K, V?) -> V ): V = synchronized(this) {
-        val before = hardReferenceSet[key]
-        val existed = before != null
+    override fun put(key: K, value: V): V? = lock.writeLock { return@writeLock super.put(key, value) }
 
-        val value = remappingFunction.invoke(key, before)
-        if (!existed || value !== before) {
-            hardReferenceSet.put(key, value)
-        }
-
-        return value
+    /**
+     * Get or put overridden so that it first uses optimistic locking.  If it failed to return a value, check again
+     * in order to account for a race condition.  Lastly put a new value by calling the unit.
+     *
+     * I found the Kotlin extension method was not in fact thread safe as the documentation claims with the ConcurrentHashMap
+     * so this is here to account for that
+     *
+     * This does call the get method an extra time.  Using this map implies it is heavy on the read access and therefore
+     * need a non blocking read whereas it is acceptable to have slower write times since it is not write heavy.
+     *
+     * @since 2.0.0
+     */
+    fun getOrPut(key: K, body: () -> V): V {
+        val value: V? = lock.optimisticReadLock { hardReferenceSet[key] }
+        return value ?: lock.writeLock {
+            var newValue = hardReferenceSet[key]
+            if(newValue == null) {
+                newValue = super.get(key)
+                hardReferenceSet.put(key, newValue)
+            }
+            if (newValue == null) {
+                newValue = body.invoke()
+                hardReferenceSet.put(key, newValue)
+            }
+            return@writeLock newValue
+        }!!
     }
+
 }

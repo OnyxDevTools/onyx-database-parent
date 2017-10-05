@@ -2,6 +2,8 @@ package com.onyx.persistence.manager.impl
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.onyx.exception.*
+import com.onyx.extension.common.setAny
+import com.onyx.extension.copy
 import com.onyx.extension.identifier
 import com.onyx.extension.partitionValue
 import com.onyx.interactors.record.data.Reference
@@ -14,7 +16,6 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.request.pojo.*
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.reflection.Reflection
 
 import java.util.*
 
@@ -71,7 +72,9 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         body.type = entity.javaClass.name
         body.partitionId = entity.partitionValue(context)
 
-        Reflection.copy(this.performCall(url + AbstractWebPersistenceManager.SAVE, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
+        val results = this.performCall(url + AbstractWebPersistenceManager.SAVE, null, entity.javaClass, body) as IManagedEntity
+        entity.copy(results, context)
+
         return entity as T
     }
 
@@ -260,7 +263,8 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         body.type = entity.javaClass.name
         body.partitionId = entity.partitionValue(context)
 
-        Reflection.copy(this.performCall(url + AbstractWebPersistenceManager.FIND, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
+        val results = this.performCall(url + AbstractWebPersistenceManager.FIND, null, entity.javaClass, body) as IManagedEntity
+        entity.copy(results, context)
 
         return entity as E
     }
@@ -406,8 +410,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         body.partitionId = entity.partitionValue(context)
 
         val relationship = this.performCall(url + AbstractWebPersistenceManager.INITIALIZE, attributeType, List::class.java, body) as List<IManagedEntity>
-
-        Reflection.setAny(entity, relationship, relationshipDescriptor.field)
+        entity.setAny(relationshipDescriptor.field, relationship)
     }
 
     /**

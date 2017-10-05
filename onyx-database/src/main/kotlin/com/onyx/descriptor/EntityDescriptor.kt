@@ -5,7 +5,6 @@ import com.onyx.persistence.annotations.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.extension.validate
 import com.onyx.extension.validateIsManagedEntity
-import com.onyx.reflection.ReflectionField
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -82,8 +81,8 @@ constructor(
     /**
      * Reflection fields used to get all fields for an entity including attributes and relationships
      */
-    val reflectionFields: Map<String, ReflectionField> by lazy {
-        val returnValue = LinkedHashMap<String, ReflectionField>()
+    val reflectionFields: Map<String, Field> by lazy {
+        val returnValue = LinkedHashMap<String, Field>()
         attributes.values.forEach { returnValue[it.name] = it.field }
         relationships.values.forEach { returnValue[it.name] = it.field }
         return@lazy returnValue
@@ -123,7 +122,8 @@ constructor(
                     identifier!!.type = it.type
                     identifier!!.loadFactor = annotation.loadFactor.toByte()
                     identifier!!.entityDescriptor = this
-                    identifier!!.setReflectionField(it)
+                    it.isAccessible = true
+                    identifier!!.field = it
                 }
             }
 
@@ -156,7 +156,7 @@ constructor(
                 }
 
                 it.isAccessible = true
-                attribute.setReflectionField(it)
+                attribute.field = it
                 attributes.put(it.name, attribute)
             }
 
@@ -174,7 +174,8 @@ constructor(
             relationship.type = it.type
             relationship.loadFactor = annotation.loadFactor.toByte()
             relationship.entityDescriptor = this
-            relationship.setReflectionField(it)
+            it.isAccessible = true
+            relationship.field = it
             relationships.put(it.name, relationship)
         }
 
@@ -194,7 +195,8 @@ constructor(
             index.loadFactor = annotation.loadFactor
             index.type = it.type
             index.entityDescriptor = this
-            index.setReflectionField(it)
+            it.isAccessible = true
+            index.field = it
 
             indexes.put(it.name, index)
         }
@@ -211,7 +213,8 @@ constructor(
                 this.partition = PartitionDescriptor()
                 this.partition!!.name = it.name
                 this.partition!!.type = it.type
-                this.partition!!.setReflectionField(it)
+                it.isAccessible = true
+                this.partition!!.field = it
             }
         }
 

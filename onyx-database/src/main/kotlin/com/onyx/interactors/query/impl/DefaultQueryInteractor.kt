@@ -1,6 +1,5 @@
 package com.onyx.interactors.query.impl
 
-import com.onyx.depricated.CompareUtil
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.factory.DiskMapFactory
@@ -15,6 +14,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.extension.*
+import com.onyx.extension.common.compare
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
 import com.onyx.interactors.query.data.QuerySortComparator
@@ -174,7 +174,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                 .filterIndexedTo(ArrayList()) { index, _ -> index in lower..(upper - 1) }
                 .forEach {
                     val entity:IManagedEntity? = it.key.toManagedEntity(context, query.entityType!!, descriptor)
-                    val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !CompareUtil.compare(entity[context, descriptor, it.fieldName!!], it.value)} != null
+                    val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value)} != null
 
                     if(updatedPartitionValue) {
                         entity?.deleteAllIndexes(context, it.key.reference)
