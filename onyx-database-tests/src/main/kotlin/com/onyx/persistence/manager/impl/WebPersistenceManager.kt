@@ -14,7 +14,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.request.pojo.*
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.Reflection
 
 import java.util.*
 
@@ -71,7 +71,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         body.type = entity.javaClass.name
         body.partitionId = entity.partitionValue(context)
 
-        ReflectionUtil.copy(this.performCall(url + AbstractWebPersistenceManager.SAVE, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
+        Reflection.copy(this.performCall(url + AbstractWebPersistenceManager.SAVE, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
         return entity as T
     }
 
@@ -260,7 +260,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         body.type = entity.javaClass.name
         body.partitionId = entity.partitionValue(context)
 
-        ReflectionUtil.copy(this.performCall(url + AbstractWebPersistenceManager.FIND, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
+        Reflection.copy(this.performCall(url + AbstractWebPersistenceManager.FIND, null, entity.javaClass, body) as IManagedEntity, entity, context.getDescriptorForEntity(entity))
 
         return entity as E
     }
@@ -407,7 +407,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
 
         val relationship = this.performCall(url + AbstractWebPersistenceManager.INITIALIZE, attributeType, List::class.java, body) as List<IManagedEntity>
 
-        ReflectionUtil.setAny(entity, relationship, relationshipDescriptor.field)
+        Reflection.setAny(entity, relationship, relationshipDescriptor.field)
     }
 
     /**

@@ -11,7 +11,7 @@ import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.depricated.CompareUtil
 import com.onyx.interactors.record.data.Reference
-import com.onyx.util.map.OptimisticLockingMap
+import com.onyx.lang.map.OptimisticLockingMap
 
 /**
  * Created by tosborn1 on 3/27/17.

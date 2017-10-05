@@ -1,4 +1,4 @@
-package com.onyx.util;
+package com.onyx.interactors.encryption.data;
 
 import javax.crypto.*;
 import javax.crypto.spec.IvParameterSpec;
@@ -32,7 +32,7 @@ public class Encryption {
      * @return an default encryption instance or {@code null} if occur some Exception, you can
      * create yur own Encryption instance using the Encryption.Builder
      */
-    static Encryption getDefault(@SuppressWarnings("SameParameterValue") String key, @SuppressWarnings("SameParameterValue") String salt, @SuppressWarnings("SameParameterValue") byte[] iv) {
+    public static Encryption getDefault(@SuppressWarnings("SameParameterValue") String key, @SuppressWarnings("SameParameterValue") String salt, @SuppressWarnings("SameParameterValue") byte[] iv) {
         try {
             return Builder.getDefaultBuilder(key, salt, iv).build();
         } catch (NoSuchAlgorithmException e) {
@@ -90,7 +90,7 @@ public class Encryption {
      *
      * @return the encrypted String or {@code null} if you send the data as {@code null}
      */
-    String encryptOrNull(String data) {
+    public String encryptOrNull(String data) {
         try {
             return encrypt(data);
         } catch (Exception e) {
@@ -148,7 +148,7 @@ public class Encryption {
      *
      * @return the decrypted String or {@code null} if you send the data as {@code null}
      */
-    String decryptOrNull(String data) {
+    public String decryptOrNull(String data) {
         try {
             return decrypt(data);
         } catch (Exception e) {

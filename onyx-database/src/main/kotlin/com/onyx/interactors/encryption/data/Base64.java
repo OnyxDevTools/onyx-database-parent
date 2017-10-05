@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.onyx.util;
+package com.onyx.interactors.encryption.data;
 
 import java.io.UnsupportedEncodingException;
 

@@ -1,15 +1,15 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.concurrent.*
-import com.onyx.concurrent.impl.DefaultDispatchLock
-import com.onyx.concurrent.impl.EmptyMap
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
+import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix
 import com.onyx.diskmap.data.CombinedIndexHashMatrixNode
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
-import com.onyx.util.map.OptimisticLockingMap
+import com.onyx.lang.concurrent.ClosureLock
+import com.onyx.lang.map.OptimisticLockingMap
 
 import java.util.*
 
@@ -40,7 +40,7 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      *
      * @return Implementation of a level read write lock
      */
-    override var readWriteLock: DispatchLock = DefaultDispatchLock()
+    override var readWriteLock: ClosureLock = DefaultClosureLock()
 
     // Cache of skip lists
     private val skipListMapCache:MutableMap<Int, CombinedIndexHashMatrixNode> = OptimisticLockingMap(WeakHashMap())
@@ -64,8 +64,8 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @since 1.2.1 Added constructor in the event you wanted a different locking implementation
      */
     @Suppress("UNUSED")
-    constructor(fileStore: Store, header: Header, loadFactor: Int, dispatchLock: DispatchLock) : super(fileStore, header, true) {
-        this.readWriteLock = dispatchLock
+    constructor(fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureLock) : super(fileStore, header, true) {
+        this.readWriteLock = closureLock
         this.loadFactor = loadFactor.toByte()
         this.hashMatrixNodeCache = EmptyMap()
         this.valueByPositionCache = EmptyMap()

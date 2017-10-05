@@ -1,5 +1,5 @@
 package com.onyx.interactors.cache.data
-import com.onyx.util.map.LastRecentlyUsedMap
+import com.onyx.lang.map.LastRecentlyUsedMap
 
 /**
  * Created by tosborn1 on 3/27/17.

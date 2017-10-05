@@ -12,7 +12,6 @@ import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.interactors.relationship.data.RelationshipReference
-import com.onyx.util.map.CompatWeakHashMap
 
 import java.util.*
 import java.util.function.Consumer
@@ -188,7 +187,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     @Suppress("UNCHECKED_CAST")
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {
-        this.values = CompatWeakHashMap()
+        this.values = WeakHashMap()
         this.identifiers = buffer.collection as MutableList<RelationshipReference>
         val className = buffer.string
         this.contextId = buffer.string

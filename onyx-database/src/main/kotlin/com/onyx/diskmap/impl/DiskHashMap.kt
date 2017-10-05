@@ -1,10 +1,10 @@
 package com.onyx.diskmap.impl
 
 
-import com.onyx.concurrent.DispatchLock
-import com.onyx.concurrent.impl.DefaultDispatchLock
-import com.onyx.concurrent.impl.EmptyDispatchLock
-import com.onyx.concurrent.impl.EmptyMap
+import com.onyx.lang.concurrent.ClosureLock
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
+import com.onyx.lang.concurrent.impl.EmptyClosureLock
+import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
@@ -14,7 +14,7 @@ import java.util.HashSet
 
 class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
 
-    override var readWriteLock: DispatchLock = DefaultDispatchLock()
+    override var readWriteLock: ClosureLock = DefaultClosureLock()
 
     /**
      * Constructor
@@ -33,8 +33,8 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @since 1.2.0
      */
     @Suppress("UNUSED")
-    constructor (fileStore: Store, header: Header, loadFactor: Int, dispatchLock: DispatchLock): super(fileStore, header, true, loadFactor) {
-        this.readWriteLock = dispatchLock
+    constructor (fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureLock): super(fileStore, header, true, loadFactor) {
+        this.readWriteLock = closureLock
         this.nodeCache = EmptyMap()
         this.mapCache = EmptyMap()
         this.cache = EmptyMap()
@@ -60,7 +60,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
             keyCache = EmptyMap()
             valueByPositionCache = EmptyMap()
             nodeCache = EmptyMap()
-            readWriteLock = EmptyDispatchLock()
+            readWriteLock = EmptyClosureLock()
         }
     }
 

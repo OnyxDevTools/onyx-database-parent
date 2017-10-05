@@ -2,7 +2,7 @@ package com.onyx.interactors.record
 
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
-import com.onyx.util.ReflectionField
+import com.onyx.reflection.ReflectionField
 
 /**
  * Created by timothy.osborn on 2/5/15.

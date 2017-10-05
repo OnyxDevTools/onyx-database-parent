@@ -13,9 +13,7 @@ import com.onyx.client.exception.OnyxServerException;
 import com.onyx.client.exception.RequestTimeoutException;
 import com.onyx.client.push.PushRegistrar;
 import com.onyx.exception.InitializationException;
-import com.onyx.persistence.context.SchemaContext;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.lang.map.OptimisticLockingMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -103,7 +102,7 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
     }
 
     // Map of push consumers
-    private final Map<Long, PushConsumer> registeredPushConsumers = new SynchronizedMap<>(new CompatHashMap<>());
+    private final Map<Long, PushConsumer> registeredPushConsumers = new OptimisticLockingMap(new HashMap());
 
     /**
      * Respond to a push event.  The consumer will be invoked

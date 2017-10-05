@@ -1,9 +1,9 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.concurrent.impl
 
-import com.onyx.concurrent.DispatchReadWriteLock
+import com.onyx.lang.concurrent.ClosureReadWriteLock
 import java.util.concurrent.locks.StampedLock
 
-class DefaultDispatchReadWriteLock : DispatchReadWriteLock {
+class DefaultClosureReadWriteLock : ClosureReadWriteLock {
 
     private var lockImplementation = StampedLock()
 

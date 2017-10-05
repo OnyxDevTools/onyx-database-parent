@@ -1,8 +1,8 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.concurrent.impl
 
-import com.onyx.concurrent.DispatchReadWriteLock
+import com.onyx.lang.concurrent.ClosureReadWriteLock
 
-class EmptyDispatchReadWriteLock : DispatchReadWriteLock {
+class EmptyClosureReadWriteLock : ClosureReadWriteLock {
 
     override fun <T> optimisticReadLock(consumer: () -> T): T = consumer.invoke()
 

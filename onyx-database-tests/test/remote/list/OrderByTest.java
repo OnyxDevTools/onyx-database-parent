@@ -153,7 +153,7 @@ public class OrderByTest extends RemoteBaseTest
         QueryOrder[] orderList = {new QueryOrder("doubleValue", false)};
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
-        Assert.assertEquals(results.get(0).id, "FIRST ONE6");
+        assert results.get(0).id.equals("FIRST ONE3") || results.get(0).id.equals("FIRST ONE6");
     }
 
     @Test
@@ -174,7 +174,7 @@ public class OrderByTest extends RemoteBaseTest
         QueryOrder[] orderList = {new QueryOrder("intValue", false)};
 
         List<AllAttributeForFetch> results = manager.list(AllAttributeForFetch.class, criteriaList, orderList);
-        Assert.assertEquals(results.get(0).id, "FIRST ONE6");
+        assert results.get(0).id.equals("FIRST ONE3") || results.get(0).id.equals("FIRST ONE6");
     }
 
     @Test

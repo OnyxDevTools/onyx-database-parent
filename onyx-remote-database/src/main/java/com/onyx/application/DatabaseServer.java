@@ -13,8 +13,8 @@ import com.onyx.server.base.AbstractDatabaseServer;
 import com.onyx.server.base.ServerState;
 import com.onyx.server.cli.CommandLineParser;
 import com.onyx.server.rmi.OnyxRMIServer;
-import com.onyx.encryption.DefaultEncryptionInteractor;
-import com.onyx.encryption.EncryptionInteractor;
+import com.onyx.interactors.encryption.DefaultEncryptionInteractor;
+import com.onyx.interactors.encryption.EncryptionInteractor;
 import org.jetbrains.annotations.NotNull;
 
 /**

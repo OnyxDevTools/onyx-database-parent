@@ -10,6 +10,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.reflection.Reflection
 
 import java.util.*
 import kotlin.reflect.KClass
@@ -20,83 +21,6 @@ import kotlin.reflect.KClass
  * This is a utility class used to compare values against various operators
  */
 object CompareUtil {
-
-    /**
-     * Cast to will take the value passed in and attempt to cast it
-     * as the class passed in.  This is enabled to support java types
-     * but, it will use the kotlin class since it does not have to take into
-     * account primitives.
-     *
-     * @param clazz Class to cast to
-     * @param value to cast to specified class
-     *
-     * @return The type casted object
-     */
-    @JvmStatic
-    fun castTo(clazz: Class<*>, value: Any?): Any? {
-
-        val kotlinClass:KClass<*> = clazz.kotlin
-
-        return when {
-            // Cast to numeric value when value is null
-            value == null -> when(kotlinClass) {
-                Int::class -> 0
-                Long::class -> 0L
-                Double::class -> 0.0
-                Float::class -> 0f
-                Boolean::class -> false
-                Char::class -> '0'
-                Byte::class -> 0.toByte()
-                Short::class -> 0.toShort()
-                else -> null
-            }
-            // When value is number
-            value is Number -> when (kotlinClass) {
-                Int::class -> value.toInt()
-                Long::class -> value.toLong()
-                Double::class -> value.toDouble()
-                Float::class -> value.toFloat()
-                Boolean::class -> value.toInt() != 0
-                Char::class -> value.toChar()
-                Byte::class -> value.toByte()
-                Short::class -> value.toShort()
-                String::class -> value.toString()
-                Date::class -> Date(value.toLong())
-                else -> null
-            }
-            clazz == String::class -> return value.toString()
-            value is Boolean -> return when (kotlinClass) {
-                Date::class -> null
-                Int::class -> if (value) 1 else 0
-                Long::class -> if (value) 1L else 0L
-                Double::class -> if (value) 1.0 else 0.0
-                Float::class -> if (value) 1f else 0f
-                Boolean::class -> value
-                Char::class -> if (value) '1' else '0'
-                Byte::class -> if (value) 1.toByte() else 0.toByte()
-                Short::class -> if (value) 1.toShort() else 0.toShort()
-                else -> null
-            }
-            value is Char -> return when (kotlinClass) {
-                Int::class -> value.toInt()
-                Long::class -> value.toLong()
-                Double::class -> value.toDouble()
-                Float::class -> value.toFloat()
-                Boolean::class -> value.toInt() != 0
-                Char::class -> value.toChar()
-                Byte::class -> value.toByte()
-                Short::class -> value.toShort()
-                String::class -> value.toString()
-                Char::class.javaPrimitiveType -> value.toChar()
-                else -> null
-            }
-            value is Date -> return when (clazz) {
-                Long::class -> value.time
-                else -> null
-            }
-            else -> null
-        }
-    }
 
     /**
      * Compare without throwing exception
@@ -279,7 +203,7 @@ object CompareUtil {
                 if (it.attributeDescriptor == null)
                     it.attributeDescriptor = descriptor.attributes[it.attribute!!]
                 val offsetField = it.attributeDescriptor!!.field
-                subCriteria = compare(it.value, ReflectionUtil.getAny(entity, offsetField), it.operator)
+                subCriteria = compare(it.value, Reflection.getAny(entity, offsetField), it.operator)
             }
             it.meetsCriteria = subCriteria
         }

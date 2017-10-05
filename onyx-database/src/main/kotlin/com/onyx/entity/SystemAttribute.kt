@@ -5,7 +5,6 @@ import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
-import com.onyx.util.ReflectionField
 
 /**
  * Created by timothy.osborn on 3/2/15.
@@ -42,8 +41,4 @@ data class SystemAttribute @JvmOverloads constructor(
         isNullable = descriptor.isNullable,
         isEnum = descriptor.isEnum,
         enumValues = descriptor.enumValues)
-
-    @Transient
-    @JvmField
-    var field: ReflectionField? = null
 }

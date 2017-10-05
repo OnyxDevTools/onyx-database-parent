@@ -12,7 +12,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
-import com.onyx.util.ReflectionField
+import com.onyx.reflection.ReflectionField
 
 import java.util.concurrent.atomic.AtomicBoolean
 

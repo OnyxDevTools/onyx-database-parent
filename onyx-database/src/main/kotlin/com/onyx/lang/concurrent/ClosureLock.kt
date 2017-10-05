@@ -1,4 +1,4 @@
-package com.onyx.concurrent
+package com.onyx.lang.concurrent
 
 /**
  * Created by timothy.osborn on 4/7/15.
@@ -9,7 +9,7 @@ package com.onyx.concurrent
  *
  * @since 1.2.0 This was changed to use a stamp lock for additional performance gains.  Since it cannot be used recursively.
  */
-interface DispatchLock {
+interface ClosureLock {
 
     /**
      * This method performs a lambda function by locking on whatever object you pass in.

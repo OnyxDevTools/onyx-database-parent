@@ -1,10 +1,10 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.concurrent.DispatchLock
-import com.onyx.concurrent.DispatchReadWriteLock
-import com.onyx.concurrent.impl.DefaultDispatchReadWriteLock
-import com.onyx.concurrent.impl.EmptyDispatchLock
-import com.onyx.concurrent.impl.EmptyDispatchReadWriteLock
+import com.onyx.lang.concurrent.ClosureLock
+import com.onyx.lang.concurrent.ClosureReadWriteLock
+import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
+import com.onyx.lang.concurrent.impl.EmptyClosureLock
+import com.onyx.lang.concurrent.impl.EmptyClosureReadWriteLock
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListNode
@@ -12,8 +12,8 @@ import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.depricated.CompareUtil
-import com.onyx.util.ReflectionField
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.ReflectionField
+import com.onyx.reflection.Reflection
 
 import java.util.HashSet
 
@@ -31,15 +31,15 @@ import java.util.HashSet
  */
 open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Boolean = false) : AbstractIterableSkipList<K, V>(fileStore, header, detached) {
 
-    override val readWriteLock:DispatchLock = EmptyDispatchLock()
+    override val readWriteLock: ClosureLock = EmptyClosureLock()
 
     override val size: Int
         get() = longSize().toInt()
 
-    private var mapReadWriteLock: DispatchReadWriteLock = if (detached)
-                                                      EmptyDispatchReadWriteLock()
+    private var mapReadWriteLock: ClosureReadWriteLock = if (detached)
+        EmptyClosureReadWriteLock()
                                                   else
-                                                      DefaultDispatchReadWriteLock()
+        DefaultClosureReadWriteLock()
 
     /**
      * Remove an item within the map
@@ -177,14 +177,14 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override fun <T : Any?> getAttributeWithRecID(attribute: ReflectionField, reference: Long): T {
         val node = findNodeAtPosition(reference) as SkipListNode<K>?
         val value = findValueAtPosition(node!!.recordPosition, node.recordSize) ?: return null as T
-        return ReflectionUtil.getAny<Any>(value, attribute) as T
+        return Reflection.getAny<Any>(value, attribute) as T
     }
 
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getAttributeWithRecID(field: ReflectionField, reference: SkipListNode<*>): T {
         val value = findValueAtPosition(reference.recordPosition, reference.recordSize) ?: return null as T
-        return ReflectionUtil.getAny<Any>(value, field) as T
+        return Reflection.getAny<Any>(value, field) as T
     }
 
     /**

@@ -1,4 +1,4 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.map
 
 /**
  * Created by tosborn1 on 2/19/17.

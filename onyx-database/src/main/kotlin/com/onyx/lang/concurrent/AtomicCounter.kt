@@ -1,4 +1,4 @@
-package com.onyx.concurrent
+package com.onyx.lang.concurrent
 
 /**
  * Created by tosborn1 on 3/2/17.

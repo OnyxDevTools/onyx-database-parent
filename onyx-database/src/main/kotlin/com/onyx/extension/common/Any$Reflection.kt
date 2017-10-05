@@ -1,12 +1,12 @@
 package com.onyx.extension.common
 
 import com.onyx.persistence.annotations.*
-import com.onyx.util.ReflectionField
-import com.onyx.util.map.OptimisticLockingMap
+import com.onyx.reflection.ReflectionField
+import com.onyx.lang.map.OptimisticLockingMap
 import java.lang.reflect.Modifier
 import java.util.ArrayList
 
-private val classFields = OptimisticLockingMap<Class<*>, List<ReflectionField>>(HashMap<Class<*>, List<ReflectionField>>(HashMap()))
+private val classFields = OptimisticLockingMap<Class<*>, List<ReflectionField>>(HashMap())
 
 fun Any.getFields() : List<ReflectionField> {
     val clazz = this.javaClass

@@ -14,10 +14,9 @@ import com.onyx.client.handlers.RequestHandler;
 import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.exception.InitializationException;
-import com.onyx.encryption.DefaultEncryptionInteractor;
-import com.onyx.encryption.EncryptionInteractor;
-import com.onyx.util.map.CompatHashMap;
-import com.onyx.util.map.SynchronizedMap;
+import com.onyx.interactors.encryption.DefaultEncryptionInteractor;
+import com.onyx.interactors.encryption.EncryptionInteractor;
+import com.onyx.lang.map.OptimisticLockingMap;
 import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.SSLContext;
@@ -30,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.nio.channels.spi.SelectorProvider;
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -261,7 +261,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     }
 
     // Registered Push subscribers
-    private final Map<PushSubscriber, PushSubscriber> pushSubscribers = new SynchronizedMap<>(new CompatHashMap<>());
+    private final Map<PushSubscriber, PushSubscriber> pushSubscribers = new OptimisticLockingMap<>(new HashMap());
 
     // Counter for correlating push subscribers
     private final AtomicLong pushSubscriberId = new AtomicLong(0);

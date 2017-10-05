@@ -1,6 +1,6 @@
-package com.onyx.encryption
+package com.onyx.interactors.encryption
 
-import com.onyx.util.Encryption
+import com.onyx.interactors.encryption.data.Encryption
 
 /**
  * Class that is a quick and dirty encryption utility.

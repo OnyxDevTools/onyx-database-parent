@@ -4,7 +4,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.getFields
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.Reflection
 
 import java.lang.reflect.Array
 import java.nio.BufferUnderflowException
@@ -30,7 +30,7 @@ class BufferStream(buffer: ByteBuffer) {
     private var referenceCount = 0
 
     // Wrapper for a ByteBuffer to retain reference
-    private var expandableByteBuffer: ExpandableByteBuffer? = null
+    private var expandableByteBuffer: ExpandableByteBuffer? = ExpandableByteBuffer(buffer)
 
     // Indicates whether we are pulling from the expandableByteBuffer or putting into the expandableByteBuffer.
     private var isComingFromBuffer = false
@@ -69,10 +69,6 @@ class BufferStream(buffer: ByteBuffer) {
      * Default constructor with no buffer
      */
     constructor() : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION))
-
-    init {
-        this.expandableByteBuffer = ExpandableByteBuffer(buffer)
-    }
 
     // endregion
 
@@ -324,20 +320,20 @@ class BufferStream(buffer: ByteBuffer) {
             val objectType = value as Class<*>
             val instance: Any
             try {
-                instance = ReflectionUtil.instantiate(objectType)
+                instance = Reflection.instantiate(objectType)
                 addReference(instance)
 
                 instance.getFields().forEach {
                     when {
-                        it.type == Long::class.javaPrimitiveType -> ReflectionUtil.setLong(instance, it, long)
-                        it.type == Int::class.javaPrimitiveType -> ReflectionUtil.setInt(instance, it, int)
-                        it.type == Double::class.javaPrimitiveType -> ReflectionUtil.setDouble(instance, it, double)
-                        it.type == Float::class.javaPrimitiveType -> ReflectionUtil.setFloat(instance, it, float)
-                        it.type == Byte::class.javaPrimitiveType -> ReflectionUtil.setByte(instance, it, byte)
-                        it.type == Char::class.javaPrimitiveType -> ReflectionUtil.setChar(instance, it, char)
-                        it.type == Short::class.javaPrimitiveType -> ReflectionUtil.setShort(instance, it, short)
-                        it.type == Boolean::class.javaPrimitiveType -> ReflectionUtil.setBoolean(instance, it, boolean)
-                        else -> ReflectionUtil.setObject(instance, it, value)
+                        it.type == Long::class.javaPrimitiveType -> Reflection.setLong(instance, it, long)
+                        it.type == Int::class.javaPrimitiveType -> Reflection.setInt(instance, it, int)
+                        it.type == Double::class.javaPrimitiveType -> Reflection.setDouble(instance, it, double)
+                        it.type == Float::class.javaPrimitiveType -> Reflection.setFloat(instance, it, float)
+                        it.type == Byte::class.javaPrimitiveType -> Reflection.setByte(instance, it, byte)
+                        it.type == Char::class.javaPrimitiveType -> Reflection.setChar(instance, it, char)
+                        it.type == Short::class.javaPrimitiveType -> Reflection.setShort(instance, it, short)
+                        it.type == Boolean::class.javaPrimitiveType -> Reflection.setBoolean(instance, it, boolean)
+                        else -> Reflection.setObject(instance, it, value)
                     }
                 }
 
@@ -423,7 +419,7 @@ class BufferStream(buffer: ByteBuffer) {
             val size = expandableByteBuffer!!.buffer.int
 
             val collection = try {
-                ReflectionUtil.instantiate<MutableCollection<Any?>>(collectionClass!!)
+                Reflection.instantiate<MutableCollection<Any?>>(collectionClass!!)
             } catch (e: Exception) {
                 ArrayList<Any?>()
             }
@@ -448,7 +444,7 @@ class BufferStream(buffer: ByteBuffer) {
         get() {
             val mapClass = value as Class<*>
             val map = try {
-                ReflectionUtil.instantiate<MutableMap<Any, Any?>>(mapClass)
+                Reflection.instantiate<MutableMap<Any, Any?>>(mapClass)
             } catch (e: InstantiationException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
             } catch (e: IllegalAccessException) {
@@ -492,7 +488,7 @@ class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             val classToInstantiate = value as Class<*>?
-            val streamable = ReflectionUtil.instantiate<BufferStreamable>(classToInstantiate!!)
+            val streamable = Reflection.instantiate<BufferStreamable>(classToInstantiate!!)
             if (context == null)
                 streamable.read(this)
             else
@@ -845,16 +841,16 @@ class BufferStream(buffer: ByteBuffer) {
         value?.getFields()?.forEach {
             try {
                 when {
-                    it.type == Int::class.javaPrimitiveType -> putInt(ReflectionUtil.getInt(value, it))
-                    it.type == Long::class.javaPrimitiveType -> putLong(ReflectionUtil.getLong(value, it))
-                    it.type == Byte::class.javaPrimitiveType -> putByte(ReflectionUtil.getByte(value, it))
-                    it.type == Float::class.javaPrimitiveType -> putFloat(ReflectionUtil.getFloat(value, it))
-                    it.type == Double::class.javaPrimitiveType -> putDouble(ReflectionUtil.getDouble(value, it))
-                    it.type == Boolean::class.javaPrimitiveType -> putBoolean(ReflectionUtil.getBoolean(value, it))
-                    it.type == Short::class.javaPrimitiveType -> putShort(ReflectionUtil.getShort(value, it))
-                    it.type == Char::class.javaPrimitiveType -> putChar(ReflectionUtil.getChar(value, it))
+                    it.type == Int::class.javaPrimitiveType -> putInt(Reflection.getInt(value, it))
+                    it.type == Long::class.javaPrimitiveType -> putLong(Reflection.getLong(value, it))
+                    it.type == Byte::class.javaPrimitiveType -> putByte(Reflection.getByte(value, it))
+                    it.type == Float::class.javaPrimitiveType -> putFloat(Reflection.getFloat(value, it))
+                    it.type == Double::class.javaPrimitiveType -> putDouble(Reflection.getDouble(value, it))
+                    it.type == Boolean::class.javaPrimitiveType -> putBoolean(Reflection.getBoolean(value, it))
+                    it.type == Short::class.javaPrimitiveType -> putShort(Reflection.getShort(value, it))
+                    it.type == Char::class.javaPrimitiveType -> putChar(Reflection.getChar(value, it))
                     else -> {
-                        val attributeObject = ReflectionUtil.getObject<Any>(value, it)
+                        val attributeObject = Reflection.getObject<Any>(value, it)
                         putObject(attributeObject)
                     }
                 }

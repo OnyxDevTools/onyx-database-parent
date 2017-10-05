@@ -5,7 +5,7 @@ import com.onyx.entity.SystemUser;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.encryption.EncryptionInteractor;
+import com.onyx.interactors.encryption.EncryptionInteractor;
 
 /**
  * Created by tosborn1 on 2/13/17.

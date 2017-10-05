@@ -1,6 +1,6 @@
-package com.onyx.util.map
+package com.onyx.lang.map
 
-import com.onyx.concurrent.impl.DefaultDispatchReadWriteLock
+import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 
 /**
  * Created by tosborn1 on 3/24/17.
@@ -9,7 +9,7 @@ import com.onyx.concurrent.impl.DefaultDispatchReadWriteLock
  */
 class OptimisticLockingMap<K, V>(private val m: MutableMap<K, V>) : MutableMap<K, V> {
 
-    private val lock = DefaultDispatchReadWriteLock()
+    private val lock = DefaultClosureReadWriteLock()
 
     // region Properties
 

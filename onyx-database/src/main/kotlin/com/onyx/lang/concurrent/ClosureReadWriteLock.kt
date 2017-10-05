@@ -1,6 +1,6 @@
-package com.onyx.concurrent
+package com.onyx.lang.concurrent
 
-interface DispatchReadWriteLock {
+interface ClosureReadWriteLock {
 
     /**
      * This method performs a lambda function by locking on whatever object you pass in.

@@ -4,21 +4,15 @@ import com.onyx.client.auth.AuthenticationManager;
 import com.onyx.client.base.ConnectionProperties;
 import com.onyx.client.exception.MethodInvocationException;
 import com.onyx.client.handlers.RequestHandler;
-import com.onyx.client.rmi.OnyxRMIClient;
 import com.onyx.client.rmi.RMIRequest;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
-import com.onyx.persistence.context.SchemaContext;
+import com.onyx.lang.map.OptimisticLockingMap;
 import com.onyx.server.base.CommunicationServer;
-import com.onyx.util.map.CompatMap;
-import com.onyx.util.map.SynchronizedMap;
 
 import javax.net.ssl.SSLException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -141,7 +135,7 @@ public class OnyxRMIServer extends CommunicationServer {
         };
     }
 
-    private final CompatMap<Class, List<Method>> methodCache = new SynchronizedMap<>();
+    private final Map<Class, List<Method>> methodCache = new OptimisticLockingMap(new HashMap());
 
     /**
      * Find the corresponding method to the proxy value

@@ -1,4 +1,4 @@
-package com.onyx.util
+package com.onyx.reflection
 
 import java.lang.reflect.Field
 

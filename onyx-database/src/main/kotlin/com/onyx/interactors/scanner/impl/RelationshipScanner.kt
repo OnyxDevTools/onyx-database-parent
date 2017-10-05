@@ -15,7 +15,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.persistence.context.Contexts
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.Reflection
 import kotlin.collections.HashMap
 
 /**
@@ -41,7 +41,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         var partitionId = 0L
 
         if (this.descriptor.hasPartition) {
-            val temporaryManagedEntity: IManagedEntity = ReflectionUtil.instantiate(descriptor.entityClass)
+            val temporaryManagedEntity: IManagedEntity = Reflection.instantiate(descriptor.entityClass)
             temporaryManagedEntity[context, descriptor, descriptor.partition!!.name] = query.partition.toString()
             partitionId = temporaryManagedEntity.partitionId(context, descriptor)
         }

@@ -1,8 +1,8 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.concurrent.impl
 
-import com.onyx.concurrent.DispatchLock
+import com.onyx.lang.concurrent.ClosureLock
 
-class DefaultDispatchLock : DispatchLock {
+class DefaultClosureLock : ClosureLock {
 
     override fun <T> performWithLock(lock: Any, consumer: (lock: Any) -> T): T = synchronized(lock) {
         consumer.invoke(lock)

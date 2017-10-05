@@ -1,15 +1,15 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.concurrent.impl
 
-import com.onyx.concurrent.DispatchLock
+import com.onyx.lang.concurrent.ClosureLock
 import java.util.*
 
 /**
  * Created by tosborn1 on 8/4/15.
  *
  *
- * This is the default implementation of the DispatchLock that implements it using 10 different StampLocks
+ * This is the default implementation of the ClosureLock that implements it using 10 different StampLocks
  */
-class ReferenceDispatchLock : DispatchLock {
+class ReferenceClosureLock : ClosureLock {
 
     private val references = WeakHashMap<Any, Any>()
 

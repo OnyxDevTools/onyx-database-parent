@@ -1,11 +1,11 @@
 package com.onyx.diskmap
 
-import com.onyx.concurrent.DispatchLock
+import com.onyx.lang.concurrent.ClosureLock
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
-import com.onyx.util.ReflectionField
+import com.onyx.reflection.ReflectionField
 
 /**
  * Created by tosborn1 on 7/30/15.
@@ -35,7 +35,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @since 1.2.0
      * @return Null if it does not apply.
      */
-    val readWriteLock: DispatchLock
+    val readWriteLock: ClosureLock
 
     /**
      * Get the set of references.  Not values nor keys

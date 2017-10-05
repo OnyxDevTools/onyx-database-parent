@@ -9,7 +9,7 @@ import com.onyx.extension.common.catchAll
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.Reflection
 
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -253,7 +253,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
             return@perform when {
                 BufferStreamable::class.java.isAssignableFrom(type) -> {
-                    val streamable:BufferStreamable = ReflectionUtil.instantiate(type)
+                    val streamable:BufferStreamable = Reflection.instantiate(type)
                     streamable.read(buffer, context)
                     streamable
                 }

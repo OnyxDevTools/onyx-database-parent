@@ -1,7 +1,7 @@
 package com.onyx.application
 
 import com.onyx.client.SSLPeer
-import com.onyx.encryption.EncryptionInteractor
+import com.onyx.interactors.encryption.EncryptionInteractor
 
 /**
  * Onyx Server contract.  This is the interface that all servers must implement.

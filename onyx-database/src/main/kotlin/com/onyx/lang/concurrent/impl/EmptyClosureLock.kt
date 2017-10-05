@@ -1,15 +1,15 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.concurrent.impl
 
-import com.onyx.concurrent.DispatchLock
+import com.onyx.lang.concurrent.ClosureLock
 
 /**
  * Created by tosborn1 on 2/20/17.
  *
- * This implementation igores locking and does not provide any concurrency blocking.
+ * This implementation ignores locking and does not provide any concurrency blocking.
  *
  * The purpose is so that it can be injected into a stateless implementation of a map.
  */
-class EmptyDispatchLock : DispatchLock {
+class EmptyClosureLock : ClosureLock {
 
     /**
      * This method does not perform any blocking it is an empty implemented method that invokes the consumer

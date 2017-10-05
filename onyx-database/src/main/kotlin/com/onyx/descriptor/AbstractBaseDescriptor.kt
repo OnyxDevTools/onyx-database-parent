@@ -1,7 +1,7 @@
 package com.onyx.descriptor
 
-import com.onyx.util.ReflectionField
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.ReflectionField
+import com.onyx.reflection.Reflection
 
 import java.lang.reflect.Field
 
@@ -25,6 +25,6 @@ abstract class AbstractBaseDescriptor {
      * @since 1.3.0 - Effort to cleanup reflection
      */
     fun setReflectionField(field: Field) {
-        this.field = ReflectionUtil.getReflectionField(field)
+        this.field = Reflection.getReflectionField(field)
     }
 }

@@ -11,7 +11,7 @@ import com.onyx.diskmap.store.Store
 import com.onyx.extension.perform
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.util.map.OptimisticLockingMap
+import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
 
 /**

@@ -1,4 +1,4 @@
-package com.onyx.depricated
+package com.onyx.reflection
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.AttributeMissingException
@@ -7,7 +7,6 @@ import com.onyx.exception.InvalidConstructorException
 import com.onyx.extension.common.castTo
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.IManagedEntity
-import com.onyx.util.ReflectionField
 
 import java.lang.reflect.*
 
@@ -21,7 +20,7 @@ import java.lang.reflect.*
  * @since 1.2.2 This class has been refactored to remove theUnsafe.  That is unavailable and it did not prooove to provide
  * performance benefit.
  */
-object ReflectionUtil {
+object Reflection {
 
     // region Fields
 
@@ -67,9 +66,6 @@ object ReflectionUtil {
             } catch (e1: InvocationTargetException) {
                 throw InstantiationException("Cannot instantiate class " + type.canonicalName)
             }
-        } catch (e:Exception)
-        {
-            throw e
         }
     }
 

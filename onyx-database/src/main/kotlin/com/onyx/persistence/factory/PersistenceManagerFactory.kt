@@ -3,7 +3,7 @@ package com.onyx.persistence.factory
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.encryption.EncryptionInteractor
+import com.onyx.interactors.encryption.EncryptionInteractor
 
 /**
  * Persistence manager factory configures the database and encapsulates the instantiation of the Persistence Manager

@@ -13,7 +13,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.impl.RemoteQueryListener
 import com.onyx.persistence.stream.QueryStream
-import com.onyx.depricated.ReflectionUtil
+import com.onyx.reflection.Reflection
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.  This specifically is used for an remote database.
@@ -81,7 +81,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Suppress("UNCHECKED_CAST")
     override fun <E : IManagedEntity> saveEntity(entity: IManagedEntity): E {
         val copyValue = proxy.saveEntity<IManagedEntity>(entity)
-        ReflectionUtil.copy(copyValue, entity, context.getDescriptorForEntity(entity))
+        Reflection.copy(copyValue, entity, context.getDescriptorForEntity(entity))
 
         return entity as E
     }
@@ -234,7 +234,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Suppress("UNCHECKED_CAST")
     override fun <E : IManagedEntity> find(entity: IManagedEntity): E {
         val results = proxy.find<IManagedEntity>(entity)
-        ReflectionUtil.copy(results, entity, context.getDescriptorForEntity(entity))
+        Reflection.copy(results, entity, context.getDescriptorForEntity(entity))
 
         return entity as E
     }

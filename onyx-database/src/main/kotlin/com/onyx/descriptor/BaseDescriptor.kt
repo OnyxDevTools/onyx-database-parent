@@ -1,6 +1,6 @@
 package com.onyx.descriptor
 
-import com.onyx.util.ReflectionField
+import com.onyx.reflection.ReflectionField
 
 interface BaseDescriptor {
 

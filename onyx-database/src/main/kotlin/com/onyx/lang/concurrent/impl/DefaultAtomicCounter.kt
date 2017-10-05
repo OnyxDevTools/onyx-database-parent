@@ -1,8 +1,8 @@
-package com.onyx.concurrent.impl
+package com.onyx.lang.concurrent.impl
 
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
-import com.onyx.concurrent.AtomicCounter
+import com.onyx.lang.concurrent.AtomicCounter
 import com.onyx.exception.BufferingException
 
 import java.util.concurrent.atomic.AtomicLong
@@ -15,13 +15,9 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.3.0
  */
-class DefaultAtomicCounter(initialValue: Long) : AtomicCounter, BufferStreamable {
+class DefaultAtomicCounter(initialValue: Long = 0L) : AtomicCounter, BufferStreamable {
 
-    private var aLong: AtomicLong = AtomicLong(0)
-
-    init {
-        this.aLong = AtomicLong(initialValue)
-    }
+    private var aLong: AtomicLong = AtomicLong(initialValue)
 
     /**
      * Set long value

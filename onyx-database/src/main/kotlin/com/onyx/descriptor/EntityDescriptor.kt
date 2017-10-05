@@ -5,7 +5,7 @@ import com.onyx.persistence.annotations.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.extension.validate
 import com.onyx.extension.validateIsManagedEntity
-import com.onyx.util.ReflectionField
+import com.onyx.reflection.ReflectionField
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method

@@ -4,7 +4,7 @@ import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
-import com.onyx.util.map.OptimisticLockingMap
+import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
 
 /**
