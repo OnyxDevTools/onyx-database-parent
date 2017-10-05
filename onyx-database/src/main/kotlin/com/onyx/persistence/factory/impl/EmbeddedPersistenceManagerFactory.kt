@@ -7,7 +7,8 @@ import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
-import com.onyx.util.EncryptionUtil
+import com.onyx.encryption.DefaultEncryptionInteractor
+import com.onyx.encryption.EncryptionInteractor
 
 import java.io.*
 import java.nio.channels.ClosedChannelException
@@ -60,6 +61,8 @@ import java.nio.charset.StandardCharsets
  */
 open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation) : PersistenceManagerFactory {
 
+    override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
+
     /**
      * Constructor that ensures safe shutdown
      * @since 1.0.0
@@ -88,7 +91,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
     @Suppress("LeakingThis")
     override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)
 
-    override val credentials: String by lazy { this.user + ":" + EncryptionUtil.encrypt(this.password) }
+    override val credentials: String by lazy { this.user + ":" + encryption.encrypt(this.password) }
 
     // Setup Persistence Manager
 
@@ -232,7 +235,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      */
     @Throws(InitializationException::class)
     private fun encryptCredentials(): String = try {
-        EncryptionUtil.encrypt(user + password)
+        encryption.encrypt(user + password)!!
     } catch (e: Exception) {
         throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
     }

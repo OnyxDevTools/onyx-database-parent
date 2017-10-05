@@ -2,7 +2,6 @@ package com.onyx.server.base;
 
 import com.onyx.application.OnyxServer;
 import com.onyx.buffer.BufferPool;
-import com.onyx.buffer.BufferStream;
 import com.onyx.client.AbstractCommunicationPeer;
 import com.onyx.client.base.*;
 import com.onyx.client.base.engine.PacketTransportEngine;
@@ -15,8 +14,11 @@ import com.onyx.client.handlers.RequestHandler;
 import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.exception.InitializationException;
+import com.onyx.encryption.DefaultEncryptionInteractor;
+import com.onyx.encryption.EncryptionInteractor;
 import com.onyx.util.map.CompatHashMap;
 import com.onyx.util.map.SynchronizedMap;
+import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -56,6 +58,7 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     private ServerSocketChannel serverSocketChannel = null;
     // Array of buffer pools for connections
     private ConnectionBufferPool[] connectionBufferPools;
+    private EncryptionInteractor encryption = DefaultEncryptionInteractor.INSTANCE;
 
     // Round robin for selecting buffer pools for inbound connections
     private volatile int connectionRoundRobin = 0;
@@ -501,5 +504,16 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     @Override
     public void copySSLPeerTo(com.onyx.client.SSLPeer peer) {
 
+    }
+
+    @NotNull
+    @Override
+    public EncryptionInteractor getEncryption() {
+        return encryption;
+    }
+
+    @Override
+    public void setEncryption(@NotNull EncryptionInteractor encryptionInteractor) {
+        this.encryption = encryptionInteractor;
     }
 }

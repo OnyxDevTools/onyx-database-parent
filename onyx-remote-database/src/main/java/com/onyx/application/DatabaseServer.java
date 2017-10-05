@@ -13,7 +13,9 @@ import com.onyx.server.base.AbstractDatabaseServer;
 import com.onyx.server.base.ServerState;
 import com.onyx.server.cli.CommandLineParser;
 import com.onyx.server.rmi.OnyxRMIServer;
-import com.onyx.util.EncryptionUtil;
+import com.onyx.encryption.DefaultEncryptionInteractor;
+import com.onyx.encryption.EncryptionInteractor;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Base Database Server Application.
@@ -58,6 +60,8 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
 
     @SuppressWarnings("WeakerAccess")
     protected AuthenticationManager authenticationManager = null;
+
+    private EncryptionInteractor encryption = DefaultEncryptionInteractor.INSTANCE;
 
     /**
      * Constructor
@@ -110,13 +114,13 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
                 // Create a default user
                 SystemUser user = new SystemUser();
                 user.setUsername(this.user);
-                user.setPassword(EncryptionUtil.encrypt(this.password));
+                user.setPassword(encryption.encrypt(this.password));
                 user.setRole(SystemUserRole.ROLE_ADMIN);
 
                 // Default User and password
                 persistenceManagerFactory.getPersistenceManager().saveEntity(user);
 
-                this.authenticationManager = new DefaultAuthenticationManager(persistenceManagerFactory.getPersistenceManager());
+                this.authenticationManager = new DefaultAuthenticationManager(persistenceManagerFactory.getPersistenceManager(), encryption);
 
                 // Create the RMI Server
                 rmiServer = new OnyxRMIServer();
@@ -186,6 +190,17 @@ public class DatabaseServer extends AbstractDatabaseServer implements OnyxServer
 
     public void copySSLPeerTo(SSLPeer peer) {
 
+    }
+
+    @NotNull
+    @Override
+    public EncryptionInteractor getEncryption() {
+        return encryption;
+    }
+
+    @Override
+    public void setEncryption(@NotNull EncryptionInteractor encryptionInteractor) {
+        this.encryption = encryptionInteractor;
     }
 }
 

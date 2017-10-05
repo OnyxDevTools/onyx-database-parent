@@ -1,7 +1,7 @@
 package embedded.encryption;
 
 import category.EmbeddedDatabaseTests;
-import com.onyx.util.EncryptionUtil;
+import com.onyx.encryption.DefaultEncryptionInteractor;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -26,15 +26,15 @@ public class EncryptionTest {
 
     @Test
     public void shouldEncrypt() throws GeneralSecurityException, UnsupportedEncodingException {
-        String encryptedText = EncryptionUtil.encrypt("adminadmin");      
+        String encryptedText = DefaultEncryptionInteractor.INSTANCE.encrypt("adminadmin");
         Assert.assertTrue(encryptedText != null);
     }
 
     @Test
     public void shouldDycrypt() throws GeneralSecurityException, IOException {
         String str = "adminadmin";
-        String encryptedText = EncryptionUtil.encrypt(str); 
-        String decryptedText = EncryptionUtil.decrypt(encryptedText);
+        String encryptedText = DefaultEncryptionInteractor.INSTANCE.encrypt(str);
+        String decryptedText = DefaultEncryptionInteractor.INSTANCE.decrypt(encryptedText);
         
         Assert.assertTrue(str.equals(decryptedText));
        
@@ -44,7 +44,7 @@ public class EncryptionTest {
     public void shouldFail() throws GeneralSecurityException, IOException {
         String str = "adminadmin";
         String str2 = "adminpassword"; 
-        String decryptedText = EncryptionUtil.decrypt(EncryptionUtil.encrypt(str2));
+        String decryptedText = DefaultEncryptionInteractor.INSTANCE.decrypt(DefaultEncryptionInteractor.INSTANCE.encrypt(str2));
         
         Assert.assertFalse(str.equals(decryptedText));   
     }
@@ -61,14 +61,14 @@ public class EncryptionTest {
        //Next, write the encrypted bytes to the file.
        
         try (FileOutputStream fileStream = new FileOutputStream(file)) {
-            fileStream.write(EncryptionUtil.encrypt(textToSave).getBytes(StandardCharsets.UTF_8));
+            fileStream.write(DefaultEncryptionInteractor.INSTANCE.encrypt(textToSave).getBytes(StandardCharsets.UTF_8));
             fileStream.close();
         }
 
         String savedText = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
 
         //make assertions
-        Assert.assertEquals(savedText,EncryptionUtil.encrypt(textToSave));
+        Assert.assertEquals(savedText, DefaultEncryptionInteractor.INSTANCE.encrypt(textToSave));
         
         //cleanup file
         boolean delete = file.delete();

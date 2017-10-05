@@ -12,7 +12,7 @@ import java.security.spec.KeySpec;
 /**
  * A class to make more easy and simple the encrypt routines, this is the core of Encryption library
  */
-class Encryption {
+public class Encryption {
 
     /**
      * The Builder used to create the Encryption instance and that contains the information about

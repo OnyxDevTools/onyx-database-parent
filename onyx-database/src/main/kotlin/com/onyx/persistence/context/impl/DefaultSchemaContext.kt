@@ -38,7 +38,7 @@ import com.onyx.interactors.transaction.impl.DefaultTransactionStore
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
-import com.onyx.util.EntityClassLoader
+import com.onyx.classLoader.EntityClassLoader
 import com.onyx.depricated.ReflectionUtil
 import com.onyx.util.map.OptimisticLockingMap
 import kotlinx.coroutines.experimental.Job

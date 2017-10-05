@@ -3,6 +3,7 @@ package com.onyx.persistence.factory
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
+import com.onyx.encryption.EncryptionInteractor
 
 /**
  * Persistence manager factory configures the database and encapsulates the instantiation of the Persistence Manager
@@ -71,6 +72,15 @@ interface PersistenceManagerFactory {
      *
      */
     var schemaContext: SchemaContext
+
+    /**
+     * Specify encryption Interactor.  By default this will select the DefaultEncryptionInteractor instance.
+     * In order to make your database secure, override the instance of encryption interactor
+     *
+     * @since 2.0.0
+     *
+     */
+    var encryption: EncryptionInteractor
 
     /**
      * Initialize the database connection and storage mechanisms

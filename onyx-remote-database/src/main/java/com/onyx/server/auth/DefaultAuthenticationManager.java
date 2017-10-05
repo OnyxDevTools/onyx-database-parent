@@ -5,7 +5,7 @@ import com.onyx.entity.SystemUser;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.util.EncryptionUtil;
+import com.onyx.encryption.EncryptionInteractor;
 
 /**
  * Created by tosborn1 on 2/13/17.
@@ -15,14 +15,16 @@ import com.onyx.util.EncryptionUtil;
 public class DefaultAuthenticationManager implements AuthenticationManager {
 
     private final PersistenceManager persistenceManager;
+    private final EncryptionInteractor encryption;
 
     /**
      * Constructor with persistence manager
      * @param persistenceManager Persistence manager
      */
-    public DefaultAuthenticationManager(PersistenceManager persistenceManager)
+    public DefaultAuthenticationManager(PersistenceManager persistenceManager, EncryptionInteractor encryption)
     {
         this.persistenceManager = persistenceManager;
+        this.encryption = encryption;
     }
 
     /**
@@ -42,7 +44,7 @@ public class DefaultAuthenticationManager implements AuthenticationManager {
         }
         if(user == null)
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
-        if(!user.getPassword().equals(EncryptionUtil.encrypt(password)))
+        if(!user.getPassword().equals(encryption.encrypt(password)))
             throw new InitializationException(InitializationException.INVALID_CREDENTIALS);
     }
 }
