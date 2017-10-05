@@ -41,4 +41,29 @@ class OptimisticLockingMap<K, V>(private val m: MutableMap<K, V>) : MutableMap<K
     override fun clear() = lock.writeLock { m.clear() }
 
     // endregion
+
+    /**
+     * Get or put overridden so that it first uses optimistic locking.  If it failed to return a value, check again
+     * in order to account for a race condition.  Lastly put a new value by calling the unit.
+     *
+     * I found the Kotlin extension method was not in fact thread safe as the documentation claims with the ConcurrentHashMap
+     * so this is here to account for that
+     *
+     * This does call the get method an extra time.  Using this map implies it is heavy on the read access and therefore
+     * need a non blocking read whereas it is acceptable to have slower write times since it is not write heavy.
+     *
+     * @since 2.0.0
+     */
+    fun getOrPut(key: K, body: () -> V): V {
+        val value: V? = get(key)
+        return value ?: lock.writeLock {
+            var newValue = m[key]
+            if (newValue == null) {
+                newValue = body.invoke()
+                m.put(key, newValue)
+            }
+            return@writeLock newValue
+        }!!
+    }
+
 }

@@ -7,13 +7,9 @@ import com.onyx.exception.InvalidConstructorException
 import com.onyx.extension.common.castTo
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.annotations.*
 import com.onyx.util.ReflectionField
 
 import java.lang.reflect.*
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.HashMap
 
 /**
  * Created by tosborn1 on 8/2/16.
@@ -29,47 +25,6 @@ object ReflectionUtil {
 
     // region Fields
 
-    // Cache of class' fields
-    private val classFields = ConcurrentHashMap<Class<*>, List<ReflectionField>>(HashMap<Class<*>, List<ReflectionField>>())
-
-    /**
-     * Get all the fields to serialize
-     *
-     * @param object The value to read the fields from
-     * @return Fields with their offsets
-     */
-    fun getFields(`object`: Any): List<ReflectionField> {
-        val clazz = `object`.javaClass
-        val isManagedEntity = `object`.javaClass.isAnnotationPresent(Entity::class.java)
-
-        return classFields.computeIfAbsent(clazz) { jClass ->
-            val fields = ArrayList<ReflectionField>()
-            var aClass = jClass
-            while (aClass != Any::class.java
-                    && aClass != Exception::class.java
-                    && aClass != Throwable::class.java) {
-                aClass.declaredFields
-                        .asSequence()
-                        .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
-                        .forEach {
-                            if (!isManagedEntity) {
-                                fields.add(ReflectionField(it.name, it))
-                            } else if (it.isAnnotationPresent(Attribute::class.java)
-                                    || it.isAnnotationPresent(Index::class.java)
-                                    || it.isAnnotationPresent(Partition::class.java)
-                                    || it.isAnnotationPresent(Identifier::class.java)
-                                    || it.isAnnotationPresent(Relationship::class.java)) {
-                                fields.add(ReflectionField(it.name, it))
-                            }
-                        }
-                aClass = aClass.superclass
-            }
-
-            fields.sortBy { it.name }
-            fields
-        }
-    }
-
     /**
      * Helper for getting the offset field which is a wrapper so that it can be used by the Unsafe for reflection
      *
@@ -77,33 +32,6 @@ object ReflectionUtil {
      * @return The offset field
      */
     fun getReflectionField(field: Field): ReflectionField = ReflectionField(field.name, field)
-
-    /**
-     * Helper for getting field that may be an inherited field
-     *
-     * @param jClass     Parent class to reflect upon
-     * @param attribute Attribute to get field of
-     * @return The Field that corresponds to that attribute name
-     * @throws AttributeMissingException Exception thrown when the field is not there
-     */
-    @Throws(AttributeMissingException::class)
-    fun getField(jClass: Class<*>, attribute: String): Field {
-        var clazz = jClass
-        while (clazz != Any::class.java) {
-            try {
-                val f = clazz.getDeclaredField(attribute)
-                if (f != null) {
-                    f.isAccessible = true
-                    return f
-                }
-            } catch (e: NoSuchFieldException) {
-                clazz = clazz.superclass
-            }
-
-        }
-
-        throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE)
-    }
 
     // endregion
 

@@ -24,7 +24,7 @@ class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsed
      * Get the object for key.  Also indicate it as touched so it marks the record as recently used
      *
      * @param key Map entry key
-     * @return Value null if it doesnt exist
+     * @return Value null if it doesn't exist
      */
     override operator fun get(key: K): V? = synchronized(this) { return hardReferenceSet[key] ?: return super.get(key) }
 

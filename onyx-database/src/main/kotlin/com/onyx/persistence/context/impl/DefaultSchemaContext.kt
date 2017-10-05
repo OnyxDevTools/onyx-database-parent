@@ -40,6 +40,7 @@ import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.util.EntityClassLoader
 import com.onyx.depricated.ReflectionUtil
+import com.onyx.util.map.OptimisticLockingMap
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.delay
 import java.io.File
@@ -47,7 +48,6 @@ import java.math.BigInteger
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -555,7 +555,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipInteractors = ConcurrentHashMap<RelationshipDescriptor, RelationshipInteractor>()
+    private val relationshipInteractors = OptimisticLockingMap<RelationshipDescriptor, RelationshipInteractor>(HashMap())
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -584,7 +584,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Index Controller
 
-    private val indexInteractors = ConcurrentHashMap<IndexDescriptor, IndexInteractor>()
+    private val indexInteractors = OptimisticLockingMap<IndexDescriptor, IndexInteractor>(HashMap())
 
     /**
      * Get Index Controller with Index descriptor.
@@ -604,7 +604,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Record Controller
 
-    private val recordInteractors = ConcurrentHashMap<EntityDescriptor, RecordInteractor>()
+    private val recordInteractors = OptimisticLockingMap<EntityDescriptor, RecordInteractor>(HashMap())
 
     /**
      * Get Record Controller.
@@ -622,7 +622,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = ConcurrentHashMap<String, DiskMapFactory>()
+    @JvmField internal val dataFiles = OptimisticLockingMap<String, DiskMapFactory>(HashMap())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.

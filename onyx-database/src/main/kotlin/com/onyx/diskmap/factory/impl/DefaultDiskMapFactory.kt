@@ -1,9 +1,10 @@
 package com.onyx.diskmap.factory.impl
 
 import com.onyx.diskmap.factory.data.MapType
-import com.onyx.diskmap.base.*
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.impl.DiskHashMap
+import com.onyx.diskmap.impl.DiskMatrixHashMap
 import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.FileChannelStore
@@ -205,7 +206,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * to change.  Always plan for scale when designing your data model.
      * @return Instantiated disk map
      */
-    private fun <T : Map<*,*>> newScalableMap(store: Store?, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskMultiHashMap<Any,Any?>(store, header, loadFactor) as T else DiskMultiMatrixHashMap<Any, Any?>(store, header, loadFactor) as T
+    private fun <T : Map<*,*>> newScalableMap(store: Store, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskHashMap<Any, Any?>(store, header, loadFactor) as T else DiskMatrixHashMap<Any, Any?>(store, header, loadFactor) as T
 
     /**
      * Create a new Disk Map.  This uses both a skip list
@@ -230,7 +231,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    override fun <T : Map<*,*>> newHashMap(header: Header, loadFactor: Int): T = DiskMultiHashMap<Any, Any?>(store, header, loadFactor, false) as T
+    override fun <T : Map<*,*>> newHashMap(header: Header, loadFactor: Int): T = DiskHashMap<Any, Any?>(store, header, loadFactor, false) as T
 
     /**
      * Get Hash Map by Name.  This will default the map with a loadFactor of 10.  In that case, it will return an

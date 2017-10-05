@@ -16,7 +16,7 @@ public class LastRecentlyUsedMap<K,V> extends LinkedHashMap<K,V> implements Comp
     @SuppressWarnings({"FieldCanBeLocal", "WeakerAccess"})
     protected final int maxCapacity = 100;
     @SuppressWarnings("WeakerAccess")
-    protected int timeToLive = 60*5*1000; // 5 minuts
+    protected int timeToLive = 60*5*1000; // 5 minutes
 
     /**
      * Constructor with max capacity

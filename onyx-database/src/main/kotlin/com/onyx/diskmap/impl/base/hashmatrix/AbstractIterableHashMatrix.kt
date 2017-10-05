@@ -3,6 +3,7 @@ package com.onyx.diskmap.impl.base.hashmatrix
 import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
 
@@ -39,8 +40,8 @@ abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Sto
     override val dictionaryValues: Set<Map<String, Any?>>
         get() = MultiMapDictionarySet<Map<String, Any?>>() as Set<Map<String, Any?>>
 
-    protected val maps: Set<DiskSkipListMap<K, V>>
-        get() = SkipListMapSet<Any>() as Set<DiskSkipListMap<K, V>>
+    protected val maps: Set<SkipListHeadNode>
+        get() = SkipListMapSet<SkipListHeadNode>() as Set<SkipListHeadNode>
 
     // endregion
 

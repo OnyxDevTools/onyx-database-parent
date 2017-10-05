@@ -1,6 +1,7 @@
 package com.onyx.diskmap.impl.base.hashmap
 
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
 import java.util.*
@@ -46,8 +47,8 @@ abstract class AbstractIterableMultiMapHashMap<K, V> protected constructor(store
      * @return Set implementation that iterates through the top level index structure
      * @since 1.2.0
      */
-    protected val maps: Set<Map<String, Any?>>
-        get() = MapSet() as Set<Map<String, Any?>>
+    protected val maps: Set<SkipListHeadNode>
+        get() = MapSet() as Set<SkipListHeadNode>
 
     /**
      * Iterator of the values within the entire map.

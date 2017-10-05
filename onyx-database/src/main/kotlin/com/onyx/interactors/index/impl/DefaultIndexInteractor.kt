@@ -112,7 +112,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
     /**
      * Find all the references above and perhaps equal to the key parameter
      *
-     * This has one prerequisite.  You must be using a DiskMultiMatrixHashMap as the storage mechanism.  Otherwise it will not be
+     * This has one prerequisite.  You must be using a DiskMatrixHashMap as the storage mechanism.  Otherwise it will not be
      * sorted.
      *
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
@@ -141,7 +141,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
     /**
      * Find all the references blow and perhaps equal to the key parameter
      *
-     * This has one prerequisite.  You must be using a DiskMultiMatrixHashMap as the storage mechanism.  Otherwise it will not be
+     * This has one prerequisite.  You must be using a DiskMatrixHashMap as the storage mechanism.  Otherwise it will not be
      * sorted.
      *
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
