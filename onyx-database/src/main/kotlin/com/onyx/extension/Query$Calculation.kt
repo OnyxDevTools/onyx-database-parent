@@ -30,14 +30,14 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
 
     // Iterate through
     this.getAllCriteria().forEach {
-        if (it.attribute!!.contains(".")) {
+        if (it.isRelationship) {
             // Compare operator for relationship value
             subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
         } else {
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-            subCriteria = it.value.compare(entity.get(context = context, name = it.attribute!!), it.operator)
+            subCriteria = it.value.compare(entity.get(context = context, descriptor = descriptor, name = it.attribute!!), it.operator)
         }
         it.meetsCriteria = subCriteria
     }
@@ -95,7 +95,7 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria<*>): Boolean {
  * to do a quick reference to see if newly saved entities meet the criteria
  */
 @Throws(OnyxException::class)
-private fun Query.relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Reference, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
+private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Reference, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
     var meetsCriteria = false
     val operator = criteria.operator
 

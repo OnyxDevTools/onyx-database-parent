@@ -496,35 +496,41 @@ open class DefaultSchemaContext : SchemaContext {
         val partitionIdVar = partitionId ?: ""
         val entityKey = entityClass.name + partitionIdVar.toString()
 
+        var descriptor = descriptors[entityKey]
+
+        if (descriptor != null)
+            return descriptor
+
         return synchronized(descriptors) {
+            descriptor = descriptors[entityKey]
+            if(descriptor != null)
+                return@synchronized descriptor!!
 
-            descriptors.getOrElse(entityKey, {
-                val descriptor = EntityDescriptor(entityClass)
-                descriptor.context = this
-                descriptor.partition?.partitionValue = partitionIdVar.toString()
+            descriptor = EntityDescriptor(entityClass)
+            descriptor!!.context = this
+            descriptor!!.partition?.partitionValue = partitionIdVar.toString()
 
-                descriptors.put(entityKey, descriptor)
+            descriptors.put(entityKey, descriptor!!)
 
-                // Get the latest System Entity
-                var systemEntity: SystemEntity? = getSystemEntityByName(descriptor.entityClass.name)
+            // Get the latest System Entity
+            var systemEntity: SystemEntity? = getSystemEntityByName(descriptor!!.entityClass.name)
 
-                // If it does not exist, lets create a new one
-                if (systemEntity == null) {
-                    systemEntity = SystemEntity(descriptor)
-                    serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
-                }
+            // If it does not exist, lets create a new one
+            if (systemEntity == null) {
+                systemEntity = SystemEntity(descriptor)
+                serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
+            }
 
-                checkForValidDescriptorPartition(descriptor, systemEntity)
-                checkForEntityChanges(descriptor, systemEntity)
+            checkForValidDescriptorPartition(descriptor!!, systemEntity)
+            checkForEntityChanges(descriptor!!, systemEntity)
 
-                // Make sure entity attributes have loaded descriptors
-                descriptor.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
-                                            .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(), "") }
+            // Make sure entity attributes have loaded descriptors
+            descriptor!!.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
+                    .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(), "") }
 
-                EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
+            EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
 
-                return@getOrElse descriptor
-            })
+            return@synchronized descriptor!!
         }
 
     }

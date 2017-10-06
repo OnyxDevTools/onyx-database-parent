@@ -37,7 +37,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator? = QueryCriter
     var first:Any? = compareTo
     val second:Any? = this
 
-    if(second != null && first != null && first::class != second::class
+    if(second != null && first != null && first::class !== second::class
             && operator != QueryCriteriaOperator.IN // Expected as List when IN
             && operator != QueryCriteriaOperator.NOT_IN) {
         first = first.castTo(second::class.java)

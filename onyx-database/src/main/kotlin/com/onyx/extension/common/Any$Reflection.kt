@@ -2,6 +2,7 @@ package com.onyx.extension.common
 
 import com.onyx.persistence.annotations.*
 import com.onyx.lang.map.OptimisticLockingMap
+import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
@@ -56,14 +57,14 @@ fun Any.getFields() : List<Field> {
 @Throws(InstantiationException::class, IllegalAccessException::class)
 fun <T : Any> Class<*>.instance(): T {
     try {
-        return this.getDeclaredConstructor().newInstance() as T
+        return constructorCache.constructor(this).newInstance() as T
     } catch (e: InstantiationException) {
         val constructor = this.constructors[0]
         constructor.isAccessible = true
         val parameters = constructor.parameters
         val parameterValues = arrayOfNulls<Any>(parameters.size)
         parameters.forEachIndexed { index, parameter ->
-            parameterValues[index] = if(parameter.type.isPrimitive) parameter.type.getDeclaredConstructor().newInstance() else null
+            parameterValues[index] = if(parameter.type.isPrimitive) constructorCache.constructor(parameter.type).newInstance() else null
         }
         try {
             return constructor.newInstance(*parameterValues) as T
@@ -123,3 +124,9 @@ fun Any.setAny(field: Field, child: Any?) = catchAll {
 }
 
 // endregion
+
+object constructorCache {
+    val constructorCache = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
+
+    fun constructor(clazz: Class<*>): Constructor<*> = constructorCache.getOrPut(clazz) { clazz.getDeclaredConstructor() }
+}

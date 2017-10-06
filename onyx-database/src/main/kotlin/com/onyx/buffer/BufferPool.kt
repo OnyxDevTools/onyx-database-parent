@@ -1,6 +1,7 @@
 package com.onyx.buffer
 
 import java.nio.ByteBuffer
+import java.util.*
 
 /**
  * Responsible for allocating and de-allocating byte buffers
@@ -17,9 +18,9 @@ object BufferPool {
     val MEDIUM_BUFFER_SIZE = 1024 * 6
     private val LARGE_BUFFER_SIZE = 18 * 1024
 
-    private val SMALL_BUFFER_POOL = ArrayList<ByteBuffer>(NUMBER_SMALL_BUFFERS)
-    private val MEDIUM_BUFFER_POOL = ArrayList<ByteBuffer>(NUMBER_MEDIUM_BUFFERS)
-    private val LARGE_BUFFER_POOL = ArrayList<ByteBuffer>(NUMBER_LARGE_BUFFERS)
+    private val SMALL_BUFFER_POOL = LinkedList<ByteBuffer>()
+    private val MEDIUM_BUFFER_POOL = LinkedList<ByteBuffer>()
+    private val LARGE_BUFFER_POOL = LinkedList<ByteBuffer>()
 
     /**
      * Pre Allocate buffers.
@@ -40,10 +41,11 @@ object BufferPool {
      */
     fun recycle(buffer: ByteBuffer) {
         buffer.clear()
+        val capacity = buffer.capacity()
         when {
-            buffer.capacity() >= LARGE_BUFFER_SIZE && LARGE_BUFFER_POOL.size < NUMBER_LARGE_BUFFERS -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.add(buffer) }
-            buffer.capacity() >= MEDIUM_BUFFER_SIZE && MEDIUM_BUFFER_POOL.size < NUMBER_MEDIUM_BUFFERS -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.add(buffer) }
-            buffer.capacity() >= SMALL_BUFFER_SIZE && SMALL_BUFFER_POOL.size < NUMBER_SMALL_BUFFERS -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.add(buffer) }
+            capacity >= LARGE_BUFFER_SIZE && LARGE_BUFFER_POOL.size < NUMBER_LARGE_BUFFERS -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.addFirst(buffer) }
+            capacity >= MEDIUM_BUFFER_SIZE && MEDIUM_BUFFER_POOL.size < NUMBER_MEDIUM_BUFFERS -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.addFirst(buffer) }
+            capacity >= SMALL_BUFFER_SIZE && SMALL_BUFFER_POOL.size < NUMBER_SMALL_BUFFERS -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.addFirst(buffer) }
         }
     }
 
@@ -55,9 +57,9 @@ object BufferPool {
      */
     fun allocate(count: Int): ByteBuffer = try {
         when {
-            count <= SMALL_BUFFER_SIZE -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.removeAt(0) }
-            count <= MEDIUM_BUFFER_SIZE -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.removeAt(0) }
-            count <= LARGE_BUFFER_SIZE -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.removeAt(0) }
+            count <= SMALL_BUFFER_SIZE && !SMALL_BUFFER_POOL.isEmpty() -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.removeFirst() }
+            count <= MEDIUM_BUFFER_SIZE && !MEDIUM_BUFFER_POOL.isEmpty() -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.removeFirst() }
+            count <= LARGE_BUFFER_SIZE && !LARGE_BUFFER_POOL.isEmpty() -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.removeFirst() }
             else -> ByteBuffer.allocate(count)
         }
     } catch (e:Exception) {

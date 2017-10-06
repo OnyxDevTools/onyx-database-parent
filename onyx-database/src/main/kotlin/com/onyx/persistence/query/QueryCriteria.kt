@@ -5,8 +5,6 @@ import com.onyx.descriptor.AttributeDescriptor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 
-import java.io.IOException
-import java.io.Serializable
 import java.util.*
 
 /**
@@ -87,6 +85,8 @@ class QueryCriteria<T> : BufferStreamable {
 
     @Transient
     var attributeDescriptor: AttributeDescriptor? = null
+
+    val isRelationship by lazy { attribute!!.contains(".") }
 
     /**
      * Constructor with attribute and operator

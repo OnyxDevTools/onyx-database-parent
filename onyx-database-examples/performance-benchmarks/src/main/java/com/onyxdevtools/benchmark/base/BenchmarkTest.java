@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public abstract class BenchmarkTest {
 
     // Thread Pool used to execute the test body of work
-    protected ThreadPoolExecutor testThreadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(8);
+    protected ThreadPoolExecutor testThreadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(10);
 
     // Marks the start time of the test
     private long startTime;

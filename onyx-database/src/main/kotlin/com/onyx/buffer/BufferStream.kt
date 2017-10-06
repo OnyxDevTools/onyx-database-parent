@@ -4,6 +4,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.*
+import com.onyx.lang.map.OptimisticLockingMap
 
 import java.lang.reflect.Array
 import java.nio.BufferUnderflowException
@@ -363,7 +364,7 @@ class BufferStream(buffer: ByteBuffer) {
             expandableByteBuffer!!.buffer.get(stringBytes)
             val className = String(stringBytes)
             try {
-                val returnValue = Class.forName(className)
+                val returnValue = classForName(className)
                 addReference(returnValue)
                 return returnValue
             } catch (e: ClassNotFoundException) {
@@ -761,7 +762,7 @@ class BufferStream(buffer: ByteBuffer) {
     fun putCollection(collection: Collection<*>) {
 
         try {
-            val clazz = Class.forName(collection.javaClass.name)
+            val clazz = classForName(collection.javaClass.name)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
             putObject(ArrayList::class.java)
@@ -785,7 +786,7 @@ class BufferStream(buffer: ByteBuffer) {
     fun putMap(map: Map<*, *>) {
 
         try {
-            val clazz = Class.forName(map.javaClass.name)
+            val clazz = classForName(map.javaClass.name)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
             putObject(HashMap::class.java)
@@ -1053,6 +1054,9 @@ class BufferStream(buffer: ByteBuffer) {
     }
 
     companion object {
+
+        private val classCache = OptimisticLockingMap<String, Class<*>>(HashMap())
+        private fun classForName(name:String) = classCache.getOrPut(name) { Class.forName(name) }
 
         /**
          * Convert an value to the byte buffer representation

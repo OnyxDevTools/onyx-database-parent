@@ -32,9 +32,8 @@ class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "",
         else -> identifier!!.hashCode() + partitionId.hashCode()
     }
 
-    override fun equals(other:Any?):Boolean = when {
-        other !is RelationshipReference -> false
-        other.identifier!!::class.java != identifier!!::class.java -> false
+    override fun equals(other:Any?):Boolean = when (other) {
+        !is RelationshipReference -> false
         else -> other.partitionId == partitionId && other.identifier == identifier
     }
 }
