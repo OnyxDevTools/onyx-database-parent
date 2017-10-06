@@ -30,7 +30,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
 
     // Iterate through
     this.getAllCriteria().forEach {
-        if (it.isRelationship) {
+        if (it.isRelationship!!) {
             // Compare operator for relationship value
             subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
         } else {

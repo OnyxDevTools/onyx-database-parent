@@ -1,6 +1,7 @@
 package com.onyx.classLoader
 
 import com.onyx.entity.SystemEntity
+import com.onyx.extension.common.OnyxClass.classForName
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.FetchPolicy
@@ -180,7 +181,7 @@ object EntityClassLoader {
 
             // Get the base Descriptor so that we ensure they get generated also
             catchAll {
-                schemaContext.getBaseDescriptorForEntity(Class.forName(genericType))
+                schemaContext.getBaseDescriptorForEntity(classForName(genericType))
             }
         }
 

@@ -10,6 +10,8 @@ import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.diskmap.store.impl.InMemoryStore
 import com.onyx.diskmap.store.impl.MemoryMappedStore
+import com.onyx.extension.common.OnyxClass
+import com.onyx.extension.common.OnyxClass.classForName
 import com.onyx.persistence.context.SchemaContext
 
 import java.io.File
@@ -339,7 +341,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
         private val isMemMapSupported: Boolean by lazy {
             val prop = System.getProperty("os.arch")
             return@lazy try {
-                prop != null && prop.contains("64") && Class.forName("sun.nio.ch.DirectBuffer") != null
+                prop != null && prop.contains("64") && classForName("sun.nio.ch.DirectBuffer") != null
             } catch (e: ClassNotFoundException) {
                 false
             }

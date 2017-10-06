@@ -39,6 +39,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.classLoader.EntityClassLoader
+import com.onyx.extension.common.OnyxClass.classForName
 import com.onyx.extension.createNewEntity
 import com.onyx.lang.map.OptimisticLockingMap
 import kotlinx.coroutines.experimental.Job
@@ -49,6 +50,7 @@ import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -224,7 +226,7 @@ open class DefaultSchemaContext : SchemaContext {
         query.selections = listOf("name")
         val results = serializedPersistenceManager.executeQuery<Map<*, *>>(query)
 
-        results.map { it["name"] as String }.forEach { getBaseDescriptorForEntity(Class.forName(it)) }
+        results.map { it["name"] as String }.forEach { getBaseDescriptorForEntity(classForName(it)) }
     }
 
     /**
@@ -476,7 +478,9 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(Class.forName(entityClass))
+    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(classForName(entityClass))
+
+    private val descriptorLockCount = AtomicInteger(0)
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -496,43 +500,53 @@ open class DefaultSchemaContext : SchemaContext {
         val partitionIdVar = partitionId ?: ""
         val entityKey = entityClass.name + partitionIdVar.toString()
 
-        var descriptor = descriptors[entityKey]
+        var descriptor:EntityDescriptor?
 
-        if (descriptor != null)
-            return descriptor
-
-        return synchronized(descriptors) {
+        if(descriptorLockCount.get() == 0) {
             descriptor = descriptors[entityKey]
-            if(descriptor != null)
-                return@synchronized descriptor!!
-
-            descriptor = EntityDescriptor(entityClass)
-            descriptor!!.context = this
-            descriptor!!.partition?.partitionValue = partitionIdVar.toString()
-
-            descriptors.put(entityKey, descriptor!!)
-
-            // Get the latest System Entity
-            var systemEntity: SystemEntity? = getSystemEntityByName(descriptor!!.entityClass.name)
-
-            // If it does not exist, lets create a new one
-            if (systemEntity == null) {
-                systemEntity = SystemEntity(descriptor)
-                serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
-            }
-
-            checkForValidDescriptorPartition(descriptor!!, systemEntity)
-            checkForEntityChanges(descriptor!!, systemEntity)
-
-            // Make sure entity attributes have loaded descriptors
-            descriptor!!.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
-                    .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(), "") }
-
-            EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
-
-            return@synchronized descriptor!!
+            if(descriptorLockCount.get() == 0 && descriptor != null)
+                return descriptor
         }
 
+        return synchronized(descriptors) {
+            descriptorLockCount.incrementAndGet()
+            try {
+                descriptor = descriptors[entityKey]
+                if (descriptor != null)
+                    return@synchronized descriptor!!
+
+                descriptor = EntityDescriptor(entityClass)
+                descriptor!!.context = this
+                descriptor!!.partition?.partitionValue = partitionIdVar.toString()
+                descriptors.put(entityKey, descriptor!!)
+
+                // Get the latest System Entity
+                var systemEntity: SystemEntity? = getSystemEntityByName(descriptor!!.entityClass.name)
+
+                // If it does not exist, lets create a new one
+                if (systemEntity == null) {
+                    systemEntity = SystemEntity(descriptor)
+                    serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
+                }
+
+                checkForValidDescriptorPartition(descriptor!!, systemEntity)
+                checkForEntityChanges(descriptor!!, systemEntity)
+
+                // Make sure entity attributes have loaded descriptors
+                descriptor!!.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
+                        .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(), "") }
+
+                // Make sure entity attributes have loaded descriptors
+                descriptor!!.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(), "") }
+
+                EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
+
+                return@synchronized descriptor!!
+            }
+            finally {
+                descriptorLockCount.decrementAndGet()
+            }
+        }
     }
 
     /**

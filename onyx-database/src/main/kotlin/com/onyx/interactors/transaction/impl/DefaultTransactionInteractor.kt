@@ -25,23 +25,20 @@ import java.nio.ByteBuffer
 class DefaultTransactionInteractor(private val transactionStore: TransactionStore, private val persistenceManager: PersistenceManager) : TransactionInteractor {
 
     private fun writeTransaction(transactionType:Byte, buffer: ByteBuffer) {
+        withBuffer(buffer) { transBuffer ->
+            val file = transactionStore.getTransactionFile()
 
-        val file = transactionStore.getTransactionFile()
-        val totalBuffer:ByteBuffer?
-
-        try {
-            totalBuffer = BufferPool.allocateAndLimit(buffer.limit() + 5)
-            withBuffer(totalBuffer) {
-                it.put(transactionType)
-                it.putInt(buffer.limit())
-                it.put(buffer)
-                it.flip()
-                file.write(it)
+            try {
+                BufferPool.allocateAndLimit(transBuffer.limit() + 5) {
+                    it.put(transactionType)
+                    it.putInt(transBuffer.limit())
+                    it.put(transBuffer)
+                    it.flip()
+                    file.write(it)
+                }
+            } catch (e: Exception) {
+                throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE)
             }
-        } catch (e: Exception) {
-            throw TransactionException(TransactionException.TRANSACTION_FAILED_TO_WRITE_FILE)
-        } finally {
-            BufferPool.recycle(buffer)
         }
     }
 
@@ -131,9 +128,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
         }
 
         var transaction: Transaction? = null
-        val metadataBuffer = BufferPool.allocateAndLimit(5)
-
-        withBuffer(metadataBuffer) {
+        BufferPool.allocateAndLimit(5) { metadataBuffer ->
             try {
                 channel.position(0)
                 while (channel.position() < channel.size()) {
@@ -145,8 +140,7 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
                         val transactionType = metadataBuffer.get()
                         val transactionDataLength = metadataBuffer.int
 
-                        val tBuffer = BufferPool.allocateAndLimit(transactionDataLength)
-                        withBuffer(tBuffer) { transactionBuffer ->
+                        BufferPool.allocateAndLimit(transactionDataLength) { transactionBuffer ->
                             channel.read(transactionBuffer)
                             transactionBuffer.rewind()
 

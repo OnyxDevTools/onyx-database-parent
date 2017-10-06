@@ -45,10 +45,7 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
         } else {
             // It already exist.  Get the map count.  It is located within the first 4 bytes of the allocated hash table space.
             val position = header.firstNode
-            val stream = fileStore.read(position, Integer.BYTES)
-            stream.perform {
-                mapCount = AtomicInteger(it!!.int)
-            }
+            fileStore.read(position, Integer.BYTES).perform { mapCount = AtomicInteger(it!!.int) }
         }
 
         referenceOffset = countBytes
@@ -65,21 +62,19 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
      * @since 1.2.0
      */
     protected open fun insertSkipListReference(hash: Int, nodeReference: Long): Long {
-        val buffer = BufferPool.allocateAndLimit(java.lang.Long.BYTES)
-
-        withBuffer(buffer) {
+        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
             // Update count of maps for iterating through each map
             val count = incrementMapCount()
-            buffer.putInt(count)
-            buffer.flip()
-            fileStore.write(buffer, reference.firstNode)
+            it.putInt(count)
+            it.flip()
+            fileStore.write(it, reference.firstNode)
 
-            buffer.clear()
-            buffer.putLong(nodeReference)
-            buffer.flip()
-            fileStore.write(buffer, reference.firstNode + referenceOffset.toLong() + (hash * java.lang.Long.BYTES).toLong())
+            it.clear()
+            it.putLong(nodeReference)
+            it.flip()
+            fileStore.write(it, reference.firstNode + referenceOffset.toLong() + (hash * java.lang.Long.BYTES).toLong())
 
-            addSkipListIterationReference(buffer, hash, count - 1)
+            addSkipListIterationReference(it, hash, count - 1)
         }
 
         return nodeReference
@@ -113,11 +108,10 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
      */
     protected open fun updateSkipListReference(hash: Int, referenceNode: Long): Long {
         val position = reference.firstNode + referenceOffset.toLong() + (hash * java.lang.Long.BYTES).toLong()
-        val buffer = BufferPool.allocateAndLimit(java.lang.Long.BYTES)
-        withBuffer(buffer) {
-            buffer.putLong(referenceNode)
-            buffer.flip()
-            fileStore.write(buffer, position)
+        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+            it.putLong(referenceNode)
+            it.flip()
+            fileStore.write(it, position)
         }
         return referenceNode
     }
@@ -130,10 +124,7 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
      */
     protected open fun getSkipListIdentifier(index: Int): Int {
         val position = reference.firstNode + listReferenceOffset.toLong() + (index * Integer.BYTES).toLong()
-        val stream = fileStore.read(position, Integer.BYTES)
-        return stream.perform {
-            return@perform it!!.int
-        }
+        return fileStore.read(position, Integer.BYTES).perform { it!!.int }
     }
 
     /**
@@ -145,8 +136,7 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
      */
     protected open fun getSkipListReference(hash: Int): Long {
         val position = (hash * java.lang.Long.BYTES).toLong() + referenceOffset.toLong() + reference.firstNode
-        val stream = fileStore.read(position, java.lang.Long.BYTES)
-        return stream.perform { return@perform it!!.long }
+        return fileStore.read(position, java.lang.Long.BYTES).perform { it!!.long }
     }
 
     /**

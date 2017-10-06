@@ -37,11 +37,10 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * This method will only update the record count rather than the entire header
      */
     private fun updateHeaderRecordCount() {
-        val buffer = BufferPool.allocateAndLimit(java.lang.Long.BYTES)
-        withBuffer(buffer) {
-            buffer.putLong(reference.recordCount.get())
-            buffer.flip()
-            fileStore.write(buffer, reference.position + java.lang.Long.BYTES)
+        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+            it.putLong(reference.recordCount.get())
+            it.flip()
+            fileStore.write(it, reference.position + java.lang.Long.BYTES)
         }
     }
 
@@ -52,11 +51,10 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @param firstNode First Node location
      */
     protected open fun updateHeaderFirstNode(header: Header, firstNode: Long) {
-        val buffer = BufferPool.allocateAndLimit(java.lang.Long.BYTES)
-        withBuffer(buffer) {
-            buffer.putLong(firstNode)
-            buffer.flip()
-            fileStore.write(buffer, header.position)
+        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+            it.putLong(firstNode)
+            it.flip()
+            fileStore.write(it, header.position)
         }
     }
 

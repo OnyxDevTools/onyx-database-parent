@@ -91,13 +91,12 @@ open class FileChannelStore() : Store {
      * we have to configure the file channel to do so.  That causes the store to be severely slowed down.
      */
     protected fun determineSize() {
-        val buffer = this.read(0, 8)
-        buffer?.byteBuffer?.rewind()
-        buffer.perform {
-            if (buffer == null || channel?.size() == 0L) {
+        this.read(0, 8).perform {
+            it?.byteBuffer?.rewind()
+            if (it == null || channel?.size() == 0L) {
                 this.allocate(8)
             } else {
-                val fSize = buffer.long
+                val fSize = it.long
                 this.fileSizeCounter.set(fSize)
             }
         }
@@ -143,13 +142,10 @@ open class FileChannelStore() : Store {
      * @param serializable Object
      * @param position Position to write to
      */
-    override fun write(serializable: BufferStreamable, position: Long): Int {
-        val stream = BufferStream()
-        return stream.perform {
-            serializable.write(stream)
-            stream.byteBuffer.flip()
-            channel!!.write(stream.byteBuffer, position)
-        }
+    override fun write(serializable: BufferStreamable, position: Long): Int = BufferStream().perform {
+        serializable.write(it!!)
+        it.flip()
+        channel!!.write(it.byteBuffer, position)
     }
 
     /**
@@ -163,20 +159,18 @@ open class FileChannelStore() : Store {
     override fun read(position: Long, size: Int, type: Class<*>): Any? {
         if (!validateFileSize(position)) return null
 
-        val buffer = BufferStream(size)
-        return buffer.perform {
-            channel!!.read(buffer.byteBuffer, position)
-            buffer.byteBuffer.rewind()
+        return BufferStream(size).perform {
+            channel!!.read(it!!.byteBuffer, position)
+            it.byteBuffer.flip()
 
-            return@perform if (BufferStreamable::class.java.isAssignableFrom(type)) {
+            if (BufferStreamable::class.java.isAssignableFrom(type)) {
                 val serializable:BufferStreamable = type.instance()
-                serializable.read(buffer)
+                serializable.read(it)
                 serializable
             } else {
-                buffer.value
+                it.value
             }
         }
-
     }
 
     /**
@@ -191,12 +185,11 @@ open class FileChannelStore() : Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferPool.allocateAndLimit(size)
-        return withBuffer(buffer) {
-            channel!!.read(buffer, position)
-            buffer.flip()
-            serializable.read(BufferStream(buffer))
-            return@withBuffer serializable
+        return BufferPool.allocateAndLimit(size) {
+            channel!!.read(it, position)
+            it.flip()
+            serializable.read(BufferStream(it))
+            return@allocateAndLimit serializable
         }
     }
 
@@ -214,10 +207,9 @@ open class FileChannelStore() : Store {
         val buffer = BufferPool.allocateAndLimit(size)
 
         channel!!.read(buffer, position)
-        buffer.rewind()
+        buffer.flip()
 
         return BufferStream(buffer)
-
     }
 
     /**
@@ -244,15 +236,12 @@ open class FileChannelStore() : Store {
      * @param size Allocate space within the store.
      * @return position of started allocated bytes
      */
-    override fun allocate(size: Int): Long {
-        val buffer = BufferPool.allocateAndLimit(8)
-        return withBuffer(buffer) {
-            val newFileSize = fileSizeCounter.getAndAdd(size)
-            it.putLong(newFileSize + size)
-            it.flip()
-            this.write(it, 0)
-            return@withBuffer newFileSize
-        }
+    override fun allocate(size: Int): Long = BufferPool.allocateAndLimit(8) {
+        val newFileSize = fileSizeCounter.getAndAdd(size)
+        it.putLong(newFileSize + size)
+        it.flip()
+        this.write(it, 0)
+        return@allocateAndLimit newFileSize
     }
 
 

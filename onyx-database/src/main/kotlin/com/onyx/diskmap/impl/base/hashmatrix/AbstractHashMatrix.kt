@@ -41,11 +41,10 @@ abstract class AbstractHashMatrix<K, V>(fileStore: Store, header: Header, detach
      */
     open fun updateHashMatrixReference(node: HashMatrixNode, index: Int, value: Long) {
         node.next[index] = value
-        val buffer = BufferPool.allocateAndLimit(java.lang.Long.BYTES)
-        withBuffer(buffer) {
-            buffer.putLong(value)
-            buffer.flip()
-            fileStore.write(buffer, node.position + (java.lang.Long.BYTES * index).toLong() + java.lang.Long.BYTES.toLong() + Integer.BYTES.toLong())
+        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+            it.putLong(value)
+            it.flip()
+            fileStore.write(it, node.position + (java.lang.Long.BYTES * index).toLong() + java.lang.Long.BYTES.toLong() + Integer.BYTES.toLong())
         }
     }
 

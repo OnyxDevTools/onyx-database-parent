@@ -220,17 +220,10 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param serializable Object serializable to write to store
      * @param position location to write to
      */
-    override fun write(serializable: BufferStreamable, position: Long): Int {
-        val stream = BufferStream()
-
-        try {
-            serializable.write(stream)
-            stream.flip()
-            return this.write(stream.byteBuffer, position)
-        }
-        finally {
-            stream.recycle()
-        }
+    override fun write(serializable: BufferStreamable, position: Long): Int = BufferStream().perform {
+        serializable.write(it!!)
+        it.flip()
+        this.write(it.byteBuffer, position)
     }
 
     /**
@@ -245,19 +238,17 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferStream(size)
+        return BufferStream(size).perform {
+            this.read(it!!.byteBuffer, position)
+            it.flip()
 
-        return buffer.perform {
-            this.read(buffer.byteBuffer, position)
-            buffer.flip()
-
-            return@perform when {
+            when {
                 BufferStreamable::class.java.isAssignableFrom(type) -> {
                     val streamable:BufferStreamable = type.instance()
-                    streamable.read(buffer, context)
+                    streamable.read(it, context)
                     streamable
                 }
-                else -> buffer.value
+                else -> it.value
             }
         }
     }
@@ -288,12 +279,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!validateFileSize(position))
             return null
 
-        val buffer = BufferPool.allocateAndLimit(size)
-        return withBuffer(buffer) {
-            read(buffer, position)
-            buffer.flip()
-            serializable.read(BufferStream(buffer))
-            return@withBuffer serializable
+        return BufferPool.allocateAndLimit(size) {
+            read(it, position)
+            it.flip()
+            serializable.read(BufferStream(it))
+            return@allocateAndLimit serializable
         }
     }
 

@@ -65,13 +65,11 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
     override fun read(buffer: BufferStream, context: SchemaContext?) {
         val serializerId = buffer.int
         val systemEntity = context!!.getSystemEntityById(serializerId)
-
         systemEntity!!.attributes.forEach {
             catchAll {
                 this.set(context = context, name = it.name, value = buffer.value)
             }
         }
-
     }
 
     /**

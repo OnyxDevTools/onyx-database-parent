@@ -8,41 +8,13 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
 import java.util.ArrayList
 
-private val classFields = OptimisticLockingMap<Class<*>, List<Field>>(HashMap())
-
-fun Any.getFields() : List<Field> {
-    val clazz = this.javaClass
-    val isManagedEntity = this.javaClass.isAnnotationPresent(Entity::class.java)
-
-    return classFields.getOrPut(clazz) {
-        val fields = ArrayList<Field>()
-        var aClass:Class<*> = this.javaClass
-        while (aClass != Any::class.java
-                && aClass != Exception::class.java
-                && aClass != Throwable::class.java) {
-            aClass.declaredFields
-                    .asSequence()
-                    .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
-                    .forEach {
-                        if (!isManagedEntity) {
-                            it.isAccessible = true
-                            fields.add(it)
-                        } else if (it.isAnnotationPresent(Attribute::class.java)
-                                || it.isAnnotationPresent(Index::class.java)
-                                || it.isAnnotationPresent(Partition::class.java)
-                                || it.isAnnotationPresent(Identifier::class.java)
-                                || it.isAnnotationPresent(Relationship::class.java)) {
-                            it.isAccessible = true
-                            fields.add(it)
-                        }
-                    }
-            aClass = aClass.superclass
-        }
-
-        fields.sortBy { it.name }
-        fields
-    }
-}
+/**
+ * Get fields for a class that apply to its reflection and serialization.  All transient fields and or fields
+ * that do not apply to an entity persistence if it is a managed entity will be excluded.
+ *
+ * @since 2.0.0
+ */
+fun Any.getFields() : List<Field> = OnyxClass.fields(this.javaClass)
 
 /**
  * Instantiate an instance of the class.  As a pre-requisite to invoking this method, there must
@@ -55,16 +27,17 @@ fun Any.getFields() : List<Field> {
  * @since 2.0.0
  */
 @Throws(InstantiationException::class, IllegalAccessException::class)
+@Suppress("UNCHECKED_CAST")
 fun <T : Any> Class<*>.instance(): T {
     try {
-        return constructorCache.constructor(this).newInstance() as T
+        return OnyxClass.constructor(this).newInstance() as T
     } catch (e: InstantiationException) {
         val constructor = this.constructors[0]
         constructor.isAccessible = true
         val parameters = constructor.parameters
         val parameterValues = arrayOfNulls<Any>(parameters.size)
         parameters.forEachIndexed { index, parameter ->
-            parameterValues[index] = if(parameter.type.isPrimitive) constructorCache.constructor(parameter.type).newInstance() else null
+            parameterValues[index] = if(parameter.type.isPrimitive) OnyxClass.constructor(parameter.type).newInstance() else null
         }
         try {
             return constructor.newInstance(*parameterValues) as T
@@ -117,16 +90,63 @@ fun Any.setBoolean(field: Field, value: Boolean) = field.setBoolean(this, value)
 fun Any.setChar(field: Field, value: Char) = field.setChar(this, value)
 fun Any.setObject(field: Field, value: Any?) = field.set(this, value)
 fun Any.setAny(field: Field, child: Any?) = catchAll {
-    if (child != null && !field.type.isAssignableFrom(child.javaClass))
-        field.set(this, child.castTo(field.type))
-    else
-        field.set(this, child)
+    when {
+        child != null && field.type === child::class.javaPrimitiveType -> field.set(this, child)
+        child != null && !field.type.isAssignableFrom(child.javaClass) -> field.set(this, child.castTo(field.type))
+        else -> field.set(this, child)
+    }
 }
 
 // endregion
 
-object constructorCache {
-    val constructorCache = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
+object OnyxClass {
 
-    fun constructor(clazz: Class<*>): Constructor<*> = constructorCache.getOrPut(clazz) { clazz.getDeclaredConstructor() }
+    private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
+    private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())
+    private val classFields = OptimisticLockingMap<Class<*>, List<Field>>(HashMap())
+
+    // region Get Reflection Information
+
+    fun constructor(clazz: Class<*>): Constructor<*> = constructors.getOrPut(clazz) {
+        val constructor = clazz.getDeclaredConstructor()
+        constructor.isAccessible = true
+        return@getOrPut constructor
+    }
+
+    fun classForName(name:String) = classes.getOrPut(name) { Class.forName(name) }
+
+    fun fields(clazz:Class<*>) : List<Field> {
+        val isManagedEntity = clazz.isAnnotationPresent(Entity::class.java)
+
+        return classFields.getOrPut(clazz) {
+            val fields = ArrayList<Field>()
+            var aClass:Class<*> = clazz
+            while (aClass != Any::class.java
+                    && aClass != Exception::class.java
+                    && aClass != Throwable::class.java) {
+                aClass.declaredFields
+                        .asSequence()
+                        .filter { it.modifiers and Modifier.STATIC == 0 && !Modifier.isTransient(it.modifiers) && it.type != Exception::class.java && it.type != Throwable::class.java }
+                        .forEach {
+                            if (!isManagedEntity) {
+                                it.isAccessible = true
+                                fields.add(it)
+                            } else if (it.isAnnotationPresent(Attribute::class.java)
+                                    || it.isAnnotationPresent(Index::class.java)
+                                    || it.isAnnotationPresent(Partition::class.java)
+                                    || it.isAnnotationPresent(Identifier::class.java)
+                                    || it.isAnnotationPresent(Relationship::class.java)) {
+                                it.isAccessible = true
+                                fields.add(it)
+                            }
+                        }
+                aClass = aClass.superclass
+            }
+
+            fields.sortBy { it.name }
+            fields
+        }
+    }
+
+    // endregion
 }

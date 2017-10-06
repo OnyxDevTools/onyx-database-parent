@@ -5,6 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.BufferingException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.OnyxClass.classForName
 import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
@@ -199,7 +200,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
 
         val context = Contexts.get(contextId) ?: Contexts.first()
 
-        this.entityDescriptor = context.getBaseDescriptorForEntity(Class.forName(className))!!
+        this.entityDescriptor = context.getBaseDescriptorForEntity(classForName(className))!!
         this.persistenceManager = context.systemPersistenceManager
     }
 

@@ -86,7 +86,13 @@ class QueryCriteria<T> : BufferStreamable {
     @Transient
     var attributeDescriptor: AttributeDescriptor? = null
 
-    val isRelationship by lazy { attribute!!.contains(".") }
+    @Transient
+    var isRelationship:Boolean? = null
+        get() {
+            if(field == null)
+                field = attribute!!.contains(".")
+            return field
+        }
 
     /**
      * Constructor with attribute and operator

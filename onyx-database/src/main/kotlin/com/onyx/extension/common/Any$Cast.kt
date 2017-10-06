@@ -17,7 +17,8 @@ fun Any?.castTo(clazz: Class<*>): Any? {
 
     val kotlinClass: KClass<*> = clazz.kotlin
 
-    if(this != null && clazz === this::class.java)
+    if((this != null && clazz === this::class.java)
+            || (this != null && clazz === this::class.javaPrimitiveType))
         return this
 
     return when {

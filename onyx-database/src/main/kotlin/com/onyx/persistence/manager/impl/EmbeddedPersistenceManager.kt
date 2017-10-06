@@ -116,16 +116,17 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     @Throws(OnyxException::class)
     override fun deleteEntity(entity: IManagedEntity): Boolean {
         context.checkForKillSwitch()
+        val descriptor = context.getDescriptorForEntity(entity)
 
-        val previousReferenceId = entity.referenceId(context)
+        val previousReferenceId = entity.referenceId(context, descriptor)
 
         if(previousReferenceId > 0) {
             journal {
                 context.transactionInteractor.writeDelete(entity)
             }
-            entity.deleteAllIndexes(context, previousReferenceId)
+            entity.deleteAllIndexes(context, previousReferenceId, descriptor)
             entity.deleteRelationships(context)
-            entity.recordInteractor(context).delete(entity)
+            entity.recordInteractor(context, descriptor).delete(entity)
         }
 
         return previousReferenceId > 0

@@ -4,7 +4,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.*
-import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.extension.common.OnyxClass.classForName
 
 import java.lang.reflect.Array
 import java.nio.BufferUnderflowException
@@ -61,7 +61,7 @@ class BufferStream(buffer: ByteBuffer) {
     /**
      * Default constructor with no buffer
      */
-    constructor(context: SchemaContext?) : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION)) {
+    private constructor(context: SchemaContext?) : this(BufferPool.allocate(ExpandableByteBuffer.BUFFER_ALLOCATION)) {
         this.context = context
     }
 
@@ -124,7 +124,9 @@ class BufferStream(buffer: ByteBuffer) {
      *
      */
     fun recycle() {
+        clear()
         BufferPool.recycle(byteBuffer)
+        expandableByteBuffer = null
     }
 
     /**
@@ -132,8 +134,7 @@ class BufferStream(buffer: ByteBuffer) {
      */
     fun clear() {
         byteBuffer.clear()
-        references.clear()
-        referencesByIndex.clear()
+        clearReferences()
     }
 
     /**
@@ -145,6 +146,7 @@ class BufferStream(buffer: ByteBuffer) {
     fun clearReferences() {
         references.clear()
         referencesByIndex.clear()
+        referenceCount = 0
     }
 
     /**
@@ -770,7 +772,7 @@ class BufferStream(buffer: ByteBuffer) {
 
         putInt(collection.size)
 
-        for (aCollection in collection) putObject(aCollection)
+        collection.forEach { putObject(it) }
     }
 
     /**
@@ -1055,9 +1057,6 @@ class BufferStream(buffer: ByteBuffer) {
 
     companion object {
 
-        private val classCache = OptimisticLockingMap<String, Class<*>>(HashMap())
-        private fun classForName(name:String) = classCache.getOrPut(name) { Class.forName(name) }
-
         /**
          * Convert an value to the byte buffer representation
          *
@@ -1096,11 +1095,11 @@ class BufferStream(buffer: ByteBuffer) {
         fun fromBuffer(buffer: ByteBuffer, context: SchemaContext? = null): Any? {
 
             val bufferStream = BufferStream(context)
+            BufferPool.recycle(bufferStream.byteBuffer)
 
             val bufferStartingPosition = buffer.position()
             val maxBufferSize = buffer.int
 
-            BufferPool.recycle(bufferStream.byteBuffer)
             bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, bufferStartingPosition, maxBufferSize)
             bufferStream.isComingFromBuffer = true
             val returnValue: Any?

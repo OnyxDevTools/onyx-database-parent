@@ -1,5 +1,6 @@
 package com.onyx.buffer
 
+import com.onyx.extension.withBuffer
 import java.nio.ByteBuffer
 import java.util.*
 
@@ -57,9 +58,9 @@ object BufferPool {
      */
     fun allocate(count: Int): ByteBuffer = try {
         when {
-            count <= SMALL_BUFFER_SIZE && !SMALL_BUFFER_POOL.isEmpty() -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.removeFirst() }
-            count <= MEDIUM_BUFFER_SIZE && !MEDIUM_BUFFER_POOL.isEmpty() -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.removeFirst() }
-            count <= LARGE_BUFFER_SIZE && !LARGE_BUFFER_POOL.isEmpty() -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.removeFirst() }
+            count <= SMALL_BUFFER_SIZE && !SMALL_BUFFER_POOL.isEmpty() -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.removeLast() }
+            count <= MEDIUM_BUFFER_SIZE && !MEDIUM_BUFFER_POOL.isEmpty() -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.removeLast() }
+            count <= LARGE_BUFFER_SIZE && !LARGE_BUFFER_POOL.isEmpty() -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.removeLast() }
             else -> ByteBuffer.allocate(count)
         }
     } catch (e:Exception) {
@@ -76,5 +77,17 @@ object BufferPool {
         val buffer = allocate(count)
         buffer.limit(count)
         return buffer
+    }
+
+    /**
+     * Allocation that will encapsulate the endian as well as the allocation method
+     *
+     * @param count Size to allocate
+     * @return An Allocated ByteBuffer and limit to the amount of bytes
+     */
+    fun <T> allocateAndLimit(count: Int, body:(ByteBuffer)->T ): T {
+        val buffer = allocate(count)
+        buffer.limit(count)
+        return withBuffer(buffer, body)
     }
 }
