@@ -1,7 +1,7 @@
 package com.onyx.classLoader
 
 import com.onyx.entity.SystemEntity
-import com.onyx.extension.common.OnyxClass.classForName
+import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.FetchPolicy

@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.BufferingException
 import com.onyx.exception.OnyxException
-import com.onyx.extension.common.OnyxClass.classForName
+import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.toManagedEntity
 import com.onyx.extension.toRelationshipReference
 import com.onyx.persistence.IManagedEntity

@@ -39,7 +39,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
 import com.onyx.classLoader.EntityClassLoader
-import com.onyx.extension.common.OnyxClass.classForName
+import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.createNewEntity
 import com.onyx.lang.map.OptimisticLockingMap
 import kotlinx.coroutines.experimental.Job

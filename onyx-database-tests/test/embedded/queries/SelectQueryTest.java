@@ -72,7 +72,7 @@ public class SelectQueryTest extends PrePopulatedDatabaseTest
         Assert.assertNotNull(results);
         Assert.assertTrue(results.get(0) instanceof Map);
         Assert.assertTrue((int)((Map) results.get(0)).get("intPrimitive") == 4);
-        Assert.assertTrue((int) ((Map) results.get(1)).get("intPrimitive") == 6);
+        Assert.assertTrue((int) ((Map) results.get(1)).get("intPrimitive") == 4);
     }
 
     @Test

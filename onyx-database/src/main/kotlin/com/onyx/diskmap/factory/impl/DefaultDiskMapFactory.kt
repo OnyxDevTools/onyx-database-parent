@@ -10,8 +10,7 @@ import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.diskmap.store.impl.InMemoryStore
 import com.onyx.diskmap.store.impl.MemoryMappedStore
-import com.onyx.extension.common.OnyxClass
-import com.onyx.extension.common.OnyxClass.classForName
+import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.persistence.context.SchemaContext
 
 import java.io.File

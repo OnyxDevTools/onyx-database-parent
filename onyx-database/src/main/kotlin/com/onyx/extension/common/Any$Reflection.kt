@@ -14,7 +14,7 @@ import java.util.ArrayList
  *
  * @since 2.0.0
  */
-fun Any.getFields() : List<Field> = OnyxClass.fields(this.javaClass)
+fun Any.getFields() : List<Field> = ClassMetadata.fields(this.javaClass)
 
 /**
  * Instantiate an instance of the class.  As a pre-requisite to invoking this method, there must
@@ -30,14 +30,14 @@ fun Any.getFields() : List<Field> = OnyxClass.fields(this.javaClass)
 @Suppress("UNCHECKED_CAST")
 fun <T : Any> Class<*>.instance(): T {
     try {
-        return OnyxClass.constructor(this).newInstance() as T
+        return ClassMetadata.constructor(this).newInstance() as T
     } catch (e: InstantiationException) {
         val constructor = this.constructors[0]
         constructor.isAccessible = true
         val parameters = constructor.parameters
         val parameterValues = arrayOfNulls<Any>(parameters.size)
         parameters.forEachIndexed { index, parameter ->
-            parameterValues[index] = if(parameter.type.isPrimitive) OnyxClass.constructor(parameter.type).newInstance() else null
+            parameterValues[index] = if(parameter.type.isPrimitive) ClassMetadata.constructor(parameter.type).newInstance() else null
         }
         try {
             return constructor.newInstance(*parameterValues) as T
@@ -99,7 +99,11 @@ fun Any.setAny(field: Field, child: Any?) = catchAll {
 
 // endregion
 
-object OnyxClass {
+/**
+ * This object is a container of cached class information.  Since some of these lookups are slow, this
+ * will use optimistic locking caching to speed the lookup up.
+ */
+object ClassMetadata {
 
     private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
     private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())
@@ -107,14 +111,29 @@ object OnyxClass {
 
     // region Get Reflection Information
 
+    /**
+     * Get A constructor for a java class
+     *
+     * @since 2.0.0
+     */
     fun constructor(clazz: Class<*>): Constructor<*> = constructors.getOrPut(clazz) {
         val constructor = clazz.getDeclaredConstructor()
         constructor.isAccessible = true
         return@getOrPut constructor
     }
 
+    /**
+     * Get a class by its simple name
+     *
+     * @since 2.0.0
+     */
     fun classForName(name:String) = classes.getOrPut(name) { Class.forName(name) }
 
+    /**
+     * Get fields for a java class
+     *
+     * @since 2.0.0
+     */
     fun fields(clazz:Class<*>) : List<Field> {
         val isManagedEntity = clazz.isAnnotationPresent(Entity::class.java)
 

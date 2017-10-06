@@ -4,7 +4,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.*
-import com.onyx.extension.common.OnyxClass.classForName
+import com.onyx.extension.common.ClassMetadata.classForName
 
 import java.lang.reflect.Array
 import java.nio.BufferUnderflowException
