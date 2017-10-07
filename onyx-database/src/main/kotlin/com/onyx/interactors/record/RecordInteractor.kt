@@ -73,7 +73,7 @@ interface RecordInteractor {
     fun existsWithId(primaryKey: Any?): Boolean
 
     /**
-     * Returns true if the records contain a primary key
+     * Returns the id of the store reference
      *
      * @param primaryKey entity id
      * @return reference within store

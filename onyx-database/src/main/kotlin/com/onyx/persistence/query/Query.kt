@@ -361,14 +361,14 @@ class Query : BufferStreamable {
      * @return Unordered set of Query Criteria
      */
     @Transient
-    private var allCriteriaValue:Set<QueryCriteria<*>>? = null
+    private var allCriteriaValue:Array<QueryCriteria<*>>? = null
 
     /**
      * Getter for all criteria
      */
-    fun getAllCriteria():Set<QueryCriteria<*>> {
+    fun getAllCriteria():Array<QueryCriteria<*>> {
         if(allCriteriaValue == null || allCriteriaValue!!.isEmpty()) {
-            allCriteriaValue = aggregateCriteria(this.criteria, LinkedHashSet())
+            allCriteriaValue = aggregateCriteria(this.criteria, LinkedHashSet()).toTypedArray() // Typed array so the iteration is quicker
         }
         return allCriteriaValue!!
     }

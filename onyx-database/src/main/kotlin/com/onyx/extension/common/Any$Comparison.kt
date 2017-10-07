@@ -32,7 +32,7 @@ fun Any?.forceCompare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCr
 @Throws(InvalidDataTypeForOperator::class)
 @JvmOverloads
 @Suppress("UNCHECKED_CAST")
-fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator? = QueryCriteriaOperator.EQUAL): Boolean {
+fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteriaOperator.EQUAL): Boolean {
 
     var first:Any? = compareTo
     val second:Any? = this
@@ -97,7 +97,6 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator? = QueryCriter
                 val list = second as List<Any>
                 return list.find { first.compare(it, QueryCriteriaOperator.EQUAL) } == null
             }
-            null -> first == second
         }
     } catch (e:Exception) {
         // Comparison operator was not found, we should throw an exception because the data types are not supported

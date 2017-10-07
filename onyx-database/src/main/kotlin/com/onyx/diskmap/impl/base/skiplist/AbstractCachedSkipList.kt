@@ -38,8 +38,8 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      * @return The instantiated and configured data.
      * @since 1.2.0
      */
-    override fun createNewNode(key: K, value: V?, level: Byte, next: Long, down: Long, cache: Boolean, recordId: Long): SkipListNode<K> {
-        val newNode = super.createNewNode(key, value, level, next, down, cache, recordId)
+    override fun createNewNode(key: K, value: V?, recordLocation:Long, level: Byte, next: Long, down: Long, cache: Boolean): SkipListNode<K> {
+        val newNode = super.createNewNode(key, value, recordLocation, level, next, down, cache)
         nodeCache.put(newNode.position, newNode)
         if (cache) {
             keyCache.put(key, newNode)
@@ -67,14 +67,13 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      * Find the value at a position.
      *
      * @param position   The position within the file structure to pull it from
-     * @param recordSize How many bytes we must read to get the object
      * @return The value as long as it serialized ok.
      * @since 1.2.0
      */
-    override fun findValueAtPosition(position: Long, recordSize: Int): V? {
+    override fun findValueAtPosition(position: Long): V? {
         var value: V? = valueByPositionCache[position]
         if (value == null) {
-            value = super.findValueAtPosition(position, recordSize)
+            value = super.findValueAtPosition(position)
             valueByPositionCache.put(position, value)
         }
         return value
@@ -141,14 +140,14 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      * @param value The value of the reference
      * @since 1.2.0
      */
-    override fun updateNodeValue(node: SkipListNode<K>, value: V, cache: Boolean) {
+    override fun updateNodeValue(node: SkipListNode<K>, value: V?, recordLocation: Long, cache: Boolean) {
         // Remove the old value before updating
         if (cache) {
             valueByPositionCache.remove(node.recordPosition)
         }
         // Update and cache the new value
         nodeCache.put(node.position, node)
-        super.updateNodeValue(node, value, cache)
+        super.updateNodeValue(node, value, recordLocation, cache)
 
         if (cache) {
             keyCache.put(node.key, node)

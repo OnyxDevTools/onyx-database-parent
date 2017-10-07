@@ -43,11 +43,11 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
         val context = Contexts.get(contextId)!!
 
         records.references.filter {
-            val entity = records.getWithRecID(it.recordId)!!
-            val reference = Reference(partitionId, it.recordId)
+            val entity = records.getWithRecID(it.recordPosition)!!
+            val reference = Reference(partitionId, it.recordPosition)
             query.meetsCriteria(entity, reference, context, descriptor)
         }.forEach {
-            val reference = Reference(partitionId, it.recordId)
+            val reference = Reference(partitionId, it.recordPosition)
             matching.put(reference, reference)
         }
 

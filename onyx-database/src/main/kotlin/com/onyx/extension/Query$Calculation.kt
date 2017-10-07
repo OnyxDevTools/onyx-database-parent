@@ -29,7 +29,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
     var subCriteria: Boolean
 
     // Iterate through
-    this.getAllCriteria().forEach {
+    for(it in this.getAllCriteria()) {
         if (it.isRelationship!!) {
             // Compare operator for relationship value
             subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
@@ -37,7 +37,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-            subCriteria = it.value.compare(entity.get(context = context, descriptor = descriptor, name = it.attribute!!), it.operator)
+            subCriteria = it.value.compare(entity.get(context = context, descriptor = descriptor, name = it.attribute!!), it.operator!!)
         }
         it.meetsCriteria = subCriteria
     }
@@ -109,7 +109,7 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: R
 
         // All we need is a single match.  If there is a relationship that meets the criteria, move along
         for (relationshipEntity in relationshipEntities) {
-            meetsCriteria = criteria.value.compare(relationshipEntity.get(context = context, name = attribute), operator)
+            meetsCriteria = criteria.value.compare(relationshipEntity.get(context = context, name = attribute), operator!!)
             if (meetsCriteria)
                 break
         }

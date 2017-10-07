@@ -9,7 +9,6 @@ import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.forceCompare
 import com.onyx.extension.perform
-import com.onyx.extension.withBuffer
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
@@ -73,7 +72,22 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         }
     }
 
-    // TODO: Holly shit this can be done better
+    /**
+     * Append a value to the store.  Return the location
+     */
+    private fun writeValue(value:V): Long = BufferStream().perform {
+        it!!.byteBuffer.position(Integer.BYTES)
+        val size = it.putObject(value, fileStore.context)
+        it.byteBuffer.rewind()
+        it.putInt(size)
+        it.byteBuffer.limit(Integer.BYTES + size)
+        it.byteBuffer.rewind()
+
+        val position = fileStore.allocate(it.byteBuffer.limit())
+       fileStore.write(it.byteBuffer, position)
+        return@perform position
+    }
+
     /**
      * Put a key value into the Map.  The underlying algorithm for searching is a Skip List
      *
@@ -83,10 +97,14 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      */
     override fun put(key: K, value: V): V {
 
+        // Write the value to the store
+        val recordLocation = writeValue(value)
+
         // First see if the key already exists.  If it does update it, otherwise, lets continue on trying to insert it.
         // The reason for this is because the rest of the put logic will not start from the root level
-        if (updateValue(key, value))
+        if (updateValue(key, value, recordLocation))
             return value
+
         var head = head
 
         val level = selectHeadLevel()
@@ -99,7 +117,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         var current: SkipListHeadNode? = head
         var last: SkipListHeadNode? = null
         var next: SkipListHeadNode?
-        var recordIndicatorNode: SkipListNode<*>? = null
 
         var cache = true
         while (current != null) {
@@ -108,10 +125,8 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             if (current.next == 0L || shouldMoveDown(key, (next as SkipListNode<K>).key)) {
                 if (level >= current.level) {
-                    val newNode = createNewNode(key, value, current.level, if (next == null) 0L else next.position, 0L, cache, if (recordIndicatorNode == null) -1 else recordIndicatorNode.recordId)
-                    if (recordIndicatorNode == null) {
-                        recordIndicatorNode = newNode
-                    }
+                    val newNode = createNewNode(key, value, recordLocation, current.level, if (next == null) 0L else next.position, 0L, cache)
+
                     // There can be multiple nodes for a single record
                     // We do not want to cache because it will stomp all over our
                     // initial reference
@@ -159,7 +174,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                 // We found the record we want
                 if (next != null && key.forceCompare((next as SkipListNode<K>).key)) {
                     // Get the return value
-                    value = findValueAtPosition(next.recordPosition, next.recordSize)
+                    value = findValueAtPosition(next.recordPosition)
                     updateNodeNext(current, next.next)
 
                     removeNode(next)
@@ -194,7 +209,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
     override fun get(key: K): V? {
         val node = find(key)
-        return if(node == null) null else findValueAtPosition(node.recordPosition, node.recordSize)
+        return if(node == null) null else findValueAtPosition(node.recordPosition)
     }
 
     /**
@@ -211,11 +226,12 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * is search from the root head.  That is why the put is insufficient.
      *
      * @param key   Key identifier
-     * @param value Value to update to
+     * @param value Record value
+     * @param recordLocation Location of the record within the store
      * @return Whether the value was updated.  In this case, it must already exist.
      * @since 1.2.0
      */
-    private fun updateValue(key: K, value: V): Boolean {
+    private fun updateValue(key: K, value:V?, recordLocation:Long): Boolean {
 
         // Whether we found the corresponding reference or not.
         var victory = false
@@ -236,7 +252,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                     // initial reference.  We use the victory flag to identify
                     // if we have already updated a data
 
-                    updateNodeValue(next, value, !victory)
+                    updateNodeValue(next, value, recordLocation, !victory)
                     victory = true
                 }
 
@@ -348,26 +364,39 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
     /**
      * This method is intended to get a record key as a dictionary.  Note: This is only intended for ManagedEntities
      *
-     * @param node Record reference to pull
+     * @param recordId Record reference to pull
      * @return Map of key key pairs
      *
      * @since 1.2.0
      */
-    protected fun getRecordValueAsDictionary(node: SkipListNode<K>): Map<String, Any?> = fileStore.read(node.recordPosition, node.recordSize).perform { it!!.toMap(fileStore.context!!) }
+    protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
+        var size = 0
+        BufferPool.allocateAndLimit(Integer.BYTES) {
+            fileStore.read(it, recordId)
+            it.flip()
+            size = it.int
+        }
+        return fileStore.read(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
+    }
 
     /**
      * Find the value at a position.
      *
      * @param position   The position within the file structure to pull it from
-     * @param recordSize How many bytes we must read to get the value
      * @return The value as long as it serialized ok.
      * @since 1.2.0
      */
-    protected open fun findValueAtPosition(position: Long, recordSize: Int): V? {
+    protected open fun findValueAtPosition(position: Long): V? {
         if (position == 0L)
             return null
 
-        return fileStore.read(position, recordSize).perform { it!!.getObject(fileStore.context) as V? }
+        var size = 0
+        BufferPool.allocateAndLimit(Integer.BYTES) {
+            fileStore.read(it, position)
+            it.flip()
+            size = it.int
+        }
+        return fileStore.read(position + Integer.BYTES, size).perform { it!!.getObject(fileStore.context) as V? }
     }
 
     /**
@@ -376,32 +405,21 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * data.  Only re-write the record size and position after it writes the record.
      *
      * @param node  Record reference
-     * @param value The value of the reference
+     * @param value Record value for caching purposes
+     * @param recordLocation Location of the value within the store
      * @since 1.2.0
      */
-    protected open fun updateNodeValue(node: SkipListNode<K>, value: V, cache: Boolean) {
-        BufferStream().perform {
-            // Write the record value to the buffer and allocate the space in the store
-            val sizeOfRecord = it!!.putObject(value, fileStore.context)
-            val recordPosition = fileStore.allocate(sizeOfRecord)
-
-            it.flip()
-            fileStore.write(it.byteBuffer, recordPosition)
-
+    protected open fun updateNodeValue(node: SkipListNode<K>, value: V?, recordLocation: Long, cache: Boolean) {
+        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
             // Set the data values and lets write only the updated values to the store.  No need to write the key and
             // all the other junk
-            node.recordSize = sizeOfRecord
-            node.recordPosition = recordPosition
-
-            it.clear()
+            node.recordPosition = recordLocation
             it.putLong(node.recordPosition)
-            it.putInt(node.recordSize)
-
             it.flip()
 
             // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // data so we want to skip over that
-            fileStore.write(it.byteBuffer, node.position + Integer.BYTES)
+            fileStore.write(it, node.position + Integer.BYTES + SkipListNode.BASE_SKIP_LIST_NODE_SIZE)
         }
     }
 
@@ -418,10 +436,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         node.down = position
         it.putLong(node.down)
 
-        var offset = Integer.BYTES + java.lang.Long.BYTES
-        if (node is SkipListNode<*>)
-            offset = Integer.BYTES + java.lang.Long.BYTES + Integer.BYTES + java.lang.Long.BYTES
-
+        val offset = Integer.BYTES + java.lang.Long.BYTES
         it.flip()
 
         // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
@@ -443,10 +458,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             node.next = position
             it.putLong(node.next)
 
-            var offset = Integer.BYTES
-            if (node is SkipListNode<*>)
-                offset = Integer.BYTES + java.lang.Long.BYTES + Integer.BYTES
-
+            val offset = Integer.BYTES
             it.flip()
 
             // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
@@ -461,55 +473,41 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * to the data elements it needs.
      *
      * @param key   Key Identifier
-     * @param value Record value
+     * @param value Record value for caching purposes
+     * @param recordLocation Record value location
      * @param level What level it exists within the skip list
      * @param next  The next value in the skip list
      * @param down  Reference to the next level
      * @return The newly created Skip List Node
      * @since 1.2.0
      */
-    protected open fun createNewNode(key: K, value: V?, level: Byte, next: Long, down: Long, cache: Boolean, recordId: Long): SkipListNode<K> {
-        var valueRecordId = recordId
-        var newNode: SkipListNode<K>? = null
-        BufferStream().perform {
+    protected open fun createNewNode(key: K, value: V?, recordLocation: Long, level: Byte, next: Long, down: Long, cache: Boolean): SkipListNode<K> {
+
+        return BufferStream().perform {
             // Write the key to the buffer just to see how big it is.  Afterwards just reset it
             val keySize = it!!.putObject(key)
             it.clear()
-
-            // Write the record to the buffer first and keep track of how big it is
-            var recordSize = 0
-            if (value != null) {
-                recordSize = it.putObject(value, fileStore.context)
-            }
-
             it.clearReferences() // Make sure we do not track previous references such as the value.  They need to be on different paths so they can be individually hydrated from store
 
             val sizeOfNode = keySize + SkipListNode.SKIP_LIST_NODE_SIZE
 
             // Allocate the space on the file.  Size of the data, record size, and size indicator as Integer.BYTES
-            val recordPosition = fileStore.allocate(sizeOfNode + recordSize + Integer.BYTES)
-
-            // Take note of the position of the data so we can indicate that within the data
-            val position = recordPosition + recordSize
-
-            if (valueRecordId < 0) {
-                valueRecordId = position
-            }
+            val nodePosition = fileStore.allocate(sizeOfNode + Integer.BYTES)
 
             // Instantiate the new data and write it to the buffer
-            newNode = SkipListNode(key, position, if (value == null) 0L else recordPosition, level, next, down, recordSize, valueRecordId)
+            val newNode:SkipListNode<K> = SkipListNode(key, nodePosition, recordLocation, level, next, down)
 
             // Jot down the size of the data so that we know how much data to pull
             it.putInt(sizeOfNode)
-            newNode!!.write(it)
+            newNode.write(it)
 
             // Write the data and record if it exists to the store
             it.flip()
-            fileStore.write(it.byteBuffer, recordPosition)
+            fileStore.write(it.byteBuffer, newNode.position)
+
+            return@perform newNode
 
         }
-
-        return newNode!!
     }
 
     /**

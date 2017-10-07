@@ -35,10 +35,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override val size: Int
         get() = longSize().toInt()
 
-    private var mapReadWriteLock: ClosureReadWriteLock = if (detached)
-        EmptyClosureReadWriteLock()
-                                                  else
-        DefaultClosureReadWriteLock()
+    private var mapReadWriteLock: ClosureReadWriteLock = if (detached) EmptyClosureReadWriteLock() else DefaultClosureReadWriteLock()
 
     /**
      * Remove an item within the map
@@ -46,9 +43,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @param key Key Identifier
      * @return The value that was removed
      */
-    override fun remove(key: K): V? = mapReadWriteLock.writeLock {
-        super.remove(key)
-    }
+    override fun remove(key: K): V? = mapReadWriteLock.writeLock { super.remove(key) }
 
     /**
      * Put a value into a map based on its key.
@@ -57,9 +52,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @param value Underlying value
      * @return The value of the object that was just put into the map
      */
-    override fun put(key: K, value: V): V = mapReadWriteLock.writeLock {
-        super.put(key, value)
-    }
+    override fun put(key: K, value: V): V = mapReadWriteLock.writeLock { super.put(key, value) }
 
     /**
      * Get an item based on its key
@@ -67,9 +60,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @param key Identifier
      * @return The corresponding value
      */
-    override operator fun get(key: K): V?  = mapReadWriteLock.optimisticReadLock {
-        super.get(key)
-    }
+    override operator fun get(key: K): V?  = mapReadWriteLock.optimisticReadLock { super.get(key) }
 
     /**
      * Iterates through the entire skip list to see if it contains the value you are looking for.
@@ -125,10 +116,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock {
-        val node = find(key) ?: return@optimisticReadLock -1
-        return@optimisticReadLock node.recordId
-    }
+    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock { find(key)?.recordPosition ?: -1 }
 
     /**
      * Hydrate a record with its record ID.  If the record value exists it will be returned
@@ -141,9 +129,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
         if (recordId <= 0)
             return@optimisticReadLock null
 
-        @Suppress("UNCHECKED_CAST")
-        val node = findNodeAtPosition(recordId) as SkipListNode<K>?
-        return@optimisticReadLock findValueAtPosition(node!!.recordPosition, node.recordSize)
+        return@optimisticReadLock findValueAtPosition(recordId)
     }
 
     /**
@@ -153,13 +139,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return Map of key values
      * @since 1.2.0
      */
-    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.optimisticReadLock {
-        @Suppress("UNCHECKED_CAST")
-        val node = findNodeAtPosition(recordId) as SkipListNode<K>?
-        return@optimisticReadLock if (node != null && node.recordId == recordId) {
-                getRecordValueAsDictionary(node)
-            } else null
-    }
+    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.optimisticReadLock { getRecordValueAsDictionary(recordId) }
 
     /**
      * Get Map representation of key object.  If it is in the cache, use reflection to get it from the cache.  Otherwise,
@@ -174,15 +154,14 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T {
-        val node = findNodeAtPosition(reference) as SkipListNode<K>?
-        val value = findValueAtPosition(node!!.recordPosition, node.recordSize) ?: return null as T
+        val value = findValueAtPosition(reference) ?: return null as T
         return value.getAny<T>(attribute)
     }
 
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipListNode<*>): T {
-        val value = findValueAtPosition(reference.recordPosition, reference.recordSize) ?: return null as T
+        val value = findValueAtPosition(reference.recordPosition) ?: return null as T
         return value.getAny<T>(field)
     }
 
@@ -216,8 +195,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
                     }
 
                     when {
-                        index.forceCompare(node.key) && includeFirst -> results.add(node.recordId)
-                        index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordId)
+                        index.forceCompare(node.key) && includeFirst -> results.add(node.recordPosition)
+                        index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordPosition)
                     }
                 }
 
@@ -254,11 +233,11 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
                 when {
                     isEqual && !includeFirst -> break@loop
                     isEqual && includeFirst -> {
-                        results.add(node.recordId)
+                        results.add(node.recordPosition)
                         continue@loop
                     }
                     index.forceCompare(node.key, QueryCriteriaOperator.LESS_THAN) -> {
-                        results.add(node.recordId)
+                        results.add(node.recordPosition)
                         continue@loop
                     }
                     index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> break@loop
