@@ -177,7 +177,7 @@ public class SelectIndexTest extends BaseTest {
         query.setEntityType(SelectIdentifierTestEntity.class);
         query.setCriteria(first.or(second.not()));
 
-        assert manager.executeQuery(query).size() == 3;
+        assert manager.executeQuery(query).size() == 5;
     }
 
     @Test
@@ -200,6 +200,14 @@ public class SelectIndexTest extends BaseTest {
         QueryCriteria third = new QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L);
         QueryCriteria fourth = new QueryCriteria("index", QueryCriteriaOperator.EQUAL, 2L);
 
+        /*
+
+          where index > 5
+                or (
+                    index < 3  && !(index = 3 | index = 2)
+                   )
+
+         */
         Query query = new Query();
         query.setEntityType(SelectIdentifierTestEntity.class);
         query.setCriteria(first.or(second.and(third.or(fourth).not())));
@@ -235,7 +243,33 @@ public class SelectIndexTest extends BaseTest {
         query.setEntityType(SelectIdentifierTestEntity.class);
         query.setCriteria(first.or(second.and(third.or(fourth).not())));
 
+        /*
+         index > 5  ||
+         (id < 3  && !(index = 3 || id 2))
+         */
         assert manager.executeQuery(query).size() == 6;
+    }
+
+    @Test
+    public void testMixMatchOfCritieria2() throws OnyxException
+    {
+        QueryCriteria first = new QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 5L);
+        QueryCriteria second = new QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 0L);
+        QueryCriteria third = new QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L);
+        QueryCriteria fourth = new QueryCriteria("id", QueryCriteriaOperator.EQUAL, 2L);
+
+        Query query = new Query();
+        query.setEntityType(SelectIdentifierTestEntity.class);
+        query.setCriteria(first.and(second.and(third.or(fourth).not())));
+
+        /* select * from da
+            where
+              index < 5
+              and id > 0
+              and !(index == 2 or index == 3)
+              */
+
+        assert manager.executeQuery(query).size() == 2;
     }
 
     @Test

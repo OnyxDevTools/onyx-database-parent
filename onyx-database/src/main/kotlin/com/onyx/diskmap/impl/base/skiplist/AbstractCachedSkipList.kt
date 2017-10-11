@@ -38,8 +38,8 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      * @return The instantiated and configured data.
      * @since 1.2.0
      */
-    override fun createNewNode(key: K, value: V?, recordLocation:Long, level: Byte, next: Long, down: Long, cache: Boolean): SkipListNode<K> {
-        val newNode = super.createNewNode(key, value, recordLocation, level, next, down, cache)
+    override fun createNewNode(key: K, value: V?, recordLocation:Long, level: Byte, next: Long, down: Long, cache: Boolean, recordId:Long): SkipListNode<K> {
+        val newNode = super.createNewNode(key, value, recordLocation, level, next, down, cache, recordId)
         nodeCache.put(newNode.position, newNode)
         if (cache) {
             keyCache.put(key, newNode)

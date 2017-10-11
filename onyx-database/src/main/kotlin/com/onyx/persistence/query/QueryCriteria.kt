@@ -43,6 +43,7 @@ class QueryCriteria<T> : BufferStreamable {
     var level: Int = 0
     var isAnd = false
     var isOr = false
+    var flip = false
     var meetsCriteria = false
 
     var attribute: String? = null
@@ -90,7 +91,7 @@ class QueryCriteria<T> : BufferStreamable {
     var isRelationship:Boolean? = null
         get() {
             if(field == null)
-                field = attribute!!.contains(".")
+                field = attribute?.contains(".") ?: false
             return field
         }
 
@@ -230,7 +231,16 @@ class QueryCriteria<T> : BufferStreamable {
      * @since 1.3.0 Added as enhancement #69
      */
     operator fun not(): QueryCriteria<T> {
-        this.isNot = true
+        if(subCriteria.isEmpty()) {
+            operator = operator!!.inverse // Invert the criteria rather than checking all the criteria
+            this.isNot = false
+        }
+        else {
+            val referenceCriteria = QueryCriteria("", QueryCriteriaOperator.EQUAL, "")
+            referenceCriteria.flip = true
+            and(referenceCriteria)
+            isNot = true
+        }
         return this
     }
 
@@ -290,6 +300,7 @@ class QueryCriteria<T> : BufferStreamable {
         var result = isNot.hashCode()
         result = 31 * result + isAnd.hashCode()
         result = 31 * result + isOr.hashCode()
+        result = 31 * result + flip.hashCode()
         result = 31 * result + (attribute?.hashCode() ?: 0)
         result = 31 * result + (operator?.hashCode() ?: 0)
         result = 31 * result + (value?.hashCode() ?: 0)

@@ -59,7 +59,7 @@ import java.nio.charset.StandardCharsets
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation) : PersistenceManagerFactory {
+open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation, override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)) : PersistenceManagerFactory {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
 
@@ -87,9 +87,6 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
     // endregion
 
     //region Override Properties
-
-    @Suppress("LeakingThis")
-    override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)
 
     override val credentials: String by lazy { this.user + ":" + encryption.encrypt(this.password) }
 

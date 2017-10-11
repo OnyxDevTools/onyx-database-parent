@@ -46,7 +46,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
             partitionId = temporaryManagedEntity.partitionId(context, descriptor)
         }
 
-        records.references.map { Reference(partitionId, it.recordPosition) }.forEach { startingPoint.put(it, it) }
+        records.references.map { Reference(partitionId, it.recordId) }.forEach { startingPoint.put(it, it) }
 
         return scan(startingPoint)
     }
@@ -77,6 +77,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         // We are going to set the attribute name so we can continue going down the chain.  We are going to remove the
         // processed token through
         criteria.attribute = criteria.attribute!!.replaceFirst((segments[0] + "\\.").toRegex(), "")
+        criteria.isRelationship = false
 
         // Get the next scanner because we are not at the end of the line.  Otherwise, we would not have gotten to this place
         val tableScanner = ScannerFactory.getScannerForQueryCriteria(context, criteria, relationshipDescriptor.inverseClass, temporaryDataFile, query, persistenceManager)

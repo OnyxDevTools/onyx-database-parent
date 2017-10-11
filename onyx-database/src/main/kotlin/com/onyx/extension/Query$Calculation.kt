@@ -30,10 +30,13 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
 
     // Iterate through
     for(it in this.getAllCriteria()) {
-        if (it.isRelationship!!) {
+        if(it.flip)
+            continue
+        else if (it.isRelationship!!) {
             // Compare operator for relationship value
             subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
-        } else {
+        }
+        else {
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
@@ -63,6 +66,8 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria<*>): Boolean {
 
     if (criteria.subCriteria.size > 0) {
         criteria.subCriteria.forEach {
+            if(it.flip)
+                return@forEach
             meetsCriteria = if (it.isOr) { calculateCriteriaMet(it) || meetsCriteria } else { calculateCriteriaMet(it) && meetsCriteria }
         }
     }
@@ -104,7 +109,7 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: R
 
     // If there are relationship values, check to see if they meet criteria
     if (relationshipEntities!!.isNotEmpty()) {
-        val items = criteria.attribute!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val items = criteria.attribute!!.split(".")
         val attribute = items[items.size - 1]
 
         // All we need is a single match.  If there is a relationship that meets the criteria, move along

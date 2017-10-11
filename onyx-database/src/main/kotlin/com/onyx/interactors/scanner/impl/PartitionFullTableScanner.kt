@@ -3,6 +3,7 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.factory.DiskMapFactory
+import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
@@ -42,12 +43,13 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
         val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
-        records.references.filter {
-            val entity = records.getWithRecID(it.recordPosition)!!
-            val reference = Reference(partitionId, it.recordPosition)
-            query.meetsCriteria(entity, reference, context, descriptor)
+        @Suppress("UNCHECKED_CAST")
+        records.entries.filter {
+            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
+            query.meetsCriteria(entry.value!!, Reference(partitionId, entry.node.recordId), context, descriptor)
         }.forEach {
-            val reference = Reference(partitionId, it.recordPosition)
+            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
+            val reference = Reference(partitionId, entry.node.recordId)
             matching.put(reference, reference)
         }
 

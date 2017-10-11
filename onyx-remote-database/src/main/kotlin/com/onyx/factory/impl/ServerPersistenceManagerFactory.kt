@@ -41,8 +41,4 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-class ServerPersistenceManagerFactory(databaseLocation: String) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation) {
-
-    override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)
-
-}
+class ServerPersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation, schemaContext)

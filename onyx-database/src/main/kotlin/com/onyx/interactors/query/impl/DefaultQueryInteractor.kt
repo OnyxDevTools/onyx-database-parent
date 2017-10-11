@@ -309,9 +309,9 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      */
     private fun <T : Any?> aggregateFilteredReferences(criteria: QueryCriteria<*>, totalResults: MutableMap<Reference, T>, criteriaResults: MutableMap<Reference, T>) {
         when {
-            criteria.isNot ->   totalResults -= criteriaResults.keys
-            criteria.isOr ->    totalResults += criteriaResults
-            criteria.isAnd ->   totalResults -= totalResults.filterKeys { !criteriaResults.containsKey(it) }.keys
+            criteria.flip ->  {totalResults.clear(); totalResults += criteriaResults}
+            criteria.isOr ->  totalResults += criteriaResults
+            criteria.isAnd -> totalResults -= totalResults.filterKeys { !criteriaResults.containsKey(it) }.keys
         }
     }
 

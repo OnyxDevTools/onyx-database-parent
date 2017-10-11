@@ -66,7 +66,7 @@ public class HashIndexConcurrencyTest extends memory.base.BaseTest {
 
         List<Future> threads = new ArrayList<>();
 
-        ExecutorService pool = Executors.newFixedThreadPool(1);
+        ExecutorService pool = Executors.newFixedThreadPool(8);
 
         List<AllAttributeEntity> entities = new ArrayList<>();
 

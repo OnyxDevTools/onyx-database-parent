@@ -48,8 +48,8 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
             deleteInverseRelationshipReference(entity, entityRelationshipReference, it)
             if (relationshipDescriptor.shouldDeleteEntity && !transaction.contains(entityToDelete!!, context)) {
                 entityToDelete.deleteAllIndexes(context, it.referenceId)
-                entityToDelete.deleteRelationships(context, transaction)
                 entityToDelete.recordInteractor(context).delete(entityToDelete)
+                entityToDelete.deleteRelationships(context, transaction)
             }
         }
     }

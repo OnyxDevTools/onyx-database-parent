@@ -54,7 +54,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator
  *
  * Tim Osborn, 02/13/2017 - This was augmented to use the new RMI Socket Server.  It has since been optimized
  */
-class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation) : EmbeddedPersistenceManagerFactory(databaseLocation, instance), PersistenceManagerFactory, SSLPeer {
+class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
 
     // region Private Values
 
@@ -74,9 +74,6 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
     // endregion
 
     // region Override Values
-
-    // Setting it null will reset the initializer.  This is in the event of closing
-    override var schemaContext: SchemaContext by mutableLazy { RemoteSchemaContext(instance) }
 
     // Set Persistence Manager will cause it to re-initialize next time
     override var persistenceManager: PersistenceManager by mutableLazy {

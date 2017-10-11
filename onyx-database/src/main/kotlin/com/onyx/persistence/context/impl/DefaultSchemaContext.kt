@@ -188,8 +188,7 @@ open class DefaultSchemaContext : SchemaContext {
         }
 
         // Close transaction file
-        transactionStore.close()
-
+        catchAll { transactionStore.close() }
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors
         recordInteractors.clear() // Clear all Record Controllers

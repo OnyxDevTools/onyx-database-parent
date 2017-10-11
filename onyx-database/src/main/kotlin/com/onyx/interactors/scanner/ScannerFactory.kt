@@ -64,6 +64,7 @@ object ScannerFactory {
      */
     @Throws(OnyxException::class)
     fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
+
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")
         } else {
@@ -76,6 +77,13 @@ object ScannerFactory {
         // This has a dot in it, it must be a relationship or a typo
         if (segments.size > 1) {
             return RelationshipScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+        }
+
+        if(criteria.flip) {
+            return if(descriptor.hasPartition)
+                PartitionReferenceScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+            else
+                ReferenceScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
         }
 
         // Identifiers criteria must be either an equal or in so that it can make exact matches

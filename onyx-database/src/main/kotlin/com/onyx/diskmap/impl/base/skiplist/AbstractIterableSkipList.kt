@@ -278,7 +278,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      *
      */
     @Suppress("UNCHECKED_CAST")
-    inner class SkipListEntry<A,B> internal constructor(private var node: SkipListNode<A>) : MutableMap.MutableEntry<A, B?> {
+    inner class SkipListEntry<A,B> internal constructor(var node: SkipListNode<A>) : MutableMap.MutableEntry<A, B?> {
 
         /**
          * Get Key

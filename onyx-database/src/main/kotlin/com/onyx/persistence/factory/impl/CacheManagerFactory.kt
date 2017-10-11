@@ -36,9 +36,8 @@ import java.io.File
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFAULT_INSTANCE) : EmbeddedPersistenceManagerFactory(createTemporaryMetadataLocation(), instance), PersistenceManagerFactory {
+class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFAULT_INSTANCE, location:String = createTemporaryMetadataLocation(), override var schemaContext: SchemaContext = CacheSchemaContext(instance, location)) : EmbeddedPersistenceManagerFactory(location, instance, schemaContext), PersistenceManagerFactory {
 
-    override var schemaContext: SchemaContext = CacheSchemaContext(instance, this.databaseLocation)
 
     /**
      * Initialize the in memory database

@@ -85,8 +85,6 @@ public class SelectNotQueryTest extends RemotePrePopulatedBaseTest {
         Query query = new Query(AllAttributeForFetch.class, criteria);
         List results = manager.executeQuery(query);
 
-        Assert.assertTrue(results.size() == 7);
-
         Assert.assertTrue("Is Null Operator with not modifier should render 7 records", results.size() == 7);
     }
 

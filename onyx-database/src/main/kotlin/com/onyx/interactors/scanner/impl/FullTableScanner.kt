@@ -2,10 +2,12 @@ package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.factory.DiskMapFactory
+import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -32,12 +34,13 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
         val matching = HashMap<Reference, Reference>()
         val context = Contexts.get(contextId)!!
 
-        records.references.filter {
-            val entity = records.getWithRecID(it.recordPosition)!!
-            val reference = Reference(partitionId, it.recordPosition)
-            query.meetsCriteria(entity, reference, context, descriptor)
+        @Suppress("UNCHECKED_CAST")
+        records.entries.filter {
+            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
+            query.meetsCriteria(entry.value!!, Reference(partitionId, entry.node.recordId), context, descriptor)
         }.forEach {
-            val reference = Reference(partitionId, it.recordPosition)
+            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
+            val reference = Reference(partitionId, entry.node.recordId)
             matching.put(reference, reference)
         }
 

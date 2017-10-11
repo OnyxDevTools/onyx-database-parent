@@ -177,7 +177,7 @@ public class SelectIndexTest extends BaseTest {
         query.setEntityType(SelectIdentifierTestEntity.class);
         query.setCriteria(first.or(second.not()));
 
-        assert manager.executeQuery(query).size() == 3;
+        assert manager.executeQuery(query).size() == 5;
     }
 
     @Test

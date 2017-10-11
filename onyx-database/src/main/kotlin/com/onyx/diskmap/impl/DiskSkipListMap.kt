@@ -116,7 +116,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock { find(key)?.recordPosition ?: -1 }
+    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock { find(key)?.recordId ?: -1 }
 
     /**
      * Hydrate a record with its record ID.  If the record value exists it will be returned
@@ -128,8 +128,9 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override fun getWithRecID(recordId: Long): V? = mapReadWriteLock.optimisticReadLock {
         if (recordId <= 0)
             return@optimisticReadLock null
-
-        return@optimisticReadLock findValueAtPosition(recordId)
+        @Suppress("UNCHECKED_CAST")
+        val node:SkipListNode<K> = findNodeAtPosition(recordId) as SkipListNode<K>? ?: return@optimisticReadLock null
+        return@optimisticReadLock findValueAtPosition(node.recordPosition)
     }
 
     /**
@@ -139,7 +140,11 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return Map of key values
      * @since 1.2.0
      */
-    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.optimisticReadLock { getRecordValueAsDictionary(recordId) }
+    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.optimisticReadLock {
+        @Suppress("UNCHECKED_CAST")
+        val node:SkipListNode<K> = findNodeAtPosition(recordId) as SkipListNode<K>? ?: return@optimisticReadLock null
+        getRecordValueAsDictionary(node.recordPosition)
+    }
 
     /**
      * Get Map representation of key object.  If it is in the cache, use reflection to get it from the cache.  Otherwise,
@@ -154,7 +159,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T {
-        val value = findValueAtPosition(reference) ?: return null as T
+        val node = findNodeAtPosition(reference) as SkipListNode<K>? ?: return null as T
+        val value = findValueAtPosition(node.recordPosition) ?: return null as T
         return value.getAny<T>(attribute)
     }
 
@@ -195,8 +201,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
                     }
 
                     when {
-                        index.forceCompare(node.key) && includeFirst -> results.add(node.recordPosition)
-                        index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordPosition)
+                        index.forceCompare(node.key) && includeFirst -> results.add(node.recordId)
+                        index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordId)
                     }
                 }
 
@@ -233,11 +239,11 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
                 when {
                     isEqual && !includeFirst -> break@loop
                     isEqual && includeFirst -> {
-                        results.add(node.recordPosition)
+                        results.add(node.recordId)
                         continue@loop
                     }
                     index.forceCompare(node.key, QueryCriteriaOperator.LESS_THAN) -> {
-                        results.add(node.recordPosition)
+                        results.add(node.recordId)
                         continue@loop
                     }
                     index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> break@loop

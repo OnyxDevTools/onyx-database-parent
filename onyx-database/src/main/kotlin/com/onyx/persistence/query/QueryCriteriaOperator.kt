@@ -33,10 +33,37 @@ enum class QueryCriteriaOperator {
      * @return If this operator supports index scanning
      */
     val isIndexed: Boolean
-        get() = this == QueryCriteriaOperator.EQUAL
-                || this == QueryCriteriaOperator.IN
-                || this == QueryCriteriaOperator.GREATER_THAN
-                || this == QueryCriteriaOperator.GREATER_THAN_EQUAL
-                || this == QueryCriteriaOperator.LESS_THAN
-                || this == QueryCriteriaOperator.LESS_THAN_EQUAL
+        get() = this === EQUAL
+                || this === IN
+                || this === GREATER_THAN
+                || this === GREATER_THAN_EQUAL
+                || this === LESS_THAN
+                || this === LESS_THAN_EQUAL
+
+    /**
+     * Get the inverse in order to support the .not() feature within query criteria
+     *
+     * @since 2.0.0
+     */
+    val inverse: QueryCriteriaOperator
+        get() = when(this) {
+            EQUAL -> NOT_EQUAL
+            NOT_EQUAL -> EQUAL
+            NOT_STARTS_WITH -> STARTS_WITH
+            NOT_NULL -> IS_NULL
+            IS_NULL -> NOT_NULL
+            STARTS_WITH -> NOT_STARTS_WITH
+            CONTAINS -> NOT_CONTAINS
+            NOT_CONTAINS -> CONTAINS
+            LIKE -> NOT_LIKE
+            NOT_LIKE -> LIKE
+            MATCHES -> NOT_MATCHES
+            NOT_MATCHES -> MATCHES
+            LESS_THAN -> GREATER_THAN_EQUAL
+            GREATER_THAN -> LESS_THAN_EQUAL
+            LESS_THAN_EQUAL -> GREATER_THAN
+            GREATER_THAN_EQUAL -> LESS_THAN
+            IN -> NOT_IN
+            NOT_IN -> IN
+        }
 }

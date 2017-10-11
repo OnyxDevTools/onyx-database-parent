@@ -26,7 +26,7 @@ interface RelationshipInteractor {
     /**
      * Delete Relationship entity
      *
-     * @param entity Entity to delete relationship for
+     * @param entity EnTotity to delete relationship for
      * @param transaction prevents recursion
      * @throws OnyxException Error deleting relationship
      */
