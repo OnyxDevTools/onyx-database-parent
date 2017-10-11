@@ -3,7 +3,7 @@ package com.onyx.persistence.manager.impl
 import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.extension.common.instance
-import com.onyx.interactors.query.impl.DefaultQueryInteractor
+import com.onyx.impl.DefaultQueryInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.*
 import com.onyx.persistence.collections.LazyQueryCollection

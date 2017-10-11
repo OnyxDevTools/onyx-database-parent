@@ -1,4 +1,4 @@
-package com.onyx.factory.impl
+package com.onyx.persistence.factory.impl
 
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.ServerSchemaContext

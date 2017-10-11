@@ -44,20 +44,18 @@ interface OnyxServer : SSLPeer {
     val isRunning: Boolean
 
     /**
-     * Get Database port
-     *
-     * @since 1.0.0
-     * @return Port Number
-     */
-    /**
      * Set Port Number.  By Default this is 8080
      *
      * @since 1.0.0
-     * @param port Port Number
      */
     var port: Int
 
-
+    /**
+     * Encryption interactor.  This will hold encryption keys and information to make database more secure
+     *
+     * @see com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+     * @since 2.0.0 Effort to make more secure and override encryption keys
+     */
     var encryption: EncryptionInteractor
 
     /**
@@ -74,14 +72,4 @@ interface OnyxServer : SSLPeer {
      * @param password Password
      */
     fun setCredentials(user: String, password: String)
-
-    /**
-     * The maximum number of worker threads threads.  Worker threads are used to perform operations that are not related to
-     * networking
-     *
-     * @param maxThreads Number of io threads
-     * @since 1.2.0
-     */
-    fun setMaxWorkerThreads(maxThreads: Int)
-
 }

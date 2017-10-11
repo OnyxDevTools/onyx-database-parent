@@ -1,7 +1,8 @@
-package com.onyx.persistence.context.impl;
+package com.onyx.persistence.context.impl
 
-import com.onyx.client.push.PushPublisher;
-import com.onyx.persistence.query.impl.RemoteQueryCacheInteractor;
+import com.onyx.client.push.PushPublisher
+import com.onyx.interactors.cache.QueryCacheInteractor
+import com.onyx.interactors.query.impl.RemoteQueryCacheInteractor
 
 /**
  * Created by tosborn1 on 3/27/17.
@@ -11,10 +12,8 @@ import com.onyx.persistence.query.impl.RemoteQueryCacheInteractor;
  *
  * @author Tim Osborn
  * @see com.onyx.persistence.context.SchemaContext
+ *
  * @since 1.3.0
- * <p>
- * <pre>
- * <code>
  *
  *
  * PersistenceManagerFactory fac = new ServerPersistenceManagerFactory("/MyDatabaseLocation");
@@ -25,21 +24,10 @@ import com.onyx.persistence.query.impl.RemoteQueryCacheInteractor;
  *
  * fac.close();
  *
- * </code>
- * </pre>
  */
-public class ServerSchemaContext extends DefaultSchemaContext {
+class ServerSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
 
-
-    /**
-     * Constructor.
-     *
-     * @param contextId Database identifier that must be unique and tied to its process
-     */
-    public ServerSchemaContext(String contextId, String location) {
-        super(contextId, location);
-        this.setQueryCacheInteractor(new RemoteQueryCacheInteractor(this));
-    }
+    override var queryCacheInteractor: QueryCacheInteractor = RemoteQueryCacheInteractor(this)
 
     /**
      * Set Push publisher.  The push publisher is used to push notifications down
@@ -53,7 +41,7 @@ public class ServerSchemaContext extends DefaultSchemaContext {
      *
      * @since 1.3.0
      */
-    public void setPushPublisher(PushPublisher pushPublisher) {
-        ((RemoteQueryCacheInteractor)this.getQueryCacheInteractor()).setPushPublisher(pushPublisher);
+    fun setPushPublisher(pushPublisher: PushPublisher) {
+        (this.queryCacheInteractor as RemoteQueryCacheInteractor).setPushPublisher(pushPublisher)
     }
 }

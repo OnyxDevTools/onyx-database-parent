@@ -1,8 +1,8 @@
 package com.onyx.cli;
 
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.WebDatabaseProxyServer;
+import com.onyx.application.impl.DatabaseServer;
 import com.onyx.application.WebDatabaseServer;
-import com.onyx.server.cli.CommandLineParser;
 import org.apache.commons.cli.*;
 
 /**
@@ -25,7 +25,7 @@ public class WebServerCommandLineParser extends CommandLineParser {
         CommandLine commandLine = super.parseCommandLine(args);
 
         if(!commandLine.hasOption(OPTION_WEBSERVICE_PORT)
-                && commandLine.hasOption(OPTION_PORT))
+                && commandLine.hasOption(Companion.getOPTION_PORT()))
         {
             System.err.println("Invalid Port, you must specify a WebService Port.");
             throw new RuntimeException();
@@ -41,12 +41,14 @@ public class WebServerCommandLineParser extends CommandLineParser {
      * @param args    - Command line arguments
      * @since 1.0.0
      */
-    public void configureDatabaseWithCommandLineOptions(DatabaseServer databaseServer, String[] args) {
-        CommandLine commandLine = parseCommandLine(args);
-        super.configureDatabaseWithCommandLineOptions(databaseServer, args);
+    public DatabaseServer buildDatabaseWithCommandLineOptions(String[] args) {
+        final CommandLine commandLine = parseCommandLine(args);
+        final DatabaseServer databaseServer = new WebDatabaseServer(commandLine.getOptionValue(Companion.getOPTION_LOCATION()));
+        super.buildDatabaseWithCommandLineOptions(databaseServer, commandLine);
 
         if (commandLine.hasOption(OPTION_WEBSERVICE_PORT)) {
             ((WebDatabaseServer)databaseServer).setWebServicePort(Integer.valueOf(commandLine.getOptionValue(OPTION_WEBSERVICE_PORT)));
         }
+        return databaseServer;
     }
 }

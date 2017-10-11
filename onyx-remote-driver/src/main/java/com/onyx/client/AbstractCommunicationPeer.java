@@ -529,7 +529,7 @@ public abstract class AbstractCommunicationPeer extends AbstractSSLPeer {
      * @since 1.2.0
      */
     protected boolean useSSL() {
-        return this.sslKeystoreFilePath != null && this.sslKeystoreFilePath.length() > 0;
+        return this.getSslKeystoreFilePath() != null && this.getSslKeystoreFilePath().length() > 0;
     }
 
     /**

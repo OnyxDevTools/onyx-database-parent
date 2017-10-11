@@ -1,4 +1,4 @@
-package com.onyx.factory.impl;
+package com.onyx.persistence.impl;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;

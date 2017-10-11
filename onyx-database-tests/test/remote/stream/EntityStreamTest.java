@@ -1,7 +1,6 @@
 package remote.stream;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.StreamException;
 import com.onyx.persistence.query.Query;

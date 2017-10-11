@@ -1,5 +1,6 @@
 package com.onyx.application;
 
+import com.onyx.application.impl.DatabaseServer;
 import com.onyx.cli.WebServerCommandLineParser;
 import com.onyx.server.*;
 import io.undertow.Handlers;
@@ -41,6 +42,11 @@ import java.util.List;
  */
 public class WebDatabaseServer extends DatabaseServer
 {
+
+    public WebDatabaseServer(String databaseLocation) {
+        super(databaseLocation);
+    }
+
     // Web Server
     Undertow server;
 
@@ -58,10 +64,8 @@ public class WebDatabaseServer extends DatabaseServer
      */
     public static void main(String[] args) throws Exception {
 
-        final WebDatabaseServer instance = new WebDatabaseServer();
-
         WebServerCommandLineParser parser = new WebServerCommandLineParser();
-        parser.configureDatabaseWithCommandLineOptions(instance, args);
+        final WebDatabaseServer instance = (WebDatabaseServer)parser.buildDatabaseWithCommandLineOptions(args);
 
         instance.start();
         instance.join();
@@ -83,10 +87,10 @@ public class WebDatabaseServer extends DatabaseServer
         final SessionCookieConfig sessionConfig = new SessionCookieConfig();
 
         // Setup Authentication classes
-        DatabaseIdentityManager databaseAuthenticationManager = new DatabaseIdentityManager(this.persistenceManagerFactory.getPersistenceManager());
+        DatabaseIdentityManager databaseAuthenticationManager = new DatabaseIdentityManager(this.getPersistenceManagerFactory().getPersistenceManager());
 
         // Persistence Handler
-        final PathHandler persistenceHandler = Handlers.path().addPrefixPath("/onyx", new JSONDatabaseMessageListener(this.persistenceManagerFactory.getPersistenceManager(), this.persistenceManagerFactory.getSchemaContext()));
+        final PathHandler persistenceHandler = Handlers.path().addPrefixPath("/onyx", new JSONDatabaseMessageListener(this.getPersistenceManagerFactory().getPersistenceManager(), this.getPersistenceManagerFactory().getSchemaContext()));
 
         // Security Handler
         HttpHandler securityHandler = new AuthenticationCallHandler(persistenceHandler);
@@ -141,8 +145,8 @@ public class WebDatabaseServer extends DatabaseServer
         {
             SSLContext sslContext;
             try {
-                sslContext = SSLContext.getInstance(protocol);
-                sslContext.init(createKeyManagers(sslKeystoreFilePath, sslStorePassword, sslKeystorePassword), createTrustManagers(sslTrustStoreFilePath, sslStorePassword), new SecureRandom());
+                sslContext = SSLContext.getInstance(getProtocol());
+                sslContext.init(createKeyManagers(getSslKeystoreFilePath(), getSslStorePassword(), getSslKeystorePassword()), createTrustManagers(getSslTrustStoreFilePath(), getSslStorePassword()), new SecureRandom());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -173,7 +177,7 @@ public class WebDatabaseServer extends DatabaseServer
      */
     private boolean useSSL()
     {
-        return (sslKeystoreFilePath != null && sslKeystoreFilePath.length() > 0);
+        return (getSslKeystoreFilePath() != null && getSslKeystoreFilePath().length() > 0);
     }
 
     /**

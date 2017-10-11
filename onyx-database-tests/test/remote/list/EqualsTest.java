@@ -1,7 +1,6 @@
 package remote.list;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import com.onyx.persistence.query.QueryCriteria;

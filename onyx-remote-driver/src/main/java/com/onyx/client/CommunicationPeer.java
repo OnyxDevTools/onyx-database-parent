@@ -170,8 +170,8 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         if (useSSL()) {
             SSLContext context;
             try {
-                context = SSLContext.getInstance(protocol);
-                context.init(createKeyManagers(sslKeystoreFilePath, sslStorePassword, sslKeystorePassword), createTrustManagers(sslTrustStoreFilePath, sslStorePassword), new SecureRandom());
+                context = SSLContext.getInstance(getProtocol());
+                context.init(createKeyManagers(getSslKeystoreFilePath(), getSslStorePassword(), getSslKeystorePassword()), createTrustManagers(getSslTrustStoreFilePath(), getSslStorePassword()), new SecureRandom());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -457,36 +457,6 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
         }
     }
 
-    @Nullable
-    @Override
-    public String getSslStorePassword() {
-        return sslStorePassword;
-    }
-
-    @Nullable
-    @Override
-    public String getSslKeystoreFilePath() {
-        return sslKeystoreFilePath;
-    }
-
-    @NotNull
-    @Override
-    public String getSslKeystorePassword() {
-        return sslKeystorePassword;
-    }
-
-    @NotNull
-    @Override
-    public String getSslTrustStoreFilePath() {
-        return sslTrustStoreFilePath;
-    }
-
-    @NotNull
-    @Override
-    public String getSslTrustStorePassword() {
-        return sslTrustStorePassword;
-    }
-
     private class RetryHeartbeatTask implements Runnable
     {
         /**
@@ -546,10 +516,5 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
                 }
             }
         }
-    }
-
-    @Override
-    public void copySSLPeerTo(com.onyx.client.SSLPeer peer) {
-
     }
 }

@@ -1,5 +1,6 @@
 package com.onyx.application;
 
+import com.onyx.application.impl.DatabaseServer;
 import com.onyx.cli.WebServerCommandLineParser;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
@@ -38,6 +39,10 @@ import java.util.List;
 public class WebDatabaseProxyServer extends WebDatabaseServer
 {
 
+    public WebDatabaseProxyServer(String databaseLocation) {
+        super(databaseLocation);
+    }
+
     /**
      * Run Database Server Main Method
      * <p>
@@ -48,11 +53,8 @@ public class WebDatabaseProxyServer extends WebDatabaseServer
      * @since 1.2.0
      */
     public static void main(String[] args) throws Exception {
-
-        final WebDatabaseServer instance = new WebDatabaseServer();
-
         WebServerCommandLineParser parser = new WebServerCommandLineParser();
-        parser.configureDatabaseWithCommandLineOptions(instance, args);
+        final DatabaseServer instance = parser.buildDatabaseWithCommandLineOptions(args);
 
         instance.start();
         instance.join();
@@ -68,19 +70,19 @@ public class WebDatabaseProxyServer extends WebDatabaseServer
     @Override
     public void start()
     {
-        PersistenceManagerFactory remotePersistenceManagerFactory = new RemotePersistenceManagerFactory(this.location, this.instance);
-        remotePersistenceManagerFactory.setCredentials(this.user, this.password);
-        this.persistenceManagerFactory = remotePersistenceManagerFactory;
+        PersistenceManagerFactory remotePersistenceManagerFactory = new RemotePersistenceManagerFactory(this.getDatabaseLocation(), this.getInstance());
+        remotePersistenceManagerFactory.setCredentials(this.getUser(), this.getPassword());
+        this.setPersistenceManagerFactory(remotePersistenceManagerFactory);
 
         // Session Manager
         final SessionManager sessionManager = new InMemorySessionManager("SESSION_MANAGER");
         final SessionCookieConfig sessionConfig = new SessionCookieConfig();
 
         // Setup Authentication classes
-        DatabaseIdentityManager databaseAuthenticationManager = new DatabaseIdentityManager(this.persistenceManagerFactory.getPersistenceManager());
+        DatabaseIdentityManager databaseAuthenticationManager = new DatabaseIdentityManager(this.getPersistenceManagerFactory().getPersistenceManager());
 
         // Persistence Handler
-        final PathHandler persistenceHandler = Handlers.path().addPrefixPath("/onyx", new JSONDatabaseMessageListener(this.persistenceManagerFactory.getPersistenceManager(), this.persistenceManagerFactory.getSchemaContext()));
+        final PathHandler persistenceHandler = Handlers.path().addPrefixPath("/onyx", new JSONDatabaseMessageListener(this.getPersistenceManagerFactory().getPersistenceManager(), this.getPersistenceManagerFactory().getSchemaContext()));
 
         // Security Handler
         HttpHandler securityHandler = new AuthenticationCallHandler(persistenceHandler);
@@ -116,7 +118,7 @@ public class WebDatabaseProxyServer extends WebDatabaseServer
     @Override
     public void stop()
     {
-        this.persistenceManagerFactory.close();
+        this.getPersistenceManagerFactory().close();
         server.stop();
     }
 }

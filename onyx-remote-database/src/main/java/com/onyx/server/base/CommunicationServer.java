@@ -107,8 +107,8 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
 
             // Define Buffer Pool for SSL and identify packet size
             if (useSSL()) {
-                sslContext = SSLContext.getInstance(protocol);
-                sslContext.init(createKeyManagers(this.sslKeystoreFilePath, this.sslStorePassword, this.sslKeystorePassword), createTrustManagers(this.sslTrustStoreFilePath, this.sslTrustStorePassword), new SecureRandom());
+                sslContext = SSLContext.getInstance(getProtocol());
+                sslContext.init(createKeyManagers(this.getSslKeystoreFilePath(), this.getSslStorePassword(), this.getSslKeystorePassword()), createTrustManagers(this.getSslTrustStoreFilePath(), this.getSslTrustStorePassword()), new SecureRandom());
                 SSLEngine sslEngine = sslContext.createSSLEngine();
                 SSLSession dummySession = sslEngine.getSession();
                 appBufferSize = dummySession.getApplicationBufferSize();
@@ -451,7 +451,6 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
      * @param maxThreads Number of io threads
      * @since 1.2.0
      */
-    @Override
     public void setMaxWorkerThreads(int maxThreads) {
         this.maxWorkerThreads = maxThreads;
     }
