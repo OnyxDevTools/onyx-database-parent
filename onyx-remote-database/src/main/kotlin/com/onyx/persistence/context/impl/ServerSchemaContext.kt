@@ -27,14 +27,14 @@ import com.onyx.interactors.query.impl.RemoteQueryCacheInteractor
  */
 class ServerSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
 
-    override var queryCacheInteractor: QueryCacheInteractor = RemoteQueryCacheInteractor(this)
+    override var queryCacheInteractor:QueryCacheInteractor = RemoteQueryCacheInteractor(this)
 
     /**
      * Set Push publisher.  The push publisher is used to push notifications down
-     * to clients.  Push notifications are not iniatialized by the client.  instead
+     * to clients.  Push notifications are not initialized by the client.  instead
      * they are send independently from the server and do not verify receipt.
      *
-     * Push notifications are used by the query subscriber / cacher to send query changes
+     * Push notifications are used by the query subscriber / cache to send query changes
      * to clients.
      *
      * @param pushPublisher Object responsible for sending push notifications
@@ -42,6 +42,6 @@ class ServerSchemaContext(contextId: String, location: String) : DefaultSchemaCo
      * @since 1.3.0
      */
     fun setPushPublisher(pushPublisher: PushPublisher) {
-        (this.queryCacheInteractor as RemoteQueryCacheInteractor).setPushPublisher(pushPublisher)
+        (this.queryCacheInteractor as RemoteQueryCacheInteractor).pushPublisher = pushPublisher
     }
 }

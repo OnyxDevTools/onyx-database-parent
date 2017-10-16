@@ -14,8 +14,6 @@ import com.onyx.client.exception.RequestTimeoutException;
 import com.onyx.client.push.PushRegistrar;
 import com.onyx.exception.InitializationException;
 import com.onyx.lang.map.OptimisticLockingMap;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -517,4 +515,5 @@ public class CommunicationPeer extends AbstractCommunicationPeer implements Onyx
             }
         }
     }
+
 }

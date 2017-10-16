@@ -7,22 +7,18 @@ import com.onyx.interactors.encryption.EncryptionInteractor
  * Onyx Server contract.  This is the interface that all servers must implement.
  *
  *
- * <pre>
- * `
- *
  * OnyxServer server = new DatabaseServer();
  * server.setPort(8080);
  * server.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
  * server.start();
  * server.join();
  *
-` *
-</pre> *
  *
  * @author Tim Osborn
  * @since 1.0.0
  */
 interface OnyxServer : SSLPeer {
+
     /**
      * Starts the database server
      * @since 1.0.0
@@ -44,17 +40,18 @@ interface OnyxServer : SSLPeer {
     val isRunning: Boolean
 
     /**
-     * Set Port Number.  By Default this is 8080
+     * Get Database port
      *
      * @since 1.0.0
+     * @return Port Number
      */
     var port: Int
 
     /**
-     * Encryption interactor.  This will hold encryption keys and information to make database more secure
+     * Database encryption.  In order to make more secure, implement custom encryption interactor.  Use it to override
+     * the keys.
      *
      * @see com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
-     * @since 2.0.0 Effort to make more secure and override encryption keys
      */
     var encryption: EncryptionInteractor
 
@@ -72,4 +69,5 @@ interface OnyxServer : SSLPeer {
      * @param password Password
      */
     fun setCredentials(user: String, password: String)
+
 }

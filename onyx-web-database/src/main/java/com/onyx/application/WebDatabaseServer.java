@@ -18,6 +18,7 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
+import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.SSLContext;
 import java.security.SecureRandom;
@@ -42,16 +43,15 @@ import java.util.List;
  */
 public class WebDatabaseServer extends DatabaseServer
 {
-
-    public WebDatabaseServer(String databaseLocation) {
-        super(databaseLocation);
-    }
-
     // Web Server
     Undertow server;
 
     // Port for web service
     private int webServicePort = 8080;
+
+    public WebDatabaseServer(@NotNull String databaseLocation) {
+        super(databaseLocation);
+    }
 
     /**
      * Run Database Server Main Method
@@ -63,9 +63,9 @@ public class WebDatabaseServer extends DatabaseServer
      * @since 1.2.0
      */
     public static void main(String[] args) throws Exception {
-
-        WebServerCommandLineParser parser = new WebServerCommandLineParser();
-        final WebDatabaseServer instance = (WebDatabaseServer)parser.buildDatabaseWithCommandLineOptions(args);
+        WebServerCommandLineParser parser = new WebServerCommandLineParser(args);
+        final WebDatabaseServer instance = new WebDatabaseServer(parser.getDatabaseLocation());
+        parser.configureDatabaseWithCommandLineOptions(instance);
 
         instance.start();
         instance.join();

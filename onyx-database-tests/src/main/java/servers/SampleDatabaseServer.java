@@ -8,9 +8,9 @@ import entities.SimpleEntity;
  */
 public class SampleDatabaseServer extends WebDatabaseServer
 {
-    public SampleDatabaseServer(String location)
+    public SampleDatabaseServer(String databaseLocation)
     {
-        super(location);
+        super(databaseLocation);
     }
 
     /**

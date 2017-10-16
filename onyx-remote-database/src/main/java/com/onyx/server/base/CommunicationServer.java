@@ -446,16 +446,6 @@ public class CommunicationServer extends AbstractCommunicationPeer implements On
     }
 
     /**
-     * Set Max Number of worker threads.  This is the threads running the request handlers
-     *
-     * @param maxThreads Number of io threads
-     * @since 1.2.0
-     */
-    public void setMaxWorkerThreads(int maxThreads) {
-        this.maxWorkerThreads = maxThreads;
-    }
-
-    /**
      * Identify whether the application is running or not
      *
      * @return boolean value

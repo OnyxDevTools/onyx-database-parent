@@ -1,6 +1,7 @@
 package com.onyx.application.impl
 
 import com.onyx.application.OnyxServer
+import com.onyx.client.SSLPeer
 import com.onyx.client.auth.AuthenticationManager
 import com.onyx.entity.SystemUser
 import com.onyx.entity.SystemUserRole
@@ -33,25 +34,24 @@ import com.onyx.persistence.IManagedEntity
  *
  *
  * To invoke command line
- * java -cp path_to_my_classes(.jar):onyx-remote-database-(0.0.1)-alpha.jar com.onyx.application.impl.DatabaseServer -l /path/to/database/location -port=8080
+ * java -cp path_to_my_classes(.jar):onyx-remote-database-(0.0.1)-alpha.jar com.onyx.application.impl.DatabaseServer -l /path/to/database/databaseLocation -port=8080
  *
  * e.x
  * java -cp /Users/tosborn1/Dropbox/OnyxSandbox/onyxdb-parent/OnyxDatabaseTests/target/classes/:onyx-remote-database-0.0.1-alpha.jar com.onyx.application.impl.DatabaseServer -l /Users/tosborn1/Desktop/database1 -port=8080
  *
+ *
  * @author Tim Osborn
  * @since 1.0.0
  */
-open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer {
+open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer, SSLPeer {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
-    override var isRunning: Boolean = false
-    override var port: Int = 8080
 
     // RMI Server.  This is the underlying network io server
     private lateinit var rmiServer: OnyxRMIServer
-    private lateinit var authenticationManager: AuthenticationManager
 
     protected var persistenceManagerFactory: PersistenceManagerFactory? = null
+    private var authenticationManager: AuthenticationManager? = null
 
     /**
      * Start the database socket server
@@ -61,8 +61,8 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     override fun start() {
         if (!isRunning) {
             this.persistenceManagerFactory = ServerPersistenceManagerFactory(this.databaseLocation)
-            this.persistenceManagerFactory!!.setCredentials(this.user, this.password)
-            this.persistenceManagerFactory!!.initialize()
+            this.persistenceManagerFactory?.setCredentials(this.user, this.password)
+            this.persistenceManagerFactory?.initialize()
 
             // Create a default user
             val user = SystemUser()
@@ -71,27 +71,20 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
             user.role = SystemUserRole.ROLE_ADMIN
 
             // Default User and password
-            persistenceManagerFactory!!.persistenceManager.saveEntity<IManagedEntity>(user)
-
+            this.persistenceManagerFactory?.persistenceManager?.saveEntity<IManagedEntity>(user)
             this.authenticationManager = DefaultAuthenticationManager(persistenceManagerFactory!!.persistenceManager, encryption)
 
             // Create the RMI Server
-            rmiServer = OnyxRMIServer()
-            rmiServer.port = port
+            this.rmiServer = OnyxRMIServer()
+            this.rmiServer.port = port
             this.copySSLPeerTo(rmiServer)
-            rmiServer.setMaxWorkerThreads(this.maxWorkerThreads)
+            this.registerServices()
 
-            registerServices()
-
-            try {
-                rmiServer.start()
-            } catch (e: Exception) {
-                throw RuntimeException(e)
-            }
+            this.rmiServer.start()
 
             // Set the push publisher within the schema context so the query caching mechanism can
             // tell what push clients to send updates to.
-            (this.persistenceManagerFactory!!.schemaContext as ServerSchemaContext).setPushPublisher(rmiServer)
+            (this.persistenceManagerFactory?.schemaContext as ServerSchemaContext).setPushPublisher(rmiServer)
 
             isRunning = true
         }
@@ -103,7 +96,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     private fun registerServices() {
         // Register the Persistence Manager
         rmiServer.register(PERSISTENCE_MANAGER_SERVICE, this.persistenceManagerFactory!!.persistenceManager, PersistenceManager::class.java)
-        rmiServer.register(AUTHENTICATION_MANAGER_SERVICE, this.authenticationManager, AuthenticationManager::class.java)
+        rmiServer.register(AUTHENTICATION_MANAGER_SERVICE, this.authenticationManager!!, AuthenticationManager::class.java)
     }
 
     /**
@@ -146,14 +139,15 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
         @Throws(Exception::class)
         @JvmStatic
         open fun main(args: Array<String>) {
-            val commandLineParser = CommandLineParser()
-            val instance = commandLineParser.buildDatabaseWithCommandLineOptions(args)
+
+            val commandLineParser = CommandLineParser(args)
+            val instance = DatabaseServer(commandLineParser.databaseLocation)
+            commandLineParser.configureDatabaseWithCommandLineOptions(instance)
+
             instance.start()
             instance.join()
         }
     }
-
-
 }
 
 

@@ -1,6 +1,5 @@
 package com.onyx.cli;
 
-import com.onyx.application.WebDatabaseProxyServer;
 import com.onyx.application.impl.DatabaseServer;
 import com.onyx.application.WebDatabaseServer;
 import org.apache.commons.cli.*;
@@ -15,11 +14,16 @@ public class WebServerCommandLineParser extends CommandLineParser {
     // Command Line Options
     private static final String OPTION_WEBSERVICE_PORT = "web-port";
 
+    public WebServerCommandLineParser(String[] args) {
+        super(args);
+    }
+
     /**
      * Parse command line arguments
      * @param args arguments to parse
      * @return CommandLine object
      */
+    @Override
     protected CommandLine parseCommandLine(String[] args)
     {
         CommandLine commandLine = super.parseCommandLine(args);
@@ -41,14 +45,9 @@ public class WebServerCommandLineParser extends CommandLineParser {
      * @param args    - Command line arguments
      * @since 1.0.0
      */
-    public DatabaseServer buildDatabaseWithCommandLineOptions(String[] args) {
-        final CommandLine commandLine = parseCommandLine(args);
-        final DatabaseServer databaseServer = new WebDatabaseServer(commandLine.getOptionValue(Companion.getOPTION_LOCATION()));
-        super.buildDatabaseWithCommandLineOptions(databaseServer, commandLine);
-
-        if (commandLine.hasOption(OPTION_WEBSERVICE_PORT)) {
-            ((WebDatabaseServer)databaseServer).setWebServicePort(Integer.valueOf(commandLine.getOptionValue(OPTION_WEBSERVICE_PORT)));
-        }
-        return databaseServer;
+    public void configureDatabaseWithCommandLineOptions(DatabaseServer databaseServer) {
+        super.configureDatabaseWithCommandLineOptions(databaseServer);
+        if (getCommandLineArguments().hasOption(OPTION_WEBSERVICE_PORT))
+            ((WebDatabaseServer)databaseServer).setWebServicePort(Integer.valueOf(getCommandLineArguments().getOptionValue(OPTION_WEBSERVICE_PORT)));
     }
 }

@@ -16,7 +16,7 @@ import com.onyx.persistence.query.impl.RemoteQueryListener
  */
 class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInteractor(context) {
 
-    private var pushPublisher: PushPublisher? = null
+    var pushPublisher: PushPublisher? = null
 
     /**
      * This method is used to subscribe irrespective of a query being ran.
@@ -60,19 +60,8 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
         if (remoteQueryListener != null) {
             this.pushPublisher!!.deRegiserSubscriberIdentity(remoteQueryListener)
             val cachedResults = getCachedQueryResults(query)
-            return cachedResults != null && cachedResults.unSubscribe(remoteQueryListener)
+            cachedResults?.unSubscribe(remoteQueryListener)
         }
         return false
-    }
-
-    /**
-     * Push publisher manages communication responses back to the client.
-     *
-     * @param pushPublisher Server mechanism responsible for push notifications
-     *
-     * @since 1.3.0
-     */
-    fun setPushPublisher(pushPublisher: PushPublisher) {
-        this.pushPublisher = pushPublisher
     }
 }

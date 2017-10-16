@@ -21,6 +21,7 @@ public class Main
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"remote-db.oxd";
+
         DatabaseServer server1 = new DatabaseServer(pathToOnyxDB);
         server1.setPort(8081);
         server1.setCredentials("onyx-remote", "SavingDataIsFun!");

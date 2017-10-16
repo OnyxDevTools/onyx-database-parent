@@ -1,6 +1,5 @@
 package com.onyx.application;
 
-import com.onyx.application.impl.DatabaseServer;
 import com.onyx.cli.WebServerCommandLineParser;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
@@ -20,6 +19,7 @@ import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +39,7 @@ import java.util.List;
 public class WebDatabaseProxyServer extends WebDatabaseServer
 {
 
-    public WebDatabaseProxyServer(String databaseLocation) {
+    public WebDatabaseProxyServer(@NotNull String databaseLocation) {
         super(databaseLocation);
     }
 
@@ -53,8 +53,11 @@ public class WebDatabaseProxyServer extends WebDatabaseServer
      * @since 1.2.0
      */
     public static void main(String[] args) throws Exception {
-        WebServerCommandLineParser parser = new WebServerCommandLineParser();
-        final DatabaseServer instance = parser.buildDatabaseWithCommandLineOptions(args);
+
+
+        WebServerCommandLineParser parser = new WebServerCommandLineParser(args);
+        final WebDatabaseServer instance = new WebDatabaseServer(parser.getDatabaseLocation());
+        parser.configureDatabaseWithCommandLineOptions(instance);
 
         instance.start();
         instance.join();
