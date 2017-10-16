@@ -37,7 +37,6 @@ open class OnyxException : Exception {
 
     companion object {
         @JvmField val UNKNOWN_EXCEPTION = "Unknown exception occurred"
-        @JvmField val CONNECTION_TIMEOUT = "Connection Timeout Occurred"
     }
 
 }
