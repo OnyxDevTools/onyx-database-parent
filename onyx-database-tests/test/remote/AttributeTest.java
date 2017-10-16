@@ -3,7 +3,7 @@ package remote;
 import category.RemoteServerTests;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.impl.DatabaseServer;
 import entities.AllAttributeEntity;
 import entities.InheritedAttributeEntity;
 import entities.SimpleEntity;
@@ -30,9 +30,8 @@ public class AttributeTest extends RemoteBaseTest {
     @BeforeClass
     public static void beforeClass() throws InterruptedException {
         deleteDatabase();
-        databaseServer = new DatabaseServer();
+        databaseServer = new DatabaseServer("C:/Sandbox/Onyx/Tests/server.oxd");
         databaseServer.setPort(8080);
-        databaseServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         databaseServer.start();
         Thread.sleep(500);
     }

@@ -6,7 +6,7 @@ import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager;
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.impl.DatabaseServer;
 import entities.SimpleEntity;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -28,9 +28,8 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     @Test
     public void testPersistantConnection() throws Exception
     {
-        DatabaseServer dbServer = new DatabaseServer();
+        DatabaseServer dbServer = new DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.setPort(8082);
-        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.start();
 
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION);
@@ -47,9 +46,8 @@ public class TestDatabaseInitialization extends RemoteBaseTest
 
         dbServer.stop();
 
-        dbServer = new DatabaseServer();
+        dbServer = new DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.setPort(8082);
-        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.start();
 
         SimpleEntity foundAfterClose = (SimpleEntity)mgr.findById(SimpleEntity.class, simpleEntity.simpleId);
@@ -63,9 +61,8 @@ public class TestDatabaseInitialization extends RemoteBaseTest
     @Test
     public void testTryConnectBeforeStart() throws Exception
     {
-        DatabaseServer dbServer = new DatabaseServer();
+        DatabaseServer dbServer = new DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd");
         dbServer.setPort(8082);
-        dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
 
         RemotePersistenceManagerFactory fac = new RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION);
         fac.setCredentials("admin", "admin");
@@ -103,9 +100,8 @@ public class TestDatabaseInitialization extends RemoteBaseTest
         RemotePersistenceManagerFactory fac = null;
         try {
 
-            DatabaseServer dbServer = new DatabaseServer();
+            DatabaseServer dbServer = new DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd");
             dbServer.setPort(8082);
-            dbServer.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server2.oxd");
             dbServer.start();
 
             fac = new RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION);

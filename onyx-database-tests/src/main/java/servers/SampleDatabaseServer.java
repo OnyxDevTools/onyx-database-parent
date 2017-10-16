@@ -8,9 +8,9 @@ import entities.SimpleEntity;
  */
 public class SampleDatabaseServer extends WebDatabaseServer
 {
-    public SampleDatabaseServer()
+    public SampleDatabaseServer(String databaseLocation)
     {
-
+        super(databaseLocation);
     }
 
     /**
@@ -23,10 +23,9 @@ public class SampleDatabaseServer extends WebDatabaseServer
      */
     public static void main(String[] args) throws Exception
     {
-        SampleDatabaseServer server1 = new SampleDatabaseServer();
+        SampleDatabaseServer server1 = new SampleDatabaseServer("C:/Sandbox/Onyx/Tests/server.oxd");
         server1.setPort(8080);
         server1.setWebServicePort(8082);
-        server1.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         server1.start();
 
         SimpleEntity simpleEntity = new SimpleEntity();

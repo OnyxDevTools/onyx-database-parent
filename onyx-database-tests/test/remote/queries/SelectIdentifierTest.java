@@ -1,7 +1,6 @@
 package remote.queries;
 
 import category.RemoteServerTests;
-import com.onyx.application.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -9,7 +8,6 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import entities.SelectIdentifierTestEntity;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;

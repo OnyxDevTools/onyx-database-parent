@@ -27,7 +27,7 @@ public class BaseTest {
     protected WebPersistenceManagerFactory factory;
 
     protected static final String DATABASE_LOCATION = "http://localhost:8080";
-    protected static final String LOCAL_DATABASE_LOCATION = "onyx.database.location=C:/Sandbox/Onyx/Tests/web.oxd";
+    protected static final String LOCAL_DATABASE_LOCATION = "onyx.database.databaseLocation=C:/Sandbox/Onyx/Tests/web.oxd";
 
     public static WebDatabaseServer testApplication = null;
 

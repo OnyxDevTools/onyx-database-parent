@@ -6,7 +6,7 @@ import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.context.impl.RemoteSchemaContext;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.impl.DatabaseServer;
 import org.junit.AfterClass;
 
 import java.io.File;

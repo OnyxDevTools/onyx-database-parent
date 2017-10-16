@@ -7,22 +7,18 @@ import com.onyx.interactors.encryption.EncryptionInteractor
  * Onyx Server contract.  This is the interface that all servers must implement.
  *
  *
- * <pre>
- * `
- *
  * OnyxServer server = new DatabaseServer();
  * server.setPort(8080);
  * server.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
  * server.start();
  * server.join();
  *
-` *
-</pre> *
  *
  * @author Tim Osborn
  * @since 1.0.0
  */
 interface OnyxServer : SSLPeer {
+
     /**
      * Starts the database server
      * @since 1.0.0
@@ -49,15 +45,14 @@ interface OnyxServer : SSLPeer {
      * @since 1.0.0
      * @return Port Number
      */
-    /**
-     * Set Port Number.  By Default this is 8080
-     *
-     * @since 1.0.0
-     * @param port Port Number
-     */
     var port: Int
 
-
+    /**
+     * Database encryption.  In order to make more secure, implement custom encryption interactor.  Use it to override
+     * the keys.
+     *
+     * @see com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+     */
     var encryption: EncryptionInteractor
 
     /**
@@ -74,14 +69,5 @@ interface OnyxServer : SSLPeer {
      * @param password Password
      */
     fun setCredentials(user: String, password: String)
-
-    /**
-     * The maximum number of worker threads threads.  Worker threads are used to perform operations that are not related to
-     * networking
-     *
-     * @param maxThreads Number of io threads
-     * @since 1.2.0
-     */
-    fun setMaxWorkerThreads(maxThreads: Int)
 
 }

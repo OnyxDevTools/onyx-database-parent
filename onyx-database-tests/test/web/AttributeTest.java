@@ -29,10 +29,9 @@ public class AttributeTest extends BaseTest {
     @BeforeClass
     public static void beforeClass()
     {
-        testApplication = new WebDatabaseServer();
+        testApplication = new WebDatabaseServer("C:/Sandbox/Onyx/Tests/server.oxd");
         testApplication.setPort(4555);
         testApplication.setWebServicePort(8080);
-        testApplication.setDatabaseLocation("C:/Sandbox/Onyx/Tests/server.oxd");
         testApplication.setCredentials("admin", "admin");
         testApplication.start();
     }
