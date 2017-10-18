@@ -13,7 +13,9 @@ import com.onyx.client.exception.OnyxServerException
 import com.onyx.client.exception.RequestTimeoutException
 import com.onyx.client.push.PushRegistrar
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.catchAll
 import com.onyx.lang.map.OptimisticLockingMap
+import kotlinx.coroutines.experimental.async
 
 import javax.net.ssl.SSLContext
 import java.io.IOException
@@ -39,7 +41,7 @@ import java.util.concurrent.locks.LockSupport
  *
  * @since 1.2.0
  */
-open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegistrar {
+open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
 
     // Heartbeat and timeout
     override var timeout = 60 // 60 second timeout
@@ -86,7 +88,7 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
 
             if (consumer != null) {
                 consumer.invoke(requestToken.packet)
-                needsToRunHeartbeat = false
+            needsToRunHeartbeat = false
             }
 
         } catch (e: Exception) {
@@ -138,7 +140,7 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
      * @since 1.3.0
      */
     @Throws(OnyxServerException::class)
-    override fun unrigister(subscriber: PushSubscriber) {
+    override fun unregister(subscriber: PushSubscriber) {
         registeredPushConsumers.remove(subscriber.pushObjectId)
         subscriber.setSubscriberEvent(2.toByte())
         send(subscriber)
@@ -160,13 +162,8 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
 
         // Setup SSL Settings
         if (useSSL()) {
-            val context: SSLContext
-            try {
-                context = SSLContext.getInstance(protocol)
-                context.init(createKeyManagers(sslKeystoreFilePath!!, sslStorePassword!!, sslKeystorePassword!!), createTrustManagers(sslTrustStoreFilePath!!, sslStorePassword!!), SecureRandom())
-            } catch (e: Exception) {
-                throw RuntimeException(e)
-            }
+            val context = SSLContext.getInstance(protocol)
+            context.init(createKeyManagers(sslKeystoreFilePath!!, sslStorePassword!!, sslKeystorePassword!!), createTrustManagers(sslTrustStoreFilePath!!, sslStorePassword!!), SecureRandom())
 
             val engine = context.createSSLEngine(host, port)
             engine.useClientMode = true
@@ -192,7 +189,6 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
         }
 
         try {
-
             socketChannel!!.configureBlocking(true)
             val connectTimeout = 5 * 1000
             socketChannel!!.socket().connect(InetSocketAddress(host, port), connectTimeout)
@@ -207,17 +203,15 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
             // Perform Handshake.  If this is unsecured, it is just pass through
             transportPacketTransportEngine.beginHandshake()
             active = doHandshake(socketChannel!!, connectionProperties)
-
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
 
-        connectionProperties!!.readThread.execute { this.pollForCommunication() }
+        async(connectionProperties!!.readThread) { pollForCommunication() }
         try {
             this.authenticationManager!!.verify(this.user, this.password)
             this.resumeHeartBeat()
         } catch (e: InitializationException) {
-
             // Authentication failed, disconnect
             this.close()
         } catch (e: RequestTimeoutException) {
@@ -232,11 +226,9 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
      */
     private fun verifyConnection() {
         if (!isConnected) {
-            try {
+            catchAll {
                 this.connect(this.host, this.port)
-            } catch (ignore: ConnectionFailedException) {
             }
-
         }
     }
 
@@ -267,10 +259,7 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
         while (active) {
             try {
                 read(socketChannel!!, connectionProperties!!)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-
+            } catch (e:Exception){}
         }
     }
 
@@ -330,12 +319,7 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
 
         write(socketChannel!!, connectionProperties!!, token)
 
-        val successResponse: Boolean
-        try {
-            successResponse = countDownLatch.await(timeout.toLong(), TimeUnit.MILLISECONDS)
-        } catch (e: InterruptedException) {
-            return RequestTimeoutException()
-        }
+        val successResponse = countDownLatch.await(timeout.toLong(), TimeUnit.MILLISECONDS)
 
         if (!successResponse) {
             pendingRequests.remove(token)
@@ -364,7 +348,6 @@ open class CommunicationPeer : AbstractCommunicationPeer(), OnyxClient, PushRegi
      */
     override fun close() {
         active = false
-        connectionProperties!!.readThread.shutdown()
         closeConnection(socketChannel!!, connectionProperties!!)
 
         needsToRunHeartbeat = false

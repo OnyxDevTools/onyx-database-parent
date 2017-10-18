@@ -33,7 +33,7 @@ abstract class AbstractSSLPeer : SSLPeer {
     @Throws(Exception::class)
     protected fun createKeyManagers(filepath: String, keystorePassword: String, keyPassword: String): Array<KeyManager> {
         val keyStore = KeyStore.getInstance("JKS")
-        val keyStoreIS = AbstractCommunicationPeer::class.java.classLoader.getResourceAsStream(filepath)
+        val keyStoreIS = AbstractNetworkPeer::class.java.classLoader.getResourceAsStream(filepath)
         keyStoreIS.use {
             keyStore.load(it, keystorePassword.toCharArray())
         }
@@ -54,7 +54,7 @@ abstract class AbstractSSLPeer : SSLPeer {
     @Throws(Exception::class)
     protected fun createTrustManagers(filepath: String, trustStorePassword: String): Array<TrustManager> {
         val trustStore = KeyStore.getInstance("JKS")
-        val trustStoreIS = AbstractCommunicationPeer::class.java.classLoader.getResourceAsStream(filepath)
+        val trustStoreIS = AbstractNetworkPeer::class.java.classLoader.getResourceAsStream(filepath)
         trustStoreIS.use {
             trustStore.load(it, trustStorePassword.toCharArray())
         }

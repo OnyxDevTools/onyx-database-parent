@@ -1,6 +1,8 @@
 package com.onyx.lang.concurrent.impl
 
+import com.onyx.extension.common.async
 import com.onyx.lang.concurrent.ClosureLock
+import kotlinx.coroutines.experimental.Deferred
 import java.util.*
 
 /**
@@ -10,6 +12,8 @@ import java.util.*
  * This is the default implementation of the ClosureLock that implements it using 10 different StampLocks
  */
 class ReferenceClosureLock : ClosureLock {
+
+    override fun <T> queue(consumer: () -> T): Deferred<T> = async { consumer.invoke() }
 
     private val references = WeakHashMap<Any, Any>()
 

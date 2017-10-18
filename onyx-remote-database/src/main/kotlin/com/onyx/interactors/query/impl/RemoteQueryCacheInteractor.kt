@@ -58,7 +58,7 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
     override fun unSubscribe(query: Query): Boolean {
         val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber?) as RemoteQueryListener<*>?
         if (remoteQueryListener != null) {
-            this.pushPublisher!!.deRegiserSubscriberIdentity(remoteQueryListener)
+            this.pushPublisher!!.deRegisterSubscriberIdentity(remoteQueryListener)
             val cachedResults = getCachedQueryResults(query)
             cachedResults?.unSubscribe(remoteQueryListener)
         }

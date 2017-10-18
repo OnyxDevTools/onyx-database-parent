@@ -1,15 +1,13 @@
 package remote.relationship;
 
 import category.RemoteServerTests;
+import com.onyx.application.impl.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import entities.relationship.ManyToManyChild;
 import entities.relationship.ManyToManyParent;
 import entities.relationship.OneToOneChild;
 import entities.relationship.OneToOneParent;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;
 

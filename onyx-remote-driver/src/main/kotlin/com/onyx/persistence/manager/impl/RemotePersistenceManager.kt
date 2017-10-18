@@ -482,7 +482,7 @@ open class RemotePersistenceManager : PersistenceManager {
             // Un-register query
             val retVal = proxy.removeChangeListener(query)
             val remoteQueryListener = query.changeListener as RemoteQueryListener<*>
-            this.pushRegistrar.unrigister(remoteQueryListener)
+            this.pushRegistrar.unregister(remoteQueryListener)
             return retVal
         }
         return false

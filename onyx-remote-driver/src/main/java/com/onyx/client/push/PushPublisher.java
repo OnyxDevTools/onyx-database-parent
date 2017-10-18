@@ -33,5 +33,5 @@ public interface PushPublisher {
      *
      * @since 1.3.0
      */
-    void deRegiserSubscriberIdentity(PushSubscriber pushSubscriber);
+    void deRegisterSubscriberIdentity(PushSubscriber pushSubscriber);
 }

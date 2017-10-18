@@ -1,5 +1,7 @@
 package com.onyx.lang.concurrent
 
+import kotlinx.coroutines.experimental.Deferred
+
 /**
  * Created by timothy.osborn on 4/7/15.
  *
@@ -18,5 +20,14 @@ interface ClosureLock {
      * @param consumer Function to invoke
      * @return The result from the function
      */
-    fun <T> performWithLock(lock: Any, consumer: (lock:Any) -> T): T
+    fun <T> performWithLock(lock: Any, consumer: (lock: Any) -> T):T
+
+    /**
+     * This method performs a lambda function by locking on whatever object you pass in.  The only difference
+     * is that it locks on itself.
+     *
+     * @param consumer Function to invoke
+     * @return The result from the function
+     */
+    fun <T> queue(consumer: () -> T):Deferred<T>
 }

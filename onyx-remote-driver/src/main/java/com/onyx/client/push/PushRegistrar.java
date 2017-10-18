@@ -30,6 +30,6 @@ public interface PushRegistrar {
      *
      * @since 1.3.0
      */
-    void unrigister(PushSubscriber subscriber) throws OnyxServerException;
+    void unregister(PushSubscriber subscriber) throws OnyxServerException;
 
 }

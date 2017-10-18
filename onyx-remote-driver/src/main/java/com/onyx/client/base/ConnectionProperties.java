@@ -31,10 +31,10 @@ public class ConnectionProperties extends ConnectionBufferPool
     {
         super();
         this.packetTransportEngine = packetTransportEngine;
-        this.writeApplicationData = BufferPool.INSTANCE.allocate(packetTransportEngine.getApplicationSize());
-        this.writeNetworkData = BufferPool.INSTANCE.allocate(packetTransportEngine.getPacketSize());
-        this.readApplicationData = BufferPool.INSTANCE.allocate(packetTransportEngine.getApplicationSize());
-        this.readNetworkData = BufferPool.INSTANCE.allocate(packetTransportEngine.getPacketSize());
+        this.setWriteApplicationData(BufferPool.INSTANCE.allocate(packetTransportEngine.getApplicationSize()));
+        this.setWriteNetworkData(BufferPool.INSTANCE.allocate(packetTransportEngine.getPacketSize()));
+        this.setReadApplicationData(BufferPool.INSTANCE.allocate(packetTransportEngine.getApplicationSize()));
+        this.setReadNetworkData(BufferPool.INSTANCE.allocate(packetTransportEngine.getPacketSize()));
         this.readOverflowData = BufferPool.INSTANCE.allocate(packetTransportEngine.getPacketSize());
     }
 
@@ -50,13 +50,13 @@ public class ConnectionProperties extends ConnectionBufferPool
     {
         this.packetTransportEngine = packetTransportEngine;
 
-        this.writeApplicationData = base.writeApplicationData;
-        this.writeNetworkData = base.writeNetworkData;
-        this.readApplicationData = base.readApplicationData;
-        this.readNetworkData = base.readNetworkData;
+        this.setWriteApplicationData(base.getWriteApplicationData());
+        this.setWriteNetworkData(base.getWriteNetworkData());
+        this.setReadApplicationData(base.getReadApplicationData());
+        this.setReadNetworkData(base.getReadNetworkData());
         this.readOverflowData = BufferPool.INSTANCE.allocate(packetTransportEngine.getPacketSize());
-        this.readThread = base.readThread;
-        this.writeThread = base.writeThread;
+        this.setReadThread(base.getReadThread());
+        this.setWriteThread(base.getWriteThread());
     }
 
     /**
@@ -91,7 +91,7 @@ public class ConnectionProperties extends ConnectionBufferPool
         if(readOverflowData.position() > 0)
         {
             readOverflowData.flip();
-            readNetworkData.put(readOverflowData);
+            getReadNetworkData().put(readOverflowData);
             readOverflowData.clear();
         }
     }

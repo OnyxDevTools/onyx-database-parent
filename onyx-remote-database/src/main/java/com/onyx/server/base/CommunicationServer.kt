@@ -2,7 +2,7 @@ package com.onyx.server.base
 
 import com.onyx.application.OnyxServer
 import com.onyx.buffer.BufferPool
-import com.onyx.client.AbstractCommunicationPeer
+import com.onyx.client.AbstractNetworkPeer
 import com.onyx.client.base.*
 import com.onyx.client.base.engine.PacketTransportEngine
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine
@@ -14,9 +14,11 @@ import com.onyx.client.handlers.RequestHandler
 import com.onyx.client.push.PushSubscriber
 import com.onyx.client.push.PushPublisher
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.async
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.lang.map.OptimisticLockingMap
+import kotlinx.coroutines.experimental.*
 
 import javax.net.ssl.SSLContext
 import java.io.IOException
@@ -27,9 +29,7 @@ import java.nio.channels.*
 import java.nio.channels.spi.SelectorProvider
 import java.security.SecureRandom
 import java.util.HashMap
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicLong
  * Each connection buffer pool contains 5 allocated buffers with a minimum of 16k bytes.  Be
  * wary on how much you allocate.
  */
-open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPublisher {
+open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
 
     private var sslContext: SSLContext? = null // SSL Context if used.  Otherwise this will be null
     private var selector: Selector? = null // Selector for inbound communication
@@ -62,13 +62,7 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
 
     // Thread properties
     private val maxWorkerThreads = Runtime.getRuntime().availableProcessors() * 2 // Worker thread number that is the max number of threads calling request handlers
-    private var daemonCountDownLatch: CountDownLatch? = null // Server Count down latch.  Used to keep server alive within a daemon
-    private var workerThreadPool: ExecutorService? = null // Worker thread pool for executing request pools
-    private val daemonService = Executors.newSingleThreadExecutor { r ->
-        val t = Executors.defaultThreadFactory().newThread(r)
-        t.isDaemon = true
-        t
-    }
+    private var daemon:Deferred<Unit>? = null
 
     /**
      * Retrieve a round robin buffer pool.  This is used to sparse the connections
@@ -95,8 +89,6 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
     override fun start() {
 
         try {
-            workerThreadPool = Executors.newFixedThreadPool(maxWorkerThreads)
-
             val appBufferSize: Int
             val packetBufferSize: Int
 
@@ -132,7 +124,7 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
             throw RuntimeException(e)
         }
 
-        daemonService.execute {
+        daemon = async {
             try {
                 pollForCommunication()
             } catch (e: ServerClosedException) {
@@ -182,7 +174,7 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
                         // That is a shared thread pool for multiple connections
                         val connectionProperties = key.attachment() as ConnectionProperties
                         if (!connectionProperties.isReading) {
-                            connectionProperties.readThread.execute {
+                            async(connectionProperties.readThread) {
                                 if (key.channel().isOpen) {
                                     read(key.channel() as SocketChannel, key.attachment() as ConnectionProperties)
                                 }
@@ -190,19 +182,13 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
                         }
                     }
                 } catch (ignore: CancelledKeyException) {
-                } catch (e: Exception) {
-                    failure(null!!, e)
                 }
-
             }
         }
 
-        // Added wait so we dont spin valuable cpu cycles
-        try {
-            Thread.sleep(20)
-        } catch (ignore: InterruptedException) {
-        }
-
+        // Added wait so we don't spin valuable cpu cycles
+        //delay(10, TimeUnit.MILLISECONDS)
+        Thread.sleep(10)
     }
 
     /**
@@ -215,32 +201,24 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
      * @since 1.2.0
      */
     override fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer) {
-        var message: RequestToken? = null
+        val message: RequestToken? = parseRequestToken(socketChannel, connectionProperties, buffer)
 
-        val isInLargePacket = packetType != AbstractCommunicationPeer.Companion.SINGLE_PACKET
-        if (!isInLargePacket) {
-            message = parseRequestToken(socketChannel, connectionProperties, buffer)
-        }
+        if(packetType != AbstractNetworkPeer.Companion.SINGLE_PACKET)
+            BufferPool.recycle(buffer)
 
         // If it is a push subscriber, it can only be a registration event
         if (message != null && message.packet is PushSubscriber) {
             handlePushSubscription(message, socketChannel, connectionProperties)
         } else {
-            val threadPoolMessage = message
-            workerThreadPool!!.execute {
-                val useThisRequestToken = if (isInLargePacket) parseRequestToken(socketChannel, connectionProperties, buffer) else threadPoolMessage
-                if (isInLargePacket) {
-                    BufferPool.recycle(buffer)
-                }
-                if (useThisRequestToken!!.packet != null) {
+            async {
+                if (message!!.packet != null) {
                     try {
-                        useThisRequestToken.packet = requestHandler!!.accept(connectionProperties, useThisRequestToken.packet) as Serializable?
+                        message.packet = requestHandler!!.accept(connectionProperties, message.packet) as Serializable?
                     } catch (e: Exception) {
-                        useThisRequestToken.packet = MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
+                        message.packet = MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
                     }
-
                 }
-                write(socketChannel, connectionProperties, useThisRequestToken)
+                write(socketChannel, connectionProperties, message)
             }
         }
     }
@@ -294,10 +272,10 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
             message.packet = subscriber.pushObjectId
             pushSubscribers.put(subscriber, subscriber)
 
-            workerThreadPool!!.execute { write(socketChannel, connectionProperties, message) }
+            async { write(socketChannel, connectionProperties, message) }
         } else if (subscriber.subscribeEvent.toInt() == 2) {
             pushSubscribers.remove(subscriber)
-            workerThreadPool!!.execute { write(socketChannel, connectionProperties, message) }
+            async { write(socketChannel, connectionProperties, message) }
         }// Remove subscriber
     }
 
@@ -351,13 +329,13 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
     override fun push(pushSubscriber: PushSubscriber, message: Any) {
         if (pushSubscriber.channel.isOpen && pushSubscriber.channel.isConnected) {
 
-            pushSubscriber.connectionProperties.writeThread.execute {
+            async(pushSubscriber.connectionProperties.writeThread) {
                 pushSubscriber.packet = message
-                val token = RequestToken(java.lang.Short.MIN_VALUE, pushSubscriber as Serializable?)
+                val token = RequestToken(PUSH_NOTIFICATION, pushSubscriber as Serializable?)
                 write(pushSubscriber.channel, pushSubscriber.connectionProperties, token)
             }
         } else {
-            deRegiserSubscriberIdentity(pushSubscriber) // Clean up non connected subscribers if not connected
+            deRegisterSubscriberIdentity(pushSubscriber) // Clean up non connected subscribers if not connected
         }
     }
 
@@ -378,7 +356,7 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
      *
      * @since 1.3.0
      */
-    override fun deRegiserSubscriberIdentity(pushSubscriber: PushSubscriber) {
+    override fun deRegisterSubscriberIdentity(pushSubscriber: PushSubscriber) {
         pushSubscribers.remove(pushSubscriber)
     }
 
@@ -389,18 +367,10 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
      */
     override fun stop() {
         active = false
-
-        if (daemonCountDownLatch != null)
-            daemonCountDownLatch!!.countDown()
-        workerThreadPool!!.shutdown()
-        daemonService.shutdown()
-        try {
-            selector!!.wakeup()
-            serverSocketChannel!!.socket().close()
-            serverSocketChannel!!.close()
-        } catch (ignore: IOException) {
-        }
-
+        daemon?.cancel()
+        selector?.wakeup()
+        serverSocketChannel?.socket()?.close()
+        serverSocketChannel?.close()
     }
 
     /**
@@ -409,13 +379,9 @@ open class CommunicationServer : AbstractCommunicationPeer(), OnyxServer, PushPu
      * @since 1.2.0
      */
     override fun join() {
-        daemonCountDownLatch = CountDownLatch(1)
-        try {
-            daemonCountDownLatch!!.await()
-        } catch (ignore: InterruptedException) {
-
+        runBlocking {
+            daemon?.await()
         }
-
     }
 
     /**

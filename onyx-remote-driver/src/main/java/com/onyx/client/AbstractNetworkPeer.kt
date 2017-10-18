@@ -4,11 +4,16 @@ import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStreamable
 import com.onyx.client.base.ConnectionProperties
 import com.onyx.client.base.RequestToken
+import com.onyx.client.exception.SerializationException
+import com.onyx.client.exception.ServerClosedException
 import com.onyx.client.exception.ServerWriteException
 import com.onyx.client.serialization.DefaultServerSerializer
 import com.onyx.client.serialization.ServerSerializer
 import com.onyx.exception.BufferingException
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.catchAll
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.delay
 
 import javax.net.ssl.SSLEngineResult
 import javax.net.ssl.SSLEngineResult.HandshakeStatus
@@ -18,6 +23,7 @@ import java.io.Serializable
 import java.nio.ByteBuffer
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.SocketChannel
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
 /**
@@ -32,7 +38,7 @@ import java.util.concurrent.locks.LockSupport
  *
  * It has been in order to remove the dependency on 3rd party libraries and improve performance.
  */
-abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
+abstract class AbstractNetworkPeer : AbstractSSLPeer() {
 
     // Whether or not the i/o server is active
     @Volatile protected var active: Boolean = false
@@ -77,7 +83,6 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                         }
                         bytesRead = socketChannel.read(connectionProperties.readNetworkData)
                         if (bytesRead > 0) {
-
                             readIterations = 0
                             // Iterate through the network data
                             connectionProperties.readNetworkData.flip()
@@ -126,11 +131,7 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                                     SSLEngineResult.Status.BUFFER_OVERFLOW -> throw IllegalStateException("Invalid SSL status: " + result.status)
                                     SSLEngineResult.Status.BUFFER_UNDERFLOW -> connectionProperties.readOverflowData.put(connectionProperties.readNetworkData)
                                     SSLEngineResult.Status.CLOSED -> {
-                                        try {
-                                            closeConnection(socketChannel, connectionProperties)
-                                        } catch (ignore: IOException) {
-                                        }
-
+                                        closeConnection(socketChannel, connectionProperties)
                                         return
                                     }
                                     else -> throw IllegalStateException("Invalid SSL status: " + result.status)
@@ -161,11 +162,7 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
 
                 } catch (exception: IOException) {
                     exception.printStackTrace()
-                    try {
-                        closeConnection(socketChannel, connectionProperties)
-                    } catch (ignore: IOException) {
-                    }
-
+                    closeConnection(socketChannel, connectionProperties)
                 }
 
             }
@@ -205,9 +202,8 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                 SSLEngineResult.Status.OK -> {
                     // Everything was ok.  We have a valid packet so, write it to the socket channel
                     connectionProperties.writeNetworkData.flip()
-                    while (connectionProperties.writeNetworkData.hasRemaining()) {
+                    while (connectionProperties.writeNetworkData.hasRemaining())
                         socketChannel.write(connectionProperties.writeNetworkData)
-                    }
                 }
                 SSLEngineResult.Status.BUFFER_OVERFLOW -> throw SSLException("Socket Channel Buffer Overflow.  You are trying to attempt to write more tha 16kb to the socket")
                 SSLEngineResult.Status.BUFFER_UNDERFLOW -> throw SSLException("Socket Channel Buffer Underflow.  Network buffer was not large enough.")
@@ -252,26 +248,12 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
     protected fun write(socketChannel: SocketChannel, connectionProperties: ConnectionProperties, message: Serializable) {
 
         var buffer = BufferPool.allocate(SERIALIZATION_BUFFER_SIZE)
-
         buffer.position(1)
-
-        try {
-            buffer = serverSerializer.serialize(message as BufferStreamable, buffer)
-        } catch (exception: BufferingException) {
-            if (message is RequestToken) {
-                if (!message.reTry) {
-                    message.reTry = true
-                    message.packet = ServerWriteException(exception)
-                    write(socketChannel, connectionProperties, message)
-                } else {
-                    failure(message, exception)
-                }
-            }
-        }
+        buffer = serverSerializer.serialize(message as BufferStreamable, buffer)
 
         val messageBuffer = buffer
 
-        connectionProperties.writeThread.execute {
+        async(connectionProperties.writeThread) {
             // Clear and add a placeholder byte for the packet type
             try {
                 // Check to see if the message buffer is the write application buffer.  If it is not,
@@ -315,12 +297,13 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                     messageBuffer.rewind()
                     writePacket(socketChannel, connectionProperties, messageBuffer)
                     BufferPool.recycle(messageBuffer)
-                }// It is small enough to fit onto a single buffer
+                }
             } catch (exception: Exception) {
                 if (message is RequestToken) {
                     if (!message.reTry
                             && message.packet != null
-                            && exception !is ClosedChannelException) {
+                            && exception !is ClosedChannelException
+                            && exception !is ServerClosedException) {
                         message.reTry = true
                         message.packet = ServerWriteException(exception)
                         write(socketChannel, connectionProperties, message)
@@ -343,17 +326,16 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
      */
     @Throws(IOException::class)
     protected fun doHandshake(socketChannel: SocketChannel, connectionProperties: ConnectionProperties?): Boolean {
-
         if (connectionProperties == null)
             return false
 
         var result: SSLEngineResult
         var handshakeStatus: HandshakeStatus
 
-        val writeHandshakeBuffer = BufferPool.allocate(connectionProperties.writeApplicationData.capacity())
+        val writeHandshakeBuffer            = BufferPool.allocate(connectionProperties.writeApplicationData.capacity())
         val writeHandshakeApplicationBuffer = BufferPool.allocate(connectionProperties.writeApplicationData.capacity())
-        val readHandshakeData = BufferPool.allocate(connectionProperties.writeNetworkData.capacity())
-        val readHandshakeApplicationData = BufferPool.allocate(connectionProperties.writeApplicationData.capacity())
+        val readHandshakeData               = BufferPool.allocate(connectionProperties.writeNetworkData.capacity())
+        val readHandshakeApplicationData    = BufferPool.allocate(connectionProperties.writeApplicationData.capacity())
 
         handshakeStatus = connectionProperties.packetTransportEngine.handshakeStatus
         try {
@@ -361,17 +343,10 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                 when (handshakeStatus) {
                     SSLEngineResult.HandshakeStatus.NEED_UNWRAP -> {
                         if (socketChannel.read(readHandshakeData) < 0) {
-                            if (connectionProperties.packetTransportEngine.isInboundDone && connectionProperties.packetTransportEngine.isOutboundDone) {
+                            if (connectionProperties.packetTransportEngine.isInboundDone && connectionProperties.packetTransportEngine.isOutboundDone)
                                 return false
-                            }
-                            try {
-                                connectionProperties.packetTransportEngine.closeInbound()
-                            } catch (e: SSLException) {
-                                // Ignore
-                            }
-
+                            connectionProperties.packetTransportEngine.closeInbound()
                             connectionProperties.packetTransportEngine.closeOutbound()
-                            // After closeOutbound the packetTransportEngine will be set to WRAP state, in order to try to send a close message to the client.
                             connectionProperties.packetTransportEngine.handshakeStatus
                             break@loop
                         }
@@ -387,12 +362,9 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                         }
 
                         when (result.status) {
-                            SSLEngineResult.Status.OK -> {
-                            }
-                            SSLEngineResult.Status.BUFFER_OVERFLOW -> {
-                            }
-                            SSLEngineResult.Status.BUFFER_UNDERFLOW -> {
-                            }
+                            SSLEngineResult.Status.OK -> { }
+                            SSLEngineResult.Status.BUFFER_OVERFLOW -> { }
+                            SSLEngineResult.Status.BUFFER_UNDERFLOW -> { }
                             SSLEngineResult.Status.CLOSED -> if (connectionProperties.packetTransportEngine.isOutboundDone) {
                                 return false
                             } else {
@@ -440,14 +412,12 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
                     SSLEngineResult.HandshakeStatus.NEED_TASK -> {
                         while(true) {
                             val task: Runnable? = connectionProperties.packetTransportEngine.delegatedTask ?: break
-                            connectionProperties.writeThread.execute(task)
+                            async(connectionProperties.writeThread) { task!!.run() }
                         }
                         handshakeStatus = connectionProperties.packetTransportEngine.handshakeStatus
                     }
-                    SSLEngineResult.HandshakeStatus.FINISHED -> {
-                    }
-                    SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING -> {
-                    }
+                    SSLEngineResult.HandshakeStatus.FINISHED -> { }
+                    SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING -> { }
                     else -> throw IllegalStateException("Invalid SSL status: " + handshakeStatus)
                 }
             }
@@ -459,7 +429,6 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
         }
 
         return true
-
     }
 
     /**
@@ -482,8 +451,10 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
      * @throws IOException General IO Exception
      */
     protected fun closeConnection(socketChannel: SocketChannel, connectionProperties: ConnectionProperties) {
-        connectionProperties.packetTransportEngine.closeOutbound()
-        socketChannel.close()
+        catchAll {
+            connectionProperties.packetTransportEngine.closeOutbound()
+            socketChannel.close()
+        }
     }
 
     /**
@@ -493,17 +464,10 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
      * @param connectionProperties Buffer information
      */
     protected fun handleEndOfStream(socketChannel: SocketChannel, connectionProperties: ConnectionProperties) {
-        try {
+        catchAll {
             connectionProperties.packetTransportEngine.closeInbound()
-        } catch (e: Exception) {
-            // Ignore
         }
-
-        try {
-            closeConnection(socketChannel, connectionProperties)
-        } catch (ignore: IOException) {
-        }
-
+        closeConnection(socketChannel, connectionProperties)
     }
 
     /**
@@ -534,5 +498,9 @@ abstract class AbstractCommunicationPeer : AbstractSSLPeer() {
         val SERIALIZATION_BUFFER_SIZE = 256
         private val MULTI_PACKET_BUFFER_ALLOCATION = MAX_PACKET_SIZE * 3 //50 KB
         private val MAX_READ_ITERATIONS_BEFORE_GIVING_UP = 200
+
+
+        val UNEXPECTED_EXCEPTION:Short = java.lang.Short.MAX_VALUE
+        val PUSH_NOTIFICATION:Short = java.lang.Short.MIN_VALUE
     }
 }

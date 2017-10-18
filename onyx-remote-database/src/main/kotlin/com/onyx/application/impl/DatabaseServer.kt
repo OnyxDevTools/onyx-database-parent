@@ -109,8 +109,14 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
         if (persistenceManagerFactory != null) {
             persistenceManagerFactory!!.close()
         }
-        super.stop()
     }
+
+    /**
+     * Join Server.  Have it suspend on a daemon thread
+     *
+     * @since 1.2.0
+     */
+    override fun join() = rmiServer.join()
 
     /**
      * Get persistence manager

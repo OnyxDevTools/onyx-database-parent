@@ -11,9 +11,6 @@ import java.util.concurrent.CountDownLatch
  */
 abstract class AbstractDatabaseServer(open val databaseLocation: String) : AbstractSSLPeer() {
 
-    // Count down latch used to keep the application alive
-    private var startStopCountDownLatch: CountDownLatch? = null
-
     // Server Port
     var port = 8080
 
@@ -23,16 +20,6 @@ abstract class AbstractDatabaseServer(open val databaseLocation: String) : Abstr
     protected var user = "admin"
     protected var password = "admin"
 
-
-    /**
-     * Stop the database server
-     *
-     * @since 1.0.0
-     */
-    open fun stop() {
-        startStopCountDownLatch?.countDown()
-    }
-
     /**
      * Flag to indicate whether the database is running or not
      *
@@ -40,16 +27,6 @@ abstract class AbstractDatabaseServer(open val databaseLocation: String) : Abstr
      * @since 1.0.0
      */
     var isRunning: Boolean = false
-
-    /**
-     * Join Thread, in order to keep the server alive
-     *
-     * @since 1.0.0
-     */
-    fun join() {
-        startStopCountDownLatch = CountDownLatch(1)
-        startStopCountDownLatch!!.await()
-    }
 
     /**
      * Set User Credentials
