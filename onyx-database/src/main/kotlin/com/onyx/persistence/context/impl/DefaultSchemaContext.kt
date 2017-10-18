@@ -189,13 +189,13 @@ open class DefaultSchemaContext : SchemaContext {
 
         // Close transaction file
         catchAll { transactionStore.close() }
+        catchAll { commitJob.cancel() }
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors
         recordInteractors.clear() // Clear all Record Controllers
         relationshipInteractors.clear() // Clear all relationship controllers
         indexInteractors.clear() // Clear all index controllers
 
-        commitJob.cancel()
     }
 
     // endregion

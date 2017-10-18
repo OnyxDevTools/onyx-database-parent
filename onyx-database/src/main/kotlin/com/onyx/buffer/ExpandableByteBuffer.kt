@@ -1,5 +1,6 @@
 package com.onyx.buffer
 
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
 /**
@@ -9,7 +10,7 @@ import java.nio.ByteBuffer
  * to a expandableByteBuffer as the underlying ByteBuffer can change.
  *
  */
-internal class ExpandableByteBuffer {
+class ExpandableByteBuffer {
 
     var buffer: ByteBuffer
     private var maxBufferSize = 0
@@ -62,6 +63,21 @@ internal class ExpandableByteBuffer {
             buffer = tempBuffer
         }
     }
+
+    /**
+     * Append a buffer to this expandable buffer
+     *
+     * @since 2.0.0
+     */
+    fun put(other: ByteBuffer) {
+        ensureSize(other.limit())
+        buffer.put(other)
+    }
+
+    /**
+     * Flip the underlying buffer
+     */
+    fun flip():Buffer = buffer.flip()
 
     companion object {
         val BUFFER_ALLOCATION = BufferPool.MEDIUM_BUFFER_SIZE // Initial Buffer allocation size 6KB

@@ -8,6 +8,7 @@ import com.onyx.client.base.RequestToken
 import com.onyx.client.base.engine.PacketTransportEngine
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine
 import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine
+import com.onyx.client.connection.ConnectionFactory
 import com.onyx.client.exception.ConnectionFailedException
 import com.onyx.client.exception.OnyxServerException
 import com.onyx.client.exception.RequestTimeoutException
@@ -51,7 +52,7 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
     // Connection information
     private var connectionProperties: ConnectionProperties? = null
     private var socketChannel: SocketChannel? = null
-    private val pendingRequests = ConcurrentHashMap<RequestToken, (Any?)->Unit>()
+    private val pendingRequests = ConcurrentHashMap<RequestToken, (Any?) -> Unit>()
     private lateinit var host: String
 
     // User and authentication
@@ -71,30 +72,30 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
      * @param buffer               ByteBuffer containing message
      * @since 1.2.0
      */
-    override fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer) {
-        var requestToken: RequestToken? = null
-        try {
-            requestToken = serverSerializer.deserialize(buffer, RequestToken()) as RequestToken
+    override fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer): RequestToken? {
+        val message = super.handleMessage(packetType, socketChannel, connectionProperties, buffer)!!
 
+        try {
             // General unhandled exception that cannot be tied back to a request
-            if (requestToken.token == java.lang.Short.MAX_VALUE) {
-                (requestToken.packet as Exception).printStackTrace()
-            } else if (requestToken.token == java.lang.Short.MIN_VALUE) {
+            if (message.token == java.lang.Short.MAX_VALUE) {
+                (message.packet as Exception).printStackTrace()
+            } else if (message.token == java.lang.Short.MIN_VALUE) {
                 // This indicates a push request
-                handlePushMessage(requestToken)
+                handlePushMessage(message)
             }
 
-            val consumer = pendingRequests.remove(requestToken)
+            val consumer = pendingRequests.remove(message)
 
             if (consumer != null) {
-                consumer.invoke(requestToken.packet)
-            needsToRunHeartbeat = false
+                consumer.invoke(message.packet)
+                needsToRunHeartbeat = false
             }
 
         } catch (e: Exception) {
-            failure(requestToken!!, e)
+            failure(message, e)
         }
 
+        return message
     }
 
     // Map of push consumers
@@ -183,7 +184,7 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
         }
 
         // Create a buffer and set the transport wrapper
-        this.connectionProperties = ConnectionProperties(transportPacketTransportEngine)
+        this.connectionProperties = ConnectionFactory.create(transportPacketTransportEngine)
         if (!useSSL()) {
             (transportPacketTransportEngine as UnsecuredPacketTransportEngine).setSocketChannel(socketChannel)
         }
@@ -259,7 +260,8 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
         while (active) {
             try {
                 read(socketChannel!!, connectionProperties!!)
-            } catch (e:Exception){}
+            } catch (e: Exception) {
+            }
         }
     }
 
@@ -275,7 +277,7 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
      * @since 1.2.0
      */
     @Throws(OnyxServerException::class)
-    override fun send(packet: Any, consumer: (Any?)->Unit) {
+    override fun send(packet: Any, consumer: (Any?) -> Unit) {
         verifyConnection()
         val token = RequestToken(generateNewToken(), packet as Serializable)
         pendingRequests.put(token, consumer)
@@ -309,7 +311,7 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
         val results = AtomicReference<Any>()
 
         // Release the thread lock
-        val consumer:((Any?) -> Unit) = { o ->
+        val consumer: ((Any?) -> Unit) = { o ->
             results.set(o)
             countDownLatch.countDown()
         }

@@ -4,16 +4,15 @@ import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStreamable
 import com.onyx.client.base.ConnectionProperties
 import com.onyx.client.base.RequestToken
+import com.onyx.client.connection.ConnectionFactory
 import com.onyx.client.exception.SerializationException
 import com.onyx.client.exception.ServerClosedException
 import com.onyx.client.exception.ServerWriteException
 import com.onyx.client.serialization.DefaultServerSerializer
 import com.onyx.client.serialization.ServerSerializer
-import com.onyx.exception.BufferingException
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.catchAll
 import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.delay
 
 import javax.net.ssl.SSLEngineResult
 import javax.net.ssl.SSLEngineResult.HandshakeStatus
@@ -23,7 +22,6 @@ import java.io.Serializable
 import java.nio.ByteBuffer
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.SocketChannel
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 
 /**
@@ -47,7 +45,7 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
     var port = 8080
 
     // Serializer
-    protected val serverSerializer: ServerSerializer = DefaultServerSerializer()
+    private val serverSerializer: ServerSerializer = DefaultServerSerializer()
 
     /**
      * Read from a socket channel.  This will read and interpret the packets in order to decipher a message.
@@ -138,7 +136,7 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
                                 }
                             }
                         } else if (bytesRead < 0) {
-                            handleEndOfStream(socketChannel, connectionProperties)
+                            closeConnection(socketChannel, connectionProperties)
                             return
                         } else {
                             readIterations++
@@ -150,7 +148,7 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
                             }
                         }
                     } catch (closed: ClosedChannelException) {
-                        handleEndOfStream(socketChannel, connectionProperties)
+                        closeConnection(socketChannel, connectionProperties)
                     }
 
                     // Added a wait so that we can hold off to see the rest
@@ -441,7 +439,23 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
      * @param buffer               ByteBuffer containing message
      * @since 1.2.0
      */
-    protected abstract fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer)
+    open protected fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer):RequestToken? {
+
+        var message: RequestToken? = null
+        try {
+            message = serverSerializer.deserialize(buffer, RequestToken()) as RequestToken
+        } catch (e: Exception) {
+            // Error de-serializing packet.  Send a response back to the client
+            val token = RequestToken(java.lang.Short.MAX_VALUE, SerializationException(e))
+            write(socketChannel, connectionProperties, token)
+            failure(token, e)
+        }
+
+        if(packetType != AbstractNetworkPeer.Companion.SINGLE_PACKET)
+            BufferPool.recycle(buffer)
+
+        return message
+    }
 
     /**
      * Close ConnectionProperties
@@ -451,23 +465,10 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
      * @throws IOException General IO Exception
      */
     protected fun closeConnection(socketChannel: SocketChannel, connectionProperties: ConnectionProperties) {
-        catchAll {
-            connectionProperties.packetTransportEngine.closeOutbound()
-            socketChannel.close()
-        }
-    }
-
-    /**
-     * Handle the end of a stream.  Handle it by closing the inbound and outbound connections
-     *
-     * @param socketChannel        Socket channel
-     * @param connectionProperties Buffer information
-     */
-    protected fun handleEndOfStream(socketChannel: SocketChannel, connectionProperties: ConnectionProperties) {
-        catchAll {
-            connectionProperties.packetTransportEngine.closeInbound()
-        }
-        closeConnection(socketChannel, connectionProperties)
+        catchAll { ConnectionFactory.recycle(connectionProperties) }
+        catchAll { connectionProperties.packetTransportEngine.closeInbound() }
+        catchAll { connectionProperties.packetTransportEngine.closeOutbound() }
+        catchAll { socketChannel.close() }
     }
 
     /**

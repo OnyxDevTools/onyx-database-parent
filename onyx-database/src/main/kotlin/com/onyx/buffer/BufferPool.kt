@@ -17,7 +17,7 @@ object BufferPool {
 
     private val SMALL_BUFFER_SIZE = 512
     val MEDIUM_BUFFER_SIZE = 1024 * 6
-    private val LARGE_BUFFER_SIZE = 18 * 1024
+    val LARGE_BUFFER_SIZE = 18 * 1024
 
     private val SMALL_BUFFER_POOL = LinkedList<ByteBuffer>()
     private val MEDIUM_BUFFER_POOL = LinkedList<ByteBuffer>()
