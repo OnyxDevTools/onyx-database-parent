@@ -50,7 +50,7 @@ public class SerializationTest extends RemoteBaseTest {
         RequestToken token2 = (RequestToken) BufferStream.fromBuffer(buf);
         BufferPool.INSTANCE.recycle(buf);
 
-        Assert.assertTrue(token2.token == token.token);
+        Assert.assertTrue(token2.getToken() == token.getToken());
 
 
 

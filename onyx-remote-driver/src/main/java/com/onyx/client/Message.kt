@@ -1,86 +1,69 @@
 package com.onyx.client
 
 import com.onyx.buffer.BufferPool
+import com.onyx.buffer.NetworkBufferPool
+import com.onyx.client.base.RequestToken
+import com.onyx.client.serialization.ServerSerializer
 import com.onyx.extension.withBuffer
 import java.nio.ByteBuffer
 
 class Message(var messageId:Short = 0) {
 
     var numberOfPackets:Short = 0
-    private val packets:MutableList<Packet> = ArrayList()
+    val packets:MutableList<Packet> = ArrayList()
 
     companion object {
-
-        private val PACKET_SIZE = 15*1024
-
-        private val MESSAGE_TYPE:Byte = 1
-        private val PACKET_TYPE:Byte = 0
-
-        private val PACKET_METADATA_SIZE = (java.lang.Short.BYTES * 2) + java.lang.Byte.BYTES
-        private val MESSAGE_METADATA_SIZE = (java.lang.Short.BYTES * 2)
-
-        fun toMessage(buffer: ByteBuffer) : Message {
-            return withBuffer(buffer) {
-                val message = Message(0)
-
-                // Divide the buffer into individual packets
-                while (buffer.hasRemaining()) {
-                    val packetBuffer = BufferPool.allocateAndLimit(PACKET_SIZE + PACKET_METADATA_SIZE)
-                    packetBuffer.position(PACKET_METADATA_SIZE)
-                    while (buffer.hasRemaining() && packetBuffer.hasRemaining())
-                        packetBuffer.put(buffer.get())
-
-                    packetBuffer.flip()
-                    val packet = Packet(PACKET_TYPE, message.messageId, packetBuffer.limit().toShort(), packetBuffer)
-                    packet.write(packetBuffer)
-                    packetBuffer.rewind()
-
-                    message.packets.add(packet)
-                }
-
-                // Add default packet for message metadata
-                message.numberOfPackets = (message.packets.size + 1).toShort() // Add 1 for the message metadata packet
-
-                val packetBuffer = BufferPool.allocateAndLimit(MESSAGE_METADATA_SIZE + MESSAGE_METADATA_SIZE)
-                val packet = Packet(MESSAGE_TYPE, message.messageId, packetBuffer.limit().toShort(), packetBuffer)
-                packet.write(packetBuffer)
-                message.write(packetBuffer)
-                packetBuffer.rewind()
-
-                // Add a index 0
-                message.packets.add(0, packet)
-
-                return@withBuffer message
-            }
-        }
-
-
-        fun toByteBuffer(message:Message):ByteBuffer {
-            if(message.packets.size != message.numberOfPackets.toInt()) {
-                // TODO: Throw an exception
-            }
-
-            val messageBuffer = BufferPool.allocate((message.packets.size - 1 * PACKET_SIZE))
-            message.packets.forEachIndexed { index, packet ->
-                withBuffer(packet.packetBuffer) {
-                    if (index != 0) {
-                        packet.packetBuffer.position(PACKET_METADATA_SIZE)
-                        messageBuffer.put(packet.packetBuffer)
-                    }
-                }
-            }
-            messageBuffer.flip()
-            return messageBuffer
-        }
+        val PACKET_METADATA_SIZE = java.lang.Short.BYTES * 2
+        val MESSAGE_METADATA_SIZE = java.lang.Short.BYTES
     }
 }
 
-fun Message.write(buffer:ByteBuffer) {
-    buffer.putShort(this.messageId)
-    buffer.putShort(this.numberOfPackets)
+fun ByteBuffer.toMessage(request: RequestToken) : Message {
+    return withBuffer(this) {
+        val message = Message(request.token)
+
+        // Divide the buffer into individual packets
+        while (this.hasRemaining()) {
+            val packetBuffer = NetworkBufferPool.allocate()
+            packetBuffer.position(if(message.packets.isEmpty()) (Message.PACKET_METADATA_SIZE + Message.MESSAGE_METADATA_SIZE) else Message.PACKET_METADATA_SIZE)
+
+            while (this.hasRemaining() && packetBuffer.hasRemaining())
+                packetBuffer.put(this.get())
+
+            packetBuffer.flip()
+            val packet = Packet(packetBuffer.limit().toShort(), message.messageId, packetBuffer)
+            packet.write(packetBuffer)
+            packetBuffer.rewind()
+
+            message.packets.add(packet)
+        }
+
+        // Update the number of packets
+        message.numberOfPackets = message.packets.size.toShort() // Add 1 for the message metadata packet
+        val firstPacket = message.packets.first()
+        firstPacket.packetBuffer.position(Message.PACKET_METADATA_SIZE)
+        firstPacket.packetBuffer.putShort(message.numberOfPackets)
+        firstPacket.packetBuffer.rewind()
+
+        return@withBuffer message
+    }
 }
 
-fun Message.read(buffer: ByteBuffer) {
-    messageId = buffer.short
-    numberOfPackets = buffer.short
+fun Message.toByteBuffer():ByteBuffer {
+    val messageBuffer = BufferPool.allocateAndLimit(this.packets.size * NetworkBufferPool.bufferSize)
+    this.packets.forEachIndexed { index, packet ->
+        NetworkBufferPool.withBuffer(packet.packetBuffer) {
+            it.position(if(index == 0) (Message.PACKET_METADATA_SIZE + Message.MESSAGE_METADATA_SIZE) else Message.PACKET_METADATA_SIZE)
+            messageBuffer.put(it)
+        }
+    }
+    messageBuffer.flip()
+    return messageBuffer
+}
+
+fun Message.toRequest(serializer:ServerSerializer):RequestToken {
+    val buffer = toByteBuffer()
+    return withBuffer(buffer) {
+        serializer.deserialize(buffer, RequestToken()) as RequestToken
+    }
 }

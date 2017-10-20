@@ -1,5 +1,6 @@
 package com.onyx.client
 
+import com.onyx.buffer.NetworkBufferPool
 import com.onyx.client.auth.AuthenticationManager
 import com.onyx.client.base.ConnectionProperties
 import com.onyx.client.push.PushSubscriber
@@ -22,7 +23,6 @@ import javax.net.ssl.SSLContext
 import java.io.IOException
 import java.io.Serializable
 import java.net.InetSocketAddress
-import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.security.SecureRandom
 import java.util.HashMap
@@ -45,7 +45,7 @@ import java.util.concurrent.locks.LockSupport
 open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
 
     // Heartbeat and timeout
-    override var timeout = 60 // 60 second timeout
+    override var timeout = 240 // 240 second timeout
     @Volatile private var needsToRunHeartbeat = true // If there was a response recently, there is no need to send a heartbeat
     private var heartBeatExecutor: ScheduledExecutorService? = null
 
@@ -56,7 +56,7 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
     private lateinit var host: String
 
     // User and authentication
-    private var authenticationManager: AuthenticationManager? = null
+    var authenticationManager: AuthenticationManager? = null
     private var user: String? = null
     private var password: String? = null
 
@@ -66,36 +66,25 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
     /**
      * Handle an response message
      *
-     * @param packetType           Indicates if the packet can fit into 1 buffer or multiple
      * @param socketChannel        Socket Channel read from
      * @param connectionProperties ConnectionProperties information containing buffer and thread info
-     * @param buffer               ByteBuffer containing message
+     * @param message              Message containing packet parts
      * @since 1.2.0
      */
-    override fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer): RequestToken? {
-        val message = super.handleMessage(packetType, socketChannel, connectionProperties, buffer)!!
+    override fun handleMessage(socketChannel: SocketChannel, connectionProperties: ConnectionProperties, message:Message) {
 
-        try {
-            // General unhandled exception that cannot be tied back to a request
-            if (message.token == java.lang.Short.MAX_VALUE) {
-                (message.packet as Exception).printStackTrace()
-            } else if (message.token == java.lang.Short.MIN_VALUE) {
-                // This indicates a push request
-                handlePushMessage(message)
-            }
+        val request = message.toRequest(serverSerializer)
 
-            val consumer = pendingRequests.remove(message)
-
-            if (consumer != null) {
-                consumer.invoke(message.packet)
+        // General unhandled exception that cannot be tied back to a request
+        when {
+            request.token == UNEXPECTED_EXCEPTION -> (request.packet as Exception).printStackTrace()
+            request.token == PUSH_NOTIFICATION -> handlePushMessage(request)
+            else -> {
+                val consumer = pendingRequests.remove(request)
+                consumer?.invoke(request.packet)
                 needsToRunHeartbeat = false
             }
-
-        } catch (e: Exception) {
-            failure(message, e)
         }
-
-        return message
     }
 
     // Map of push consumers
@@ -173,6 +162,8 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
             transportPacketTransportEngine = UnsecuredPacketTransportEngine()
         }// Not SSL use un-secure transport engine
 
+        NetworkBufferPool.init(transportPacketTransportEngine.packetSize)
+
         // Try to open the connection
         try {
             socketChannel = SocketChannel.open()
@@ -208,7 +199,9 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
             throw ConnectionFailedException()
         }
 
-        async(connectionProperties!!.readThread) { pollForCommunication() }
+        startWriteQueue()
+        startReadQueue()
+
         try {
             this.authenticationManager!!.verify(this.user, this.password)
             this.resumeHeartBeat()
@@ -256,11 +249,12 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
      *
      * @since 1.2.0
      */
-    private fun pollForCommunication() {
-        while (active) {
-            try {
-                read(socketChannel!!, connectionProperties!!)
-            } catch (e: Exception) {
+    override fun startReadQueue() {
+        readJob = async {
+            while (active) {
+                catchAll {
+                    read(socketChannel!!, connectionProperties!!)
+                }
             }
         }
     }
@@ -316,7 +310,7 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
             countDownLatch.countDown()
         }
 
-        val token = RequestToken(generateNewToken(), packet as Serializable?)
+        val token = RequestToken(generateNewToken(), packet)
         pendingRequests.put(token, consumer)
 
         write(socketChannel!!, connectionProperties!!, token)
@@ -350,21 +344,16 @@ open class CommunicationPeer : AbstractNetworkPeer(), OnyxClient, PushRegistrar 
      */
     override fun close() {
         active = false
+        stopReadQueue()
+        stopWriteQueue()
         closeConnection(socketChannel!!, connectionProperties!!)
-
         needsToRunHeartbeat = false
         pendingRequests.clear()
-        if (this.heartBeatExecutor != null) {
-            this.heartBeatExecutor!!.shutdown()
-        }
+        this.heartBeatExecutor?.shutdown()
     }
 
     override val isConnected: Boolean
         get() = socketChannel?.isConnected ?: false
-
-    fun setAuthenticationManager(authenticationManager: AuthenticationManager) {
-        this.authenticationManager = authenticationManager
-    }
 
     /**
      * Set User credentials for persistant authentication

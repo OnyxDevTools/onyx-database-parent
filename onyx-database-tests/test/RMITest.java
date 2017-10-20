@@ -55,7 +55,7 @@ public class RMITest {
     public void testRMIPerformance() throws Exception {
         RMIMessageServer.main(null);
 
-        IMessage messanger = RMIClient.getMessage();
+        IMessage messenger = RMIClient.getMessage();
 
         byte[] message = new byte[2048];
         ExecutorService threadPool = Executors.newFixedThreadPool(16);
@@ -65,7 +65,7 @@ public class RMITest {
         for (int i = 0; i < 1000000; i++) {
             threadPool.execute(() -> {
                 try {
-                    messanger.captureMessage(message);
+                    messenger.captureMessage(message);
                     countDownLatch.countDown();
                 } catch (RemoteException e) {
                     e.printStackTrace();

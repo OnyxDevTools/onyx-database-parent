@@ -1,7 +1,9 @@
 package com.onyx.server.base
 
 import com.onyx.application.OnyxServer
+import com.onyx.buffer.NetworkBufferPool
 import com.onyx.client.AbstractNetworkPeer
+import com.onyx.client.Message
 import com.onyx.client.base.*
 import com.onyx.client.base.engine.PacketTransportEngine
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine
@@ -12,6 +14,7 @@ import com.onyx.client.exception.ServerClosedException
 import com.onyx.client.handlers.RequestHandler
 import com.onyx.client.push.PushSubscriber
 import com.onyx.client.push.PushPublisher
+import com.onyx.client.toRequest
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
@@ -23,7 +26,6 @@ import javax.net.ssl.SSLContext
 import java.io.IOException
 import java.io.Serializable
 import java.net.InetSocketAddress
-import java.nio.ByteBuffer
 import java.nio.channels.*
 import java.nio.channels.spi.SelectorProvider
 import java.util.HashMap
@@ -52,7 +54,6 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
     private var sslContext: SSLContext? = null // SSL Context if used.  Otherwise this will be null
     private var selector: Selector? = null // Selector for inbound communication
     private var serverSocketChannel: ServerSocketChannel? = null
-    private var daemon:Deferred<Unit>? = null
 
     /**
      * Start Server
@@ -63,20 +64,16 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
 
         selector = SelectorProvider.provider().openSelector()
         serverSocketChannel = ServerSocketChannel.open()
-        serverSocketChannel!!.socket().reuseAddress = true
-        serverSocketChannel!!.configureBlocking(false)
-        serverSocketChannel!!.bind(InetSocketAddress(port))
-        serverSocketChannel!!.register(selector, SelectionKey.OP_ACCEPT)
-
-        daemon = async {
-            try {
-                pollForCommunication()
-            } catch (e: ServerClosedException) {
-                active = false
-            }
+        serverSocketChannel!!.apply {
+            socket().reuseAddress = true
+            configureBlocking(false)
+            bind(InetSocketAddress(port))
+            register(selector, SelectionKey.OP_ACCEPT)
         }
 
         active = true
+        startWriteQueue()
+        startReadQueue()
     }
 
     /**
@@ -86,46 +83,22 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
      * @since 1.2.0
      */
     @Throws(ServerClosedException::class)
-    private fun pollForCommunication() {
+    override fun startReadQueue() {
+        readJob = async {
+            while (active) {
+                try { selector?.select() } catch (e: IOException) { throw ServerClosedException(e) }
 
-        while (active) {
-            try {
-                selector!!.select()
-            } catch (e: IOException) {
-                throw ServerClosedException(e)
-            }
+                val selectedKeys = selector?.selectedKeys()?.iterator()
 
-            val selectedKeys = selector!!.selectedKeys().iterator()
-
-            // Iterate through all the selection keys that have pending reads
-            while (selectedKeys.hasNext()) {
-                val key = selectedKeys.next()
-                selectedKeys.remove()
-                // Ensure connection still open
-                if (!key.isValid) {
-                    closeConnection(key.channel() as SocketChannel, key.attachment() as ConnectionProperties)
-                    continue
-                }
-                try {
-                    if (key.isAcceptable) {
-                        try {
-                            accept(key)
-                        } catch (ignore: Exception) {
-                            closeConnection(key.channel() as SocketChannel, key.attachment() as ConnectionProperties)
-                        }
-                    } else if (key.isReadable) {
-                        // Read from the connectionProperties.  Notice it goes down on the readThread for the connectionProperties.
-                        // That is a shared thread pool for multiple connections
-                        val connectionProperties = key.attachment() as ConnectionProperties
-                        if (!connectionProperties.isReading) {
-                            async(connectionProperties.readThread) {
-                                if (key.channel().isOpen) {
-                                    read(key.channel() as SocketChannel, key.attachment() as ConnectionProperties)
-                                }
-                            }
-                        }
+                // Iterate through all the selection keys that have pending reads
+                while (selectedKeys?.hasNext()!!) {
+                    val key = selectedKeys.next()
+                    selectedKeys.remove()
+                    when {
+                        !key.isValid || !key.channel().isOpen -> closeConnection(key.channel() as SocketChannel, key.attachment() as ConnectionProperties)
+                        key.isAcceptable -> try { accept(key) } catch (any: Exception) { closeConnection(key.channel() as SocketChannel, key.attachment() as ConnectionProperties) }
+                        key.isReadable -> { read(key.channel() as SocketChannel, key.attachment() as ConnectionProperties) }
                     }
-                } catch (ignore: CancelledKeyException) {
                 }
             }
         }
@@ -134,33 +107,30 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
     /**
      * Handle an inbound message
      *
-     * @param packetType           Indicates if the packet can fit into 1 buffer or multiple
      * @param socketChannel        Socket Channel read from
      * @param connectionProperties ConnectionProperties information containing buffer and thread info
-     * @param buffer               ByteBuffer containing message
+     * @param message              Network message containing packet segments
      * @since 1.2.0
      */
-    override fun handleMessage(packetType: Byte, socketChannel: SocketChannel, connectionProperties: ConnectionProperties, buffer: ByteBuffer):RequestToken? {
+    override fun handleMessage(socketChannel: SocketChannel, connectionProperties: ConnectionProperties, message: Message) {
 
-        val message = super.handleMessage(packetType, socketChannel, connectionProperties, buffer)!!
+        val request:RequestToken = message.toRequest(serverSerializer)
 
-        // If it is a push subscriber, it can only be a registration event
-        if (message.packet is PushSubscriber) {
-            handlePushSubscription(message, socketChannel, connectionProperties)
-        } else {
-            async {
-                if (message.packet != null) {
-                    try {
-                        message.packet = requestHandler!!.accept(connectionProperties, message.packet) as Serializable?
-                    } catch (e: Exception) {
-                        message.packet = MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
+        request.apply {
+            when (packet) {
+                is PushSubscriber -> handlePushSubscription(this, socketChannel, connectionProperties)
+                else -> {
+                    packet = try {
+                        requestHandler?.accept(connectionProperties, packet)
                     }
+                    catch (e:Exception) {
+                        MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
+                    }
+
+                    write(socketChannel, connectionProperties, this)
                 }
-                write(socketChannel, connectionProperties, message)
             }
         }
-
-        return message
     }
 
     // Registered Push subscribers
@@ -230,6 +200,8 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
             transportPacketTransportEngine = UnsecuredPacketTransportEngine(socketChannel)
         }
 
+        NetworkBufferPool.init(transportPacketTransportEngine.packetSize)
+
         // Send the buffer pool into the connectionProperties so that they may retain its references
         val connectionProperties = ConnectionFactory.create(transportPacketTransportEngine)
 
@@ -252,11 +224,9 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
      */
     override fun push(pushSubscriber: PushSubscriber, message: Any) {
         if (pushSubscriber.channel.isOpen && pushSubscriber.channel.isConnected) {
-            async(pushSubscriber.connectionProperties.writeThread) {
-                pushSubscriber.packet = message
-                val token = RequestToken(PUSH_NOTIFICATION, pushSubscriber as Serializable?)
-                write(pushSubscriber.channel, pushSubscriber.connectionProperties, token)
-            }
+            pushSubscriber.packet = message
+            val token = RequestToken(PUSH_NOTIFICATION, pushSubscriber as Serializable?)
+            async { write(pushSubscriber.channel, pushSubscriber.connectionProperties, token) }
         } else {
             deRegisterSubscriberIdentity(pushSubscriber) // Clean up non connected subscribers if not connected
         }
@@ -290,7 +260,8 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
      */
     override fun stop() {
         active = false
-        daemon?.cancel()
+        stopReadQueue()
+        stopWriteQueue()
         selector?.wakeup()
         serverSocketChannel?.socket()?.close()
         serverSocketChannel?.close()
@@ -303,7 +274,7 @@ open class CommunicationServer : AbstractNetworkPeer(), OnyxServer, PushPublishe
      */
     override fun join() {
         runBlocking {
-            daemon?.await()
+            readJob?.await()
         }
     }
 

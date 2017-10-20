@@ -6,7 +6,6 @@ import com.onyx.client.base.engine.PacketTransportEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -21,7 +20,7 @@ import java.nio.channels.SocketChannel;
  */
 public class UnsecuredPacketTransportEngine extends AbstractTransportEngine implements PacketTransportEngine {
 
-    private static final int DEFAULT_BUFFER_SIZE = (100*1024); // 100 KB
+    private static final int DEFAULT_BUFFER_SIZE = Short.MAX_VALUE;
 
     // Underlying channel
     private SocketChannel socketChannel;
@@ -61,11 +60,8 @@ public class UnsecuredPacketTransportEngine extends AbstractTransportEngine impl
      */
     @Override
     public SSLEngineResult wrap(ByteBuffer fromBuffer, ByteBuffer toBuffer) throws SSLException {
-        int size = fromBuffer.limit();
-        toBuffer.putInt(size);
         toBuffer.put(fromBuffer);
-
-        return new SSLEngineResult(SSLEngineResult.Status.OK, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, fromBuffer.limit() + Integer.BYTES, fromBuffer.limit() + Integer.BYTES);
+        return new SSLEngineResult(SSLEngineResult.Status.OK, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, fromBuffer.limit(), fromBuffer.limit());
     }
 
 
@@ -82,29 +78,23 @@ public class UnsecuredPacketTransportEngine extends AbstractTransportEngine impl
      */
     @Override
     public SSLEngineResult unwrap(ByteBuffer fromBuffer, ByteBuffer toBuffer) throws SSLException {
-        int fromBufferStartingPosition = fromBuffer.position();
-        int size = fromBuffer.getInt();
-
-        // We do not have the entire packet.  Go back read some more from the socket and try again
-        if(fromBuffer.limit() - fromBuffer.position() < size)
-        {
-            fromBuffer.position(fromBuffer.position()-Integer.BYTES);
-            return new SSLEngineResult(SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, fromBuffer.limit(), Integer.BYTES);
+        if (!fromBuffer.hasRemaining()) {
+            return new SSLEngineResult(SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, 0, 0);
         }
 
-        // Copy only the packet buffer bytes.  Leave everything else
-        try {
-            for (int i = 0; i < size; i++)
+        int position = fromBuffer.position();
+        short sizeOfPacket = fromBuffer.getShort();
+        fromBuffer.position(position);
+
+        if (sizeOfPacket <= fromBuffer.limit() - fromBuffer.position()) {
+            for (int i = 0; i < sizeOfPacket; i++)
                 toBuffer.put(fromBuffer.get());
-        } catch (BufferUnderflowException e)
-        {
-            // Packet buffer was not big enough.  Try again next round.
-            fromBuffer.position(fromBufferStartingPosition);
-            return new SSLEngineResult(SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, fromBuffer.limit(), Integer.BYTES);
+            return new SSLEngineResult(SSLEngineResult.Status.OK, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, sizeOfPacket, sizeOfPacket);
+        } else {
+            for (int i = 0; i < sizeOfPacket; i++)
+                toBuffer.put(fromBuffer);
+            return new SSLEngineResult(SSLEngineResult.Status.BUFFER_OVERFLOW, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, sizeOfPacket, sizeOfPacket);
         }
-
-        // All Good
-        return new SSLEngineResult(SSLEngineResult.Status.OK, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, fromBuffer.limit(), fromBuffer.limit());
     }
 
     /**
@@ -144,7 +134,7 @@ public class UnsecuredPacketTransportEngine extends AbstractTransportEngine impl
     @Override
     public int getApplicationSize()
     {
-        return DEFAULT_BUFFER_SIZE + 4; // Add the additional identification bytes
+        return DEFAULT_BUFFER_SIZE;
     }
 
     /**

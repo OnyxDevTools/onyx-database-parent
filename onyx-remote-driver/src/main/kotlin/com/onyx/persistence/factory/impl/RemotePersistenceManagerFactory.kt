@@ -120,7 +120,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
         onyxRMIClient.setCredentials(this.user, this.password)
 
         val authenticationManager = onyxRMIClient.getRemoteObject(Services.AUTHENTICATION_MANAGER_SERVICE.serviceId, AuthenticationManager::class.java) as AuthenticationManager
-        onyxRMIClient.setAuthenticationManager(authenticationManager)
+        onyxRMIClient.authenticationManager = authenticationManager
 
         try {
             onyxRMIClient.connect(host, Integer.valueOf(port)!!)
