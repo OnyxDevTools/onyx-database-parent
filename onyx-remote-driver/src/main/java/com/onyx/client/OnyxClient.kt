@@ -19,15 +19,6 @@ interface OnyxClient {
     fun connect(host: String, port: Int)
 
     /**
-     * Write request object to server
-     *
-     * @param packet Object to send to server
-     * @param consumer Consumer for the results
-     */
-    @Throws(OnyxServerException::class)
-    fun send(packet: Any, consumer: (Any?) -> Unit):Any?
-
-    /**
      * A blocking api for sending a request and waiting on the results
      *
      * @param packet Object to send to server
@@ -53,5 +44,11 @@ interface OnyxClient {
      * @return timeout
      */
     var timeout: Int
+
+    /**
+     * Amount of time allowed to make a connection.  Will result in a Timeout Exception if this is
+     * surpassed.  Measured in seconds
+     */
+    var connectTimeout:Int
 
 }

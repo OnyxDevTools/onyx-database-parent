@@ -11,6 +11,7 @@ object NetworkBufferPool {
     private var isInitialized = false
     var bufferSize = 0
 
+    @Synchronized
     fun init(bufferSize:Int) {
         if(!isInitialized) {
             this.bufferSize = bufferSize
@@ -22,14 +23,14 @@ object NetworkBufferPool {
 
     @Synchronized
     fun allocate():ByteBuffer = try { bufferPool.removeFirst() } catch (e:NoSuchElementException) {
-        println("Creating New Buffer")
         ByteBuffer.allocateDirect(bufferSize)
     }
 
     @Synchronized
     fun recycle(buffer: ByteBuffer) {
         buffer.clear()
-        bufferPool.addLast(buffer)
+        if(bufferPool.size < numberOfBuffers)
+            bufferPool.addLast(buffer)
     }
 
     fun <T> withBuffer(buffer: ByteBuffer, body:(ByteBuffer) -> T):T {

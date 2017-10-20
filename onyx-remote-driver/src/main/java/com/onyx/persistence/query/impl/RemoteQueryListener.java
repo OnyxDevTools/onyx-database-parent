@@ -2,7 +2,7 @@ package com.onyx.persistence.query.impl;
 
 import com.onyx.buffer.BufferStream;
 import com.onyx.buffer.BufferStreamable;
-import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.base.Connection;
 import com.onyx.client.push.PushSubscriber;
 import com.onyx.client.push.PushPublisher;
 import com.onyx.client.push.PushConsumer;
@@ -30,7 +30,7 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
     private byte subscribeEvent = 1;
 
     // Publisher information
-    private transient ConnectionProperties connectionProperties;
+    private transient Connection connection;
     private transient SocketChannel socketChannel;
     private transient PushPublisher pushPublisher;
 
@@ -90,16 +90,16 @@ public class RemoteQueryListener<T> implements BufferStreamable, QueryListener<T
 
     /**
      * Set connection information
-     * @param connectionProperties Connection container
+     * @param connection Connection container
      */
     @Override
-    public void setConnectionProperties(ConnectionProperties connectionProperties) {
-        this.connectionProperties = connectionProperties;
+    public void setConnection(Connection connection) {
+        this.connection = connection;
     }
 
     @Override
-    public ConnectionProperties getConnectionProperties() {
-        return connectionProperties;
+    public Connection getConnection() {
+        return connection;
     }
 
     @Override

@@ -1,9 +1,6 @@
 package com.onyx.extension.common
 
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.CoroutineScope
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.*
 
 typealias Block = Any
 
@@ -12,7 +9,7 @@ typealias Block = Any
  *
  * @param block Block expression to execute
  */
-fun runJob(block: suspend CoroutineScope.() -> Unit): Job = kotlinx.coroutines.experimental.launch(context = CommonPool, block = block)
+fun runJob(name:String, block: suspend CoroutineScope.() -> Unit): Job = kotlinx.coroutines.experimental.launch(newSingleThreadContext(name), block = block)
 
 /**
  * Run a block in background co-routine

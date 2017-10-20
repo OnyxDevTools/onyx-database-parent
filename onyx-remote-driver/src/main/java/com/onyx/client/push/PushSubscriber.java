@@ -1,6 +1,6 @@
 package com.onyx.client.push;
 
-import com.onyx.client.base.ConnectionProperties;
+import com.onyx.client.base.Connection;
 
 import java.nio.channels.SocketChannel;
 
@@ -20,10 +20,10 @@ public interface PushSubscriber {
 
     /**
      * Connection properties.  Container for write buffers and thread pool
-     * @param connectionProperties Connection container
+     * @param connection Connection container
      * @since 1.3.0
      */
-    void setConnectionProperties(ConnectionProperties connectionProperties);
+    void setConnection(Connection connection);
 
     /**
      * Contains connection information used so the subscriber can communicate with the push consumer on the client.
@@ -31,7 +31,7 @@ public interface PushSubscriber {
      *
      * @since 1.3.0
      */
-    ConnectionProperties getConnectionProperties();
+    Connection getConnection();
 
     /**
      * Socket channel to push subscriber

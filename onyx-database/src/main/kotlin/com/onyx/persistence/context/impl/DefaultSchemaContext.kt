@@ -112,7 +112,7 @@ open class DefaultSchemaContext : SchemaContext {
         @Suppress("LeakingThis")
         Contexts.put(this)
 
-        commitJob = runJob {
+        commitJob = runJob("File Commit Job") {
             while (!killSwitch) {
                 dataFiles.forEach { _, db -> db.commit() }
                 delay(10L, TimeUnit.SECONDS)

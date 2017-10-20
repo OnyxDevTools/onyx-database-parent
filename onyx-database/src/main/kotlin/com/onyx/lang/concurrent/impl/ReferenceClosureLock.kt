@@ -13,8 +13,6 @@ import java.util.*
  */
 class ReferenceClosureLock : ClosureLock {
 
-    override fun <T> queue(consumer: () -> T): Deferred<T> = async { consumer.invoke() }
-
     private val references = WeakHashMap<Any, Any>()
 
     /**

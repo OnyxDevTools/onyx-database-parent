@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
  * that each connection is assigned to.
  * @since 1.2.0
  */
-class ConnectionProperties(
+class Connection(
 
         var packetTransportEngine: PacketTransportEngine,
         var writeNetworkData: ByteBuffer = BufferPool.allocateAndLimit(NetworkBufferPool.bufferSize),

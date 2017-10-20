@@ -1,6 +1,7 @@
 package remote.partition;
 
 import category.RemoteServerTests;
+import com.onyx.application.impl.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -8,6 +9,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.AttributeUpdate;
 import entities.partition.FullTablePartitionEntity;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

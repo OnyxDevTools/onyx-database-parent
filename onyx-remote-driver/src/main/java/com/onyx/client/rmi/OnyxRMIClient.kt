@@ -1,6 +1,6 @@
 package com.onyx.client.rmi
 
-import com.onyx.client.CommunicationPeer
+import com.onyx.client.NetworkClient
 
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -15,7 +15,7 @@ import java.util.*
  *
  * @since 1.2.0
  */
-class OnyxRMIClient : CommunicationPeer() {
+class OnyxRMIClient : NetworkClient() {
 
 
     // Local Cache of Remote Objects

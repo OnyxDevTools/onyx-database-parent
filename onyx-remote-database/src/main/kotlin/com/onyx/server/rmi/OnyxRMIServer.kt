@@ -2,14 +2,14 @@ package com.onyx.server.rmi
 
 import com.onyx.client.SSLPeer
 import com.onyx.client.auth.AuthenticationManager
-import com.onyx.client.base.ConnectionProperties
+import com.onyx.client.base.Connection
 import com.onyx.client.exception.MethodInvocationException
 import com.onyx.client.handlers.RequestHandler
 import com.onyx.client.rmi.RMIRequest
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
 import com.onyx.lang.map.OptimisticLockingMap
-import com.onyx.server.base.CommunicationServer
+import com.onyx.server.base.NetworkServer
 
 import java.lang.reflect.Method
 import kotlin.collections.HashMap
@@ -28,7 +28,7 @@ import kotlin.collections.HashMap
  *
  * @since 1.2.0
  */
-class OnyxRMIServer : CommunicationServer(), SSLPeer {
+class OnyxRMIServer : NetworkServer(), SSLPeer {
 
     // Local Cache of the registered objects
     private val registeredObjects = OptimisticLockingMap<String, Any>(HashMap())
@@ -51,14 +51,14 @@ class OnyxRMIServer : CommunicationServer(), SSLPeer {
             /**
              * Verify the session is active and valid.  If not, shut it down.
              * @param registeredObject The Proxy class
-             * @param connectionProperties Connection information
+             * @param connection Connection information
              * @return Whether the session is valid
              * @since 1.2.0
              */
-            private fun verifySession(connectionProperties: ConnectionProperties, registeredObject: Any?): Boolean {
-                if (!AuthenticationManager::class.java.isAssignableFrom(registeredObject!!.javaClass) && !connectionProperties.isAuthenticated) {
-                    connectionProperties.packetTransportEngine.closeOutbound()
-                    connectionProperties.packetTransportEngine.closeInbound()
+            private fun verifySession(connection: Connection, registeredObject: Any?): Boolean {
+                if (!AuthenticationManager::class.java.isAssignableFrom(registeredObject!!.javaClass) && !connection.isAuthenticated) {
+                    connection.packetTransportEngine.closeOutbound()
+                    connection.packetTransportEngine.closeInbound()
                     return false
                 }
                 return true
@@ -69,13 +69,13 @@ class OnyxRMIServer : CommunicationServer(), SSLPeer {
              * we can keep track of the session.
              *
              * @param registeredObject Proxy value
-             * @param connectionProperties Connection information holding authentication information
+             * @param connection Connection information holding authentication information
              *
              * @since 1.2.0
              */
-            private fun checkForAuthentication(registeredObject: Any?, connectionProperties: ConnectionProperties) {
+            private fun checkForAuthentication(registeredObject: Any?, connection: Connection) {
                 if (AuthenticationManager::class.java.isAssignableFrom(registeredObject!!.javaClass)) {
-                    connectionProperties.isAuthenticated = true
+                    connection.isAuthenticated = true
                 }
             }
 
@@ -84,12 +84,12 @@ class OnyxRMIServer : CommunicationServer(), SSLPeer {
              * @param `request` Request.  In this case a RMIRequest
              * @return the result
              */
-            override fun accept(connectionProperties: ConnectionProperties, request: Any): Any? {
+            override fun accept(connection: Connection, request: Any?): Any? {
 
                 if (request is RMIRequest) {
                     val registeredObject = registeredObjects[request.instance]
 
-                    if (!verifySession(connectionProperties, registeredObject))
+                    if (!verifySession(connection, registeredObject))
                         return InitializationException(InitializationException.CONNECTION_EXCEPTION)
 
                     val registeredInterface = registeredInterfaces[request.instance]
@@ -110,7 +110,7 @@ class OnyxRMIServer : CommunicationServer(), SSLPeer {
                     return try {
                         // Invoke the method
                         val result = method.invoke(registeredObject, *request.params)
-                        checkForAuthentication(registeredObject, connectionProperties)
+                        checkForAuthentication(registeredObject, connection)
                         result
                     } catch (t: Throwable) {
                         // In some cases an entity exception is expected.  Return that
