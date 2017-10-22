@@ -42,14 +42,11 @@ import com.onyx.classLoader.EntityClassLoader
 import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.createNewEntity
 import com.onyx.lang.map.OptimisticLockingMap
-import kotlinx.coroutines.experimental.Job
-import kotlinx.coroutines.experimental.delay
 import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -87,8 +84,6 @@ open class DefaultSchemaContext : SchemaContext {
     // Indicates whether the database has been stopped
     @Volatile override var killSwitch = false
 
-    private lateinit var commitJob:Job
-
     private lateinit var transactionStore: TransactionStore
 
     // endregion
@@ -112,12 +107,6 @@ open class DefaultSchemaContext : SchemaContext {
         @Suppress("LeakingThis")
         Contexts.put(this)
 
-        commitJob = runJob("File Commit Job") {
-            while (!killSwitch) {
-                dataFiles.forEach { _, db -> db.commit() }
-                delay(10L, TimeUnit.SECONDS)
-            }
-        }
     }
 
     // endregion
@@ -189,7 +178,6 @@ open class DefaultSchemaContext : SchemaContext {
 
         // Close transaction file
         catchAll { transactionStore.close() }
-        catchAll { commitJob.cancel() }
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors
         recordInteractors.clear() // Clear all Record Controllers

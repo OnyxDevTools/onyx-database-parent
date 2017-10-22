@@ -1,8 +1,6 @@
 package com.onyx.lang.concurrent.impl
 
-import com.onyx.extension.common.async
 import com.onyx.lang.concurrent.ClosureLock
-import kotlinx.coroutines.experimental.Deferred
 import java.util.*
 
 /**

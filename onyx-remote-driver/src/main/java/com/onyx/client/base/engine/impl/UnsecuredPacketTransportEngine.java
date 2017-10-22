@@ -20,7 +20,7 @@ import java.nio.channels.SocketChannel;
  */
 public class UnsecuredPacketTransportEngine extends AbstractTransportEngine implements PacketTransportEngine {
 
-    private static final int DEFAULT_BUFFER_SIZE = Short.MAX_VALUE;
+    private static final int DEFAULT_BUFFER_SIZE = 100; // In KB
 
     // Underlying channel
     private SocketChannel socketChannel;
@@ -120,7 +120,7 @@ public class UnsecuredPacketTransportEngine extends AbstractTransportEngine impl
     @Override
     public int getPacketSize()
     {
-        return DEFAULT_BUFFER_SIZE;
+        return DEFAULT_BUFFER_SIZE * 1024;
     }
 
     /**
@@ -134,7 +134,7 @@ public class UnsecuredPacketTransportEngine extends AbstractTransportEngine impl
     @Override
     public int getApplicationSize()
     {
-        return DEFAULT_BUFFER_SIZE;
+        return DEFAULT_BUFFER_SIZE * 1024;
     }
 
     /**

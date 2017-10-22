@@ -50,7 +50,7 @@ fun ByteBuffer.toMessage(request: RequestToken) : Message {
 }
 
 fun Message.toByteBuffer():ByteBuffer {
-    val messageBuffer = BufferPool.allocateAndLimit(this.packets.size * NetworkBufferPool.bufferSize)
+    val messageBuffer = if(this.packets.size == 1) NetworkBufferPool.allocate() else BufferPool.allocateAndLimit(this.packets.size * NetworkBufferPool.bufferSize)
     this.packets.forEachIndexed { index, packet ->
         NetworkBufferPool.withBuffer(packet.packetBuffer) {
             it.position(if(index == 0) (Message.PACKET_METADATA_SIZE + Message.MESSAGE_METADATA_SIZE) else Message.PACKET_METADATA_SIZE)
@@ -63,7 +63,14 @@ fun Message.toByteBuffer():ByteBuffer {
 
 fun Message.toRequest(serializer:ServerSerializer):RequestToken {
     val buffer = toByteBuffer()
-    return withBuffer(buffer) {
-        serializer.deserialize(buffer, RequestToken()) as RequestToken
+    if(this.packets.size > 1) {
+        return withBuffer(buffer) {
+            serializer.deserialize(buffer, RequestToken()) as RequestToken
+        }
+    } else {
+        return NetworkBufferPool.withBuffer(buffer) {
+            serializer.deserialize(buffer, RequestToken()) as RequestToken
+
+        }
     }
 }

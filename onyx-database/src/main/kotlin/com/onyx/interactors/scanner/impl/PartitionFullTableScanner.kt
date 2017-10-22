@@ -17,8 +17,7 @@ import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.extension.meetsCriteria
 import com.onyx.persistence.context.Contexts
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.runBlocking
+import java.util.concurrent.Future
 import kotlin.collections.HashMap
 
 /**
@@ -68,7 +67,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
 
         if (query.partition === QueryPartitionMode.ALL) {
             val matching = HashMap<Reference, Reference>()
-            val units = ArrayList<Deferred<Map<Reference, Reference>>>()
+            val units = ArrayList<Future<Map<Reference, Reference>>>()
 
             systemEntity.partition!!.entries.forEach {
                 units.add(
@@ -81,9 +80,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
                 )
             }
 
-            runBlocking {
-                units.forEach { matching += it.await() }
-            }
+            units.forEach { matching += it.get() }
             return matching
         } else {
             val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L

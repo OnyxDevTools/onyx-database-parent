@@ -14,8 +14,7 @@ import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.extension.common.async
 import com.onyx.persistence.context.Contexts
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.runBlocking
+import java.util.concurrent.Future
 import kotlin.collections.HashMap
 
 /**
@@ -39,7 +38,7 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
         val matching = HashMap<Reference, Reference>()
 
         if (query.partition === QueryPartitionMode.ALL) {
-            val units = ArrayList<Deferred<Map<Reference, Reference>>>()
+            val units = ArrayList<Future<Map<Reference, Reference>>>()
             systemEntity.partition!!.entries.forEach {
                 units.add(
                     async {
@@ -50,9 +49,7 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
                 )
             }
 
-            runBlocking {
-                units.forEach { matching += it.await() }
-            }
+            units.forEach { matching += it.get() }
         } else {
 
             val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L

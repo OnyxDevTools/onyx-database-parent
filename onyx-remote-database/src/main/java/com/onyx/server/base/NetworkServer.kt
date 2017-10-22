@@ -20,7 +20,6 @@ import com.onyx.extension.common.runJob
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.lang.map.OptimisticLockingMap
-import kotlinx.coroutines.experimental.*
 
 import javax.net.ssl.SSLContext
 import java.io.IOException
@@ -28,6 +27,7 @@ import java.net.InetSocketAddress
 import java.nio.channels.*
 import java.nio.channels.spi.SelectorProvider
 import java.util.HashMap
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -75,7 +75,6 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
         }
 
         active = true
-        startWriteQueue()
         startReadQueue()
     }
 
@@ -87,7 +86,6 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
     override fun stop() {
         active = false
         stopReadQueue()
-        stopWriteQueue()
         selector?.wakeup()
         serverSocketChannel?.socket()?.close()
         serverSocketChannel?.close()
@@ -99,9 +97,7 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
      * @since 1.2.0
      */
     override fun join() {
-        runBlocking {
-            readJob?.join()
-        }
+        readJob?.join()
     }
 
     /**
@@ -125,21 +121,19 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
      */
     @Throws(ServerClosedException::class)
     override fun startReadQueue() {
-        readJob = runJob("Server Read Job") {
-            while (active) {
-                try { selector?.select() } catch (e: IOException) { throw ServerClosedException(e) }
+        readJob = runJob(100, TimeUnit.MICROSECONDS) {
+            try { selector?.select() } catch (e: IOException) { throw ServerClosedException(e) }
 
-                val selectedKeys = selector?.selectedKeys()?.iterator()
+            val selectedKeys = selector?.selectedKeys()?.iterator()
 
-                // Iterate through all the selection keys that have pending reads
-                while (selectedKeys?.hasNext()!!) {
-                    val key = selectedKeys.next()
-                    selectedKeys.remove()
-                    when {
-                        !key.isValid || !key.channel().isOpen -> closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
-                        key.isAcceptable -> try { accept(key) } catch (any: Exception) { closeConnection(key.channel() as SocketChannel, key.attachment() as Connection) }
-                        key.isReadable -> { read(key.channel() as SocketChannel, key.attachment() as Connection) }
-                    }
+            // Iterate through all the selection keys that have pending reads
+            while (selectedKeys?.hasNext()!!) {
+                val key = selectedKeys.next()
+                selectedKeys.remove()
+                when {
+                    !key.isValid || !key.channel().isOpen -> closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
+                    key.isAcceptable -> try { accept(key) } catch (any: Exception) { closeConnection(key.channel() as SocketChannel, key.attachment() as Connection) }
+                    key.isReadable -> { read(key.channel() as SocketChannel, key.attachment() as Connection) }
                 }
             }
         }

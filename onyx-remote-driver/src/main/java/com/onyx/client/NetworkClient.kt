@@ -15,11 +15,11 @@ import com.onyx.client.exception.OnyxServerException
 import com.onyx.client.exception.RequestTimeoutException
 import com.onyx.client.push.PushRegistrar
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.Job
 import com.onyx.extension.common.catchAll
+import com.onyx.extension.common.delay
 import com.onyx.extension.common.runJob
 import com.onyx.lang.map.OptimisticLockingMap
-import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.TimeoutException
 
 import javax.net.ssl.SSLContext
 import java.io.IOException
@@ -56,7 +56,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
     // Connection information
     private var connection: Connection? = null
     private var socketChannel: SocketChannel? = null
-    private val pendingRequests = ConcurrentHashMap<RequestToken, CompletableDeferred<Any?>>()
+    private val pendingRequests = ConcurrentHashMap<RequestToken, CompletableFuture<Any?>>()
 
     // Map of push consumers
     private val registeredPushConsumers = OptimisticLockingMap<Long, PushConsumer>(HashMap())
@@ -70,8 +70,8 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
 
     // User and authentication
     var authenticationManager: AuthenticationManager? = null
-    private var user: String? = null
-    private var password: String? = null
+    private var user: String = "admin"
+    private var password: String = "admin"
 
     // Set Username and password
     fun setCredentials(user: String, password: String) {
@@ -128,10 +128,10 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
         }
 
         try {
-            socketChannel?.configureBlocking(true)
             socketChannel?.socket()?.connect(InetSocketAddress(host, port), connectTimeout * 1000)
             while (!socketChannel!!.finishConnect())
-                runBlocking { delay(10, TimeUnit.MILLISECONDS) }
+                delay(10, TimeUnit.MILLISECONDS)
+            socketChannel?.configureBlocking(false)
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
@@ -144,7 +144,6 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
             throw ConnectionFailedException()
         }
 
-        startWriteQueue()
         startReadQueue()
 
         try {
@@ -170,7 +169,6 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
         pendingRequests.clear()
         heartBeatJob?.cancel()
         stopReadQueue()
-        stopWriteQueue()
     }
 
     /**
@@ -194,11 +192,9 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
      * @since 2.0.0 Refactored as a Job
      */
     override fun startReadQueue() {
-        readJob = runJob("Client Read Job") {
-            while (active) {
-                catchAll {
-                    read(socketChannel!!, connection!!)
-                }
+        readJob = runJob(100, TimeUnit.MICROSECONDS) {
+            catchAll {
+                read(socketChannel!!, connection!!)
             }
         }
     }
@@ -216,7 +212,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
      * @since 1.2.0
      */
     @Throws(OnyxServerException::class)
-    override fun send(packet: Any): Any? = send(packet, timeout * 1000)
+    override fun send(packet: Any): Any? = send(packet, timeout)
 
     /**
      * Send a message to the server.  This is blocking and will wait for the response.
@@ -230,17 +226,13 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
 
         verifyConnection()
         val token = RequestToken(generateNewToken(), packet)
-        val deferredValue = CompletableDeferred<Any?>()
-        pendingRequests.put(token, deferredValue)
+        val future = CompletableFuture<Any?>()
+        pendingRequests.put(token, future)
 
         try {
             write(socketChannel!!, connection!!, token)
-            return runBlocking {
-                withTimeout(timeout.toLong()) {
-                    deferredValue.await()
-                }
-            }
-        } catch (e:TimeoutException) {
+            return future.get(timeout.toLong(), TimeUnit.SECONDS)
+        } catch (e: TimeoutException) {
             pendingRequests.remove(token)
             if (active)
                 return RequestTimeoutException()
@@ -367,11 +359,8 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
      * @since 1.2.0
      */
     private fun resumeHeartBeat() {
-        heartBeatJob = runJob("Client Heart Beat Job") {
-            while (true) {
-                runHeartBeat()
-                delay(HEART_BEAT_INTERVAL, TimeUnit.SECONDS)
-            }
+        heartBeatJob = runJob(HEART_BEAT_INTERVAL, TimeUnit.SECONDS) {
+            runHeartBeat()
         }
     }
 
