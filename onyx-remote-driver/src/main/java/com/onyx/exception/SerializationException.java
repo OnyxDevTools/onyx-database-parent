@@ -1,4 +1,4 @@
-package com.onyx.client.exception;
+package com.onyx.exception;
 
 /**
  * Created by tosborn1 on 7/1/16.

@@ -70,7 +70,6 @@ fun Message.toRequest(serializer:ServerSerializer):RequestToken {
     } else {
         return NetworkBufferPool.withBuffer(buffer) {
             serializer.deserialize(buffer, RequestToken()) as RequestToken
-
         }
     }
 }

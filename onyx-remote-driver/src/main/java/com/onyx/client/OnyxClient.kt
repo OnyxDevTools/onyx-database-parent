@@ -1,7 +1,7 @@
 package com.onyx.client
 
-import com.onyx.client.exception.ConnectionFailedException
-import com.onyx.client.exception.OnyxServerException
+import com.onyx.exception.ConnectionFailedException
+import com.onyx.exception.OnyxServerException
 
 /**
  * Created by tosborn1 on 6/26/16.

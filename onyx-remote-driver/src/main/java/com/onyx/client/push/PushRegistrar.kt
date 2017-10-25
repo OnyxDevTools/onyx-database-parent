@@ -1,13 +1,13 @@
-package com.onyx.client.push;
+package com.onyx.client.push
 
-import com.onyx.client.exception.OnyxServerException;
+import com.onyx.exception.OnyxServerException
 
 /**
  * Created by tosborn1 on 3/27/17.
  *
  * Register a consumer with the given subscriber information
  */
-public interface PushRegistrar {
+interface PushRegistrar {
 
     /**
      * Register a consumer with a subscriber
@@ -17,7 +17,8 @@ public interface PushRegistrar {
      *
      * @since 1.3.0
      */
-    void register(PushSubscriber consumer, PushConsumer responder) throws OnyxServerException;
+    @Throws(OnyxServerException::class)
+    fun register(consumer: PushSubscriber, responder: PushConsumer)
 
     /**
      * De register a push registration.  This API is for clients to take the original subscriber containing
@@ -30,6 +31,7 @@ public interface PushRegistrar {
      *
      * @since 1.3.0
      */
-    void unregister(PushSubscriber subscriber) throws OnyxServerException;
+    @Throws(OnyxServerException::class)
+    fun unregister(subscriber: PushSubscriber)
 
 }

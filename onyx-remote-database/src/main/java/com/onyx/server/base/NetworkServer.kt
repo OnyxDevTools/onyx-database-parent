@@ -9,13 +9,15 @@ import com.onyx.client.base.engine.PacketTransportEngine
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine
 import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine
 import com.onyx.client.connection.ConnectionFactory
-import com.onyx.client.exception.MethodInvocationException
-import com.onyx.client.exception.ServerClosedException
+import com.onyx.exception.MethodInvocationException
+import com.onyx.exception.ServerClosedException
 import com.onyx.client.handlers.RequestHandler
 import com.onyx.client.push.PushSubscriber
 import com.onyx.client.push.PushPublisher
 import com.onyx.client.toRequest
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.async
+import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
@@ -42,10 +44,10 @@ import java.util.concurrent.atomic.AtomicLong
  *
  *
  * This utilizes off heap buffering.  It sets up a buffer pool for how many active threads you can have.
- * Each connection buffer pool contains 5 allocated buffers with a minimum of 16k bytes.  Be
- * wary on how much you allocate.
+ * Each connection buffer pool contains 2 allocated buffers.  The size is specified within the packet transport
+ * engine.  Be wary on how much you allocate since they are allocated for each connection
  *
- * @since 2.0.0 Refactored to Use co-routines and to be non blocking.  Also change to Kotlin.
+ * @since 2.0.0 Refactored to be in Kotlin.
  */
 open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
 
@@ -65,10 +67,22 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
      */
     override fun start() {
 
+        // Create a dummy transport engine in order to see how much the buffer allocation should be
+        val transportPacketTransportEngine: PacketTransportEngine = if (useSSL()) {
+            val engine = sslContext!!.createSSLEngine()
+            engine.useClientMode = false
+            engine.beginHandshake()
+            SecurePacketTransportEngine(engine)
+        } else {
+            UnsecuredPacketTransportEngine()
+        }
+
         selector = SelectorProvider.provider().openSelector()
         serverSocketChannel = ServerSocketChannel.open()
         serverSocketChannel!!.apply {
             socket().reuseAddress = true
+            socket().receiveBufferSize = transportPacketTransportEngine.packetSize
+            socket().setPerformancePreferences(0,2,1)
             configureBlocking(false)
             bind(InetSocketAddress(port))
             register(selector, SelectionKey.OP_ACCEPT)
@@ -122,18 +136,27 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
     @Throws(ServerClosedException::class)
     override fun startReadQueue() {
         readJob = runJob(100, TimeUnit.MICROSECONDS) {
+
             try { selector?.select() } catch (e: IOException) { throw ServerClosedException(e) }
 
             val selectedKeys = selector?.selectedKeys()?.iterator()
 
             // Iterate through all the selection keys that have pending reads
             while (selectedKeys?.hasNext()!!) {
-                val key = selectedKeys.next()
-                selectedKeys.remove()
-                when {
-                    !key.isValid || !key.channel().isOpen -> closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
-                    key.isAcceptable -> try { accept(key) } catch (any: Exception) { closeConnection(key.channel() as SocketChannel, key.attachment() as Connection) }
-                    key.isReadable -> { read(key.channel() as SocketChannel, key.attachment() as Connection) }
+                catchAll {
+                    val key = selectedKeys.next()
+                    selectedKeys.remove()
+                    when {
+                        !key.isValid || !key.channel().isOpen -> closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
+                        key.isAcceptable -> try {
+                            accept(key)
+                        } catch (any: Exception) {
+                            closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
+                        }
+                        key.isReadable -> {
+                            read(key.channel() as SocketChannel, key.attachment() as Connection)
+                        }
+                    }
                 }
             }
         }
@@ -153,22 +176,25 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
      */
     override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: Message) {
 
-        val request:RequestToken = message.toRequest(serverSerializer)
+        try {
+            val request: RequestToken = message.toRequest(serverSerializer)
 
-        request.apply {
-            when (packet) {
-                is PushSubscriber -> handlePushSubscription(this, socketChannel, connection)
-                else -> {
-                    packet = try {
-                        requestHandler?.accept(connection, packet)
-                    }
-                    catch (e:Exception) {
-                        MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
-                    }
+            request.apply {
+                when (packet) {
+                    is PushSubscriber -> handlePushSubscription(this, socketChannel, connection)
+                    else -> {
+                        packet = try {
+                            requestHandler?.accept(connection, packet)
+                        } catch (e: Exception) {
+                            MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
+                        }
 
-                    write(socketChannel, connection, this)
+                        write(socketChannel, connection, this)
+                    }
                 }
             }
+        } catch (e:Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -227,7 +253,9 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
             pushSubscribers.remove(subscriber)
         }
 
-        write(socketChannel, connection, message)
+        async {
+            write(socketChannel, connection, message)
+        }
     }
 
     /**
@@ -241,7 +269,9 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
     override fun push(pushSubscriber: PushSubscriber, packet: Any) {
         if (pushSubscriber.channel.isOpen && pushSubscriber.channel.isConnected) {
             pushSubscriber.packet = packet
-            write(pushSubscriber.channel, pushSubscriber.connection, RequestToken(PUSH_NOTIFICATION, pushSubscriber))
+            async {
+                write(pushSubscriber.channel, pushSubscriber.connection, RequestToken(PUSH_NOTIFICATION, pushSubscriber))
+            }
         } else {
             deRegisterSubscriberIdentity(pushSubscriber) // Clean up non connected subscribers if not connected
         }
@@ -295,6 +325,11 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
         }
 
         NetworkBufferPool.init(transportPacketTransportEngine.packetSize)
+        socketChannel.socket().sendBufferSize = transportPacketTransportEngine.packetSize
+        socketChannel.socket().receiveBufferSize = transportPacketTransportEngine.packetSize
+        socketChannel.socket().tcpNoDelay = true
+        socketChannel.socket().oobInline = false
+        socketChannel.socket().setPerformancePreferences(0,2,1)
 
         // Send the buffer pool into the connectionProperties so that they may retain its references
         val connectionProperties = ConnectionFactory.create(transportPacketTransportEngine)
@@ -324,4 +359,5 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
         val REMOVE_SUBSCRIBER_EVENT = 1.toByte()
         val REGISTER_SUBSCRIBER_EVENT = 2.toByte()
     }
+
 }

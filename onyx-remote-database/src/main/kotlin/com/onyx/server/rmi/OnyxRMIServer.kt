@@ -3,7 +3,7 @@ package com.onyx.server.rmi
 import com.onyx.client.SSLPeer
 import com.onyx.client.auth.AuthenticationManager
 import com.onyx.client.base.Connection
-import com.onyx.client.exception.MethodInvocationException
+import com.onyx.exception.MethodInvocationException
 import com.onyx.client.handlers.RequestHandler
 import com.onyx.client.rmi.RMIRequest
 import com.onyx.exception.OnyxException
@@ -84,15 +84,15 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
              * @param `request` Request.  In this case a RMIRequest
              * @return the result
              */
-            override fun accept(connection: Connection, request: Any?): Any? {
+            override fun accept(connection: Connection, `object`: Any?): Any? {
 
-                if (request is RMIRequest) {
-                    val registeredObject = registeredObjects[request.instance]
+                if (`object` is RMIRequest) {
+                    val registeredObject = registeredObjects[`object`.instance]
 
                     if (!verifySession(connection, registeredObject))
                         return InitializationException(InitializationException.CONNECTION_EXCEPTION)
 
-                    val registeredInterface = registeredInterfaces[request.instance]
+                    val registeredInterface = registeredInterfaces[`object`.instance]
 
                     // Get the registered value.  If it does not exist, return an exception
                     if (registeredObject == null) return MethodInvocationException()
@@ -100,7 +100,7 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
                     // Find the correct method.  If it doesn't exist, return an exception
                     val method: Method
                     try {
-                        method = getCorrectMethod(registeredInterface!!, request.method)
+                        method = getCorrectMethod(registeredInterface!!, `object`.method)
                     } catch (e: Exception) {
                         return MethodInvocationException(MethodInvocationException.NO_SUCH_METHOD, e)
                     }
@@ -109,7 +109,7 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
                         method.isAccessible = true
                     return try {
                         // Invoke the method
-                        val result = method.invoke(registeredObject, *request.params)
+                        val result = method.invoke(registeredObject, *`object`.params!!)
                         checkForAuthentication(registeredObject, connection)
                         result
                     } catch (t: Throwable) {

@@ -191,12 +191,12 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
 
     @Throws(BufferingException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun read(bufferStream: BufferStream) {
+    override fun read(buffer: BufferStream) {
         this.values = WeakHashMap()
-        this.identifiers = bufferStream.collection as MutableList<Reference>
-        val className = bufferStream.string
-        this.contextId = bufferStream.string
-        this.hasSelections = bufferStream.boolean
+        this.identifiers = buffer.collection as MutableList<Reference>
+        val className = buffer.string
+        this.contextId = buffer.string
+        this.hasSelections = buffer.boolean
 
         val context = Contexts.get(contextId) ?: Contexts.first()
 
@@ -205,11 +205,11 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     }
 
     @Throws(BufferingException::class)
-    override fun write(bufferStream: BufferStream) {
-        bufferStream.putCollection(this.identifiers)
-        bufferStream.putString(this.entityDescriptor.entityClass.name)
-        bufferStream.putString(contextId)
-        bufferStream.putBoolean(hasSelections)
+    override fun write(buffer: BufferStream) {
+        buffer.putCollection(this.identifiers)
+        buffer.putString(this.entityDescriptor.entityClass.name)
+        buffer.putString(contextId)
+        buffer.putBoolean(hasSelections)
     }
 
     /**

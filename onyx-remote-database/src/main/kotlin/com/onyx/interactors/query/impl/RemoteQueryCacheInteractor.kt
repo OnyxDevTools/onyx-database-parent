@@ -28,7 +28,7 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
      * @since 1.3.1
      */
     override fun subscribe(query: Query) {
-        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber?) as RemoteQueryListener<*>
+        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber) as RemoteQueryListener<*>
         query.changeListener = remoteQueryListener
         super.subscribe(query)
     }
@@ -38,7 +38,7 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
      * of the push subscriber through the publisher.  The publisher keeps track of all registered subscribers.
      *
      * @param results       Results to listen to
-     * @param queryListener listner to respond to cache changes
+     * @param queryListener listener to respond to cache changes
      * @since 1.3.0
      */
     override fun subscribe(results: CachedResults, queryListener: QueryListener<*>) {
@@ -49,14 +49,14 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
     }
 
     /**
-     * Unsubscribe query.  The only difference between this class is that it will also remove the push notification subscriber.
+     * Un-subscribe query.  The only difference between this class is that it will also remove the push notification subscriber.
      *
      * @param query Query to unsubscribe from
      * @return Whether the listener was listening to begin with
      * @since 1.3.0
      */
     override fun unSubscribe(query: Query): Boolean {
-        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber?) as RemoteQueryListener<*>?
+        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber) as RemoteQueryListener<*>?
         if (remoteQueryListener != null) {
             this.pushPublisher!!.deRegisterSubscriberIdentity(remoteQueryListener)
             val cachedResults = getCachedQueryResults(query)

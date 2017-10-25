@@ -39,7 +39,7 @@ class OnyxRMIClient : NetworkClient() {
         val interfaces = arrayOfNulls<Class<*>>(1)
         interfaces[0] = type
 
-        val instance = Proxy.newProxyInstance(type.classLoader, interfaces, RMIClientInvocationHander(type, remoteId))
+        val instance = Proxy.newProxyInstance(type.classLoader, interfaces, RMIClientInvocationHandler(type, remoteId))
 
         // Add it to the local cache
         registeredObjects.put(remoteId, instance)
@@ -55,17 +55,17 @@ class OnyxRMIClient : NetworkClient() {
      *
      * @since 1.3.0
      */
-    private inner class RMIClientInvocationHander internal constructor(type: Class<*>, internal val remoteId: String) : InvocationHandler {
-        internal var methods: List<Method> = ArrayList()
+    private inner class RMIClientInvocationHandler internal constructor(type: Class<*>, internal val remoteId: String) : InvocationHandler {
+        internal var methods: MutableList<Method> = ArrayList()
 
         init {
             val methodArray = type.declaredMethods
             this.methods = Arrays.asList(*methodArray)
-            Collections.sort(this.methods) { o1, o2 -> o1.toString().compareTo(o2.toString()) }
+            this.methods.sortBy { it.toString() }
         }
 
         @Throws(Throwable::class)
-        override fun invoke(proxy: Any, method: Method, args: Array<Any>): Any? {
+        override fun invoke(proxy: Any, method: Method, args: Array<Any?>): Any? {
             val request = RMIRequest(remoteId, methods.indexOf(method).toByte(), args)
             val result = send(request)
             if (result is Exception)

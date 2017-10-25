@@ -1,12 +1,12 @@
-package com.onyx.client.base.engine.impl;
+package com.onyx.client.base.engine.impl
 
-import com.onyx.client.base.engine.AbstractTransportEngine;
-import com.onyx.client.base.engine.PacketTransportEngine;
+import com.onyx.client.base.engine.AbstractTransportEngine
+import com.onyx.client.base.engine.PacketTransportEngine
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import java.nio.ByteBuffer;
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.SSLEngineResult
+import javax.net.ssl.SSLException
+import java.nio.ByteBuffer
 
 /**
  * Created by tosborn1 on 2/12/17.
@@ -15,18 +15,7 @@ import java.nio.ByteBuffer;
  *
  * @since 1.2.0
  */
-public class SecurePacketTransportEngine extends AbstractTransportEngine implements PacketTransportEngine {
-
-    private final SSLEngine sslEngine;
-
-    /**
-     * Constructor with underlying SSL Engine
-     * @param sslEngine SSL Engine
-     */
-    public SecurePacketTransportEngine(SSLEngine sslEngine)
-    {
-        this.sslEngine = sslEngine;
-    }
+class SecurePacketTransportEngine (private val sslEngine: SSLEngine) : AbstractTransportEngine(), PacketTransportEngine {
 
     /**
      * Get Handshake status
@@ -34,10 +23,8 @@ public class SecurePacketTransportEngine extends AbstractTransportEngine impleme
      * @return The current handshake status
      * @since 1.2.0
      */
-    @Override
-    public SSLEngineResult.HandshakeStatus getHandshakeStatus() {
-        return sslEngine.getHandshakeStatus();
-    }
+    override val handshakeStatus: SSLEngineResult.HandshakeStatus
+        get() = sslEngine.handshakeStatus
 
     /**
      * Wrap a from Buffer and put it into another buffer.  It is wrapped with the meta data
@@ -49,10 +36,8 @@ public class SecurePacketTransportEngine extends AbstractTransportEngine impleme
      * @throws SSLException Something bad happened.  Typically indicates some bad memory issues
      * @since 1.2.0
      */
-    @Override
-    public SSLEngineResult wrap(ByteBuffer fromBuffer, ByteBuffer toBuffer) throws SSLException {
-        return sslEngine.wrap(fromBuffer, toBuffer);
-    }
+    @Throws(SSLException::class)
+    override fun wrap(fromBuffer: ByteBuffer, toBuffer: ByteBuffer): SSLEngineResult = sslEngine.wrap(fromBuffer, toBuffer)
 
     /**
      * Unwrap the byte buffer and have a nice clean packet buffer.
@@ -60,34 +45,21 @@ public class SecurePacketTransportEngine extends AbstractTransportEngine impleme
      * @param fromBuffer Network buffer
      * @param toBuffer   Packet application buffer
      * @return The status whether it was successful or not.  Typically OK if successful or BUFFER_UNDERFLOW, if the information
-     *         was insufficient.  Buffer Overflow if the allocated destination buffer was not large enough.
-     *         That should not happen though.
+     * was insufficient.  Buffer Overflow if the allocated destination buffer was not large enough.
+     * That should not happen though.
      *
      * @throws SSLException Something went bad when working with buffers
      */
-    @Override
-    public SSLEngineResult unwrap(ByteBuffer fromBuffer, ByteBuffer toBuffer) throws SSLException{
-        return sslEngine.unwrap(fromBuffer, toBuffer);
-    }
-
-    /**
-     * Return runnable for delegating hand shaking
-     * @since 1.2.0
-     * @return Thread if it applies
-     */
-    @Override
-    public Runnable getDelegatedTask() {
-        return sslEngine.getDelegatedTask();
-    }
+    @Throws(SSLException::class)
+    override fun unwrap(fromBuffer: ByteBuffer, toBuffer: ByteBuffer): SSLEngineResult = sslEngine.unwrap(fromBuffer, toBuffer)
 
     /**
      * Close the outbound connection.  Awww snap, no soup for you
      *
      * @since 1.2.0
      */
-    @Override
-    public void closeOutbound() {
-        sslEngine.closeOutbound();
+    override fun closeOutbound() {
+        sslEngine.closeOutbound()
     }
 
     /**
@@ -96,9 +68,9 @@ public class SecurePacketTransportEngine extends AbstractTransportEngine impleme
      * @throws SSLException General exception occurred when closing the inbound socket.
      * @since 1.2.0
      */
-    @Override
-    public void closeInbound() throws SSLException{
-        sslEngine.closeInbound();
+    @Throws(SSLException::class)
+    override fun closeInbound() {
+        sslEngine.closeInbound()
     }
 
     /**
@@ -108,11 +80,8 @@ public class SecurePacketTransportEngine extends AbstractTransportEngine impleme
      * @since 1.2.0
      * @return Size of the network packet
      */
-    @Override
-    public int getPacketSize()
-    {
-        return sslEngine.getSession().getPacketBufferSize();
-    }
+    override val packetSize: Int
+        get() = sslEngine.session.packetBufferSize
 
     /**
      * Get the size of the application buffer.  This needs to be a little smaller than the packet size so it can account
@@ -122,40 +91,32 @@ public class SecurePacketTransportEngine extends AbstractTransportEngine impleme
      *
      * @since 1.2.0
      */
-    @Override
-    public int getApplicationSize()
-    {
-        return sslEngine.getSession().getApplicationBufferSize();
-    }
+    override val applicationSize: Int
+        get() = sslEngine.session.applicationBufferSize
 
     /**
      * Is the inbound connection done throwing data at you
      * @return Whether it is all wrapped up
      * @since 1.2.0
      */
-    @Override
-    public boolean isInboundDone() {
-        return sslEngine.isInboundDone();
-    }
+    override val isInboundDone: Boolean
+        get() = sslEngine.isInboundDone
 
     /**
      * Is the outbound connection done throwing data at you
      * @return Whether it is all wrapped up
      * @since 1.2.0
      */
-    @Override
-    public boolean isOutboundDone() {
-        return sslEngine.isOutboundDone();
-    }
+    override val isOutboundDone: Boolean
+        get() = sslEngine.isOutboundDone
 
     /**
      * Start the handshake process.  This is officiated on purpose.  Need more info.  Tough shit.
      * @throws SSLException Handshake did not go well :(  Nobody wants to be your friend.
      * @since 1.2.0
      */
-    @Override
-    public void beginHandshake() throws SSLException
-    {
-        sslEngine.beginHandshake();
+    @Throws(SSLException::class)
+    override fun beginHandshake() {
+        sslEngine.beginHandshake()
     }
 }

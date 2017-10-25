@@ -1,11 +1,11 @@
-package com.onyx.client.push;
+package com.onyx.client.push
 
 /**
  * Created by tosborn1 on 3/27/17.
  *
  * Publish a push event.  This is performed by a server.  This should manage the push to the client.
  */
-public interface PushPublisher {
+interface PushPublisher {
 
     /**
      * Send an arbitrary packet to a client
@@ -14,7 +14,7 @@ public interface PushPublisher {
      *
      * @since 1.3.0
      */
-    void push(PushSubscriber pushSubscriber, Object message);
+    fun push(pushSubscriber: PushSubscriber, message: Any)
 
     /**
      * Get actual reference of the push subscriber.
@@ -24,7 +24,7 @@ public interface PushPublisher {
      *
      * @since 1.3.0
      */
-    PushSubscriber getRegisteredSubscriberIdentity(PushSubscriber pushSubscriber);
+    fun getRegisteredSubscriberIdentity(pushSubscriber: PushSubscriber): PushSubscriber?
 
     /**
      * De-register a push subscriber
@@ -33,5 +33,5 @@ public interface PushPublisher {
      *
      * @since 1.3.0
      */
-    void deRegisterSubscriberIdentity(PushSubscriber pushSubscriber);
+    fun deRegisterSubscriberIdentity(pushSubscriber: PushSubscriber)
 }

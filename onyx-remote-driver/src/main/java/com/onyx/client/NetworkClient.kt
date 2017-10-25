@@ -10,15 +10,12 @@ import com.onyx.client.base.engine.PacketTransportEngine
 import com.onyx.client.base.engine.impl.SecurePacketTransportEngine
 import com.onyx.client.base.engine.impl.UnsecuredPacketTransportEngine
 import com.onyx.client.connection.ConnectionFactory
-import com.onyx.client.exception.ConnectionFailedException
-import com.onyx.client.exception.OnyxServerException
-import com.onyx.client.exception.RequestTimeoutException
+import com.onyx.exception.ConnectionFailedException
+import com.onyx.exception.OnyxServerException
+import com.onyx.exception.RequestTimeoutException
 import com.onyx.client.push.PushRegistrar
 import com.onyx.exception.InitializationException
-import com.onyx.extension.common.Job
-import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.delay
-import com.onyx.extension.common.runJob
+import com.onyx.extension.common.*
 import com.onyx.lang.map.OptimisticLockingMap
 
 import javax.net.ssl.SSLContext
@@ -56,7 +53,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
     // Connection information
     private var connection: Connection? = null
     private var socketChannel: SocketChannel? = null
-    private val pendingRequests = ConcurrentHashMap<RequestToken, CompletableFuture<Any?>>()
+    private val pendingRequests = ConcurrentHashMap<RequestToken, DeferredValue<Any?>>()
 
     // Map of push consumers
     private val registeredPushConsumers = OptimisticLockingMap<Long, PushConsumer>(HashMap())
@@ -114,8 +111,12 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
         try {
             socketChannel = SocketChannel.open()
             socketChannel!!.socket().keepAlive = true
-            socketChannel!!.socket().tcpNoDelay = true
+            socketChannel!!.socket().tcpNoDelay = false
             socketChannel!!.socket().reuseAddress = true
+            socketChannel!!.socket().sendBufferSize = transportPacketTransportEngine.packetSize
+            socketChannel!!.socket().receiveBufferSize = transportPacketTransportEngine.packetSize
+            socketChannel!!.socket().oobInline = false
+            socketChannel!!.socket().setPerformancePreferences(0,2,1)
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
@@ -124,14 +125,14 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
         this.connection = ConnectionFactory.create(transportPacketTransportEngine)
 
         if (transportPacketTransportEngine is UnsecuredPacketTransportEngine) {
-            transportPacketTransportEngine.setSocketChannel(socketChannel)
+            transportPacketTransportEngine.socketChannel = socketChannel
         }
 
         try {
             socketChannel?.socket()?.connect(InetSocketAddress(host, port), connectTimeout * 1000)
             while (!socketChannel!!.finishConnect())
                 delay(10, TimeUnit.MILLISECONDS)
-            socketChannel?.configureBlocking(false)
+            socketChannel?.configureBlocking(true)
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
@@ -192,7 +193,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
      * @since 2.0.0 Refactored as a Job
      */
     override fun startReadQueue() {
-        readJob = runJob(100, TimeUnit.MICROSECONDS) {
+        readJob = runJob(100, TimeUnit.NANOSECONDS) {
             catchAll {
                 read(socketChannel!!, connection!!)
             }
@@ -226,7 +227,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
 
         verifyConnection()
         val token = RequestToken(generateNewToken(), packet)
-        val future = CompletableFuture<Any?>()
+        val future = DeferredValue<Any?>()
         pendingRequests.put(token, future)
 
         try {

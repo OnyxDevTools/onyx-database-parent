@@ -1,17 +1,16 @@
-package com.onyx.client.serialization;
+package com.onyx.client.serialization
 
-import com.onyx.buffer.BufferStreamable;
-import com.onyx.exception.BufferingException;
+import com.onyx.buffer.BufferStreamable
+import com.onyx.exception.BufferingException
 
-import java.nio.ByteBuffer;
+import java.nio.ByteBuffer
 
 /**
  * Created by tosborn1 on 7/1/16.
  *
  * This class is the basic interface of serializer that is used by the server.
  */
-public interface ServerSerializer
-{
+interface ServerSerializer {
 
     /**
      * Serialize and put the bytes into the input buffer
@@ -20,7 +19,8 @@ public interface ServerSerializer
      *
      * @throws BufferingException Problem while reading from input stream
      */
-    ByteBuffer serialize(BufferStreamable serializable, ByteBuffer inputBuffer) throws BufferingException;
+    @Throws(BufferingException::class)
+    fun serialize(serializable: BufferStreamable, inputBuffer: ByteBuffer): ByteBuffer
 
     /**
      * Deserialize the bytes from the buffer
@@ -30,5 +30,6 @@ public interface ServerSerializer
      *
      * @throws BufferingException Problem while writing to output stream
      */
-    BufferStreamable deserialize(ByteBuffer buffer, BufferStreamable streamable) throws BufferingException;
+    @Throws(BufferingException::class)
+    fun deserialize(buffer: ByteBuffer, streamable: BufferStreamable): BufferStreamable
 }

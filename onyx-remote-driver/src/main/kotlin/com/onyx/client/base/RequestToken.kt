@@ -24,7 +24,7 @@ class RequestToken() : BufferStreamable {
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {
         token = buffer.short
-        packet = buffer.value as Serializable?
+        packet = buffer.value
     }
 
     @Throws(BufferingException::class)
@@ -36,6 +36,5 @@ class RequestToken() : BufferStreamable {
     override fun hashCode(): Int = token.toInt()
 
     override fun equals(other: Any?): Boolean = other != null && other is RequestToken && other.token == token
-
 
 }

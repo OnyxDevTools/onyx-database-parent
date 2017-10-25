@@ -2,7 +2,7 @@ package com.onyx.persistence.factory.impl
 
 import com.onyx.client.SSLPeer
 import com.onyx.client.auth.AuthenticationManager
-import com.onyx.client.exception.ConnectionFailedException
+import com.onyx.exception.ConnectionFailedException
 import com.onyx.client.rmi.OnyxRMIClient
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException

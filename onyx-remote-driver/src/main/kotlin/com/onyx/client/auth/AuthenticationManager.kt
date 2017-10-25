@@ -1,6 +1,6 @@
 package com.onyx.client.auth
 
-import com.onyx.client.exception.RequestTimeoutException
+import com.onyx.exception.RequestTimeoutException
 import com.onyx.exception.InitializationException
 
 /**
