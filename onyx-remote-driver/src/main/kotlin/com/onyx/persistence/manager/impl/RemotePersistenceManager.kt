@@ -353,17 +353,6 @@ open class RemotePersistenceManager : PersistenceManager {
     override fun saveRelationshipsForEntity(entity: IManagedEntity, relationship: String, relationshipIdentifiers: Set<Any>) = proxy.saveRelationshipsForEntity(entity, relationship, relationshipIdentifiers)
 
     /**
-     * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
-     *
-     * @since 1.0.0
-     * @param referenceId Reference location within database
-     * @return Managed Entity
-     * @throws OnyxException The reference does not exist for that type
-     */
-    @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E? = proxy.getWithReferenceId(entityType, referenceId)
-
-    /**
      * Get an entity by its partition reference.  This is the same as the method above but for objects that have
      * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
      * hydrate objects in random partitions.

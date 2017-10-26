@@ -1,7 +1,6 @@
 package web.queries;
 
 import category.WebServerTests;
-import com.onyx.application.WebDatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -9,7 +8,6 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import entities.PerformanceEntity;
 import junit.framework.Assert;
-import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;

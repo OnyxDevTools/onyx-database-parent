@@ -1,4 +1,4 @@
-package com.onyx.application
+package com.onyx.application.impl
 
 import com.onyx.cli.WebServerCommandLineParser
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
@@ -99,8 +99,7 @@ class WebDatabaseProxyServer(databaseLocation: String) : WebDatabaseServer(datab
          */
         @Throws(Exception::class)
         @JvmStatic
-        fun main(args: Array<String>) {
-
+        open fun main(args: Array<String>) {
 
             val parser = WebServerCommandLineParser(args)
             val instance = WebDatabaseServer(parser.databaseLocation)

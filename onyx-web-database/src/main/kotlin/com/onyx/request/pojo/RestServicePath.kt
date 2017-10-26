@@ -7,7 +7,6 @@ package com.onyx.request.pojo
 enum class RestServicePath constructor(val path: String) {
 
     SAVE("/saveEntity"),
-    FIND_BY_REFERENCE("/findByReferenceId"),
     FIND_BY_PARTITION_REFERENCE("/findByPartitionReference"),
     FIND_BY_PARTITION("/findWithPartitionId"),
     FIND("/find"),

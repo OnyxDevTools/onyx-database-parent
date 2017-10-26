@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 /**
  * Created by tosborn on 8/30/14.
  *
- * Pojo for entity request
+ * POJO for entity request
  */
 class EntityRequestBody : BufferStreamable {
     var entity: Any? = null

@@ -523,19 +523,6 @@ interface PersistenceManager {
     fun saveRelationshipsForEntity(entity: IManagedEntity, relationship: String, relationshipIdentifiers: Set<Any>)
 
     /**
-     * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
-     *
-     * @since 1.0.0
-     * @param entityType Type of managed entity
-     * @param referenceId Reference location within database
-     * @return Managed Entity
-     * @throws OnyxException The reference does not exist for that type
-     */
-    @Throws(OnyxException::class)
-    @Deprecated("Should use entire reference")
-    fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E?
-
-    /**
      * Get an entity by its partition reference.  This is the same as the method above but for objects that have
      * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
      * hydrate objects in random partitions.

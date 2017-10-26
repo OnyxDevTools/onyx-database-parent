@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 /**
  * Created by timothy.osborn on 4/8/15.
  *
- * Pojo for list request
+ * POJO for list request
  */
 class EntityListRequestBody : BufferStreamable {
 

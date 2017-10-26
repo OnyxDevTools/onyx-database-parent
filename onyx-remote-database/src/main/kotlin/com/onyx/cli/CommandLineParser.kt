@@ -104,7 +104,7 @@ open class CommandLineParser(args: Array<String>) {
     companion object {
 
         // Command Line Options
-        protected val OPTION_PORT = "port"
+        val OPTION_PORT = "port"
         private val OPTION_USER = "user"
         private val OPTION_PASSWORD = "password"
         private val OPTION_LOCATION = "databaseLocation"

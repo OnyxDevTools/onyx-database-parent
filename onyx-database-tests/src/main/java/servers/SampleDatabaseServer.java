@@ -1,6 +1,6 @@
 package servers;
 
-import com.onyx.application.WebDatabaseServer;
+import com.onyx.application.impl.WebDatabaseServer;
 import entities.SimpleEntity;
 
 /**

@@ -478,22 +478,6 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
     }
 
     /**
-     * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
-     *
-     * @since 1.0.0
-     * @param referenceId Reference location within database
-     * @return Managed Entity
-     * @throws OnyxException The reference does not exist for that type
-     */
-    @Throws(OnyxException::class)
-    override fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E? {
-        val body = EntityRequestBody()
-        body.id = referenceId
-        body.type = entityType.name
-        return this.performCall(url + AbstractWebPersistenceManager.FIND_BY_REFERENCE_ID, null, entityType, body) as E
-    }
-
-    /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
      * This is unsupported in the WebPersistenceManager.  Please use the native remote driver aka RemotePersistenceManager to take advantage of this feature

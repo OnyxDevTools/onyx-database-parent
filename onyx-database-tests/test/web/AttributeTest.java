@@ -1,7 +1,7 @@
 package web;
 
 import category.WebServerTests;
-import com.onyx.application.WebDatabaseServer;
+import com.onyx.application.impl.WebDatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.exception.InitializationException;
 import entities.AllAttributeEntity;

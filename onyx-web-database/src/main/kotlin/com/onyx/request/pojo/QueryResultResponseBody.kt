@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 /**
  * Created by timothy.osborn on 4/13/15.
  *
- * Pojo for query result
+ * POJO for query result
  */
 class QueryResultResponseBody constructor() : BufferStreamable {
 

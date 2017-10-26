@@ -434,30 +434,6 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
     }
 
     /**
-     * Get entity with Reference Id.  This is used within the LazyResultsCollection and LazyQueryResults to fetch entities with file record ids.
-     *
-     * @param referenceId Reference location within database
-     * @return Managed Entity
-     * @throws OnyxException The reference does not exist for that type
-     * @since 1.0.0
-     */
-    @Throws(OnyxException::class)
-    @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity> getWithReferenceId(entityType: Class<*>, referenceId: Long): E {
-        context.checkForKillSwitch()
-
-        var entity:IManagedEntity? = entityType.createNewEntity()
-        val descriptor = context.getDescriptorForEntity(entity!!, "")
-        val recordInteractor = context.getRecordInteractor(descriptor)
-
-        // Find the object
-        entity = recordInteractor.getWithReferenceId(referenceId)
-        entity?.hydrateRelationships(context)
-
-        return entity as E
-    }
-
-    /**
      * Get an entity by its partition reference.  This is the same as the method above but for objects that have
      * a reference as part of a partition.  An example usage would be in LazyQueryCollection so that it may
      * hydrate objects in random partitions.

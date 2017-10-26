@@ -1,6 +1,5 @@
-package com.onyx.application
+package com.onyx.application.impl
 
-import com.onyx.application.impl.DatabaseServer
 import com.onyx.cli.WebServerCommandLineParser
 import com.onyx.server.*
 import io.undertow.Handlers
@@ -142,9 +141,7 @@ open class WebDatabaseServer(databaseLocation: String) : DatabaseServer(database
      * Private helper method to determine if SSL is being used.
      * @return Whether the keystore file path is populated
      */
-    private fun useSSL(): Boolean {
-        return sslKeystoreFilePath != null && sslKeystoreFilePath!!.isNotEmpty()
-    }
+    private fun useSSL(): Boolean = sslKeystoreFilePath != null && sslKeystoreFilePath!!.isNotEmpty()
 
     companion object {
 
