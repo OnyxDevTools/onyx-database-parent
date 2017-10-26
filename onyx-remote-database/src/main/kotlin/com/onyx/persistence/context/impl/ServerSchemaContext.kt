@@ -1,6 +1,6 @@
 package com.onyx.persistence.context.impl
 
-import com.onyx.client.push.PushPublisher
+import com.onyx.network.push.PushPublisher
 import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.query.impl.RemoteQueryCacheInteractor
 

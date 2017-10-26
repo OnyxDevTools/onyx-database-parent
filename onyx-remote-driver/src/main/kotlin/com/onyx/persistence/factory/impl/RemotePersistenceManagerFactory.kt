@@ -1,13 +1,13 @@
 package com.onyx.persistence.factory.impl
 
-import com.onyx.client.SSLPeer
-import com.onyx.client.auth.AuthenticationManager
+import com.onyx.network.ssl.SSLPeer
+import com.onyx.network.auth.AuthenticationManager
 import com.onyx.exception.ConnectionFailedException
-import com.onyx.client.rmi.OnyxRMIClient
+import com.onyx.network.rmi.OnyxRMIClient
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
-import com.onyx.mutableLazy
+import com.onyx.lang.property.mutableLazy
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.RemoteSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
@@ -58,7 +58,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
 
     // region Private Values
 
-    private val onyxRMIClient:OnyxRMIClient by lazy { OnyxRMIClient() }
+    private val onyxRMIClient: OnyxRMIClient by lazy { OnyxRMIClient() }
 
     // endregion
 

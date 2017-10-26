@@ -1,6 +1,6 @@
-import com.onyx.client.auth.AuthenticationManager;
-import com.onyx.client.rmi.OnyxRMIClient;
-import com.onyx.server.rmi.OnyxRMIServer;
+import com.onyx.network.auth.AuthenticationManager;
+import com.onyx.network.rmi.OnyxRMIClient;
+import com.onyx.network.rmi.OnyxRMIServer;
 import org.junit.Test;
 import rmi.IMessage;
 import rmi.MessageImplementation;

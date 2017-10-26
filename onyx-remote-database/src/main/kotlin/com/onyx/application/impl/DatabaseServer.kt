@@ -1,18 +1,17 @@
 package com.onyx.application.impl
 
 import com.onyx.application.OnyxServer
-import com.onyx.client.SSLPeer
-import com.onyx.client.auth.AuthenticationManager
+import com.onyx.network.ssl.SSLPeer
+import com.onyx.network.auth.AuthenticationManager
 import com.onyx.entity.SystemUser
 import com.onyx.entity.SystemUserRole
 import com.onyx.persistence.context.impl.ServerSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.factory.impl.ServerPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.server.auth.impl.DefaultAuthenticationManager
-import com.onyx.server.base.AbstractDatabaseServer
+import com.onyx.network.auth.impl.DefaultAuthenticationManager
 import com.onyx.cli.CommandLineParser
-import com.onyx.server.rmi.OnyxRMIServer
+import com.onyx.network.rmi.OnyxRMIServer
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.persistence.IManagedEntity

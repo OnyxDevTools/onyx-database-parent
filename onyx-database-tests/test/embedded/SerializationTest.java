@@ -2,7 +2,7 @@ package embedded;
 
 import com.onyx.buffer.BufferPool;
 import com.onyx.buffer.BufferStream;
-import com.onyx.client.base.RequestToken;
+import com.onyx.network.transport.data.RequestToken;
 import com.onyx.exception.OnyxException;
 import entities.AllAttributeEntity;
 import org.junit.Assert;

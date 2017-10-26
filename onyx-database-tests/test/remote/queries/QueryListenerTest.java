@@ -1,6 +1,7 @@
 package remote.queries;
 
 import category.RemoteServerTests;
+import com.onyx.application.impl.DatabaseServer;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.query.Query;
@@ -8,6 +9,7 @@ import com.onyx.persistence.query.QueryListener;
 import entities.SimpleEntity;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import remote.base.RemoteBaseTest;

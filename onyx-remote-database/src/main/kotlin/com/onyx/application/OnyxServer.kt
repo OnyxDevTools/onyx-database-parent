@@ -1,6 +1,6 @@
 package com.onyx.application
 
-import com.onyx.client.SSLPeer
+import com.onyx.network.ssl.SSLPeer
 import com.onyx.interactors.encryption.EncryptionInteractor
 
 /**
@@ -18,19 +18,6 @@ import com.onyx.interactors.encryption.EncryptionInteractor
  * @since 1.0.0
  */
 interface OnyxServer : SSLPeer {
-
-    /**
-     * Starts the database server
-     * @since 1.0.0
-     */
-    fun start()
-
-
-    /**
-     * Stops the database server
-     * @since 1.0.0
-     */
-    fun stop()
 
     /**
      * Flag to indicate whether the database is running or not
@@ -54,6 +41,18 @@ interface OnyxServer : SSLPeer {
      * @see com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
      */
     var encryption: EncryptionInteractor
+
+    /**
+     * Starts the database server
+     * @since 1.0.0
+     */
+    fun start()
+
+    /**
+     * Stops the database server
+     * @since 1.0.0
+     */
+    fun stop()
 
     /**
      * Join Thread, in order to keep the server alive

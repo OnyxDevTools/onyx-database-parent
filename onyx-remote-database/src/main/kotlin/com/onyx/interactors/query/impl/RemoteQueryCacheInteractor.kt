@@ -1,13 +1,13 @@
 package com.onyx.interactors.query.impl
 
-import com.onyx.client.push.PushPublisher
-import com.onyx.client.push.PushSubscriber
+import com.onyx.network.push.PushPublisher
+import com.onyx.network.push.PushSubscriber
 import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.QueryListener
-import com.onyx.persistence.query.impl.RemoteQueryListener
+import com.onyx.persistence.query.RemoteQueryListener
 
 /**
  * Created by tosborn1 on 3/27/17.

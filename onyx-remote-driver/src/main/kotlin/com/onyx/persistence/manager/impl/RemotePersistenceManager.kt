@@ -1,6 +1,6 @@
 package com.onyx.persistence.manager.impl
 
-import com.onyx.client.push.PushRegistrar
+import com.onyx.network.push.PushRegistrar
 import com.onyx.exception.OnyxException
 import com.onyx.exception.StreamException
 import com.onyx.extension.copy
@@ -12,7 +12,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.impl.RemoteQueryListener
+import com.onyx.persistence.query.RemoteQueryListener
 import com.onyx.persistence.stream.QueryStream
 
 /**
