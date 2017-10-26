@@ -200,7 +200,7 @@ public class Encryption {
      * This class is used to create an Encryption instance, you should provide ALL data or start
      * with the Default Builder provided by the getDefaultBuilder method
      */
-    @SuppressWarnings("WeakerAccess")
+    @SuppressWarnings({"WeakerAccess", "SpellCheckingInspection"})
     private static class Builder {
 
         private byte[] mIv;

@@ -40,7 +40,7 @@ public class DeletingAnEntityExample {
         Person deletedPerson = manager.findById(Person.class, savedPerson.getId());
 
         if (deletedPerson == null) {
-            System.out.println("Entity was deleted sucessfully");
+            System.out.println("Entity was deleted successfully");
         }
 
         factory.close(); //Close the embedded database after you're done with it

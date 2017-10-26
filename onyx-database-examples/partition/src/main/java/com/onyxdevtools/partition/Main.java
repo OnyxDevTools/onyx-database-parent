@@ -34,7 +34,7 @@ public class Main extends AbstractDemo {
 
         //Initialize the database and get a handle on the PersistenceManager
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();

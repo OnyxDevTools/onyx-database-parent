@@ -63,16 +63,17 @@ class ManualMigrationDemo {
         final Query accountQuery = new Query(Account.class, new QueryCriteria("accountId", QueryCriteriaOperator.NOT_NULL));
 
         persistenceManager.stream(accountQuery, (QueryMapStream) (o, internalPersistenceManager) -> {
-            Map accountMap = o;
             try {
 
+                @SuppressWarnings("RedundantCast")
+                Map mapValue = (Map)o;
                 // Ensure the property still exists within the data.
-                if(accountMap.containsKey("balanceDue"))
+                if(mapValue.containsKey("balanceDue"))
                 {
-                    double balanceDue = (double) accountMap.get("balanceDue");
+                    double balanceDue = (double) mapValue.get("balanceDue");
 
                     // This field has been updated to long in the new data model but, the old data model persisted it as an int.  So, that is the reason why we cast it as an integer.
-                    int accountId = (int) accountMap.get("accountId");
+                    int accountId = (int) mapValue.get("accountId");
 
                     // Get the latest invoice
                     final QueryCriteria fetchInvoiceCriteria = new QueryCriteria("invoiceId", QueryCriteriaOperator.NOT_NULL).and("account.accountId", QueryCriteriaOperator.EQUAL, accountId);

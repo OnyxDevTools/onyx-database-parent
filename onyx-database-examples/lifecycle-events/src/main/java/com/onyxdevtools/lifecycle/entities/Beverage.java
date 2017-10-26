@@ -5,13 +5,11 @@ package com.onyxdevtools.lifecycle.entities;
  *
  * These are the possible beverages that lead to different behaviors.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused","SpellCheckingInspection"})
 public enum Beverage
 {
     BEER("Im feeling dangerous", "Lets makeout on a plane and annoy the people around me!", "Hold my hair back"),
-    //noinspection SpellCheckingInspection
     WATER("Soooo thirsty", "Satisfied", "I gotta pee"),
-    //noinspection SpellCheckingInspection
     COFFEE("Very Sleepy", "Bouncing off the walls", "Zzzzzzzzzz");
 
     protected String preConsumption;

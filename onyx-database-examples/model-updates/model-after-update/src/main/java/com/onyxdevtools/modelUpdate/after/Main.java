@@ -35,7 +35,7 @@ public class Main
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
 
         //noinspection SpellCheckingInspection
-        factory.setCredentials("onyx", "SavingDataisFun!"); //2
+        factory.setCredentials("onyx", "SavingDataIsFun!"); //2
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();  //5

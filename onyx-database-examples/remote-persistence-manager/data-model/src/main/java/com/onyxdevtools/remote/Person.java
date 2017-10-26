@@ -8,7 +8,6 @@ import com.onyx.persistence.annotations.Identifier;
 import java.util.Date;
 
 @Entity
-@SuppressWarnings("unused")
 public class Person extends ManagedEntity
 {
 
@@ -28,6 +27,7 @@ public class Person extends ManagedEntity
     @Attribute
     private String lastName;
 
+    @SuppressWarnings("unused")
     public String getId()
     {
         return id;
@@ -38,21 +38,25 @@ public class Person extends ManagedEntity
         this.id = id;
     }
 
+    @SuppressWarnings("unused")
     public Date getDateCreated()
     {
         return dateCreated;
     }
 
+    @SuppressWarnings("unused")
     public void setDateCreated(Date dateCreated)
     {
         this.dateCreated = dateCreated;
     }
 
+    @SuppressWarnings("unused")
     public Date getDateUpdated()
     {
         return dateUpdated;
     }
 
+    @SuppressWarnings("unused")
     public void setDateUpdated(Date dateUpdated)
     {
         this.dateUpdated = dateUpdated;

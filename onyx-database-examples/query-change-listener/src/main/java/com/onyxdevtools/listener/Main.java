@@ -17,6 +17,7 @@ import java.io.File;
  *
  * This example demonstrates how to subscribe to query changes.
  */
+@SuppressWarnings("unused")
 public class Main {
 
     public static void main(String[] args) throws OnyxException
@@ -49,19 +50,16 @@ public class Main {
         hallOfFameQuarterBackQuery.setChangeListener(new QueryListener<Player>()
         {
             @Override
-            @SuppressWarnings("UNUSED")
             public void onItemUpdated(Player item) {
                 System.out.println("Player " + item.getFirstName() + " " + item.getLastName() + " has been updated!");
             }
 
             @Override
-            @SuppressWarnings("UNUSED")
             public void onItemAdded(Player item) {
                 System.out.println("Player " + item.getFirstName() + " " + item.getLastName() + " has been added!");
             }
 
             @Override
-            @SuppressWarnings("UNUSED")
             public void onItemRemoved(Player item) {
                 System.out.println("Player " + item.getFirstName() + " " + item.getLastName() + " has been removed!");
             }

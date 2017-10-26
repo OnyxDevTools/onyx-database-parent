@@ -104,7 +104,7 @@ public class JPAPersistenceManager implements ProviderPersistenceManager {
             entityManager.getTransaction().begin();
             try {
 
-                Object object = entityManager.find(clazz, identifier);
+                @SuppressWarnings("unchecked") Object object = entityManager.find(clazz, identifier);
                 entityManager.remove(object);
                 entityManager.getTransaction().commit();
             } catch (Exception e) {
@@ -124,11 +124,11 @@ public class JPAPersistenceManager implements ProviderPersistenceManager {
      * @param identifier Entity's primary key
      * @return Object within database if found
      */
-    @SuppressWarnings("UNCHECKED_CAST")
     public Object find(Class clazz, Object identifier) {
         EntityManager entityManager = null;
         try {
             entityManager = entityManagers.poll();
+            //noinspection unchecked
             return entityManager.find(clazz, identifier);
         } catch (Exception e) {
             e.printStackTrace();

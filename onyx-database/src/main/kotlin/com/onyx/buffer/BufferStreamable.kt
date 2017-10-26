@@ -9,7 +9,7 @@ import java.io.Serializable
 /**
  * Created by Tim Osborn on 7/30/16.
  *
- * This interface is intended to enable an value for expandableByteBuffer io.  It works much like the Externalizable interface
+ * This interface is intended to enable an value for expandableByteBuffer io.  It works much like the Externalize interface
  * except without using input and output streams it uses a ByteBuffer.  The IO is wrapped within the BufferStream.
  */
 interface BufferStreamable : Serializable {

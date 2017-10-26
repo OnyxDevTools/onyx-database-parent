@@ -8,4 +8,4 @@ import com.onyx.exception.OnyxException
  *
  * Response POJO for exception
  */
-class ExceptionResponse @JvmOverloads constructor(val exception: OnyxException? = null) : BufferStreamable
+class ExceptionResponse @JvmOverloads constructor(val exception: OnyxException? = null, @Suppress("UNUSED") val exceptionType: String? = null) : BufferStreamable

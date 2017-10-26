@@ -21,7 +21,7 @@ class CascadeDeferExample extends AbstractDemo
                 File.separatorChar + "relationship-cascade-db.oxd";
         final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
 
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);

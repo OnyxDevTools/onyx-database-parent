@@ -1,6 +1,6 @@
 # quickstart
 
-This project was created as a suplemental resource for this tutorial: [onyx database quickstart](https://onyxdevtools.com/learn/getting-started)
+This project was created as a supplemental resource for this tutorial: [onyx database quickstart](https://onyxdevtools.com/learn/getting-started)
 
 ***How To Install:*** <br />
 From the quickstart directory simply run this command:
