@@ -20,7 +20,7 @@ import com.onyx.persistence.query.QueryPartitionMode
 fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = context.getDescriptorForEntity(this.entityType, "")):Boolean {
     // If there are no criteria, add a dummy criteria to the list
     if (this.criteria == null) {
-        this.criteria = QueryCriteria<Any>(descriptor.identifier!!.name, QueryCriteriaOperator.NOT_EQUAL)
+        this.criteria = QueryCriteria(descriptor.identifier!!.name, QueryCriteriaOperator.NOT_EQUAL)
     }
 
     definePartition(context)

@@ -58,25 +58,25 @@ abstract class AbstractWebPersistenceManager : PersistenceManager {
 
         if (res!!.statusCode == HttpStatus.OK) {
 
-            if (returnType == QueryResultResponseBody::class.java) {
-                response = objectMapper.convertValue<QueryResultResponseBody>(res.body, returnType)
+            when (returnType) {
+                QueryResultResponseBody::class.java -> {
+                    response = objectMapper.convertValue<QueryResultResponseBody>(res.body, returnType)
 
-                val responseValue = response
-                if ((responseValue!! as QueryResultResponseBody).resultList != null) {
+                    val responseValue = response
                     for (i in 0 until responseValue.resultList.size) {
                         responseValue.resultList[i] = objectMapper.convertValue(responseValue.resultList[i], elementType)
                     }
                 }
-            } else if (returnType == List::class.java) {
-                val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, elementType!!)
-                try {
-                    response = objectMapper.readValue<Any>(res.body as String, javaType)
-                } catch (e: IOException) {
-                    e.printStackTrace()
-                }
+                List::class.java -> {
+                    val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, elementType!!)
+                    try {
+                        response = objectMapper.readValue<Any>(res.body as String, javaType)
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
 
-            } else {
-                response = objectMapper.convertValue(res.body, returnType)
+                }
+                else -> response = objectMapper.convertValue(res.body, returnType)
             }
         } else if (res.statusCode == HttpStatus.SEE_OTHER) {
 
@@ -104,8 +104,6 @@ abstract class AbstractWebPersistenceManager : PersistenceManager {
         get() = HttpHeaders()
 
     companion object {
-
-
         val SAVE = "/saveEntity"
         val FIND = "/find"
         val EXISTS = "/exists"
@@ -118,7 +116,6 @@ abstract class AbstractWebPersistenceManager : PersistenceManager {
         val BATCH_SAVE = "/batchSave"
         val BATCH_DELETE = "/batchDelete"
         val SAVE_RELATIONSHIPS = "/saveRelationships"
-        val FIND_BY_REFERENCE_ID = "/findByReferenceId"
         val FIND_BY_PARTITION_REFERENCE = "/findByPartitionReference"
         val FIND_WITH_PARTITION_ID = "/findWithPartitionId"
     }

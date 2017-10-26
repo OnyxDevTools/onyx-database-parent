@@ -36,7 +36,7 @@ object ScannerFactory {
      * @since 1.3.0
      */
     @Throws(OnyxException::class)
-    fun getFullTableScanner(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
+    fun getFullTableScanner(context:SchemaContext, criteria: QueryCriteria, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")
         } else {
@@ -63,7 +63,7 @@ object ScannerFactory {
      * @return Scanner implementation
      */
     @Throws(OnyxException::class)
-    fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria<*>, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
+    fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
 
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")

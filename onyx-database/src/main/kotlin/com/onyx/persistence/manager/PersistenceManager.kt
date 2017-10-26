@@ -319,7 +319,7 @@ interface PersistenceManager {
         val descriptor = context.getBaseDescriptorForEntity(clazz)
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
-        val criteria = QueryCriteria<Nothing>(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
+        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
         return list(clazz, criteria)
     }
 
@@ -337,7 +337,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>): List<E> = list(clazz, criteria, arrayOf())
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria): List<E> = list(clazz, criteria, arrayOf())
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -355,7 +355,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: Array<QueryOrder>): List<E> = list(clazz, criteria, 0, -1, orderBy)
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: Array<QueryOrder>): List<E> = list(clazz, criteria, 0, -1, orderBy)
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results.
@@ -373,7 +373,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: QueryOrder): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: QueryOrder): List<E> {
         val queryOrders = arrayOf(orderBy)
         return list(clazz, criteria, queryOrders)
     }
@@ -394,7 +394,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, partitionId: Any): List<E> = list(clazz, criteria, arrayOf(), partitionId)
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, partitionId: Any): List<E> = list(clazz, criteria, arrayOf(), partitionId)
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -414,7 +414,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: Array<QueryOrder>, partitionId: Any): List<E> = list(clazz, criteria, 0, -1, orderBy, partitionId)
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: Array<QueryOrder>, partitionId: Any): List<E> = list(clazz, criteria, 0, -1, orderBy, partitionId)
 
     /**
      * Provides a list of results with a list of given criteria with no limits on number of results within a partition.
@@ -434,7 +434,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, orderBy: QueryOrder, partitionId: Any): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, orderBy: QueryOrder, partitionId: Any): List<E> {
         val queryOrders = arrayOf(orderBy)
         return list(clazz, criteria, queryOrders, partitionId)
     }
@@ -461,7 +461,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?): List<E> {
         val tmpQuery = Query(clazz, criteria)
         tmpQuery.maxResults = maxResults
         tmpQuery.firstRow = start
@@ -495,7 +495,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while filtering results
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria<*>, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?, partitionId: Any): List<E> {
+    fun <E : IManagedEntity> list(clazz: Class<*>, criteria: QueryCriteria, start: Int, maxResults: Int, orderBy: Array<QueryOrder>?, partitionId: Any): List<E> {
 
         val tmpQuery = Query(clazz, criteria)
         tmpQuery.partition = partitionId

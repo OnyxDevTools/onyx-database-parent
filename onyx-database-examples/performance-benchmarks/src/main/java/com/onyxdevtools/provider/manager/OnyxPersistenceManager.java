@@ -106,9 +106,9 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     {
         QueryCriteria criteria = null;
         if(value instanceof String)
-            criteria = new QueryCriteria<>(key, QueryCriteriaOperator.EQUAL, value);
+            criteria = new QueryCriteria(key, QueryCriteriaOperator.EQUAL, value);
         else if(value.getClass() == int.class || value instanceof Integer)
-            criteria = new QueryCriteria<>(key, QueryCriteriaOperator.EQUAL, value);
+            criteria = new QueryCriteria(key, QueryCriteriaOperator.EQUAL, value);
 
         assert criteria != null;
         Query query = new Query(clazz, criteria);

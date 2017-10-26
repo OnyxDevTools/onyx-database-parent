@@ -54,7 +54,7 @@ class Query : BufferStreamable {
      * Gets the criteria value that is used to filter when doing a fetch
      * @since 1.0.0
      */
-    var criteria: QueryCriteria<*>? = null
+    var criteria: QueryCriteria? = null
 
     /**
      * Sets the queryOrder objects that are used to sort the result set
@@ -125,7 +125,7 @@ class Query : BufferStreamable {
      * List results = manager.executeQuery(query);
      *
      */
-    constructor(entityType: Class<*>, criteria: QueryCriteria<*>) {
+    constructor(entityType: Class<*>, criteria: QueryCriteria) {
         this.entityType = entityType
         this.criteria = criteria
     }
@@ -144,7 +144,7 @@ class Query : BufferStreamable {
      * List results = manager.executeQuery(query);
      *
      */
-    constructor(entityType: Class<*>, criteria: QueryCriteria<*>, queryOrder: QueryOrder) {
+    constructor(entityType: Class<*>, criteria: QueryCriteria, queryOrder: QueryOrder) {
         this.entityType = entityType
         this.criteria = criteria
         this.queryOrders = listOf(queryOrder)
@@ -217,7 +217,7 @@ class Query : BufferStreamable {
      * List results = manager.executeQuery(query);
      *
      */
-    constructor(entityType: Class<*>, criteria: QueryCriteria<*>, vararg queryOrders: QueryOrder) {
+    constructor(entityType: Class<*>, criteria: QueryCriteria, vararg queryOrders: QueryOrder) {
         this.entityType = entityType
         this.criteria = criteria
         this.queryOrders = Arrays.asList(*queryOrders)
@@ -234,7 +234,7 @@ class Query : BufferStreamable {
      * List results = manager.executeQuery(query);
      *
      */
-    constructor(entityType: Class<*>, selections: List<String>, criteria: QueryCriteria<*>) {
+    constructor(entityType: Class<*>, selections: List<String>, criteria: QueryCriteria) {
         this.entityType = entityType
         this.selections = selections
         this.criteria = criteria
@@ -250,7 +250,7 @@ class Query : BufferStreamable {
      * Query query = new Query(Person.class, new QueryCriteria("attributeName", QueryCriteriaOperator.EQUAL, "key"), new AttributeUpdate("name", "Jim");
      * List results = manager.executeUpdate(query);
      */
-    constructor(entityType: Class<*>, criteria: QueryCriteria<*>, vararg updates: AttributeUpdate) {
+    constructor(entityType: Class<*>, criteria: QueryCriteria, vararg updates: AttributeUpdate) {
         this.entityType = entityType
         this.updates = arrayListOf(*updates)
         this.criteria = criteria
@@ -267,7 +267,7 @@ class Query : BufferStreamable {
      * @param criteria   Query filter criteria
      * @param updates    List of attribute update instructions
      */
-    constructor(entityType: Class<*>, criteria: QueryCriteria<*>, updates: List<AttributeUpdate>) {
+    constructor(entityType: Class<*>, criteria: QueryCriteria, updates: List<AttributeUpdate>) {
         this.entityType = entityType
         this.criteria = criteria
         this.updates = updates
@@ -289,7 +289,7 @@ class Query : BufferStreamable {
      * List results = manager.executeQuery(query);
      *
      */
-    constructor(entityType: Class<*>, selections: List<String>, criteria: QueryCriteria<*>, queryOrders: List<QueryOrder>) {
+    constructor(entityType: Class<*>, selections: List<String>, criteria: QueryCriteria, queryOrders: List<QueryOrder>) {
         this.entityType = entityType
         this.selections = selections
         this.criteria = criteria
@@ -311,7 +311,7 @@ class Query : BufferStreamable {
      * List results = manager.executeQuery(query);
      *
      */
-    constructor(entityType: Class<*>, criteria: QueryCriteria<*>, vararg selections: String) {
+    constructor(entityType: Class<*>, criteria: QueryCriteria, vararg selections: String) {
         this.entityType = entityType
         this.selections = Arrays.asList(*selections)
         this.criteria = criteria
@@ -361,12 +361,12 @@ class Query : BufferStreamable {
      * @return Unordered set of Query Criteria
      */
     @Transient
-    private var allCriteriaValue:Array<QueryCriteria<*>>? = null
+    private var allCriteriaValue:Array<QueryCriteria>? = null
 
     /**
      * Getter for all criteria
      */
-    fun getAllCriteria():Array<QueryCriteria<*>> {
+    fun getAllCriteria():Array<QueryCriteria> {
         if(allCriteriaValue == null || allCriteriaValue!!.isEmpty()) {
             allCriteriaValue = aggregateCriteria(this.criteria, LinkedHashSet()).toTypedArray() // Typed array so the iteration is quicker
         }
@@ -385,7 +385,7 @@ class Query : BufferStreamable {
      * @since 1.3.0 Re-vamped criteria checking to address bugs and maintain
      * record insertion criteria checking
      */
-    private fun aggregateCriteria(criteria: QueryCriteria<*>?, allCriteria: MutableSet<QueryCriteria<*>>): Set<QueryCriteria<*>> {
+    private fun aggregateCriteria(criteria: QueryCriteria?, allCriteria: MutableSet<QueryCriteria>): Set<QueryCriteria> {
         if (criteria == null)
             return allCriteria
 

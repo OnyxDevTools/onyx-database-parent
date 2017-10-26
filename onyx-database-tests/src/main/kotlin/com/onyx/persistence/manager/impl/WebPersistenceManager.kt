@@ -427,7 +427,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val descriptor = context.getBaseDescriptorForEntity(clazz)
 
         // Get the class' identifier and add a simple criteria to ensure the identifier is not null.  This should return all records.
-        val criteria = QueryCriteria<Nothing>(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
+        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
         return list(clazz, criteria)
     }
 

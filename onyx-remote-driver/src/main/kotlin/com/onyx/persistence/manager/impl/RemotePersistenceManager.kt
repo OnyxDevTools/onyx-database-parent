@@ -315,7 +315,7 @@ open class RemotePersistenceManager : PersistenceManager {
     @Throws(OnyxException::class)
     override fun <E : IManagedEntity> list(clazz: Class<*>): List<E> {
         val descriptor = context.getBaseDescriptorForEntity(clazz)
-        val criteria = QueryCriteria<Nothing>(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
+        val criteria = QueryCriteria(descriptor!!.identifier!!.name, QueryCriteriaOperator.NOT_NULL)
 
         return proxy.list(clazz, criteria)
     }

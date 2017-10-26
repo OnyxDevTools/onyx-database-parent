@@ -36,7 +36,7 @@ import java.util.*
  * @see com.onyx.persistence.query.Query
  */
 @Suppress("ALL")
-class QueryCriteria<T> : BufferStreamable {
+class QueryCriteria : BufferStreamable {
 
     constructor()
 
@@ -80,10 +80,10 @@ class QueryCriteria<T> : BufferStreamable {
     var shortValueList: List<Short>? = null
     var entityValueList: List<ManagedEntity>? = null
 
-    var subCriteria: MutableList<QueryCriteria<*>> = ArrayList()
+    var subCriteria: MutableList<QueryCriteria> = ArrayList()
 
     @Transient
-    var parentCriteria: QueryCriteria<*>? = null
+    var parentCriteria: QueryCriteria? = null
 
     @Transient
     var attributeDescriptor: AttributeDescriptor? = null
@@ -114,7 +114,7 @@ class QueryCriteria<T> : BufferStreamable {
      * @param criteriaEnum Criteria Operator e.x QueryCriteriaOperator.EQUAL
      * @param value Long key
      */
-    constructor(attribute: String, criteriaEnum: QueryCriteriaOperator, value: T) {
+    constructor(attribute: String, criteriaEnum: QueryCriteriaOperator, value: Any?) {
         this.attribute = attribute
         this.operator = criteriaEnum
 
@@ -159,7 +159,7 @@ class QueryCriteria<T> : BufferStreamable {
      * @param value Long key
      * @return New Query Criteria with added and sub query
      */
-    fun <K : Any> and(attribute: String, criteriaEnum: QueryCriteriaOperator, value: K): QueryCriteria<T> {
+    fun <K : Any> and(attribute: String, criteriaEnum: QueryCriteriaOperator, value: K): QueryCriteria {
         val criteria = QueryCriteria(attribute, criteriaEnum, value)
         criteria.isAnd = true
         subCriteria.add(criteria)
@@ -173,7 +173,7 @@ class QueryCriteria<T> : BufferStreamable {
      * @param andGroup And sub query
      * @return New Query Criteria with added and sub query
      */
-    fun and(andGroup: QueryCriteria<*>): QueryCriteria<T> {
+    fun and(andGroup: QueryCriteria): QueryCriteria {
         andGroup.isAnd = true
         this.subCriteria.add(andGroup)
         return this
@@ -188,7 +188,7 @@ class QueryCriteria<T> : BufferStreamable {
      * @param value long key
      * @return New Query Criteria with added or sub query
      */
-    fun <R : Any> or(attribute: String, criteriaEnum: QueryCriteriaOperator, value: R): QueryCriteria<T> {
+    fun <R : Any> or(attribute: String, criteriaEnum: QueryCriteriaOperator, value: R): QueryCriteria {
         val criteria = QueryCriteria(attribute, criteriaEnum, value)
         criteria.isOr = true
         subCriteria.add(criteria)
@@ -202,7 +202,7 @@ class QueryCriteria<T> : BufferStreamable {
      * @param orGroup Or Sub Query
      * @return New Query Criteria with added or sub query
      */
-    fun or(orGroup: QueryCriteria<*>): QueryCriteria<T> {
+    fun or(orGroup: QueryCriteria): QueryCriteria {
         orGroup.isOr = true
         this.subCriteria.add(orGroup)
         return this
@@ -231,7 +231,7 @@ class QueryCriteria<T> : BufferStreamable {
      *
      * @since 1.3.0 Added as enhancement #69
      */
-    operator fun not(): QueryCriteria<T> {
+    operator fun not(): QueryCriteria {
         if(subCriteria.isEmpty()) {
             operator = operator!!.inverse // Invert the criteria rather than checking all the criteria
             this.isNot = false
@@ -283,7 +283,7 @@ class QueryCriteria<T> : BufferStreamable {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as QueryCriteria<*>
+        other as QueryCriteria
 
         if (isNot != other.isNot) return false
         if (isAnd != other.isAnd) return false

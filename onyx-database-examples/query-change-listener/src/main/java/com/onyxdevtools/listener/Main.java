@@ -42,8 +42,8 @@ public class Main {
         manager.saveEntity(johnElway);
 
         // Define criteria to match position = QB & isHallOfFame = true
-        QueryCriteria hallOfFameQuarterbackCriteria = new QueryCriteria<>("position", QueryCriteriaOperator.EQUAL, "QB")
-                                                            .and(new QueryCriteria<>("isHallOfFame", QueryCriteriaOperator.EQUAL, true));
+        QueryCriteria hallOfFameQuarterbackCriteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB")
+                                                            .and(new QueryCriteria("isHallOfFame", QueryCriteriaOperator.EQUAL, true));
         final Query hallOfFameQuarterBackQuery = new Query(Player.class, hallOfFameQuarterbackCriteria);
 
         // Define Change listener for query

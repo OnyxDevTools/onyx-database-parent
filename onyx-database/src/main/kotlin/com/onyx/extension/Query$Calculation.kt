@@ -61,7 +61,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
  *
  * @since 1.3.0 Added to enhance insertion based criteria checking
  */
-private fun Query.calculateCriteriaMet(criteria: QueryCriteria<*>): Boolean {
+private fun Query.calculateCriteriaMet(criteria: QueryCriteria): Boolean {
     var meetsCriteria = criteria.meetsCriteria
 
     if (criteria.subCriteria.size > 0) {
@@ -100,7 +100,7 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria<*>): Boolean {
  * to do a quick reference to see if newly saved entities meet the criteria
  */
 @Throws(OnyxException::class)
-private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Reference, criteria: QueryCriteria<*>, context: SchemaContext): Boolean {
+private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Reference, criteria: QueryCriteria, context: SchemaContext): Boolean {
     var meetsCriteria = false
     val operator = criteria.operator
 
