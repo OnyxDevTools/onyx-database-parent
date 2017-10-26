@@ -12,7 +12,7 @@ import java.lang.reflect.Field;
 import java.util.Date;
 
 /**
- * Created by tosborn1 on 8/23/15.
+ * Created by Tim Osborn on 8/23/15.
  */
 @Ignore
 public class TestAttributeUpdate extends BaseTest

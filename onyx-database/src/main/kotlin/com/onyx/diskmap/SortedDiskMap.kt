@@ -1,7 +1,7 @@
 package com.onyx.diskmap
 
 /**
- * Created by tosborn1 on 2/16/17.
+ * Created by Tim Osborn on 2/16/17.
  *
  * This is a contract of a sorted disk map.
  *

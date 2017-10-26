@@ -13,7 +13,7 @@ import java.util.Date;
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 public class SavingAnEntityExample
 {
@@ -39,7 +39,8 @@ public class SavingAnEntityExample
         Person savedPerson = manager.saveEntity(person1);
         
         Person retrievedPerson = manager.findById(Person.class, savedPerson.getId());
-        
+
+        assert retrievedPerson != null;
         System.out.println("Person " + retrievedPerson.getId() + " saved successfully");
         
         factory.close(); //Close the embedded database after you're done with it

@@ -9,7 +9,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Created by tosborn1 on 8/23/15.
+ * Created by Tim Osborn on 8/23/15.
  */
 @Ignore
 public class TestChangeIntegerToLongID extends BaseTest {

@@ -8,7 +8,7 @@ import com.onyx.exception.BufferingException
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 7/1/16.
+ * Created by Tim Osborn on 7/1/16.
  *
  * The default serializer implementation will use basic java serialization and Externalize whenever possible.
  * @since 1.2.0

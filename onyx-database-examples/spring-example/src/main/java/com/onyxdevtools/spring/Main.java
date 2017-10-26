@@ -14,6 +14,7 @@ import static java.lang.System.exit;
 @EnableAutoConfiguration
 public class Main
 {
+    @SuppressWarnings("SpellCheckingInspection")
     public static void main(String[] args)
     {
         // Run the spring application and return the context

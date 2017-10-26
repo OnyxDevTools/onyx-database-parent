@@ -60,6 +60,7 @@ class OneToManyExample extends AbstractDemo
 
         // Find sailboat with Id
         final Sailboat savedSailboat = manager.findById(Sailboat.class, "USA11");
+        assert savedSailboat != null;
         System.out.println("Sailboat has " + savedSailboat.getCrew().size() + " crew members");
         System.out.println(savedSailboat.getCrew().get(0).getFirstName() + " is the skipper on boat " +
             savedSailboat.getCrew().get(0).getSailboat().getName());

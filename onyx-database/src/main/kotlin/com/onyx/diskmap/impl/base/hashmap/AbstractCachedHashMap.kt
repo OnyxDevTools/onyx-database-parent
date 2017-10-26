@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 import java.util.*
 
 /**
- * Created by tosborn1 on 2/15/17.
+ * Created by Tim Osborn on 2/15/17.
  *
  * This class controls the caching of a Hash Map within a disk store
  *
@@ -59,7 +59,7 @@ abstract class AbstractCachedHashMap<K, V>(fileStore: Store, header: Header, hea
 
     /**
      * Add iteration list.  This method adds a reference so that the iterator knows what to iterate through without
-     * guessing wich element within the hash as a sub data structure reference.
+     * guessing which element within the hash as a sub data structure reference.
      *
      * @param buffer Byte Buffer to add the hash id to.
      * @param hash Identifier of the sub data structure

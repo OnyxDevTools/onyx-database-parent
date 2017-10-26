@@ -3,7 +3,7 @@ package com.onyx.network.handlers
 import com.onyx.network.connection.Connection
 
 /**
- * Created by tosborn1 on 6/23/16.
+ * Created by Tim Osborn on 6/23/16.
  *
  * This class is used as a callback handler for message requests
  */

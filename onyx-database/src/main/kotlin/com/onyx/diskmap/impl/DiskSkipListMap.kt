@@ -17,7 +17,7 @@ import java.lang.reflect.Field
 import java.util.HashSet
 
 /**
- * Created by tosborn1 on 1/7/17.
+ * Created by Tim Osborn on 1/7/17.
  *
  *
  * This class was added to enhance the existing index within Onyx Database.  The bitmap was very efficient but, it was a hog
@@ -161,6 +161,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T {
         val node = findNodeAtPosition(reference) as SkipListNode<K>? ?: return null as T
         val value = findValueAtPosition(node.recordPosition) ?: return null as T
+        @Suppress("RemoveExplicitTypeArguments") // This is needed to compile
         return value.getAny<T>(attribute)
     }
 
@@ -168,6 +169,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipListNode<*>): T {
         val value = findValueAtPosition(reference.recordPosition) ?: return null as T
+        @Suppress("RemoveExplicitTypeArguments") // This is needed to compile
         return value.getAny<T>(field)
     }
 
@@ -192,8 +194,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
 
                 if (node is SkipListNode<*>) {
                     if (node.key == index && !includeFirst) {
-                        if (node.next > 0L)
-                            node = findNodeAtPosition(node.next)
+                        node = if (node.next > 0L)
+                            findNodeAtPosition(node.next)
                         else
                             break
 

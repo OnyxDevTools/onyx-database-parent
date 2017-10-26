@@ -1,7 +1,7 @@
 package com.onyx.network.push
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * Publish a push event.  This is performed by a server.  This should manage the push to the client.
  */

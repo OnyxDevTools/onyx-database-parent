@@ -10,7 +10,7 @@ import java.io.File;
 
 
 /**
- @author  cosborn
+ @author  Chris Osborn
  */
 class FindExample
 {

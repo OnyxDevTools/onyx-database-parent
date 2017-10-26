@@ -1,7 +1,7 @@
 package com.onyxdevtools.index;
 
 /**
- @author  cosborn
+ @author  Chris Osborn
  */
 abstract class AbstractDemo
 {

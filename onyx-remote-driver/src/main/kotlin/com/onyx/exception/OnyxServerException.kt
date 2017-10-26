@@ -5,7 +5,7 @@ import java.io.Serializable
 import java.io.StringWriter
 
 /**
- * Created by tosborn1 on 6/25/16.
+ * Created by Tim Osborn on 6/25/16.
  *
  * Base server exception
  */

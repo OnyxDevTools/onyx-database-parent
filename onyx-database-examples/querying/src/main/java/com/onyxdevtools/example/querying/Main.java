@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.Arrays;
 
 //J-
+@SuppressWarnings("SpellCheckingInspection")
 public class Main extends AbstractDemo
 {
 
@@ -128,8 +129,8 @@ public class Main extends AbstractDemo
         Team broncos = new Team();
         broncos.setTeamName("Broncos");
 
-        Team cheifs = new Team();
-        cheifs.setTeamName("Cheifs");
+        Team chiefs = new Team();
+        chiefs.setTeamName("Chiefs");
 
         Team chargers = new Team();
         chargers.setTeamName("Chargers");
@@ -220,7 +221,7 @@ public class Main extends AbstractDemo
         vikings.setTeamName("Vikings");
 
         //Add teams to divisions
-        afcWest.setTeams(Arrays.asList(raiders, broncos, cheifs, chargers));
+        afcWest.setTeams(Arrays.asList(raiders, broncos, chiefs, chargers));
 
         afcSouth.setTeams(Arrays.asList(colts, texans, jaguars, titans));
 
@@ -346,7 +347,7 @@ public class Main extends AbstractDemo
 
         broncos.setPlayers(Arrays.asList(broncosQB, broncosRB1, broncosRB2, broncosWR1, broncosWR2));
 
-        cheifs.setPlayers(Arrays.asList(cheifsQB, cheifsRB1, cheifsRB2, cheifsWR1, cheifsWR2));
+        chiefs.setPlayers(Arrays.asList(cheifsQB, cheifsRB1, cheifsRB2, cheifsWR1, cheifsWR2));
 
         chargers.setPlayers(Arrays.asList(chargersQB, chargersRB1, chargersRB2, chargersWR1, chargersWR2));
 

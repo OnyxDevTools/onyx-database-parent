@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.values.IdentifierGenerator;
 import pojo.SimpleEnum;
 
 /**
- * Created by tosborn1 on 4/30/17.
+ * Created by Tim Osborn on 4/30/17.
  */
 @Entity
 public class EnumEntity extends AbstractEntity implements IManagedEntity {

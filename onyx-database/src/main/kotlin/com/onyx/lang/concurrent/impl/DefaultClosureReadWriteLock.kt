@@ -12,10 +12,9 @@ class DefaultClosureReadWriteLock : ClosureReadWriteLock {
         val returnValue = consumer.invoke()
         if(!lockImplementation.validate(stamp)) {
             stamp = lockImplementation.readLock()
-            try {
-                return consumer.invoke()
-            }
-            finally {
+            return try {
+                consumer.invoke()
+            } finally {
                 lockImplementation.unlockRead(stamp)
             }
         }
@@ -24,8 +23,8 @@ class DefaultClosureReadWriteLock : ClosureReadWriteLock {
 
     override fun <T> readLock(consumer: () -> T): T {
         val stamp = lockImplementation.readLock()
-        try {
-            return consumer.invoke()
+        return try {
+            consumer.invoke()
         }
         finally {
             lockImplementation.unlockRead(stamp)
@@ -34,8 +33,8 @@ class DefaultClosureReadWriteLock : ClosureReadWriteLock {
 
     override fun <T> writeLock(consumer: () -> T): T {
         val stamp = lockImplementation.writeLock()
-        try {
-            return consumer.invoke()
+        return try {
+            consumer.invoke()
         } finally {
             lockImplementation.unlockWrite(stamp)
         }

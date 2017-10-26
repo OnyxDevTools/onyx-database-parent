@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.List;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 class UpdateQueryExample

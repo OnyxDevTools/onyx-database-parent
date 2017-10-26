@@ -14,7 +14,7 @@ import org.junit.Test;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 9/1/15.
+ * Created by Tim Osborn on 9/1/15.
  */
 @Ignore
 public class TestIndexSchemaChange extends BaseTest {

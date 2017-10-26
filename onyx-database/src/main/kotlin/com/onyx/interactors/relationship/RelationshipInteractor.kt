@@ -18,7 +18,7 @@ interface RelationshipInteractor {
      *
      * @param entity Entity being saved
      * @param transaction Prevents recursion
-     * @throws OnyxException Error saving realationship object
+     * @throws OnyxException Error saving relationship object
      */
     @Throws(OnyxException::class)
     fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction)
@@ -26,7 +26,7 @@ interface RelationshipInteractor {
     /**
      * Delete Relationship entity
      *
-     * @param entity EnTotity to delete relationship for
+     * @param entity Entity to delete relationship for
      * @param transaction prevents recursion
      * @throws OnyxException Error deleting relationship
      */

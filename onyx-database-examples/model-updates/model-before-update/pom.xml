@@ -39,7 +39,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.onyxdevtools.modelupdate.before.Main</mainClass>
+                    <mainClass>com.onyxdevtools.modelUpdate.before.Main</mainClass>
                 </configuration>
             </plugin>
 

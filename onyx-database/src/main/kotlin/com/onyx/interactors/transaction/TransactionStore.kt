@@ -4,7 +4,7 @@ import com.onyx.exception.TransactionException
 import java.nio.channels.FileChannel
 
 /**
- * Created by tosborn1 on 9/6/17.
+ * Created by Tim Osborn on 9/6/17.
  *
  * Contract for retrieving transaction files
  */

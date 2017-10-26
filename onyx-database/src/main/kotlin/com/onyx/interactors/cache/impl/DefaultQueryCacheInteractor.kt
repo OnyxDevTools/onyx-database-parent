@@ -14,7 +14,7 @@ import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.map.OptimisticLockingMap
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * This controller handles how a query is cached.  In this case, the policy is if the entity is part of one of the 100
  * most recently used queries.
@@ -99,7 +99,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
 
     /**
      * Subscribe a query listener with associated cached results.
-     * The subscription will ocur during executeQuery and executeLazyQuery.
+     * The subscription will occur during executeQuery and executeLazyQuery.
      * Currently you cannot subscribe to delete or update queries.
      *
      * @param results Results to listen to

@@ -1,7 +1,7 @@
 package com.onyx.network.ssl
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * Contract for SSL Peer communication
  */

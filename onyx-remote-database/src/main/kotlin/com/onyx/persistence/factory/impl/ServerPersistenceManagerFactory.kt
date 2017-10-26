@@ -2,15 +2,14 @@ package com.onyx.persistence.factory.impl
 
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.ServerSchemaContext
-import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * Persistence manager factory for a server based database.
  *
  * This is a server persistence manager factory.  It is overridden so that the context
- * type is also a server schema context.  It differes due to the query caching policies.
+ * type is also a server schema context.  It differs due to the query caching policies.
  *
  * @author Tim Osborn
  * @since 1.3.0 Introduced as work done on query subscribers.

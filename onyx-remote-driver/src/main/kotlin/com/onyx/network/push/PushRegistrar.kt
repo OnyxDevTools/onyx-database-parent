@@ -3,7 +3,7 @@ package com.onyx.network.push
 import com.onyx.exception.OnyxServerException
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * Register a consumer with the given subscriber information
  */

@@ -10,7 +10,7 @@ import java.io.File;
 
 
 /**
- @author  cosborn
+ @author  Chris Osborn
  */
 class FindByIdExample
 {
@@ -27,10 +27,10 @@ class FindByIdExample
 
         final PersistenceManager manager = factory.getPersistenceManager();
 
-        // Retreived the 2015 season using the PersistenceManager#findById method
+        // Retrieved the 2015 season using the PersistenceManager#findById method
         final Season season = manager.findById(Season.class, 2015);
 
-        // Confirm that season was retreived
+        // Confirm that season was retrieved
         if (season != null)
         {
             System.out.println("The season has " + season.getConferences().size() + " conferences!");

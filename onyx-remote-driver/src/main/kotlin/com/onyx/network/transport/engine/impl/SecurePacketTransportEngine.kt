@@ -9,7 +9,7 @@ import javax.net.ssl.SSLException
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 2/12/17.
+ * Created by Tim Osborn on 2/12/17.
  *
  * This class is used to wrap SSL packets.  It is just a wrapper that uses the SSLEngine implementation.
  *
@@ -54,7 +54,7 @@ class SecurePacketTransportEngine (private val sslEngine: SSLEngine) : AbstractT
     override fun unwrap(fromBuffer: ByteBuffer, toBuffer: ByteBuffer): SSLEngineResult = sslEngine.unwrap(fromBuffer, toBuffer)
 
     /**
-     * Close the outbound connection.  Awww snap, no soup for you
+     * Close the outbound connection.
      *
      * @since 1.2.0
      */
@@ -63,7 +63,7 @@ class SecurePacketTransportEngine (private val sslEngine: SSLEngine) : AbstractT
     }
 
     /**
-     * Close the inbound connection.  Awww snap, no soup for you
+     * Close the inbound connection.
      *
      * @throws SSLException General exception occurred when closing the inbound socket.
      * @since 1.2.0

@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.entities;
+package com.onyxdevtools.modelUpdate.entities;
 
 
 import com.onyx.persistence.IManagedEntity;
@@ -6,7 +6,6 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
 import com.onyx.persistence.annotations.values.CascadePolicy;
 import com.onyx.persistence.annotations.values.FetchPolicy;
-import com.onyx.persistence.annotations.values.IdentifierGenerator;
 import com.onyx.persistence.annotations.values.RelationshipType;
 
 import java.util.List;
@@ -16,15 +15,22 @@ import java.util.List;
 public class Account extends ManagedEntity implements IManagedEntity
 {
 
+    // Note for Example 2: I have changed the type of the accountId from an int to a long.  Also the generator was removed.
     @Attribute
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    private int accountId;
+    @Identifier
+    private long accountId;
+
+    // Note for Example 1: I have added the Account Holder's Name
+    @Attribute
+    protected String accountHolderName;
 
     @Attribute
     private String accountName;
 
-    @Attribute
-    private double balanceDue;
+    // Note for Example 1: I have removed the balance Due since it should not be reflected on the Account
+    // and should be reflected on the Invoice
+    //@Attribute
+    //protected double balanceDue;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "account",
@@ -33,11 +39,11 @@ public class Account extends ManagedEntity implements IManagedEntity
             fetchPolicy = FetchPolicy.LAZY)
     private List<Invoice> invoices;
 
-    public int getAccountId() {
+    public long getAccountId() {
         return accountId;
     }
 
-    public void setAccountId(int accountId) {
+    public void setAccountId(long accountId) {
         this.accountId = accountId;
     }
 
@@ -47,14 +53,6 @@ public class Account extends ManagedEntity implements IManagedEntity
 
     public void setAccountName(String accountName) {
         this.accountName = accountName;
-    }
-
-    public double getBalanceDue() {
-        return balanceDue;
-    }
-
-    public void setBalanceDue(double balanceDue) {
-        this.balanceDue = balanceDue;
     }
 
     public List<Invoice> getInvoices() {

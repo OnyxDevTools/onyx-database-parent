@@ -53,7 +53,7 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
 
     /**
      * Start read queue.  This is to be overridden by extending class.  A client may want to implement a blocking queue
-     * and a server would be a selection key.  That is why this is abstract.  The only requiement is that the daemon
+     * and a server would be a selection key.  That is why this is abstract.  The only requirement is that the daemon
      * is started and assigns the readJob.
      *
      * @since 2.0.0
@@ -287,8 +287,8 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
                             SSLEngineResult.Status.OK -> { }
                             SSLEngineResult.Status.BUFFER_OVERFLOW -> { }
                             SSLEngineResult.Status.BUFFER_UNDERFLOW -> { }
-                            SSLEngineResult.Status.CLOSED -> if (connection.packetTransportEngine.isOutboundDone) {
-                                return false
+                            SSLEngineResult.Status.CLOSED -> return if (connection.packetTransportEngine.isOutboundDone) {
+                                false
                             } else {
                                 closeConnection(socketChannel, connection)
                                 break@loop

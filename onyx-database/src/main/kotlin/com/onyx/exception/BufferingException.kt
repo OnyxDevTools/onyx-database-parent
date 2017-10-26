@@ -1,7 +1,7 @@
 package com.onyx.exception
 
 /**
- * Created by tosborn1 on 8/1/16.
+ * Created by Tim Osborn on 8/1/16.
  *
  * This class indicates an issue when trying to serialize and de-serialize using the buffering mechanism
  */

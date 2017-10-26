@@ -4,7 +4,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 
 /**
- * Created by tosborn1 on 7/1/16.
+ * Created by Tim Osborn on 7/1/16.
  *
  * This indicates a problem when invoking a remote method.
  * @since 1.2.0

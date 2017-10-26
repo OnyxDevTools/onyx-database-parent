@@ -3,7 +3,7 @@ package com.onyx.lang.concurrent.impl
 import com.onyx.lang.concurrent.ClosureLock
 
 /**
- * Created by tosborn1 on 2/20/17.
+ * Created by Tim Osborn on 2/20/17.
  *
  * This implementation ignores locking and does not provide any concurrency blocking.
  *

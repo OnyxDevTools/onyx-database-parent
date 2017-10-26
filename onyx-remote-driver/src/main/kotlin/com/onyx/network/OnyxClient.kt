@@ -4,7 +4,7 @@ import com.onyx.exception.ConnectionFailedException
 import com.onyx.exception.OnyxServerException
 
 /**
- * Created by tosborn1 on 6/26/16.
+ * Created by Tim Osborn on 6/26/16.
  *
  * This interface is the contract for how the client connects to the server
  */

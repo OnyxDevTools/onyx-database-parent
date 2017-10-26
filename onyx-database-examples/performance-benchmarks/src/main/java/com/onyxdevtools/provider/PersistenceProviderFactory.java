@@ -10,7 +10,7 @@ import javax.persistence.Persistence;
 import java.io.File;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This class is a factory for returning the persistence manager so that we can use a single contract for persisting and fetching
  * data

@@ -3,7 +3,7 @@ package com.onyx.exception
 import com.onyx.interactors.transaction.data.Transaction
 
 /**
- * Created by tosborn1 on 3/25/16.
+ * Created by Tim Osborn on 3/25/16.
  *
  * This error denotes a failure to interact with a transaction WAL file
  */

@@ -12,7 +12,7 @@ import java.nio.channels.SocketChannel
 import java.util.Objects
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * This is a 3 for one.  It contains the push subscriber information, consumer for the client, and a
  * base query listener.
@@ -69,8 +69,8 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
     }
 
     /**
-     * Item has been modified.  This ocurres when an entity met the original criteria
-     * when querying the database and was updated.  The updated values still match the critieria
+     * Item has been modified.  This occurs when an entity met the original criteria
+     * when querying the database and was updated.  The updated values still match the criteria
      *
      * @param item Entity updated via the persistence manager
      *
@@ -82,7 +82,7 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
     }
 
     /**
-     * Item has been inserted.  This ocurres when an entity was saved and it meets the query criteria.
+     * Item has been inserted.  This occurs when an entity was saved and it meets the query criteria.
      *
      * @param item Entity inserted via the persistence manager
      *
@@ -94,7 +94,7 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
     }
 
     /**
-     * Item has been deleted or no longer meets the critieria of the query.
+     * Item has been deleted or no longer meets the criteria of the query.
      *
      * @param item Entity persisted via the persistence manager
      *
@@ -107,7 +107,7 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
 
     /**
      * Helped to uniquely identify a subscriber
-     * @return Hash code of listner and socket channel
+     * @return Hash code of listener and socket channel
      */
     override fun hashCode(): Int {
         return Objects.hash(pushObjectId)

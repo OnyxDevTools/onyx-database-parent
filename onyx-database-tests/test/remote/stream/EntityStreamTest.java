@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Created by tosborn1 on 6/2/16.
+ * Created by Tim Osborn on 6/2/16.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ RemoteServerTests.class })

@@ -442,7 +442,7 @@ open class RemotePersistenceManager : PersistenceManager {
      * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
-     * @return The number of entities that meet the query criterium
+     * @return The number of entities that meet the query criterion
      * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
@@ -451,10 +451,10 @@ open class RemotePersistenceManager : PersistenceManager {
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.
-     * If you do not un-register queries, they will not expire nor will they be de-registered autmatically.
-     * This could cause performance degredation if removing the registration is neglected.
+     * If you do not un-register queries, they will not expire nor will they be de-registered automatically.
+     * This could cause performance degrading if removing the registration is neglected.
      *
-     * These will eventuallly be cleared out by the server when it detects connections have been dropped but,
+     * These will eventually be cleared out by the server when it detects connections have been dropped but,
      * it is better to be pro-active about it.
      *
      * @param query Query with a listener attached

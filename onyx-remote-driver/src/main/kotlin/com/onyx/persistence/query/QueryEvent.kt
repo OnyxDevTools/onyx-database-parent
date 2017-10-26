@@ -5,9 +5,9 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
- * Pojo for a query event push response
+ * POJO for a query event push response
  */
 class QueryEvent<T>(var type: QueryListenerEvent? = null, var entity: T? = null) : BufferStreamable {
 
@@ -15,7 +15,7 @@ class QueryEvent<T>(var type: QueryListenerEvent? = null, var entity: T? = null)
     /**
      * Read value from buffer
      * @param buffer Buffer Stream to read from
-     * @throws BufferingException Hmmm, you messed up
+     * @throws BufferingException Byte format was incorrect
      */
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {

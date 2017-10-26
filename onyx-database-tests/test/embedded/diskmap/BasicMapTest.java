@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
- * Created by tosborn on 3/21/15.
+ * Created by Tim Osborn on 3/21/15.
  */
 @Category({ EmbeddedDatabaseTests.class })
 public class BasicMapTest extends AbstractTest

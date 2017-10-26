@@ -13,7 +13,7 @@ import org.junit.experimental.categories.Category;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 5/29/16.
+ * Created by Tim Osborn on 5/29/16.
  */
 @Category({ EmbeddedDatabaseTests.class })
 public class EmptyCriteriaTest extends PrePopulatedDatabaseTest

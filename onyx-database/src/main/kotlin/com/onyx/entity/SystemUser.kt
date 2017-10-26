@@ -8,7 +8,7 @@ import java.security.Principal
 import javax.security.auth.Subject
 
 /**
- * Created by cosborn on 3/2/2015.
+ * Created by Chris Osborn on 3/2/2015.
  *
  * User for the database.
  */

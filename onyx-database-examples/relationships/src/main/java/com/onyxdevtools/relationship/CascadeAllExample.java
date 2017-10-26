@@ -54,6 +54,7 @@ class CascadeAllExample extends AbstractDemo
 
         // Make sure that it has been cascaded properly
         assertNotNull("Sponge Bob Series should have been saved", spongeBobSeries);
+        assert spongeBobSeries != null;
         assertNotNull("Sponge Bob Seasons should have been saved", spongeBobSeries.getSeasons());
         assertEquals("There should have been 5 seasons saved", spongeBobSeries.getSeasons().size(), 5);
 
@@ -67,6 +68,7 @@ class CascadeAllExample extends AbstractDemo
         spongeBobSeries = manager.findById(Series.class, spongeBobSeries.getSeriesId());
 
         // Make sure that it has been cascaded properly
+        assert spongeBobSeries != null;
         assertEquals("There should have been 4 seasons saved", spongeBobSeries.getSeasons().size(), 4);
 
         factory.close();

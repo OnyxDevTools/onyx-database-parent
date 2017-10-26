@@ -7,7 +7,7 @@ import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
- * Created by cosborn on 12/26/2014.
+ * Created by Chris Osborn on 12/26/2014.
  */
 @Entity
 public class SimpleEntity extends AbstractEntity implements IManagedEntity {

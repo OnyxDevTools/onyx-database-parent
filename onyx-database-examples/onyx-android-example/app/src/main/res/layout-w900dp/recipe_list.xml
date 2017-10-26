@@ -12,7 +12,7 @@
               tools:context="com.onyxdevtools.RecipeListActivity">
 
     <!--
-    This layout is a two-pane layout for the Recipees
+    This layout is a two-pane layout for the Recipes
     master/detail flow.
     
     -->

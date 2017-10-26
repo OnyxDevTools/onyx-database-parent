@@ -21,7 +21,7 @@ class Header : BufferStreamable {
     /**
      * Override equals key to compare all values
      *
-     * @param other Object to compare agains
+     * @param other Object to compare against
      * @return Whether the header = the parameter value
      */
     override fun equals(other: Any?): Boolean = other is Header && position == other.position

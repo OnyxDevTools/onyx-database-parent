@@ -6,7 +6,7 @@ import com.onyx.exception.BufferingException
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 7/1/16.
+ * Created by Tim Osborn on 7/1/16.
  *
  * This class is the basic interface of serializer that is used by the server.
  */

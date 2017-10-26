@@ -55,6 +55,7 @@ class OneToOneExample extends AbstractDemo
 
         // Find the sailboat by ID
         Sailboat newlyCreatedSailboat = manager.findById(Sailboat.class, "NCC1701");
+        assert newlyCreatedSailboat != null;
         System.out.println("Sailboat " + newlyCreatedSailboat.getName() + " was created with skipper " + newlyCreatedSailboat.getSkipper().getFirstName());
 
         factory.close();

@@ -12,7 +12,7 @@ import java.util.List;
 
 
 /**
- @author  cosborn
+ @author  Chris Osborn
  */
 class LazyQueryExample
 {
@@ -36,7 +36,7 @@ class LazyQueryExample
         // Invoke manager#executeLazyQuery
         final List<Player> allPlayers = manager.executeLazyQuery(query); // returns LazyQueryCollection
 
-        // Get and print out all of the entites in the LazyQueryCollection
+        // Get and print out all of the entities in the LazyQueryCollection
         for (final Player player : allPlayers) {
             System.out.println(player.getFirstName() + " " + player.getLastName());
         }

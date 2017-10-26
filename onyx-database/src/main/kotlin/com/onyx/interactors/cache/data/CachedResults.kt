@@ -8,7 +8,7 @@ import com.onyx.persistence.query.QueryListenerEvent
 import java.util.HashSet
 
 /**
- * Created by tosborn1 on 3/21/17.
+ * Created by Tim Osborn on 3/21/17.
  *
  * This method denotes a cached query containing its references and potentially its values
  *
@@ -44,7 +44,7 @@ class CachedResults(references: MutableMap<Reference, Any?>? = null) {
      *
      * @param reference Key reference value
      * @param entity Managed entity removed from the query cache
-     * @param event What type of event this is.  If it were an upate
+     * @param event What type of event this is.  If it were an update
      * than it should not invoke the listeners.  Only if it is
      * a true removal
      *

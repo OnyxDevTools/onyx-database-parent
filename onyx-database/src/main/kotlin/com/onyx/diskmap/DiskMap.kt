@@ -8,7 +8,7 @@ import com.onyx.exception.AttributeTypeMismatchException
 import java.lang.reflect.Field
 
 /**
- * Created by tosborn1 on 7/30/15.
+ * Created by Tim Osborn on 7/30/15.
  *
  * This is the an interface that extends the functionality of a Map.  It also contains methods that assist in finding
  * records by references within a store / volume.

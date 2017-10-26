@@ -3,14 +3,14 @@ package com.onyx.diskmap.factory
 import com.onyx.diskmap.data.Header
 
 /**
- * Created by tosborn1 on 7/30/15.
+ * Created by Tim Osborn on 7/30/15.
  *
  *
  * This is the contract a map factory must obey.
  * This class is responsible for building all maps.  There is one map factory per file and or storage
  *
- * This contract has been consoladated in v1.2.0.  The different map implementations has been reduced only to use
- * the best rather than having an option.  The DefaultDiskMapFactory will decide which map impmentation is better
+ * This contract has been consolidated in v1.2.0.  The different map implementations has been reduced only to use
+ * the best rather than having an option.  The DefaultDiskMapFactory will decide which map implementation is better
  * based on the loadFactor.
  *
  * @since 1.0.0
@@ -34,7 +34,7 @@ interface DiskMapFactory {
      * @since 1.1.0
      *
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
-     * It is now an implemenation of an inter changable index followed by a skip list.
+     * It is now an implementation of an inter changeable index followed by a skip list.
      */
     fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T
 

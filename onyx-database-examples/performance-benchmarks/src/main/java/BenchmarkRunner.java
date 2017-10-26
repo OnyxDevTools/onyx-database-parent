@@ -8,7 +8,7 @@ import java.lang.reflect.Constructor;
 
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This class is the main class for executing a benchmark test.  It requires 2 parameters.  First is the number of the database provider.
  *
@@ -42,27 +42,27 @@ public class BenchmarkRunner {
     @SuppressWarnings("unchecked")
     public static void main(@SuppressWarnings("ParameterCanBeLocal") String args[]) throws Exception {
 
-        //Default values to run via the IDE
-        args = new String[2];
-        args[0] = "1";
-        args[1] = "RandomTransactionBenchmarkTest";
+        if(args == null || args.length == 0) {
+            //Default values to run via the IDE
+            args = new String[2];
+            args[0] = "1";
+            args[1] = "RandomTransactionBenchmarkTest";
+        }
 
         // Delete the existing database so we start with a clean slate
         deleteDirectory(new File(DatabaseProvider.DATABASE_LOCATION));
 
         // Default Provider properties
         DatabaseProvider databaseProvider;
-        BenchmarkTest benchmarkBenchmarkTest = null;
+        BenchmarkTest benchmarkBenchmarkTest;
 
         // If the arguments exist through command line use them
-        if (args.length > 1) {
-            int databaseProviderIndex = Integer.valueOf(args[0]);
-            String test = args[1];
-            Class testClass = Class.forName("com.onyxdevtools.benchmark." + test);
-            Constructor<?> constructor = testClass.getConstructor(ProviderPersistenceManager.class);
-            databaseProvider = DatabaseProvider.values()[databaseProviderIndex];
-            benchmarkBenchmarkTest = (BenchmarkTest) constructor.newInstance(PersistenceProviderFactory.getPersistenceManager(databaseProvider));
-        }
+        int databaseProviderIndex = Integer.valueOf(args[0]);
+        String test = args[1];
+        Class testClass = Class.forName("com.onyxdevtools.benchmark." + test);
+        Constructor<?> constructor = testClass.getConstructor(ProviderPersistenceManager.class);
+        databaseProvider = DatabaseProvider.values()[databaseProviderIndex];
+        benchmarkBenchmarkTest = (BenchmarkTest) constructor.newInstance(PersistenceProviderFactory.getPersistenceManager(databaseProvider));
 
         runTest(benchmarkBenchmarkTest);
 
@@ -76,6 +76,7 @@ public class BenchmarkRunner {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     static private void deleteDirectory(File path) {
         if (path.exists()) {
+            //noinspection ConstantConditions
             for (File f : path.listFiles()) {
                 if (f.isDirectory()) {
                     deleteDirectory(f);
@@ -92,7 +93,7 @@ public class BenchmarkRunner {
      */
     private static void runTest(BenchmarkTest benchmarkTest) {
         benchmarkTest.before();
-        benchmarkTest.markBeginingOfTest();
+        benchmarkTest.markBeginningOfTest();
         benchmarkTest.execute(benchmarkTest.getNumberOfExecutions());
         benchmarkTest.markEndOfTest();
         benchmarkTest.after();

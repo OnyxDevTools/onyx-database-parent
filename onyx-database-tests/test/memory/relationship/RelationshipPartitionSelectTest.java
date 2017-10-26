@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by tosborn1 on 3/13/17.
+ * Created by Tim Osborn on 3/13/17.
  */
 @Category({InMemoryDatabaseTests.class})
 public class RelationshipPartitionSelectTest extends BaseTest {

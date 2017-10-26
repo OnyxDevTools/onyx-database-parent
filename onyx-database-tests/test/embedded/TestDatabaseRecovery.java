@@ -23,7 +23,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/25/16.
+ * Created by Tim Osborn on 3/25/16.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @Category({ EmbeddedDatabaseTests.class })

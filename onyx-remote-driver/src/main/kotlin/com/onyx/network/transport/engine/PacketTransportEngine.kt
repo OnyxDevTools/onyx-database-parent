@@ -5,7 +5,7 @@ import javax.net.ssl.SSLException
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 2/12/17.
+ * Created by Tim Osborn on 2/12/17.
  *
  *
  * This contract is meant to encapsulate the handling of partial packets.  If packets
@@ -56,7 +56,7 @@ interface PacketTransportEngine {
     fun unwrap(fromBuffer: ByteBuffer, toBuffer: ByteBuffer): SSLEngineResult
 
     /**
-     * Close the inbound connection.  Awww snap, no soup for you
+     * Close the inbound connection.
      *
      * @throws SSLException General exception occurred when closing the inbound socket.
      * @since 1.2.0
@@ -65,7 +65,7 @@ interface PacketTransportEngine {
     fun closeInbound()
 
     /**
-     * Close the outbound connection.  Awww snap, no soup for you
+     * Close the outbound connection.
      *
      * @since 1.2.0
      */

@@ -1,14 +1,14 @@
-package com.onyxdevtools.modelupdate.after;
+package com.onyxdevtools.modelUpdate.after;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.modelupdate.entities.Invoice;
-import com.onyxdevtools.modelupdate.entities.Payment;
+import com.onyxdevtools.modelUpdate.entities.Invoice;
+import com.onyxdevtools.modelUpdate.entities.Payment;
 
 import java.util.List;
 
 /**
- * Created by tosborn1 on 6/28/16.
+ * Created by Tim Osborn on 6/28/16.
  *
  * This demonstrates how a To One relationship can be changed to a To Many Relationship to support
  * easy model updates.  One thing to note is that it may be easy for Onyx to transpose a relationship
@@ -22,6 +22,7 @@ class UpdateRelationshipDemo {
 
         // This used to be a single entity and now it is a list of payments since the relationship has changed from a One To One
         // to a One To Many.  This is also handled by the light weight migration.
+        assert myLatestInvoice != null;
         List<Payment> paymentList = myLatestInvoice.getPayments();
 
         // What previously was a one to one relationship should have the existing record in the set.

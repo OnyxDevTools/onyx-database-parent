@@ -36,7 +36,7 @@ import com.onyx.persistence.IManagedEntity
  * java -cp path_to_my_classes(.jar):onyx-remote-database-(0.0.1)-alpha.jar com.onyx.application.impl.DatabaseServer -l /path/to/database/databaseLocation -port=8080
  *
  * e.x
- * java -cp /Users/tosborn1/Dropbox/OnyxSandbox/onyxdb-parent/OnyxDatabaseTests/target/classes/:onyx-remote-database-0.0.1-alpha.jar com.onyx.application.impl.DatabaseServer -l /Users/tosborn1/Desktop/database1 -port=8080
+ * java -cp /Users/Tim Osborn/Dropbox/OnyxSandbox/onyxdb-parent/OnyxDatabaseTests/target/classes/:onyx-remote-database-0.0.1-alpha.jar com.onyx.application.impl.DatabaseServer -l /Users/Tim Osborn/Desktop/database1 -port=8080
  *
  *
  * @author Tim Osborn

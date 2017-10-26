@@ -7,7 +7,7 @@ import com.onyx.persistence.annotations.Identifier;
 import entities.AbstractEntity;
 
 /**
- * Created by tosborn on 8/27/14.
+ * Created by Tim Osborn on 8/27/14.
  */
 @Entity
 public class WorkspaceFileTmp extends AbstractEntity implements IManagedEntity

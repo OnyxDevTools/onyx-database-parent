@@ -14,7 +14,7 @@ import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
 
 /**
- * Created by tosborn1 on 1/8/17.
+ * Created by Tim Osborn on 1/8/17.
  *
  *
  * This class is used to combine both a Hash Matrix index and a SkipList.  The tail end of the hash matrix points to a skip list.
@@ -228,10 +228,10 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
         val hash = Math.abs(hash(key))
         val hashDigits = getHashDigits(hash)
         val skipListMapId = getSkipListKey(key)
-        try {
-            return skipListMapCache.getOrPut(skipListMapId) { return@getOrPut seek(forInsert, hashDigits)!! }
+        return try {
+            skipListMapCache.getOrPut(skipListMapId) { return@getOrPut seek(forInsert, hashDigits)!! }
         } catch (e: KotlinNullPointerException) {
-            return null
+            null
         }
     }
 

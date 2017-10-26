@@ -18,7 +18,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/13/17.
+ * Created by Tim Osborn on 3/13/17.
  */
 @Category({ EmbeddedDatabaseTests.class })
 public class IdentifierListTest extends BaseTest {

@@ -47,8 +47,8 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
     @Throws(OnyxException::class)
     fun findByPartitionReference(request: EntityRequestBody): IManagedEntity? {
         var clazz: Class<*>? = null
-        try {
-            clazz = Class.forName(request.type)
+        clazz = try {
+            Class.forName(request.type)
         } catch (e: ClassNotFoundException) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, clazz!!)
         }
@@ -97,9 +97,8 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(OnyxException::class)
     fun findWithPartitionId(request: EntityRequestBody): IManagedEntity {
-        val clazz: Class<*>
-        try {
-            clazz = Class.forName(request.type)
+        val clazz: Class<*> = try {
+            Class.forName(request.type)
         } catch (e: ClassNotFoundException) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND)
         }
@@ -185,8 +184,8 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
         val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, clazz)
         val entities: List<IManagedEntity>
 
-        try {
-            entities = objectMapper.readValue(request.entities, javaType)
+        entities = try {
+            objectMapper.readValue(request.entities, javaType)
         } catch (e: IOException) {
             throw EntityClassNotFoundException(OnyxException.UNKNOWN_EXCEPTION)
         }
@@ -208,8 +207,8 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
         val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, clazz)
         val entities: List<IManagedEntity>
 
-        try {
-            entities = objectMapper.readValue(request.entities, javaType)
+        entities = try {
+            objectMapper.readValue(request.entities, javaType)
         } catch (e: IOException) {
             throw EntityClassNotFoundException(OnyxException.UNKNOWN_EXCEPTION)
         }

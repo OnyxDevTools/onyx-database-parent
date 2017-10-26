@@ -6,7 +6,7 @@ import com.onyx.persistence.annotations.*;
 import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
- * Created by tosborn1 on 9/1/15.
+ * Created by Tim Osborn on 9/1/15.
  */
 @Entity
 public class SchemaIndexChangedEntity extends ManagedEntity implements IManagedEntity

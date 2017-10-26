@@ -8,7 +8,7 @@ import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 import java.util.Map;
 
 /**
- * Created by tosborn1 on 7/14/16.
+ * Created by Tim Osborn on 7/14/16.
  */
 public class BasicQueryMapStream implements QueryMapStream<Map<String, ? >> {
 

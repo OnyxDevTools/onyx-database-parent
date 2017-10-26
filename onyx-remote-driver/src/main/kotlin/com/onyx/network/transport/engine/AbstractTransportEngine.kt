@@ -4,7 +4,7 @@ import javax.net.ssl.SSLEngineResult
 import javax.net.ssl.SSLException
 
 /**
- * Created by tosborn1 on 3/29/17.
+ * Created by Tim Osborn on 3/29/17.
  *
  * Abstract implementation of a transport engine
  */
@@ -36,7 +36,7 @@ abstract class AbstractTransportEngine {
         get() = true
 
     /**
-     * Close the inbound connection.  Awww snap, no soup for you
+     * Close the inbound connection.
      *
      * @throws SSLException General exception occurred when closing the inbound socket.
      * @since 1.2.0

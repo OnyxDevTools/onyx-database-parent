@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 2/16/17.
+ * Created by Tim Osborn on 2/16/17.
  *
  * This indicates a head of a data structure for a Hash table with a child index of a skip list.
  */

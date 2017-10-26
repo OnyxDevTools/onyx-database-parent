@@ -1,7 +1,7 @@
 package com.onyx.exception
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * Client failed to connect
  */

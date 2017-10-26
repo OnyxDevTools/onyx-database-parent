@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @Entity

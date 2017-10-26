@@ -41,7 +41,7 @@ object EntityClassLoader {
     /**
      * Write an enum to file
      * @param enumClass Enum Class Name
-     * @param enumValues Enum values separated by comman and ended with a semicolon.
+     * @param enumValues Enum values separated by comma and ended with a semicolon.
      * @param outputDirectory Source directory
      */
     private fun writeEnum(enumClass: String?, enumValues: String?, outputDirectory: String) {

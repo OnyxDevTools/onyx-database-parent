@@ -6,7 +6,7 @@ import com.onyx.persistence.annotations.*;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 4/2/17.
+ * Created by Tim Osborn on 4/2/17.
  *
  * Simple entity for a cookbook.
  */

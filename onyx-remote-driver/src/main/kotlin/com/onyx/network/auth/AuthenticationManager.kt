@@ -4,7 +4,7 @@ import com.onyx.exception.RequestTimeoutException
 import com.onyx.exception.InitializationException
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * This contract serves as an authentication / identity verification class
  */

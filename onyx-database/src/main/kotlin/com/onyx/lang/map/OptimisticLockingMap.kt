@@ -3,7 +3,7 @@ package com.onyx.lang.map
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 
 /**
- * Created by tosborn1 on 3/24/17.
+ * Created by Tim Osborn on 3/24/17.
  *
  * This map only locks on write access.  It is non blocking for read access.
  */

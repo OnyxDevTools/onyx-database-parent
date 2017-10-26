@@ -3,7 +3,7 @@ import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import com.onyx.lang.map.LastRecentlyUsedMap
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * This query build on top of the last recently used.  It also stores hard references that do not get removed
  */

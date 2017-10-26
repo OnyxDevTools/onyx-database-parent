@@ -4,7 +4,7 @@ import com.onyx.application.impl.DatabaseServer
 import org.apache.commons.cli.*
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * This is responsible for parsing the command line options of a database server
  */
@@ -48,9 +48,9 @@ open class CommandLineParser(args: Array<String>) {
         val options = configureCommandLineOptions()
 
         val commandLine: CommandLine
-        try {
+        commandLine = try {
             // parse the command line arguments
-            commandLine = parser.parse(options, args)
+            parser.parse(options, args)
         } catch (exp: ParseException) {
             // oops, something went wrong
             System.err.println("Invalid Arguments.  Reason: " + exp.message)

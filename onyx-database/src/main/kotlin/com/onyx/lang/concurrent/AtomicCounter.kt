@@ -1,7 +1,7 @@
 package com.onyx.lang.concurrent
 
 /**
- * Created by tosborn1 on 3/2/17.
+ * Created by Tim Osborn on 3/2/17.
  *
  *
  * This method is the contract that is used to count long values.

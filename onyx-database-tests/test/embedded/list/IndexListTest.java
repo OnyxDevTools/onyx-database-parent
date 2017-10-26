@@ -1,7 +1,7 @@
 package embedded.list;
 
 /**
- * Created by tosborn1 on 3/14/17.
+ * Created by Tim Osborn on 3/14/17.
  */
 
 import category.EmbeddedDatabaseTests;
@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/13/17.
+ * Created by Tim Osborn on 3/13/17.
  */
 @SuppressWarnings("unchecked")
 @Category({EmbeddedDatabaseTests.class})

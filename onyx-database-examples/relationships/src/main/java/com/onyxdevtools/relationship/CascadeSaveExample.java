@@ -54,6 +54,7 @@ class CascadeSaveExample extends AbstractDemo
         spongeBobSeries = manager.findById(Series.class, spongeBobSeries.getSeriesId());
 
         // Make sure that it has been cascaded properly
+        assert spongeBobSeries != null;
         assertNotNull("Sponge Bob Series should have been saved", spongeBobSeries);
         assertNotNull("Sponge Bob Seasons should have been saved", spongeBobSeries.getSeasons());
         assertEquals("The pilot episode should have been saved",  "SpongeBob - S01E01", spongeBobSeries.getSeasons().get(0).getEpisodes().get(0).getEpisodeId());

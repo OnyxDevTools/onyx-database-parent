@@ -63,8 +63,8 @@ object NetworkBufferPool {
      * @since 2.0.0
      */
     fun <T> withBuffer(buffer: ByteBuffer, body:(ByteBuffer) -> T):T {
-        try {
-            return body.invoke(buffer)
+        return try {
+            body.invoke(buffer)
         } finally {
             recycle(buffer)
         }

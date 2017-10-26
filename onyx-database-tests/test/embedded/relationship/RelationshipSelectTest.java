@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by tosborn1 on 3/17/17.
+ * Created by Tim Osborn on 3/17/17.
  */
 @Category({EmbeddedDatabaseTests.class})
 public class RelationshipSelectTest extends BaseTest {

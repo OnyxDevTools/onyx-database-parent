@@ -2,18 +2,18 @@ package com.onyx.persistence.query
 
 
 /**
- * Created by tosborn1 on 3/21/17.
+ * Created by Tim Osborn on 3/21/17.
  *
  * Template for query change listener.  This is the contract you adhere to while
  * listening for changes in a query.  If an entity is inserted, updated, or deleted
- * that match the orignal query this listener is associated to, it will fire one
+ * that match the original query this listener is associated to, it will fire one
  * of these delegate methods.
  */
 interface QueryListener<in T> {
 
     /**
-     * Item has been modified.  This ocurres when an entity met the original criteria
-     * when querying the database and was updated.  The updated values still match the critieria
+     * Item has been modified.  This occurs when an entity met the original criteria
+     * when querying the database and was updated.  The updated values still match the criteria
      *
      * @param item Entity updated via the persistence manager
      *
@@ -22,7 +22,7 @@ interface QueryListener<in T> {
     fun onItemUpdated(item: T)
 
     /**
-     * Item has been inserted.  This ocurres when an entity was saved and it meets the query criteria.
+     * Item has been inserted.  This occurs when an entity was saved and it meets the query criteria.
      *
      * @param item Entity inserted via the persistence manager
      *
@@ -31,7 +31,7 @@ interface QueryListener<in T> {
     fun onItemAdded(item: T)
 
     /**
-     * Item has been deleted or no longer meets the critieria of the query.
+     * Item has been deleted or no longer meets the criteria of the query.
      *
      * @param item Entity persisted via the persistence manager
      *

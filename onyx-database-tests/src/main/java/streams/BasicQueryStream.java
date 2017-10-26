@@ -7,7 +7,7 @@ import com.onyx.persistence.stream.QueryStream;
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete;
 
 /**
- * Created by tosborn1 on 7/14/16.
+ * Created by Tim Osborn on 7/14/16.
  */
 public class BasicQueryStream implements QueryStream {
 

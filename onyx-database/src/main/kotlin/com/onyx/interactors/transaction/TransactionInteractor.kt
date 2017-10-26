@@ -6,7 +6,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.interactors.transaction.data.Transaction
 
 /**
- * Created by tosborn1 on 3/25/16.
+ * Created by Tim Osborn on 3/25/16.
  *
  * The purpose of this class is to write a WAL transaction to keep a history of all transactions
  */

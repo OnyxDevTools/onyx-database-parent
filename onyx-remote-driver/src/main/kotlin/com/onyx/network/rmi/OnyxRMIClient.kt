@@ -9,7 +9,7 @@ import java.lang.reflect.Proxy
 import java.util.*
 
 /**
- * Created by tosborn1 on 6/27/16.
+ * Created by Tim Osborn on 6/27/16.
  *
  *
  * The purpose of this is to serve as a thin client for retrieving proxy remote instances from the server

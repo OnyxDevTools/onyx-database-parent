@@ -35,6 +35,7 @@ import java.util.*
  *
  * @see com.onyx.persistence.query.Query
  */
+@Suppress("ALL")
 class QueryCriteria<T> : BufferStreamable {
 
     constructor()
@@ -91,7 +92,7 @@ class QueryCriteria<T> : BufferStreamable {
     var isRelationship:Boolean? = null
         get() {
             if(field == null)
-                field = attribute?.contains(".") ?: false
+                field = attribute?.contains(".") == true
             return field
         }
 

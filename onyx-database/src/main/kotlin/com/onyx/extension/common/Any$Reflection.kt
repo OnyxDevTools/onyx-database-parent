@@ -39,8 +39,8 @@ fun <T : Any> Class<*>.instance(): T {
         parameters.forEachIndexed { index, parameter ->
             parameterValues[index] = if(parameter.type.isPrimitive) ClassMetadata.constructor(parameter.type).newInstance() else null
         }
-        try {
-            return constructor.newInstance(*parameterValues) as T
+        return try {
+            constructor.newInstance(*parameterValues) as T
         } catch (e1: InvocationTargetException) {
             throw InstantiationException("Cannot instantiate class " + this.canonicalName)
         }

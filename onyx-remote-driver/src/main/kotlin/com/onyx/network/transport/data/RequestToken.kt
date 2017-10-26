@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 2/10/17.
+ * Created by Tim Osborn on 2/10/17.
  *
  * This class is a token that is sent back and fourth between the client and server.
  */

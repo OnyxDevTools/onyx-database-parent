@@ -32,9 +32,9 @@ abstract class AbstractIterableHashMap<K, V>(fileStore: Store, header: Header, h
         override fun hasNext(): Boolean = index < mapCount.get()
 
         override fun next(): Long {
-            try {
+            return try {
                 val mapId = getSkipListIdentifier(index)
-                return getSkipListReference(mapId)
+                getSkipListReference(mapId)
             } finally {
                 index++
             }

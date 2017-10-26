@@ -13,7 +13,7 @@ import com.onyxdevtools.listener.entities.Player;
 import java.io.File;
 
 /**
- * Created by tosborn1 on 4/1/17.
+ * Created by Tim Osborn on 4/1/17.
  *
  * This example demonstrates how to subscribe to query changes.
  */
@@ -40,25 +40,28 @@ public class Main {
 
         manager.saveEntity(johnElway);
 
-        // Define critiera to match position = QB & isHallOfFame = true
-        QueryCriteria hallOfFameQuarterbackCriteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB")
-                                                            .and(new QueryCriteria("isHallOfFame", QueryCriteriaOperator.EQUAL, true));
+        // Define criteria to match position = QB & isHallOfFame = true
+        QueryCriteria hallOfFameQuarterbackCriteria = new QueryCriteria<>("position", QueryCriteriaOperator.EQUAL, "QB")
+                                                            .and(new QueryCriteria<>("isHallOfFame", QueryCriteriaOperator.EQUAL, true));
         final Query hallOfFameQuarterBackQuery = new Query(Player.class, hallOfFameQuarterbackCriteria);
 
         // Define Change listener for query
         hallOfFameQuarterBackQuery.setChangeListener(new QueryListener<Player>()
         {
             @Override
+            @SuppressWarnings("UNUSED")
             public void onItemUpdated(Player item) {
                 System.out.println("Player " + item.getFirstName() + " " + item.getLastName() + " has been updated!");
             }
 
             @Override
+            @SuppressWarnings("UNUSED")
             public void onItemAdded(Player item) {
                 System.out.println("Player " + item.getFirstName() + " " + item.getLastName() + " has been added!");
             }
 
             @Override
+            @SuppressWarnings("UNUSED")
             public void onItemRemoved(Player item) {
                 System.out.println("Player " + item.getFirstName() + " " + item.getLastName() + " has been removed!");
             }

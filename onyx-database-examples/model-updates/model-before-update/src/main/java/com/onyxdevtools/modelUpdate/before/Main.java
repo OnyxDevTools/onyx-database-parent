@@ -1,12 +1,12 @@
-package com.onyxdevtools.modelupdate.before;
+package com.onyxdevtools.modelUpdate.before;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.modelupdate.entities.Account;
-import com.onyxdevtools.modelupdate.entities.Invoice;
-import com.onyxdevtools.modelupdate.entities.Payment;
+import com.onyxdevtools.modelUpdate.entities.Account;
+import com.onyxdevtools.modelUpdate.entities.Invoice;
+import com.onyxdevtools.modelUpdate.entities.Payment;
 
 import java.io.File;
 import java.text.ParseException;
@@ -16,12 +16,12 @@ import java.util.Date;
 /**
  * This is a 1 part example.  The first example is used simply to create an existing database.
  *
- * Part 1 - @see com.onyxdevtools.modelupdate.before.Main
+ * Part 1 - @see com.onyxdevtools.modelUpdate.before.Main
  *
  *   This class' purpose is to fill a test database with a flawed data model so that we can showcase
  *   how we can make changes to the data model and handle migrations.
  *
- * Part 2 - @see com.onyxdevtools.modelupdate.after.Main
+ * Part 2 - @see com.onyxdevtools.modelUpdate.after.Main
  *
  *   Part 2 will demonstrate how the changes are made to the data model.  Have a look at the entities and notice
  *   the commented changes to those entities.
@@ -47,6 +47,7 @@ public class Main
 
         // Create a database and its connection
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
+        //noinspection SpellCheckingInspection
         factory.setCredentials("onyx", "SavingDataisFun!"); //2
         factory.initialize();
 
@@ -68,6 +69,7 @@ public class Main
     private static void seedData(PersistenceManager manager) throws OnyxException
     {
         Account account = new Account();
+        //noinspection SpellCheckingInspection
         account.setAccountName("Timbob's Lawn Care");
         account.setBalanceDue(55.43f);
 
@@ -99,6 +101,7 @@ public class Main
         manager.saveEntity(marchLawnCarePayment);
 
         Account account1 = manager.findById(Account.class, 1);
+        assert account1 != null;
         assert account1.getAccountId() == 1L;
     }
 
@@ -126,7 +129,7 @@ public class Main
     private static void deleteDatabase(String pathToDb)
     {
         File database = new File(pathToDb);
-        if (database != null && database.exists()) {
+        if (database.exists()) {
             delete(database);
         }
         database.delete();
@@ -138,6 +141,7 @@ public class Main
      */
     private static void delete(File f) {
         if (f.isDirectory()) {
+            //noinspection ConstantConditions
             for (File c : f.listFiles())
                 delete(c);
         }

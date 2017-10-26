@@ -14,7 +14,7 @@ import java.util.Random;
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 public class BatchDeletingDataExample
 {

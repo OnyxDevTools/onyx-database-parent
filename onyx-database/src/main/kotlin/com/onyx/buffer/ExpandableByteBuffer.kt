@@ -4,7 +4,7 @@ import java.nio.Buffer
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 8/2/16.
+ * Created by Tim Osborn on 8/2/16.
  *
  * This class is meant to encapsulate the automatic growing and shrinking of a byte expandableByteBuffer.  Also it acts as a reference
  * to a expandableByteBuffer as the underlying ByteBuffer can change.

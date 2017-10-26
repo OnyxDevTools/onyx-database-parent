@@ -7,7 +7,7 @@ import com.onyx.network.transport.engine.PacketTransportEngine
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 2/12/17.
+ * Created by Tim Osborn on 2/12/17.
  *
  * This contains the connection information including the buffers and the thread pool
  * that each connection is assigned to.

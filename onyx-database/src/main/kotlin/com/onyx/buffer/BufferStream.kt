@@ -13,7 +13,7 @@ import java.util.*
 import kotlin.collections.HashMap
 
 /**
- * Created by tosborn1 on 7/2/16.
+ * Created by Tim Osborn on 7/2/16.
  *
  *
  * The expandableByteBuffer expandableByteBuffer is an value serialization expandableByteBuffer.   It is inspired by the InputStream and and OutputStream
@@ -143,7 +143,7 @@ class BufferStream(buffer: ByteBuffer) {
      *
      * @since 2.0.0
      */
-    fun clearReferences() {
+    private fun clearReferences() {
         references.clear()
         referencesByIndex.clear()
         referenceCount = 0
@@ -365,10 +365,10 @@ class BufferStream(buffer: ByteBuffer) {
             val stringBytes = ByteArray(stringSize)
             expandableByteBuffer!!.buffer.get(stringBytes)
             val className = String(stringBytes)
-            try {
+            return try {
                 val returnValue = classForName(className)
                 addReference(returnValue)
-                return returnValue
+                returnValue
             } catch (e: ClassNotFoundException) {
                 throw BufferingException(BufferingException.UNKNOWN_CLASS + className, null, e)
             }
@@ -1104,8 +1104,8 @@ class BufferStream(buffer: ByteBuffer) {
             bufferStream.isComingFromBuffer = true
             val returnValue: Any?
 
-            try {
-                returnValue = bufferStream.value
+            returnValue = try {
+                bufferStream.value
             } catch (e: BufferingException) {
                 buffer.position(maxBufferSize + bufferStartingPosition)
                 throw e

@@ -18,7 +18,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 /**
- * Created by tosborn1 on 3/25/16.
+ * Created by Tim Osborn on 3/25/16.
  *
  * Handles logging of a transaction
  */

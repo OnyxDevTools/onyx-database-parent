@@ -7,7 +7,7 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.Serializable
 
 /**
- * Created by tosborn1 on 7/30/16.
+ * Created by Tim Osborn on 7/30/16.
  *
  * This interface is intended to enable an value for expandableByteBuffer io.  It works much like the Externalizable interface
  * except without using input and output streams it uses a ByteBuffer.  The IO is wrapped within the BufferStream.

@@ -1,11 +1,10 @@
 package com.onyx.diskmap.impl.base.hashmatrix
 
 import com.onyx.buffer.BufferPool
-import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.Store
-import com.onyx.extension.withBuffer
 
 /**
  * This class is responsible for the store i/o that writes and reads the hash matrix nodes.  It inherits all of the
@@ -49,7 +48,7 @@ abstract class AbstractHashMatrix<K, V>(fileStore: Store, header: Header, detach
     }
 
     /**
-     * Get Hash Matrix Node.  Return the deserialized value from the store
+     * Get Hash Matrix Node.  Return the de-serialized value from the store
      *
      * @param position Position to find the data
      * @return Node retrieved from the cache or the volume

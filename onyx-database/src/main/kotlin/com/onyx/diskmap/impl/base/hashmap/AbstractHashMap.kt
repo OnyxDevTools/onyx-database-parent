@@ -1,12 +1,10 @@
 package com.onyx.diskmap.impl.base.hashmap
 
 import com.onyx.buffer.BufferPool
-import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.perform
-import com.onyx.extension.withBuffer
-
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 

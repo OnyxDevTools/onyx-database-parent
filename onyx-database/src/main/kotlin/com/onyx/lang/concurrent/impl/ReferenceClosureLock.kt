@@ -4,11 +4,12 @@ import com.onyx.lang.concurrent.ClosureLock
 import java.util.*
 
 /**
- * Created by tosborn1 on 8/4/15.
+ * Created by Tim Osborn on 8/4/15.
  *
  *
  * This is the default implementation of the ClosureLock that implements it using 10 different StampLocks
  */
+@Suppress("UNUSED")
 class ReferenceClosureLock : ClosureLock {
 
     private val references = WeakHashMap<Any, Any>()

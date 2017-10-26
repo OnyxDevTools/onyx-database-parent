@@ -9,7 +9,7 @@ import javax.net.ssl.TrustManagerFactory
 import java.security.KeyStore
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * The purpose of this class is to abstract out the keystore file settings
  */

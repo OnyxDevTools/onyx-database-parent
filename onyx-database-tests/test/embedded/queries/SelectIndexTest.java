@@ -15,7 +15,7 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 
 /**
- * Created by tosborn1 on 3/22/17.
+ * Created by Tim Osborn on 3/22/17.
  */
 @Category({EmbeddedDatabaseTests.class})
 public class SelectIndexTest extends BaseTest {

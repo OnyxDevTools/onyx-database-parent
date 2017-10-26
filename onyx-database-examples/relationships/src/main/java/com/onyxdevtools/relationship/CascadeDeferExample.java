@@ -51,6 +51,7 @@ class CascadeDeferExample extends AbstractDemo
 
         // The Persistence Manager did not save the actors and associated it to the movie //2
         final Movie starWarsAfterSave1 = manager.findById(Movie.class, starWarsMovie.getMovieId());
+        assert starWarsAfterSave1 != null;
         manager.initialize(starWarsAfterSave1, "actors");
         assertEquals("Movie should not have any associated actors", 0, starWarsAfterSave1.actors.size());
 
@@ -63,6 +64,7 @@ class CascadeDeferExample extends AbstractDemo
 
         // The Persistence Manager did save the actors and associated it to the movie //4
         final Movie starWarsAfterSave2 = manager.findById(Movie.class, starWarsMovie.getMovieId());
+        assert starWarsAfterSave2 != null;
         manager.initialize(starWarsAfterSave2, "actors");
         assertEquals("Movie SHOULD have associated actors", 2, starWarsAfterSave1.actors.size());
 

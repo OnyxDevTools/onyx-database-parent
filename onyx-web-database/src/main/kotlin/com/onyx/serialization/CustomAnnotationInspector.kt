@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.introspect.ObjectIdInfo
 import com.onyx.buffer.BufferStreamable
 
 /**
- * Created by tosborn1 on 2/14/17.
+ * Created by Tim Osborn on 2/14/17.
  *
  * The purpose of this is because Jackson JSon serialization is a piece of shit.  I need to account for
  * nested objects.  Luckily they have an obscure hack for this.  That hack is below:

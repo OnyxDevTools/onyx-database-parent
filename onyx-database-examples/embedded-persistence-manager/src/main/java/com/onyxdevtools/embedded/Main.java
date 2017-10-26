@@ -25,6 +25,7 @@ public class Main
                 + File.separatorChar +"embedded-db.oxd";
 
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
+        //noinspection SpellCheckingInspection
         factory.setCredentials("onyx-remote", "SavingDataisFun!"); //2
         factory.initialize();  //4
 

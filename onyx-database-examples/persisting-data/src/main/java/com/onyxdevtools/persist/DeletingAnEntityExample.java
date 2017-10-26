@@ -11,7 +11,7 @@ import java.io.File;
 import java.util.Date;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
 public class DeletingAnEntityExample {
 

@@ -112,7 +112,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
     /**
      * Returns true if the records contain a primary key
      *
-     * @param primaryKey Idnetifier of entity
+     * @param primaryKey Identifier of entity
      * @return Whether that id is taken
      */
     @Throws(OnyxException::class)

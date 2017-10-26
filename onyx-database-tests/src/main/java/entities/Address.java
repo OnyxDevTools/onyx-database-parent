@@ -10,7 +10,7 @@ import com.onyx.persistence.annotations.values.RelationshipType;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/13/17.
+ * Created by Tim Osborn on 3/13/17.
  */
 @Entity
 public class Address extends ManagedEntity

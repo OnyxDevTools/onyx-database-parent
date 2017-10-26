@@ -1,7 +1,7 @@
 package com.onyx.diskmap.data
 
 /**
- * Created by tosborn1 on 1/10/17.
+ * Created by Tim Osborn on 1/10/17.
  *
  * This class indicates both a bitmap and skip list combined data
  *

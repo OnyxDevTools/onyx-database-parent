@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.after;
+package com.onyxdevtools.modelUpdate.after;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -8,16 +8,16 @@ import com.onyx.persistence.query.QueryCriteriaOperator;
 import com.onyx.persistence.query.QueryOrder;
 import com.onyx.persistence.stream.QueryMapStream;
 import com.onyx.persistence.stream.QueryStream;
-import com.onyxdevtools.modelupdate.entities.Account;
-import com.onyxdevtools.modelupdate.entities.Invoice;
-import com.onyxdevtools.modelupdate.entities.Payment;
+import com.onyxdevtools.modelUpdate.entities.Account;
+import com.onyxdevtools.modelUpdate.entities.Invoice;
+import com.onyxdevtools.modelUpdate.entities.Payment;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Created by tosborn1 on 6/28/16.
+ * Created by Tim Osborn on 6/28/16.
  *
  * Manual Migrations utilizes an API within the Persistence Manager that has many uses.  It can be used to Migrate data,
  * perform analytics, or run complex scripts.
@@ -63,7 +63,7 @@ class ManualMigrationDemo {
         final Query accountQuery = new Query(Account.class, new QueryCriteria("accountId", QueryCriteriaOperator.NOT_NULL));
 
         persistenceManager.stream(accountQuery, (QueryMapStream) (o, internalPersistenceManager) -> {
-            Map accountMap = (Map)o;
+            Map accountMap = o;
             try {
 
                 // Ensure the property still exists within the data.

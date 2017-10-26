@@ -1,11 +1,11 @@
-package com.onyxdevtools.modelupdate.after;
+package com.onyxdevtools.modelUpdate.after;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.modelupdate.entities.Account;
+import com.onyxdevtools.modelUpdate.entities.Account;
 
 /**
- * Created by tosborn1 on 6/28/16.
+ * Created by Tim Osborn on 6/28/16.
  *
  * // Displays how the identifier type has changed.  This has been done by the lightweight migration.
  * This class demonstrates how an identifier properties can be changed and handled by the lightweight migration.
@@ -31,6 +31,7 @@ class UpdateIdentifierDemo {
         try {
             // Fetch an account.  Notice that the id is now a long rather than an integer.
             Account account = persistenceManager.findById(Account.class, 1L);
+            assert account != null;
             assert account.getAccountId() == 1L;
 
             // This example creates a new account and attempts to save it without an identifier.
@@ -39,7 +40,7 @@ class UpdateIdentifierDemo {
 
             // The account ID was not auto incremented.
             // This is because we removed the generator from the @Identifier annotation.
-            assert account2.getAccountId() == 0;
+            assert 0 == account2.getAccountId();
         } catch (OnyxException e)
         {
             e.printStackTrace();

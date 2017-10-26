@@ -1,11 +1,11 @@
-package com.onyxdevtools.modelupdate.after;
+package com.onyxdevtools.modelUpdate.after;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
-import com.onyxdevtools.modelupdate.entities.Account;
+import com.onyxdevtools.modelUpdate.entities.Account;
 
 /**
- * Created by tosborn1 on 6/28/16.
+ * Created by Tim Osborn on 6/28/16.
  *
  * The UpdateFieldDemo demonstrates how the model has been changed by adding/removing fields.
  * There should not be any additional work needed as it is handled by the lightweight migration.
@@ -24,6 +24,7 @@ class UpdateFieldDemo
         try {
             // Fetch an account.  Notice that the id is now a long rather than an integer.
             Account account = persistenceManager.findById(Account.class, 1L);
+            assert account != null;
             assert account.getAccountId() == 1L;
 
             // The Account Name is a new field and is now persistable.
@@ -34,6 +35,7 @@ class UpdateFieldDemo
 
             // Verify it was indeed persisted
             account = persistenceManager.findById(Account.class, 1L);
+            assert account != null;
             assert account.getAccountName().equals("Utility Bill");
 
             // Notice, the one thing that we cannot demonstrate is that we removed a field, "balanceDue"

@@ -3,13 +3,12 @@ package com.onyx.diskmap.store.impl
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
-import com.onyx.lang.concurrent.AtomicCounter
-import com.onyx.lang.concurrent.impl.DefaultAtomicCounter
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
 import com.onyx.extension.common.instance
 import com.onyx.extension.perform
-import com.onyx.extension.withBuffer
+import com.onyx.lang.concurrent.AtomicCounter
+import com.onyx.lang.concurrent.impl.DefaultAtomicCounter
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import java.io.File

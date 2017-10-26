@@ -15,7 +15,7 @@ import java.util.List;
 
 
 /**
- @author  cosborn
+ @author  Chris Osborn
  */
 class QueryExample
 {
@@ -37,7 +37,7 @@ class QueryExample
         criteria.and("lastName", QueryCriteriaOperator.STARTS_WITH, "C");
 
         final Query query = new Query(Player.class, criteria, new QueryOrder("firstName"));
-        // query.setCriteria(criteria); or you can set the critiera after construction
+        // query.setCriteria(criteria); or you can set the criteria after construction
 
         final List<Player> quarterbacks = manager.executeQuery(query);
 

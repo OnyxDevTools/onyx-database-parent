@@ -3,7 +3,7 @@ package com.onyx.persistence.stream
 import com.onyx.persistence.manager.PersistenceManager
 
 /**
- * Created by tosborn1 on 5/19/16.
+ * Created by Tim Osborn on 5/19/16.
  *
  * This is a lambda for the Onyx Database Stream API.  This will iterate through entities
  */

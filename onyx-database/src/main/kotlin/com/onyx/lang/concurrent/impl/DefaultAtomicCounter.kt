@@ -8,7 +8,7 @@ import com.onyx.exception.BufferingException
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Created by tosborn1 on 3/2/17.
+ * Created by Tim Osborn on 3/2/17.
  *
  *
  * Default implementation of the atomic counter

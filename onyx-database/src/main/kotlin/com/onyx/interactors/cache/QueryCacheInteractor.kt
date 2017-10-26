@@ -9,7 +9,7 @@ import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * This controller handles how a query is cached.
  */
@@ -52,7 +52,7 @@ interface QueryCacheInteractor {
      * @param entity Entity that was potentially inserted, updated, or deleted.
      * @param descriptor The entity's descriptor
      * @param entityReference The entity's reference
-     * @param type Wheter or not to remove it from the cache.  In this case, it would be if an entity was deleted.
+     * @param type Whether or not to remove it from the cache.  In this case, it would be if an entity was deleted.
      *
      * @since 1.3.0
      */
@@ -62,7 +62,7 @@ interface QueryCacheInteractor {
      * Subscribe a query listener with associated cached results
      *
      * @param results Results to listen to
-     * @param queryListener listner to respond to cache changes
+     * @param queryListener listener to respond to cache changes
      *
      * @since 1.3.0
      */

@@ -3,7 +3,7 @@ package com.onyx.application.impl
 import com.onyx.network.ssl.impl.AbstractSSLPeer
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * This class is to abstract out the basic properties and functions of a server
  */

@@ -11,7 +11,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This is the JPA implementation of the persistence manager.  This is setup to have 8 concurrent entity managers
  * Although that may not be the best implementation for application's business rules, this is used to outline
@@ -95,6 +95,7 @@ public class JPAPersistenceManager implements ProviderPersistenceManager {
      * @param clazz Entity type
      * @param identifier Primary key of the entity
      */
+    @SuppressWarnings("UNCHECKED_CAST")
     public void delete(Class clazz, Object identifier) {
 
         EntityManager entityManager = null;
@@ -123,6 +124,7 @@ public class JPAPersistenceManager implements ProviderPersistenceManager {
      * @param identifier Entity's primary key
      * @return Object within database if found
      */
+    @SuppressWarnings("UNCHECKED_CAST")
     public Object find(Class clazz, Object identifier) {
         EntityManager entityManager = null;
         try {

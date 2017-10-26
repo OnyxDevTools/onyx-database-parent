@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 7/31/16.
+ * Created by Tim Osborn on 7/31/16.
  */
 class BufferStreamableObject : BufferStreamable {
     var myString: String? = null

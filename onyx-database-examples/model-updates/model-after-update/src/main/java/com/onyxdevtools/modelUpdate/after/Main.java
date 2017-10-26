@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.after;
+package com.onyxdevtools.modelUpdate.after;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
@@ -10,12 +10,12 @@ import java.io.File;
 /**
  * This is a 2 part example.  The first example is used simply to create an existing database.
  *
- * Part 1 - @see com.onyxdevtools.modelupdate.before.Main
+ * Part 1 - @see com.onyxdevtools.modelUpdate.before.Main
  *
  *   This class' purpose is to fill a test database with a flawed data model so that we can showcase
  *   how we can make changes to the data model and handle migrations.
  *
- * Part 2 - @see com.onyxdevtools.modelupdate.after.Main
+ * Part 2 - @see com.onyxdevtools.modelUpdate.after.Main
  *
  *   Part 2 will demonstrate how the changes are made to the data model.  Have a look at the entities and notice
  *   the commented changes to those entities.
@@ -34,6 +34,7 @@ public class Main
         // Create a database and its connection
         PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
 
+        //noinspection SpellCheckingInspection
         factory.setCredentials("onyx", "SavingDataisFun!"); //2
         factory.initialize();
 

@@ -10,7 +10,7 @@ import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.RemoteQueryListener
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * This class is responsible for controlling the query cache for a remote server.
  */
@@ -51,7 +51,7 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
     /**
      * Un-subscribe query.  The only difference between this class is that it will also remove the push notification subscriber.
      *
-     * @param query Query to unsubscribe from
+     * @param query Query to un-subscribe from
      * @return Whether the listener was listening to begin with
      * @since 1.3.0
      */

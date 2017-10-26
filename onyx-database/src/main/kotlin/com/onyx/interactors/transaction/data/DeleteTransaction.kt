@@ -3,7 +3,7 @@ package com.onyx.interactors.transaction.data
 import com.onyx.persistence.IManagedEntity
 
 /**
- * Created by tosborn1 on 3/25/16.
+ * Created by Tim Osborn on 3/25/16.
  *
  * Delete entity transaction
  */

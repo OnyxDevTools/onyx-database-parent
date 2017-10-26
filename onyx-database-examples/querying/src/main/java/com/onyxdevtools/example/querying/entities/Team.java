@@ -10,7 +10,7 @@ import com.onyx.persistence.annotations.values.RelationshipType;
 import java.util.List;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @Entity

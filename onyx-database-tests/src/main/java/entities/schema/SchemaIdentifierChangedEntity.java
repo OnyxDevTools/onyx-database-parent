@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
- * Created by tosborn1 on 8/26/15.
+ * Created by Tim Osborn on 8/26/15.
  */
 
 @Entity

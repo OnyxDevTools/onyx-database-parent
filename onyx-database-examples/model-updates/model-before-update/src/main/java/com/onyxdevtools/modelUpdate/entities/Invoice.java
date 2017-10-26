@@ -1,4 +1,4 @@
-package com.onyxdevtools.modelupdate.entities;
+package com.onyxdevtools.modelUpdate.entities;
 
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;

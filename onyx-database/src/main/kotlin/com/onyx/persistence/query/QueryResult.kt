@@ -6,7 +6,7 @@ import com.onyx.exception.BufferingException
 import java.io.Serializable
 
 /**
- * Created by tosborn1 on 3/13/16.
+ * Created by Tim Osborn on 3/13/16.
  *
  * The purpose of this class is to be a wrapper for the results since we need the result count
  * and the results.  Using the embedded, the reference of resultCount is used to update the query value

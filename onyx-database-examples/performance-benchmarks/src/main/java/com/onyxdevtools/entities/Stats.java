@@ -11,7 +11,7 @@ import javax.persistence.Index;
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @com.onyx.persistence.annotations.Entity(fileName = "stats")

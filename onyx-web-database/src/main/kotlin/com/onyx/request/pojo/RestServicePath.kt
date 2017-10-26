@@ -1,7 +1,7 @@
 package com.onyx.request.pojo
 
 /**
- * Created by tosborn on 12/31/15.
+ * Created by Tim Osborn on 12/31/15.
  * This contains the list of services for the restful web service api within Onyx
  */
 enum class RestServicePath constructor(val path: String) {

@@ -3,7 +3,7 @@ package com.onyx.request.pojo
 import com.onyx.buffer.BufferStreamable
 
 /**
- * Created by tosborn on 8/30/14.
+ * Created by Tim Osborn on 8/30/14.
  *
  * POJO for entity request
  */

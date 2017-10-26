@@ -20,7 +20,7 @@ import javax.net.ssl.SSLContext
 import java.security.SecureRandom
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * Tim Osborn - 02/13/2017
  *
@@ -76,8 +76,8 @@ open class WebDatabaseServer(databaseLocation: String) : DatabaseServer(database
         val baseHandler = SessionAttachmentHandler(sessionManager, sessionConfig)
         baseHandler.next = securityHandler
 
-        try {
-            server = buildUndertowConfigurationWithHandler(baseHandler)
+        server = try {
+            buildUndertowConfigurationWithHandler(baseHandler)
         } catch (e: Exception) {
             throw RuntimeException(e)
         }

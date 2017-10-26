@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
 public class BatchSavingDataExample {
 

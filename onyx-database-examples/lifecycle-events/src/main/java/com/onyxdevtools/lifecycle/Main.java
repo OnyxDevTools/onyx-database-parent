@@ -7,7 +7,7 @@ import com.onyxdevtools.lifecycle.entities.Beverage;
 import com.onyxdevtools.lifecycle.entities.BeverageEffects;
 
 /**
- * Created by tosborn1 on 4/4/16.
+ * Created by Tim Osborn on 4/4/16.
  *
  * This demo highlights usage of lifecycle events associated to entities.
  */

@@ -38,7 +38,7 @@ import java.util.concurrent.*
  * It was created in order to improve the performance and remove 3rd party libraries
  *
  * @since 1.2.0
- * @since 2.0.0 Refactored from Communication Peer to NetworkClient.  As part of that make coroutine and non blocking
+ * @since 2.0.0 Refactored from Communication Peer to NetworkClient.
  */
 open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
 
@@ -84,7 +84,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
     // region Connection
 
     override val isConnected: Boolean
-        get() = socketChannel?.isConnected ?: false
+        get() = socketChannel?.isConnected == true
 
     /**
      * Connect to a server with given host and port #
@@ -140,10 +140,10 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
             throw ConnectionFailedException()
         }
 
-        try {
+        active = try {
             // Perform Handshake.  If this is unsecured, it is just pass through
             transportPacketTransportEngine.beginHandshake()
-            active = doHandshake(socketChannel!!, connection)
+            doHandshake(socketChannel!!, connection)
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
@@ -233,14 +233,14 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
         val future = DeferredValue<Any?>()
         pendingRequests.put(token, future)
 
-        try {
+        return try {
             write(socketChannel!!, connection!!, token)
-            return future.get(timeout.toLong(), TimeUnit.SECONDS)
+            future.get(timeout.toLong(), TimeUnit.SECONDS)
         } catch (e: TimeoutException) {
             pendingRequests.remove(token)
             if (active)
                 return RequestTimeoutException()
-            return null
+            null
         }
     }
 

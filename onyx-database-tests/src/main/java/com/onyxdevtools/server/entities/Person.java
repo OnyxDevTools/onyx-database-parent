@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
- * Created by tosborn1 on 10/20/15.
+ * Created by Tim Osborn on 10/20/15.
  */
 @Entity
 public class Person extends ManagedEntity implements IManagedEntity

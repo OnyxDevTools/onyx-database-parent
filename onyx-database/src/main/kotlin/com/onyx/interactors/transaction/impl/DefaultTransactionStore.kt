@@ -13,7 +13,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Created by tosborn1 on 9/6/17.
+ * Created by Tim Osborn on 9/6/17.
  *
  * Implementation for getting the file channel for a transaction wal
  *

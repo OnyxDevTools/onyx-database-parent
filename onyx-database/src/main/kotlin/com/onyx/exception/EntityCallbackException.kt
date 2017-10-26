@@ -1,7 +1,7 @@
 package com.onyx.exception
 
 /**
- * Created by cosborn on 12/29/2014.
+ * Created by Chris Osborn on 12/29/2014.
  *
  * Exception occurred while invoking a callback
  */

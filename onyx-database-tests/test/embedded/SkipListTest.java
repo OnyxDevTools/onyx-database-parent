@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by tosborn1 on 1/6/17.
+ * Created by Tim Osborn on 1/6/17.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SkipListTest

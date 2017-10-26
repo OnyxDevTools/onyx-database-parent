@@ -2,7 +2,7 @@ package com.onyx.cli
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 object Main {
     @JvmStatic

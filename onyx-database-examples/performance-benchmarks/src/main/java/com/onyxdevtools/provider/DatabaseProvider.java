@@ -4,7 +4,7 @@ import java.io.File;
 
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This enum represents the different databases the test can support.  For now this includes embedded databases within java
  * that support JPA.  This is set to expand in the future.

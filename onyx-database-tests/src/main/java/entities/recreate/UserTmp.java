@@ -12,7 +12,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by tosborn on 8/30/14.
+ * Created by Tim Osborn on 8/30/14.
  */
 @Entity
 public class UserTmp implements IManagedEntity

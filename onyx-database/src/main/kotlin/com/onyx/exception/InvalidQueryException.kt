@@ -1,7 +1,7 @@
 package com.onyx.exception
 
 /**
- * Created by tosborn1 on 3/14/17.
+ * Created by Tim Osborn on 3/14/17.
  *
  *
  * This exception indicates an issue with the query detected during runtime.

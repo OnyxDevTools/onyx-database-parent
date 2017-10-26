@@ -1,12 +1,12 @@
-package com.onyxdevtools.modelupdate.after;
+package com.onyxdevtools.modelUpdate.after;
 
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyxdevtools.modelupdate.entities.Invoice;
-import com.onyxdevtools.modelupdate.entities.Payment;
+import com.onyxdevtools.modelUpdate.entities.Invoice;
+import com.onyxdevtools.modelUpdate.entities.Payment;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -14,7 +14,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 6/28/16.
+ * Created by Tim Osborn on 6/28/16.
  *
  * The purpose of this Demo class is to outline how an index can be removed and added and the queries that
  * would be impacted by the model changes.

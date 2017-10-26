@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Created by tosborn1 on 1/18/17.
+ * Created by Tim Osborn on 1/18/17.
  */
 @Entity
 public class AllAttributeV2Entity extends AllAttributeEntity {

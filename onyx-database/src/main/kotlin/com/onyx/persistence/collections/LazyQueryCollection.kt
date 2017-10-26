@@ -226,8 +226,8 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
             override fun hasNext(): Boolean = i < size
 
             override fun next(): E {
-                try {
-                    return get(i)
+                return try {
+                    get(i)
                 } finally {
                     i++
                 }
@@ -261,8 +261,8 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
             override fun hasNext(): Boolean = i + 1 < size
 
             override fun next(): E {
-                try {
-                    return get(i)
+                return try {
+                    get(i)
                 } finally {
                     i++
                 }
@@ -271,8 +271,8 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
             override fun hasPrevious(): Boolean = i > 0
 
             override fun previous(): E {
-                try {
-                    return get(i)
+                return try {
+                    get(i)
                 } finally {
                     i--
                 }

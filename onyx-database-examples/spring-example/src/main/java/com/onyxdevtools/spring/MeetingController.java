@@ -25,7 +25,7 @@ class MeetingController
     void saveMeeting(Meeting meeting)
     {
         try {
-            persistenceManager.saveEntity(meeting);
+            this.persistenceManager.saveEntity(meeting);
         } catch (OnyxException e) {
             // Log an error
         }
@@ -39,7 +39,7 @@ class MeetingController
      *
      * @return A list of really boring meetings
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "SpellCheckingInspection"})
     List<Meeting> findBoringMeetings()
     {
         Query query = new Query(Meeting.class, new QueryCriteria("notes", QueryCriteriaOperator.CONTAINS, "Boring"));

@@ -4,7 +4,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 1/6/17.
+ * Created by Tim Osborn on 1/6/17.
  *
  * This is a record pointer for a skip list.
  */

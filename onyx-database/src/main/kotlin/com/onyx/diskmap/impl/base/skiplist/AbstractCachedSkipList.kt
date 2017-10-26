@@ -8,7 +8,7 @@ import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
 
 /**
- * Created by tosborn1 on 1/7/17.
+ * Created by Tim Osborn on 1/7/17.
  *
  *
  * This class was added to enhance the existing index within Onyx Database.  The bitmap was very efficient but, it was a hog
@@ -121,7 +121,7 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
     }
 
     /**
-     * Remove the data from the cache before updating.  Apparantly the reference of the data is not sufficient and
+     * Remove the data from the cache before updating.  Apparently the reference of the data is not sufficient and
      * it needs to be removed so that it can be refreshed from disk.
      *
      * @param node Node to update

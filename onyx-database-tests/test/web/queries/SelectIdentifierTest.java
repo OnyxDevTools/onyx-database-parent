@@ -15,7 +15,7 @@ import web.base.BaseTest;
 import java.io.IOException;
 
 /**
- * Created by tosborn1 on 3/22/17.
+ * Created by Tim Osborn on 3/22/17.
  */
 @Category({WebServerTests.class})
 public class SelectIdentifierTest extends BaseTest {

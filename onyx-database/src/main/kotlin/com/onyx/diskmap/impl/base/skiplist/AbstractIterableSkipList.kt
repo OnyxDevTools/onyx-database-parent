@@ -8,7 +8,7 @@ import com.onyx.diskmap.store.Store
 import java.util.*
 
 /**
- * Created by tosborn1 on 1/7/17.
+ * Created by Tim Osborn on 1/7/17.
  *
  * This class was added to enhance the existing index within Onyx Database.  The bitmap was very efficient but, it was a hog
  * as far as how much space it took over.  As far as in-memory data structures, this will be the go-to algorithm.  The

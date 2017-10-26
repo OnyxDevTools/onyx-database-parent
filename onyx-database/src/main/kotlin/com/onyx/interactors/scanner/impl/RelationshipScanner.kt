@@ -55,7 +55,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
      * Full Scan with existing values
      *
      * @param existingValues Existing values to check criteria
-     * @return filterd map of results matching additional criteria
+     * @return filtered map of results matching additional criteria
      * @throws OnyxException Cannot scan relationship values
      */
     @Throws(OnyxException::class)

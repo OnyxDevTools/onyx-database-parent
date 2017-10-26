@@ -10,7 +10,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This test illustrates how fast the database can delete items within a database.
  */
@@ -41,8 +41,8 @@ public class DeleteBenchmarkTest extends BenchmarkTest {
     public void before() {
         // Execute a bunch of insertions
         // Note, the Warm up insertions are the same as number of updates
-        completionLatch = new CountDownLatch(getNumberOfWarmupExecutions());
-        for (int i = 0; i < getNumberOfWarmupExecutions(); i++)
+        completionLatch = new CountDownLatch(getNumberOfWarmUpExecutions());
+        for (int i = 0; i < getNumberOfWarmUpExecutions(); i++)
             this.testThreadPool.execute(getWarmUpTestingUnitRunnable());
 
         try {
@@ -74,7 +74,7 @@ public class DeleteBenchmarkTest extends BenchmarkTest {
      * @return The number of iterations to warm up on.
      */
     @Override
-    public int getNumberOfWarmupExecutions() {
+    public int getNumberOfWarmUpExecutions() {
         return NUMBER_OF_WARM_UP_INSERTIONS;
     }
 

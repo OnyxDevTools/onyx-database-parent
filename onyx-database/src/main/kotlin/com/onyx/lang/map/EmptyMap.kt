@@ -1,7 +1,7 @@
 package com.onyx.lang.map
 
 /**
- * Created by tosborn1 on 2/19/17.
+ * Created by Tim Osborn on 2/19/17.
  *
  * This class is a map that does not perform any actions.  The purpose is so that it can be injected to ignore caching
  */

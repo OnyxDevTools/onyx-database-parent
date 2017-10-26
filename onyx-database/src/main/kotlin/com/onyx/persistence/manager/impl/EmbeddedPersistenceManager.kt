@@ -259,16 +259,16 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-        try {
+        return try {
             val results:MutableMap<Reference,IManagedEntity?> = cache(query) {
                 val matchingReferences = queryController.getReferencesForQuery<IManagedEntity?>(query)
 
                 return@cache if (query.shouldSortResults())
-                                queryController.sort(query, matchingReferences)
-                             else
-                                matchingReferences
+                    queryController.sort(query, matchingReferences)
+                else
+                    matchingReferences
             }
-            return LazyQueryCollection(descriptor, results, context) as List<E>
+            LazyQueryCollection(descriptor, results, context) as List<E>
         } finally {
             queryController.cleanup()
         }

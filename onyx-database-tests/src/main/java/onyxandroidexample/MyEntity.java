@@ -7,7 +7,7 @@ import com.onyx.persistence.annotations.Identifier;
 import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
- * Created by tosborn1 on 3/29/17.
+ * Created by Tim Osborn on 3/29/17.
  */
 @Entity
 public class MyEntity extends ManagedEntity {

@@ -13,7 +13,7 @@ import remote.base.RemoteBaseTest;
 import java.io.IOException;
 
 /**
- * Created by cosborn on 12/29/2014.
+ * Created by Chris Osborn on 12/29/2014.
  */
 public class EntityWithCallbacksTest extends RemoteBaseTest {
 

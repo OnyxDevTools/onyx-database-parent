@@ -4,7 +4,7 @@ import com.onyx.network.connection.Connection
 import java.nio.channels.SocketChannel
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * Container for publish settings and unique subscription information
  */

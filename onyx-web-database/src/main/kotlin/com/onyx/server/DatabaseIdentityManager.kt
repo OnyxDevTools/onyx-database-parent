@@ -38,11 +38,11 @@ class DatabaseIdentityManager(private val persistenceManager: PersistenceManager
     }
 
     private fun getAccount(id: String): Account? {
-        try {
+        return try {
             val user = persistenceManager.findById<SystemUser>(SystemUser::class.java, id) ?: return null
-            return DatabaseUserAccount(user)
+            DatabaseUserAccount(user)
         } catch (e: OnyxException) {
-            return null
+            null
         }
     }
 

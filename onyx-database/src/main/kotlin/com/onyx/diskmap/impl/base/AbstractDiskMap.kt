@@ -5,13 +5,11 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
-import com.onyx.extension.withBuffer
-
 import java.util.concurrent.atomic.AtomicLong
 
 
 /**
- * Created by tosborn1 on 1/11/17.
+ * Created by Tim Osborn on 1/11/17.
  *
  * This class was intended to abstract some of the common actions and values that all disk data structures use.
  *

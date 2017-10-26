@@ -33,7 +33,7 @@ class RelationshipTransaction {
      * @return Whether the entity is already there
      */
     @Throws(AttributeMissingException::class)
-    fun contains(entity: IManagedEntity, context: SchemaContext): Boolean = entities[entity.javaClass.name]?.contains(entity.toRelationshipReference(context)) ?: false
+    fun contains(entity: IManagedEntity, context: SchemaContext): Boolean = entities[entity.javaClass.name]?.contains(entity.toRelationshipReference(context)) == true
 
     /**
      * Adds a new key to the 2 dimensional structure

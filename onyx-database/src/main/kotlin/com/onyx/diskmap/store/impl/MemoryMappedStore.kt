@@ -8,9 +8,7 @@ import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.instance
 import com.onyx.extension.perform
-import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
-
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -18,7 +16,7 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 
 /**
- * Created by tosborn on 3/27/15.
+ * Created by Tim Osborn on 3/27/15.
  *
  * This class uses buffers that are mapped to memory rather than a direct file channel
  */

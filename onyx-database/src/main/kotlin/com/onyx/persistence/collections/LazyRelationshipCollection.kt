@@ -221,8 +221,8 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
             override fun hasNext(): Boolean = i < size
 
             override fun next(): E {
-                try {
-                    return get(i)
+                return try {
+                    get(i)
                 } finally {
                     i++
                 }

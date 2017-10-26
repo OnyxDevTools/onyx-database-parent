@@ -8,7 +8,7 @@ import com.onyx.persistence.annotations.values.RelationshipType;
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @Entity

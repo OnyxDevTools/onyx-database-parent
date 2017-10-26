@@ -19,7 +19,7 @@ import io.undertow.server.session.SessionCookieConfig
 
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * Tim Osborn - 02/13/2017
  *
@@ -62,8 +62,8 @@ class WebDatabaseProxyServer(databaseLocation: String) : WebDatabaseServer(datab
         val baseHandler = SessionAttachmentHandler(sessionManager, sessionConfig)
         baseHandler.next = securityHandler
 
-        try {
-            server = buildUndertowConfigurationWithHandler(baseHandler)
+        server = try {
+            buildUndertowConfigurationWithHandler(baseHandler)
         } catch (e: Exception) {
             throw RuntimeException(e)
         }

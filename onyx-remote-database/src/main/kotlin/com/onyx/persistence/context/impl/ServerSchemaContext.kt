@@ -5,7 +5,7 @@ import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.query.impl.RemoteQueryCacheInteractor
 
 /**
- * Created by tosborn1 on 3/27/17.
+ * Created by Tim Osborn on 3/27/17.
  *
  * Schema context that defines local stores for data storage and partitioning. This can only be accessed by a single process. Databases must
  * not have multiple process accessed at the same time.

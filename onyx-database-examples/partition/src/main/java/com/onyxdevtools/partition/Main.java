@@ -14,7 +14,7 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/31/16.
+ * Created by Tim Osborn on 3/31/16.
  *
  * This demonstrates how to declare and use a partition
  */
@@ -58,6 +58,8 @@ public class Main extends AbstractDemo {
         CallLog callLogInAreaCode123 = manager.findByIdInPartition(CallLog.class, 1, 123);
 
         // Make sure the CallLog(s) are 2 different entities.
+        assert callLogInAreaCode123 != null;
+        assert callLogInAreaCode555 != null;
         assertTrue("The Destination Number should be different for each CallLog!", !callLogInAreaCode123.getDestinationNumber().equals(callLogInAreaCode555.getDestinationNumber()));
 
         // Since we have defined an IdentifierGenerator of SEQUENCE, it is possible the identifiers for call log
@@ -85,7 +87,7 @@ public class Main extends AbstractDemo {
         callToMom.setCallFromAreaCode(myPhoneNumber.getAreaCode());
         manager.saveEntity(callToMom);
 
-        CallLog callToEdwardSnowden = new CallLog();
+        @SuppressWarnings("SpellCheckingInspection") CallLog callToEdwardSnowden = new CallLog();
         callToEdwardSnowden.setDestinationNumber("(555) 122-2341");
         callToEdwardSnowden.setNSAListening(false);
         callToEdwardSnowden.setCallFrom(myPhoneNumber);

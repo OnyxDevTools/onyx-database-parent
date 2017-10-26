@@ -9,7 +9,7 @@ import com.onyx.persistence.annotations.values.RelationshipType;
 import java.util.Date;
 
 /**
- * Created by tosborn1 on 8/23/15.
+ * Created by Tim Osborn on 8/23/15.
  */
 @Entity
 public class SchemaAttributeEntity extends ManagedEntity implements IManagedEntity

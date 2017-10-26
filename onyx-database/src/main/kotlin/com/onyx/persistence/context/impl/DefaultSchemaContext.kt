@@ -1,23 +1,37 @@
 package com.onyx.persistence.context.impl
 
+import com.onyx.classLoader.EntityClassLoader
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
-import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
+import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.NULL_PARTITION
+import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.runJob
+import com.onyx.extension.createNewEntity
 import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
+import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
+import com.onyx.interactors.record.RecordInteractor
+import com.onyx.interactors.record.impl.DefaultRecordInteractor
+import com.onyx.interactors.record.impl.SequenceRecordInteractor
+import com.onyx.interactors.relationship.RelationshipInteractor
+import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
+import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
+import com.onyx.interactors.transaction.TransactionInteractor
+import com.onyx.interactors.transaction.TransactionStore
+import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
+import com.onyx.interactors.transaction.impl.DefaultTransactionStore
+import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.values.IdentifierGenerator
@@ -26,22 +40,10 @@ import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.persistence.query.*
-import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
-import com.onyx.interactors.record.RecordInteractor
-import com.onyx.interactors.record.impl.DefaultRecordInteractor
-import com.onyx.interactors.record.impl.SequenceRecordInteractor
-import com.onyx.interactors.transaction.TransactionInteractor
-import com.onyx.interactors.transaction.TransactionStore
-import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
-import com.onyx.interactors.transaction.impl.DefaultTransactionStore
-import com.onyx.interactors.relationship.RelationshipInteractor
-import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
-import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
-import com.onyx.classLoader.EntityClassLoader
-import com.onyx.extension.common.ClassMetadata.classForName
-import com.onyx.extension.createNewEntity
-import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.QueryOrder
 import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
@@ -188,7 +190,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // endregion
 
-    // region Initializers
+    // region Initializer
 
     private val partitionCounter = AtomicLong(0)
 

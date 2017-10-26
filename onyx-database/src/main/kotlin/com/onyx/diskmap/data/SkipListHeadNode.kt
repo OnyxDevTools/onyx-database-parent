@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 1/9/17.
+ * Created by Tim Osborn on 1/9/17.
  *
  * This is a head of a skip list level.
  */

@@ -1,7 +1,7 @@
 package category;
 
 /**
- * Created by tosborn1 on 8/10/15.
+ * Created by Tim Osborn on 8/10/15.
  */
 public class InMemoryDatabaseTests {
 }

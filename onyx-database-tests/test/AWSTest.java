@@ -7,7 +7,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 /**
- * Created by tosborn1 on 2/24/17.
+ * Created by Tim Osborn on 2/24/17.
  *
  * Sample test to generate a decent load
  */

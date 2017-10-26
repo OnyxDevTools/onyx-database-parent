@@ -14,8 +14,9 @@ import java.util.List;
 
 
 /**
- @author  cosborn
+ @author  Chris Osborn
  */
+@SuppressWarnings("SpellCheckingInspection")
 class DeleteQueryExample
 {
     @SuppressWarnings("unchecked")

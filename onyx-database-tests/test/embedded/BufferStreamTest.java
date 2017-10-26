@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
- * Created by tosborn1 on 7/28/16.
+ * Created by Tim Osborn on 7/28/16.
  */
 public class BufferStreamTest {
 

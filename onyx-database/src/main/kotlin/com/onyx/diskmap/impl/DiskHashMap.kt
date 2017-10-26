@@ -50,7 +50,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @param loadFactor The max size of the hash that is generated
      * @param stateless  If designated as true, this map does not retain state.  The state is handled elsewhere.  Without a state
      * there can not be a meaningful cache nor a meaningful lock.  In that case, in this constructor,
-     * we set the cache elements and lock to empty implmementations.
+     * we set the cache elements and lock to empty implementations.
      * @since 1.2.0
      */
     constructor(fileStore: Store, header: Header, loadFactor: Int, stateless: Boolean): super(fileStore, header, true, loadFactor) {

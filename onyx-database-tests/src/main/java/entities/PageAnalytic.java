@@ -1,7 +1,7 @@
 package entities;
 
 /**
- * Created by tosborn1 on 4/22/17.
+ * Created by Tim Osborn on 4/22/17.
  */
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
@@ -11,7 +11,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 /**
- * Created by tosborn1 on 4/19/17.
+ * Created by Tim Osborn on 4/19/17.
  *
  * This object denotes a page request
  */

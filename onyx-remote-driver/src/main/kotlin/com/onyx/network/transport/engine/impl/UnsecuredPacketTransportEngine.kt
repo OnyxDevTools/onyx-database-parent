@@ -10,7 +10,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 
 /**
- * Created by tosborn1 on 2/12/17.
+ * Created by Tim Osborn on 2/12/17.
  *
  * This class was crated to have an option of an unsecured transport that took advantage
  * of the nice neat SSLEngine implementation.  This on the other hand is far more efficient
@@ -78,16 +78,16 @@ class UnsecuredPacketTransportEngine() : AbstractTransportEngine(), PacketTransp
         return if (sizeOfPacket <= fromBuffer.limit() - fromBuffer.position()) {
             for (i in 0 until sizeOfPacket)
                 toBuffer.put(fromBuffer.get())
-            SSLEngineResult(SSLEngineResult.Status.OK, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, sizeOfPacket.toInt(), sizeOfPacket.toInt())
+            SSLEngineResult(SSLEngineResult.Status.OK, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, sizeOfPacket, sizeOfPacket)
         } else {
             for (i in 0 until sizeOfPacket)
                 toBuffer.put(fromBuffer)
-            SSLEngineResult(SSLEngineResult.Status.BUFFER_OVERFLOW, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, sizeOfPacket.toInt(), sizeOfPacket.toInt())
+            SSLEngineResult(SSLEngineResult.Status.BUFFER_OVERFLOW, SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING, sizeOfPacket, sizeOfPacket)
         }
     }
 
     /**
-     * Close the outbound connection.  Awww snap, no soup for you
+     * Close the outbound connection.
      *
      * @since 1.2.0
      */

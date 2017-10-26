@@ -2,8 +2,6 @@ package com.onyx.request.pojo
 
 import com.onyx.buffer.BufferStreamable
 
-import java.io.IOException
-
 /**
  * Created by timothy.osborn on 3/5/15.
  *

@@ -15,7 +15,7 @@ import remote.base.RemoteBaseTest;
 import java.io.IOException;
 
 /**
- * Created by tosborn1 on 3/22/17.
+ * Created by Tim Osborn on 3/22/17.
  */
 @Category({RemoteServerTests.class})
 public class SelectIdentifierTest extends RemoteBaseTest {

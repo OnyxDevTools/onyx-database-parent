@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
 
 /**
- * Created by tosborn1 on 7/1/16.
+ * Created by Tim Osborn on 7/1/16.
  *
  * This is the main packet to send to the server for remote method invocation.
  * @since 1.2.0

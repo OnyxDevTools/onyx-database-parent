@@ -12,7 +12,7 @@ interface QueryInteractor {
      * @param query Query Criteria
      * @return References matching query criteria
      * @throws com.onyx.exception.OnyxException General query exception
-     * @since 1.3.0 This has been refactored to remove the logic for meeting critieria.  That has
+     * @since 1.3.0 This has been refactored to remove the logic for meeting criteria.  That has
      * been moved to CompareUtil
      */
     @Throws(OnyxException::class)
@@ -78,8 +78,8 @@ interface QueryInteractor {
      * for the entire table.
      *
      * @param query Query to identify count for
-     * @return The number of records matching query criterium
-     * @throws OnyxException Excaption ocurred while executing query
+     * @return The number of records matching query criterion
+     * @throws OnyxException Exception occurred while executing query
      * @since 1.3.0 Added as enhancement #71
      */
     @Throws(OnyxException::class)

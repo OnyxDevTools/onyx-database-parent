@@ -13,6 +13,7 @@ import com.onyxdevtools.relationship.entities.Series;
 import java.io.File;
 import java.util.ArrayList;
 
+@SuppressWarnings("ALL")
 class FetchPolicyExample extends AbstractDemo
 {
     static void demo() throws OnyxException
@@ -88,6 +89,7 @@ class FetchPolicyExample extends AbstractDemo
         Series theSopranosCopy = manager.findById(Series.class, theSopranos.getSeriesId());
 
         // Assert seasons which is an eagerly loaded
+        assert theSopranosCopy != null;
         assertNotNull("Seasons should be populated because it is eagerly fetched", theSopranosCopy.getSeasons());
         assertTrue("Seasons should be fully populated as an ArrayList", (theSopranosCopy.getSeasons() instanceof ArrayList));
 

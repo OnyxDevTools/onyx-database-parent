@@ -1,21 +1,19 @@
 package com.onyx.diskmap.impl.base.hashmatrix
 
-import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
-
 import java.util.*
 
 /**
- * Created by tosborn1 on 1/9/17.
+ * Created by Tim Osborn on 1/9/17.
  *
  * This class manages the iteration behavior of a multi indexed map.  The first index being a hash matrix.  The second,
  * is a skip list.
  *
- * So, first it will iterate through the hash matrix, and grab a reference to each second index being the rerence to the
+ * So, first it will iterate through the hash matrix, and grab a reference to each second index being the reference to the
  * skip lists.
  *
  * @since 1.2.0

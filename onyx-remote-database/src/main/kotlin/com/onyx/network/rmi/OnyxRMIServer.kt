@@ -15,7 +15,7 @@ import java.lang.reflect.Method
 import kotlin.collections.HashMap
 
 /**
- * Created by tosborn1 on 6/27/16.
+ * Created by Tim Osborn on 6/27/16.
  *
  *
  * This server extends the communication server.  It is so that we have the convenience
@@ -99,8 +99,8 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
 
                     // Find the correct method.  If it doesn't exist, return an exception
                     val method: Method
-                    try {
-                        method = getCorrectMethod(registeredInterface!!, `object`.method)
+                    method = try {
+                        getCorrectMethod(registeredInterface!!, `object`.method)
                     } catch (e: Exception) {
                         return MethodInvocationException(MethodInvocationException.NO_SUCH_METHOD, e)
                     }
@@ -131,7 +131,7 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
      * Find the corresponding method to the proxy value
      *
      * @param clazz  Class to get from
-     * @param method Method.  This is a string value.  This can prolly be optimized in the future but, its better than
+     * @param method Method.  This is a byte index of the method in alphabetical order
      * iterating through all the properties and parameters.
      * @return Method if it exist
      * @since 1.2.0
@@ -147,7 +147,7 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
 
 
     /**
-     * Register an value within the server as a remote value that can be proxy'd by the clienst
+     * Register an value within the server as a remote value that can be proxy'd by the client
      *
      * @param remoteId Instance name of the remote value
      * @param object   instance

@@ -3,7 +3,7 @@ package com.onyx.lang.map
 import java.util.LinkedHashMap
 
 /**
- * Created by tosborn1 on 3/24/17.
+ * Created by Tim Osborn on 3/24/17.
  *
  * This map will retain value that are most recently used.  If an value has expired, it will
  * eject the last recently used object.

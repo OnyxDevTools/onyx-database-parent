@@ -14,7 +14,7 @@ import org.junit.experimental.categories.Category;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/17/17.
+ * Created by Tim Osborn on 3/17/17.
  * <p>
  * This test was created to support the new operators in V1.3.0
  */

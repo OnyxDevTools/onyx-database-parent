@@ -8,7 +8,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.interactors.encryption.EncryptionInteractor
 
 /**
- * Created by tosborn1 on 2/13/17.
+ * Created by Tim Osborn on 2/13/17.
  *
  * Default implementation of the authentication manager
  */
@@ -24,8 +24,8 @@ class DefaultAuthenticationManager(private val persistenceManager: PersistenceMa
     @Throws(InitializationException::class)
     override fun verify(username: String, password: String) {
         val user: SystemUser?
-        try {
-            user = persistenceManager.findById(SystemUser::class.java, username)
+        user = try {
+            persistenceManager.findById(SystemUser::class.java, username)
         } catch (e: OnyxException) {
             throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
         }
