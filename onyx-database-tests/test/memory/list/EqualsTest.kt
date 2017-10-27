@@ -243,7 +243,7 @@ class EqualsTest : BaseTest() {
         val criteria2 = QueryCriteria("doublePrimitive", QueryCriteriaOperator.EQUAL, 3.35)
         results = manager.list(AllAttributeForFetch::class.java, criteria2)
         Assert.assertEquals(1, results.size.toLong())
-        Assert.assertEquals(java.lang.Double.valueOf(results[0].doublePrimitive), java.lang.Double.valueOf(3.35))
+        assert(java.lang.Double.valueOf(results[0].doublePrimitive) == java.lang.Double.valueOf(3.35))
     }
 
     @Test

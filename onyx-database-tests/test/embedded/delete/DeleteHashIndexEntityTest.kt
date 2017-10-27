@@ -33,8 +33,7 @@ class DeleteHashIndexEntityTest : BaseTest() {
         shutdown()
     }
 
-    @Test
-    @Throws(OnyxException::class)
+    @Test(expected = NoResultsException::class)
     fun testDeleteEntity() {
         val entity = AllAttributeEntity()
         entity.id = "dc5cholqdu5vha5bb6ned8ASDF"
@@ -44,20 +43,8 @@ class DeleteHashIndexEntityTest : BaseTest() {
         entity.stringValue = "Hiya"
         save(entity)
 
-        /*manager.deleteEntity(entity);
-
-        boolean pass = false;
-        try {
-            manager.find(entity);
-        }
-        catch (EntityException e)
-        {
-            if(e instanceof NoResultsException)
-            {
-                pass = true;
-            }
-        }
-        Assert.assertTrue(pass);*/
+        manager.deleteEntity(entity)
+        manager.find<IManagedEntity>(entity)
     }
 
     @Test

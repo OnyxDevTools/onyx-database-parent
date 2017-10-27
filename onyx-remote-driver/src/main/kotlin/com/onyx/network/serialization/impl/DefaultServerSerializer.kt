@@ -4,6 +4,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.network.serialization.ServerSerializer
 import com.onyx.exception.BufferingException
+import com.onyx.extension.common.copy
 
 import java.nio.ByteBuffer
 
@@ -22,13 +23,7 @@ class DefaultServerSerializer : ServerSerializer {
      */
     @Throws(BufferingException::class)
     override fun serialize(serializable: BufferStreamable, inputBuffer: ByteBuffer): ByteBuffer {
-        var inputBuffer = inputBuffer
-        val stream = BufferStream(inputBuffer)
-        serializable.write(stream)
-
-        inputBuffer = stream.byteBuffer
-        inputBuffer.flip()
-        return inputBuffer
+        return BufferStream.toBuffer(serializable)
     }
 
     /**
@@ -40,8 +35,6 @@ class DefaultServerSerializer : ServerSerializer {
      */
     @Throws(BufferingException::class)
     override fun deserialize(buffer: ByteBuffer, streamable: BufferStreamable): BufferStreamable {
-        val stream = BufferStream(buffer)
-        streamable.read(stream)
-        return streamable
+        return BufferStream.fromBuffer(buffer) as BufferStreamable
     }
 }

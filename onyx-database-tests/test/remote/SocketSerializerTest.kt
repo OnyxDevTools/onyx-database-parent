@@ -8,7 +8,6 @@ import org.junit.Test
 import org.junit.experimental.categories.Category
 import pojo.*
 
-import java.nio.ByteBuffer
 import java.util.ArrayList
 import java.util.Date
 import java.util.HashMap
@@ -104,7 +103,7 @@ class SocketSerializerTest {
         val instance = TransientValue()
         instance.intValue = 44
         instance.longValue = 234L
-        instance.zdateValue = Date(23423)
+        instance.zDateValue = Date(23423)
 
         val buffer = BufferStream.toBuffer(instance)
         buffer.rewind()
@@ -113,7 +112,7 @@ class SocketSerializerTest {
 
         Assert.assertTrue(instance.intValue == instance2!!.intValue)
         Assert.assertTrue(instance.longValue != instance2.longValue)
-        Assert.assertTrue(instance.zdateValue!!.time == instance2.zdateValue!!.time)
+        Assert.assertTrue(instance.zDateValue!!.time == instance2.zDateValue!!.time)
     }
 
 

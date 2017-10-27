@@ -62,7 +62,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      *
      * @return Saved Managed Entity
      *
-     * @throws OnyxException Exception occured while persisting an entity
+     * @throws OnyxException Exception occurred while persisting an entity
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
@@ -180,7 +180,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
     }
 
     /**
-     * Execute query with criteria and optional row limitations.  For RESTful Web Services this is not implemented.  This will invoke executeQuery.  Lazy initialization is not supported by the Web Database.
+     * Execute query with criteria and optional row limitations.  For REST-full Web Services this is not implemented.  This will invoke executeQuery.  Lazy initialization is not supported by the Web Database.
      *
      * @since 1.0.0
      *
@@ -489,9 +489,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      * @param streamer Instance of the streamer to use to stream the data
      */
     @Throws(OnyxException::class)
-    override fun <T : Any> stream(query: Query, streamer: QueryStream<T>) {
-        throw StreamException(StreamException.UNSUPPORTED_FUNCTION)
-    }
+    override fun <T : Any> stream(query: Query, streamer: QueryStream<T>): Nothing = throw StreamException(StreamException.UNSUPPORTED_FUNCTION)
 
     /**
      * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -505,15 +503,13 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      * @param queryStreamClass Class instance of the database stream
      */
     @Throws(OnyxException::class)
-    override fun stream(query: Query, queryStreamClass: Class<*>) {
-        throw StreamException(StreamException.UNSUPPORTED_FUNCTION)
-    }
+    override fun stream(query: Query, queryStreamClass: Class<*>): Nothing = throw StreamException(StreamException.UNSUPPORTED_FUNCTION)
 
     @Throws(OnyxException::class)
     override fun getMapWithReferenceId(entityType: Class<*>, reference: Reference): Map<String,Any?>? = null
 
     /**
-     * Retrieve the quantity of entities that match the query criterium.
+     * Retrieve the quantity of entities that match the query criterion.
      *
      *
      * usage:
@@ -531,7 +527,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
-     * @return The number of entities that meet the query criterium
+     * @return The number of entities that meet the query criterion
      * @throws OnyxException Error during query.
      * @since 1.3.0 Implemented with feature request #71
      */
@@ -553,7 +549,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      * @since 1.3.0 Added query subscribers as an enhancement.
      */
     @Throws(OnyxException::class)
-    override fun removeChangeListener(query: Query): Boolean = false
+    override fun removeChangeListener(query: Query) = false
 
     /**
      * Listen to a query and register its subscriber
@@ -562,9 +558,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      * @since 1.3.1
      */
     @Throws(OnyxException::class)
-    override fun listen(query: Query) {
-
-    }
+    override fun listen(query: Query) = Unit
 
     companion object {
         val WEB = "/onyx"
