@@ -3,13 +3,12 @@ package database
 import category.EmbeddedDatabaseTests
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteriaOperator
-import database.database.base.DatabaseBaseTest
+import database.base.DatabaseBaseTest
 import entities.AllAttributeV2Entity
 import entities.EnumEntity
 import entities.InheritedAttributeEntity
 import entities.SimpleEntity
 import org.junit.*
-import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 import org.junit.runners.Parameterized
@@ -25,25 +24,6 @@ import kotlin.test.assertNull
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized::class)
 class AttributeTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
-
-    companion object {
-        @BeforeClass
-        @JvmStatic
-        fun beforeClass() {
-            deleteAllDatabases()
-            startServers()
-        }
-    }
-
-    @Before
-    fun before() {
-        initialize()
-    }
-
-    @After
-    fun after() {
-        shutdown()
-    }
 
     /**
      * Tests all possible populated values in order to test a round trip serialization

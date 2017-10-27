@@ -1,4 +1,4 @@
-package database.database.base
+package database.base
 
 import com.onyx.application.impl.DatabaseServer
 import com.onyx.application.impl.WebDatabaseServer
@@ -12,7 +12,10 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
 import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
+import org.junit.After
 import org.junit.AfterClass
+import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.runners.Parameterized
 import java.io.File
 import java.math.BigInteger
@@ -38,7 +41,8 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
      * Initialize Database
      * @throws InitializationException
      */
-    protected fun initialize() {
+    @Before
+    fun initialize() {
         factory = when (factoryClass) {
             EmbeddedPersistenceManagerFactory::class -> EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION)
             RemotePersistenceManagerFactory::class ->   RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)
@@ -52,7 +56,8 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         manager = factory.persistenceManager
     }
 
-    protected fun shutdown() {
+    @After
+    fun shutdown() {
         factory.close()
         context = null
     }
@@ -68,7 +73,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         /**
          * Delete all databases prior to running unit test
          */
-        fun deleteAllDatabases() {
+        private fun deleteAllDatabases() {
             deleteDatabase(EMBEDDED_DATABASE_LOCATION)
             deleteDatabase(REMOTE_DATABASE_LOCATION)
             deleteDatabase(WEB_DATABASE_LOCATION)
@@ -80,7 +85,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         /**
          * Start servers for the persistence manager factories that require services
          */
-        fun startServers() {
+        private fun startServers() {
             startRemoteDatabase()
             startWebDatabase()
         }
@@ -127,6 +132,8 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         protected var random = SecureRandom()
 
+        private var databasesStarted = false
+
         protected val randomString: String
             get() = BigInteger(130, random).toString(32)
 
@@ -136,6 +143,16 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         @AfterClass
         @JvmStatic
         fun afterClass() {}
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeClass() {
+            if(!databasesStarted) {
+                deleteAllDatabases()
+                startServers()
+                databasesStarted = true
+            }
+        }
 
         @JvmStatic
         @Parameterized.Parameters

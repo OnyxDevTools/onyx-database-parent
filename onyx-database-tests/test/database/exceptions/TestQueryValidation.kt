@@ -1,67 +1,55 @@
-package remote.exception
+package database.exceptions
 
-
-import category.RemoteServerTests
 import com.onyx.exception.*
+import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.AttributeUpdate
+import database.base.DatabaseBaseTest
 import entities.ValidationEntity
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import remote.base.RemoteBaseTest
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import kotlin.reflect.KClass
 
-import java.io.IOException
 
 /**
  * Created by timothy.osborn on 1/21/15.
+ * Updated by Chris Osborn on 5/15/15
  */
-@Category(RemoteServerTests::class)
-class TestQueryValidation : RemoteBaseTest() {
-
-    @Before
-    @Throws(InitializationException::class)
-    fun before() {
-        initialize()
-    }
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class TestQueryValidation(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Test(expected = AttributeNonNullException::class)
-    @Throws(OnyxException::class)
     fun testNullValue() {
         val updateQuery = Query(ValidationEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L), AttributeUpdate("requiredString", null))
-        manager!!.executeUpdate(updateQuery)
+        manager.executeUpdate(updateQuery)
     }
 
-
     @Test(expected = AttributeMissingException::class)
-    @Throws(OnyxException::class)
     fun testAttributeMissing() {
         val updateQuery = Query(ValidationEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L), AttributeUpdate("booger", null))
-        manager!!.executeUpdate(updateQuery)
+        manager.executeUpdate(updateQuery)
     }
 
     @Test(expected = AttributeSizeException::class)
-    @Throws(OnyxException::class)
     fun testAttributeSizeException() {
         val updateQuery = Query(ValidationEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L), AttributeUpdate("maxSizeString", "12345678901"))
-        manager!!.executeUpdate(updateQuery)
+        manager.executeUpdate(updateQuery)
 
     }
 
     @Test(expected = AttributeUpdateException::class)
-    @Throws(OnyxException::class)
     fun testUpdateIdentifier() {
         val updateQuery = Query(ValidationEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L), AttributeUpdate("id", 5L))
-        manager!!.executeUpdate(updateQuery)
+        manager.executeUpdate(updateQuery)
     }
 
+    @Test(expected = OnyxException::class)
+    fun testMissingEntityTypeException() {
+        val criteria = QueryCriteria("name", QueryCriteriaOperator.NOT_NULL)
+        val query = Query()
+        query.criteria = criteria
+        manager.executeQuery<Any>(query)
+    }
 }

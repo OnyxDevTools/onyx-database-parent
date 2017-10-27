@@ -5,7 +5,7 @@ import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import database.database.base.DatabaseBaseTest
+import database.base.DatabaseBaseTest
 import entities.identifiers.StringIdentifierEntity
 import entities.index.StringIdentifierEntityIndex
 import org.junit.After
@@ -23,16 +23,6 @@ import kotlin.test.assertTrue
  */
 @RunWith(Parameterized::class)
 class SaveIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
-
-    @Before
-    fun before() {
-        initialize()
-    }
-
-    @After
-    fun after() {
-        shutdown()
-    }
 
     @Test
     fun saveStringIndexUpdateTest() {

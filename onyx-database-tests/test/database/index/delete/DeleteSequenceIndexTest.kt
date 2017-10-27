@@ -1,50 +1,35 @@
-package memory.delete
+package database.index.delete
 
-import category.InMemoryDatabaseTests
-import com.onyx.exception.OnyxException
 import com.onyx.exception.NoResultsException
+import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
+import database.base.DatabaseBaseTest
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete
-import org.junit.After
 import org.junit.Assert
-import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
-
-import java.io.IOException
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.util.ArrayList
-
-import org.junit.Assert.assertFalse
-import org.junit.Assert.fail
+import kotlin.reflect.KClass
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Created by timothy.osborn on 11/3/14.
  */
-@Category(InMemoryDatabaseTests::class)
-class DeleteSequenceIndexEntityTest : memory.base.BaseTest() {
-    @Before
-    @Throws(OnyxException::class)
-    fun before() {
-        initialize()
-    }
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class DeleteSequenceIndexEntityTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Test
-    @Throws(OnyxException::class)
     fun testAddDeleteSequence() {
         val entity = ImmutableSequenceIdentifierEntityForDelete()
         entity.correlation = 1
-        save(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
-        Assert.assertTrue(entity.identifier > 0)
-        delete(entity)
+        assertTrue(entity.identifier > 0, "Identifier was not generated")
 
-        assertFalse(manager.exists(entity))
+        manager.deleteEntity(entity)
+        assertFalse(manager.exists(entity), "Entity was not deleted")
 
         var pass = false
         try {
@@ -55,43 +40,37 @@ class DeleteSequenceIndexEntityTest : memory.base.BaseTest() {
             }
         }
 
-        Assert.assertTrue(pass)
+        assertTrue(pass, "Entity still exist when finding")
     }
 
     @Test
     fun testSequenceBatchDelete() {
         val entity = ImmutableSequenceIdentifierEntityForDelete()
         entity.correlation = 1
-        save(entity)
-        val id1 = entity.identifier
+        manager.saveEntity<IManagedEntity>(entity)
 
         val entity2 = ImmutableSequenceIdentifierEntityForDelete()
         entity2.correlation = 1
-        save(entity2)
-        val id2 = entity2.identifier
+        manager.saveEntity<IManagedEntity>(entity2)
 
         val entity3 = ImmutableSequenceIdentifierEntityForDelete()
         entity3.correlation = 1
-        save(entity3)
-        val id3 = entity3.identifier
+        manager.saveEntity<IManagedEntity>(entity3)
 
         val entity4 = ImmutableSequenceIdentifierEntityForDelete()
         entity4.correlation = 1
-        save(entity4)
-        val id4 = entity4.identifier
+        manager.saveEntity<IManagedEntity>(entity4)
 
         val entity5 = ImmutableSequenceIdentifierEntityForDelete()
         entity5.correlation = 5
-        save(entity5)
-        val id5 = entity.identifier
+        manager.saveEntity<IManagedEntity>(entity5)
 
         val entity6 = ImmutableSequenceIdentifierEntityForDelete()
         entity.correlation = 6
-        save(entity6)
-        val id6 = entity6.identifier
+        manager.saveEntity<IManagedEntity>(entity6)
 
-        Assert.assertTrue(entity.identifier > 0)
-        Assert.assertTrue(entity6.identifier > 0)
+        assertTrue(entity.identifier > 0, "First entity's identifier was not generated")
+        assertTrue(entity6.identifier > 0, "Last entity's identifier was not generated")
 
         val entitiesToDelete = ArrayList<IManagedEntity>()
         //entitiesToDelete.add(entity);
@@ -101,74 +80,63 @@ class DeleteSequenceIndexEntityTest : memory.base.BaseTest() {
         entitiesToDelete.add(entity5)
         entitiesToDelete.add(entity6)
 
+        manager.deleteEntities(entitiesToDelete)
 
-        try {
-            manager.deleteEntities(entitiesToDelete)
-        } catch (e: OnyxException) {
-            fail("Failure to execute delete batch")
-        }
 
         for (deletedEntity in entitiesToDelete) {
             var pass = false
+
             try {
-                manager.find<IManagedEntity>(deletedEntity as IManagedEntity)
-            } catch (e: OnyxException) {
-                if (e is NoResultsException) {
-                    pass = true
-                }
+                manager.find<IManagedEntity>(deletedEntity)
+            } catch (e: NoResultsException) {
+                pass = true
             }
 
-            Assert.assertTrue(pass)
+            assertTrue(pass, "Failed to delete entity")
         }
 
         val entity7 = ImmutableSequenceIdentifierEntityForDelete()
         entity.correlation = 7
-        save(entity7)
-        val id7 = entity7.identifier
+        manager.saveEntity<IManagedEntity>(entity7)
 
-        find(entity7)
-        find(entity)
+        manager.find<IManagedEntity>(entity7)
+        manager.find<IManagedEntity>(entity)
     }
 
     @Test
     fun testSequenceSkip() {
         val entity = ImmutableSequenceIdentifierEntityForDelete()
         entity.correlation = 1
-        save(entity)
+        manager.saveEntity<IManagedEntity>(entity)
         val id1 = entity.identifier
 
         val entity2 = ImmutableSequenceIdentifierEntityForDelete()
         entity2.correlation = 1
         entity2.identifier = id1 + 100
-        save(entity2)
-        val id2 = entity2.identifier
+        manager.saveEntity<IManagedEntity>(entity2)
 
         val entity3 = ImmutableSequenceIdentifierEntityForDelete()
         entity3.correlation = 1
-        save(entity3)
-        val id3 = entity3.identifier
+        manager.saveEntity<IManagedEntity>(entity3)
 
 
         Assert.assertTrue(entity.identifier > 0)
         Assert.assertTrue(entity2.identifier > entity.identifier)
-        //        Assert.assertTrue(entity3.identifier > entity2.identifier);
         Assert.assertTrue(entity2.identifier - entity.identifier == 100L)
 
-        delete(entity2)
+        manager.deleteEntity(entity2)
 
-        find(entity)
-        find(entity3)
+        manager.find<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity3)
 
         var pass = false
         try {
             manager.find<IManagedEntity>(entity2)
-        } catch (e: OnyxException) {
-            if (e is NoResultsException) {
-                pass = true
-            }
+        } catch (e: NoResultsException) {
+            pass = true
         }
 
-        Assert.assertTrue(pass)
+        assertTrue(pass, "Failure to delete entity when skipping an index")
 
     }
 }

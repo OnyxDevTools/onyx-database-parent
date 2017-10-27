@@ -287,7 +287,10 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val body = EntityRequestBody()
         body.id = id
         body.type = clazz.name
-        return this.performCall(url + AbstractWebPersistenceManager.FIND, null, clazz, body) as E
+        return try {
+            this.performCall(url + AbstractWebPersistenceManager.FIND, null, clazz, body) as E
+        } catch (e:NoResultsException) { return null }
+
     }
 
     /**

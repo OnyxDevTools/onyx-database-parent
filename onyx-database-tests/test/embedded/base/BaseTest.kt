@@ -119,10 +119,5 @@ open class BaseTest {
             database.delete()
             Contexts.clear()
         }
-
-        @AfterClass
-        fun afterClass() {
-
-        }
     }
 }

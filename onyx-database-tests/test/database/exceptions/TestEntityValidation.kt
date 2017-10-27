@@ -1,38 +1,23 @@
-package web.exception
+package database.exceptions
 
-import category.WebServerTests
 import com.onyx.exception.*
 import com.onyx.persistence.IManagedEntity
+import database.base.DatabaseBaseTest
 import entities.ValidateRequiredIDEntity
 import entities.ValidationEntity
-import org.junit.After
-import org.junit.Before
+import entities.exception.TestValidExtendAbstract
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import web.base.BaseTest
-
-import java.io.IOException
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import kotlin.reflect.KClass
 
 /**
  * Created by timothy.osborn on 1/21/15.
  */
-@Category(WebServerTests::class)
-class TestEntityValidation : BaseTest() {
-
-    @Before
-    @Throws(InitializationException::class)
-    fun before() {
-        initialize()
-    }
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class TestEntityValidation(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Test(expected = AttributeNonNullException::class)
-    @Throws(OnyxException::class)
     fun testNullValue() {
         val validationEntity = ValidationEntity()
         validationEntity.id = 3L
@@ -40,7 +25,6 @@ class TestEntityValidation : BaseTest() {
     }
 
     @Test(expected = AttributeSizeException::class)
-    @Throws(OnyxException::class)
     fun testAttributeSizeException() {
         val validationEntity = ValidationEntity()
         validationEntity.id = 3L
@@ -50,7 +34,6 @@ class TestEntityValidation : BaseTest() {
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testValidAttributeSizeException() {
         val validationEntity = ValidationEntity()
         validationEntity.id = 3L
@@ -60,7 +43,6 @@ class TestEntityValidation : BaseTest() {
     }
 
     @Test(expected = IdentifierRequiredException::class)
-    @Throws(OnyxException::class)
     fun testRequiredIDException() {
         val validationEntity = ValidateRequiredIDEntity()
         validationEntity.requiredString = "ASFD"
@@ -68,4 +50,13 @@ class TestEntityValidation : BaseTest() {
         manager.saveEntity<IManagedEntity>(validationEntity)
     }
 
+    /**
+     * Negative test to ensure extending an abstract managed entity still applies to entity
+     */
+    @Test
+    fun testValidObjectAsExtendingAbstract() {
+        val obj = TestValidExtendAbstract()
+        manager.saveEntity<IManagedEntity>(obj)
+        manager.find<IManagedEntity>(obj)
+    }
 }

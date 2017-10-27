@@ -1,64 +1,45 @@
-package web.exception
+package database.exceptions
 
-import category.WebServerTests
-import com.onyx.exception.*
+import com.onyx.exception.EntityClassNotFoundException
+import com.onyx.exception.EntityTypeMatchException
+import com.onyx.exception.InvalidIdentifierException
 import com.onyx.persistence.IManagedEntity
+import database.base.DatabaseBaseTest
 import entities.SimpleEntity
 import entities.exception.*
-import org.junit.After
-import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import web.base.BaseTest
-
-import java.io.IOException
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.util.ArrayList
+import kotlin.reflect.KClass
+import kotlin.test.assertNull
 
-/**
- * Created by timothy.osborn on 12/14/14.
- */
-@Category(WebServerTests::class)
-class TestEntitySaveExceptions : BaseTest() {
-
-    @Before
-    @Throws(InitializationException::class)
-    fun before() {
-        initialize()
-    }
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
-
-    @get:Synchronized private var z = 0
-
-    @Synchronized protected fun increment() {
-        z++
-    }
+@RunWith(Parameterized::class)
+class TestEntitySaveException(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Test(expected = EntityClassNotFoundException::class)
-    @Throws(OnyxException::class)
     fun testNoEntitySave() {
         val entity = NoEntityAnnotationClass()
         entity.id = "Hiya"
-
         manager.saveEntity<IManagedEntity>(entity)
     }
 
-
     @Test(expected = InvalidIdentifierException::class)
-    @Throws(OnyxException::class)
     fun testNoIDEntity() {
         val entity = NoIdEntity()
         entity.attr = 3
         manager.saveEntity<IManagedEntity>(entity)
     }
 
+    @Test
+    fun testInvalidIDEntity() {
+        val entity = InvalidIDEntity()
+        entity.id = 23.3
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
+    }
+
     @Test(expected = InvalidIdentifierException::class)
-    @Throws(OnyxException::class)
     fun testInvalidGenerator() {
         val entity = InvalidIDGeneratorEntity()
         entity.id = "ASDF"
@@ -66,40 +47,30 @@ class TestEntitySaveExceptions : BaseTest() {
     }
 
     @Test(expected = EntityClassNotFoundException::class)
-    @Throws(OnyxException::class)
     fun testNoInterfaceException() {
         val entity = EntityNoIPersistedEntity()
         entity.id = "ASDF"
         val entities = ArrayList<Any>()
         entities.add(entity)
-
-        manager.saveEntities(entities as List<IManagedEntity>)
+        @Suppress("UNCHECKED_CAST") // Suppressed because we want to replicate the scenario of passing wrong type in
+        manager.saveEntities(entities as ArrayList<IManagedEntity>)
     }
 
     @Test(expected = EntityTypeMatchException::class)
-    @Throws(OnyxException::class)
     fun testInvalidAttributeType() {
         val entity = InvalidAttributeTypeEntity()
         entity.id = "ASDF"
         manager.saveEntity<IManagedEntity>(entity)
     }
 
-    /**
-     * This unit test no longer applies becuse there was an enhancement to accept like types.
-     * @throws OnyxException
-     */
-    @Ignore
-    @Test(expected = AttributeTypeMismatchException::class)
-    @Throws(OnyxException::class)
+    @Test
     fun testInvalidFindById() {
-        //Save entity
+        // Negative test to ensure error is not thrown when running findById
         val entity = SimpleEntity()
         entity.simpleId = "1"
         entity.name = "Chris"
         manager.saveEntity<IManagedEntity>(entity)
-        //Retreive entity using findById method using the wrong data type for id
-        val savedEntity = manager.findById<IManagedEntity>(entity.javaClass, 1) as SimpleEntity?
-
+        val savedEntity = manager.findById<IManagedEntity>(entity.javaClass, 20) as SimpleEntity?
+        assertNull(savedEntity, "Entity should not exist with that identifier")
     }
-
 }
