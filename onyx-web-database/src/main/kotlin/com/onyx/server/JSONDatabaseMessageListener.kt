@@ -116,10 +116,8 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
                     }
 
                     val requestBody = objectMapper.readValue(bytes, bodyType)
-                    //            async {
                     val response = invokeHandler(path, requestBody)
                     sendResponse(exchange, response, 200)
-                    //            }
 
                 } catch (entityException: OnyxException) {
                     val response = ExceptionResponse(entityException, entityException.javaClass.name)
@@ -160,6 +158,7 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
 
         // Prepare headers
         exchange.responseHeaders.put(Headers.CONTENT_TYPE, "application/json")
+        exchange.responseHeaders.put(Headers.CONTENT_LENGTH, responseBytes.size.toLong())
 
         // Set OK or ERROR aka SEE_OTHER
         exchange.responseCode = responseCode

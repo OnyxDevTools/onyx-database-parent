@@ -132,7 +132,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
 
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.getHashMap<Map<Long, Set<Long>>>(it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
+                .map { dataFile.newHashMap<Map<Long, Set<Long>>>(it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences
@@ -159,7 +159,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.getHashMap<DiskMap<Long, Any?>>(it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
+                .map { dataFile.newHashMap<DiskMap<Long, Any?>>(it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences

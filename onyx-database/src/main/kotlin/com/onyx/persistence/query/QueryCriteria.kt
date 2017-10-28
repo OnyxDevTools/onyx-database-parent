@@ -173,7 +173,7 @@ class QueryCriteria : BufferStreamable {
      * @param andGroup And sub query
      * @return New Query Criteria with added and sub query
      */
-    fun and(andGroup: QueryCriteria): QueryCriteria {
+    infix fun and(andGroup: QueryCriteria): QueryCriteria {
         andGroup.isAnd = true
         this.subCriteria.add(andGroup)
         return this

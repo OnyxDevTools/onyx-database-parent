@@ -14,13 +14,9 @@ import java.util.Date
 @Suppress("UNUSED")
 class AllAttributeForFetchSequenceGen : AbstractEntity(), IManagedEntity {
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
-    @Attribute(size = 130)
     var id: Long? = null
-
     @Index
-    @Attribute
     var indexVal: Int = 0
-
     @Attribute
     var longValue: Long? = null
     @Attribute
@@ -41,8 +37,6 @@ class AllAttributeForFetchSequenceGen : AbstractEntity(), IManagedEntity {
     var booleanValue: Boolean? = null
     @Attribute
     var booleanPrimitive: Boolean = false
-
-
     @Attribute
     var mutableFloat: Float? = null
     @Attribute
