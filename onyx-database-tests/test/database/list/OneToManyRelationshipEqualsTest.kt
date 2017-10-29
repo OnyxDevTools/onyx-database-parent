@@ -1,36 +1,26 @@
-package remote.list
+package database.list
 
-import category.RemoteServerTests
-import com.onyx.exception.OnyxException
-import com.onyx.exception.InitializationException
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.extension.IN
+import com.onyx.extension.cont
+import com.onyx.extension.eq
+import com.onyx.extension.startsWith
+import com.onyx.persistence.IManagedEntity
+import database.base.DatabaseBaseTest
 import entities.OneToManyChildFetchEntity
 import entities.OneToOneFetchEntity
-import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import remote.base.RemoteBaseTest
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import java.util.*
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 
-import java.io.IOException
-import java.util.ArrayList
-import java.util.Date
-
-@Category(RemoteServerTests::class)
-class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class OneToManyRelationshipEqualsTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Before
-    @Throws(InitializationException::class)
     fun seedData() {
-        initialize()
-
         var entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE"
         entity.stringValue = "Some test strin"
@@ -41,8 +31,7 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity.booleanPrimitive = true
         entity.longPrimitive = 1000L
         entity.longValue = 323L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE1"
@@ -54,8 +43,7 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity.booleanPrimitive = false
         entity.longPrimitive = 1002L
         entity.longValue = 322L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE2"
@@ -67,8 +55,7 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity.booleanPrimitive = false
         entity.longPrimitive = 1002L
         entity.longValue = 322L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE3"
@@ -80,8 +67,7 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity.booleanPrimitive = false
         entity.longPrimitive = 1001L
         entity.longValue = 321L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE3"
@@ -93,19 +79,15 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity.booleanPrimitive = true
         entity.longPrimitive = 1301L
         entity.longValue = 322L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE4"
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE5"
-        save(entity)
-        find(entity)
-
+        manager.saveEntity<IManagedEntity>(entity)
 
         var entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE"
@@ -117,12 +99,11 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity2.booleanPrimitive = true
         entity2.longPrimitive = 1000L
         entity2.longValue = 323L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2.parents = OneToOneFetchEntity()
         entity2.parents!!.id = "FIRST ONE1"
-        save(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE1"
@@ -134,12 +115,11 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity2.booleanPrimitive = false
         entity2.longPrimitive = 1002L
         entity2.longValue = 322L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2.parents = OneToOneFetchEntity()
         entity2.parents!!.id = "FIRST ONE2"
-        save(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE2"
@@ -151,8 +131,7 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity2.booleanPrimitive = false
         entity2.longPrimitive = 1002L
         entity2.longValue = 322L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE3"
@@ -164,8 +143,7 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity2.booleanPrimitive = false
         entity2.longPrimitive = 1001L
         entity2.longValue = 321L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE3"
@@ -177,82 +155,46 @@ class OneToManyRelationshipEqualsTest : RemoteBaseTest() {
         entity2.booleanPrimitive = true
         entity2.longPrimitive = 1301L
         entity2.longValue = 322L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2.parents = OneToOneFetchEntity()
         entity2.parents!!.id = "FIRST ONE2"
-        save(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2.parents = OneToOneFetchEntity()
         entity2.parents!!.id = "FIRST ONE3"
-        save(entity2)
-        find(entity2)
-
-        find(entity2.parents!!)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE4"
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToManyChildFetchEntity()
         entity2.id = "FIRST ONE5"
-        save(entity2)
-        find(entity2)
-
+        manager.saveEntity<IManagedEntity>(entity2)
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testOneToOneHasRelationshipMeetsOne() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
-                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
-
-        val time = System.currentTimeMillis()
-        val results = manager!!.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
-        val done = System.currentTimeMillis()
-
-        Assert.assertEquals(1, results.size.toLong())
+        val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, ("stringValue" eq "Some test strin3") and ("children.id" eq "FIRST ONE3"))
+        assertEquals(1, results.size, "Expected 1 result")
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testOneToOneHasRelationship() {
-
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.CONTAINS, "Some test strin")
-                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
-
-        val results = manager!!.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
-
-        Assert.assertEquals(1, results.size.toLong())
+        val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java,  ("stringValue" cont "Some test strin") and ("children.id" eq "FIRST ONE3"))
+        assertEquals(1, results.size, "Expected 1 result")
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testOneToOneNoMeetCriteriaRelationship() {
-
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some te1st strin3")
-                .and("children.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
-
-        val time = System.currentTimeMillis()
-        val results = manager!!.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
-        val done = System.currentTimeMillis()
-
-        Assert.assertEquals(0, results.size.toLong())
+        val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, ("stringValue" eq "Some te1st strin3") and ("children.id" eq "FIRST ONE3"))
+        assertEquals(0, results.size, "Expected no results")
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testOneToManyInCriteriaRelationship() {
-        val idlist = ArrayList<Any>()
-        idlist.add("FIRST ONE3")
-        idlist.add("FIRST ONE2")
-
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some test strin1")
-                .and("children.id", QueryCriteriaOperator.IN, idlist)
-
-        val results = manager!!.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
-        Assert.assertEquals(0, results.size.toLong())
+        val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, ("stringValue" startsWith  "Some test strin1") and ("children.id" IN arrayListOf("FIRST ONE3", "FIRST ONE2")))
+        assertEquals(0, results.size, "Expected no results")
     }
 }

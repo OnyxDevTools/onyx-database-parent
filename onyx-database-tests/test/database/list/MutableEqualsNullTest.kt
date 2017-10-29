@@ -1,39 +1,30 @@
-package embedded.list
+package database.list
 
-import category.EmbeddedDatabaseTests
 import com.onyx.exception.OnyxException
-import com.onyx.persistence.query.Query
+import com.onyx.extension.delete
+import com.onyx.extension.from
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import embedded.base.BaseTest
+import database.base.DatabaseBaseTest
 import entities.AllAttributeForFetch
-import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
-
-import java.io.IOException
-import java.util.Date
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import java.util.*
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 
 /**
- * Created by timothy.osborn on 11/8/14.
+ * Created by timothy.osborn on 11/6/14.
  */
-@Category(EmbeddedDatabaseTests::class)
-class LessThanEqualTest : BaseTest() {
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class MutableEqualsNullTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Before
-    @Throws(OnyxException::class)
     fun seedData() {
-        initialize()
-
-        val deleteQuery = Query(AllAttributeForFetch::class.java)
-        manager.executeDelete(deleteQuery)
+        manager.from(AllAttributeForFetch::class).delete()
 
         var entity = AllAttributeForFetch()
         entity.id = "FIRST ONE"
@@ -47,8 +38,7 @@ class LessThanEqualTest : BaseTest() {
         entity.longValue = 323L
         entity.intValue = 3
         entity.intPrimitive = 3
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE1"
@@ -62,8 +52,7 @@ class LessThanEqualTest : BaseTest() {
         entity.longValue = 322L
         entity.intValue = 2
         entity.intPrimitive = 4
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE2"
@@ -77,8 +66,7 @@ class LessThanEqualTest : BaseTest() {
         entity.longValue = 322L
         entity.intValue = 2
         entity.intPrimitive = 4
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE3"
@@ -92,8 +80,7 @@ class LessThanEqualTest : BaseTest() {
         entity.longValue = 321L
         entity.intValue = 5
         entity.intPrimitive = 6
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE3"
@@ -107,92 +94,62 @@ class LessThanEqualTest : BaseTest() {
         entity.longValue = 322L
         entity.intValue = 6
         entity.intPrimitive = 3
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE4"
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE5"
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
     }
 
     @Test
     @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testStringIDLessThanEqual() {
-        val criteriaList = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN_EQUAL, "FIRST ONE3")
+    fun testStringEqualsNull() {
+        val criteriaList = QueryCriteria("stringValue", QueryCriteriaOperator.IS_NULL)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(4, results.size.toLong())
+        assertEquals(2, results.size, "Expected 2 results")
     }
 
     @Test
     @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testStringStringLessThanEqual() {
-        val criteriaList = QueryCriteria("stringValue", QueryCriteriaOperator.LESS_THAN_EQUAL, "Some test strin2")
+    fun testIntEqualsNull() {
+        val criteriaList = QueryCriteria("intValue", QueryCriteriaOperator.IS_NULL)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(5, results.size.toLong())
-    }
-
-
-    @Test
-    @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testLongLessThanEqual() {
-        val criteriaList = QueryCriteria("longValue", QueryCriteriaOperator.LESS_THAN_EQUAL, 323L)
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(6, results.size.toLong())
+        assertEquals(2, results.size, "Expected 2 results")
     }
 
     @Test
     @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testPrimitiveLongLessThanEqual() {
-        val criteriaList = QueryCriteria("longPrimitive", QueryCriteriaOperator.LESS_THAN_EQUAL, 1000L)
+    fun testLongEqualsNull() {
+        val criteriaList = QueryCriteria("longValue", QueryCriteriaOperator.IS_NULL)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(3, results.size.toLong())
+        assertEquals(2, results.size, "Expected 2 results")
     }
 
     @Test
     @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testIntegerLessThanEqual() {
-        val criteriaList = QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN_EQUAL, 3)
+    fun testDateEqualsNull() {
+        val criteriaList = QueryCriteria("dateValue", QueryCriteriaOperator.IS_NULL)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(5, results.size.toLong())
+        assertEquals(2, results.size, "Expected 2 results")
     }
 
     @Test
     @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testPrimitiveIntegerLessThanEqual() {
-        val criteriaList = QueryCriteria("intPrimitive", QueryCriteriaOperator.LESS_THAN_EQUAL, 4)
+    fun testDoubleEqualsNull() {
+        val criteriaList = QueryCriteria("doubleValue", QueryCriteriaOperator.IS_NULL)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(6, results.size.toLong())
-    }
-
-
-    @Test
-    @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testDoubleLessThanEqual() {
-        val criteriaList = QueryCriteria("doubleValue", QueryCriteriaOperator.LESS_THAN_EQUAL, 1.11)
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(5, results.size.toLong())
+        assertEquals(2, results.size, "Expected 2 results")
     }
 
     @Test
     @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testPrimitiveDoubleLessThanEqual() {
-        val criteriaList = QueryCriteria("doublePrimitive", QueryCriteriaOperator.LESS_THAN_EQUAL, 3.32)
+    fun testBooleanEqualsNull() {
+        val criteriaList = QueryCriteria("booleanValue", QueryCriteriaOperator.IS_NULL)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(5, results.size.toLong())
+        assertEquals(2, results.size, "Expected 2 results")
     }
-
-    @Test
-    @Throws(OnyxException::class, InstantiationException::class, IllegalAccessException::class)
-    fun testDateLessThanEqual() {
-        val criteriaList = QueryCriteria("dateValue", QueryCriteriaOperator.LESS_THAN_EQUAL, Date(1001))
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        Assert.assertEquals(5, results.size.toLong())
-    }
-
 }

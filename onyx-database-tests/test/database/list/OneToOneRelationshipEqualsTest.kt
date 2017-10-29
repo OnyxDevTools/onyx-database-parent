@@ -1,41 +1,27 @@
-package web.list
+package database.list
 
-import category.WebServerTests
-import com.onyx.exception.OnyxException
-import com.onyx.exception.InitializationException
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
+import database.base.DatabaseBaseTest
 import entities.OneToOneChildFetchEntity
 import entities.OneToOneFetchEntity
 import entities.relationship.OneToManyChild
 import entities.relationship.OneToManyParent
-import org.junit.After
-import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import web.base.BaseTest
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import java.util.*
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
-import java.io.IOException
-import java.util.ArrayList
-import java.util.Date
-
-/**
- * Created by timothy.osborn on 11/8/14.
- */
-@Category(WebServerTests::class)
-class OneToOneRelationshipEqualsTest : BaseTest() {
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Before
-    @Throws(InitializationException::class)
     fun seedData() {
-        initialize()
-
         var entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE"
         entity.stringValue = "Some test strin"
@@ -46,8 +32,8 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity.booleanPrimitive = true
         entity.longPrimitive = 1000L
         entity.longValue = 323L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE1"
@@ -59,8 +45,8 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity.booleanPrimitive = false
         entity.longPrimitive = 1002L
         entity.longValue = 322L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE2"
@@ -72,8 +58,8 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity.booleanPrimitive = false
         entity.longPrimitive = 1002L
         entity.longValue = 322L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE3"
@@ -85,8 +71,8 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity.booleanPrimitive = false
         entity.longPrimitive = 1001L
         entity.longValue = 321L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE3"
@@ -98,18 +84,18 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity.booleanPrimitive = true
         entity.longPrimitive = 1301L
         entity.longValue = 322L
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE4"
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE5"
-        save(entity)
-        find(entity)
+        manager.saveEntity<IManagedEntity>(entity)
+        manager.find<IManagedEntity>(entity)
 
 
         var entity2 = OneToOneChildFetchEntity()
@@ -122,12 +108,12 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity2.booleanPrimitive = true
         entity2.longPrimitive = 1000L
         entity2.longValue = 323L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
         entity2.parent = OneToOneFetchEntity()
         entity2.parent!!.id = "FIRST ONE1"
-        save(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE1"
@@ -139,12 +125,12 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity2.booleanPrimitive = false
         entity2.longPrimitive = 1002L
         entity2.longValue = 322L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
         entity2.parent = OneToOneFetchEntity()
         entity2.parent!!.id = "FIRST ONE2"
-        save(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE2"
@@ -156,8 +142,8 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity2.booleanPrimitive = false
         entity2.longPrimitive = 1002L
         entity2.longValue = 322L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE3"
@@ -169,8 +155,8 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity2.booleanPrimitive = false
         entity2.longPrimitive = 1001L
         entity2.longValue = 321L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE3"
@@ -182,53 +168,43 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         entity2.booleanPrimitive = true
         entity2.longPrimitive = 1301L
         entity2.longValue = 322L
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
         entity2.parent = OneToOneFetchEntity()
         entity2.parent!!.id = "FIRST ONE3"
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
-        find(entity2.parent!!)
+        manager.find<IManagedEntity>(entity2.parent!!)
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE4"
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE5"
-        save(entity2)
-        find(entity2)
+        manager.saveEntity<IManagedEntity>(entity2)
+        manager.find<IManagedEntity>(entity2)
 
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testOneToOneHasRelationship() {
         val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
                 .and("child.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
-
-        val time = System.currentTimeMillis()
         val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
-        val done = System.currentTimeMillis()
-
-        Assert.assertEquals(1, results.size.toLong())
+        assertEquals(1, results.size, "Expecting results")
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testOneToOneNoMeetCriteriaRelationship() {
 
         val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some te1st strin3")
                 .and("child.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
-
-        val time = System.currentTimeMillis()
         val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
-        val done = System.currentTimeMillis()
-
-        Assert.assertEquals(0, results.size.toLong())
+        assertEquals(0, results.size, "Expecting no results")
     }
 
     @Test
@@ -236,60 +212,53 @@ class OneToOneRelationshipEqualsTest : BaseTest() {
         val parent = OneToManyParent()
         parent.identifier = "ZZ"
         parent.correlation = 30
-        save(parent)
+        manager.saveEntity<IManagedEntity>(parent)
 
         var child = OneToManyChild()
         child.identifier = "YY"
         child.correlation = 31
-        //save(child);
 
         var child2 = OneToManyChild()
         child2.identifier = "XX"
         child2.correlation = 32
-        //save(child);
 
         parent.childNoInverseCascade = ArrayList()
         parent.childNoInverseCascade!!.add(child)
         parent.childNoInverseCascade!!.add(child2)
 
-        save(parent)
-
+        manager.saveEntity<IManagedEntity>(parent)
 
         child = OneToManyChild()
         child.identifier = "YY"
-        find(child)
+        manager.find<IManagedEntity>(child)
 
         child2 = OneToManyChild()
         child2.identifier = "XX"
-        find(child2)
+        manager.find<IManagedEntity>(child2)
 
         // Validate the child still exists
-        junit.framework.Assert.assertEquals(child2.correlation, 32)
+        assertEquals(32, child2.correlation, "Expecting correlation to be updated to 32")
 
         val parent1 = OneToManyParent()
         parent1.identifier = "ZZ"
-        find(parent1)
+        manager.find<IManagedEntity>(parent1)
 
         // Verify the relationship is still there
-        junit.framework.Assert.assertEquals(parent1.correlation, 30)
-        junit.framework.Assert.assertNotNull(parent1.childNoInverseCascade)
-        junit.framework.Assert.assertEquals(parent1.childNoInverseCascade!!.size, 2)
-        //Assert.assertEquals(parent1.childNoInverseCascade.get(0).identifier, child.identifier);
-        //Assert.assertEquals(parent1.childNoInverseCascade.get(1).identifier, child2.identifier);
+        assertEquals(30, parent1.correlation, "Expecting correlation to still be there")
+        assertNotNull(parent1.childNoInverseCascade, "Expecting relationship to still exist")
+        assertEquals(2, parent1.childNoInverseCascade!!.size, "Expecting 2 relationship entities")
 
-        //parent1.childNoInverseNoCascade = null;
-        initialize(parent1, "childNoInverseCascade")
-        parent1.childNoInverseCascade!!.removeAll(parent1.childNoInverseCascade!!)
-        save(parent1)
+        manager.initialize(parent1, "childNoInverseCascade")
+        parent1.childNoInverseCascade?.removeAll(parent1.childNoInverseCascade!!)
+        manager.saveEntity<IManagedEntity>(parent1)
 
         // Get the parent to check relationships
         val parent2 = OneToManyParent()
         parent2.identifier = "ZZ"
-        find(parent2)
+        manager.find<IManagedEntity>(parent2)
 
         // Ensure the relationship was not removed
-        junit.framework.Assert.assertEquals(0, parent2.childNoInverseCascade!!.size)
-        junit.framework.Assert.assertEquals(30, parent2.correlation)
-
+        assertEquals(0, parent2.childNoInverseCascade!!.size, "Expecting relationships to have been deleted")
+        assertEquals(30, parent2.correlation, "Expecting correlation to be modified")
     }
 }

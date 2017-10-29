@@ -1,9 +1,11 @@
 package database.list
 
-import com.onyx.extension.*
+import com.onyx.extension.gt
+import com.onyx.extension.gte
+import com.onyx.extension.lt
+import com.onyx.extension.lte
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
-import entities.AllAttributeForFetch
 import entities.AllAttributeForFetchSequenceGen
 import org.junit.Before
 import org.junit.Test
@@ -18,8 +20,6 @@ class IdentifierListTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Before
     fun seedData() {
-
-        manager.from(AllAttributeForFetch::class).delete()
 
         var entity = AllAttributeForFetchSequenceGen()
         entity.stringValue = "Some test strin"
