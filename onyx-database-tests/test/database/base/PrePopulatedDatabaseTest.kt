@@ -1,6 +1,5 @@
 package database.base
 
-import com.onyx.extension.delete
 import com.onyx.extension.from
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteriaOperator

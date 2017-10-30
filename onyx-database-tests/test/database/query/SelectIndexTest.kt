@@ -1,41 +1,26 @@
-package memory.queries
+package database.query
 
-import category.InMemoryDatabaseTests
-import com.onyx.exception.OnyxException
+import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
+import database.base.DatabaseBaseTest
 import entities.SelectIdentifierTestEntity
-import memory.base.BaseTest
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 
-import java.io.IOException
-
-/**
- * Created by Tim Osborn on 3/22/17.
- */
-@Category(InMemoryDatabaseTests::class)
-class SelectIndexTest : BaseTest() {
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class SelectIndexTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Before
-    @Throws(OnyxException::class)
-    fun before() {
-        initialize()
-        seedData()
-    }
+    fun seedData() {
+        manager.from(SelectIdentifierTestEntity::class).delete()
 
-    @Throws(OnyxException::class)
-    private fun seedData() {
         var entity = SelectIdentifierTestEntity()
         entity.id = 1L
         entity.index = 1
@@ -109,32 +94,29 @@ class SelectIndexTest : BaseTest() {
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierAndCritieria() {
+    fun testIdentifierAndCriteria() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.and(second)
 
-        assert(manager.executeQuery<Any>(query).size == 2)
+        assertEquals(2, manager.executeQuery<Any>(query).size, "Expected 2 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierOrCritieria() {
+    fun testIdentifierOrCriteria() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second)
 
-        assert(manager.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierCompoundCritieria() {
+    fun testIdentifierCompoundCriteria() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
@@ -144,83 +126,69 @@ class SelectIndexTest : BaseTest() {
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.and(third.or(fourth)))
 
-        assert(manager.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierAndCritieriaWithNot() {
+    fun testIdentifierAndCriteriaWithNot() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.and(second.not())
 
-        assert(manager.executeQuery<Any>(query).size == 3)
+        assertEquals(3, manager.executeQuery<Any>(query).size, "Expected 3 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierAndCritieriaWithNotGroup() {
+    fun testIdentifierAndCriteriaWithNotGroup() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.and(second).not()
 
-        assert(manager.executeQuery<Any>(query).size == 8)
+        assertEquals(8, manager.executeQuery<Any>(query).size, "Expected 8 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierOrCritieriaWithNot() {
+    fun testIdentifierOrCriteriaWithNot() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.not())
 
-        assert(manager.executeQuery<Any>(query).size == 5)
+        assertEquals(5, manager.executeQuery<Any>(query).size, "Expected 5 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierOrCritieriaWithNotGroup() {
+    fun testIdentifierOrCriteriaWithNotGroup() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second).not()
 
-        assert(manager.executeQuery<Any>(query).size == 0)
+        assertEquals(0, manager.executeQuery<Any>(query).size, "Expected no results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierCompoundCritieriaWithNot() {
+    fun testIdentifierCompoundCriteriaWithNot() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
         val fourth = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 2L)
 
-        /*
-
-          where index > 5
-                or (
-                    index < 3  && !(index = 3 | index = 2)
-                   )
-
-         */
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.and(third.or(fourth).not()))
 
-        assert(manager.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierCompoundCritieriaWithNotFullScan() {
+    fun testIdentifierCompoundCriteriaWithNotFullScan() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
@@ -231,12 +199,11 @@ class SelectIndexTest : BaseTest() {
         query.criteria = first.or(second.and(third.or(fourth))).not()
 
 
-        assert(manager.executeQuery<Any>(query).size == 4)
+        assertEquals(4, manager.executeQuery<Any>(query).size, "Expected 4 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testMixMatchOfCritieria() {
+    fun testMixMatchOfCriteria() {
         val first = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
@@ -246,58 +213,19 @@ class SelectIndexTest : BaseTest() {
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.and(third.or(fourth).not()))
 
-        /*
-         index > 5  ||
-         (id < 3  && !(index = 3 || id 2))
-         */
-        assert(manager.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testMixMatchOfCritieria2() {
-        val first = QueryCriteria("index", QueryCriteriaOperator.LESS_THAN, 5L)
-        val second = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 0L)
-        val third = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
-        val fourth = QueryCriteria("id", QueryCriteriaOperator.EQUAL, 2L)
+    fun testMixMatchOfCriteriaIncludeFull() {
+        val count = manager.from(SelectIdentifierTestEntity::class).where(
+                              ("index" gt 5L)
+                              .or( ("id" lt 3)
+                                  .and((("index" eq 3) or !("id" eq 2)))
+                                  .and(("attribute" eq 3) or ("attribute" eq 2))
+                                 )
+                          ).count()
 
-        val query = Query()
-        query.entityType = SelectIdentifierTestEntity::class.java
-        query.criteria = first.and(second.and(third.or(fourth).not()))
-
-        /* select * from da
-            where
-              index < 5
-              and id > 0
-              and !(index == 2 or index == 3)
-              */
-
-        assert(manager.executeQuery<Any>(query).size == 2)
-    }
-
-    @Test
-    @Throws(OnyxException::class)
-    fun testMixMatchOfCritieriaIncludeFull() {
-        val indexGreaterThan5 = QueryCriteria("index", QueryCriteriaOperator.GREATER_THAN, 5L)
-        val idLessThan3 = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L)
-        val indexEqualTo3 = QueryCriteria("index", QueryCriteriaOperator.EQUAL, 3L)
-        val idEqualTo2 = QueryCriteria("id", QueryCriteriaOperator.EQUAL, 2L)
-        val attributeEq3 = QueryCriteria("attribute", QueryCriteriaOperator.EQUAL, "3")
-        val attributeEq2 = QueryCriteria("attribute", QueryCriteriaOperator.EQUAL, "2")
-
-        val query = Query()
-        query.entityType = SelectIdentifierTestEntity::class.java
-        query.criteria =
-                // Index Gt 5 6,7,8,9,10
-                indexGreaterThan5.or(idLessThan3 // Index Gt 5 (6,7,8,9,10) or id less than 3 (1,2)
-                        .and(
-                                indexEqualTo3.or(idEqualTo2).not() // index eq 3 (3) or id equal 2 (2) // NOT!
-                        ) //  Index Gt 5 (6,7,8,9,10) or id less than 3 (1,!2) = (6,7,8,9,10,1)
-                        .and(
-                                attributeEq3.or(attributeEq2)
-                        )
-                )
-
-        assert(manager.executeQuery<Any>(query).size == 5)
+        assertEquals(5, count, "Expected 5 results from compound query")
     }
 }

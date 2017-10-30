@@ -134,10 +134,10 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         private var databasesStarted = false
 
-        protected val randomString: String
+        val randomString: String
             get() = BigInteger(130, random).toString(32)
 
-        protected val randomInteger: Int
+        val randomInteger: Int
             get() = BigInteger(10, random).toInt()
 
         @AfterClass
@@ -156,6 +156,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         @JvmStatic
         @Parameterized.Parameters
-        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(EmbeddedPersistenceManagerFactory::class, CacheManagerFactory::class, WebPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
+        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(CacheManagerFactory::class, EmbeddedPersistenceManagerFactory::class, WebPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
     }
 }

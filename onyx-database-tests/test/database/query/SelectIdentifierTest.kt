@@ -1,140 +1,125 @@
-package remote.queries
+package database.query
 
-import category.RemoteServerTests
-import com.onyx.exception.OnyxException
+import com.onyx.extension.from
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
+import database.base.DatabaseBaseTest
 import entities.SelectIdentifierTestEntity
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
-import remote.base.RemoteBaseTest
-
-import java.io.IOException
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 
 /**
  * Created by Tim Osborn on 3/22/17.
  */
-@Category(RemoteServerTests::class)
-class SelectIdentifierTest : RemoteBaseTest() {
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class SelectIdentifierTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Before
-    @Throws(OnyxException::class)
-    fun before() {
-        initialize()
-        seedData()
-    }
+    fun seedData() {
+        manager.from(SelectIdentifierTestEntity::class).delete()
 
-    @Throws(OnyxException::class)
-    private fun seedData() {
         var entity = SelectIdentifierTestEntity()
         entity.id = 1L
         entity.index = 1
         entity.attribute = "1"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 2L
         entity.index = 2
         entity.attribute = "2"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 3L
         entity.index = 3
         entity.attribute = "3"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 4L
         entity.index = 4
         entity.attribute = "4"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 5L
         entity.index = 5
         entity.attribute = "5"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 6L
         entity.index = 6
         entity.attribute = "6"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 7L
         entity.index = 7
         entity.attribute = "7"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 8L
         entity.index = 8
         entity.attribute = "8"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 9L
         entity.index = 9
         entity.attribute = "9"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
         entity = SelectIdentifierTestEntity()
         entity.id = 10L
         entity.index = 10
         entity.attribute = "10"
 
-        manager!!.saveEntity<IManagedEntity>(entity)
+        manager.saveEntity<IManagedEntity>(entity)
 
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierAndCritieria() {
+    fun testIdentifierAndCriteria() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.and(second)
 
-        assert(manager!!.executeQuery<Any>(query).size == 2)
+        assertEquals(2, manager.executeQuery<Any>(query).size, "Expected 2 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierOrCritieria() {
+    fun testIdentifierOrCriteria() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second)
 
-        assert(manager!!.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierCompoundCritieria() {
+    fun testIdentifierCompoundCriteria() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L)
@@ -144,14 +129,10 @@ class SelectIdentifierTest : RemoteBaseTest() {
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.and(third.or(fourth)))
 
-        //6,7,8,9,10
-        //        1,2 && (2,3)
-
-        assert(manager!!.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
     fun testIdentifierAndCritieriaWithNot() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L)
@@ -159,48 +140,44 @@ class SelectIdentifierTest : RemoteBaseTest() {
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.and(second.not())
 
-        assert(manager!!.executeQuery<Any>(query).size == 3)
+        assertEquals(3, manager.executeQuery<Any>(query).size, "Expected 3 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierAndCritieriaWithNotGroup() {
+    fun testIdentifierAndCriteriaWithNotGroup() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.and(second).not()
 
-        assert(manager!!.executeQuery<Any>(query).size == 8)
+        assertEquals(8, manager.executeQuery<Any>(query).size, "Expected 8 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierOrCritieriaWithNot() {
+    fun testIdentifierOrCriteriaWithNot() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.not())
 
-        assert(manager!!.executeQuery<Any>(query).size == 5)
+        assertEquals(5, manager.executeQuery<Any>(query).size, "Expected 5 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierOrCritieriaWithNotGroup() {
+    fun testIdentifierOrCriteriaWithNotGroup() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second).not()
 
-        assert(manager!!.executeQuery<Any>(query).size == 0)
+        assertEquals(0, manager.executeQuery<Any>(query).size, "Expected 0 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierCompoundCritieriaWithNot() {
+    fun testIdentifierCompoundCriteriaWithNot() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L)
@@ -210,12 +187,11 @@ class SelectIdentifierTest : RemoteBaseTest() {
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.and(third.or(fourth).not()))
 
-        assert(manager!!.executeQuery<Any>(query).size == 6)
+        assertEquals(6, manager.executeQuery<Any>(query).size, "Expected 6 results")
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun testIdentifierCompoundCritieriaWithNotFullScan() {
+    fun testIdentifierCompoundCriteriaWithNotFullScan() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 3L)
         val third = QueryCriteria("id", QueryCriteriaOperator.EQUAL, 3L)
@@ -225,7 +201,6 @@ class SelectIdentifierTest : RemoteBaseTest() {
         query.entityType = SelectIdentifierTestEntity::class.java
         query.criteria = first.or(second.and(third.or(fourth))).not()
 
-
-        assert(manager!!.executeQuery<Any>(query).size == 4)
+        assertEquals(4, manager.executeQuery<Any>(query).size, "Expected 4 results")
     }
 }

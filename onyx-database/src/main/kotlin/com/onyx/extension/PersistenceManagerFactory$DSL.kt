@@ -2,15 +2,132 @@ package com.onyx.extension
 
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.persistence.query.AttributeUpdate
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.*
 import kotlin.reflect.KClass
 
-class QueryBuilder(var manager:PersistenceManager, var query: Query)
+class QueryBuilder(var manager:PersistenceManager, var query: Query) {
+    var onItemAdded:((Any) -> Unit)? = null
+    var onItemDeleted:((Any) -> Unit)? = null
+    var onItemUpdated:((Any) -> Unit)? = null
 
-// region Query Construction
+    // region Query Execution
+
+    fun <T> list():List<T> {
+        assignListener()
+        return manager.executeQuery(this.query)
+    }
+
+    fun <T : IManagedEntity> lazy():List<T> {
+        assignListener()
+        return manager.executeLazyQuery(this.query)
+    }
+
+    fun update():Int {
+        assignListener()
+        return manager.executeUpdate(this.query)
+    }
+
+    fun count():Long {
+        assignListener()
+        return manager.countForQuery(this.query)
+    }
+
+    fun delete():Int {
+        assignListener()
+        return manager.executeDelete(this.query)
+    }
+
+    private fun assignListener() {
+        if(onItemAdded != null
+                || onItemDeleted != null
+                || onItemDeleted != null) {
+            this.query.changeListener = object : QueryListener<Any> {
+                override fun onItemUpdated(item: Any) {
+                    onItemUpdated?.invoke(item)
+                }
+
+                override fun onItemAdded(item: Any) {
+                    onItemAdded?.invoke(item)
+                }
+
+                override fun onItemRemoved(item: Any) {
+                    onItemDeleted?.invoke(item)
+                }
+            }
+        }
+    }
+
+    // endregion
+
+    // region Query Building
+
+    fun from(type:KClass<*>):QueryBuilder {
+        this.query.entityType = type.javaObjectType
+        return this
+    }
+
+    fun where(criteria: QueryCriteria): QueryBuilder {
+        this.query.criteria = criteria
+        return this
+    }
+
+    fun limit(limit:Int):QueryBuilder {
+        this.query.maxResults = limit
+        return this
+    }
+
+    fun first(first:Int):QueryBuilder {
+        this.query.firstRow = first
+        return this
+    }
+
+    fun set(vararg update:AttributeUpdate):QueryBuilder {
+        this.query.updates = update.toList()
+        return this
+    }
+
+    // endregion
+
+    // region Query Order
+
+    fun <T> orderBy(vararg order:T):QueryBuilder {
+        query.queryOrders = ArrayList()
+        order.toList().forEach {
+            if(it is QueryOrder)
+                (query.queryOrders as MutableList).add(it)
+            else if(it is String) {
+                (query.queryOrders as MutableList).add(QueryOrder(it))
+            }
+        }
+        return this
+    }
+
+    // endregion
+
+    // region Listener events
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T : IManagedEntity> onItemAdded(listener:((T) -> Unit)):QueryBuilder {
+        this.onItemAdded = listener as ((Any) -> Unit)?
+        return this
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T : IManagedEntity> onItemDeleted(listener:((T) -> Unit)):QueryBuilder {
+        this.onItemDeleted = listener as ((Any) -> Unit)?
+        return this
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T : IManagedEntity> onItemUpdated(listener:((T) -> Unit)):QueryBuilder {
+        this.onItemUpdated = listener as ((Any) -> Unit)?
+        return this
+    }
+
+    // endregion
+}
+
+// region Query Builder Construction Extensions
 
 fun PersistenceManager.from(type:KClass<*>):QueryBuilder = QueryBuilder(this, Query(type.javaObjectType))
 
@@ -18,59 +135,6 @@ fun PersistenceManager.select(vararg properties:String):QueryBuilder {
     val query = Query()
     query.selections = properties.toList()
     return QueryBuilder(this, query)
-}
-
-// endregion
-
-// region Query Building
-
-fun QueryBuilder.from(type:KClass<*>):QueryBuilder {
-    this.query.entityType = type.javaObjectType
-    return this
-}
-
-fun QueryBuilder.where(criteria: QueryCriteria): QueryBuilder {
-    this.query.criteria = criteria
-    return this
-}
-
-fun QueryBuilder.limit(limit:Int):QueryBuilder {
-    this.query.maxResults = limit
-    return this
-}
-
-fun QueryBuilder.first(first:Int):QueryBuilder {
-    this.query.firstRow = first
-    return this
-}
-
-fun QueryBuilder.set(vararg update:AttributeUpdate):QueryBuilder {
-    this.query.updates = update.toList()
-    return this
-}
-
-// endregion
-
-// region Query Execution
-
-fun <T> QueryBuilder.list() = manager.executeQuery<T>(this.query)
-fun <T : IManagedEntity> QueryBuilder.lazy() = manager.executeLazyQuery<T>(this.query)
-fun QueryBuilder.update() = manager.executeUpdate(this.query)
-fun QueryBuilder.count() = manager.countForQuery(this.query)
-fun QueryBuilder.delete() = manager.executeDelete(this.query)
-
-// endregion
-
-// region Query Criteria Joins
-
-infix fun QueryCriteria.and(criteria:QueryCriteria):QueryCriteria {
-    this.and(criteria)
-    return this
-}
-
-infix fun QueryCriteria.or(criteria: QueryCriteria): QueryCriteria {
-    this.or(criteria)
-    return this
 }
 
 // endregion
@@ -96,14 +160,17 @@ infix fun <T> String.notStartsWith(value:T):QueryCriteria = QueryCriteria(this, 
 fun String.notNull():QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_NULL)
 fun String.isNull():QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IS_NULL)
 
-operator fun QueryCriteria.not() {
-    this.not()
-}
-
 // endregion
 
 // region Query Update
 
 infix fun String.to(value: Any?) = AttributeUpdate(this, value)
+
+// endregion
+
+// region Query Order Extensions
+
+fun String.asc():QueryOrder = QueryOrder(this, true)
+fun String.desc():QueryOrder = QueryOrder(this, false)
 
 // endregion

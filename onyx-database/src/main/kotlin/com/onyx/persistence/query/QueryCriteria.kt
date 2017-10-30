@@ -202,7 +202,7 @@ class QueryCriteria : BufferStreamable {
      * @param orGroup Or Sub Query
      * @return New Query Criteria with added or sub query
      */
-    fun or(orGroup: QueryCriteria): QueryCriteria {
+    infix fun or(orGroup: QueryCriteria): QueryCriteria {
         orGroup.isOr = true
         this.subCriteria.add(orGroup)
         return this

@@ -1,46 +1,30 @@
-package embedded.queries
+package database.query
 
-import category.EmbeddedDatabaseTests
-import com.onyx.exception.OnyxException
-import com.onyx.exception.InitializationException
+import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.QueryPartitionMode
-import embedded.base.BaseTest
+import database.base.DatabaseBaseTest
 import entities.SimpleEntity
 import entities.partition.BasicPartitionEntity
-import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import org.junit.experimental.categories.Category
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
 
-import java.io.IOException
-
-/**
- * This test will address the countForQuery() method
- * within the PersistenceManager API added in 1.3.0
- */
-@Category(EmbeddedDatabaseTests::class)
-class QueryCountTest : BaseTest() {
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     @Before
-    @Throws(InitializationException::class)
-    fun before() {
-        initialize()
+    fun removeTestData() {
+        manager.from(SimpleEntity::class).delete()
     }
 
     /**
      * Tests an entity without a partition
      */
     @Test
-    @Throws(OnyxException::class)
     fun testQueryCountForNonPartitionEntity() {
         var simpleEntity = SimpleEntity()
         simpleEntity.simpleId = "ASDF"
@@ -54,16 +38,13 @@ class QueryCountTest : BaseTest() {
         simpleEntity.simpleId = "ASDF"
         manager.deleteEntity(simpleEntity)
 
-        val query = Query()
-        query.entityType = SimpleEntity::class.java
-        assert(manager.countForQuery(query) == 1L)
+        assertEquals(1L, manager.from(SimpleEntity::class).count(), "Expected 1 result")
     }
 
     /**
      * Tests an entity with a partition.  The count uses a specific partition
      */
     @Test
-    @Throws(OnyxException::class)
     fun testQueryCountForPartitionEntity() {
         var basicPartitionEntity = BasicPartitionEntity()
         basicPartitionEntity.partitionId = 3L
@@ -80,7 +61,7 @@ class QueryCountTest : BaseTest() {
         val query = Query()
         query.entityType = BasicPartitionEntity::class.java
         query.partition = 3L
-        assert(manager.countForQuery(query) == 1L)
+        assertEquals(1L, manager.countForQuery(query), "Expected 1 result")
     }
 
 
@@ -89,7 +70,6 @@ class QueryCountTest : BaseTest() {
      * partition set.
      */
     @Test
-    @Throws(OnyxException::class)
     fun testQueryCountForAllPartitions() {
         var basicPartitionEntity = BasicPartitionEntity()
         basicPartitionEntity.partitionId = 3L
@@ -103,17 +83,13 @@ class QueryCountTest : BaseTest() {
 
         manager.saveEntity<IManagedEntity>(basicPartitionEntity)
 
-        val query = Query()
-        query.entityType = BasicPartitionEntity::class.java
-        query.partition = QueryPartitionMode.ALL
-        assert(manager.countForQuery(query) == 2L)
+        assertEquals(2L, manager.from(BasicPartitionEntity::class).count(), "Expected 2 results")
     }
 
     /**
      * Tests a custom query rather than the entire data set
      */
     @Test
-    @Throws(OnyxException::class)
     fun testQueryCountForCustomQuery() {
         var basicPartitionEntity = BasicPartitionEntity()
         basicPartitionEntity.partitionId = 3L
@@ -127,7 +103,6 @@ class QueryCountTest : BaseTest() {
 
         manager.saveEntity<IManagedEntity>(basicPartitionEntity)
 
-        val query = Query(BasicPartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 1L))
-        assert(manager.countForQuery(query) == 1L)
+        assertEquals(1L, manager.from(BasicPartitionEntity::class).where("id" gt 1L).count(), "Expected 1 result")
     }
 }

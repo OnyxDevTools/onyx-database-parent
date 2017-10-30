@@ -1,13 +1,10 @@
 package database.list
 
 import com.onyx.extension.cont
-import com.onyx.extension.delete
-import com.onyx.extension.from
 import com.onyx.extension.startsWith
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeEntity
 import entities.AllAttributeForFetch
-import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
