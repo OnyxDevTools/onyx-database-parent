@@ -64,7 +64,7 @@ class SelectQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
                              .list<Map<String, Any?>>()
 
         assertNotNull(results, "Results should not be null")
-        assertEquals(4, results[0]["intPrimitive"] as Int, "intPrimitive has incorrect value")
+        assertEquals(3, results[0]["intPrimitive"] as Int, "intPrimitive has incorrect value")
         assertEquals(4, results[1]["intPrimitive"] as Int, "intPrimitive has incorrect value")
     }
 
@@ -79,7 +79,7 @@ class SelectQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
         assertNotNull(results, "Results should not be null")
         assertEquals(2, results.size, "Expected 2 results")
         assertEquals("FIRST ONE", results[0].id, "Query order is incorrect")
-        assertEquals("FIRST ONE2", results[1].id, "Query order is incorrect")
+        assertEquals("FIRST ONE1", results[1].id, "Query order is incorrect")
     }
 
     @Test

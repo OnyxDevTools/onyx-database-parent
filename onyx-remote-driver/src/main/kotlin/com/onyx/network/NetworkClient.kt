@@ -288,12 +288,12 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
     /**
      * Message failure. Respond to the failure by sending the exception as the response.
      *
-     * @param token Message ID
      * @param cause Exception that caused it to fail
+     * @param token Message ID
      *
      * @since 1.2.0
      */
-    override fun failure(token: RequestToken, cause: Exception) {
+    override fun failure(cause: Exception, token: RequestToken?) {
         try {
             val consumer = pendingRequests.remove(token)
             consumer?.complete(cause)

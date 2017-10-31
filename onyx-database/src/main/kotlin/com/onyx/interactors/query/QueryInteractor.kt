@@ -40,6 +40,16 @@ interface QueryInteractor {
     fun <T : Any?> referencesToResults(query: Query, references: MutableMap<Reference, T>): List<T>
 
     /**
+     * Return a subset of records based on query maxResults & firstRow
+     *
+     * @param query      Query containing all the munging instructions
+     * @param references References from query results
+     * @return Range of records if specified to do so in query
+     * @throws OnyxException Error hydrating entities
+     */
+    fun <T : Any?> filterReferences(query: Query, references: MutableMap<Reference, T>): MutableMap<Reference, T>
+
+    /**
      * Hydrate given attributes
      *
      * @param query      Query containing selection and count information

@@ -86,6 +86,25 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
     }
 
     /**
+     * Return a subset of records based on query maxResults & firstRow
+     *
+     * @param query      Query containing all the munging instructions
+     * @param references References from query results
+     * @return Range of records if specified to do so in query
+     * @throws OnyxException Error hydrating entities
+     */
+    @Throws(OnyxException::class)
+    override fun <T : Any?> filterReferences(query: Query, references: MutableMap<Reference, T>): MutableMap<Reference, T> {
+        if(!(query.maxResults > 0 || query.firstRow > 0)) return references
+        val lower = query.firstRow
+        val upper = lower + if(query.maxResults > 0) query.maxResults else references.size
+
+        val filteredValues = LinkedHashMap<Reference, T>()
+        references.asSequence().filterIndexed { index, _ -> index in lower..(upper - 1) }.forEach { filteredValues.put(it.key, it.value) }
+        return filteredValues
+    }
+
+    /**
      * Hydrate given attributes
      *
      * @param query      Query containing selection and count information

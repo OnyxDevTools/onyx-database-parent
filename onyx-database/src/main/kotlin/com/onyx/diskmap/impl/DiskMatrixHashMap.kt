@@ -1,6 +1,5 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix
@@ -8,7 +7,8 @@ import com.onyx.diskmap.data.CombinedIndexHashMatrixNode
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
-import com.onyx.lang.concurrent.ClosureLock
+import com.onyx.lang.concurrent.ClosureReadWriteLock
+import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import com.onyx.lang.map.OptimisticLockingMap
 
 import java.util.*
@@ -35,12 +35,7 @@ import java.util.*
  */
 class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<K,V> {
 
-    /**
-     * Get the read write lock
-     *
-     * @return Implementation of a level read write lock
-     */
-    override var readWriteLock: ClosureLock = DefaultClosureLock()
+    private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
     // Cache of skip lists
     private val skipListMapCache:MutableMap<Int, CombinedIndexHashMatrixNode> = OptimisticLockingMap(WeakHashMap())
@@ -64,8 +59,8 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @since 1.2.1 Added constructor in the event you wanted a different locking implementation
      */
     @Suppress("UNUSED")
-    constructor(fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureLock) : super(fileStore, header, true) {
-        this.readWriteLock = closureLock
+    constructor(fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureReadWriteLock) : super(fileStore, header, true) {
+        this.mapReadWriteLock = closureLock
         this.loadFactor = loadFactor.toByte()
         this.hashMatrixNodeCache = EmptyMap()
         this.valueByPositionCache = EmptyMap()
@@ -98,25 +93,20 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return The value we just inserted
      * @since 1.2.0
      */
-    override fun put(key: K, value: V): V {
+    override fun put(key: K, value: V): V = this.mapReadWriteLock.writeLock {
         val combinedNode = getHeadReferenceForKey(key, true)
         head = combinedNode?.head
 
-        val oldHead = combinedNode!!.head
+        val returnValue = super@DiskMatrixHashMap.put(key, value)
+        val newHead = head
 
-        return this.readWriteLock.performWithLock(oldHead) {
-            val returnValue = super@DiskMatrixHashMap.put(key, value)
-
-            val newHead = head
-
-            // Only update the data if the head of the skip list has changed
-            if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != newHead!!.position) {
-                combinedNode.head = newHead
-                this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
-                this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
-            }
-            return@performWithLock returnValue
+        // Only update the data if the head of the skip list has changed
+        if (combinedNode!!.bitMapNode.next[combinedNode.hashDigit] != newHead!!.position) {
+            combinedNode.head = newHead
+            this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
+            this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
         }
+        return@writeLock returnValue
     }
 
     /**
@@ -126,28 +116,24 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return Object that was removed.  Null otherwise
      * @since 1.2.0
      */
-    override fun remove(key: K): V? {
+    override fun remove(key: K): V? = this.mapReadWriteLock.writeLock {
         val combinedNode = getHeadReferenceForKey(key, true)
         head = combinedNode?.head
-
         val oldHead = combinedNode?.head
 
-        return if (oldHead != null) {
+        return@writeLock if (oldHead != null) {
 
-            this.readWriteLock.performWithLock(oldHead) {
-                val returnValue = super@DiskMatrixHashMap.remove(key)
+            val returnValue = super@DiskMatrixHashMap.remove(key)
 
-                val newHead = head
+            val newHead = head
 
-                // Only update the data if the head of the skip list has changed
-                if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != newHead!!.position) {
-                    combinedNode.head = newHead
-                    this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
-                    this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
-                }
-                returnValue
+            // Only update the data if the head of the skip list has changed
+            if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != newHead!!.position) {
+                combinedNode.head = newHead
+                this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
+                this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
             }
-
+            returnValue
         } else null
     }
 
@@ -196,7 +182,7 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @since 1.2.0
      */
     override fun clear() {
-        this.readWriteLock.performWithLock(reference) {
+        this.mapReadWriteLock.writeLock {
             super@DiskMatrixHashMap.clear()
         }
     }
@@ -209,10 +195,10 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return -1
+    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return@optimisticReadLock -1
         head = combinedNode.head
-        return super.getRecID(key)
+        return@optimisticReadLock super.getRecID(key)
     }
 
     /**

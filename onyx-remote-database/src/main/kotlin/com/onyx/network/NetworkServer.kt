@@ -206,7 +206,7 @@ open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
      * @param cause     The underlying exception
      * @since 1.2.0
      */
-    override fun failure(token: RequestToken, cause: Exception) {
+    override fun failure(cause: Exception, token: RequestToken?) {
         if (cause !is InitializationException)
             cause.printStackTrace() // TODO() Something better than printing a damn stacktrace
     }

@@ -20,6 +20,8 @@ import org.junit.runners.Parameterized
 import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 
@@ -153,6 +155,11 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
                 databasesStarted = true
             }
         }
+
+        /**
+         * Helper to run asyn on an executor
+         */
+        fun <T> async(executor:ExecutorService, block: () -> T): Future<T> = executor.submit<T> { block.invoke() }
 
         @JvmStatic
         @Parameterized.Parameters

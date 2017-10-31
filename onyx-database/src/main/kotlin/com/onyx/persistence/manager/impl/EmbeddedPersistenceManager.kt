@@ -255,7 +255,6 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         context.checkForKillSwitch()
 
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
-
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
@@ -268,7 +267,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
                 else
                     matchingReferences
             }
-            LazyQueryCollection(descriptor, results, context) as List<E>
+            LazyQueryCollection(descriptor, queryController.filterReferences(query, results), context) as List<E>
         } finally {
             queryController.cleanup()
         }

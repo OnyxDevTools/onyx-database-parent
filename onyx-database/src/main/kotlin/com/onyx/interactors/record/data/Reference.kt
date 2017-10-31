@@ -8,7 +8,7 @@ import com.onyx.buffer.BufferStreamable
  *
  * This is a combined reference of the partition the entity is in and its location
  */
-data class Reference(var partition: Long, var reference: Long) : Comparable<Reference>, BufferStreamable {
+data class Reference @JvmOverloads constructor(var partition: Long = 0L, var reference: Long = 0L) : Comparable<Reference>, BufferStreamable {
 
     override fun compareTo(other: Reference): Int = when {
         this.partition < other.partition -> -1

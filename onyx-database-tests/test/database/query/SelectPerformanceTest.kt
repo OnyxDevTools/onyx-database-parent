@@ -41,7 +41,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
      * @throws OnyxException
      */
     @Test
-    fun bTestSortingResultsFullTableScanFor200kRecords() {
+    fun bTestSortingResultsFullTableScanForRecords() {
 
         val builder = manager.from(PerformanceEntity::class)
                              .where("stringValue" neq "A")
@@ -50,7 +50,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
                              .limit(20)
 
         val before = System.currentTimeMillis()
-        val results = builder.lazy<PerformanceEntity>()
+        val results = builder.list<PerformanceEntity>()
         val after = System.currentTimeMillis()
 
         assertEquals(20, results.size, "Only 20 records should be returned")
@@ -60,13 +60,10 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
     /**
      * Scans 1 index returning 20 keys
-     * then joins with one associated table
-     * returns a total of 20 recs
-     * Last result: 59(win), 36(mac)
      * @throws OnyxException
      */
     @Test
-    fun cTestJoiningResultsFor300kRecords() {
+    fun cTestJoiningResultsForRecords() {
         var results = manager.from(PerformanceEntity::class)
                              .where("stringValue" neq "A")
                              .orderBy("id".asc())

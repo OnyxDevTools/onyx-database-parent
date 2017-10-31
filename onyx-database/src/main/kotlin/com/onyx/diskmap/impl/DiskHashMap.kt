@@ -1,20 +1,18 @@
 package com.onyx.diskmap.impl
 
-
-import com.onyx.lang.concurrent.ClosureLock
-import com.onyx.lang.concurrent.impl.DefaultClosureLock
-import com.onyx.lang.concurrent.impl.EmptyClosureLock
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.impl.base.hashmap.AbstractIterableMultiMapHashMap
 import com.onyx.diskmap.store.Store
+import com.onyx.lang.concurrent.ClosureReadWriteLock
+import com.onyx.lang.concurrent.impl.*
 import java.util.HashSet
 
 class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
 
-    override var readWriteLock: ClosureLock = DefaultClosureLock()
+    private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
     /**
      * Constructor
@@ -33,13 +31,13 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @since 1.2.0
      */
     @Suppress("UNUSED")
-    constructor (fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureLock): super(fileStore, header, true, loadFactor) {
-        this.readWriteLock = closureLock
+    constructor (fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureReadWriteLock): super(fileStore, header, true, loadFactor) {
         this.nodeCache = EmptyMap()
         this.mapCache = EmptyMap()
         this.cache = EmptyMap()
         this.valueByPositionCache = EmptyMap()
         this.keyCache = EmptyMap()
+        this.mapReadWriteLock = closureLock
     }
 
     /**
@@ -60,7 +58,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
             keyCache = EmptyMap()
             valueByPositionCache = EmptyMap()
             nodeCache = EmptyMap()
-            readWriteLock = EmptyClosureLock()
+            mapReadWriteLock = EmptyClosureReadWriteLock()
         }
     }
 
@@ -71,7 +69,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @return Object that was removed.  Null otherwise
      * @since 1.2.0
      */
-    override fun remove(key: K): V? {
+    override fun remove(key: K): V? = mapReadWriteLock.writeLock {
         val combinedNode = getHeadReferenceForKey(key, true)
         head = combinedNode?.head
 
@@ -79,16 +77,15 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
 
         if (head != null) {
             val headPosition = head.position
-            return readWriteLock.performWithLock(head) {
-                val returnValue = super@DiskHashMap.remove(key)
-                combinedNode.head = head
-                if (head.position != headPosition) {
-                    updateSkipListReference(combinedNode.mapId, head.position)
-                }
-                returnValue
+
+            val returnValue = super@DiskHashMap.remove(key)
+            combinedNode.head = head
+            if (head.position != headPosition) {
+                updateSkipListReference(combinedNode.mapId, head.position)
             }
+            return@writeLock returnValue
         }
-        return null
+        return@writeLock null
     }
 
     /**
@@ -105,8 +102,9 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
         head = combinedNode?.head
 
         return if (combinedNode?.head != null) {
-            super.get(key)
-        } else null
+             super.get(key)
+        }
+        else null
     }
 
     /**
@@ -117,25 +115,22 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @return The value we just inserted
      * @since 1.2.0
      */
-    override fun put(key: K, value: V): V {
-
+    override fun put(key: K, value: V): V = mapReadWriteLock.writeLock {
         val combinedNode = getHeadReferenceForKey(key, true)
         head = combinedNode?.head
 
         val mapHead = combinedNode?.head
         if(mapHead != null) {
             val headPosition = mapHead.position
-            return readWriteLock.performWithLock(mapHead) {
-                val returnValue = super@DiskHashMap.put(key, value)
-                val newHead = head!!
-                combinedNode.head = newHead
-                if (newHead.position != headPosition)
-                    updateSkipListReference(combinedNode.mapId, newHead.position)
-                return@performWithLock returnValue
-            }
+            val returnValue = super@DiskHashMap.put(key, value)
+            val newHead = head!!
+            combinedNode.head = newHead
+            if (newHead.position != headPosition)
+                updateSkipListReference(combinedNode.mapId, newHead.position)
+            return@writeLock returnValue
         }
 
-        return value
+        return@writeLock value
     }
 
     /**
@@ -173,10 +168,10 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return -1
+    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return@optimisticReadLock -1
         head = combinedNode.head
-        return super.getRecID(key)
+        return@optimisticReadLock mapReadWriteLock.optimisticReadLock { super.getRecID(key) }
     }
 
     /**
@@ -198,7 +193,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @since 1.2.0
      */
     override fun clear() {
-        readWriteLock.performWithLock(reference) {
+        mapReadWriteLock.writeLock {
             super.clear()
         }
     }
@@ -250,24 +245,19 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
     private fun getHeadReferenceForKey(key: K, forInsert: Boolean): CombinedIndexHashNode? {
         val skipListMapId = getSkipListKey(key)
 
-        return readWriteLock.performWithLock(this.reference) {
-            if (forInsert) {
-                val headNode1: SkipListHeadNode
-                val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
-                if (reference == 0L) {
-                    headNode1 = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
-                    insertSkipListReference(skipListMapId, headNode1.position)
-                    return@performWithLock CombinedIndexHashNode(headNode1, skipListMapId)
-                } else {
-                    return@performWithLock CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId)
-                }
+        return if (forInsert) {
+            val headNode1: SkipListHeadNode
+            val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
+            if (reference == 0L) {
+                headNode1 = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
+                insertSkipListReference(skipListMapId, headNode1.position)
+                CombinedIndexHashNode(headNode1, skipListMapId)
             } else {
-                val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
-                if (reference > 0L)
-                    return@performWithLock CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId)
-                else
-                    return@performWithLock null
+                CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId)
             }
+        } else {
+            val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
+            if (reference > 0L) CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId) else null
         }
     }
 

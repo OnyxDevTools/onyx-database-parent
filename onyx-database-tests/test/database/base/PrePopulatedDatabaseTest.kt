@@ -57,7 +57,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
         entity.longPrimitive = 1002L
         entity.longValue = 322L
         entity.intValue = 2
-        entity.intPrimitive = 4
+        entity.intPrimitive = 3
         manager.saveEntity<IManagedEntity>(entity)
 
         entity = AllAttributeForFetch()

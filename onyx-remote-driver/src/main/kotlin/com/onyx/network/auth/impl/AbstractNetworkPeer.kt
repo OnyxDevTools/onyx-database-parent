@@ -151,7 +151,7 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
         // If all of the packets are accounted for, handle the message asynchronously
         if (message.numberOfPackets.toInt() == message.packets.count()) {
             connection.messages.remove(packet.messageId)
-            async { handleMessage(socketChannel, connection, message) }
+            async { try { handleMessage(socketChannel, connection, message) } catch (e:Exception) { failure(e) } }
         }
     }
 
@@ -379,10 +379,10 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
     /**
      * Exception handling.  Both the client and server need to override this so they can have their own custom handling.
      *
-     * @param token Original request
      * @param cause The underlying exception
+     * @param token Message ID
      */
-    abstract protected fun failure(token: RequestToken, cause: Exception)
+    abstract protected fun failure(cause: Exception, token: RequestToken? = null)
 
     // endregion
 

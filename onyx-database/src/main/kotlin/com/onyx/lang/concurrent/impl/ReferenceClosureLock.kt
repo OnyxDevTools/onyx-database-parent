@@ -1,7 +1,9 @@
 package com.onyx.lang.concurrent.impl
 
 import com.onyx.lang.concurrent.ClosureLock
+import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * Created by Tim Osborn on 8/4/15.
@@ -12,7 +14,7 @@ import java.util.*
 @Suppress("UNUSED")
 class ReferenceClosureLock : ClosureLock {
 
-    private val references = WeakHashMap<Any, Any>()
+    private val references = OptimisticLockingMap<Any, Any>(WeakHashMap())
 
     /**
      * This method performs a lambda function by locking on whatever object you pass in.  In this case it has
@@ -23,21 +25,9 @@ class ReferenceClosureLock : ClosureLock {
      * @return The result from the function
      */
     override fun <T> performWithLock(lock: Any, consumer: (lock:Any) -> T): T {
-        var lockReference = lock
-
-        var objectToLockOn: Any?
-        synchronized(references) {
-            objectToLockOn = references[lockReference]
-            if (objectToLockOn == null) {
-                references.put(lockReference, lockReference)
-            } else {
-                lockReference = objectToLockOn!!
-            }
-        }
-
-        synchronized(lockReference) {
+        synchronized(references.getOrPut(lock) { lock }) {
             @Suppress("UNCHECKED_CAST")
-            return consumer.invoke(lockReference)
+            return consumer.invoke(lock)
         }
     }
 

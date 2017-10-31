@@ -1,97 +1,91 @@
-package embedded.stream
+package database.stream
 
-import category.EmbeddedDatabaseTests
-import com.onyx.exception.OnyxException
+import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.factory.impl.CacheManagerFactory
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
+import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
-import embedded.base.BaseTest
+import database.base.DatabaseBaseTest
 import entities.identifiers.ImmutableSequenceIdentifierEntity
 import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete
 import org.junit.*
-import org.junit.experimental.categories.Category
+import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
-
-import java.io.IOException
+import org.junit.runners.Parameterized
+import streams.BasicQueryMapStream
+import streams.BasicQueryStream
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.reflect.KClass
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-/**
- * Created by Tim Osborn on 6/2/16.
- */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Category(EmbeddedDatabaseTests::class)
-class EntityStreamTest : BaseTest() {
-    @Before
-    @Throws(OnyxException::class)
-    fun before() {
-        initialize()
-    }
-
-    @After
-    @Throws(IOException::class)
-    fun after() {
-        shutdown()
-    }
+@RunWith(Parameterized::class)
+class EntityStreamTestFor(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     /**
      * Test a basic Query Stream implementation
-     * @throws OnyxException Should not happen
      */
     @Test
-    @Throws(OnyxException::class)
     fun testBasicQueryStream() {
+        Assume.assumeFalse("Unsupported feature for remote persistence manager", factory is RemotePersistenceManagerFactory)
+
         val testEntity = ImmutableSequenceIdentifierEntityForDelete()
         testEntity.correlation = 1
-        save(testEntity)
+        manager.saveEntity<IManagedEntity>(testEntity)
 
         val query = Query(ImmutableSequenceIdentifierEntityForDelete::class.java, QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0))
 
         val hadDataToStream = AtomicBoolean(false)
-        manager.stream(query, object :QueryStream<ImmutableSequenceIdentifierEntityForDelete> {
+        manager.stream(query, object : QueryStream<ImmutableSequenceIdentifierEntityForDelete> {
             override fun accept(entity: ImmutableSequenceIdentifierEntityForDelete, persistenceManager: PersistenceManager) {
                 entity.correlation = 2
                 hadDataToStream.set(true)
             }
         })
 
-        assert(hadDataToStream.get())
+        assertTrue(hadDataToStream.get(), "Stream had data to iterate")
     }
 
+
+
     /**
-     * Test a Query Stream implementation with an andThan syntax
-     * @throws OnyxException
+     * Test a basic Query Stream implementation
      */
     @Test
-    @Ignore
-    @Throws(OnyxException::class)
-    fun testBasicQueryStreamAndThen() {
+    fun testBasicQueryStreamByClassLoading() {
         val testEntity = ImmutableSequenceIdentifierEntityForDelete()
         testEntity.correlation = 1
-        save(testEntity)
+        manager.saveEntity<IManagedEntity>(testEntity)
 
         val query = Query(ImmutableSequenceIdentifierEntityForDelete::class.java, QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0))
+        manager.stream(query, BasicQueryStream::class.java)
+        manager.find<IManagedEntity>(testEntity)
 
-        val hadDataToStream = AtomicBoolean(false)
-
-        val modifyStream:QueryStream<ImmutableSequenceIdentifierEntity> = object : QueryStream<ImmutableSequenceIdentifierEntity> {
-            override fun accept(entity: ImmutableSequenceIdentifierEntity, persistenceManager: PersistenceManager) {
-                entity.correlation = 2
-                hadDataToStream.set(true)
-            }
-        }
+        assertEquals(99, testEntity.correlation, "Stream successfully updated entities")
+    }
 
 
-        val didModifyData = AtomicBoolean(false)
+    /**
+     * Test a basic Query Stream implementation
+     */
+    @Test
+    fun testBasicQueryStreamDictionaryByClassLoading() {
+        val testEntity = ImmutableSequenceIdentifierEntityForDelete()
+        testEntity.correlation = 1
+        manager.saveEntity<IManagedEntity>(testEntity)
 
+        val query = Query(ImmutableSequenceIdentifierEntityForDelete::class.java, QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0))
+        manager.stream(query, BasicQueryMapStream::class.java)
 
-        manager.stream(query, modifyStream)
+        manager.find<IManagedEntity>(testEntity)
 
-        assert(hadDataToStream.get())
-        assert(didModifyData.get())
-
+        assertEquals(55, testEntity.correlation, "Stream successfully updated entities")
     }
 
     /**
@@ -99,21 +93,22 @@ class EntityStreamTest : BaseTest() {
      * The purpose of this is to display that we can iterate through it without having the dependency
      * of what format the entity used to be in.  In this case, it would help with migrations.
      *
-     * @throws OnyxException Should Not happen
      */
     @Test
-    @Throws(OnyxException::class)
     fun testStreamAsDictionary() {
+        Assume.assumeFalse("Unsupported feature for remote persistence manager", factory is RemotePersistenceManagerFactory)
+
         // Save some test data
         val testEntity = ImmutableSequenceIdentifierEntityForDelete()
         testEntity.correlation = 1
-        save(testEntity)
+        manager.saveEntity<IManagedEntity>(testEntity)
 
         // Create query to feed to the stream
         val query = Query(ImmutableSequenceIdentifierEntityForDelete::class.java, QueryCriteria("correlation", QueryCriteriaOperator.GREATER_THAN, 0))
 
         val hadDataToStream = AtomicBoolean(false)
 
+        // Create a QueryMapStream as opposed to a QueryStream
         // Create a QueryMapStream as opposed to a QueryStream
         val modifyStream = object : QueryMapStream<MutableMap<String, Any>> {
             override fun accept(entity: MutableMap<String, Any>, persistenceManager: PersistenceManager) {
@@ -126,14 +121,10 @@ class EntityStreamTest : BaseTest() {
                 freshEntity.fromMap(entity, persistenceManager.context)
 
                 // Save the entity
-                try {
-                    persistenceManager.saveEntity<ImmutableSequenceIdentifierEntity>(freshEntity)
-                    assert(freshEntity.correlation == 5)
+                persistenceManager.saveEntity<ImmutableSequenceIdentifierEntity>(freshEntity)
+                assertEquals(5, freshEntity.correlation, "Stream updated dictionary value")
 
-                    hadDataToStream.set(true)
-                } catch (e: OnyxException) {
-                    e.printStackTrace()
-                }
+                hadDataToStream.set(true)
             }
 
         }
@@ -141,6 +132,18 @@ class EntityStreamTest : BaseTest() {
         // Kick off the whole thing
         manager.stream(query, modifyStream)
 
-        assert(hadDataToStream.get())
+        assertTrue(hadDataToStream.get(), "Stream had data to iterate")
     }
+
+    companion object {
+
+        /**
+         * do not run this for web because it only supports a subst of features for streaming
+         */
+        @JvmStatic
+        @Parameterized.Parameters
+        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(CacheManagerFactory::class, EmbeddedPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
+    }
+
 }
+
