@@ -53,7 +53,7 @@ class LessThanTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseT
     fun testPrimitiveIntegerLessThan() {
         val criteriaList = QueryCriteria("intPrimitive", QueryCriteriaOperator.LESS_THAN, 4)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
-        assertEquals(4, results.size, "Expected 4 results")
+        assertEquals(5, results.size, "Expected 5 results")
     }
 
     @Test

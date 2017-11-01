@@ -151,7 +151,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @throws OnyxException General entity exception
      */
     @Throws(OnyxException::class, IllegalAccessException::class, InstantiationException::class, ClassNotFoundException::class)
-    fun initialize(request: EntityInitializeBody): List<IManagedEntity> {
+    fun initialize(request: EntityInitializeBody): Any? {
         val clazz = Class.forName(request.entityType)
         val entity = clazz.newInstance() as IManagedEntity
 

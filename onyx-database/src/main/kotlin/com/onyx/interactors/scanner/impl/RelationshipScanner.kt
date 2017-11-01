@@ -5,6 +5,7 @@ import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InvalidQueryException
 import com.onyx.extension.*
+import com.onyx.extension.common.copy
 import com.onyx.extension.common.instance
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.ScannerFactory
@@ -74,13 +75,16 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         val returnValue = HashMap<Reference, Reference>()
         val relationshipDescriptor = this.descriptor.relationships[segments[0]]!!
 
-        // We are going to set the attribute name so we can continue going down the chain.  We are going to remove the
-        // processed token through
-        criteria.attribute = criteria.attribute!!.replaceFirst((segments[0] + "\\.").toRegex(), "")
-        criteria.isRelationship = false
+        // Create a copy of the query so it does not impact the reference of the one controlling the cache
+        val queryTuple = copyQuery()
+        val copyCriteria = queryTuple.second
+        val queryCopy = queryTuple.first
+
+        copyCriteria.attribute = criteria.attribute!!.replaceFirst((segments[0] + "\\.").toRegex(), "")
+        copyCriteria.isRelationship = false
 
         // Get the next scanner because we are not at the end of the line.  Otherwise, we would not have gotten to this place
-        val tableScanner = ScannerFactory.getScannerForQueryCriteria(context, criteria, relationshipDescriptor.inverseClass, temporaryDataFile, query, persistenceManager)
+        val tableScanner = ScannerFactory.getScannerForQueryCriteria(context, copyCriteria, relationshipDescriptor.inverseClass, temporaryDataFile, queryCopy, persistenceManager)
 
         // Sweet, lets get the scanner.  Note, this very well can be recursive, but sooner or later it will get to the
         // other scanners
@@ -89,9 +93,32 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         // Swap parent / child after getting results.  This is because we can use the child when hydrating stuff
         childIndexes.keys.forEach { returnValue[relationshipIndexes[it]!!] = it }
 
-        criteria.attribute = originalAttribute
-
         return returnValue
+    }
+
+    private fun searchForMatchingCriteriaRecursively(queryCriteria: QueryCriteria):QueryCriteria? {
+        val index = queryCriteria.subCriteria.indexOfFirst { it == criteria }
+        return if(index > -1) {
+            queryCriteria.subCriteria[index] = QueryCriteria()
+            queryCriteria.subCriteria[index].copy(criteria)
+            queryCriteria.subCriteria[index]
+        } else {
+            queryCriteria.subCriteria.firstOrNull { searchForMatchingCriteriaRecursively(it) != null }
+        }
+    }
+
+    private fun copyQuery():Pair<Query, QueryCriteria> {
+        val queryCopy = Query()
+        queryCopy.copy(query)
+
+        return if(queryCopy.criteria != criteria) {
+            queryCopy.to(searchForMatchingCriteriaRecursively(queryCopy.criteria!!)!!)
+        }
+        else {
+            queryCopy.criteria = QueryCriteria()
+            queryCopy.criteria!!.copy(criteria)
+            queryCopy.to(queryCopy.criteria!!)
+        }
     }
 
     /**

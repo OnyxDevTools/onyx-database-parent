@@ -19,6 +19,7 @@ class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fa
     @Before
     fun removeTestData() {
         manager.from(SimpleEntity::class).delete()
+        manager.from(BasicPartitionEntity::class).delete()
     }
 
     /**
@@ -83,7 +84,7 @@ class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fa
 
         manager.saveEntity<IManagedEntity>(basicPartitionEntity)
 
-        assertEquals(2L, manager.from(BasicPartitionEntity::class).count(), "Expected 2 results")
+        assertEquals(2, manager.from(BasicPartitionEntity::class).count(), "Expected 2 results")
     }
 
     /**
@@ -103,6 +104,6 @@ class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fa
 
         manager.saveEntity<IManagedEntity>(basicPartitionEntity)
 
-        assertEquals(1L, manager.from(BasicPartitionEntity::class).where("id" gt 1L).count(), "Expected 1 result")
+        assertEquals(1, manager.from(BasicPartitionEntity::class).where("id" gt 1L).count(), "Expected 1 result")
     }
 }

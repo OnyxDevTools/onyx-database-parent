@@ -412,7 +412,9 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         body.entityType = entity.javaClass.name
         body.partitionId = entity.partitionValue(context)
 
-        val relationship = this.performCall(url + AbstractWebPersistenceManager.INITIALIZE, attributeType, List::class.java, body) as List<IManagedEntity>
+        val relationship = if(relationshipDescriptor.isToMany)
+            this.performCall(url + AbstractWebPersistenceManager.INITIALIZE, attributeType, List::class.java, body) as List<IManagedEntity>
+            else this.performCall(url + AbstractWebPersistenceManager.INITIALIZE, null, attributeType, body)
         entity.setAny(relationshipDescriptor.field, relationship)
     }
 

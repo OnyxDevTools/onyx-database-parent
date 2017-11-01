@@ -1,6 +1,5 @@
 package database
 
-import category.EmbeddedDatabaseTests
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteriaOperator
 import database.base.DatabaseBaseTest

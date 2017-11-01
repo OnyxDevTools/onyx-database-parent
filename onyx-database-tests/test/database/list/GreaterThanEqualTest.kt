@@ -46,7 +46,7 @@ class GreaterThanEqualTest(override var factoryClass: KClass<*>) : PrePopulatedD
     @Test
     fun testPrimitiveIntegerGreaterThanEqual() {
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("intPrimitive" gte  4))
-        assertEquals(2, results.size, "Expected 2 results from query")
+        assertEquals(1, results.size, "Expected 1 result from query")
     }
 
     @Test
