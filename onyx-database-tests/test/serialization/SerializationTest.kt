@@ -1,20 +1,18 @@
-package embedded
+package serialization
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.network.transport.data.RequestToken
 import com.onyx.exception.OnyxException
+import database.base.DatabaseBaseTest
 import entities.AllAttributeEntity
 import org.junit.Assert
 import org.junit.FixMethodOrder
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.runners.MethodSorters
-import remote.base.RemoteBaseTest
 
 import java.io.Serializable
-import java.math.BigInteger
-import java.nio.ByteBuffer
 import java.util.ArrayList
 import java.util.Date
 
@@ -23,7 +21,7 @@ import java.util.Date
  */
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-class SerializationTest : RemoteBaseTest() {
+class SerializationTest {
 
 
     @Test
@@ -32,7 +30,7 @@ class SerializationTest : RemoteBaseTest() {
     fun testBasic() {
 
         val entity = AllAttributeEntity()
-        entity.id = BigInteger(130, random).toString(32)
+        entity.id = DatabaseBaseTest.randomString
         entity.longValue = 4L
         entity.longPrimitive = 3L
         entity.stringValue = "STring key"
@@ -76,7 +74,6 @@ class SerializationTest : RemoteBaseTest() {
     @Throws(OnyxException::class)
     fun testPerformance() {
 
-
         val time = System.currentTimeMillis()
 
         var entities: MutableList<AllAttributeEntity>? = null
@@ -87,7 +84,7 @@ class SerializationTest : RemoteBaseTest() {
             for (k in 0..4999) {
 
                 val entity = AllAttributeEntity()
-                entity.id = BigInteger(130, random).toString(32)
+                entity.id = DatabaseBaseTest.randomString
                 entity.longValue = 4L
                 entity.longPrimitive = 3L
                 entity.stringValue = "STring key"

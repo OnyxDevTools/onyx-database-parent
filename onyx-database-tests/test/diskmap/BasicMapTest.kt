@@ -1,22 +1,17 @@
-package embedded.diskmap
+package diskmap
 
-import category.EmbeddedDatabaseTests
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
 import entities.EntityYo
 import org.junit.Assert
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
 import java.util.Date
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 
 /**
  * Created by Tim Osborn on 3/21/15.
  */
-@Category(EmbeddedDatabaseTests::class)
 class BasicMapTest : AbstractTest() {
 
     @Test

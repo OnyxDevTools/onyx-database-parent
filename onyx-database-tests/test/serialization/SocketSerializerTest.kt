@@ -1,11 +1,9 @@
-package remote
+package serialization
 
-import category.RemoteServerTests
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.BufferingException
 import org.junit.Assert
 import org.junit.Test
-import org.junit.experimental.categories.Category
 import pojo.*
 
 import java.util.ArrayList
@@ -15,10 +13,9 @@ import java.util.HashMap
 /**
  * Created by timothy.osborn on 4/14/15.
  */
-@Category(RemoteServerTests::class)
 class SocketSerializerTest {
+
     @Test
-    @Throws(BufferingException::class)
     fun testSimple() {
         val instance = Simple()
         instance.hiya = 4

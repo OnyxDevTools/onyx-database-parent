@@ -1,6 +1,5 @@
 package database.partition
 
-import category.EmbeddedDatabaseTests
 import com.onyx.extension.from
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.AttributeUpdate
@@ -12,7 +11,6 @@ import entities.partition.FullTablePartitionEntity
 import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Test
-import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 import org.junit.runners.Parameterized
@@ -21,7 +19,6 @@ import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Category(EmbeddedDatabaseTests::class)
 @RunWith(Parameterized::class)
 class FullTableScanPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 

@@ -1,21 +1,16 @@
-package embedded.diskmap
+package diskmap
 
-import category.EmbeddedDatabaseTests
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
-import com.onyx.diskmap.factory.DiskMapFactory
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
 import java.util.*
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 /**
  * Created by timothy.osborn on 3/27/15.
  */
-@Category(EmbeddedDatabaseTests::class)
 class MultiThreadTest : AbstractTest() {
 
     internal var pool = Executors.newFixedThreadPool(9)

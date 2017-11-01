@@ -1,19 +1,15 @@
-package embedded.diskmap
+package diskmap
 
-import category.EmbeddedDatabaseTests
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
-import com.onyx.diskmap.factory.DiskMapFactory
 import entities.EntityYo
 import org.junit.Assert
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
 import java.util.*
 
 /**
  * Created by timothy.osborn on 4/2/15.
  */
-@Category(EmbeddedDatabaseTests::class)
 class ObjectSerializationTest : AbstractTest() {
     @Test
     fun testPushObject() {

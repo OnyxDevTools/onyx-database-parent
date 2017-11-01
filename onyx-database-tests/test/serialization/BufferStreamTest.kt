@@ -1,10 +1,8 @@
-package embedded
+package serialization
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.exception.BufferingException
-import com.onyx.persistence.context.Contexts
-import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator

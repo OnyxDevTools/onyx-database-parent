@@ -44,7 +44,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
      * @throws InitializationException
      */
     @Before
-    fun initialize() {
+    open fun initialize() {
         factory = when (factoryClass) {
             EmbeddedPersistenceManagerFactory::class -> EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION)
             RemotePersistenceManagerFactory::class ->   RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)

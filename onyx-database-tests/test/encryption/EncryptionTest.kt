@@ -1,10 +1,8 @@
-package embedded.encryption
+package encryption
 
-import category.EmbeddedDatabaseTests
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import org.junit.Assert
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
 import java.io.File
 import java.io.FileOutputStream
@@ -19,7 +17,6 @@ import java.security.GeneralSecurityException
  *
  * @author cosbor11
  */
-@Category(EmbeddedDatabaseTests::class)
 class EncryptionTest {
 
     @Test

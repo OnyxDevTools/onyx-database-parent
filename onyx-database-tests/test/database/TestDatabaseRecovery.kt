@@ -1,50 +1,43 @@
-package embedded
+package database
 
-import category.EmbeddedDatabaseTests
-import com.onyx.exception.OnyxException
-import com.onyx.exception.InitializationException
 import com.onyx.interactors.transaction.data.SaveTransaction
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
-import com.onyx.persistence.manager.PersistenceManager
+import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.AttributeUpdate
-import embedded.base.BaseTest
+import database.base.DatabaseBaseTest
 import entities.AllAttributeEntity
 import org.junit.*
-import org.junit.experimental.categories.Category
 import org.junit.runners.MethodSorters
 
 import java.io.File
-import java.util.Arrays
 import java.util.Date
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * Created by Tim Osborn on 3/25/16.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Category(EmbeddedDatabaseTests::class)
-class TestDatabaseRecovery : BaseTest() {
+class TestDatabaseRecovery : DatabaseBaseTest(EmbeddedPersistenceManager::class) {
 
     @Before
-    @Throws(InitializationException::class, InterruptedException::class)
-    fun before() {
+    override fun initialize() {
         if (context == null) {
             factory = EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_BASE)
             (factory as EmbeddedPersistenceManagerFactory).isEnableJournaling = true
-            factory!!.initialize()
-
-            context = factory!!.schemaContext
-            manager = factory!!.persistenceManager
+            factory.initialize()
+            context = factory.schemaContext
+            manager = factory.persistenceManager
         }
     }
 
     @Test
-    @Throws(OnyxException::class)
-    fun atestDatabaseRecovery() {
+    fun aTestDatabaseRecovery() {
         this.populateTransactionData()
 
         val newFactory = EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_RECOVERED)
@@ -53,20 +46,21 @@ class TestDatabaseRecovery : BaseTest() {
         val newContext = newFactory.schemaContext
         val newManager = newFactory.persistenceManager
 
-        newContext.transactionInteractor.recoverDatabase(DATABASE_LOCATION_BASE + File.separator + "wal") { transaction -> true }
+        newContext.transactionInteractor.recoverDatabase(DATABASE_LOCATION_BASE + File.separator + "wal") { _ -> true }
 
-        Assert.assertTrue(newManager.findById<IManagedEntity>(AllAttributeEntity::class.java, "ASDFASDF100020") == null)
-        Assert.assertTrue(newManager.findById<IManagedEntity>(AllAttributeEntity::class.java, "ASDFASDF100") == null)
+        assertNotNull(newManager.findById<IManagedEntity>(AllAttributeEntity::class.java, "ASDFASDF100020"))
+        assertNotNull(newManager.findById<IManagedEntity>(AllAttributeEntity::class.java, "ASDFASDF100"))
 
         val deleteQuery = Query(AllAttributeEntity::class.java, QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 5000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 4000))
         var results: List<*> = newManager.executeQuery<Any>(deleteQuery)
-        Assert.assertTrue(results.size == 0)
+        assertTrue(results.isNotEmpty())
 
         val updateQuery = Query(AllAttributeEntity::class.java, QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 90000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 80000)
                 .and("doubleValue", QueryCriteriaOperator.EQUAL, 99.0))
+
         results = newManager.executeQuery<Any>(updateQuery)
         expectedUpdatedEntitiesAfterRecovery = results.size
-        Assert.assertTrue(results.size == 9999)
+        assertEquals(9999, results.size)
 
         val existsQuery = Query()
         existsQuery.entityType = AllAttributeEntity::class.java
@@ -76,18 +70,20 @@ class TestDatabaseRecovery : BaseTest() {
 
         results = newManager.executeQuery<Any>(existsQuery)
 
-        Assert.assertTrue(expectedEntitiesAfterRecovery == results.size)
+        assertEquals(expectedEntitiesAfterRecovery, results.size, "Number of entities does not match expected")
 
-        factory!!.close()
+        factory.close()
         newFactory.close()
 
     }
 
+    /**
+     * This unit test illustrates how to filter transactions when applying a wal log
+     */
     @Test
-    @Throws(OnyxException::class)
-    fun btestDatabaseApplyTransactions() {
+    fun bTestDatabaseApplyTransactions() {
 
-        val newFactory = EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_AMMENDED)
+        val newFactory = EmbeddedPersistenceManagerFactory(DATABASE_LOCATION_AMENDED)
         newFactory.initialize()
 
         val newContext = newFactory.schemaContext
@@ -95,22 +91,20 @@ class TestDatabaseRecovery : BaseTest() {
 
         newContext.transactionInteractor.applyTransactionLog(DATABASE_LOCATION_BASE + File.separator + "wal" + File.separator + "0.wal") { transaction ->
             transaction is SaveTransaction
-
         }
 
         val existsQuery = Query()
         existsQuery.entityType = AllAttributeEntity::class.java
         val results = newManager.executeLazyQuery<IManagedEntity>(existsQuery)
 
-        Assert.assertTrue(results.size == 101000)
+        assertEquals(101000, results.size, "Filtering transactions did not work")
 
         newFactory.close()
     }
 
-    @Throws(OnyxException::class)
-    protected fun populateTransactionData() {
+    private fun populateTransactionData() {
 
-        var allAttributeEntity: AllAttributeEntity? = null
+        var allAttributeEntity: AllAttributeEntity?
 
         for (i in 0..99999) {
             allAttributeEntity = AllAttributeEntity()
@@ -144,33 +138,35 @@ class TestDatabaseRecovery : BaseTest() {
         manager.executeDelete(deleteQuery)
 
         val updateQuery = Query(AllAttributeEntity::class.java, QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 90000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 80000))
-        updateQuery.updates = Arrays.asList(AttributeUpdate("doubleValue", 99.0))
+        updateQuery.updates = arrayListOf(AttributeUpdate("doubleValue", 99.0))
         manager.executeUpdate(updateQuery)
 
     }
 
     companion object {
 
-        protected val DATABASE_LOCATION_RECOVERED = "C:/Sandbox/Onyx/Tests/recovered.oxd"
-        protected val DATABASE_LOCATION_AMMENDED = "C:/Sandbox/Onyx/Tests/ammended.oxd"
-        protected val DATABASE_LOCATION_BASE = "C:/Sandbox/Onyx/Tests/base.oxd"
+        internal var expectedEntitiesAfterRecovery: Int = 0
+        internal var expectedUpdatedEntitiesAfterRecovery: Int = 0
+
+        private val DATABASE_LOCATION_RECOVERED = "C:/Sandbox/Onyx/Tests/recovered.oxd"
+        private val DATABASE_LOCATION_AMENDED = "C:/Sandbox/Onyx/Tests/amended.oxd"
+        private val DATABASE_LOCATION_BASE = "C:/Sandbox/Onyx/Tests/base.oxd"
 
         @BeforeClass
+        @JvmStatic
         fun beforeClass() {
-            BaseTest.delete(File(DATABASE_LOCATION_RECOVERED))
-            BaseTest.delete(File(DATABASE_LOCATION_AMMENDED))
-            BaseTest.delete(File(DATABASE_LOCATION_BASE))
+            deleteDatabase(DATABASE_LOCATION_RECOVERED)
+            deleteDatabase(DATABASE_LOCATION_AMENDED)
+            deleteDatabase(DATABASE_LOCATION_BASE)
         }
 
         @AfterClass
+        @JvmStatic
         fun afterClass() {
-            BaseTest.delete(File(DATABASE_LOCATION_RECOVERED))
-            BaseTest.delete(File(DATABASE_LOCATION_AMMENDED))
-            BaseTest.delete(File(DATABASE_LOCATION_BASE))
+            deleteDatabase(DATABASE_LOCATION_RECOVERED)
+            deleteDatabase(DATABASE_LOCATION_AMENDED)
+            deleteDatabase(DATABASE_LOCATION_BASE)
         }
-
-        internal var expectedEntitiesAfterRecovery: Int = 0
-        internal var expectedUpdatedEntitiesAfterRecovery: Int = 0
     }
 
 }

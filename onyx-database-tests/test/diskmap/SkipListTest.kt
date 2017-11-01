@@ -1,8 +1,7 @@
-package embedded
+package diskmap
 
 import com.onyx.exception.InitializationException
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
-import com.onyx.diskmap.factory.DiskMapFactory
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runners.MethodSorters

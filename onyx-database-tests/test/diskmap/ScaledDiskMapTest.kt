@@ -1,7 +1,6 @@
-package embedded
+package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
-import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.store.StoreType
 import org.junit.FixMethodOrder
 import org.junit.Test

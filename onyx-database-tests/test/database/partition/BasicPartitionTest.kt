@@ -1,13 +1,11 @@
 package database.partition
 
-import category.EmbeddedDatabaseTests
 import com.onyx.exception.NoResultsException
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.partition.BasicPartitionEntity
 import org.junit.FixMethodOrder
 import org.junit.Test
-import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 import org.junit.runners.Parameterized
@@ -17,7 +15,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Category(EmbeddedDatabaseTests::class)
 @RunWith(Parameterized::class)
 class BasicPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 

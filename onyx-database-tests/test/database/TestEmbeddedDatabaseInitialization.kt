@@ -1,97 +1,75 @@
-package embedded
+package database
 
-import category.EmbeddedDatabaseTests
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
-import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
-import embedded.base.BaseTest
+import database.base.DatabaseBaseTest
 import org.junit.AfterClass
-import org.junit.Assert
 import org.junit.BeforeClass
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
 import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Created by timothy.osborn on 12/11/14.
  *
  * Tests the initialization of the database
  */
-@Category(EmbeddedDatabaseTests::class)
-class TestDatabaseInitialization : BaseTest() {
+class TestEmbeddedDatabaseInitialization {
 
     /**
-     * Positive test
-     *
-     * @throws Exception
+     * Positive test to ensure a database can initialize
      */
     @Test
-    @Throws(Exception::class)
     fun testInitializeDatabase() {
         var fac: PersistenceManagerFactory = EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION)
         fac.setCredentials("tim", "osborn")
         fac.initialize()
-
-        manager = EmbeddedPersistenceManager(fac.schemaContext)
         fac.close()
 
         fac = EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION)
         fac.setCredentials("tim", "osborn")
         fac.initialize()
 
-        Assert.assertTrue(fac.databaseLocation === TMP_DATABASE_LOCATION)
-        Assert.assertTrue(File(TMP_DATABASE_LOCATION).exists())
+        assertEquals(TMP_DATABASE_LOCATION, fac.databaseLocation)
+        assertTrue(File(TMP_DATABASE_LOCATION).exists())
 
         fac.close()
     }
 
     /**
      * Negative Test for access violation
-     *
-     * @throws Exception
      */
     @Test(expected = InitializationException::class)
-    @Throws(Exception::class)
     fun testDataFileIsNotAccessible() {
         val fac = EmbeddedPersistenceManagerFactory(INVALID_DATABASE_LOCATION)
         fac.initialize()
-
-        manager = EmbeddedPersistenceManager(null!!)
-        manager.context = fac.schemaContext
     }
 
     /**
      * Negative Test for invalid credentials
-     *
-     * @throws Exception
      */
     @Test(expected = InitializationException::class)
-    @Throws(Exception::class)
     fun testInvalidCredentials() {
         val fac = EmbeddedPersistenceManagerFactory(TMP_DATABASE_LOCATION)
         fac.setCredentials("bill", "tom")
         fac.initialize()
-
-        manager = EmbeddedPersistenceManager(null!!)
-        manager.context = fac.schemaContext
     }
 
     companion object {
-        val INVALID_DATABASE_LOCATION = "/Users/ashley.hampshire"
-        val TMP_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/tmpdatbase"
+        val INVALID_DATABASE_LOCATION = "/Users/some_user_that_does_not_exist/database.onx"
+        val TMP_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/embedded_init_test.onx"
 
         @BeforeClass
+        @JvmStatic
         fun deleteDatabase() {
-            val database = File(TMP_DATABASE_LOCATION)
-            if (database.exists()) {
-                BaseTest.delete(database)
-            }
-            database.delete()
+            DatabaseBaseTest.deleteDatabase(TMP_DATABASE_LOCATION)
         }
 
         @AfterClass
+        @JvmStatic
         fun after() {
             deleteDatabase()
         }
