@@ -44,8 +44,16 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
     @Test
     fun testDistinctValues() {
         for (i in 0..49) {
-            val person = PersonNoPartition()
+            var person = PersonNoPartition()
             person.firstName = "Cristian"
+            person.lastName = "Vogel" + i
+            person.address = AddressNoPartition()
+            person.address!!.street = "Sluisvaart"
+            person.address!!.houseNr = 98
+            manager.saveEntity<IManagedEntity>(person)
+
+            person = PersonNoPartition()
+            person.firstName = "Timbob"
             person.lastName = "Vogel" + i
             person.address = AddressNoPartition()
             person.address!!.street = "Sluisvaart"
@@ -298,8 +306,6 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
         assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
-        assertEquals("Timbob", ((addresses[0]["occupants"] as List<*>)[1] as Map<*, *>)["firstName"])
-        assertEquals("Cristian", ((addresses[0]["occupants"] as List<*>)[0] as Map<*, *>)["firstName"])
     }
 
     @Test
