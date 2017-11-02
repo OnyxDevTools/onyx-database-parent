@@ -15,6 +15,7 @@ import java.util.List;
 class MeetingController
 {
     // Persistence Manager injected by spring
+    @SuppressWarnings("unused")
     @Autowired
     private PersistenceManager persistenceManager;
 

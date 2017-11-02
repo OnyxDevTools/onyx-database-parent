@@ -58,9 +58,7 @@ class SecurePacketTransportEngine (private val sslEngine: SSLEngine) : AbstractT
      *
      * @since 1.2.0
      */
-    override fun closeOutbound() {
-        sslEngine.closeOutbound()
-    }
+    override fun closeOutbound() = sslEngine.closeOutbound()
 
     /**
      * Close the inbound connection.
@@ -69,9 +67,7 @@ class SecurePacketTransportEngine (private val sslEngine: SSLEngine) : AbstractT
      * @since 1.2.0
      */
     @Throws(SSLException::class)
-    override fun closeInbound() {
-        sslEngine.closeInbound()
-    }
+    override fun closeInbound() = sslEngine.closeInbound()
 
     /**
      * Get the maximum size of packets thrown over the network.  For SSL, that means 16k.  Not sure why that is the
@@ -116,7 +112,5 @@ class SecurePacketTransportEngine (private val sslEngine: SSLEngine) : AbstractT
      * @since 1.2.0
      */
     @Throws(SSLException::class)
-    override fun beginHandshake() {
-        sslEngine.beginHandshake()
-    }
+    override fun beginHandshake() = sslEngine.beginHandshake()
 }

@@ -10,7 +10,7 @@ import java.io.File;
 import java.util.Arrays;
 
 //J-
-@SuppressWarnings("SpellCheckingInspection")
+@SuppressWarnings({"SpellCheckingInspection", "WeakerAccess"})
 public class Main extends AbstractDemo
 {
 

@@ -91,10 +91,8 @@ class UnsecuredPacketTransportEngine() : AbstractTransportEngine(), PacketTransp
      *
      * @since 1.2.0
      */
-    override fun closeOutbound() {
-        catchAll {
-            socketChannel!!.close()
-        }
+    override fun closeOutbound() = catchAll {
+        socketChannel!!.close()
     }
 
     /**

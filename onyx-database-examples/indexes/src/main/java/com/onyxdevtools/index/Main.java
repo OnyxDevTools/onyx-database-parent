@@ -10,6 +10,7 @@ import com.onyxdevtools.index.entities.Book;
 
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main extends AbstractDemo
 {
 

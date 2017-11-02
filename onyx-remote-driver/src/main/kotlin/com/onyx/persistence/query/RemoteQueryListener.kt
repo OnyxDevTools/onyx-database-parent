@@ -109,18 +109,14 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
      * Helped to uniquely identify a subscriber
      * @return Hash code of listener and socket channel
      */
-    override fun hashCode(): Int {
-        return Objects.hash(pushObjectId)
-    }
+    override fun hashCode(): Int = Objects.hash(pushObjectId)
 
     /**
      * Comparator to see if the listener is uniquely identified.  This compares exact identity.
      * @param other Object to compare
      * @return Whether objects are equal
      */
-    override fun equals(other: Any?): Boolean {
-        return other is RemoteQueryListener<*> && other.pushObjectId == this.pushObjectId
-    }
+    override fun equals(other: Any?): Boolean = other is RemoteQueryListener<*> && other.pushObjectId == this.pushObjectId
 
     /**
      * Accept query events

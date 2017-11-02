@@ -13,6 +13,7 @@ import java.util.Date;
 /**
  * @author Chris Osborn
  */
+@SuppressWarnings({"WeakerAccess", "SpellCheckingInspection"})
 public class DeletingAnEntityExample {
 
 

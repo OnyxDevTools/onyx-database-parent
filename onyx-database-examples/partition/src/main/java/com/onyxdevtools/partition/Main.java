@@ -18,6 +18,7 @@ import java.util.List;
  *
  * This demonstrates how to declare and use a partition
  */
+@SuppressWarnings("WeakerAccess")
 public class Main extends AbstractDemo {
 
     @SuppressWarnings("unchecked")

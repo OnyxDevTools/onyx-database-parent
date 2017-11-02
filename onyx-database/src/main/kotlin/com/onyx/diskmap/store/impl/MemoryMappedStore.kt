@@ -299,9 +299,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
         * There is no public JVM API to unmap buffer, so this tries to use SUN proprietary API for unmap.
         * Any error is silently ignored (for example SUN API does not exist on Android).
         */
-        fun flush() {
-
-        }
+        fun flush() = Unit
     }
 
     /**

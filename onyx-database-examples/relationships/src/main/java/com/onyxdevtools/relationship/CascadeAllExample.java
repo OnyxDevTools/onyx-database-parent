@@ -12,6 +12,7 @@ import java.util.ArrayList;
 
 class CascadeAllExample extends AbstractDemo
 {
+    @SuppressWarnings("SpellCheckingInspection")
     static void demo() throws OnyxException
     {
         String pathToOnyxDB = System.getProperty("user.home")

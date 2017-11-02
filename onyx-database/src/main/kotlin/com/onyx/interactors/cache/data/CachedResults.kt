@@ -17,7 +17,7 @@ import java.util.HashSet
 class CachedResults(references: MutableMap<Reference, Any?>? = null) {
 
     var references: MutableMap<Reference, Any?>? = references
-        set(value) { synchronized(this) { field = value} }
+        set(value) = synchronized(this) { field = value}
 
     val listeners = HashSet<QueryListener<Any>>()
 

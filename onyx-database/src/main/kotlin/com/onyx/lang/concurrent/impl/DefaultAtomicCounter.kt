@@ -59,8 +59,6 @@ class DefaultAtomicCounter(initialValue: Long = 0L) : AtomicCounter, BufferStrea
      * @throws BufferingException cannot write
      */
     @Throws(BufferingException::class)
-    override fun write(buffer: BufferStream) {
-        buffer.putLong(aLong.get())
-    }
+    override fun write(buffer: BufferStream) = buffer.putLong(aLong.get())
 
 }

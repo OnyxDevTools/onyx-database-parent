@@ -44,18 +44,14 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @return The head data.
      */
     protected var head: SkipListHeadNode? = null
-        get() {
-            return if (detached)
-                threadLocalHead.get()
-            else
-                field
-        }
-        set(value) {
-            if (detached)
-                threadLocalHead.set(value)
-            else
-                field = value
-        }
+        get() = if (detached)
+            threadLocalHead.get()
+        else
+            field
+        set(value) = if (detached)
+            threadLocalHead.set(value)
+        else
+            field = value
 
     init {
         if (detached) {
@@ -481,32 +477,29 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @return The newly created Skip List Node
      * @since 1.2.0
      */
-    protected open fun createNewNode(key: K, value: V?, recordLocation: Long, level: Byte, next: Long, down: Long, cache: Boolean, recordId: Long): SkipListNode<K> {
+    protected open fun createNewNode(key: K, value: V?, recordLocation: Long, level: Byte, next: Long, down: Long, cache: Boolean, recordId: Long): SkipListNode<K> = BufferStream().perform {
+        // Write the key to the buffer just to see how big it is.  Afterwards just reset it
+        val keySize = it!!.putObject(key)
+        it.clear() // Make sure we do not track previous references such as the value.  They need to be on different paths so they can be individually hydrated from store
 
-        return BufferStream().perform {
-            // Write the key to the buffer just to see how big it is.  Afterwards just reset it
-            val keySize = it!!.putObject(key)
-            it.clear() // Make sure we do not track previous references such as the value.  They need to be on different paths so they can be individually hydrated from store
+        val sizeOfNode = keySize + SkipListNode.SKIP_LIST_NODE_SIZE
 
-            val sizeOfNode = keySize + SkipListNode.SKIP_LIST_NODE_SIZE
+        // Allocate the space on the file.  Size of the data, record size, and size indicator as Integer.BYTES
+        val nodePosition = fileStore.allocate(sizeOfNode + Integer.BYTES)
 
-            // Allocate the space on the file.  Size of the data, record size, and size indicator as Integer.BYTES
-            val nodePosition = fileStore.allocate(sizeOfNode + Integer.BYTES)
+        // Instantiate the new data and write it to the buffer
+        val newNode: SkipListNode<K> = SkipListNode(key, nodePosition, recordLocation, level, next, down, if(recordId == 0L) nodePosition else recordId)
 
-            // Instantiate the new data and write it to the buffer
-            val newNode: SkipListNode<K> = SkipListNode(key, nodePosition, recordLocation, level, next, down, if(recordId == 0L) nodePosition else recordId)
+        // Jot down the size of the data so that we know how much data to pull
+        it.putInt(sizeOfNode)
+        newNode.write(it)
 
-            // Jot down the size of the data so that we know how much data to pull
-            it.putInt(sizeOfNode)
-            newNode.write(it)
+        // Write the data and record if it exists to the store
+        it.flip()
+        fileStore.write(it.byteBuffer, newNode.position)
 
-            // Write the data and record if it exists to the store
-            it.flip()
-            fileStore.write(it.byteBuffer, newNode.position)
+        return@perform newNode
 
-            return@perform newNode
-
-        }
     }
 
     /**

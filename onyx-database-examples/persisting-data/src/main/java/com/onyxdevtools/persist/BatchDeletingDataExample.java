@@ -16,6 +16,7 @@ import java.util.Random;
  *
  * @author Chris Osborn
  */
+@SuppressWarnings("WeakerAccess")
 public class BatchDeletingDataExample
 {
     @SuppressWarnings("unchecked")

@@ -20,12 +20,10 @@ class CustomAnnotationInspector : JacksonAnnotationIntrospector() {
      * @param annotated Object to see if hack applies
      * @return Object ID Info with annotation including @ID
      */
-    override fun findObjectIdInfo(annotated: Annotated?): ObjectIdInfo? {
-        return if (BufferStreamable::class.java.isAssignableFrom(annotated!!.rawType)) {
-            ObjectIdInfo(
-                    PropertyName.construct("@id",
-                            null), null,
-                    ObjectIdGenerators.IntSequenceGenerator::class.java, null)
-        } else super.findObjectIdInfo(annotated)
-    }
+    override fun findObjectIdInfo(annotated: Annotated?): ObjectIdInfo? = if (BufferStreamable::class.java.isAssignableFrom(annotated!!.rawType)) {
+        ObjectIdInfo(
+                PropertyName.construct("@id",
+                        null), null,
+                ObjectIdGenerators.IntSequenceGenerator::class.java, null)
+    } else super.findObjectIdInfo(annotated)
 }

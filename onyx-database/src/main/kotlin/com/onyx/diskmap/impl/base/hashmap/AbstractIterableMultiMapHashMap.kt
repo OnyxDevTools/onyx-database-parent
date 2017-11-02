@@ -120,7 +120,7 @@ abstract class AbstractIterableMultiMapHashMap<K, V> protected constructor(store
     private inner class MultiMapSkipListIterator<out V> : MutableIterator<V> {
         internal val otherMapIterator: Iterator<Long> =  this@AbstractIterableMultiMapHashMap.skipListMaps.iterator()
 
-        override fun remove() {}
+        override fun remove() = Unit
         override fun hasNext(): Boolean = otherMapIterator.hasNext()
         override fun next(): V = findNodeAtPosition(otherMapIterator.next()) as V
     }

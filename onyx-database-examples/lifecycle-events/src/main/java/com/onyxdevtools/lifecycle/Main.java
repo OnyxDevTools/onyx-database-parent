@@ -11,6 +11,7 @@ import com.onyxdevtools.lifecycle.entities.BeverageEffects;
  *
  * This demo highlights usage of lifecycle events associated to entities.
  */
+@SuppressWarnings("WeakerAccess")
 public class Main extends AbstractDemo {
 
     public static void main(String[] args) throws OnyxException {

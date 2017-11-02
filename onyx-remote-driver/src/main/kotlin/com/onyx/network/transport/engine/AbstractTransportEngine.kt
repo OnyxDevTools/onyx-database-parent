@@ -42,7 +42,7 @@ abstract class AbstractTransportEngine {
      * @since 1.2.0
      */
     @Throws(SSLException::class)
-    open fun closeInbound() { }
+    open fun closeInbound() = Unit
 
     /**
      * Start the handshake process.  This is officiated on purpose.  Need more info.  Tough shit.
@@ -50,6 +50,6 @@ abstract class AbstractTransportEngine {
      * @since 1.2.0
      */
     @Throws(SSLException::class)
-    open fun beginHandshake() {}
+    open fun beginHandshake() = Unit
 
 }

@@ -17,7 +17,7 @@ import java.io.File;
  *
  * This example demonstrates how to subscribe to query changes.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class Main {
 
     public static void main(String[] args) throws OnyxException

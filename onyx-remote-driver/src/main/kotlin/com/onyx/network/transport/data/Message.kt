@@ -34,42 +34,40 @@ class Message(var messageId:Short = 0) {
  *
  * @since 2.0.0
  */
-fun ByteBuffer.toMessage(request: RequestToken) : Message {
-    // Recycle this when done
-    return withBuffer(this) {
-        val message = Message(request.token)
+fun ByteBuffer.toMessage(request: RequestToken) : Message = // Recycle this when done
+        withBuffer(this) {
+            val message = Message(request.token)
 
-        // Divide the buffer into individual packets
-        while (this.hasRemaining()) {
+            // Divide the buffer into individual packets
+            while (this.hasRemaining()) {
 
-            // Allocate a buffer from the network pool
-            val packetBuffer = NetworkBufferPool.allocate()
-            packetBuffer.position(if(message.packets.isEmpty()) (Message.PACKET_METADATA_SIZE + Message.MESSAGE_METADATA_SIZE) else Message.PACKET_METADATA_SIZE)
+                // Allocate a buffer from the network pool
+                val packetBuffer = NetworkBufferPool.allocate()
+                packetBuffer.position(if(message.packets.isEmpty()) (Message.PACKET_METADATA_SIZE + Message.MESSAGE_METADATA_SIZE) else Message.PACKET_METADATA_SIZE)
 
-            while (this.hasRemaining() && packetBuffer.hasRemaining())
-                packetBuffer.put(this.get())
+                while (this.hasRemaining() && packetBuffer.hasRemaining())
+                    packetBuffer.put(this.get())
 
-            packetBuffer.flip()
-            val packet = Packet(packetBuffer.limit(), message.messageId, packetBuffer)
+                packetBuffer.flip()
+                val packet = Packet(packetBuffer.limit(), message.messageId, packetBuffer)
 
-            // write packet metadata at the beginning
-            packet.write(packetBuffer)
-            packetBuffer.rewind()
+                // write packet metadata at the beginning
+                packet.write(packetBuffer)
+                packetBuffer.rewind()
 
-            message.packets.add(packet)
+                message.packets.add(packet)
+            }
+
+            // Update the number of packets
+            message.numberOfPackets = message.packets.size.toShort() // Add 1 for the message metadata packet
+            val firstPacket = message.packets.first()
+            firstPacket.packetBuffer.position(Message.PACKET_METADATA_SIZE)
+            // Set the number of packets at the beginning of the buffer
+            firstPacket.packetBuffer.putShort(message.numberOfPackets)
+            firstPacket.packetBuffer.rewind()
+
+            return@withBuffer message
         }
-
-        // Update the number of packets
-        message.numberOfPackets = message.packets.size.toShort() // Add 1 for the message metadata packet
-        val firstPacket = message.packets.first()
-        firstPacket.packetBuffer.position(Message.PACKET_METADATA_SIZE)
-        // Set the number of packets at the beginning of the buffer
-        firstPacket.packetBuffer.putShort(message.numberOfPackets)
-        firstPacket.packetBuffer.rewind()
-
-        return@withBuffer message
-    }
-}
 
 /**
  * Convert a message to a byte buffer that is ready to deserialize.

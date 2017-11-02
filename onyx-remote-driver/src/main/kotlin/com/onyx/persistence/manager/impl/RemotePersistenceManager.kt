@@ -126,9 +126,7 @@ open class RemotePersistenceManager : PersistenceManager {
      * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
      */
     @Throws(OnyxException::class)
-    override fun deleteEntities(entities: List<IManagedEntity>) {
-        proxy.deleteEntities(entities)
-    }
+    override fun deleteEntities(entities: List<IManagedEntity>) = proxy.deleteEntities(entities)
 
     /**
      * Execute query with criteria and optional row limitations

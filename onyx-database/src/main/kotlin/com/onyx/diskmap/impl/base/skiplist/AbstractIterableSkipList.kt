@@ -131,7 +131,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
             return findValueAtPosition(next.recordPosition) as V
         }
 
-        override fun remove() {}
+        override fun remove() = Unit
 
     }
 
@@ -194,9 +194,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      */
     inner class DictionaryIterator<out T> : MutableIterator<T> {
 
-        override fun remove() {
-            nodeIterator.remove()
-        }
+        override fun remove() = nodeIterator.remove()
 
         private val nodeIterator = NodeIterator()
 
@@ -221,7 +219,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      * Iterates through nodes and gets the left, right, next values
      */
     inner class NodeIterator : MutableIterator<SkipListNode<K>?> {
-        override fun remove() { removeNode(current!!) }
+        override fun remove() = removeNode(current!!)
 
         private var current: SkipListHeadNode? = null
 

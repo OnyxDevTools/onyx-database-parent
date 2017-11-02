@@ -12,6 +12,7 @@ import com.onyxdevtools.embedded.entities.Person;
 import java.io.File;
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 

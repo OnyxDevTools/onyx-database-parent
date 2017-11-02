@@ -2,6 +2,7 @@ package com.onyxdevtools.persist;
 
 import com.onyx.exception.OnyxException;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 

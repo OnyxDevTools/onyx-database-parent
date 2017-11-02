@@ -15,6 +15,7 @@ import java.util.Random;
 /**
  * @author Chris Osborn
  */
+@SuppressWarnings("WeakerAccess")
 public class BatchSavingDataExample {
 
     @SuppressWarnings("unchecked")

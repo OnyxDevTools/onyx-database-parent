@@ -29,11 +29,9 @@ fun IManagedEntity.identifier(context: SchemaContext? = null, descriptor: Entity
  * @param descriptor Contains entity property information
  * @since 2.0.0
  */
-fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) {
-    descriptor!!.reflectionFields.values.forEach {
-        catchAll {
-            this.setAny(it,from.getAny(it))
-        }
+fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")) = descriptor!!.reflectionFields.values.forEach {
+    catchAll {
+        this.setAny(it,from.getAny(it))
     }
 }
 

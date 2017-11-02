@@ -22,6 +22,7 @@ import java.io.File;
  *
  * Instruction - First run this main class for Part 1, and then run the main class in Part 2
  */
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
     public static void main(String[] args) throws OnyxException

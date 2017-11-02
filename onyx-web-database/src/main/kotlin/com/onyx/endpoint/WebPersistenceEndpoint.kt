@@ -283,7 +283,5 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @since 1.3.0 Added as enhancement for git issue #71
      */
     @Throws(OnyxException::class)
-    fun countForQuery(body: EntityQueryBody): Long {
-        return persistenceManager.countForQuery(body.query!!)
-    }
+    fun countForQuery(body: EntityQueryBody): Long = persistenceManager.countForQuery(body.query!!)
 }

@@ -24,6 +24,7 @@ import java.util.*
  *
  * This class saves the entity information and formats the source on disk
  */
+//noinspection SpellCheckingInspection
 object EntityClassLoader {
 
     private val LOADED_CLASSES: MutableSet<String> = HashSet()

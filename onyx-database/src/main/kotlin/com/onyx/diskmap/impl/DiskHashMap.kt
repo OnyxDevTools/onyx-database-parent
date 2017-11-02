@@ -154,11 +154,9 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @return Whether the value was found
      * @since 1.2.0
      */
-    override fun containsValue(value: V): Boolean {
-        return values.first {
-            it == value
-        } != null
-    }
+    override fun containsValue(value: V): Boolean = values.first {
+        it == value
+    } != null
 
     /**
      * Get the record id of a corresponding data.  Note, this points to the SkipListNode position.  Not the actual
@@ -180,10 +178,8 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      * @param from Map to convert from
      * @since 1.2.0
      */
-    override fun putAll(from: Map<out K, V>) {
-        from.forEach {
-            put(it.key, it.value)
-        }
+    override fun putAll(from: Map<out K, V>) = from.forEach {
+        put(it.key, it.value)
     }
 
     /**
@@ -192,10 +188,8 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
      *
      * @since 1.2.0
      */
-    override fun clear() {
-        mapReadWriteLock.writeLock {
-            super.clear()
-        }
+    override fun clear() = mapReadWriteLock.writeLock {
+        super.clear()
     }
 
     /**

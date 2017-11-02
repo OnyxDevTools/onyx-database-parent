@@ -14,9 +14,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class InsertionSingleThreadBenchmarkTest extends InsertionBenchmarkTest {
 
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_INSERTIONS = 20000;
+    private final int NUMBER_OF_INSERTIONS = 20000;
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
+    private final int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
 
     /**
      * Default Constructor

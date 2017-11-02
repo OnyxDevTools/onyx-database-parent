@@ -11,6 +11,7 @@ import com.onyxdevtools.remote.Person;
 
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 

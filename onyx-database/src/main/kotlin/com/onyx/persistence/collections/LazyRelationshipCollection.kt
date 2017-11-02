@@ -212,21 +212,17 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
      *
      * @return an iterator over the elements in this list in proper sequence
      */
-    override fun iterator(): MutableIterator<E> {
-        return object : MutableIterator<E> {
-            override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator")
+    override fun iterator(): MutableIterator<E> = object : MutableIterator<E> {
+        override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator")
 
-            internal var i = 0
+        internal var i = 0
 
-            override fun hasNext(): Boolean = i < size
+        override fun hasNext(): Boolean = i < size
 
-            override fun next(): E {
-                return try {
-                    get(i)
-                } finally {
-                    i++
-                }
-            }
+        override fun next(): E = try {
+            get(i)
+        } finally {
+            i++
         }
     }
 

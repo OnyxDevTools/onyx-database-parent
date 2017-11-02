@@ -28,7 +28,7 @@ import java.util.Date;
  *
  * Instruction - First run this main class for Part 1, and then run the main class in Part 2
  */
-@SuppressWarnings("ResultOfMethodCallIgnored")
+@SuppressWarnings({"ResultOfMethodCallIgnored", "WeakerAccess"})
 public class Main
 {
 

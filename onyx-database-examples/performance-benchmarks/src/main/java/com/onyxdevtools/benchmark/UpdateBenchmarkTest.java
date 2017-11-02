@@ -15,13 +15,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("unused")
 public class UpdateBenchmarkTest extends BenchmarkTest {
 
-    private static AtomicInteger playerIdCounter = new AtomicInteger(0);
-    private static AtomicInteger statIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger playerIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger statIdCounter = new AtomicInteger(0);
 
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_UPDATES = 20000;
+    private final int NUMBER_OF_UPDATES = 20000;
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_WARM_UP_INSERTIONS = 20000;
+    private final int NUMBER_OF_WARM_UP_INSERTIONS = 20000;
 
     /**
      * Default Constructor

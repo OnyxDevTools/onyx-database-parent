@@ -354,7 +354,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
      * @param password Password
      * @since 1.2.0
      */
-    override fun setCredentials(user: String, password: String) {}
+    override fun setCredentials(user: String, password: String) = Unit
 
     companion object {
         val REMOVE_SUBSCRIBER_EVENT = 1.toByte()

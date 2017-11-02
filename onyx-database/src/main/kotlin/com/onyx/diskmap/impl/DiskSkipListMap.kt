@@ -80,9 +80,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      *
      * @param from Map to convert from
      */
-    override fun putAll(from: Map<out K, V>) {
-        from.forEach { this.put(it.key, it.value) }
-    }
+    override fun putAll(from: Map<out K, V>) = from.forEach { this.put(it.key, it.value) }
 
     /**
      * Clear all the elements of the array.  If it is not detached we must handle
@@ -90,17 +88,15 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      *
      * @since 1.2.0
      */
-    override fun clear() {
-        mapReadWriteLock.writeLock {
-            super.clear()
+    override fun clear() = mapReadWriteLock.writeLock {
+        super.clear()
 
-            if (!this.detached) {
-                head = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
-                this.reference.firstNode = head!!.position
-                updateHeaderFirstNode(reference, this.reference.firstNode)
-                reference.recordCount.set(0L)
-                updateHeaderRecordCount()
-            }
+        if (!this.detached) {
+            head = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
+            this.reference.firstNode = head!!.position
+            updateHeaderFirstNode(reference, this.reference.firstNode)
+            reference.recordCount.set(0L)
+            updateHeaderRecordCount()
         }
     }
 

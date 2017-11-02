@@ -23,9 +23,9 @@ import java.util.concurrent.locks.LockSupport;
 @SuppressWarnings("unused unchecked")
 public class RandomTransactionBenchmarkTest extends BenchmarkTest {
 
-    private static AtomicInteger playerIdCounter = new AtomicInteger(0);
-    private static AtomicInteger teamIdCounter = new AtomicInteger(0);
-    private static AtomicInteger statIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger playerIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger teamIdCounter = new AtomicInteger(0);
+    private static final AtomicInteger statIdCounter = new AtomicInteger(0);
 
     final private BlockingQueue<Integer> cachedPlayerIds = new ArrayBlockingQueue(5000);
     final private BlockingQueue<String> cachedTeamIds = new ArrayBlockingQueue(5000);
@@ -35,9 +35,9 @@ public class RandomTransactionBenchmarkTest extends BenchmarkTest {
 
 
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_UPDATES = 30000;
+    private final int NUMBER_OF_UPDATES = 30000;
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
+    private final int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
 
     /**
      * Default Constructor

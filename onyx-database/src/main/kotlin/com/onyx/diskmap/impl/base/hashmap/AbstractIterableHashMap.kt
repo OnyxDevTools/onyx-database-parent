@@ -25,19 +25,17 @@ abstract class AbstractIterableHashMap<K, V>(fileStore: Store, header: Header, h
      * Iterates through the skip list references.
      */
     private inner class SkipListMapIterator : MutableIterator<Long> {
-        override fun remove() {}
+        override fun remove() = Unit
 
         internal var index = 0
 
         override fun hasNext(): Boolean = index < mapCount.get()
 
-        override fun next(): Long {
-            return try {
-                val mapId = getSkipListIdentifier(index)
-                getSkipListReference(mapId)
-            } finally {
-                index++
-            }
+        override fun next(): Long = try {
+            val mapId = getSkipListIdentifier(index)
+            getSkipListReference(mapId)
+        } finally {
+            index++
         }
     }
 

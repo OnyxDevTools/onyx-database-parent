@@ -227,7 +227,7 @@ abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Sto
             return currentIterator!!.next()!!
         }
 
-        override fun remove() {}
+        override fun remove() = Unit
 
     }
 

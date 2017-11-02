@@ -97,5 +97,5 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
      * @param relationshipIdentifiers Relationship references
      */
     @Throws(OnyxException::class)
-    override fun updateAll(entity: IManagedEntity, relationshipIdentifiers: MutableSet<RelationshipReference>) {}
+    override fun updateAll(entity: IManagedEntity, relationshipIdentifiers: MutableSet<RelationshipReference>) = Unit
 }

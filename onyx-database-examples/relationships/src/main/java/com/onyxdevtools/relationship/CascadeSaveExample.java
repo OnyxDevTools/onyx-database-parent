@@ -31,6 +31,7 @@ class CascadeSaveExample extends AbstractDemo
         PersistenceManager manager = factory.getPersistenceManager();
 
         Series spongeBobSeries = new Series();
+        //noinspection SpellCheckingInspection
         spongeBobSeries.setSeriesId("SPONGEBOB");
 
         Season firstSeason = new Season(1, 1999);

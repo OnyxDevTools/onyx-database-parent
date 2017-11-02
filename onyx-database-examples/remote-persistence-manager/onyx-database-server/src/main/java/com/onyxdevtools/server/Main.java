@@ -4,6 +4,7 @@ import com.onyx.application.impl.DatabaseServer;
 
 import java.io.File;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 

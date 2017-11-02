@@ -1,6 +1,5 @@
 package com.onyx.diskmap
 
-import com.onyx.lang.concurrent.ClosureLock
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
@@ -28,14 +27,6 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @return Header reference item
      */
     val reference: Header
-
-    /**
-     * Get the level read write lock implementation.
-     *
-     * @since 1.2.0
-     * @return Null if it does not apply.
-     */
-    val readWriteLock: ClosureLock
 
     /**
      * Get the set of references.  Not values nor keys

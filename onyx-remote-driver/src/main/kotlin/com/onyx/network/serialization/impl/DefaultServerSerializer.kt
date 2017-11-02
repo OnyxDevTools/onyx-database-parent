@@ -4,7 +4,6 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.network.serialization.ServerSerializer
 import com.onyx.exception.BufferingException
-import com.onyx.extension.common.copy
 
 import java.nio.ByteBuffer
 
@@ -22,9 +21,7 @@ class DefaultServerSerializer : ServerSerializer {
      * @since 1.2.0
      */
     @Throws(BufferingException::class)
-    override fun serialize(serializable: BufferStreamable, inputBuffer: ByteBuffer): ByteBuffer {
-        return BufferStream.toBuffer(serializable)
-    }
+    override fun serialize(serializable: BufferStreamable, inputBuffer: ByteBuffer): ByteBuffer = BufferStream.toBuffer(serializable)
 
     /**
      * Deserialize the bytes from the buffer
@@ -34,7 +31,5 @@ class DefaultServerSerializer : ServerSerializer {
      * @since 1.2.0
      */
     @Throws(BufferingException::class)
-    override fun deserialize(buffer: ByteBuffer, streamable: BufferStreamable): BufferStreamable {
-        return BufferStream.fromBuffer(buffer) as BufferStreamable
-    }
+    override fun deserialize(buffer: ByteBuffer, streamable: BufferStreamable): BufferStreamable = BufferStream.fromBuffer(buffer) as BufferStreamable
 }

@@ -32,6 +32,7 @@ import java.lang.reflect.Constructor;
  *  java -jar performance-benchmark-1.0.jar 0 RandomTransactionBenchmarkTest
  *
  */
+@SuppressWarnings("WeakerAccess")
 public class BenchmarkRunner {
 
     /**

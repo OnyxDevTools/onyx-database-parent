@@ -634,70 +634,67 @@ class BufferStream(buffer: ByteBuffer) {
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    fun putArray(array: Any?) {
-
-        when {
-            array!!.javaClass == LongArray::class.java -> {
-                val arr = array as LongArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
-            }
-            array.javaClass == IntArray::class.java -> {
-                val arr = array as IntArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
-            }
-            array.javaClass == FloatArray::class.java -> {
-                val arr = array as FloatArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
-            }
-            array.javaClass == ByteArray::class.java -> {
-                val arr = array as ByteArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.put(anArr)
-            }
-            array.javaClass == CharArray::class.java -> {
-                val arr = array as CharArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
-            }
-            array.javaClass == ShortArray::class.java -> {
-                val arr = array as ShortArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
-            }
-            array.javaClass == BooleanArray::class.java -> {
-                val arr = array as BooleanArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
-            }
-            array.javaClass == DoubleArray::class.java -> {
-                val arr = array as DoubleArray
-                putInt(arr.size)
-                expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
-                for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
-            }
-            array.javaClass == kotlin.Array<Any?>::class.java -> {
-                @Suppress("UNCHECKED_CAST")
-                val arr = array as kotlin.Array<Any?>
-                putInt(arr.size)
-                for (anArr in arr) putObject(anArr)
-            }
-            else -> {
-                putObjectClass(array.javaClass.componentType)
-                @Suppress("UNCHECKED_CAST")
-                val arr = array as kotlin.Array<Any?>
-                putInt(arr.size)
-                for (anArr in arr) putObject(anArr)
-            }
+    fun putArray(array: Any?) = when {
+        array!!.javaClass == LongArray::class.java -> {
+            val arr = array as LongArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
+        }
+        array.javaClass == IntArray::class.java -> {
+            val arr = array as IntArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
+        }
+        array.javaClass == FloatArray::class.java -> {
+            val arr = array as FloatArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
+        }
+        array.javaClass == ByteArray::class.java -> {
+            val arr = array as ByteArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.put(anArr)
+        }
+        array.javaClass == CharArray::class.java -> {
+            val arr = array as CharArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
+        }
+        array.javaClass == ShortArray::class.java -> {
+            val arr = array as ShortArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
+        }
+        array.javaClass == BooleanArray::class.java -> {
+            val arr = array as BooleanArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
+        }
+        array.javaClass == DoubleArray::class.java -> {
+            val arr = array as DoubleArray
+            putInt(arr.size)
+            expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
+            for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
+        }
+        array.javaClass == kotlin.Array<Any?>::class.java -> {
+            @Suppress("UNCHECKED_CAST")
+            val arr = array as kotlin.Array<Any?>
+            putInt(arr.size)
+            for (anArr in arr) putObject(anArr)
+        }
+        else -> {
+            putObjectClass(array.javaClass.componentType)
+            @Suppress("UNCHECKED_CAST")
+            val arr = array as kotlin.Array<Any?>
+            putInt(arr.size)
+            for (anArr in arr) putObject(anArr)
         }
     }
 

@@ -15,6 +15,7 @@ import java.util.Date;
  *
  * @author Chris Osborn
  */
+@SuppressWarnings("WeakerAccess")
 public class SavingAnEntityExample
 {
 
@@ -33,6 +34,7 @@ public class SavingAnEntityExample
         
         Person person1 = new Person();
         person1.setFirstName("John");
+        //noinspection SpellCheckingInspection
         person1.setLastName("Elway");
         person1.setDateCreated(new Date());
         

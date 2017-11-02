@@ -10,6 +10,7 @@ import java.util.List;
 
 import static java.lang.System.exit;
 
+@SuppressWarnings("WeakerAccess")
 @SpringBootApplication
 @EnableAutoConfiguration
 public class Main

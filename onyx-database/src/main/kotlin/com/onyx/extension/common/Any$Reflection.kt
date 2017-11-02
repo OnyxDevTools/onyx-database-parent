@@ -53,11 +53,9 @@ fun <T : Any> Class<*>.instance(): T {
  * @param from Entity to copy properties from
  * @since 2.0.0
  */
-fun Any.copy(from: Any) {
-    from.getFields().forEach {
-        catchAll {
-            this.setAny(it, from.getAny(it))
-        }
+fun Any.copy(from: Any) = from.getFields().forEach {
+    catchAll {
+        this.setAny(it, from.getAny(it))
     }
 }
 

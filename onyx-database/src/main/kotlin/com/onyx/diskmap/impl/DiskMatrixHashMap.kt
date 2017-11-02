@@ -158,12 +158,10 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return Whether the value was found
      * @since 1.2.0
      */
-    override fun containsValue(value: V): Boolean {
-        return this.maps.firstOrNull {
-            head = it
-            super.containsValue(value)
-        } != null
-    }
+    override fun containsValue(value: V): Boolean = this.maps.firstOrNull {
+        head = it
+        super.containsValue(value)
+    } != null
 
     /**
      * Put all the objects from one map into this map.
@@ -171,9 +169,7 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @param from Map to convert from
      * @since 1.2.0
      */
-    override fun putAll(from: Map<out K, V>) {
-        from.forEach { this.put(it.key, it.value) }
-    }
+    override fun putAll(from: Map<out K, V>) = from.forEach { this.put(it.key, it.value) }
 
     /**
      * Clear this map.  In order to do that.  All we have to do is remove the first data reference and it will
@@ -181,10 +177,8 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      *
      * @since 1.2.0
      */
-    override fun clear() {
-        this.mapReadWriteLock.writeLock {
-            super@DiskMatrixHashMap.clear()
-        }
+    override fun clear() = this.mapReadWriteLock.writeLock {
+        super@DiskMatrixHashMap.clear()
     }
 
     /**

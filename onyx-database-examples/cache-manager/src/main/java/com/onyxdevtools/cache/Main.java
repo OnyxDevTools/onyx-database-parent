@@ -11,6 +11,7 @@ import com.onyxdevtools.cache.entities.Person;
 
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 

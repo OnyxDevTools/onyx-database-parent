@@ -19,8 +19,8 @@ class EmptyMap<K,V> : MutableMap<K, V> {
     override fun containsValue(value: V): Boolean = false
     override fun get(key: K): V? = null
     override fun isEmpty(): Boolean = true
-    override fun clear() {}
+    override fun clear() = Unit
     override fun put(key: K, value: V): V? = null
-    override fun putAll(from: Map<out K, V>) {}
+    override fun putAll(from: Map<out K, V>) = Unit
     override fun remove(key: K): V? = null
 }

@@ -135,12 +135,10 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
      * @return ManagedEntity
      */
     @Suppress("UNCHECKED_CAST")
-    fun getDict(index: Int): Map<String, Any?>? {
-        return try {
-            persistenceManager!!.getMapWithReferenceId(entityDescriptor.entityClass, identifiers[index])
-        } catch (e: OnyxException) {
-            null
-        }
+    fun getDict(index: Int): Map<String, Any?>? = try {
+        persistenceManager!!.getMapWithReferenceId(entityDescriptor.entityClass, identifiers[index])
+    } catch (e: OnyxException) {
+        null
     }
 
     /**
@@ -152,9 +150,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
      * @param element ManagedEntity
      * @return Record set
      */
-    override fun set(index: Int, element: E?): E {
-        throw RuntimeException("Method unsupported")
-    }
+    override fun set(index: Int, element: E?): E = throw RuntimeException("Method unsupported")
 
     /**
      * Add value at index
@@ -219,24 +215,18 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
      *
      * @return an iterator over the elements in this list in proper sequence
      */
-    override fun iterator(): MutableIterator<E> {
-        return object : MutableIterator<E> {
-            internal var i = 0
+    override fun iterator(): MutableIterator<E> = object : MutableIterator<E> {
+        internal var i = 0
 
-            override fun hasNext(): Boolean = i < size
+        override fun hasNext(): Boolean = i < size
 
-            override fun next(): E {
-                return try {
-                    get(i)
-                } finally {
-                    i++
-                }
-            }
-
-            override fun remove() {
-                throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.remove")
-            }
+        override fun next(): E = try {
+            get(i)
+        } finally {
+            i++
         }
+
+        override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.remove")
     }
 
     /**
@@ -254,45 +244,33 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     /**
      * {@inheritDoc}
      */
-    override fun listIterator(): MutableListIterator<E> {
-        return object : MutableListIterator<E> {
-            internal var i = -1
+    override fun listIterator(): MutableListIterator<E> = object : MutableListIterator<E> {
+        internal var i = -1
 
-            override fun hasNext(): Boolean = i + 1 < size
+        override fun hasNext(): Boolean = i + 1 < size
 
-            override fun next(): E {
-                return try {
-                    get(i)
-                } finally {
-                    i++
-                }
-            }
-
-            override fun hasPrevious(): Boolean = i > 0
-
-            override fun previous(): E {
-                return try {
-                    get(i)
-                } finally {
-                    i--
-                }
-            }
-
-            override fun nextIndex(): Int = i + 1
-
-            override fun previousIndex(): Int = i - 1
-
-            override fun remove() {
-                throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.remove")
-            }
-
-            override fun set(element: E) {
-                throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.set")
-            }
-
-            override fun add(element: E) {
-                throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.add")
-            }
+        override fun next(): E = try {
+            get(i)
+        } finally {
+            i++
         }
+
+        override fun hasPrevious(): Boolean = i > 0
+
+        override fun previous(): E = try {
+            get(i)
+        } finally {
+            i--
+        }
+
+        override fun nextIndex(): Int = i + 1
+
+        override fun previousIndex(): Int = i - 1
+
+        override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.remove")
+
+        override fun set(element: E) = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.set")
+
+        override fun add(element: E) = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator.add")
     }
 }

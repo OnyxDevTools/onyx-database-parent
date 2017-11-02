@@ -141,23 +141,21 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
      * @throws InitializationException Failure to start database due to either invalid credentials invalid network connection
      */
     @Throws(InitializationException::class)
-    override fun initialize() {
-        try {
-            connect()
+    override fun initialize() = try {
+        connect()
 
-            // Verify Connection by getting System Entities
-            val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""))
-            persistenceManager.executeQuery<Any>(query)
-            schemaContext.start()
-        } catch (e: OnyxException) {
-            if(e is InitializationException && e.message != InitializationException.INVALID_CREDENTIALS) {
-                catchAll {
-                    persistenceManager
-                    schemaContext.start()
-                }
+        // Verify Connection by getting System Entities
+        val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""))
+        persistenceManager.executeQuery<Any>(query)
+        schemaContext.start()
+    } catch (e: OnyxException) {
+        if(e is InitializationException && e.message != InitializationException.INVALID_CREDENTIALS) {
+            catchAll {
+                persistenceManager
+                schemaContext.start()
             }
-            throw e
         }
+        throw e
     }
 
     /**
