@@ -5,7 +5,7 @@ package com.onyx.exception
  *
  * Client failed to connect
  */
-class ConnectionFailedException(override var message: String = "") : OnyxServerException(message) {
+class ConnectionFailedException(override var message: String? = "") : OnyxServerException(message) {
 
     companion object {
         @JvmField val CONNECTION_TIMEOUT = "Connection Timeout Occurred"

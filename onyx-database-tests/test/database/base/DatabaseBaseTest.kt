@@ -3,7 +3,6 @@ package database.base
 import com.onyx.application.impl.DatabaseServer
 import com.onyx.application.impl.WebDatabaseServer
 import com.onyx.exception.InitializationException
-import com.onyx.extension.common.delay
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
@@ -22,7 +21,6 @@ import java.math.BigInteger
 import java.security.SecureRandom
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 
 /**
@@ -59,7 +57,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
     }
 
     @After
-    fun shutdown() {
+    open fun shutdown() {
         factory.close()
         context = null
     }
@@ -98,7 +96,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
                 remoteServer!!.port = 8080
                 remoteServer!!.setCredentials("admin", "admin")
                 remoteServer!!.start()
-                delay(1000, TimeUnit.MILLISECONDS)
             }
         }
 
@@ -144,7 +141,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         @AfterClass
         @JvmStatic
-        fun afterClass() {}
+        fun afterClass() = Unit
 
         @BeforeClass
         @JvmStatic
@@ -157,7 +154,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         }
 
         /**
-         * Helper to run asyn on an executor
+         * Helper to run async on an executor
          */
         fun <T> async(executor:ExecutorService, block: () -> T): Future<T> = executor.submit<T> { block.invoke() }
 

@@ -19,8 +19,8 @@ class ContainsTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseT
 
     @Test
     fun testStringContains() {
-        val results = manager.list<AllAttributeEntity>(AllAttributeForFetch::class.java, "stringValue" cont "Some test strin")
-        assertEquals(4, results.size, "Expected 4 results for 'stringValue' containing 'Some test strin'")
+        val results = manager.list<AllAttributeEntity>(AllAttributeForFetch::class.java, "stringValue" cont "Some test string")
+        assertEquals(4, results.size, "Expected 4 results for 'stringValue' containing 'Some test string'")
     }
 
     @Test
@@ -31,8 +31,8 @@ class ContainsTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseT
 
     @Test
     fun testStringStartsWith() {
-        val results = manager.list<AllAttributeEntity>(AllAttributeForFetch::class.java, "stringValue" cont "ome test strin")
-        assertEquals(4, results.size, "Expected 4 results for 'stringValue' containing 'ome test strin'")
+        val results = manager.list<AllAttributeEntity>(AllAttributeForFetch::class.java, "stringValue" cont "ome test string")
+        assertEquals(4, results.size, "Expected 4 results for 'stringValue' containing 'ome test string'")
     }
 
     @Test

@@ -2,15 +2,18 @@ package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import entities.EntityYo
-import org.junit.Assert
 import org.junit.Test
 
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Created by timothy.osborn on 4/2/15.
  */
-class ObjectSerializationTest : AbstractTest() {
+class NamedObjectMapTest : AbstractTest() {
+
     @Test
     fun testPushObject() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
@@ -37,21 +40,21 @@ class ObjectSerializationTest : AbstractTest() {
 
         val another = myMap[entityYo.id!!]
 
-        Assert.assertTrue(entityYo.id == another!!.id)
-        Assert.assertTrue(entityYo.longValue == another.longValue)
-        Assert.assertTrue(entityYo.dateValue == another.dateValue)
-        Assert.assertTrue(entityYo.longStringValue == another.longStringValue)
-        Assert.assertTrue(entityYo.otherStringValue == another.otherStringValue)
-        Assert.assertTrue(entityYo.mutableInteger == another.mutableInteger)
-        Assert.assertTrue(entityYo.mutableLong == another.mutableLong)
-        Assert.assertTrue(entityYo.mutableBoolean == another.mutableBoolean)
-        Assert.assertTrue(entityYo.mutableFloat == another.mutableFloat)
-        Assert.assertTrue(entityYo.mutableDouble == another.mutableDouble)
-        Assert.assertTrue(entityYo.immutableInteger == another.immutableInteger)
-        Assert.assertTrue(entityYo.immutableLong == another.immutableLong)
-        Assert.assertTrue(entityYo.immutableBoolean == another.immutableBoolean)
-        Assert.assertTrue(entityYo.immutableFloat == another.immutableFloat)
-        Assert.assertTrue(entityYo.immutableDouble == another.immutableDouble)
+        assertEquals(entityYo.id, another!!.id)
+        assertEquals(entityYo.longValue, another.longValue)
+        assertEquals(entityYo.dateValue, another.dateValue)
+        assertEquals(entityYo.longStringValue, another.longStringValue)
+        assertEquals(entityYo.otherStringValue, another.otherStringValue)
+        assertEquals(entityYo.mutableInteger, another.mutableInteger)
+        assertEquals(entityYo.mutableLong, another.mutableLong)
+        assertEquals(entityYo.mutableBoolean, another.mutableBoolean)
+        assertEquals(entityYo.mutableFloat, another.mutableFloat)
+        assertEquals(entityYo.mutableDouble, another.mutableDouble)
+        assertEquals(entityYo.immutableInteger, another.immutableInteger)
+        assertEquals(entityYo.immutableLong, another.immutableLong)
+        assertEquals(entityYo.immutableBoolean, another.immutableBoolean)
+        assertEquals(entityYo.immutableFloat, another.immutableFloat)
+        assertEquals(entityYo.immutableDouble, another.immutableDouble)
 
     }
 
@@ -68,20 +71,20 @@ class ObjectSerializationTest : AbstractTest() {
 
         val another = myMap[entityYo.id!!]
 
-        Assert.assertTrue(entityYo.id == another!!.id)
-        Assert.assertTrue(entityYo.dateValue == null)
-        Assert.assertTrue(entityYo.longStringValue == null)
-        Assert.assertTrue(entityYo.otherStringValue == null)
-        Assert.assertTrue(entityYo.mutableInteger == null)
-        Assert.assertTrue(entityYo.mutableLong == null)
-        Assert.assertTrue(entityYo.mutableBoolean == null)
-        Assert.assertTrue(entityYo.mutableFloat == null)
-        Assert.assertTrue(entityYo.mutableDouble == null)
-        Assert.assertTrue(entityYo.immutableInteger == 0)
-        Assert.assertTrue(entityYo.immutableLong == 0L)
-        Assert.assertTrue(entityYo.immutableBoolean == false)
-        Assert.assertTrue(entityYo.immutableFloat == 0.0f)
-        Assert.assertTrue(entityYo.immutableDouble == 0.0)
+        assertEquals(entityYo.id, another!!.id)
+        assertNull(entityYo.dateValue)
+        assertNull(entityYo.longStringValue)
+        assertNull(entityYo.otherStringValue)
+        assertNull(entityYo.mutableInteger)
+        assertNull(entityYo.mutableLong)
+        assertNull(entityYo.mutableBoolean)
+        assertNull(entityYo.mutableFloat)
+        assertNull(entityYo.mutableDouble)
+        assertEquals(0, entityYo.immutableInteger)
+        assertEquals(0L, entityYo.immutableLong)
+        assertEquals(false, entityYo.immutableBoolean)
+        assertEquals(0.0f, entityYo.immutableFloat)
+        assertEquals(0.0, entityYo.immutableDouble)
 
     }
 
@@ -101,10 +104,10 @@ class ObjectSerializationTest : AbstractTest() {
         myMap.put("FIRST", list)
 
         val list2 = myMap["FIRST"]
-        Assert.assertTrue(list2!!.size == list!!.size)
-        Assert.assertTrue(list2.get(0) == "HIYA1")
-        Assert.assertTrue(list2.get(4) == "HIYA5")
-        Assert.assertTrue(list2 is ArrayList<*>)
+        assertEquals(list2!!.size, list.size)
+        assertEquals(list2[0], "HIYA1")
+        assertEquals(list2[4], "HIYA5")
+        assertTrue(list2 is ArrayList<*>)
     }
 
     @Test
@@ -123,15 +126,14 @@ class ObjectSerializationTest : AbstractTest() {
         myMap.put("FIRST", list)
 
         val list2 = myMap["FIRST"]
-        Assert.assertTrue(list2!!.size == list!!.size)
-        Assert.assertTrue(list2 is HashSet<*>)
+        assertEquals(list2!!.size, list.size)
+        assertTrue(list2 is HashSet<*>)
     }
 
     @Test
     fun testMap() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Map<*, *>>>("objectos")
-
 
         val list = HashMap<String, Int>()
         list.put("HIYA1", 1)
@@ -144,9 +146,9 @@ class ObjectSerializationTest : AbstractTest() {
         myMap.put("FIRST", list)
 
         val list2 = myMap["FIRST"]
-        Assert.assertTrue(list2!!.size == list.size)
-        Assert.assertTrue(list2 is HashMap<*, *>)
+        assertEquals(list2!!.size, list.size)
+        assertTrue(list2 is HashMap<*, *>)
 
-        Assert.assertTrue((list2 as HashMap<*, *>)["HIYA2"] == 6)
+        assertEquals(6, (list2 as HashMap<*, *>)["HIYA2"])
     }
 }

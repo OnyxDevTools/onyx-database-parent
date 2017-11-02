@@ -11,7 +11,6 @@ import entities.SimpleEntity
 import entities.index.StringIdentifierEntityIndex
 import entities.relationship.OneToOneChild
 import entities.relationship.OneToOneParent
-import org.junit.Ignore
 import org.junit.Test
 import pojo.AllTypes
 import pojo.BufferStreamableObject
@@ -19,6 +18,10 @@ import pojo.Simple
 
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Created by Tim Osborn on 7/28/16.
@@ -26,126 +29,120 @@ import java.util.*
 class BufferStreamTest {
 
     @Test
-    @Throws(BufferingException::class)
     fun testSerializePrimitive() {
         // int
         var buffer = serialize(1)
         val value = deserialize(buffer) as Int
-        assert(value == 1)
+        assertEquals(1, value)
         BufferPool.recycle(buffer)
 
         // long
         buffer = serialize(2L)
-        assert(deserialize(buffer) as Long == 2L)
+        assertEquals(2L, deserialize(buffer))
         BufferPool.recycle(buffer)
 
         // boolean
         buffer = serialize(true)
-        assert(deserialize(buffer) as Boolean == true)
+        assertEquals(true, deserialize(buffer))
         BufferPool.recycle(buffer)
 
         // short
         buffer = serialize(34.toShort())
-        assert(deserialize(buffer) as Short == 34.toShort())
+        assertEquals(34.toShort(), deserialize(buffer))
         BufferPool.recycle(buffer)
 
         // byte
         buffer = serialize(3.toByte())
-        assert(deserialize(buffer) as Byte == 3.toByte())
+        assertEquals(3.toByte(), deserialize(buffer))
         BufferPool.recycle(buffer)
 
         // float
         buffer = serialize(3.3f)
-        assert(deserialize(buffer) as Float == 3.3f)
+        assertEquals(3.3f, deserialize(buffer))
         BufferPool.recycle(buffer)
 
         // double
         buffer = serialize(3.33)
-        assert(deserialize(buffer) as Double == 3.33)
+        assertEquals(3.33, deserialize(buffer))
         BufferPool.recycle(buffer)
 
         // char
         buffer = serialize('C')
-        assert(deserialize(buffer) as Char == 'C')
+        assertEquals('C', deserialize(buffer))
         BufferPool.recycle(buffer)
 
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testPrimitiveArrays() {
         var ints = intArrayOf(1, 2, 3, 4)
         var buffer = serialize(ints)
         ints = deserialize(buffer) as IntArray
-        assert(ints[0] == 1 && ints[1] == 2 && ints[2] == 3 && ints[3] == 4)
+        assertTrue(ints[0] == 1 && ints[1] == 2 && ints[2] == 3 && ints[3] == 4)
         BufferPool.recycle(buffer)
 
         var longs = longArrayOf(1L, 2L, 3L, 4L)
         buffer = serialize(longs)
         longs = deserialize(buffer) as LongArray
-        assert(longs[0] == 1L && longs[1] == 2L && longs[2] == 3L && longs[3] == 4L)
+        assertTrue(longs[0] == 1L && longs[1] == 2L && longs[2] == 3L && longs[3] == 4L)
         BufferPool.recycle(buffer)
 
         var bytes = byteArrayOf(1, 2, 3, 4)
         buffer = serialize(bytes)
         bytes = deserialize(buffer) as ByteArray
-        assert(bytes[0].toInt() == 1 && bytes[1].toInt() == 2 && bytes[2].toInt() == 3 && bytes[3].toInt() == 4)
+        assertTrue(bytes[0].toInt() == 1 && bytes[1].toInt() == 2 && bytes[2].toInt() == 3 && bytes[3].toInt() == 4)
         BufferPool.recycle(buffer)
 
         var booleans = booleanArrayOf(true, false, true, false)
         buffer = serialize(booleans)
         booleans = deserialize(buffer) as BooleanArray
-        assert(booleans[0] && !booleans[1] && booleans[2] && !booleans[3])
+        assertTrue(booleans[0] && !booleans[1] && booleans[2] && !booleans[3])
         BufferPool.recycle(buffer)
 
         var floats = floatArrayOf(1.1f, 2.2f, 3.3f, 4.4f)
         buffer = serialize(floats)
         floats = deserialize(buffer) as FloatArray
-        assert(floats[0] == 1.1f && floats[1] == 2.2f && floats[2] == 3.3f && floats[3] == 4.4f)
+        assertTrue(floats[0] == 1.1f && floats[1] == 2.2f && floats[2] == 3.3f && floats[3] == 4.4f)
         BufferPool.recycle(buffer)
 
         var doubles = doubleArrayOf(1.1, 2.2, 3.3, 4.4)
         buffer = serialize(doubles)
         doubles = deserialize(buffer) as DoubleArray
-        assert(doubles[0] == 1.1 && doubles[1] == 2.2 && doubles[2] == 3.3 && doubles[3] == 4.4)
+        assertTrue(doubles[0] == 1.1 && doubles[1] == 2.2 && doubles[2] == 3.3 && doubles[3] == 4.4)
         BufferPool.recycle(buffer)
 
         var shorts = shortArrayOf(1, 2, 3, 4)
         buffer = serialize(shorts)
         shorts = deserialize(buffer) as ShortArray
-        assert(shorts[0].toInt() == 1 && shorts[1].toInt() == 2 && shorts[2].toInt() == 3 && shorts[3].toInt() == 4)
+        assertTrue(shorts[0].toInt() == 1 && shorts[1].toInt() == 2 && shorts[2].toInt() == 3 && shorts[3].toInt() == 4)
         BufferPool.recycle(buffer)
 
         var chars = charArrayOf('1', '2', '3', '4')
         buffer = serialize(chars)
         chars = deserialize(buffer) as CharArray
-        assert(chars[0] == '1' && chars[1] == '2' && chars[2] == '3' && chars[3] == '4')
+        assertTrue(chars[0] == '1' && chars[1] == '2' && chars[2] == '3' && chars[3] == '4')
         BufferPool.recycle(buffer)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testString() {
-        val value = "ASDF@#$@#\$ASDFASDF"
+        val value = "_ASDF@#$@#\$ASDF_ASDF_"
         val buffer = serialize(value)
         val otherValue = deserialize(buffer) as String?
-        assert(value == otherValue)
+        assertEquals(value, otherValue)
         BufferPool.recycle(buffer)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testDate() {
         val value = Date(3737373)
         val buffer = serialize(value)
         val otherValue = deserialize(buffer) as Date?
-        assert(value == otherValue)
+        assertEquals(value, otherValue)
         BufferPool.recycle(buffer)
     }
 
     @Test
-    @Ignore
-    @Throws(BufferingException::class)
     fun testNamedObject() {
 
         val entity = AllAttributeEntity()
@@ -164,20 +161,19 @@ class BufferStreamTest {
         val otherValue = deserialize(buffer) as AllAttributeEntity?
         BufferPool.recycle(buffer)
 
-        assert(otherValue!!.booleanPrimitive == false)
-        assert(otherValue.booleanValue === true)
-        assert(otherValue.longValue === 4L)
-        assert(otherValue.longPrimitive == 3L)
-        assert(otherValue.intValue === 23)
-        assert(otherValue.intPrimitive == 22)
-        assert(otherValue.stringValue == "234234234")
-        assert(otherValue.dateValue == Date(333333))
-        assert(otherValue.doublePrimitive == 23.33)
-        assert(otherValue.doubleValue === 22.2)
+        assertEquals(false, otherValue!!.booleanPrimitive)
+        assertEquals(true, otherValue.booleanValue)
+        assertEquals(4L, otherValue.longValue)
+        assertEquals(3L, otherValue.longPrimitive)
+        assertEquals(23, otherValue.intValue)
+        assertEquals(22, otherValue.intPrimitive)
+        assertEquals("234234234", otherValue.stringValue)
+        assertEquals(Date(333333), otherValue.dateValue)
+        assertEquals(23.33, otherValue.doublePrimitive)
+        assertEquals(22.2, otherValue.doubleValue)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testNonNamedObject() {
         val entity = AllTypes()
         entity.booleanValueM = false
@@ -205,29 +201,28 @@ class BufferStreamTest {
         val entity2 = deserialize(buffer) as AllTypes?
         BufferPool.recycle(buffer)
 
-        assert(entity2!!.booleanValueM == false)
-        assert(entity2!!.booleanValue == true)
-        assert(entity2.longValue == 4L)
-        assert(entity2.longValueM == 3L)
-        assert(entity2.intValue == 23)
-        assert(entity2.intValueM == 22)
-        assert(entity2.stringValue == "234234234")
-        assert(entity2.dateValue == Date(333333))
-        assert(entity2.shortValue.toInt() == 26)
-        assert(entity2.shortValueM == 95.toShort())
-        assert(entity2.doubleValue == 32.32)
-        assert(entity2.doubleValueM == 22.54)
-        assert(entity2.floatValue == 32.321f)
-        assert(entity2.floatValueM == 22.542f)
-        assert(entity2.byteValue == 4.toByte())
-        assert(entity2.byteValueM == 9.toByte())
-        assert(entity2.nullValue == null)
-        assert(entity2.charValue == 'K')
-        assert(entity2.charValueM == 'U')
+        assertEquals(false, entity2?.booleanValueM)
+        assertEquals(true, entity2!!.booleanValue)
+        assertEquals(4L, entity2.longValue)
+        assertEquals(3L, entity2.longValueM)
+        assertEquals(23, entity2.intValue)
+        assertEquals(22, entity2.intValueM)
+        assertEquals("234234234", entity2.stringValue)
+        assertEquals(Date(333333), entity2.dateValue)
+        assertEquals(26, entity2.shortValue)
+        assertEquals(95.toShort(), entity2.shortValueM)
+        assertEquals(32.32, entity2.doubleValue)
+        assertEquals(22.54, entity2.doubleValueM)
+        assertEquals(32.321f, entity2.floatValue)
+        assertEquals(22.542f, entity2.floatValueM)
+        assertEquals(4, entity2.byteValue)
+        assertEquals(9, entity2.byteValueM)
+        assertNull(entity2.nullValue)
+        assertEquals('K', entity2.charValue)
+        assertEquals('U', entity2.charValueM)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testMapPrimitives() {
         val map = HashMap<Int, Any?>()
         map.put(1, 3)
@@ -244,23 +239,22 @@ class BufferStreamTest {
         val other = deserialize(buffer) as Map<*, *>?
         BufferPool.recycle(buffer)
 
-        assert(other!![1] as Int == 3)
-        assert(other[4] as Long == 6L)
-        assert(other[6] as Double == 22.2)
-        assert(other[3] as Float == 23.3f)
-        assert(other[5] as Boolean == true)
-        assert(other[9] as Short == 23.toShort())
-        assert(other[99] as Byte == 32.toByte())
-        assert(other[87] as Char == 'C')
-        assert((other[100] as IntArray)[0] == 3)
-        assert((other[100] as IntArray)[1] == 4)
-        assert((other[100] as IntArray)[2] == 6)
-        assert((other[100] as IntArray)[3] == 3)
+        assertEquals(3, other!![1])
+        assertEquals(6L, other[4])
+        assertEquals(22.2, other[6])
+        assertEquals(23.3f, other[3])
+        assertEquals(true, other[5])
+        assertEquals(23.toShort(), other[9])
+        assertEquals(32.toByte(), other[99])
+        assertEquals('C', other[87])
+        assertEquals(3, (other[100] as IntArray)[0])
+        assertEquals(4, (other[100] as IntArray)[1])
+        assertEquals(6, (other[100] as IntArray)[2])
+        assertEquals(3, (other[100] as IntArray)[3])
 
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testCollection() {
         val myCollection = ArrayList<AllTypes>()
         for (i in 0..9999) {
@@ -291,37 +285,32 @@ class BufferStreamTest {
         val collection2 = deserialize(buffer) as Collection<*>?
         BufferPool.recycle(buffer)
 
-        var i = 0
-        for (obj in collection2!!) {
+        collection2!!.forEachIndexed { i, obj ->
             val entity = obj as AllTypes
 
-            assert(entity.booleanValueM == false)
-            assert(entity.booleanValue == true)
-            assert(entity.longValue == 4L)
-            assert(entity.longValueM == 3L)
-            assert(entity.intValue == i)
-            assert(entity.intValueM == 22)
-            assert(entity.stringValue == "234234234")
-            assert(entity.dateValue == Date(333333))
-            assert(entity.shortValue.toInt() == 26)
-            assert(entity.shortValueM == 95.toShort())
-            assert(entity.doubleValue == 32.32)
-            assert(entity.doubleValueM == 22.54)
-            assert(entity.floatValue == 32.321f)
-            assert(entity.floatValueM == 22.542f)
-            assert(entity.byteValue == 4.toByte())
-            assert(entity.byteValueM == 9.toByte())
-            assert(entity.nullValue == null)
-            assert(entity.charValue == 'K')
-            assert(entity.charValueM == 'U')
-
-            i++
-
+            assertEquals(false, entity.booleanValueM)
+            assertEquals(true, entity.booleanValue)
+            assertEquals(4L, entity.longValue)
+            assertEquals(3L, entity.longValueM)
+            assertEquals(i, entity.intValue)
+            assertEquals(22, entity.intValueM)
+            assertEquals("234234234", entity.stringValue)
+            assertEquals(Date(333333), entity.dateValue)
+            assertEquals(26, entity.shortValue)
+            assertEquals(95, entity.shortValueM)
+            assertEquals(32.32, entity.doubleValue)
+            assertEquals(22.54, entity.doubleValueM)
+            assertEquals(32.321f, entity.floatValue)
+            assertEquals(22.542f, entity.floatValueM)
+            assertEquals(4, entity.byteValue)
+            assertEquals(9, entity.byteValueM)
+            assertNull(entity.nullValue)
+            assertEquals('K', entity.charValue)
+            assertEquals('U', entity.charValueM)
         }
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testMap() {
         val myCollection = ArrayList<AllTypes>()
         for (i in 0..9999) {
@@ -352,37 +341,31 @@ class BufferStreamTest {
         val collection2 = deserialize(buffer) as Collection<*>?
         BufferPool.recycle(buffer)
 
-        var i = 0
-        for (obj in collection2!!) {
+        collection2!!.forEachIndexed { i, obj ->
             val entity = obj as AllTypes
-
-            assert(entity.booleanValueM == false)
-            assert(entity.booleanValue)
-            assert(entity.longValue == 4L)
-            assert(entity.longValueM == 3L)
-            assert(entity.intValue == i)
-            assert(entity.intValueM == 22)
-            assert(entity.stringValue == "234234234")
-            assert(entity.dateValue == Date(333333))
-            assert(entity.shortValue.toInt() == 26)
-            assert(entity.shortValueM == 95.toShort())
-            assert(entity.doubleValue == 32.32)
-            assert(entity.doubleValueM == 22.54)
-            assert(entity.floatValue == 32.321f)
-            assert(entity.floatValueM == 22.542f)
-            assert(entity.byteValue == 4.toByte())
-            assert(entity.byteValueM == 9.toByte())
-            assert(entity.nullValue == null)
-            assert(entity.charValue == 'K')
-            assert(entity.charValueM == 'U')
-
-            i++
-
+            assertEquals(false, entity.booleanValueM)
+            assertEquals(true, entity.booleanValue)
+            assertEquals(4L, entity.longValue)
+            assertEquals(3L, entity.longValueM)
+            assertEquals(i, entity.intValue)
+            assertEquals(22, entity.intValueM)
+            assertEquals("234234234", entity.stringValue)
+            assertEquals(Date(333333), entity.dateValue)
+            assertEquals(26, entity.shortValue)
+            assertEquals(95, entity.shortValueM)
+            assertEquals(32.32, entity.doubleValue)
+            assertEquals(22.54, entity.doubleValueM)
+            assertEquals(32.321f, entity.floatValue)
+            assertEquals(22.542f, entity.floatValueM)
+            assertEquals(4, entity.byteValue)
+            assertEquals(9, entity.byteValueM)
+            assertNull(entity.nullValue)
+            assertEquals('K', entity.charValue)
+            assertEquals('U', entity.charValueM)
         }
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testRandomObjectArray() {
         val objects = ArrayList<Any?>()
         objects.add(1)
@@ -418,36 +401,83 @@ class BufferStreamTest {
         BufferPool.recycle(buffer)
 
 
-        assert(collection2!![0] as Int == 1)
-        assert(collection2[1] as Long == 1L)
-        assert(collection2[3] as Boolean == true)
+        assertEquals(1, collection2!![0])
+        assertEquals(1L, collection2[1])
+        assertEquals(true, collection2[3])
 
         entity = collection2[2] as AllTypes
 
-        assert(entity.booleanValueM == false)
-        assert(entity.booleanValue == true)
-        assert(entity.longValue == 4L)
-        assert(entity.longValueM == 3L)
-        assert(entity.intValue == 55)
-        assert(entity.intValueM == 22)
-        assert(entity.stringValue == "234234234")
-        assert(entity.dateValue == Date(333333))
-        assert(entity.shortValue.toInt() == 26)
-        assert(entity.shortValueM == 95.toShort())
-        assert(entity.doubleValue == 32.32)
-        assert(entity.doubleValueM == 22.54)
-        assert(entity.floatValue == 32.321f)
-        assert(entity.floatValueM == 22.542f)
-        assert(entity.byteValue == 4.toByte())
-        assert(entity.byteValueM == 9.toByte())
-        assert(entity.nullValue == null)
-        assert(entity.charValue == 'K')
-        assert(entity.charValueM == 'U')
+        assertEquals(false, entity.booleanValueM)
+        assertEquals(true, entity.booleanValue)
+        assertEquals(4L, entity.longValue)
+        assertEquals(3L, entity.longValueM)
+        assertEquals(55, entity.intValue)
+        assertEquals(22, entity.intValueM)
+        assertEquals("234234234", entity.stringValue)
+        assertEquals(Date(333333), entity.dateValue)
+        assertEquals(26, entity.shortValue)
+        assertEquals(95, entity.shortValueM)
+        assertEquals(32.32, entity.doubleValue)
+        assertEquals(22.54, entity.doubleValueM)
+        assertEquals(32.321f, entity.floatValue)
+        assertEquals(22.542f, entity.floatValueM)
+        assertEquals(4, entity.byteValue)
+        assertEquals(9, entity.byteValueM)
+        assertNull(entity.nullValue)
+        assertEquals('K', entity.charValue)
+        assertEquals('U', entity.charValueM)
     }
 
     @Test
-    @Ignore
-    @Throws(BufferingException::class)
+    fun testObjectWithEnum() {
+        val query = Query(SimpleEntity::class.java, QueryCriteria("attribute", QueryCriteriaOperator.EQUAL, 33L))
+
+        val buffer = serialize(query)
+        val query1 = deserialize(buffer) as Query?
+        BufferPool.recycle(buffer)
+
+        assertEquals(query.entityType, query1!!.entityType)
+        assertEquals(query.criteria!!.type, query1.criteria!!.type)
+        assertEquals(query.criteria!!.attribute, query1.criteria!!.attribute)
+        assertEquals(query.criteria!!.longValue, query1.criteria!!.longValue)
+    }
+
+    @Test
+    fun testBufferable() {
+        val bufferableObject = BufferStreamableObject()
+        bufferableObject.myInt = 33
+        bufferableObject.myString = "This"
+        bufferableObject.simple = Simple()
+        bufferableObject.simple!!.hiya = 2
+
+        val buffer = serialize(bufferableObject)
+        val bufferableObject1 = deserialize(buffer) as BufferStreamableObject?
+        BufferPool.recycle(buffer)
+
+        assertNotNull(bufferableObject1)
+        assertEquals(33, bufferableObject1!!.myInt)
+        assertEquals("This", bufferableObject1.myString)
+        assertEquals(2, bufferableObject1.simple!!.hiya)
+
+    }
+
+    @Test
+    fun testNestedCollection() {
+        val findQuery = Query(StringIdentifierEntityIndex::class.java, QueryCriteria("correlation", QueryCriteriaOperator.NOT_EQUAL, 99).and("indexValue", QueryCriteriaOperator.EQUAL, "INDEX VALUE"))
+        val buffer = serialize(findQuery)
+        val query = deserialize(buffer) as Query?
+        BufferPool.recycle(buffer)
+
+        assertEquals(findQuery.entityType, query!!.entityType)
+        assertEquals(findQuery.criteria!!.integerValue, query.criteria!!.integerValue)
+        assertEquals(findQuery.criteria!!.type, query.criteria!!.type)
+        assertEquals(findQuery.criteria!!.subCriteria[0].attribute, query.criteria!!.subCriteria[0].attribute)
+        assertEquals(findQuery.criteria!!.subCriteria[0].stringValue, query.criteria!!.subCriteria[0].stringValue)
+        assertEquals(findQuery.criteria!!.operator, query.criteria!!.operator)
+        assertEquals(findQuery.maxResults, query.maxResults)
+    }
+
+    @Test
     fun testRecursiveEntry() {
         val parent = OneToOneParent()
         parent.child = OneToOneChild()
@@ -461,17 +491,14 @@ class BufferStreamTest {
         val parent1 = deserialize(buffer) as OneToOneParent?
         BufferPool.recycle(buffer)
 
-        assert(parent1!!.child!!.correlation == 99)
-        assert(parent1.child!!.parent == parent1)
-        assert(parent1.child!!.identifier == "CHILD ID")
-        assert(parent1.correlation == 322)
-        assert(parent1.identifier == "THIS IS AN ID")
+        assertEquals(99, parent1!!.child!!.correlation)
+        assertEquals("CHILD ID", parent1.child!!.identifier)
+        assertEquals(322, parent1.correlation)
+        assertEquals("THIS IS AN ID", parent1.identifier)
 
     }
 
     @Test
-    @Ignore
-    @Throws(BufferingException::class)
     fun testNamedObjectArray() {
         val simpleEntity = SimpleEntity()
         simpleEntity.simpleId = "HIYA"
@@ -484,94 +511,30 @@ class BufferStreamTest {
         objects[4] = 3
 
         var buffer = serialize(objects)
-        val objects1 = deserialize(buffer) as Array<Any>?
+        val objects1 = deserialize(buffer) as Array<*>?
         BufferPool.recycle(buffer)
 
-        assert(objects1!!.size == 5)
-        assert(objects1[0] as Long == 1L)
-        assert(objects1[1] as Float == 22.32f)
-        assert(objects1[2] == "This is a string")
-        assert((objects1[3] as SimpleEntity).simpleId == "HIYA")
-        assert((objects1[3] as SimpleEntity).name == "NAME")
-        assert(objects[4] as Int == 3)
-
-        val time = System.currentTimeMillis()
+        assertEquals(5, objects1!!.size)
+        assertEquals(1L, objects1[0])
+        assertEquals(22.32f, objects1[1])
+        assertEquals("This is a string", objects1[2])
+        assertEquals("HIYA", (objects1[3] as SimpleEntity).simpleId)
+        assertEquals("NAME", (objects1[3] as SimpleEntity).name)
+        assertEquals(3, objects[4])
 
         for (i in 0..99999) {
             buffer = serialize(objects)
             deserialize(buffer)
             BufferPool.recycle(buffer)
         }
-
-        val after = System.currentTimeMillis()
-
-        println("Took " + (after - time))
-    }
-
-    @Test
-    @Throws(BufferingException::class)
-    fun testObjectWithEnum() {
-        val query = Query(SimpleEntity::class.java, QueryCriteria("attribute", QueryCriteriaOperator.EQUAL, 33L))
-
-        val buffer = serialize(query)
-        val query1 = deserialize(buffer) as Query?
-        BufferPool.recycle(buffer)
-
-        assert(query.entityType == query1!!.entityType)
-        assert(query.criteria!!.type === query1.criteria!!.type)
-        assert(query.criteria!!.attribute == query1.criteria!!.attribute)
-        assert(query.criteria!!.longValue == query1.criteria!!.longValue)
-    }
-
-    @Test
-    @Throws(BufferingException::class)
-    fun testBufferable() {
-        val bufferableObject = BufferStreamableObject()
-        bufferableObject.myInt = 33
-        bufferableObject.myString = "This"
-        bufferableObject.simple = Simple()
-        bufferableObject.simple!!.hiya = 2
-
-        val buffer = serialize(bufferableObject)
-        val bufferableObject1 = deserialize(buffer) as BufferStreamableObject?
-        BufferPool.recycle(buffer)
-
-        assert(bufferableObject1 != null)
-        assert(bufferableObject1!!.myInt == 33)
-        assert(bufferableObject1.myString == "This")
-        assert(bufferableObject1.simple!!.hiya == 2)
-
-    }
-
-    @Test
-    @Throws(BufferingException::class)
-    fun testNestedCollection() {
-        val findQuery = Query(StringIdentifierEntityIndex::class.java, QueryCriteria("correlation", QueryCriteriaOperator.NOT_EQUAL, 99).and("indexValue", QueryCriteriaOperator.EQUAL, "INDEX VALUE"))
-        val buffer = serialize(findQuery)
-        val query = deserialize(buffer) as Query?
-        BufferPool.recycle(buffer)
-
-        assert(findQuery.entityType == query!!.entityType)
-        assert(findQuery.criteria!!.integerValue == query.criteria!!.integerValue)
-        assert(findQuery.criteria!!.type == query.criteria!!.type)
-        assert(findQuery.criteria!!.subCriteria[0].attribute == query.criteria!!.subCriteria[0].attribute)
-        assert(findQuery.criteria!!.subCriteria[0].stringValue == query.criteria!!.subCriteria[0].stringValue)
-
-        assert(findQuery.criteria!!.operator == query.criteria!!.operator)
-        assert(findQuery.maxResults == query.maxResults)
     }
 
     companion object {
+        @Throws(BufferingException::class)
+        fun serialize(`object`: Any): ByteBuffer = BufferStream.toBuffer(`object`)
 
         @Throws(BufferingException::class)
-        fun serialize(`object`: Any): ByteBuffer {
-            return BufferStream.toBuffer(`object`)
-        }
-
-        @Throws(BufferingException::class)
-        fun deserialize(buffer: ByteBuffer): Any? {
-            return BufferStream.fromBuffer(buffer)
-        }
+        fun deserialize(buffer: ByteBuffer): Any? = BufferStream.fromBuffer(buffer)
     }
 
 }

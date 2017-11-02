@@ -17,10 +17,10 @@ class NotInTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest
 
     @Test
     fun testNotInString() {
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" notIn arrayListOf("Some test strin1","Some test strin3")))
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" notIn arrayListOf("Some test string1","Some test string3")))
         assertEquals(3, results.size, "Expected 3 results")
-        assertNotEquals("Some test strin1", results[0].stringValue)
-        assertNotEquals("Some test strin3", results[0].stringValue)
+        assertNotEquals("Some test string1", results[0].stringValue)
+        assertNotEquals("Some test string3", results[0].stringValue)
     }
 
     @Test

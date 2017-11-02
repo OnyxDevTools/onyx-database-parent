@@ -1,7 +1,7 @@
 package com.onyx.network
 
 import com.onyx.buffer.NetworkBufferPool
-import com.onyx.network.auth.impl.AbstractNetworkPeer
+import com.onyx.network.auth.impl.NetworkPeer
 import com.onyx.network.auth.AuthenticationManager
 import com.onyx.network.connection.Connection
 import com.onyx.network.push.PushSubscriber
@@ -40,7 +40,7 @@ import java.util.concurrent.*
  * @since 1.2.0
  * @since 2.0.0 Refactored from Communication Peer to NetworkClient.
  */
-open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
+open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
 
     // region Variables
 
@@ -115,7 +115,7 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
             socketChannel = SocketChannel.open()
             socketChannel!!.socket().keepAlive = true
             socketChannel!!.socket().tcpNoDelay = false
-            socketChannel!!.socket().reuseAddress = true
+            socketChannel!!.socket().reuseAddress = false // Prevented so the server does not re-use the old connection
             socketChannel!!.socket().sendBufferSize = transportPacketTransportEngine.packetSize
             socketChannel!!.socket().receiveBufferSize = transportPacketTransportEngine.packetSize
             socketChannel!!.socket().oobInline = false
@@ -155,6 +155,8 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
             this.resumeHeartBeat()
         } catch (e: InitializationException) {
             this.close()
+            if(e.message == InitializationException.INVALID_CREDENTIALS)
+                throw e
         } catch (e: RequestTimeoutException) {
             this.close()
             throw ConnectionFailedException(ConnectionFailedException.CONNECTION_TIMEOUT)
@@ -227,9 +229,9 @@ open class NetworkClient : AbstractNetworkPeer(), OnyxClient, PushRegistrar {
      * @since 1.2.0
      */
     private fun send(packet: Any?, timeout: Int): Any? {
-
         verifyConnection()
         val token = RequestToken(generateNewToken(), packet)
+
         val future = DeferredValue<Any?>()
         pendingRequests.put(token, future)
 

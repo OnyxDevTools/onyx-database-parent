@@ -21,7 +21,7 @@ class GreaterThanEqualTest(override var factoryClass: KClass<*>) : PrePopulatedD
 
     @Test
     fun testStringStringGreaterThanEqual() {
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" gte  "Some test strin2"))
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" gte  "Some test string2"))
         assertEquals(1, results.size, "Expected 1 results from query")
     }
 

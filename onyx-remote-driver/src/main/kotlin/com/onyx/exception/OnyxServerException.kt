@@ -9,7 +9,7 @@ import java.io.StringWriter
  *
  * Base server exception
  */
-abstract class OnyxServerException(override var message: String = "", override final var cause:Throwable? = null) : OnyxException(message, cause), Serializable {
+abstract class OnyxServerException(override var message: String? = "", override final var cause:Throwable? = null) : OnyxException(message, cause), Serializable {
 
     protected var stack:String = ""
 

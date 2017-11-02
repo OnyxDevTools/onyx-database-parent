@@ -32,7 +32,7 @@ class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fa
 
         manager.saveEntity<IManagedEntity>(simpleEntity)
         simpleEntity = SimpleEntity()
-        simpleEntity.simpleId = "ASDFL"
+        simpleEntity.simpleId = "ABDUL"
         manager.saveEntity<IManagedEntity>(simpleEntity)
 
         simpleEntity = SimpleEntity()

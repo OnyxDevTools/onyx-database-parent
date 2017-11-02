@@ -23,7 +23,7 @@ class LessThanEqualTest(override var factoryClass: KClass<*>) : PrePopulatedData
 
     @Test
     fun testStringStringLessThanEqual() {
-        val criteriaList = QueryCriteria("stringValue", QueryCriteriaOperator.LESS_THAN_EQUAL, "Some test strin2")
+        val criteriaList = QueryCriteria("stringValue", QueryCriteriaOperator.LESS_THAN_EQUAL, "Some test string2")
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, criteriaList)
         assertEquals(5, results.size, "Expected 5 results")
     }

@@ -45,9 +45,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
 
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<IManagedEntity> {
-            override fun onItemUpdated(item: IManagedEntity) {}
-            override fun onItemAdded(item: IManagedEntity) {}
-            override fun onItemRemoved(item: IManagedEntity) {}
+            override fun onItemUpdated(item: IManagedEntity) = Unit
+            override fun onItemAdded(item: IManagedEntity) = Unit
+            override fun onItemRemoved(item: IManagedEntity) = Unit
         }
 
         manager.executeQuery<Any>(query)
@@ -70,9 +70,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
 
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<IManagedEntity> {
-            override fun onItemUpdated(item: IManagedEntity) { }
-            override fun onItemAdded(item: IManagedEntity) { }
-            override fun onItemRemoved(item: IManagedEntity) { }
+            override fun onItemUpdated(item: IManagedEntity) = Unit
+            override fun onItemAdded(item: IManagedEntity) = Unit
+            override fun onItemRemoved(item: IManagedEntity) = Unit
         }
 
         manager.executeQuery<Any>(query)
@@ -98,9 +98,8 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<SimpleEntity> {
 
-            override fun onItemUpdated(item: SimpleEntity) {
-                assertTrue(false, "onItemUpdated should not have been executed")
-            }
+            override fun onItemUpdated(item: SimpleEntity) =
+                    assertTrue(false, "onItemUpdated should not have been executed")
 
             override fun onItemAdded(item: SimpleEntity) {
                 assertEquals("22", item.simpleId, "simpleId was not assigned properly")
@@ -108,9 +107,8 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
                 pass.countDown()
             }
 
-            override fun onItemRemoved(item: SimpleEntity) {
-                assertTrue(false, "onItemRemoved should not have been executed")
-            }
+            override fun onItemRemoved(item: SimpleEntity) =
+                    assertTrue(false, "onItemRemoved should not have been executed")
         }
 
         manager.executeQuery<Any>(query)
@@ -139,13 +137,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
                 pass.countDown()
             }
 
-            override fun onItemAdded(item: SimpleEntity) {
-                assertTrue(false)
-            }
+            override fun onItemAdded(item: SimpleEntity) = assertTrue(false)
 
-            override fun onItemRemoved(item: SimpleEntity) {
-                assertTrue(false)
-            }
+            override fun onItemRemoved(item: SimpleEntity) = assertTrue(false)
         }
 
         manager.executeQuery<Any>(query)
@@ -172,13 +166,10 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<SimpleEntity> {
 
-            override fun onItemUpdated(item: SimpleEntity) {
-                assertTrue(false, "onItemUpdated should not have been fired")
-            }
+            override fun onItemUpdated(item: SimpleEntity) =
+                    assertTrue(false, "onItemUpdated should not have been fired")
 
-            override fun onItemAdded(item: SimpleEntity) {
-                assertTrue(false, "onItemAdded should not have been fired")
-            }
+            override fun onItemAdded(item: SimpleEntity) = assertTrue(false, "onItemAdded should not have been fired")
 
             override fun onItemRemoved(item: SimpleEntity) {
                 assertEquals("55", item.simpleId, "simpleId was not assigned")
@@ -262,9 +253,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
 
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<IManagedEntity> {
-            override fun onItemUpdated(item: IManagedEntity) { }
-            override fun onItemAdded(item: IManagedEntity) { }
-            override fun onItemRemoved(item: IManagedEntity) { }
+            override fun onItemUpdated(item: IManagedEntity) = Unit
+            override fun onItemAdded(item: IManagedEntity) = Unit
+            override fun onItemRemoved(item: IManagedEntity) = Unit
         }
 
         manager.listen(query)
@@ -287,9 +278,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
 
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<IManagedEntity> {
-            override fun onItemUpdated(item: IManagedEntity) { }
-            override fun onItemAdded(item: IManagedEntity) { }
-            override fun onItemRemoved(item: IManagedEntity) { }
+            override fun onItemUpdated(item: IManagedEntity) = Unit
+            override fun onItemAdded(item: IManagedEntity) = Unit
+            override fun onItemRemoved(item: IManagedEntity) = Unit
         }
 
         manager.listen(query)
@@ -316,9 +307,8 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<SimpleEntity> {
 
-            override fun onItemUpdated(item: SimpleEntity) {
-                assertTrue(false, "onItemUpdated should not have been fired")
-            }
+            override fun onItemUpdated(item: SimpleEntity) =
+                    assertTrue(false, "onItemUpdated should not have been fired")
 
             override fun onItemAdded(item: SimpleEntity) {
                 assertEquals("220", item.simpleId, "simpleId was not assigned")
@@ -326,9 +316,8 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
                 pass.countDown()
             }
 
-            override fun onItemRemoved(item: SimpleEntity) {
-                assertTrue(false, "onItemRemoved should not have been fired")
-            }
+            override fun onItemRemoved(item: SimpleEntity) =
+                    assertTrue(false, "onItemRemoved should not have been fired")
         }
 
         manager.listen(query)
@@ -361,13 +350,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
                 assertEquals("2", item.name, "name not set")
             }
 
-            override fun onItemAdded(item: SimpleEntity) {
-                assertTrue(false, "onItemAdded should not be invoked")
-            }
+            override fun onItemAdded(item: SimpleEntity) = assertTrue(false, "onItemAdded should not be invoked")
 
-            override fun onItemRemoved(item: SimpleEntity) {
-                assertTrue(false, "onItemRemoved should not be invoked")
-            }
+            override fun onItemRemoved(item: SimpleEntity) = assertTrue(false, "onItemRemoved should not be invoked")
         }
 
         manager.listen(query)
@@ -395,13 +380,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         val query = Query(SimpleEntity::class.java)
         query.changeListener = object : QueryListener<SimpleEntity> {
 
-            override fun onItemUpdated(item: SimpleEntity) {
-                assertTrue(false, "onItemUpdated should not be invoked")
-            }
+            override fun onItemUpdated(item: SimpleEntity) = assertTrue(false, "onItemUpdated should not be invoked")
 
-            override fun onItemAdded(item: SimpleEntity) {
-                assertTrue(false, "onItemAdded should not be invoked")
-            }
+            override fun onItemAdded(item: SimpleEntity) = assertTrue(false, "onItemAdded should not be invoked")
 
             override fun onItemRemoved(item: SimpleEntity) {
                 assertEquals("12", item.simpleId, "simpleId not set")

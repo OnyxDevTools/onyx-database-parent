@@ -1,4 +1,4 @@
-package database
+package database.zstartup
 
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
@@ -6,7 +6,10 @@ import com.onyx.application.impl.DatabaseServer
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.SimpleEntity
+import org.junit.Before
+import org.junit.FixMethodOrder
 import org.junit.Test
+import org.junit.runners.MethodSorters
 import kotlin.test.assertEquals
 
 /**
@@ -14,11 +17,64 @@ import kotlin.test.assertEquals
  *
  * Tests the initialization of the database
  */
-class TestRemoteDatabaseInitialization : DatabaseBaseTest(RemotePersistenceManagerFactory::class) {
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+class TestRemoteDatabaseInitialization {
+
+    @Before
+    fun deleteDatabase() = DatabaseBaseTest.deleteDatabase(REMOTE_DATABASE_LOCATION)
+
+    companion object {
+        val REMOTE_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/remoteOnyxInitialize.oxd"
+        val REMOTE_DATABASE_ENDPOINT = "onx://localhost:8012"
+        val INVALID_DATABASE_LOCATION = "onx://localhost:8081"
+        val PERSIST_CONN_DATABASE_LOCATION = "onx://localhost:8082"
+        val CONN_BEFORE_START_LOCATION = "onx://localhost:8083"
+        val PERSIST_CONN_NOT_REOPEN_DATABASE_LOCATION = "onx://localhost:8084"
+    }
+
+    /**
+     * Positive test
+     */
+    @Test
+    fun aTestInitializeDatabase() {
+        val remoteServer = DatabaseServer(REMOTE_DATABASE_LOCATION)
+        remoteServer.port = 8012
+        remoteServer.setCredentials("admin", "admin")
+        remoteServer.start()
+
+        try {
+            val fac = RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)
+            fac.setCredentials("admin", "admin")
+            fac.initialize()
+            fac.close()
+        } finally {
+            remoteServer.stop()
+        }
+    }
+
+    /**
+     * Negative Test for invalid credentials
+     */
+    @Test(expected = InitializationException::class)
+    fun bTestInvalidCredentials() {
+        val remoteServer = DatabaseServer(REMOTE_DATABASE_LOCATION)
+        remoteServer.port = 8012
+        remoteServer.setCredentials("admin", "admin")
+        remoteServer.start()
+
+        try {
+            val fac = RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)
+            fac.setCredentials("bill", "tom")
+            fac.initialize()
+            fac.close()
+        } finally {
+            remoteServer.stop()
+        }
+    }
 
     @Test
     fun testPersistentConnection() {
-        var server = DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd")
+        var server = DatabaseServer(REMOTE_DATABASE_LOCATION)
         server.port = 8082
         server.start()
 
@@ -29,16 +85,16 @@ class TestRemoteDatabaseInitialization : DatabaseBaseTest(RemotePersistenceManag
         val manager = factory.persistenceManager
 
         val simpleEntity = SimpleEntity()
-        simpleEntity.simpleId = "MYIDYO"
+        simpleEntity.simpleId = "MY_ID_YO"
         manager.saveEntity<IManagedEntity>(simpleEntity)
 
         server.stop()
 
-        server = DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd")
+        server = DatabaseServer(REMOTE_DATABASE_LOCATION)
         server.port = 8082
         server.start()
 
-        val foundAfterClose = manager.findById<IManagedEntity>(SimpleEntity::class.java, simpleEntity.simpleId) as SimpleEntity?
+        val foundAfterClose = manager.findById<SimpleEntity>(SimpleEntity::class.java, simpleEntity.simpleId)
 
         assertEquals(simpleEntity.simpleId, foundAfterClose!!.simpleId, "Failed to retrieve simpleEntity")
 
@@ -47,12 +103,11 @@ class TestRemoteDatabaseInitialization : DatabaseBaseTest(RemotePersistenceManag
     }
 
     @Test
-    @Throws(Exception::class)
     fun testTryConnectBeforeStart() {
-        val server = DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd")
-        server.port = 8082
+        val server = DatabaseServer(REMOTE_DATABASE_LOCATION)
+        server.port = 8083
 
-        val factory = RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION)
+        val factory = RemotePersistenceManagerFactory(CONN_BEFORE_START_LOCATION)
         factory.setCredentials("admin", "admin")
 
         try {
@@ -62,7 +117,7 @@ class TestRemoteDatabaseInitialization : DatabaseBaseTest(RemotePersistenceManag
         val manager = factory.persistenceManager
 
         val simpleEntity = SimpleEntity()
-        simpleEntity.simpleId = "MYIDYO"
+        simpleEntity.simpleId = "MY_ID_YO"
 
         try {
             manager.saveEntity<IManagedEntity>(simpleEntity)
@@ -84,18 +139,18 @@ class TestRemoteDatabaseInitialization : DatabaseBaseTest(RemotePersistenceManag
         var factory: RemotePersistenceManagerFactory? = null
         try {
 
-            val server = DatabaseServer("C:/Sandbox/Onyx/Tests/server2.oxd")
-            server.port = 8082
+            val server = DatabaseServer(REMOTE_DATABASE_LOCATION)
+            server.port = 8084
             server.start()
 
-            factory = RemotePersistenceManagerFactory(PERSIST_CONN_DATABASE_LOCATION)
+            factory = RemotePersistenceManagerFactory(PERSIST_CONN_NOT_REOPEN_DATABASE_LOCATION)
             factory.setCredentials("admin", "admin")
             factory.initialize()
 
             val manager = factory.persistenceManager
 
             val simpleEntity = SimpleEntity()
-            simpleEntity.simpleId = "MYIDYO"
+            simpleEntity.simpleId = "MY_ID_YO"
 
             manager.saveEntity<IManagedEntity>(simpleEntity)
 
@@ -110,40 +165,12 @@ class TestRemoteDatabaseInitialization : DatabaseBaseTest(RemotePersistenceManag
     }
 
     /**
-     * Positive test
-     */
-    @Test
-    fun testInitializeDatabase() {
-        val fac = RemotePersistenceManagerFactory(DATABASE_LOCATION)
-        fac.setCredentials("admin", "admin")
-        fac.initialize()
-        fac.close()
-    }
-
-    /**
      * Negative Test for access violation
      */
     @Test(expected = InitializationException::class)
     fun testDataFileIsNotAccessible() {
         val fac = RemotePersistenceManagerFactory(INVALID_DATABASE_LOCATION)
         fac.initialize()
-    }
-
-    /**
-     * Negative Test for invalid credentials
-     */
-    @Test(expected = InitializationException::class)
-    fun testInvalidCredentials() {
-        val fac = RemotePersistenceManagerFactory(DATABASE_LOCATION)
-        fac.setCredentials("bill", "tom")
-        fac.initialize()
-        fac.close()
-    }
-
-    companion object {
-        val INVALID_DATABASE_LOCATION = "onx://localhost:8081"
-        val DATABASE_LOCATION = "onx://localhost:8080"
-        val PERSIST_CONN_DATABASE_LOCATION = "onx://localhost:8082"
     }
 
 }

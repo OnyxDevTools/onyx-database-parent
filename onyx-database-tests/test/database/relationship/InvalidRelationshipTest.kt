@@ -16,14 +16,14 @@ class InvalidRelationshipTest(override var factoryClass: KClass<*>) : DatabaseBa
     @Test(expected = InvalidRelationshipTypeException::class)
     fun testInvalidOneToOneWithListType() {
         val myInvalidEntity = HasInvalidToOne()
-        myInvalidEntity.identifier = "INVALIDONE"
+        myInvalidEntity.identifier = "INVALID_ONE"
         manager.saveEntity<IManagedEntity>(myInvalidEntity)
     }
 
     @Test(expected = InvalidRelationshipTypeException::class)
     fun testInvalidOneToManyWithNonListType() {
         val myInvalidEntity = HasInvalidToMany()
-        myInvalidEntity.identifier = "INVALIDONE"
+        myInvalidEntity.identifier = "INVALID_ONE"
         manager.saveEntity<IManagedEntity>(myInvalidEntity)
     }
 }

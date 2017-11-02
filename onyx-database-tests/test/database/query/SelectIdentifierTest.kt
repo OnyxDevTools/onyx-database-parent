@@ -133,7 +133,7 @@ class SelectIdentifierTest(override var factoryClass: KClass<*>) : DatabaseBaseT
     }
 
     @Test
-    fun testIdentifierAndCritieriaWithNot() {
+    fun testIdentifierAndCriteriaWithNot() {
         val first = QueryCriteria("id", QueryCriteriaOperator.GREATER_THAN, 5L)
         val second = QueryCriteria("id", QueryCriteriaOperator.LESS_THAN, 8L)
         val query = Query()

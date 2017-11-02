@@ -21,7 +21,7 @@ class GreaterThanTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
 
     @Test
     fun testStringStringGreaterThan() {
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" gt "Some test strin2"))
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" gt "Some test string2"))
         assertEquals(1, results.size, "Expected 1 query result")
     }
 

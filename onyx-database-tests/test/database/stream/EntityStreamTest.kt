@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized::class)
-class EntityStreamTestFor(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
+class EntityStreamTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     /**
      * Test a basic Query Stream implementation

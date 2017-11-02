@@ -7,6 +7,7 @@ import com.onyx.network.rmi.OnyxRMIClient
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.catchAll
 import com.onyx.lang.property.mutableLazy
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.RemoteSchemaContext
@@ -125,7 +126,6 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
         try {
             onyxRMIClient.connect(host, Integer.valueOf(port)!!)
         } catch (e: ConnectionFailedException) {
-            this.close()
             throw InitializationException(InitializationException.CONNECTION_EXCEPTION)
         }
     }
@@ -142,15 +142,21 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
      */
     @Throws(InitializationException::class)
     override fun initialize() {
-        connect()
-
-        // Verify Connection by getting System Entities
         try {
+            connect()
+
+            // Verify Connection by getting System Entities
             val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""))
             persistenceManager.executeQuery<Any>(query)
             schemaContext.start()
         } catch (e: OnyxException) {
-            throw InitializationException(InitializationException.INVALID_CREDENTIALS)
+            if(e is InitializationException && e.message != InitializationException.INVALID_CREDENTIALS) {
+                catchAll {
+                    persistenceManager
+                    schemaContext.start()
+                }
+            }
+            throw e
         }
     }
 

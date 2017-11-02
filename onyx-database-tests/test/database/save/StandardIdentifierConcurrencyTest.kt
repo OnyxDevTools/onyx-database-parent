@@ -39,7 +39,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -82,7 +82,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -125,7 +125,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -169,7 +169,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -206,7 +206,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -271,7 +271,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -305,7 +305,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -382,7 +382,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -428,7 +428,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = randomString + i
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2

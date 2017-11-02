@@ -8,8 +8,6 @@ import com.onyx.persistence.query.QueryCriteriaOperator
 import database.base.DatabaseBaseTest
 import entities.identifiers.StringIdentifierEntity
 import entities.index.StringIdentifierEntityIndex
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized

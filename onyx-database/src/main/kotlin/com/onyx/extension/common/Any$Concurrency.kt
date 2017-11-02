@@ -80,7 +80,7 @@ class Job(private val executor:ExecutorService) {
  */
 class DeferredValue<T> {
 
-    val countDown = CountDownLatch(1)
+    private val countDown = CountDownLatch(1)
     var value:T? = null
 
     fun complete(value:T?) {
@@ -88,8 +88,11 @@ class DeferredValue<T> {
         countDown.countDown()
     }
 
+    @Throws(TimeoutException::class)
     fun get(timeout:Long, unit: TimeUnit):T? {
-        countDown.await(timeout, unit)
+        val success = countDown.await(timeout, unit)
+        if(!success)
+            throw TimeoutException()
         return value
     }
 }

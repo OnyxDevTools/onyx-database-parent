@@ -1,31 +1,34 @@
 package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
+import database.base.DatabaseBaseTest
 import org.junit.Test
 
 import java.util.*
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import kotlin.test.assertNull
 
 /**
  * Created by timothy.osborn on 3/27/15.
  */
 class MultiThreadTest : AbstractTest() {
 
-    internal var pool = Executors.newFixedThreadPool(9)
+    companion object {
+        private var threadPool = Executors.newFixedThreadPool(10)
+    }
+
     @Test
     fun testMultiThread() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, String>>("second")
 
-        val time = System.currentTimeMillis()
         val items = ArrayList<Future<*>>()
         for (i in 1..19) {
-            val p = randomGenerator.nextInt(19 - 1 + 1) + 1
+            val p = DatabaseBaseTest.randomInteger + 1
 
             if (i % 5 == 0) {
-                val scanThread = Runnable {
+                val scanThread = DatabaseBaseTest.async(threadPool) {
                     val it = myMap.entries.iterator()
 
                     while (it.hasNext()) {
@@ -33,50 +36,32 @@ class MultiThreadTest : AbstractTest() {
                         entry.key
                     }
                 }
-
-                items.add(pool.submit(scanThread))
+                items.add(scanThread)
             }
+
             val runnable = MyRunnable(myMap, p)
-            items.add(pool.submit(runnable))
+            items.add(DatabaseBaseTest.async(threadPool, runnable::run))
         }
 
-        items.stream().forEach { future ->
-            try {
-                future.get()
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-            } catch (e: ExecutionException) {
-                e.printStackTrace()
-            }
-        }
-
-        println("Done in " + (time - System.currentTimeMillis()))
+        items.forEach { it.get() }
         store.close()
     }
 
-    internal inner class MyRunnable(myMap: MutableMap<Int, String>, var p: Int) : Runnable {
-        protected var myMap: MutableMap<Int, String>? = null
+    internal inner class MyRunnable(myMap: MutableMap<Int, String>, private var p: Int) : Runnable {
+        private var myMap: MutableMap<Int, String>? = null
 
         init {
             this.myMap = myMap
-
         }
 
         override fun run() {
-            val it = p
             for (k in 1..4999) {
-                val value:Int = (k * p).toInt()
+                val value:Int = (k * p)
                 myMap!!.put(value, "HIYA" + value)
-                var strVal = myMap!![value] as String
+                myMap!![value] as String
                 myMap!!.remove(value)
-                strVal = myMap!![value] as String
+                assertNull(myMap!![value])
             }
         }
     }
-
-    companion object {
-
-        internal var randomGenerator = Random()
-    }
-
 }

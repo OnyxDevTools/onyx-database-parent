@@ -34,7 +34,7 @@ class AttributeTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fac
         entity.id = "A"
         entity.longValue = 4L
         entity.longPrimitive = 3L
-        entity.stringValue = "STring key"
+        entity.stringValue = "String key"
         entity.dateValue = Date(1483736263743L)
         entity.doublePrimitive = 342.23
         entity.doubleValue = 232.2
@@ -71,7 +71,7 @@ class AttributeTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fac
         assertEquals("A", entity2.id, message + "id")
         assertEquals(4L, entity2.longValue, message + "longValue")
         assertEquals(3L, entity2.longPrimitive, message + "longPrimitive")
-        assertEquals("STring key", entity2.stringValue, message + "stringValue")
+        assertEquals("String key", entity2.stringValue, message + "stringValue")
         assertEquals(entity.dateValue, entity2.dateValue, message + "dateValue")
         assertEquals(342.23, entity2.doublePrimitive, message + "doublePrimitive")
         assertEquals(232.2, entity2.doubleValue, message + "doubleValue")
@@ -148,7 +148,7 @@ class AttributeTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fac
         entity.id = "C"
         entity.longValue = 4L
         entity.longPrimitive = 3L
-        entity.stringValue = "STring key"
+        entity.stringValue = "String key"
         entity.dateValue = Date(343535)
         entity.doublePrimitive = 342.23
         entity.doubleValue = 232.2
@@ -168,7 +168,7 @@ class AttributeTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fac
         assertEquals("C", entity2.id, message + "id")
         assertEquals(4L, entity2.longValue, message + "longValue")
         assertEquals(3L, entity2.longPrimitive, message + "longPrimitive")
-        assertEquals("STring key", entity2.stringValue, message + "stringValue")
+        assertEquals("String key", entity2.stringValue, message + "stringValue")
         assertEquals(entity.dateValue, entity2.dateValue, message + "dateValue")
         assertEquals (342.23, entity2.doublePrimitive, message + "doublePrimitive")
         assertEquals(232.2, entity2.doubleValue, message + "doubleValue")

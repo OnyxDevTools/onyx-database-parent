@@ -2,6 +2,7 @@ package com.onyx.network.auth.impl
 
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.NetworkBufferPool
+import com.onyx.exception.InitializationException
 import com.onyx.network.connection.Connection
 import com.onyx.network.transport.data.RequestToken
 import com.onyx.network.transport.engine.impl.UnsecuredPacketTransportEngine
@@ -21,6 +22,7 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus
 import javax.net.ssl.SSLException
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.channels.ClosedChannelException
 import java.nio.channels.SocketChannel
 
 /**
@@ -35,7 +37,7 @@ import java.nio.channels.SocketChannel
  *
  * It has been in order to remove the dependency on 3rd party libraries and improve performance.
  */
-abstract class AbstractNetworkPeer : AbstractSSLPeer() {
+abstract class NetworkPeer : AbstractSSLPeer() {
 
     // Whether or not the i/o server is active
     @Volatile
@@ -193,8 +195,16 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
 
         try {
             if (connection.packetTransportEngine is UnsecuredPacketTransportEngine) {
-                while (packetBuffer!!.hasRemaining())
-                    socketChannel.write(packetBuffer)
+                while (packetBuffer!!.hasRemaining()) {
+                    try {
+                        val bytesWritten = socketChannel.write(packetBuffer)
+                        if (bytesWritten < 0)
+                            closeConnection(socketChannel, connection)
+                    } catch (e:ClosedChannelException) {
+                        closeConnection(socketChannel, connection)
+                        throw InitializationException(InitializationException.CONNECTION_EXCEPTION)
+                    }
+                }
             } else {
                 // My Net Data is guaranteed to only have 16k of data, so you should never get a UNDERFLOW or OVERFLOW
                 connection.writeNetworkData.clear()
@@ -208,10 +218,15 @@ abstract class AbstractNetworkPeer : AbstractSSLPeer() {
                     SSLEngineResult.Status.OK -> {
                         // Everything was ok.  We have a valid packet so, write it to the socket channel
                         connection.writeNetworkData.flip()
-                        while (connection.writeNetworkData.hasRemaining()) {
-                            val bytesWritten = socketChannel.write(connection.writeNetworkData)
-                            if(bytesWritten < 0)
-                                closeConnection(socketChannel, connection)
+                        try {
+                            while (connection.writeNetworkData.hasRemaining()) {
+                                val bytesWritten = socketChannel.write(connection.writeNetworkData)
+                                if(bytesWritten < 0)
+                                    closeConnection(socketChannel, connection)
+                            }
+                        } catch (e:ClosedChannelException) {
+                            closeConnection(socketChannel, connection)
+                            throw InitializationException(InitializationException.CONNECTION_EXCEPTION)
                         }
                     }
                     SSLEngineResult.Status.CLOSED -> {

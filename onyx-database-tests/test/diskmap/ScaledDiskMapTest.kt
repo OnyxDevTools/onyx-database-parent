@@ -9,6 +9,9 @@ import org.junit.runners.MethodSorters
 import java.util.HashMap
 import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 /**
  * Created by Tim Osborn on 1/6/17.
@@ -32,17 +35,13 @@ class ScaledDiskMapTest {
 
         val i = AtomicInteger(0)
         keyValues.forEach({ o, o2 ->
-            val inte = skipList[o]
             i.addAndGet(1)
-            if (inte == null)
-                assert(skipList[o] == o2)
+            assertEquals(o2, skipList[o])
         })
-
     }
 
     @Test
     fun testDelete() {
-
 
         val builder = DefaultDiskMapFactory(TEST_DATABASE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("second", 10)
@@ -59,12 +58,12 @@ class ScaledDiskMapTest {
         val newKeyValues = HashMap<Int, Int>()
         val deletedKeyValues = HashMap<Int, Int>()
 
-        val `val` = AtomicInteger(0)
+        val value = AtomicInteger(0)
         keyValues.forEach({ o, o2 ->
 
-            assert(skipList[o] == o2)
+            assertEquals(skipList[o], o2)
 
-            if (`val`.addAndGet(1) % 1000 == 0) {
+            if (value.addAndGet(1) % 1000 == 0) {
                 skipList.remove(o)
                 deletedKeyValues.put(o, o2)
             } else {
@@ -72,10 +71,8 @@ class ScaledDiskMapTest {
             }
         })
 
-        newKeyValues.forEach({ o, o2 -> assert(skipList[o] == o2) })
-
-        deletedKeyValues.forEach({ o, o2 -> assert(skipList[o] == null) })
-
+        newKeyValues.forEach({ o, o2 -> assertEquals(skipList[o], o2) })
+        deletedKeyValues.forEach({ o, _ -> assertNull(skipList[o]) })
     }
 
     @Test
@@ -90,10 +87,9 @@ class ScaledDiskMapTest {
 
             skipList.put(randomNum, randomValue)
             keyValues.put(randomNum, randomValue)
-
         }
 
-        keyValues.forEach({ o, o2 -> skipList.put(o as Int, o2 as Int) })
+        keyValues.forEach({ o, o2 -> skipList.put(o, o2) })
     }
 
     @Test
@@ -108,29 +104,24 @@ class ScaledDiskMapTest {
 
             skipList.put(randomNum, randomValue)
             keyValues.put(randomNum, randomValue)
-
         }
 
-        val `val` = AtomicInteger(0)
+        val value = AtomicInteger(0)
         keyValues.forEach({ o, o2 ->
-
-            assert(skipList[o] == o2)
-
-            if (`val`.addAndGet(1) % 1000 == 0) {
+            assertEquals(o2, skipList[o])
+            if (value.addAndGet(1) % 1000 == 0) {
                 skipList.remove(o)
             }
         })
 
-
         val numberOfValues = AtomicInteger(0)
         skipList.forEach { integer, integer2 ->
-            assert(integer != null)
-            assert(integer2 != null)
+            assertNotNull(integer)
+            assertNotNull(integer2)
             numberOfValues.addAndGet(1)
         }
 
-
-        assert(numberOfValues.get() == skipList.size)
+        assertEquals(skipList.size, numberOfValues.get())
     }
 
     @Test
@@ -147,27 +138,25 @@ class ScaledDiskMapTest {
             keyValues.put(randomNum, randomValue)
         }
 
-        val `val` = AtomicInteger(0)
+        val value = AtomicInteger(0)
         keyValues.forEach({ o, o2 ->
 
-            assert(skipList[o] == o2)
+            assertEquals(skipList[o], o2)
 
-            if (`val`.addAndGet(1) % 1000 == 0) {
+            if (value.addAndGet(1) % 1000 == 0) {
                 skipList.remove(o)
             }
         })
-
 
         val numberOfValues = AtomicInteger(0)
 
         val iterator = skipList.keys.iterator()
         while (iterator.hasNext()) {
-            assert(iterator.next() is Int)
+            assertNotNull(iterator.next())
             numberOfValues.addAndGet(1)
         }
 
-
-        assert(numberOfValues.get() == skipList.size)
+        assertEquals(skipList.size, numberOfValues.get())
     }
 
     @Test
@@ -182,34 +171,30 @@ class ScaledDiskMapTest {
 
             skipList.put(randomNum, randomValue)
             keyValues.put(randomNum, randomValue)
-
         }
 
-        val `val` = AtomicInteger(0)
+        val value = AtomicInteger(0)
         keyValues.forEach({ o, o2 ->
 
-            assert(skipList[o] == o2)
+            assertEquals(o2, skipList[o])
 
-            if (`val`.addAndGet(1) % 1000 == 0) {
+            if (value.addAndGet(1) % 1000 == 0) {
                 skipList.remove(o)
             }
         })
-
 
         val numberOfValues = AtomicInteger(0)
 
         val iterator = skipList.values.iterator()
         while (iterator.hasNext()) {
-            assert(iterator.next() is Int)
+            assertNotNull(iterator.next())
             numberOfValues.addAndGet(1)
         }
 
-
-        assert(numberOfValues.get() == skipList.size)
+        assertEquals(skipList.size, numberOfValues.get())
     }
 
     companion object {
-
         val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/load.db"
     }
 }

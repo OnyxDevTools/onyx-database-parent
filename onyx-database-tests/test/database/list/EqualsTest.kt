@@ -20,10 +20,10 @@ class EqualsTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTes
 
     @Test
     fun testStringEquals() {
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, "stringValue" eq "Some test strin1")
-        assertEquals(2, results.size, "Expected 2 entities with 'stringValue' equal to 'Some test strin1'")
-        assertEquals(results[0].stringValue, "Some test strin1", "stringValue was incorrect")
-        assertEquals(results[1].stringValue, "Some test strin1", "stringValue was incorrect")
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, "stringValue" eq "Some test string1")
+        assertEquals(2, results.size, "Expected 2 entities with 'stringValue' equal to 'Some test string1'")
+        assertEquals(results[0].stringValue, "Some test string1", "stringValue was incorrect")
+        assertEquals(results[1].stringValue, "Some test string1", "stringValue was incorrect")
     }
 
     @Test

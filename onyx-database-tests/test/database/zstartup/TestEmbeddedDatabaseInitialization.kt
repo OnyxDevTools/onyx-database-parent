@@ -1,4 +1,4 @@
-package database
+package database.zstartup
 
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.factory.PersistenceManagerFactory
@@ -62,16 +62,13 @@ class TestEmbeddedDatabaseInitialization {
         val INVALID_DATABASE_LOCATION = "/Users/some_user_that_does_not_exist/database.onx"
         val TMP_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/embedded_init_test.onx"
 
+        @Suppress("MemberVisibilityCanPrivate")
         @BeforeClass
         @JvmStatic
-        fun deleteDatabase() {
-            DatabaseBaseTest.deleteDatabase(TMP_DATABASE_LOCATION)
-        }
+        fun deleteDatabase() = DatabaseBaseTest.deleteDatabase(TMP_DATABASE_LOCATION)
 
         @AfterClass
         @JvmStatic
-        fun after() {
-            deleteDatabase()
-        }
+        fun after() = deleteDatabase()
     }
 }

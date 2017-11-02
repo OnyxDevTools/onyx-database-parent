@@ -22,6 +22,7 @@ class AddressNoPartition : ManagedEntity() {
     @Attribute(nullable = false)
     var houseNr: Int = 0
 
+    @Suppress("UNUSED")
     @Relationship(type = RelationshipType.ONE_TO_MANY, inverseClass = PersonNoPartition::class, inverse = "address", cascadePolicy = CascadePolicy.ALL, fetchPolicy = FetchPolicy.LAZY)
     var occupants: MutableList<PersonNoPartition>? = null
 }

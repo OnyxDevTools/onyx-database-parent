@@ -1,9 +1,8 @@
-package database
+package database.zstartup
 
 import com.onyx.interactors.transaction.data.SaveTransaction
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
-import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
@@ -16,14 +15,14 @@ import org.junit.runners.MethodSorters
 import java.io.File
 import java.util.Date
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
  * Created by Tim Osborn on 3/25/16.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-class TestDatabaseRecovery : DatabaseBaseTest(EmbeddedPersistenceManager::class) {
+class TestDatabaseRecovery : DatabaseBaseTest(EmbeddedPersistenceManagerFactory::class) {
 
     @Before
     override fun initialize() {
@@ -48,8 +47,8 @@ class TestDatabaseRecovery : DatabaseBaseTest(EmbeddedPersistenceManager::class)
 
         newContext.transactionInteractor.recoverDatabase(DATABASE_LOCATION_BASE + File.separator + "wal") { _ -> true }
 
-        assertNotNull(newManager.findById<IManagedEntity>(AllAttributeEntity::class.java, "ASDFASDF100020"))
-        assertNotNull(newManager.findById<IManagedEntity>(AllAttributeEntity::class.java, "ASDFASDF100"))
+        assertNull(newManager.findById(AllAttributeEntity::class.java, "_ASDF_ASDF100020"))
+        assertNull(newManager.findById(AllAttributeEntity::class.java, "_ASDF_ASDF100"))
 
         val deleteQuery = Query(AllAttributeEntity::class.java, QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 5000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 4000))
         var results: List<*> = newManager.executeQuery<Any>(deleteQuery)
@@ -109,28 +108,28 @@ class TestDatabaseRecovery : DatabaseBaseTest(EmbeddedPersistenceManager::class)
         for (i in 0..99999) {
             allAttributeEntity = AllAttributeEntity()
             allAttributeEntity.doubleValue = 23.0
-            allAttributeEntity.id = "ASDFASDF" + i
+            allAttributeEntity.id = "_ASDF_ASDF" + i
             allAttributeEntity.dateValue = Date()
             allAttributeEntity.intValue = i
             manager.saveEntity<IManagedEntity>(allAttributeEntity)
         }
 
         allAttributeEntity = AllAttributeEntity()
-        allAttributeEntity.id = "ASDFASDF100"
+        allAttributeEntity.id = "_ASDF_ASDF100"
 
         manager.deleteEntity(allAttributeEntity)
 
         for (i in 100000..100999) {
             allAttributeEntity = AllAttributeEntity()
             allAttributeEntity.doubleValue = 23.0
-            allAttributeEntity.id = "ASDFASDF" + i
+            allAttributeEntity.id = "_ASDF_ASDF" + i
             allAttributeEntity.dateValue = Date()
             allAttributeEntity.intValue = i
             manager.saveEntity<IManagedEntity>(allAttributeEntity)
         }
 
         allAttributeEntity = AllAttributeEntity()
-        allAttributeEntity.id = "ASDFASDF100020"
+        allAttributeEntity.id = "_ASDF_ASDF100020"
 
         manager.deleteEntity(allAttributeEntity)
 

@@ -86,7 +86,7 @@ open class DefaultSchemaContext : SchemaContext {
     // Indicates whether the database has been stopped
     @Volatile override var killSwitch = false
 
-    private lateinit var transactionStore: TransactionStore
+    private var transactionStore: TransactionStore? = null
 
     // endregion
 
@@ -132,7 +132,8 @@ open class DefaultSchemaContext : SchemaContext {
         set(systemPersistenceManager) {
             field = systemPersistenceManager!!
             serializedPersistenceManager = field!!
-            this.transactionInteractor = DefaultTransactionInteractor(transactionStore, field!!)
+            if(transactionStore != null)
+                this.transactionInteractor = DefaultTransactionInteractor(transactionStore!!, field!!)
         }
 
     // endregion
@@ -179,7 +180,7 @@ open class DefaultSchemaContext : SchemaContext {
         }
 
         // Close transaction file
-        catchAll { transactionStore.close() }
+        catchAll { transactionStore?.close() }
         dataFiles.clear() // Clear all data files
         descriptors.clear() // Clear all descriptors
         recordInteractors.clear() // Clear all Record Controllers

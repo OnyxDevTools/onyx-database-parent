@@ -1,9 +1,7 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.lang.concurrent.ClosureLock
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
-import com.onyx.lang.concurrent.impl.EmptyClosureLock
 import com.onyx.lang.concurrent.impl.EmptyClosureReadWriteLock
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.diskmap.data.Header
@@ -29,8 +27,6 @@ import java.util.HashSet
  * @since 1.2.0
  */
 open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Boolean = false) : AbstractIterableSkipList<K, V>(fileStore, header, detached) {
-
-    override val readWriteLock: ClosureLock = EmptyClosureLock()
 
     override val size: Int
         get() = longSize().toInt()

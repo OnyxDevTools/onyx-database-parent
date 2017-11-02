@@ -96,17 +96,15 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         return returnValue
     }
 
-    private fun searchForMatchingCriteriaRecursively(queryCriteria: QueryCriteria):QueryCriteria? {
-        val index = queryCriteria.subCriteria.indexOfFirst { it == criteria }
-        return if(index > -1) {
-            queryCriteria.subCriteria[index] = QueryCriteria()
-            queryCriteria.subCriteria[index].copy(criteria)
-            queryCriteria.subCriteria[index]
-        } else {
-            queryCriteria.subCriteria.firstOrNull { searchForMatchingCriteriaRecursively(it) != null }
-        }
-    }
-
+    /**
+     * The purpose of this method is to copy a query so that the relationship scanner can treat it as a property
+     * scanner without impacting the original query reference.  The original query reference must stay in tact
+     * for caching purposes.
+     *
+     * @since 2.0.0 Fixed a bug related to subsequent and concurrent query matching logic
+     *
+     * @return Pair query and its applied criteria for scanner.  Both must be cloned
+     */
     private fun copyQuery():Pair<Query, QueryCriteria> {
         val queryCopy = Query()
         queryCopy.copy(query)
@@ -118,6 +116,22 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
             queryCopy.criteria = QueryCriteria()
             queryCopy.criteria!!.copy(criteria)
             queryCopy.to(queryCopy.criteria!!)
+        }
+    }
+
+    /**
+     * Recursively search through all criteria to find and clone the criteria that applies to this scanner
+     *
+     * @since 2.0.0
+     */
+    private fun searchForMatchingCriteriaRecursively(queryCriteria: QueryCriteria):QueryCriteria? {
+        val index = queryCriteria.subCriteria.indexOfFirst { it == criteria }
+        return if(index > -1) {
+            queryCriteria.subCriteria[index] = QueryCriteria()
+            queryCriteria.subCriteria[index].copy(criteria)
+            queryCriteria.subCriteria[index]
+        } else {
+            queryCriteria.subCriteria.firstOrNull { searchForMatchingCriteriaRecursively(it) != null }
         }
     }
 

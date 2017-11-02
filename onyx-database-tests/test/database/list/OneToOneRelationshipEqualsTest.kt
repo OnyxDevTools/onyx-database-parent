@@ -24,7 +24,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
     fun seedData() {
         var entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE"
-        entity.stringValue = "Some test strin"
+        entity.stringValue = "Some test string"
         entity.dateValue = Date(1000)
         entity.doublePrimitive = 3.3
         entity.doubleValue = 1.1
@@ -37,7 +37,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE1"
-        entity.stringValue = "Some test strin1"
+        entity.stringValue = "Some test string1"
         entity.dateValue = Date(1001)
         entity.doublePrimitive = 3.31
         entity.doubleValue = 1.11
@@ -50,7 +50,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE2"
-        entity.stringValue = "Some test strin1"
+        entity.stringValue = "Some test string1"
         entity.dateValue = Date(1001)
         entity.doublePrimitive = 3.31
         entity.doubleValue = 1.11
@@ -63,7 +63,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE3"
-        entity.stringValue = "Some test strin2"
+        entity.stringValue = "Some test string2"
         entity.dateValue = Date(1002)
         entity.doublePrimitive = 3.32
         entity.doubleValue = 1.12
@@ -76,7 +76,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity = OneToOneFetchEntity()
         entity.id = "FIRST ONE3"
-        entity.stringValue = "Some test strin3"
+        entity.stringValue = "Some test string3"
         entity.dateValue = Date(1022)
         entity.doublePrimitive = 3.35
         entity.doubleValue = 1.126
@@ -100,7 +100,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         var entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE"
-        entity2.stringValue = "Some test strin"
+        entity2.stringValue = "Some test string"
         entity2.dateValue = Date(1000)
         entity2.doublePrimitive = 3.3
         entity2.doubleValue = 1.1
@@ -117,7 +117,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE1"
-        entity2.stringValue = "Some test strin1"
+        entity2.stringValue = "Some test string1"
         entity2.dateValue = Date(1001)
         entity2.doublePrimitive = 3.31
         entity2.doubleValue = 1.11
@@ -134,7 +134,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE2"
-        entity2.stringValue = "Some test strin1"
+        entity2.stringValue = "Some test string1"
         entity2.dateValue = Date(1001)
         entity2.doublePrimitive = 3.31
         entity2.doubleValue = 1.11
@@ -147,7 +147,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE3"
-        entity2.stringValue = "Some test strin2"
+        entity2.stringValue = "Some test string2"
         entity2.dateValue = Date(1002)
         entity2.doublePrimitive = 3.32
         entity2.doubleValue = 1.12
@@ -160,7 +160,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
         entity2 = OneToOneChildFetchEntity()
         entity2.id = "FIRST ONE3"
-        entity2.stringValue = "Some test strin3"
+        entity2.stringValue = "Some test string3"
         entity2.dateValue = Date(1022)
         entity2.doublePrimitive = 3.35
         entity2.doubleValue = 1.126
@@ -192,7 +192,7 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
 
     @Test
     fun testOneToOneHasRelationship() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string3")
                 .and("child.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
         val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
         assertEquals(1, results.size, "Expecting results")
@@ -201,14 +201,14 @@ class OneToOneRelationshipEqualsTest(override var factoryClass: KClass<*>) : Dat
     @Test
     fun testOneToOneNoMeetCriteriaRelationship() {
 
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some te1st strin3")
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some te1st string3")
                 .and("child.id", QueryCriteriaOperator.EQUAL, "FIRST ONE3")
         val results = manager.list<OneToOneFetchEntity>(OneToOneFetchEntity::class.java, criteria)
         assertEquals(0, results.size, "Expecting no results")
     }
 
     @Test
-    fun ftestOneToManyRemoveHasMultiple() {
+    fun fTestOneToManyRemoveHasMultiple() {
         val parent = OneToManyParent()
         parent.identifier = "ZZ"
         parent.correlation = 30

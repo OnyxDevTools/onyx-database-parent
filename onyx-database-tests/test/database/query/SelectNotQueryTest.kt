@@ -20,7 +20,7 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
      */
     @Test
     fun testNotEqualsOperator() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "Some test strin1")
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.NOT_EQUAL, "Some test string1")
         val query = Query(AllAttributeForFetch::class.java, criteria)
         val results = manager.executeQuery<IManagedEntity>(query)
 
@@ -32,7 +32,7 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
      */
     @Test
     fun testNotEqualsInverseCriteria() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1").not()
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string1").not()
         val query = Query(AllAttributeForFetch::class.java, criteria)
         val results = manager.executeQuery<Any>(query)
 
@@ -101,7 +101,7 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
 
     @Test
     fun testNotLikeOperator() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.NOT_LIKE, "some test strin1")
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.NOT_LIKE, "some test string1")
         val query = Query(AllAttributeForFetch::class.java, criteria)
         val results = manager.executeQuery<Any>(query)
 
@@ -110,7 +110,7 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
 
     @Test
     fun testNotLikeOperatorInverseCriteria() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.LIKE, "some test strin1").not()
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.LIKE, "some test string1").not()
         val query = Query(AllAttributeForFetch::class.java, criteria)
         val results = manager.executeQuery<Any>(query)
 
@@ -120,14 +120,14 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
 
     @Test
     fun testFullTableScanAndCriteriaWithInverse() {
-        var criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
+        var criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string1")
         var criteria2 = QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some")
         var query = Query(AllAttributeForFetch::class.java, criteria1.and(criteria2))
         var results: List<*> = manager.executeQuery<Any>(query)
 
         assertEquals(2, results.size, "Expected 2 matching criteria")
 
-        criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
+        criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string1")
         criteria2 = QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some")
         query = Query(AllAttributeForFetch::class.java, criteria1.and(criteria2).not())
         results = manager.executeQuery<Any>(query)
@@ -137,14 +137,14 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
 
     @Test
     fun testFullTableScanAndCriteriaWithInverseAndNonMatching() {
-        var criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
+        var criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string1")
         var criteria2 = QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some")
         var query = Query(AllAttributeForFetch::class.java, criteria1.and(criteria2))
         var results: List<*> = manager.executeQuery<Any>(query)
 
         assertEquals(2, results.size, "Expected 2 matching criteria")
 
-        criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
+        criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string1")
         criteria2 = QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some")
         query = Query(AllAttributeForFetch::class.java, criteria1.and(criteria2).not())
         results = manager.executeQuery<Any>(query)
@@ -154,7 +154,7 @@ class SelectNotQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDat
 
     @Test
     fun testFullTableScanWithCompoundQueryInverse() {
-        val criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin1")
+        val criteria1 = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string1")
         val criteria2 = QueryCriteria("stringValue", QueryCriteriaOperator.STARTS_WITH, "Some")
         val orCriteria = QueryCriteria("stringValue", QueryCriteriaOperator.LIKE, "s")
 

@@ -19,7 +19,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
 
         var entity = AllAttributeForFetch()
         entity.id = "FIRST ONE"
-        entity.stringValue = "Some test strin"
+        entity.stringValue = "Some test string"
         entity.dateValue = Date(1000)
         entity.doublePrimitive = 3.3
         entity.doubleValue = 1.1
@@ -48,7 +48,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE1"
-        entity.stringValue = "Some test strin1"
+        entity.stringValue = "Some test string1"
         entity.dateValue = Date(1001)
         entity.doublePrimitive = 3.31
         entity.doubleValue = 1.11
@@ -62,7 +62,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE2"
-        entity.stringValue = "Some test strin1"
+        entity.stringValue = "Some test string1"
         entity.dateValue = Date(1001)
         entity.doublePrimitive = 3.31
         entity.doubleValue = 1.11
@@ -76,7 +76,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE3"
-        entity.stringValue = "Some test strin2"
+        entity.stringValue = "Some test string2"
         entity.dateValue = Date(1002)
         entity.doublePrimitive = 3.32
         entity.doubleValue = 1.12
@@ -95,7 +95,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
         entity.mutableChar = '9'
         entity.charValue = 'O'
         entity.entity = AllAttributeV2Entity()
-        entity.entity!!.id = "ASDAAF"
+        entity.entity!!.id = "ASD_AAF"
         entity.operator = QueryCriteriaOperator.CONTAINS
         manager.saveEntity<IManagedEntity>(entity)
 
@@ -129,7 +129,7 @@ open class PrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : Data
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE3"
-        entity.stringValue = "Some test strin3"
+        entity.stringValue = "Some test string3"
         entity.dateValue = Date(1022)
         entity.doublePrimitive = 3.35
         entity.doubleValue = 1.126

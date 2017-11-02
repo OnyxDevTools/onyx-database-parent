@@ -27,7 +27,7 @@ class MutableEqualsNullTest(override var factoryClass: KClass<*>) : DatabaseBase
 
         var entity = AllAttributeForFetch()
         entity.id = "FIRST ONE"
-        entity.stringValue = "Some test strin"
+        entity.stringValue = "Some test string"
         entity.dateValue = Date(1000)
         entity.doublePrimitive = 3.3
         entity.doubleValue = 1.1
@@ -41,7 +41,7 @@ class MutableEqualsNullTest(override var factoryClass: KClass<*>) : DatabaseBase
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE1"
-        entity.stringValue = "Some test strin1"
+        entity.stringValue = "Some test string1"
         entity.dateValue = Date(1001)
         entity.doublePrimitive = 3.31
         entity.doubleValue = 1.11
@@ -55,7 +55,7 @@ class MutableEqualsNullTest(override var factoryClass: KClass<*>) : DatabaseBase
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE2"
-        entity.stringValue = "Some test strin1"
+        entity.stringValue = "Some test string1"
         entity.dateValue = Date(1001)
         entity.doublePrimitive = 3.31
         entity.doubleValue = 1.11
@@ -69,7 +69,7 @@ class MutableEqualsNullTest(override var factoryClass: KClass<*>) : DatabaseBase
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE3"
-        entity.stringValue = "Some test strin2"
+        entity.stringValue = "Some test string2"
         entity.dateValue = Date(1002)
         entity.doublePrimitive = 3.32
         entity.doubleValue = 1.12
@@ -83,7 +83,7 @@ class MutableEqualsNullTest(override var factoryClass: KClass<*>) : DatabaseBase
 
         entity = AllAttributeForFetch()
         entity.id = "FIRST ONE3"
-        entity.stringValue = "Some test strin3"
+        entity.stringValue = "Some test string3"
         entity.dateValue = Date(1022)
         entity.doublePrimitive = 3.35
         entity.doubleValue = 1.126

@@ -26,9 +26,9 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
      */
     @Test
     fun aTestNoResultsSingleFullTableScanFor100kRecords() {
-        manager.list<IManagedEntity>(PerformanceEntity::class.java, QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAHAHAHABOOGER"))
+        manager.list<IManagedEntity>(PerformanceEntity::class.java, QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAMBURGER"))
         val time = System.currentTimeMillis()
-        manager.list<IManagedEntity>(PerformanceEntity::class.java, QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAHAHAHABOOGER"))
+        manager.list<IManagedEntity>(PerformanceEntity::class.java, QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAMBURGER"))
         val after = System.currentTimeMillis()
 
         val timeToComplete  = after - time

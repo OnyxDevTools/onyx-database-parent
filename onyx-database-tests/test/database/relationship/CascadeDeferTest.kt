@@ -65,7 +65,7 @@ class CascadeDeferTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(
 
     companion object {
         /**
-         * Relationship deferral is un-suppored for web persistence manager
+         * Relationship deferral is un-supported for web persistence manager
          */
         @JvmStatic
         @Parameterized.Parameters

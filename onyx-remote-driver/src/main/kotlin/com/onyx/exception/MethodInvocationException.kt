@@ -37,7 +37,7 @@ class MethodInvocationException : OnyxServerException, BufferStreamable {
     @Throws(BufferingException::class)
     override fun write(buffer: BufferStream) {
         buffer.putObject(cause)
-        buffer.putString(message)
+        buffer.putString(message!!)
         buffer.putString(this.stack)
     }
 

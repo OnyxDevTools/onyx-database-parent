@@ -60,12 +60,12 @@ class SaveStandardIdentifierTest(override var factoryClass: KClass<*>) : Databas
     @Test
     fun cTestSaveStringHashIndex2() {
         val entity = StringIdentifierEntity()
-        entity.identifier = "ASDVF*32234"
+        entity.identifier = "ADVT*32234"
         entity.correlation = 2
         manager.saveEntity<IManagedEntity>(entity)
 
         var entity2 = StringIdentifierEntity()
-        entity2.identifier = "ASDVF*32234"
+        entity2.identifier = "ADVT*32234"
         entity2 = manager.find(entity2)
 
         assertEquals(entity.identifier, entity2.identifier, "String Identifier Entity Not saved")

@@ -1,13 +1,17 @@
+@file:Suppress("LoopToCallChain")
+
 package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
+import database.base.DatabaseBaseTest
 import entities.EntityYo
-import org.junit.Assert
 import org.junit.Test
 
 import java.util.Date
 import java.util.concurrent.Executors
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 /**
  * Created by Tim Osborn on 3/21/15.
@@ -18,8 +22,8 @@ class BasicMapTest : AbstractTest() {
     fun putTest() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Any>>("first")
-
         myMap.put("MY NEW STRING", "Hi1ya1")
+        assertEquals(myMap["MY NEW STRING"], "Hi1ya1", "Failed to put string into map")
         store.close()
     }
 
@@ -27,12 +31,9 @@ class BasicMapTest : AbstractTest() {
     fun getTest() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Any>>("first")
-
         myMap.put("MY NEW STRING", "Hi1ya1")
-
         val value = myMap["MY NEW STRING"] as String
-
-        Assert.assertTrue(value == "Hi1ya1")
+        assertEquals("Hi1ya1", value)
         store.close()
     }
 
@@ -41,29 +42,24 @@ class BasicMapTest : AbstractTest() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any>>("second")
 
-        var time = System.currentTimeMillis()
         for (i in 0..9999) {
             myMap.put(i, "Hiya")
         }
 
-        println("Took " + (System.currentTimeMillis() - time))
-
-        time = System.currentTimeMillis()
         for (i in 5000..9999) {
             myMap.remove(i)
         }
 
         for (i in 0..4999) {
             val value = myMap[i] as String
-            Assert.assertTrue(value == "Hiya")
+            assertEquals("Hiya", value)
         }
 
         for (i in 5000..9999) {
             val value = myMap[i]
-            Assert.assertTrue(value == null)
+            assertNull(value)
         }
 
-        println("Took " + (System.currentTimeMillis() - time))
         store.close()
     }
 
@@ -72,53 +68,39 @@ class BasicMapTest : AbstractTest() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any?>>("second")
 
-        var time = System.currentTimeMillis()
         for (i in 0..9999) {
             myMap.put(i, "Hi1ya1")
         }
 
-        println("Took " + (System.currentTimeMillis() - time))
-
         myMap.remove(0)
 
-        time = System.currentTimeMillis()
         for (i in 1..9999) {
             val value = myMap[i] as String
-            Assert.assertTrue(value == "Hi1ya1")
+            assertEquals("Hi1ya1", value)
         }
 
         val value = myMap[0]
-        Assert.assertTrue(value == null)
+        assertNull(value)
 
-        println("Took " + (System.currentTimeMillis() - time))
         store.close()
     }
 
     @Test
-    fun jumboTest() {
+    fun largeDataSetTest() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any>>("seconds")
 
-        println("Starting Jumbo")
-        var time = System.currentTimeMillis()
         for (i in 0..499999) {
             myMap.put(i, "Hiya")
         }
 
         store.commit()
 
-        println("Took " + (System.currentTimeMillis() - time))
-
-        time = System.currentTimeMillis()
         for (i in 0..499999) {
             val value = myMap[i] as String
-            Assert.assertTrue(value == "Hiya")
+            assertEquals("Hiya", value)
         }
 
-
-        println("Took " + (System.currentTimeMillis() - time))
-
-        time = System.currentTimeMillis()
         val it = myMap.entries.iterator()
         var i = 0
         while (it.hasNext()) {
@@ -126,11 +108,9 @@ class BasicMapTest : AbstractTest() {
             entry.value
             i++
         }
-        println("Took " + (System.currentTimeMillis() - time) + " for this many " + i)
+
+        assertEquals(500000, i)
         store.close()
-
-        println("Done with Jumbo")
-
     }
 
     @Test
@@ -138,21 +118,16 @@ class BasicMapTest : AbstractTest() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any?>>("second")
 
-        var time = System.currentTimeMillis()
         for (i in 0..99999) {
             myMap.put(i, "Hiya")
         }
 
-        println("Took " + (System.currentTimeMillis() - time))
-
-        time = System.currentTimeMillis()
         for (i in 5000..9999) {
             myMap.remove(i)
         }
 
         for (i in 0..4999) {
-            val value = myMap[i] as String
-            Assert.assertTrue(value == "Hiya")
+            assertEquals("Hiya", myMap[i])
         }
 
         for (i in 3000..5999) {
@@ -161,16 +136,14 @@ class BasicMapTest : AbstractTest() {
 
         for (i in 6000..9999) {
             val value = myMap[i]
-            Assert.assertTrue(value == null)
+            assertNull(value)
         }
 
         for (i in 3000..5999) {
-
             val value = myMap[i] as String
-            Assert.assertTrue(value == "Wheee woooooo haaaa" + i)
+            assertEquals("Wheee woooooo haaaa" + i, value)
         }
 
-        println("Took " + (System.currentTimeMillis() - time))
         store.close()
     }
 
@@ -180,56 +153,30 @@ class BasicMapTest : AbstractTest() {
 
         val service = Executors.newFixedThreadPool(3)
 
-        val t = Runnable { testPushObjects(store, 1) }
+        val f1 = DatabaseBaseTest.async(service) { testPushObjects(store, 1) }
+        val f2 = DatabaseBaseTest.async(service) { testPushObjects(store, 2) }
+        val f3 = DatabaseBaseTest.async(service) { testPushObjects(store, 3) }
 
-        val f1 = service.submit(t)
-
-        val t2 = Runnable { testPushObjects(store, 2) }
-
-        val f2 = service.submit(t2)
-
-        val t3 = Runnable { testPushObjects(store, 3) }
-
-        val f3 = service.submit(t3)
-
-        try {
-            f1.get()
-            f2.get()
-            f3.get()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        f1.get()
+        f2.get()
+        f3.get()
 
         store.close()
-
-
     }
 
     @Test
     fun testPushSingleObjects() {
         val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
-
         val service = Executors.newFixedThreadPool(3)
 
-        val t = Runnable { testPushObjects(store, 1) }
-
-        val f1 = service.submit(t)
-
-        try {
-            f1.get()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        val f1 = DatabaseBaseTest.async(service) { testPushObjects(store, 1) }
+        f1.get()
 
         store.close()
-
-
     }
 
-    fun testPushObjects(store: DiskMapFactory, hashMapId: Int) {
+    private fun testPushObjects(store: DiskMapFactory, hashMapId: Int) {
         val myMap = store.getHashMap<MutableMap<String, EntityYo>>("objectos" + hashMapId)
-
-        var time = System.currentTimeMillis()
 
         var entityYo: EntityYo? = null
 
@@ -238,7 +185,7 @@ class BasicMapTest : AbstractTest() {
             entityYo.id = "OOO, this is an id" + i
             entityYo.longValue = 23L
             entityYo.dateValue = Date(1433233222)
-            entityYo.longStringValue = "This is a really long string key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long striring key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string text"
+            entityYo.longStringValue = "This is a really long string key wooo, long string textThis is a really long string key wooo, long string key wooo, long string textThis is a really long string key wooo, long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string textThis is a really long string key wooo, long string text"
             entityYo.otherStringValue = "Normal text but still has some kind of content"
             entityYo.mutableInteger = 23
             entityYo.mutableLong = 42L
@@ -256,33 +203,26 @@ class BasicMapTest : AbstractTest() {
 
         store.commit()
 
-        println("Took " + (System.currentTimeMillis() - time))
+        var another: EntityYo?
 
-        var another: EntityYo? = null
-
-        time = System.currentTimeMillis()
         for (i in 0..99999) {
             another = myMap["OOO, this is an id" + i]
-            Assert.assertTrue(entityYo!!.longValue == another!!.longValue)
-            Assert.assertTrue(entityYo.dateValue == another.dateValue)
-            Assert.assertTrue(entityYo.longStringValue == another.longStringValue)
-            Assert.assertTrue(entityYo.otherStringValue == another.otherStringValue)
-            Assert.assertTrue(entityYo.mutableInteger == another.mutableInteger)
-            Assert.assertTrue(entityYo.mutableLong == another.mutableLong)
-            Assert.assertTrue(entityYo.mutableBoolean == another.mutableBoolean)
-            Assert.assertTrue(entityYo.mutableFloat == another.mutableFloat)
-            Assert.assertTrue(entityYo.mutableDouble == another.mutableDouble)
-            Assert.assertTrue(entityYo.immutableInteger == another.immutableInteger)
-            Assert.assertTrue(entityYo.immutableLong == another.immutableLong)
-            Assert.assertTrue(entityYo.immutableBoolean == another.immutableBoolean)
-            Assert.assertTrue(entityYo.immutableFloat == another.immutableFloat)
-            Assert.assertTrue(entityYo.immutableDouble == another.immutableDouble)
+            assertEquals(entityYo!!.longValue, another!!.longValue)
+            assertEquals(entityYo.dateValue, another.dateValue)
+            assertEquals(entityYo.longStringValue, another.longStringValue)
+            assertEquals(entityYo.otherStringValue, another.otherStringValue)
+            assertEquals(entityYo.mutableInteger, another.mutableInteger)
+            assertEquals(entityYo.mutableLong, another.mutableLong)
+            assertEquals(entityYo.mutableBoolean, another.mutableBoolean)
+            assertEquals(entityYo.mutableFloat, another.mutableFloat)
+            assertEquals(entityYo.mutableDouble, another.mutableDouble)
+            assertEquals(entityYo.immutableInteger, another.immutableInteger)
+            assertEquals(entityYo.immutableLong, another.immutableLong)
+            assertEquals(entityYo.immutableBoolean, another.immutableBoolean)
+            assertEquals(entityYo.immutableFloat, another.immutableFloat)
+            assertEquals(entityYo.immutableDouble, another.immutableDouble)
         }
 
-
-        println("Took " + (System.currentTimeMillis() - time))
-
-        time = System.currentTimeMillis()
         val it = myMap.entries.iterator()
         var i = 0
         while (it.hasNext()) {
@@ -290,10 +230,7 @@ class BasicMapTest : AbstractTest() {
             entry.value
             i++
         }
-        println("Took " + (System.currentTimeMillis() - time) + " for this many " + i)
 
-        println("Done with Jumbo Named")
-
+        assertEquals(100000, i)
     }
-
 }

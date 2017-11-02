@@ -190,8 +190,6 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         assertTrue(addresses.isNotEmpty(), "Query missing results")
         assertTrue(addresses[0]["occupants"] is List<*>)
         assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
-        assertTrue(((addresses[0]["occupants"] as List<*>)[0] as Map<*, *>)["firstName"] == "Cristian")
-        assertTrue(((addresses[0]["occupants"] as List<*>)[1] as Map<*, *>)["firstName"] == "Timbob")
     }
 
     @Test

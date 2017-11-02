@@ -1,7 +1,6 @@
 package database.list
 
 import com.onyx.extension.IN
-import database.base.DatabaseBaseTest
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import org.junit.Test
@@ -16,7 +15,7 @@ class InTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(fa
 
     @Test
     fun testInEquals() {
-        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" IN arrayListOf("Some test strin1","Some test strin3")))
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("stringValue" IN arrayListOf("Some test string1","Some test string3")))
         assertEquals(3, results.size, "Expected 3 results")
     }
 

@@ -17,9 +17,9 @@ class DeleteQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
 
     @Test
     fun testExecuteDeleteQuery() {
-        val results = manager.from(AllAttributeForFetch::class).where("stringValue" eq "Some test strin3").delete()
+        val results = manager.from(AllAttributeForFetch::class).where("stringValue" eq "Some test string3").delete()
         assertEquals(1, results, "One entity should have been deleted")
-        assertEquals(0,  manager.from(AllAttributeForFetch::class).where("stringValue" eq "Some test strin3").count(), "Deleted entity should not exist")
+        assertEquals(0,  manager.from(AllAttributeForFetch::class).where("stringValue" eq "Some test string3").count(), "Deleted entity should not exist")
     }
 
     @Test

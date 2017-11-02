@@ -18,6 +18,7 @@ import entities.InheritedLongAttributeEntity
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(Parameterized::class)
+
 class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
 
     companion object {
@@ -39,7 +40,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -81,7 +82,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -124,7 +125,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             entity.id = i.toLong()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -167,7 +168,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -203,7 +204,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -267,7 +268,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -300,7 +301,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -376,7 +377,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2
@@ -421,7 +422,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             val entity = InheritedLongAttributeEntity()
             entity.longValue = 4L
             entity.longPrimitive = 3L
-            entity.stringValue = "STring key"
+            entity.stringValue = "String key"
             entity.dateValue = Date(1483736263743L)
             entity.doublePrimitive = 342.23
             entity.doubleValue = 232.2

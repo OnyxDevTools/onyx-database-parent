@@ -1,55 +1,47 @@
 package encryption
 
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
-import org.junit.Assert
 import org.junit.Test
 
 import java.io.File
 import java.io.FileOutputStream
-import java.io.IOException
-import java.io.UnsupportedEncodingException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.security.GeneralSecurityException
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 
 /**
  *
- * @author cosbor11
+ * @author Chris Osborn
  */
 class EncryptionTest {
 
     @Test
-    @Throws(GeneralSecurityException::class, UnsupportedEncodingException::class)
     fun shouldEncrypt() {
-        val encryptedText = DefaultEncryptionInteractor.encrypt("adminadmin")
-        Assert.assertTrue(encryptedText != null)
+        val encryptedText = DefaultEncryptionInteractor.encrypt("admin_admin")
+        assertNotNull(encryptedText, "Encrypted text should not be null")
     }
 
     @Test
-    @Throws(GeneralSecurityException::class, IOException::class)
-    fun shouldDycrypt() {
-        val str = "adminadmin"
+    fun shouldDecrypt() {
+        val str = "admin_admin"
         val encryptedText = DefaultEncryptionInteractor.encrypt(str)
         val decryptedText = DefaultEncryptionInteractor.decrypt(encryptedText!!)
-
-        Assert.assertTrue(str == decryptedText)
-
+        assertEquals(str,  decryptedText, "Decrypted text should match original")
     }
 
     @Test
-    @Throws(GeneralSecurityException::class, IOException::class)
     fun shouldFail() {
-        val str = "adminadmin"
-        val str2 = "adminpassword"
+        val str = "admin_admin"
+        val str2 = "admin_password"
         val decryptedText = DefaultEncryptionInteractor.decrypt(DefaultEncryptionInteractor.encrypt(str2)!!)
 
-        Assert.assertFalse(str == decryptedText)
+        assertNotEquals(str, decryptedText, "Decrypted should not match")
     }
 
-
     @Test
-    @Throws(GeneralSecurityException::class, IOException::class)
     fun shouldWriteToFile() {
         val textToSave = "asdfasdf"
 
@@ -67,18 +59,13 @@ class EncryptionTest {
         val savedText = String(Files.readAllBytes(Paths.get(file.absolutePath)))
 
         //make assertions
-        Assert.assertEquals(savedText, DefaultEncryptionInteractor.encrypt(textToSave))
+        assertEquals(savedText, DefaultEncryptionInteractor.encrypt(textToSave), "Encrypted text does not match")
 
         //cleanup file
-        val delete = file.delete()
-        //Now lets read from the file
-
+        file.delete()
     }
 
     companion object {
-
-        protected val FILE_LOCATION = "C:/Sandbox/Onyx/Tests/encryption"
+        private val FILE_LOCATION = "C:/Sandbox/Onyx/Tests/encryption"
     }
-
-
 }

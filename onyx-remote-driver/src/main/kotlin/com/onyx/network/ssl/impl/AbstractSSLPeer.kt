@@ -1,6 +1,6 @@
 package com.onyx.network.ssl.impl
 
-import com.onyx.network.auth.impl.AbstractNetworkPeer
+import com.onyx.network.auth.impl.NetworkPeer
 import com.onyx.network.ssl.SSLPeer
 import javax.net.ssl.KeyManager
 import javax.net.ssl.KeyManagerFactory
@@ -35,7 +35,7 @@ abstract class AbstractSSLPeer : SSLPeer {
     @Throws(Exception::class)
     protected fun createKeyManagers(filepath: String, keystorePassword: String, keyPassword: String): Array<KeyManager> {
         val keyStore = KeyStore.getInstance("JKS")
-        val keyStoreIS = AbstractNetworkPeer::class.java.classLoader.getResourceAsStream(filepath)
+        val keyStoreIS = NetworkPeer::class.java.classLoader.getResourceAsStream(filepath)
         keyStoreIS.use {
             keyStore.load(it, keystorePassword.toCharArray())
         }
@@ -56,7 +56,7 @@ abstract class AbstractSSLPeer : SSLPeer {
     @Throws(Exception::class)
     protected fun createTrustManagers(filepath: String, trustStorePassword: String): Array<TrustManager> {
         val trustStore = KeyStore.getInstance("JKS")
-        val trustStoreIS = AbstractNetworkPeer::class.java.classLoader.getResourceAsStream(filepath)
+        val trustStoreIS = NetworkPeer::class.java.classLoader.getResourceAsStream(filepath)
         trustStoreIS.use {
             trustStore.load(it, trustStorePassword.toCharArray())
         }

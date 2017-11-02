@@ -1,14 +1,16 @@
 package serialization
 
 import com.onyx.buffer.BufferStream
-import com.onyx.exception.BufferingException
-import org.junit.Assert
 import org.junit.Test
 import pojo.*
 
 import java.util.ArrayList
 import java.util.Date
 import java.util.HashMap
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Created by timothy.osborn on 4/14/15.
@@ -24,12 +26,10 @@ class SocketSerializerTest {
         buffer.rewind()
 
         val instance2 = BufferStream.fromBuffer(buffer) as Simple?
-
-        Assert.assertTrue(instance.hiya == instance2!!.hiya)
+        assertEquals(instance.hiya, instance2!!.hiya)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testAllValues() {
         val instance = AllTypes()
         instance.intValue = 654
@@ -56,28 +56,27 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as AllTypes?
 
-        Assert.assertTrue(instance.intValue == instance2!!.intValue)
-        Assert.assertTrue(instance.intValueM == instance2.intValueM)
-        Assert.assertTrue(instance.longValue == instance2.longValue)
-        Assert.assertTrue(instance.longValueM == instance2.longValueM)
-        Assert.assertTrue(instance.booleanValue == instance2.booleanValue)
-        Assert.assertTrue(instance.booleanValueM == instance2.booleanValueM)
-        Assert.assertTrue(instance.shortValueM == instance2.shortValueM)
-        Assert.assertTrue(instance.doubleValue == instance2.doubleValue)
-        Assert.assertTrue(instance.shortValue == instance2.shortValue)
-        Assert.assertTrue(instance.doubleValueM == instance2.doubleValueM)
-        Assert.assertTrue(instance.floatValue == instance2.floatValue)
-        Assert.assertTrue(instance.floatValueM == instance2.floatValueM)
-        Assert.assertTrue(instance.byteValue == instance2.byteValue)
-        Assert.assertTrue(instance.byteValueM == instance2.byteValueM)
-        Assert.assertTrue(instance.dateValue!!.time == instance2.dateValue!!.time)
-        Assert.assertTrue(instance.stringValue == instance2.stringValue)
-        Assert.assertTrue(instance.nullValue === instance2.nullValue)
-        Assert.assertTrue(instance.charValue == instance2.charValue)
+        assertEquals(instance.intValue, instance2!!.intValue)
+        assertEquals(instance.intValueM, instance2.intValueM)
+        assertEquals(instance.longValue, instance2.longValue)
+        assertEquals(instance.longValueM, instance2.longValueM)
+        assertEquals(instance.booleanValue, instance2.booleanValue)
+        assertEquals(instance.booleanValueM, instance2.booleanValueM)
+        assertEquals(instance.shortValueM, instance2.shortValueM)
+        assertEquals(instance.doubleValue, instance2.doubleValue)
+        assertEquals(instance.shortValue, instance2.shortValue)
+        assertEquals(instance.doubleValueM, instance2.doubleValueM)
+        assertEquals(instance.floatValue, instance2.floatValue)
+        assertEquals(instance.floatValueM, instance2.floatValueM)
+        assertEquals(instance.byteValue, instance2.byteValue)
+        assertEquals(instance.byteValueM, instance2.byteValueM)
+        assertEquals(instance.dateValue!!.time, instance2.dateValue!!.time)
+        assertEquals(instance.stringValue, instance2.stringValue)
+        assertEquals(instance.nullValue, instance2.nullValue)
+        assertEquals(instance.charValue, instance2.charValue)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testEnum() {
         val instance = EnumTypeObject()
         instance.intValue = 44
@@ -89,13 +88,12 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as EnumTypeObject?
 
-        Assert.assertTrue(instance.intValue == instance2!!.intValue)
-        Assert.assertTrue(instance.longValue == instance2.longValue)
-        Assert.assertTrue(instance.simpleEnum === instance2.simpleEnum)
+        assertEquals(instance.intValue, instance2!!.intValue)
+        assertEquals(instance.longValue, instance2.longValue)
+        assertEquals(instance.simpleEnum, instance2.simpleEnum)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testTransient() {
         val instance = TransientValue()
         instance.intValue = 44
@@ -107,14 +105,13 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as TransientValue?
 
-        Assert.assertTrue(instance.intValue == instance2!!.intValue)
-        Assert.assertTrue(instance.longValue != instance2.longValue)
-        Assert.assertTrue(instance.zDateValue!!.time == instance2.zDateValue!!.time)
+        assertEquals(instance.intValue, instance2!!.intValue)
+        assertNotEquals(instance.longValue, instance2.longValue)
+        assertEquals(instance.zDateValue!!.time, instance2.zDateValue!!.time)
     }
 
 
     @Test
-    @Throws(BufferingException::class)
     fun testArrayObject() {
         val instance = ArrayObject()
         instance.longArray = arrayOfNulls(3)
@@ -139,23 +136,21 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as ArrayObject?
 
-        Assert.assertTrue(instance2!!.longArray!![0] == 223L)
-        Assert.assertTrue(instance2!!.longArray!![1] == 293L)
-        Assert.assertTrue(instance2!!.longArray!![2] == 323L)
+        assertEquals(223L, instance2!!.longArray!![0])
+        assertEquals(293L, instance2.longArray!![1])
+        assertEquals(323L, instance2.longArray!![2])
 
-        Assert.assertTrue(instance2!!.objectArray!![0] == null)
-        Assert.assertTrue(instance2.objectArray!![1] == null)
-        Assert.assertTrue(instance2.objectArray!![3] is AllTypes)
-        Assert.assertTrue((instance2.objectArray!![3] as AllTypes).intValue == 23)
+        assertNull(instance2.objectArray!![0])
+        assertNull(instance2.objectArray!![1])
+        assertTrue(instance2.objectArray!![3] is AllTypes)
+        assertEquals(23, (instance2.objectArray!![3] as AllTypes).intValue)
 
-        Assert.assertTrue(instance2.simpleArray!![0] == null)
-        Assert.assertTrue(instance2.simpleArray!![1] is Simple)
-        Assert.assertTrue(instance2.simpleArray!![1]!!.hiya == 99)
-
+        assertNull(instance2.simpleArray!![0])
+        assertTrue(instance2.simpleArray!![1] is Simple)
+        assertEquals(99, instance2.simpleArray!![1]!!.hiya)
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testListObject() {
         val instance = ListObject()
         instance.longArray = ArrayList()
@@ -180,20 +175,16 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as ListObject?
 
-        Assert.assertTrue(instance2!!.longArray!![0] === 223L)
-        Assert.assertTrue(instance2!!.longArray!![1] === 293L)
-        Assert.assertTrue(instance2!!.longArray!![2] === 323L)
-
-        Assert.assertTrue(instance2!!.objectArray!![0] is AllTypes)
-        Assert.assertTrue((instance2.objectArray!![0] as AllTypes).intValue == 23)
-
-        Assert.assertTrue(instance2.simpleArray!![0] is Simple)
-        Assert.assertTrue(instance2.simpleArray!![0].hiya == 99)
+        assertEquals(223L, instance2!!.longArray!![0])
+        assertEquals(293L, instance2.longArray!![1])
+        assertEquals(323L, instance2.longArray!![2])
+        assertTrue(instance2.objectArray!![0] is AllTypes)
+        assertEquals(23, (instance2.objectArray!![0] as AllTypes).intValue)
+        assertEquals(99, instance2.simpleArray!![0].hiya)
 
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testMapSerialization() {
         val instance = MapObject()
         instance.simpleMap = HashMap()
@@ -206,7 +197,7 @@ class SocketSerializerTest {
         instance.simpleMap!!["NEW"]!!.hiya = 2324
         instance.simpleMap!!["NEW3"]!!.hiya = 2924
 
-        instance.objectMap = HashMap<Any, Any?>()
+        instance.objectMap = HashMap()
         instance.objectMap!!.put(23, 22)
         instance.objectMap!!.put(12, false)
         instance.objectMap!!.put(Simple(), AllTypes())
@@ -216,20 +207,19 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as MapObject?
 
-        Assert.assertTrue(instance2!!.simpleMap!!.size == 4)
-        Assert.assertTrue(instance2.simpleMap!!["NEW"]!!.hiya == 2324)
-        Assert.assertTrue(instance2.simpleMap!!["NEW3"]!!.hiya == 2924)
-        Assert.assertTrue(instance2.simpleMap!!["NEW2"]!!.hiya == 3)
-        Assert.assertTrue(instance2.simpleMap!!["NEW4"] == null)
+        assertEquals(4, instance2!!.simpleMap!!.size)
+        assertEquals(2324, instance2.simpleMap!!["NEW"]!!.hiya)
+        assertEquals(2924, instance2.simpleMap!!["NEW3"]!!.hiya)
+        assertEquals(3, instance2.simpleMap!!["NEW2"]!!.hiya)
+        assertNull(instance2.simpleMap!!["NEW4"])
 
-        Assert.assertTrue(instance2.objectMap!!.size == 3)
-        Assert.assertTrue(instance2.objectMap!![23] == 22)
-        Assert.assertTrue(instance2.objectMap!![Simple()] == AllTypes())
-        Assert.assertTrue(instance2.objectMap!![12] as Boolean == false)
+        assertEquals(3, instance2.objectMap!!.size)
+        assertEquals(22, instance2.objectMap!![23])
+        assertEquals(AllTypes(), instance2.objectMap!![Simple()])
+        assertEquals(false, instance2.objectMap!![12])
     }
 
     @Test
-    @Throws(BufferingException::class)
     fun testComplexObject() {
         val `object` = ComplexObject()
         `object`.child = ComplexObjectChild()
@@ -244,10 +234,10 @@ class SocketSerializerTest {
 
         val instance2 = BufferStream.fromBuffer(buffer) as ComplexObject?
 
-        Assert.assertTrue(instance2!!.dateValue!!.time == `object`.dateValue!!.time)
-        Assert.assertTrue(instance2.child!!.longValue == `object`.child!!.longValue)
-        Assert.assertTrue(instance2.child!!.parent == instance2)
-        Assert.assertTrue(instance2.mine == instance2)
+        assertEquals(instance2!!.dateValue!!.time, `object`.dateValue!!.time)
+        assertEquals(instance2.child!!.longValue, `object`.child!!.longValue)
+        assertEquals(instance2.child!!.parent, instance2)
+        assertEquals(instance2.mine, instance2)
     }
 
 }

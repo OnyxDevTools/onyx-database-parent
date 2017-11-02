@@ -19,7 +19,7 @@ class UpdateQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
 
     @Test
     fun testExecuteUpdateQuery() {
-        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test strin3")
+        val criteria = QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "Some test string3")
         val query = Query(AllAttributeForFetch::class.java, criteria, AttributeUpdate("stringValue", "B"))
 
         val results = manager.executeUpdate(query)
@@ -29,7 +29,7 @@ class UpdateQueryTest(override var factoryClass: KClass<*>) : PrePopulatedDataba
         val listResults = manager.executeQuery<AllAttributeForFetch>(fetchQuery)
 
         val res = listResults[0]
-        res.stringValue = "Some test strin3"
+        res.stringValue = "Some test string3"
         manager.saveEntity<IManagedEntity>(res)
 
         assertEquals(1, listResults.size, "Expected 1 result")

@@ -6,16 +6,19 @@ package com.onyx.exception
  *
  * Base exception for an entity
  */
+@Suppress("LeakingThis")
 open class OnyxException : Exception {
 
     @Transient internal var rootCause: Throwable? = null
+
+    override var message:String?
 
     /**
      * Constructor with cause
      *
      * @param cause Root cause
      */
-    constructor(cause: Throwable) : super(cause.localizedMessage) {
+    constructor(cause: Throwable) : this(cause.localizedMessage) {
         this.rootCause = cause
     }
 
@@ -25,7 +28,7 @@ open class OnyxException : Exception {
      * @param message Exception message
      */
     @JvmOverloads
-    constructor(message: String? = UNKNOWN_EXCEPTION) : super(message)
+    constructor(message: String? = UNKNOWN_EXCEPTION) : super(message) { this.message = message }
 
     /**
      * Constructor with message and cause
@@ -33,7 +36,7 @@ open class OnyxException : Exception {
      * @param message Exception message
      * @param cause Root cause
      */
-    constructor(message: String? = UNKNOWN_EXCEPTION, cause: Throwable?) : super(message, cause)
+    constructor(message: String? = UNKNOWN_EXCEPTION, cause: Throwable?) : super(message, cause) { this.message = message }
 
     companion object {
         @JvmField val UNKNOWN_EXCEPTION = "Unknown exception occurred"

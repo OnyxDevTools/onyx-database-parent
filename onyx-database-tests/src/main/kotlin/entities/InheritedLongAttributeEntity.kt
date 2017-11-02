@@ -26,9 +26,7 @@ class InheritedLongAttributeEntity : AbstractInheritedAttributes(), IManagedEnti
         return true
     }
 
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
+    override fun hashCode(): Int = id.hashCode()
 
 
 }

@@ -1,8 +1,7 @@
 package diskmap
 
+import database.base.DatabaseBaseTest
 import org.junit.BeforeClass
-
-import java.io.File
 
 /**
  * Created by timothy.osborn on 3/21/15.
@@ -10,16 +9,10 @@ import java.io.File
 open class AbstractTest {
     companion object {
 
-        val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/hiya.db"
+        val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/mapTest.db"
 
         @BeforeClass
         @JvmStatic
-        fun beforeTest() {
-            val testDataBase = File(TEST_DATABASE)
-            if (testDataBase.exists()) {
-                testDataBase.delete()
-            }
-        }
+        fun beforeTest() = DatabaseBaseTest.deleteDatabase(TEST_DATABASE)
     }
-
 }

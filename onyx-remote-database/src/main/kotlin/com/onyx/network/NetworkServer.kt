@@ -2,7 +2,7 @@ package com.onyx.network
 
 import com.onyx.application.OnyxServer
 import com.onyx.buffer.NetworkBufferPool
-import com.onyx.network.auth.impl.AbstractNetworkPeer
+import com.onyx.network.auth.impl.NetworkPeer
 import com.onyx.network.transport.data.Message
 import com.onyx.network.transport.engine.PacketTransportEngine
 import com.onyx.network.transport.engine.impl.SecurePacketTransportEngine
@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 2.0.0 Refactored to be in Kotlin.
  */
-open class NetworkServer : AbstractNetworkPeer(), OnyxServer, PushPublisher {
+open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
     protected var requestHandler: RequestHandler? = null // Handler for responding to requests
