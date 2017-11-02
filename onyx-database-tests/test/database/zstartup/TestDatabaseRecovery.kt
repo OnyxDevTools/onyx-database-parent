@@ -52,7 +52,7 @@ class TestDatabaseRecovery : DatabaseBaseTest(EmbeddedPersistenceManagerFactory:
 
         val deleteQuery = Query(AllAttributeEntity::class.java, QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 5000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 4000))
         var results: List<*> = newManager.executeQuery<Any>(deleteQuery)
-        assertTrue(results.isNotEmpty())
+        assertTrue(results.isEmpty())
 
         val updateQuery = Query(AllAttributeEntity::class.java, QueryCriteria("intValue", QueryCriteriaOperator.LESS_THAN, 90000).and("intValue", QueryCriteriaOperator.GREATER_THAN, 80000)
                 .and("doubleValue", QueryCriteriaOperator.EQUAL, 99.0))
