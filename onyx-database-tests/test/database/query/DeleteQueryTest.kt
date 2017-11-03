@@ -1,8 +1,11 @@
 package database.query
 
 import com.onyx.exception.NoResultsException
-import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.from
+import com.onyx.persistence.query.gte
+import com.onyx.persistence.query.startsWith
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import entities.AllAttributeForFetchChild

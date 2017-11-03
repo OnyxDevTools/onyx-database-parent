@@ -1,6 +1,6 @@
 package database.list
 
-import com.onyx.extension.gt
+import com.onyx.persistence.query.gt
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import org.junit.Test

@@ -64,15 +64,6 @@ interface RecordInteractor {
     fun exists(entity: IManagedEntity): Boolean
 
     /**
-     * Returns true if the records contain a primary key
-     *
-     * @param primaryKey entity primary key
-     * @return whether it exist
-     */
-    @Throws(OnyxException::class)
-    fun existsWithId(primaryKey: Any?): Boolean
-
-    /**
      * Returns the id of the store reference
      *
      * @param primaryKey entity id

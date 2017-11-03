@@ -1,7 +1,10 @@
 package database.list
 
-import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.query.cont
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.neq
+import com.onyx.persistence.query.startsWith
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import org.junit.*

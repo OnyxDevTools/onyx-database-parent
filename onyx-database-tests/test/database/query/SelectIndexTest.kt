@@ -1,10 +1,7 @@
 package database.query
 
-import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.SelectIdentifierTestEntity
 import org.junit.Before

@@ -110,15 +110,6 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
     override fun exists(entity: IManagedEntity): Boolean = records.containsKey(entity.identifier(context))
 
     /**
-     * Returns true if the records contain a primary key
-     *
-     * @param primaryKey Identifier of entity
-     * @return Whether that id is taken
-     */
-    @Throws(OnyxException::class)
-    override fun existsWithId(primaryKey: Any?): Boolean = if(primaryKey == null) false else records.containsKey(primaryKey)
-
-    /**
      * Delete
      *
      * @param entity Entity to delete

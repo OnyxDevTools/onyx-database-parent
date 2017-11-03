@@ -22,6 +22,7 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus
 import javax.net.ssl.SSLException
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.SocketChannel
 
@@ -170,7 +171,7 @@ abstract class NetworkPeer : AbstractSSLPeer() {
      * @since 1.2.0
      */
     protected fun write(socketChannel: SocketChannel, connection: Connection, request: RequestToken) {
-        val buffer = serverSerializer.serialize(request, ByteBuffer.allocate(BufferPool.MEDIUM_BUFFER_SIZE))
+        val buffer = serverSerializer.serialize(request, ByteBuffer.allocate(BufferPool.MEDIUM_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
         val message = buffer.toMessage(request)
 
         message.packets.forEach {

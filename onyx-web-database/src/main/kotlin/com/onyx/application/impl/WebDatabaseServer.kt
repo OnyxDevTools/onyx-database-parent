@@ -157,6 +157,7 @@ open class WebDatabaseServer(databaseLocation: String) : DatabaseServer(database
          */
         @Throws(Exception::class)
         @JvmStatic
+        @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         open fun main(args: Array<String>) {
             val parser = WebServerCommandLineParser(args)
             val instance = WebDatabaseServer(parser.databaseLocation)

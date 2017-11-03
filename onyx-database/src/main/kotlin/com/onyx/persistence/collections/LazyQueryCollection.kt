@@ -114,7 +114,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
         var entity: E? = values[index]
         if (entity == null) {
             entity = try {
-                val reference = identifiers[index]
+            val reference = identifiers[index]
                 persistenceManager!!.getWithReference(entityDescriptor.entityClass, reference)
 
             } catch (e: OnyxException) {

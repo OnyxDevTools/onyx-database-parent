@@ -15,9 +15,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-
-import com.onyx.exception.EntityException;
 import com.onyx.exception.InitializationException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -28,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * An activity representing a list of Recipees. This activity
+ * An activity representing a list of Recipes. This activity
  * has different presentations for handset and tablet-size devices. On
  * handsets, the activity presents a list of items, which when touched,
  * lead to a {@link RecipeDetailActivity} representing
@@ -68,13 +67,18 @@ public class RecipeListActivity extends AppCompatActivity {
         }
 
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         toolbar.setTitle(getTitle());
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show());
+        FloatingActionButton fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+            }
+        });
 
         View recyclerView = findViewById(R.id.recipe_list);
         assert recyclerView != null;
@@ -130,22 +134,22 @@ public class RecipeListActivity extends AppCompatActivity {
         lasagna.setContent("Lasagna");
         lasagna.setDetails("Beg spouse to make, ask spouse every 5 minutes if it is done yet, complain about how hungry you are, and enjoy!  This could be the last lasagna you ever get to eat.");
 
-        List<Recipe> recipees = new ArrayList<>();
-        recipees.add(cupOfNoodle);
-        recipees.add(pbAndJ);
-        recipees.add(meatloaf);
-        recipees.add(spaghetti);
-        recipees.add(frozenBurrito);
-        recipees.add(tacoBell);
-        recipees.add(water);
-        recipees.add(hotDog);
-        recipees.add(lasagna);
+        List<Recipe> recipes = new ArrayList<>();
+        recipes.add(cupOfNoodle);
+        recipes.add(pbAndJ);
+        recipes.add(meatloaf);
+        recipes.add(spaghetti);
+        recipes.add(frozenBurrito);
+        recipes.add(tacoBell);
+        recipes.add(water);
+        recipes.add(hotDog);
+        recipes.add(lasagna);
 
-        cookBook.setRecipes(recipees);
+        cookBook.setRecipes(recipes);
 
         try {
             sPersistenceManager.saveEntity(cookBook);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             Log.e(TAG, "Could not persist cookbook");
         }
     }
@@ -154,7 +158,7 @@ public class RecipeListActivity extends AppCompatActivity {
         CookBook cookBook = null;
         try {
             cookBook = sPersistenceManager.findById(CookBook.class, 1L);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             Log.e(TAG, "Could not query cook books");
         }
 
@@ -182,21 +186,24 @@ public class RecipeListActivity extends AppCompatActivity {
             holder.mIdView.setText(String.valueOf(holder.mItem.getRecipeId()));
             holder.mContentView.setText(holder.mItem.getContent());
 
-            holder.mView.setOnClickListener(v -> {
-                if (mTwoPane) {
-                    Bundle arguments = new Bundle();
-                    arguments.putLong(RecipeDetailFragment.ARG_ITEM_ID, holder.mItem.getRecipeId());
-                    RecipeDetailFragment fragment = new RecipeDetailFragment();
-                    fragment.setArguments(arguments);
-                    getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.recipe_detail_container, fragment)
-                            .commit();
-                } else {
-                    Context context = v.getContext();
-                    Intent intent = new Intent(context, RecipeDetailActivity.class);
-                    intent.putExtra(RecipeDetailFragment.ARG_ITEM_ID, holder.mItem.getRecipeId());
+            holder.mView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (mTwoPane) {
+                        Bundle arguments = new Bundle();
+                        arguments.putLong(RecipeDetailFragment.ARG_ITEM_ID, holder.mItem.getRecipeId());
+                        RecipeDetailFragment fragment = new RecipeDetailFragment();
+                        fragment.setArguments(arguments);
+                        getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.recipe_detail_container, fragment)
+                                .commit();
+                    } else {
+                        Context context = view.getContext();
+                        Intent intent = new Intent(context, RecipeDetailActivity.class);
+                        intent.putExtra(RecipeDetailFragment.ARG_ITEM_ID, holder.mItem.getRecipeId());
 
-                    context.startActivity(intent);
+                        context.startActivity(intent);
+                    }
                 }
             });
         }
@@ -215,8 +222,8 @@ public class RecipeListActivity extends AppCompatActivity {
             ViewHolder(View view) {
                 super(view);
                 mView = view;
-                mIdView = (TextView) view.findViewById(R.id.id);
-                mContentView = (TextView) view.findViewById(R.id.content);
+                mIdView = view.findViewById(R.id.id);
+                mContentView = view.findViewById(R.id.content);
             }
 
             @Override

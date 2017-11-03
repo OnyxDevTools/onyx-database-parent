@@ -1,7 +1,14 @@
 package com.onyxdevtools.entities;
 
 import com.onyx.persistence.ManagedEntity;
-import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.Attribute;
+import com.onyx.persistence.annotations.Entity;
+import com.onyx.persistence.annotations.Identifier;
+import com.onyx.persistence.annotations.Relationship;
+import com.onyx.persistence.annotations.values.CascadePolicy;
+import com.onyx.persistence.annotations.values.FetchPolicy;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 import java.util.List;
 
@@ -10,6 +17,7 @@ import java.util.List;
  *
  * Simple entity for a cookbook.
  */
+@SuppressWarnings("unused")
 @Entity
 public class CookBook extends ManagedEntity {
 
@@ -17,6 +25,7 @@ public class CookBook extends ManagedEntity {
     @Attribute
     private long cookBookId;
 
+    @Attribute
     private String title;
 
     @Relationship(type = RelationshipType.ONE_TO_MANY,
@@ -38,6 +47,7 @@ public class CookBook extends ManagedEntity {
         return title;
     }
 
+    @SuppressWarnings("SameParameterValue")
     public void setTitle(String title) {
         this.title = title;
     }

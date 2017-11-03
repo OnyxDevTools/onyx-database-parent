@@ -1,12 +1,8 @@
 package database.query
 
 import com.onyx.exception.OnyxException
-import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.QueryOrder
+import com.onyx.persistence.query.*
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import org.junit.Test

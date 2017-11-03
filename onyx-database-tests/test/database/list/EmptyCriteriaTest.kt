@@ -1,6 +1,6 @@
 package database.list
 
-import com.onyx.extension.notNull
+import com.onyx.persistence.query.notNull
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import org.junit.FixMethodOrder

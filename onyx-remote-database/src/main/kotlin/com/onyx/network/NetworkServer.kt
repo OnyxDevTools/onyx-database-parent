@@ -195,7 +195,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
                 }
             }
         } catch (e:Exception) {
-            e.printStackTrace()
+            failure(e)
         }
     }
 

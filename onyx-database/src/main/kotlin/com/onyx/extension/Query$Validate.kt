@@ -56,7 +56,7 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
                 if (attribute.type.isPrimitive && attribute.type == it.value!!::class.javaPrimitiveType) {}
                 else {
                     try {
-                        it.value = it.value.castTo(attribute.type)
+                    it.value = it.value.castTo(attribute.type)
                     } catch (e: Exception) {
                         throw AttributeTypeMismatchException(AttributeTypeMismatchException.ATTRIBUTE_TYPE_MISMATCH, attribute.type, it.value?.javaClass, attribute.name)
                     }

@@ -324,7 +324,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
     /**
      * Register a push consumer with a subscriber.
      *
-     * @param subscriber Object to send to the server to register the push subscription.
+     * @param consumer Object to send to the server to register the push subscription.
      * @param responder Local responder object that will handle the inbound push notifications
      *
      * @throws OnyxServerException Cannot communicate with server
@@ -332,11 +332,11 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
      * @since 1.3.0
      */
     @Throws(OnyxServerException::class)
-    override fun register(subscriber: PushSubscriber, responder: PushConsumer) {
-        subscriber.setSubscriberEvent(1.toByte())
+    override fun register(consumer: PushSubscriber, responder: PushConsumer) {
+        consumer.setSubscriberEvent(1.toByte())
 
-        val pushId = send(subscriber) as Long
-        subscriber.pushObjectId = pushId
+        val pushId = send(consumer) as Long
+        consumer.pushObjectId = pushId
         registeredPushConsumers.put(pushId, responder)
 
     }

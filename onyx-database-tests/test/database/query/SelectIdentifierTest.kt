@@ -1,6 +1,6 @@
 package database.query
 
-import com.onyx.extension.from
+import com.onyx.persistence.query.from
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria

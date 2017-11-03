@@ -1,6 +1,6 @@
 package database.list
 
-import com.onyx.extension.eq
+import com.onyx.persistence.query.eq
 import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory
 import com.onyx.persistence.query.QueryCriteriaOperator
 import database.base.PrePopulatedDatabaseTest

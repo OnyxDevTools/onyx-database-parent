@@ -9,7 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyxdevtools.entities.Recipe;
 
 /**
@@ -50,12 +50,12 @@ public class RecipeDetailFragment extends Fragment {
             // to load content from a content provider.
             try {
                 mItem = RecipeListActivity.sPersistenceManager.findById(Recipe.class, getArguments().getLong(ARG_ITEM_ID));
-            } catch (EntityException e) {
+            } catch (OnyxException e) {
                 Log.e(TAG, "Could not retrieve recipe");
             }
 
             Activity activity = this.getActivity();
-            CollapsingToolbarLayout appBarLayout = (CollapsingToolbarLayout) activity.findViewById(R.id.toolbar_layout);
+            CollapsingToolbarLayout appBarLayout = activity.findViewById(R.id.toolbar_layout);
             if (appBarLayout != null) {
                 appBarLayout.setTitle(mItem.getContent());
             }

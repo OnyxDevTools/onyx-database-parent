@@ -77,7 +77,7 @@ class ExpandableByteBuffer {
     /**
      * Flip the underlying buffer
      */
-    fun flip():Buffer = buffer.flip()
+    fun flip(): Buffer = buffer.flip()
 
     companion object {
         val BUFFER_ALLOCATION = BufferPool.MEDIUM_BUFFER_SIZE // Initial Buffer allocation size 6KB

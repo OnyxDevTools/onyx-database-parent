@@ -97,6 +97,7 @@ class WebDatabaseProxyServer(databaseLocation: String) : WebDatabaseServer(datab
          * @throws Exception General Exception
          * @since 1.2.0
          */
+        @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @Throws(Exception::class)
         @JvmStatic
         open fun main(args: Array<String>) {

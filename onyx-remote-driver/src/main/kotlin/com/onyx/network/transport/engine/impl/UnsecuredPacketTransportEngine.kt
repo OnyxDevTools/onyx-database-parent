@@ -114,7 +114,7 @@ class UnsecuredPacketTransportEngine() : AbstractTransportEngine(), PacketTransp
      * @since 1.2.0
      */
     override val applicationSize: Int
-        get() = DEFAULT_BUFFER_SIZE * 1024
+        get() = packetSize
 
     companion object {
         private val DEFAULT_BUFFER_SIZE = 100 // In KB

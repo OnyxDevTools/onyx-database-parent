@@ -141,6 +141,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
          * @throws Exception General Exception
          * @since 1.0.0
          */
+        @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
         @Throws(Exception::class)
         @JvmStatic
         open fun main(args: Array<String>) {

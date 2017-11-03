@@ -1,6 +1,7 @@
 package com.onyx.buffer
 
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.*
 import kotlin.NoSuchElementException
 
@@ -15,7 +16,7 @@ object NetworkBufferPool {
 
     private val bufferPool = LinkedList<ByteBuffer>()
     private var isInitialized = false
-    private var numberOfBuffers = 100
+    private var numberOfBuffers = 20
     var bufferSize = 0
 
     /**
@@ -25,12 +26,16 @@ object NetworkBufferPool {
      * @param numberOfBuffers Number of buffers to be allocated
      */
     @Synchronized
-    fun init(bufferSize:Int, numberOfBuffers:Int = 100) {
+    fun init(bufferSize:Int, numberOfBuffers:Int = 20) {
         if(!isInitialized) {
+            // Limit to only use a max of 50% of total VM memory
+            if((numberOfBuffers * bufferSize) > (Runtime.getRuntime().totalMemory() / 2 / bufferSize)) {
+                this.numberOfBuffers = (Runtime.getRuntime().totalMemory() / 2 / bufferSize).toInt()
+            }
             this.numberOfBuffers = numberOfBuffers
             this.bufferSize = bufferSize
             bufferPool.clear()
-            for (i in 0..numberOfBuffers) bufferPool.add(ByteBuffer.allocateDirect(bufferSize))
+            for (i in 0..numberOfBuffers) bufferPool.add(ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.BIG_ENDIAN))
         }
         isInitialized = true
     }
@@ -42,7 +47,7 @@ object NetworkBufferPool {
      */
     @Synchronized
     fun allocate():ByteBuffer = try { bufferPool.removeFirst() } catch (e:NoSuchElementException) {
-        ByteBuffer.allocateDirect(bufferSize)
+        ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.BIG_ENDIAN)
     }
 
     /**

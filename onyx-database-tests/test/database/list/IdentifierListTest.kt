@@ -1,9 +1,9 @@
 package database.list
 
-import com.onyx.extension.gt
-import com.onyx.extension.gte
-import com.onyx.extension.lt
-import com.onyx.extension.lte
+import com.onyx.persistence.query.gt
+import com.onyx.persistence.query.gte
+import com.onyx.persistence.query.lt
+import com.onyx.persistence.query.lte
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.AllAttributeForFetchSequenceGen

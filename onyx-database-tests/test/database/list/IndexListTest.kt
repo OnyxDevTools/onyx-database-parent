@@ -1,6 +1,6 @@
 package database.list
 
-import com.onyx.extension.*
+import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.AllAttributeForFetchSequenceGen
 import org.junit.Before

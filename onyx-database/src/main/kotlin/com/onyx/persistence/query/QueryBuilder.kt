@@ -1,8 +1,7 @@
-package com.onyx.extension
+package com.onyx.persistence.query
 
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.persistence.query.*
 import kotlin.reflect.KClass
 
 class QueryBuilder(var manager:PersistenceManager, var query: Query) {
@@ -61,7 +60,7 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
     // region Query Building
 
-    fun from(type:KClass<*>):QueryBuilder {
+    fun from(type:KClass<*>): QueryBuilder {
         this.query.entityType = type.javaObjectType
         return this
     }
@@ -71,17 +70,17 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
-    fun limit(limit:Int):QueryBuilder {
+    fun limit(limit:Int): QueryBuilder {
         this.query.maxResults = limit
         return this
     }
 
-    fun first(first:Int):QueryBuilder {
+    fun first(first:Int): QueryBuilder {
         this.query.firstRow = first
         return this
     }
 
-    fun set(vararg update:AttributeUpdate):QueryBuilder {
+    fun set(vararg update:AttributeUpdate): QueryBuilder {
         this.query.updates = update.toList()
         return this
     }
@@ -90,7 +89,7 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
     // region Query Order
 
-    fun <T> orderBy(vararg order:T):QueryBuilder {
+    fun <T> orderBy(vararg order:T): QueryBuilder {
         query.queryOrders = ArrayList()
         order.toList().forEach {
             if(it is QueryOrder)
@@ -107,19 +106,19 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
     // region Listener events
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : IManagedEntity> onItemAdded(listener:((T) -> Unit)):QueryBuilder {
+    fun <T : IManagedEntity> onItemAdded(listener:((T) -> Unit)): QueryBuilder {
         this.onItemAdded = listener as ((Any) -> Unit)?
         return this
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : IManagedEntity> onItemDeleted(listener:((T) -> Unit)):QueryBuilder {
+    fun <T : IManagedEntity> onItemDeleted(listener:((T) -> Unit)): QueryBuilder {
         this.onItemDeleted = listener as ((Any) -> Unit)?
         return this
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : IManagedEntity> onItemUpdated(listener:((T) -> Unit)):QueryBuilder {
+    fun <T : IManagedEntity> onItemUpdated(listener:((T) -> Unit)): QueryBuilder {
         this.onItemUpdated = listener as ((Any) -> Unit)?
         return this
     }
@@ -129,9 +128,9 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
 // region Query Builder Construction Extensions
 
-fun PersistenceManager.from(type:KClass<*>):QueryBuilder = QueryBuilder(this, Query(type.javaObjectType))
+fun PersistenceManager.from(type:KClass<*>): QueryBuilder = QueryBuilder(this, Query(type.javaObjectType))
 
-fun PersistenceManager.select(vararg properties:String):QueryBuilder {
+fun PersistenceManager.select(vararg properties:String): QueryBuilder {
     val query = Query()
     query.selections = properties.toList()
     return QueryBuilder(this, query)

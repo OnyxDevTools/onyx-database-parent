@@ -1,9 +1,9 @@
 package database.list
 
-import com.onyx.extension.IN
-import com.onyx.extension.cont
-import com.onyx.extension.eq
-import com.onyx.extension.startsWith
+import com.onyx.persistence.query.IN
+import com.onyx.persistence.query.cont
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.startsWith
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.OneToManyChildFetchEntity

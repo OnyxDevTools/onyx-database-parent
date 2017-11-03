@@ -1,6 +1,5 @@
 package database.query
 
-import com.onyx.extension.*
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory

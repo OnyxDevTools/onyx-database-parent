@@ -1,6 +1,6 @@
 package database.list
 
-import com.onyx.extension.notIn
+import com.onyx.persistence.query.notIn
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeEntity
 import entities.AllAttributeForFetch

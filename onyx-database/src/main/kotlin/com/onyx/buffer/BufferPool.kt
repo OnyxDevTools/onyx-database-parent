@@ -2,6 +2,7 @@ package com.onyx.buffer
 
 import com.onyx.extension.withBuffer
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.*
 
 /**
@@ -11,9 +12,9 @@ import java.util.*
  */
 object BufferPool {
 
-    private val NUMBER_SMALL_BUFFERS = 200
-    private val NUMBER_MEDIUM_BUFFERS = 100
-    private val NUMBER_LARGE_BUFFERS = 25
+    private val NUMBER_SMALL_BUFFERS = 100
+    private val NUMBER_MEDIUM_BUFFERS = 25
+    private val NUMBER_LARGE_BUFFERS = 10
 
     private val SMALL_BUFFER_SIZE = 512
     val MEDIUM_BUFFER_SIZE = 1024 * 6
@@ -28,11 +29,11 @@ object BufferPool {
      */
     init {
         for (i in 1..NUMBER_SMALL_BUFFERS)
-            SMALL_BUFFER_POOL.add(ByteBuffer.allocateDirect(SMALL_BUFFER_SIZE))
+            SMALL_BUFFER_POOL.add(ByteBuffer.allocateDirect(SMALL_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
         for (i in 1..NUMBER_MEDIUM_BUFFERS)
-            MEDIUM_BUFFER_POOL.add(ByteBuffer.allocateDirect(MEDIUM_BUFFER_SIZE))
+            MEDIUM_BUFFER_POOL.add(ByteBuffer.allocateDirect(MEDIUM_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
         for (i in 1..NUMBER_LARGE_BUFFERS)
-            LARGE_BUFFER_POOL.add(ByteBuffer.allocateDirect(LARGE_BUFFER_SIZE))
+            LARGE_BUFFER_POOL.add(ByteBuffer.allocateDirect(LARGE_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
     }
 
     /**
@@ -61,10 +62,10 @@ object BufferPool {
             count <= SMALL_BUFFER_SIZE && !SMALL_BUFFER_POOL.isEmpty() -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.removeLast() }
             count <= MEDIUM_BUFFER_SIZE && !MEDIUM_BUFFER_POOL.isEmpty() -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.removeLast() }
             count <= LARGE_BUFFER_SIZE && !LARGE_BUFFER_POOL.isEmpty() -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.removeLast() }
-            else -> ByteBuffer.allocate(count)
+            else -> ByteBuffer.allocate(count).order(ByteOrder.BIG_ENDIAN)
         }
     } catch (e:Exception) {
-        ByteBuffer.allocate(count)
+        ByteBuffer.allocate(count).order(ByteOrder.BIG_ENDIAN)
     }
 
     /**

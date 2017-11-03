@@ -76,7 +76,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
                 val dataFile = context.getDataFile(descriptor)
 
                 references.computeIfPresent(indexValue) { _, header ->
-                    val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(header, INDEX_VALUE_MAP_LOAD_FACTOR)
+                    val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(header!!, INDEX_VALUE_MAP_LOAD_FACTOR)
                     indexes.remove(reference)
                     header.firstNode = indexes.reference.firstNode
                     header.position = indexes.reference.position

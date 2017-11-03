@@ -5,6 +5,7 @@ import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
 import java.lang.reflect.Field
+import java.util.*
 
 /**
  * Created by Tim Osborn on 7/30/15.
@@ -109,4 +110,55 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @since 1.2.0
      */
     fun below(index: K, includeFirst: Boolean): Set<Long>
+
+    /**
+     * Added in order to get around requiring Java 8.  This is a workaround
+     * for Android older devices.  Works as intended for Map interface
+     *
+     * @since 2.0.0
+     */
+    fun compute(key: K, remappingFunction: (K,V?) -> V?): V? {
+        Objects.requireNonNull(remappingFunction)
+        val oldValue = get(key)
+
+        val newValue = remappingFunction.invoke(key, oldValue)
+        return if (newValue == null) {
+            // delete mapping
+            if (oldValue != null || containsKey(key)) {
+                // something to remove
+                remove(key)
+                null
+            } else {
+                // nothing to do. Leave things as they were.
+                null
+            }
+        } else {
+            // add or replace old mapping
+            put(key, newValue)
+            newValue
+        }
+    }
+
+    /**
+     * Added in order to get around requiring Java 8.  This is a workaround
+     * for Android older devices.  Works as intended for Map interface
+     *
+     * @since 2.0.0
+     */
+    fun computeIfPresent(key: K, remappingFunction: (K,V?) -> V?): V? {
+        Objects.requireNonNull(remappingFunction)
+        val oldValue: V? = get(key)
+        return if (oldValue != null) {
+            val newValue = remappingFunction.invoke(key, oldValue)
+            if (newValue != null) {
+                put(key, newValue)
+                newValue
+            } else {
+                remove(key)
+                null
+            }
+        } else {
+            null
+        }
+    }
 }

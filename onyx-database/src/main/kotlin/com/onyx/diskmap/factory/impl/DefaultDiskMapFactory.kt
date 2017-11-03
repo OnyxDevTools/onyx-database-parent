@@ -340,6 +340,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
         private val isMemMapSupported: Boolean by lazy {
             val prop = System.getProperty("os.arch")
             return@lazy try {
+                @Suppress("SENSELESS_COMPARISON")
                 prop != null && prop.contains("64") && classForName("sun.nio.ch.DirectBuffer") != null
             } catch (e: ClassNotFoundException) {
                 false

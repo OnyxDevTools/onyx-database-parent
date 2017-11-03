@@ -1,6 +1,6 @@
 package database.base
 
-import com.onyx.extension.from
+import com.onyx.persistence.query.from
 import com.onyx.persistence.IManagedEntity
 import entities.PerformanceEntity
 import entities.PerformanceEntityChild
