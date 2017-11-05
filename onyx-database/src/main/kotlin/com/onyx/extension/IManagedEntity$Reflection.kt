@@ -50,6 +50,18 @@ fun IManagedEntity.partitionValue(context: SchemaContext? = null, descriptor: En
 }
 
 /**
+ * Get the partition field value from the entity.  If the partition field does not exist it will return an empty value
+ *
+ * @param context Schema context the entity belongs to
+ * @since 2.0.0
+ */
+fun IManagedEntity.setPartitionValue(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), value:Any?) {
+    if(descriptor!!.partition != null) {
+        set(context, descriptor, descriptor.partition!!.name, value)
+    }
+}
+
+/**
  * Overloaded operator to use entity[context, property] syntax
  * @since 2.0.0
  */

@@ -339,6 +339,7 @@ class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
         context.checkForKillSwitch()
 
         var entity: IManagedEntity? = clazz.createNewEntity()
+        entity?.setPartitionValue(context = context, value = partitionId)
 
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
