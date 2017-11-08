@@ -13,6 +13,7 @@ import com.onyx.cli.CommandLineParser
 import com.onyx.network.rmi.OnyxRMIServer
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
+import com.onyx.network.ssl.SSLPeer
 import com.onyx.persistence.IManagedEntity
 
 /**
@@ -41,9 +42,16 @@ import com.onyx.persistence.IManagedEntity
  * @author Tim Osborn
  * @since 1.0.0
  */
-open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer {
+open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer, SSLPeer {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
+
+    override var protocol = "TLSv1.2"
+    override var sslStorePassword: String? = null
+    override var sslKeystoreFilePath: String? = null
+    override var sslKeystorePassword: String? = null
+    override var sslTrustStoreFilePath: String? = null
+    override var sslTrustStorePassword: String? = null
 
     // RMI Server.  This is the underlying network io server
     private lateinit var rmiServer: OnyxRMIServer
@@ -74,6 +82,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
 
             // Create the RMI Server
             this.rmiServer = OnyxRMIServer()
+            copySSLPeerTo(this.rmiServer)
             this.rmiServer.port = port
             this.registerServices()
 

@@ -16,6 +16,7 @@ import com.onyx.lang.map.OptimisticLockingMap
 
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.nio.channels.ByteChannel
 import java.nio.channels.SocketChannel
 import java.util.HashMap
 import java.util.concurrent.*
@@ -104,8 +105,6 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
             throw ConnectionFailedException()
         }
 
-        // Create a buffer and set the transport wrapper
-        this.connection = Connection(socketChannel!!)
 
         try {
             socketChannel?.socket()?.connect(InetSocketAddress(host, port), connectTimeout * 1000)
@@ -113,8 +112,13 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
                 delay(100, TimeUnit.MICROSECONDS)
             socketChannel?.configureBlocking(true)
         } catch (e: IOException) {
+            // Create a buffer and set the transport wrapper
+            this.connection = Connection(socketChannel!!)
             throw ConnectionFailedException()
         }
+
+        // Create a buffer and set the transport wrapper
+        this.connection = Connection(if(useSSL()) SSLSocketChannel(socketChannel!!, sslContext, true) else socketChannel!!)
 
         active = true
 
@@ -242,7 +246,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
      * @param message              Message containing packet parts
      * @since 1.2.0
      */
-    override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: RequestToken) {
+    override fun handleMessage(socketChannel: ByteChannel, connection: Connection, message: RequestToken) {
 
         // General unhandled exception that cannot be tied back to a request
         when {

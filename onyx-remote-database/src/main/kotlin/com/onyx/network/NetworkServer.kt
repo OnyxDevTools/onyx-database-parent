@@ -154,7 +154,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
      * @param message              Network message containing packet segments
      * @since 1.2.0
      */
-    override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: RequestToken) {
+    override fun handleMessage(socketChannel: ByteChannel, connection: Connection, message: RequestToken) {
         try {
             message.apply {
                 when (packet) {
@@ -215,7 +215,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
      *
      * @since 1.3.0 Push notifications were introduced
      */
-    private fun handlePushSubscription(message: RequestToken, socketChannel: SocketChannel, connection: Connection) {
+    private fun handlePushSubscription(message: RequestToken, socketChannel: ByteChannel, connection: Connection) {
         val subscriber = message.packet as PushSubscriber
         subscriber.channel = socketChannel
         // Register subscriber
@@ -244,7 +244,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
      * @since 1.3.0
      */
     override fun push(pushSubscriber: PushSubscriber, message: Any) {
-        if (pushSubscriber.channel!!.isOpen && pushSubscriber.channel!!.isConnected) {
+        if (pushSubscriber.channel!!.isOpen) {
             pushSubscriber.packet = message
             async {
                 write(pushSubscriber.connection!!, RequestToken(PUSH_NOTIFICATION, pushSubscriber))
@@ -296,8 +296,14 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
         socketChannel.socket().sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
         socketChannel.socket().setPerformancePreferences(0,2,1)
 
+
         // Perform handshake.  If this is secure SSL, this does something otherwise, it is just pass through
-        socketChannel.register(selector, SelectionKey.OP_READ, Connection(socketChannel))
+        socketChannel.register(selector, SelectionKey.OP_READ, Connection(if(useSSL())
+            SSLSocketChannel(socketChannel, sslContext, false)
+        else
+            socketChannel))
+
+
     }
 
     // endregion

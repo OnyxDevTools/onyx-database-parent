@@ -1,6 +1,6 @@
 package com.onyx.network.connection
 
-import java.nio.channels.SocketChannel
+import java.nio.channels.ByteChannel
 
 /**
  * Created by Tim Osborn on 2/12/17.
@@ -9,6 +9,6 @@ import java.nio.channels.SocketChannel
  * that each connection is assigned to.
  * @since 1.2.0
  */
-class Connection(val socketChannel: SocketChannel) {
+class Connection(val socketChannel: ByteChannel) {
     var isAuthenticated = false
 }

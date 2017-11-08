@@ -1,7 +1,7 @@
 package com.onyx.network.push
 
 import com.onyx.network.connection.Connection
-import java.nio.channels.SocketChannel
+import java.nio.channels.ByteChannel
 
 /**
  * Created by Tim Osborn on 3/27/17.
@@ -22,7 +22,7 @@ interface PushSubscriber {
      *
      * @since 1.3.0
      */
-    var channel: SocketChannel?
+    var channel: ByteChannel?
 
     /**
      * Getter for subscriber id

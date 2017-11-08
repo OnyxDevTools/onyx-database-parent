@@ -11,13 +11,16 @@ import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.delay
 import com.onyx.extension.withBuffer
+import com.onyx.network.ssl.SSLPeer
 
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.ByteChannel
 import java.nio.channels.ClosedChannelException
-import java.nio.channels.SocketChannel
+import java.security.SecureRandom
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
 
 /**
  * Created by Tim Osborn 02/13/2017
@@ -31,7 +34,14 @@ import java.util.concurrent.TimeUnit
  *
  * It has been in order to remove the dependency on 3rd party libraries and improve performance.
  */
-abstract class NetworkPeer {
+abstract class NetworkPeer : SSLPeer {
+
+    override var protocol = "TLSv1.2"
+    override var sslStorePassword: String? = null
+    override var sslKeystoreFilePath: String? = null
+    override var sslKeystorePassword: String? = null
+    override var sslTrustStoreFilePath: String? = null
+    override var sslTrustStorePassword: String? = null
 
     // Whether or not the i/o server is active
     @Volatile
@@ -196,7 +206,7 @@ abstract class NetworkPeer {
      * @param message              Network message containing token information
      * @since 1.2.0
      */
-    abstract protected fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: RequestToken)
+    abstract protected fun handleMessage(socketChannel: ByteChannel, connection: Connection, message: RequestToken)
 
     /**
      * Exception handling.  Both the client and server need to override this so they can have their own custom handling.
@@ -207,6 +217,25 @@ abstract class NetworkPeer {
     abstract protected fun failure(cause: Exception, token: RequestToken? = null)
 
     // endregion
+
+    /**
+     * Identify whether we should use SSL or not.  This is based on the ssl info being populated
+     *
+     * @return If the keystore file path is populated
+     * @since 1.2.0
+     */
+    protected fun useSSL(): Boolean = this.sslKeystoreFilePath != null && this.sslKeystoreFilePath!!.isNotEmpty()
+
+    /**
+     * Lazy getter for ssl context
+     *
+     * @since 2.0.0
+     */
+    protected val sslContext:SSLContext by lazy {
+        val context = SSLContext.getInstance(protocol)
+        context.init(createKeyManagers(sslKeystoreFilePath!!, sslStorePassword!!, sslKeystorePassword!!), createTrustManagers(sslTrustStoreFilePath!!, sslStorePassword!!), SecureRandom())
+        return@lazy context
+    }
 
     companion object {
         val UNEXPECTED_EXCEPTION: Short = java.lang.Short.MAX_VALUE
