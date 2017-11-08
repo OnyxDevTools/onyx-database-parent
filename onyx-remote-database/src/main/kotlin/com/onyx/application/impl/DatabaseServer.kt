@@ -1,7 +1,6 @@
 package com.onyx.application.impl
 
 import com.onyx.application.OnyxServer
-import com.onyx.network.ssl.SSLPeer
 import com.onyx.network.auth.AuthenticationManager
 import com.onyx.entity.SystemUser
 import com.onyx.entity.SystemUserRole
@@ -42,7 +41,7 @@ import com.onyx.persistence.IManagedEntity
  * @author Tim Osborn
  * @since 1.0.0
  */
-open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer, SSLPeer {
+open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
 
@@ -76,7 +75,6 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
             // Create the RMI Server
             this.rmiServer = OnyxRMIServer()
             this.rmiServer.port = port
-            this.copySSLPeerTo(rmiServer)
             this.registerServices()
 
             this.rmiServer.start()

@@ -47,15 +47,11 @@ class RemoteSchemaContext : DefaultSchemaContext, SchemaContext {
         @JvmStatic
         private fun createTempDir(): File {
             val baseDir = File(System.getProperty("java.io.tmpdir"))
-            val baseName = System.currentTimeMillis().toString() + "-"
-            val TEMP_DIR_ATTEMPTS = 10000
-            (0 until TEMP_DIR_ATTEMPTS)
-                    .map { File(baseDir, baseName + it) }
-                    .filter { it.mkdir() }
-                    .forEach { return it }
-            throw IllegalStateException("Failed to create directory within "
-                    + TEMP_DIR_ATTEMPTS + " attempts (tried "
-                    + baseName + "0 to " + baseName + (TEMP_DIR_ATTEMPTS - 1) + ')')
+            val baseName = System.nanoTime().toString() + "-onyx-tmp-remote"
+            val file = File(baseDir, baseName)
+            if(file.mkdir())
+                return file
+            return createTempDir()
         }
     }
 }

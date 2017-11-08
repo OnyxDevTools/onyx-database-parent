@@ -36,6 +36,14 @@ fun runJob(interval:Long, unit:TimeUnit, block: () -> Unit): Job {
 fun <T> async(block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke() }
 
 /**
+ * Run a block in background on the default pool.  The default pool should be implemented as a ForkJoinPool
+ *
+ * @param block Block expression to execute
+ * @since 2.0.0
+ */
+fun <T> async(executor: ExecutorService, block: () -> T): Future<T> = executor.submit<T> { block.invoke() }
+
+/**
  * Sleep thread a fixed amount of time.
  *
  * @param amount of time to sleep

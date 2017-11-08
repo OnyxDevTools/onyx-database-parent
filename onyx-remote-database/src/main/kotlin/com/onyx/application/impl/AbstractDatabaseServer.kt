@@ -1,13 +1,12 @@
 package com.onyx.application.impl
 
-import com.onyx.network.ssl.impl.AbstractSSLPeer
 
 /**
  * Created by Tim Osborn on 2/13/17.
  *
  * This class is to abstract out the basic properties and functions of a server
  */
-abstract class AbstractDatabaseServer(open val databaseLocation: String) : AbstractSSLPeer() {
+abstract class AbstractDatabaseServer(open val databaseLocation: String) {
 
     // Server Port
     var port = 8080

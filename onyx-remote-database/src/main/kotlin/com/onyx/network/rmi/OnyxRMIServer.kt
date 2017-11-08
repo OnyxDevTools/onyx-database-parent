@@ -1,6 +1,5 @@
 package com.onyx.network.rmi
 
-import com.onyx.network.ssl.SSLPeer
 import com.onyx.network.auth.AuthenticationManager
 import com.onyx.network.connection.Connection
 import com.onyx.exception.MethodInvocationException
@@ -28,7 +27,7 @@ import kotlin.collections.HashMap
  *
  * @since 1.2.0
  */
-class OnyxRMIServer : NetworkServer(), SSLPeer {
+class OnyxRMIServer : NetworkServer() {
 
     // Local Cache of the registered objects
     private val registeredObjects = OptimisticLockingMap<String, Any>(HashMap())
@@ -57,8 +56,7 @@ class OnyxRMIServer : NetworkServer(), SSLPeer {
              */
             private fun verifySession(connection: Connection, registeredObject: Any?): Boolean {
                 if (!AuthenticationManager::class.java.isAssignableFrom(registeredObject!!.javaClass) && !connection.isAuthenticated) {
-                    connection.packetTransportEngine.closeOutbound()
-                    connection.packetTransportEngine.closeInbound()
+                    connection.socketChannel.close()
                     return false
                 }
                 return true

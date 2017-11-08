@@ -1,6 +1,5 @@
 package com.onyx.persistence.factory.impl
 
-import com.onyx.network.ssl.SSLPeer
 import com.onyx.network.auth.AuthenticationManager
 import com.onyx.exception.ConnectionFailedException
 import com.onyx.network.rmi.OnyxRMIClient
@@ -15,9 +14,6 @@ import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
 import com.onyx.persistence.manager.impl.RemotePersistenceManager
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
 
 /**
  * Persistence manager factory for an remote Onyx Database
@@ -55,22 +51,11 @@ import com.onyx.persistence.query.QueryCriteriaOperator
  *
  * Tim Osborn, 02/13/2017 - This was augmented to use the new RMI Socket Server.  It has since been optimized
  */
-class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
+class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory {
 
     // region Private Values
 
     private val onyxRMIClient: OnyxRMIClient by lazy { OnyxRMIClient() }
-
-    // endregion
-
-    // region SSLPeer
-
-    override var protocol = "TLSv1.2"
-    override var sslStorePassword: String? = null
-    override var sslKeystoreFilePath: String? = null
-    override var sslKeystorePassword: String? = null
-    override var sslTrustStoreFilePath: String? = null
-    override var sslTrustStorePassword: String? = null
 
     // endregion
 
@@ -112,12 +97,12 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
      */
     @Throws(InitializationException::class)
     private fun connect() {
+
         val locationParts = databaseLocation.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
         val port = locationParts[locationParts.size - 1]
         val host = databaseLocation.replace(":" + port, "")
 
-        copySSLPeerTo(onyxRMIClient)
         onyxRMIClient.setCredentials(this.user, this.password)
 
         val authenticationManager = onyxRMIClient.getRemoteObject(Services.AUTHENTICATION_MANAGER_SERVICE.serviceId, AuthenticationManager::class.java) as AuthenticationManager
@@ -145,8 +130,7 @@ class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation
         connect()
 
         // Verify Connection by getting System Entities
-        val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""))
-        persistenceManager.executeQuery<Any>(query)
+        persistenceManager.findById<SystemEntity>(SystemEntity::class.java, 1)
         schemaContext.start()
     } catch (e: OnyxException) {
         if(e is InitializationException && e.message != InitializationException.INVALID_CREDENTIALS) {

@@ -1,18 +1,11 @@
 package com.onyx.network
 
-import com.onyx.buffer.NetworkBufferPool
 import com.onyx.network.auth.impl.NetworkPeer
 import com.onyx.network.auth.AuthenticationManager
 import com.onyx.network.connection.Connection
 import com.onyx.network.push.PushSubscriber
 import com.onyx.network.push.PushConsumer
 import com.onyx.network.transport.data.RequestToken
-import com.onyx.network.transport.engine.PacketTransportEngine
-import com.onyx.network.transport.engine.impl.SecurePacketTransportEngine
-import com.onyx.network.transport.engine.impl.UnsecuredPacketTransportEngine
-import com.onyx.network.connection.ConnectionFactory
-import com.onyx.network.transport.data.Message
-import com.onyx.network.transport.data.toRequest
 import com.onyx.exception.ConnectionFailedException
 import com.onyx.exception.OnyxServerException
 import com.onyx.exception.RequestTimeoutException
@@ -21,11 +14,9 @@ import com.onyx.exception.InitializationException
 import com.onyx.extension.common.*
 import com.onyx.lang.map.OptimisticLockingMap
 
-import javax.net.ssl.SSLContext
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SocketChannel
-import java.security.SecureRandom
 import java.util.HashMap
 import java.util.concurrent.*
 
@@ -98,17 +89,6 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
     override fun connect(host: String, port: Int) {
         this.port = port
         this.host = host
-        val transportPacketTransportEngine: PacketTransportEngine = if (useSSL()) {
-            val context = SSLContext.getInstance(protocol)
-            context.init(createKeyManagers(sslKeystoreFilePath!!, sslStorePassword!!, sslKeystorePassword!!), createTrustManagers(sslTrustStoreFilePath!!, sslStorePassword!!), SecureRandom())
-            val engine = context.createSSLEngine(host, port)
-            engine.useClientMode = true
-            SecurePacketTransportEngine(engine)
-        } else {
-            UnsecuredPacketTransportEngine()
-        }
-
-        NetworkBufferPool.init(transportPacketTransportEngine.packetSize)
 
         // Try to open the connection
         try {
@@ -116,40 +96,29 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
             socketChannel!!.socket().keepAlive = true
             socketChannel!!.socket().tcpNoDelay = false
             socketChannel!!.socket().reuseAddress = false // Prevented so the server does not re-use the old connection
-            socketChannel!!.socket().sendBufferSize = transportPacketTransportEngine.packetSize
-            socketChannel!!.socket().receiveBufferSize = transportPacketTransportEngine.packetSize
             socketChannel!!.socket().oobInline = false
+            socketChannel!!.socket().receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
+            socketChannel!!.socket().sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
             socketChannel!!.socket().setPerformancePreferences(0,2,1)
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
 
         // Create a buffer and set the transport wrapper
-        this.connection = ConnectionFactory.create(transportPacketTransportEngine)
-
-        if (transportPacketTransportEngine is UnsecuredPacketTransportEngine) {
-            transportPacketTransportEngine.socketChannel = socketChannel
-        }
+        this.connection = Connection(socketChannel!!)
 
         try {
             socketChannel?.socket()?.connect(InetSocketAddress(host, port), connectTimeout * 1000)
             while (!socketChannel!!.finishConnect())
-                delay(10, TimeUnit.MILLISECONDS)
+                delay(100, TimeUnit.MICROSECONDS)
             socketChannel?.configureBlocking(true)
         } catch (e: IOException) {
             throw ConnectionFailedException()
         }
 
-        active = try {
-            // Perform Handshake.  If this is unsecured, it is just pass through
-            transportPacketTransportEngine.beginHandshake()
-            doHandshake(socketChannel!!, connection)
-        } catch (e: IOException) {
-            throw ConnectionFailedException()
-        }
+        active = true
 
         startReadQueue()
-
         try {
             this.authenticationManager?.verify(this.user, this.password)
             this.resumeHeartBeat()
@@ -161,6 +130,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
             this.close()
             throw ConnectionFailedException(ConnectionFailedException.CONNECTION_TIMEOUT)
         }
+
     }
 
     /**
@@ -170,7 +140,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
      */
     override fun close() {
         active = false
-        closeConnection(socketChannel!!, connection!!)
+        closeConnection(connection!!)
         needsToRunHeartbeat = false
         pendingRequests.clear()
         heartBeatJob?.cancel()
@@ -198,9 +168,9 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
      * @since 2.0.0 Refactored as a Job
      */
     override fun startReadQueue() {
-        readJob = runJob(100, TimeUnit.NANOSECONDS) {
+        readJob = runJob(10, TimeUnit.MICROSECONDS) {
             catchAll {
-                read(socketChannel!!, connection!!)
+                read(connection!!)
             }
         }
     }
@@ -236,7 +206,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
         pendingRequests.put(token, future)
 
         return try {
-            write(socketChannel!!, connection!!, token)
+            write(connection!!, token)
             future.get(timeout.toLong(), TimeUnit.SECONDS)
         } catch (e: TimeoutException) {
             pendingRequests.remove(token)
@@ -272,16 +242,15 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
      * @param message              Message containing packet parts
      * @since 1.2.0
      */
-    override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: Message) {
-        val request = message.toRequest(serverSerializer)
+    override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: RequestToken) {
 
         // General unhandled exception that cannot be tied back to a request
         when {
-            request.token == UNEXPECTED_EXCEPTION -> (request.packet as Exception).printStackTrace()
-            request.token == PUSH_NOTIFICATION -> handlePushMessage(request)
+            message.token == UNEXPECTED_EXCEPTION -> (message.packet as Exception).printStackTrace()
+            message.token == PUSH_NOTIFICATION -> handlePushMessage(message)
             else -> {
-                val consumer = pendingRequests.remove(request)
-                consumer?.complete(request.packet)
+                val consumer = pendingRequests.remove(message)
+                consumer?.complete(message.packet)
                 needsToRunHeartbeat = false // Successful response.  No need to run heartbeat
             }
         }
@@ -396,7 +365,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
             try {
 
                 // Heartbeat failed, try to re-connect
-                closeConnection(socketChannel!!, connection!!)
+                closeConnection(connection!!)
                 connect(host, port)
 
                 if (active
@@ -412,7 +381,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
                     pendingRequests.forEach { requestToken, _ ->
                         // Ignore heartbeat packets
                         if (requestToken.packet != null) {
-                            write(socketChannel!!, connection!!, requestToken)
+                            write(connection!!, requestToken)
                         }
                     }
                 }

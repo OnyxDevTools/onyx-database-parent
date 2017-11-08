@@ -132,5 +132,4 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
             else -> { }
         }
     }
-
 }

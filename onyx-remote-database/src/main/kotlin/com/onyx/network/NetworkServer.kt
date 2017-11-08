@@ -1,19 +1,12 @@
 package com.onyx.network
 
 import com.onyx.application.OnyxServer
-import com.onyx.buffer.NetworkBufferPool
 import com.onyx.network.auth.impl.NetworkPeer
-import com.onyx.network.transport.data.Message
-import com.onyx.network.transport.engine.PacketTransportEngine
-import com.onyx.network.transport.engine.impl.SecurePacketTransportEngine
-import com.onyx.network.transport.engine.impl.UnsecuredPacketTransportEngine
-import com.onyx.network.connection.ConnectionFactory
 import com.onyx.exception.MethodInvocationException
 import com.onyx.exception.ServerClosedException
 import com.onyx.network.handlers.RequestHandler
 import com.onyx.network.push.PushSubscriber
 import com.onyx.network.push.PushPublisher
-import com.onyx.network.transport.data.toRequest
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
@@ -24,7 +17,6 @@ import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.network.connection.Connection
 import com.onyx.network.transport.data.RequestToken
 
-import javax.net.ssl.SSLContext
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.*
@@ -55,7 +47,6 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
     protected var requestHandler: RequestHandler? = null // Handler for responding to requests
 
-    private var sslContext: SSLContext? = null // SSL Context if used.  Otherwise this will be null
     private var selector: Selector? = null // Selector for inbound communication
     private var serverSocketChannel: ServerSocketChannel? = null
 
@@ -68,22 +59,12 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
      */
     override fun start() {
 
-        // Create a dummy transport engine in order to see how much the buffer allocation should be
-        val transportPacketTransportEngine: PacketTransportEngine = if (useSSL()) {
-            val engine = sslContext!!.createSSLEngine()
-            engine.useClientMode = false
-            engine.beginHandshake()
-            SecurePacketTransportEngine(engine)
-        } else {
-            UnsecuredPacketTransportEngine()
-        }
-
         selector = SelectorProvider.provider().openSelector()
         serverSocketChannel = ServerSocketChannel.open()
         serverSocketChannel!!.apply {
             socket().reuseAddress = true
-            socket().receiveBufferSize = transportPacketTransportEngine.packetSize
             socket().setPerformancePreferences(0,2,1)
+            socket().receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
             configureBlocking(false)
             bind(InetSocketAddress(port))
             register(selector, SelectionKey.OP_ACCEPT)
@@ -148,15 +129,13 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
                     val key = selectedKeys.next()
                     selectedKeys.remove()
                     when {
-                        !key.isValid || !key.channel().isOpen -> closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
+                        !key.isValid || !key.channel().isOpen -> closeConnection(key.attachment() as Connection)
                         key.isAcceptable -> try {
-                            accept(key)
+                            accept()
                         } catch (any: Exception) {
-                            closeConnection(key.channel() as SocketChannel, key.attachment() as Connection)
+                            closeConnection(key.attachment() as Connection)
                         }
-                        key.isReadable -> {
-                            read(key.channel() as SocketChannel, key.attachment() as Connection)
-                        }
+                        key.isReadable -> { read(key.attachment() as Connection) }
                     }
                 }
             }
@@ -175,12 +154,9 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
      * @param message              Network message containing packet segments
      * @since 1.2.0
      */
-    override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: Message) {
-
+    override fun handleMessage(socketChannel: SocketChannel, connection: Connection, message: RequestToken) {
         try {
-            val request: RequestToken = message.toRequest(serverSerializer)
-
-            request.apply {
+            message.apply {
                 when (packet) {
                     is PushSubscriber -> handlePushSubscription(this, socketChannel, connection)
                     else -> {
@@ -190,7 +166,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
                             MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
                         }
 
-                        write(socketChannel, connection, this)
+                        write(connection, this)
                     }
                 }
             }
@@ -255,7 +231,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
         }
 
         async {
-            write(socketChannel, connection, message)
+            write(connection, message)
         }
     }
 
@@ -271,7 +247,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
         if (pushSubscriber.channel!!.isOpen && pushSubscriber.channel!!.isConnected) {
             pushSubscriber.packet = message
             async {
-                write(pushSubscriber.channel!!, pushSubscriber.connection!!, RequestToken(PUSH_NOTIFICATION, pushSubscriber))
+                write(pushSubscriber.connection!!, RequestToken(PUSH_NOTIFICATION, pushSubscriber))
             }
         } else {
             deRegisterSubscriberIdentity(pushSubscriber) // Clean up non connected subscribers if not connected
@@ -306,41 +282,22 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
     /**
      * Accept an inbound connection
      *
-     * @param key Selection Key
      * @throws Exception Connection was not successful
      * @since 1.2.0
      */
-    @Throws(Exception::class)
-    private fun accept(key: SelectionKey) {
+    private fun accept() {
 
-        val socketChannel = (key.channel() as ServerSocketChannel).accept()
+        val socketChannel = serverSocketChannel!!.accept()
         socketChannel.configureBlocking(false)
 
-        val transportPacketTransportEngine: PacketTransportEngine = if (useSSL()) {
-            val engine = sslContext!!.createSSLEngine()
-            engine.useClientMode = false
-            engine.beginHandshake()
-            SecurePacketTransportEngine(engine)
-        } else {
-            UnsecuredPacketTransportEngine(socketChannel)
-        }
-
-        NetworkBufferPool.init(transportPacketTransportEngine.packetSize)
-        socketChannel.socket().sendBufferSize = transportPacketTransportEngine.packetSize
-        socketChannel.socket().receiveBufferSize = transportPacketTransportEngine.packetSize
         socketChannel.socket().tcpNoDelay = true
         socketChannel.socket().oobInline = false
+        socketChannel.socket().receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
+        socketChannel.socket().sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
         socketChannel.socket().setPerformancePreferences(0,2,1)
 
-        // Send the buffer pool into the connectionProperties so that they may retain its references
-        val connectionProperties = ConnectionFactory.create(transportPacketTransportEngine)
-
         // Perform handshake.  If this is secure SSL, this does something otherwise, it is just pass through
-        if (doHandshake(socketChannel, connectionProperties)) {
-            socketChannel.register(selector, SelectionKey.OP_READ, connectionProperties)
-        } else {
-            closeConnection(socketChannel, connectionProperties)
-        }
+        socketChannel.register(selector, SelectionKey.OP_READ, Connection(socketChannel))
     }
 
     // endregion

@@ -27,11 +27,6 @@ open class CommandLineParser(args: Array<String>) {
         options.addOption("p", OPTION_PASSWORD, true, "Database password")
         options.addOption("l", OPTION_LOCATION, true, "Database filesystem databaseLocation")
         options.addOption("i", OPTION_INSTANCE, true, "Database instance name")
-        options.addOption("k", OPTION_KEYSTORE, true, "Keystore file path.")
-        options.addOption("t", OPTION_TRUST_STORE, true, "Trust Store file path.")
-        options.addOption("sp", OPTION_STORE_PASSWORD, true, "SSL Store Password.")
-        options.addOption("kp", OPTION_KEYSTORE_PASSWORD, true, "Keystore password. ")
-        options.addOption("tp", OPTION_TRUST_STORE_PASSWORD, true, "Trust Store password.")
         options.addOption("h", OPTION_HELP, false, "Help")
 
         return options
@@ -86,16 +81,6 @@ open class CommandLineParser(args: Array<String>) {
             databaseServer.port = Integer.valueOf(commandLineArguments.getOptionValue(OPTION_PORT))
         if (commandLineArguments.hasOption(OPTION_INSTANCE))
             databaseServer.instance = commandLineArguments.getOptionValue(OPTION_INSTANCE)
-        if (commandLineArguments.hasOption(OPTION_KEYSTORE))
-            databaseServer.sslKeystoreFilePath = commandLineArguments.getOptionValue(OPTION_KEYSTORE)
-        if (commandLineArguments.hasOption(OPTION_TRUST_STORE))
-            databaseServer.sslTrustStoreFilePath = commandLineArguments.getOptionValue(OPTION_TRUST_STORE)
-        if (commandLineArguments.hasOption(OPTION_KEYSTORE_PASSWORD))
-            databaseServer.sslKeystorePassword = commandLineArguments.getOptionValue(OPTION_KEYSTORE_PASSWORD)
-        if (commandLineArguments.hasOption(OPTION_STORE_PASSWORD))
-            databaseServer.sslStorePassword = commandLineArguments.getOptionValue(OPTION_STORE_PASSWORD)
-        if (commandLineArguments.hasOption(OPTION_TRUST_STORE_PASSWORD))
-            databaseServer.sslTrustStorePassword = commandLineArguments.getOptionValue(OPTION_TRUST_STORE_PASSWORD)
     }
 
     val databaseLocation: String
@@ -109,11 +94,6 @@ open class CommandLineParser(args: Array<String>) {
         private val OPTION_PASSWORD = "password"
         private val OPTION_LOCATION = "databaseLocation"
         private val OPTION_INSTANCE = "instance"
-        private val OPTION_KEYSTORE = "keystore"
-        private val OPTION_TRUST_STORE = "trust-store"
-        private val OPTION_STORE_PASSWORD = "store-password"
-        private val OPTION_KEYSTORE_PASSWORD = "keystore-password"
-        private val OPTION_TRUST_STORE_PASSWORD = "trust-password"
         private val OPTION_HELP = "help"
     }
 }

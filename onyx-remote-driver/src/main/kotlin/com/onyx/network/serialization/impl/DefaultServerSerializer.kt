@@ -3,7 +3,6 @@ package com.onyx.network.serialization.impl
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.network.serialization.ServerSerializer
-import com.onyx.exception.BufferingException
 
 import java.nio.ByteBuffer
 
@@ -17,19 +16,16 @@ class DefaultServerSerializer : ServerSerializer {
 
     /**
      * Serialize and put the bytes into the input buffer
-     * @param inputBuffer Buffer to put results in
      * @since 1.2.0
      */
-    @Throws(BufferingException::class)
-    override fun serialize(serializable: BufferStreamable, inputBuffer: ByteBuffer): ByteBuffer = BufferStream.toBuffer(serializable)
+    override fun serialize(serializable: BufferStreamable): ByteBuffer = BufferStream.toBuffer(serializable)
 
     /**
      * Deserialize the bytes from the buffer
      * @param buffer Buffer the object lives within
-     * @param streamable Streamable object to read from buffer
      * @return The de-serialized object
      * @since 1.2.0
      */
-    @Throws(BufferingException::class)
-    override fun deserialize(buffer: ByteBuffer, streamable: BufferStreamable): BufferStreamable = BufferStream.fromBuffer(buffer) as BufferStreamable
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : BufferStreamable> deserialize(buffer: ByteBuffer): T = BufferStream.fromBuffer(buffer) as T
 }

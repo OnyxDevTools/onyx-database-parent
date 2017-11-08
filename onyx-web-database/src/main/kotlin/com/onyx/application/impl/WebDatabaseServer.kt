@@ -1,6 +1,7 @@
 package com.onyx.application.impl
 
 import com.onyx.cli.WebServerCommandLineParser
+import com.onyx.network.ssl.SSLPeer
 import com.onyx.server.*
 import io.undertow.Handlers
 import io.undertow.Undertow
@@ -35,7 +36,15 @@ import java.security.SecureRandom
  * to the unit test project along with all its crappy dependencies such as Spring :(.
  *
  */
-open class WebDatabaseServer(databaseLocation: String) : DatabaseServer(databaseLocation) {
+open class WebDatabaseServer(databaseLocation: String) : DatabaseServer(databaseLocation), SSLPeer {
+
+    override var protocol = "TLSv1.2"
+    override var sslStorePassword: String? = null
+    override var sslKeystoreFilePath: String? = null
+    override var sslKeystorePassword: String? = null
+    override var sslTrustStoreFilePath: String? = null
+    override var sslTrustStorePassword: String? = null
+
     // Web Server
     lateinit var server: Undertow
 

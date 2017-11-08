@@ -17,7 +17,7 @@ import com.onyx.interactors.encryption.EncryptionInteractor
  * @author Tim Osborn
  * @since 1.0.0
  */
-interface OnyxServer : SSLPeer {
+interface OnyxServer {
 
     /**
      * Flag to indicate whether the database is running or not

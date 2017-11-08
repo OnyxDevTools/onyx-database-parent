@@ -18,7 +18,6 @@ import java.util.*
  */
 class OnyxRMIClient : NetworkClient() {
 
-
     // Local Cache of Remote Objects
     private val registeredObjects = HashMap<String, Any>()
 
