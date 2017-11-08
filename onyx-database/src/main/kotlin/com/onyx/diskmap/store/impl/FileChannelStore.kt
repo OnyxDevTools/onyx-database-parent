@@ -267,7 +267,7 @@ open class FileChannelStore() : Store {
         val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
         val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
 
-        private fun isSmallDevice() = Runtime.getRuntime().totalMemory() < (1024 * 1024 * 1024) // 1G
+        private fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
     }
 
 }
