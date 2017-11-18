@@ -13,7 +13,7 @@ import java.io.File
  *
  * @see com.onyx.persistence.context.SchemaContext
  */
-class RemoteSchemaContext : DefaultSchemaContext, SchemaContext {
+open class RemoteSchemaContext : DefaultSchemaContext, SchemaContext {
 
     // region Constructors
 

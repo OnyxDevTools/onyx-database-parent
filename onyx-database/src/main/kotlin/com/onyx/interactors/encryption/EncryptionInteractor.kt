@@ -2,6 +2,7 @@ package com.onyx.interactors.encryption
 
 import com.onyx.interactors.encryption.data.Encryption
 
+
 /**
  * Class that is a quick and dirty encryption utility.
  */
@@ -44,7 +45,7 @@ interface EncryptionInteractor {
 }
 
 object DefaultEncryption {
-    var encryption:Encryption? = null
+    var encryption: Encryption? = null
 
     fun encrypt(interactor: EncryptionInteractor):Encryption {
         if(encryption == null) encryption = Encryption.getDefault(interactor.key, interactor.salt, interactor.iv)

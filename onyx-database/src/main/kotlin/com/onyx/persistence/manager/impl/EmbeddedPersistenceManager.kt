@@ -35,7 +35,7 @@ import java.util.*
  * factory.close(); //Close the in memory database
  *
  */
-class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
+open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManager {
 
     override var context: SchemaContext = context
         set(value) {

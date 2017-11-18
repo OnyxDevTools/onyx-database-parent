@@ -27,17 +27,24 @@ import java.util.*
 //noinspection SpellCheckingInspection
 object EntityClassLoader {
 
-    private val LOADED_CLASSES: MutableSet<String> = HashSet()
-    private val WRITTEN_CLASSES: MutableSet<String> = HashSet()
-
-    private val GENERATED_DIRECTORY = "generated"
-    private val GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities"
-    private val GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries"
-
-    private val SOURCE_DIRECTORY = "source"
-    private val XTEND_SOURCE_DIRECTORY = "xtend"
-    private val SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities"
-    private val XTEND_SOURCE_ENTITIES_DIRECTORY = XTEND_SOURCE_DIRECTORY + File.separator + "entities"
+    @Suppress("MemberVisibilityCanPrivate")
+    val LOADED_CLASSES: MutableSet<String> = HashSet()
+    @Suppress("MemberVisibilityCanPrivate")
+    val WRITTEN_CLASSES: MutableSet<String> = HashSet()
+    @Suppress("MemberVisibilityCanPrivate")
+    val GENERATED_DIRECTORY = "generated"
+    @Suppress("MemberVisibilityCanPrivate")
+    val GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities"
+    @Suppress("MemberVisibilityCanPrivate")
+    val GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries"
+    @Suppress("MemberVisibilityCanPrivate")
+    val SOURCE_DIRECTORY = "source"
+    @Suppress("MemberVisibilityCanPrivate")
+    val XTEND_SOURCE_DIRECTORY = "xtend"
+    @Suppress("MemberVisibilityCanPrivate")
+    val SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities"
+    @Suppress("MemberVisibilityCanPrivate")
+    val XTEND_SOURCE_ENTITIES_DIRECTORY = XTEND_SOURCE_DIRECTORY + File.separator + "entities"
 
     /**
      * Write an enum to file
@@ -242,7 +249,7 @@ object EntityClassLoader {
 
         addClassPaths(context)
 
-        File(entitiesSourceDirectory.path).walkTopDown().filter {it.isDirectory && !it.isHidden && it.path.endsWith(".java") }.forEach {
+        File(entitiesSourceDirectory.path).walkTopDown().filter {!it.isHidden && it.path.endsWith(".java") }.forEach {
             var path = it.path.replace(entitiesSourceDirectory.path + File.separator, "")
             path = path.replace("\\.java".toRegex(), "")
             path = path.replace("\\\\".toRegex(), ".")
@@ -258,7 +265,8 @@ object EntityClassLoader {
      *
      * @param schemaContext Context of the database
      */
-    private fun addClassPaths(schemaContext: SchemaContext) {
+    @Suppress("MemberVisibilityCanPrivate")
+    fun addClassPaths(schemaContext: SchemaContext) {
         val systemClassLoader = ClassLoader.getSystemClassLoader() as URLClassLoader
 
         // Add URL to class path
