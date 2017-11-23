@@ -40,7 +40,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
     @Transient private var persistenceManager: PersistenceManager? = null
     @Transient lateinit var entityDescriptor: EntityDescriptor
 
-    private lateinit var identifiers: MutableList<Reference>
+    lateinit var identifiers: MutableList<Reference>
 
     private var hasSelections = false
 

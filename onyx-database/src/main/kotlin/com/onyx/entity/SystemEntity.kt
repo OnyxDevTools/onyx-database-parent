@@ -44,8 +44,12 @@ data class SystemEntity @JvmOverloads constructor(
     @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
     var primaryKey: Int = 0
 
+    @Suppress("unused")
+    @Attribute
+    var isLatestVersion:Boolean = true
+
     constructor(descriptor: EntityDescriptor?) : this(
-            name = descriptor!!.entityClass.name,
+            name = descriptor!!.entityClass.canonicalName,
             className = descriptor.entityClass.simpleName,
             indexes = ArrayList(),
             relationships = ArrayList(),

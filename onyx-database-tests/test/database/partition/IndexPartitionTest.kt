@@ -238,19 +238,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestUpdatePartitionField() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
         query.updates = Arrays.asList(AttributeUpdate("partitionId", 5L), AttributeUpdate("indexVal", 6L))
@@ -263,9 +263,6 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         val result = manager.executeQuery<Any>(query2)
 
         // CacheManagerFactory will flush the existing data so it breaks the unit test workflow
-        if(factory is CacheManagerFactory)
-            assertEquals(1, result.size, "Expected 2 result(s)")
-        else
-            assertEquals(2, result.size, "Expected 2 result(s)")
+        assertEquals(2, result.size, "Expected 2 result(s)")
     }
 }
