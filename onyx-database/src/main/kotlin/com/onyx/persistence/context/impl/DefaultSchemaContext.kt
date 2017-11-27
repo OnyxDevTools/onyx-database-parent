@@ -1,6 +1,6 @@
 package com.onyx.persistence.context.impl
 
-import com.onyx.classLoader.EntityClassLoader
+import com.onyx.classLoader.EntityClassWriter
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
@@ -529,7 +529,7 @@ open class DefaultSchemaContext : SchemaContext {
                 // Make sure entity attributes have loaded descriptors
                 descriptor!!.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(), "") }
 
-                EntityClassLoader.writeClass(systemEntity, location, this@DefaultSchemaContext)
+                EntityClassWriter.writeClass(systemEntity, location, this@DefaultSchemaContext)
 
                 return@synchronized descriptor!!
             }

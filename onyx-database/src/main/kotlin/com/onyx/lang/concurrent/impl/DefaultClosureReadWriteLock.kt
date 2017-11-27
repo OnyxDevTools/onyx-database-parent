@@ -1,11 +1,12 @@
 package com.onyx.lang.concurrent.impl
 
+import com.onyx.interactors.classfinder.ApplicationClassFinder
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 
 class DefaultClosureReadWriteLock : ClosureReadWriteLock {
 
     private val lockImplementation:ClosureReadWriteLock = try {
-        Class.forName("java.util.concurrent.locks.StampedLock")
+        ApplicationClassFinder.forName("java.util.concurrent.locks.StampedLock")
         StampedClosureReadWriteLock()
     } catch (e:Exception) {
         ClosureReadWriteCompatLock()

@@ -1,5 +1,6 @@
 package com.onyx.extension.common
 
+import com.onyx.interactors.classfinder.ApplicationClassFinder
 import com.onyx.persistence.annotations.*
 import com.onyx.lang.map.OptimisticLockingMap
 import java.lang.reflect.Constructor
@@ -125,7 +126,7 @@ object ClassMetadata {
      *
      * @since 2.0.0
      */
-    fun classForName(name:String) = classes.getOrPut(name) { Class.forName(name) }
+    fun classForName(name:String) = classes.getOrPut(name) { ApplicationClassFinder.forName(name) }
 
     /**
      * Get fields for a java class

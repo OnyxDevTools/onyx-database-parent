@@ -3,6 +3,7 @@ package com.onyx.persistence.manager.impl
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.onyx.exception.OnyxException
+import com.onyx.interactors.classfinder.ApplicationClassFinder
 import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.request.pojo.QueryResultResponseBody
@@ -83,7 +84,7 @@ abstract class AbstractWebPersistenceManager : PersistenceManager {
             val exception = (res.body as LinkedHashMap<*, *>)["exceptionType"] as String
             val e: OnyxException?
             try {
-                val exceptionClass = Class.forName(exception)
+                val exceptionClass = ApplicationClassFinder.forName(exception)
                 e = objectMapper.convertValue(res.body, exceptionClass) as OnyxException
                 throw e
             } catch (ignore: ClassNotFoundException) {

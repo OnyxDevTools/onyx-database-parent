@@ -10,12 +10,8 @@ import com.onyx.persistence.annotations.values.RelationshipType
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.CacheSchemaContext
 
-import javax.tools.StandardLocation
-import javax.tools.ToolProvider
 import java.io.File
 import java.io.FileWriter
-import java.net.URL
-import java.net.URLClassLoader
 import java.util.*
 
 /**
@@ -25,26 +21,20 @@ import java.util.*
  * This class saves the entity information and formats the source on disk
  */
 //noinspection SpellCheckingInspection
-object EntityClassLoader {
+object EntityClassWriter {
 
-    @Suppress("MemberVisibilityCanPrivate")
-    val LOADED_CLASSES: MutableSet<String> = HashSet()
     @Suppress("MemberVisibilityCanPrivate")
     val WRITTEN_CLASSES: MutableSet<String> = HashSet()
     @Suppress("MemberVisibilityCanPrivate")
-    val GENERATED_DIRECTORY = "generated"
-    @Suppress("MemberVisibilityCanPrivate")
-    val GENERATED_ENTITIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "entities"
-    @Suppress("MemberVisibilityCanPrivate")
-    val GENERATED_QUERIES_DIRECTORY = GENERATED_DIRECTORY + File.separator + "queries"
+    val OUTPUT_DIRECTORY = "target"
+    @Suppress("UNUSED")
+    val OUTPUT_ENTITIES_DIRECTORY = OUTPUT_DIRECTORY + File.separator + "entities"
+    @Suppress("UNUSED")
+    val OUTPUT_QUERIES_DIRECTORY = OUTPUT_DIRECTORY + File.separator + "queries"
     @Suppress("MemberVisibilityCanPrivate")
     val SOURCE_DIRECTORY = "source"
     @Suppress("MemberVisibilityCanPrivate")
-    val XTEND_SOURCE_DIRECTORY = "xtend"
-    @Suppress("MemberVisibilityCanPrivate")
     val SOURCE_ENTITIES_DIRECTORY = SOURCE_DIRECTORY + File.separator + "entities"
-    @Suppress("MemberVisibilityCanPrivate")
-    val XTEND_SOURCE_ENTITIES_DIRECTORY = XTEND_SOURCE_DIRECTORY + File.separator + "entities"
 
     /**
      * Write an enum to file
@@ -100,7 +90,7 @@ object EntityClassLoader {
      */
     private fun writeXtendClass(systemEntity: SystemEntity, databaseLocation: String, schemaContext: SchemaContext, idType: String, idName: String) {
         val packageName = systemEntity.name.replace("." + systemEntity.className!!, "")
-        val outputDirectory = databaseLocation + File.separator + XTEND_SOURCE_ENTITIES_DIRECTORY
+        val outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY
         val className = systemEntity.className
         val generatorType = IdentifierGenerator.values()[systemEntity.identifier!!.generator.toInt()].toString()
         val fileName = systemEntity.fileName
@@ -109,25 +99,23 @@ object EntityClassLoader {
         val builder = StringBuilder()
         builder.append("package ")
         builder.append(packageName)
-        builder.append("\n" +
+        builder.append(";\n" +
                 "\n" +
-                "import com.onyx.persistence.annotations.*\n" +
-                "import com.onyx.persistence.*\n" +
-                "import net.sagittarian.onyx.annotations.OnyxFields\n" +
-                "import net.sagittarian.onyx.annotations.OnyxJoins\n" +
-                "import org.eclipse.xtend.lib.annotations.Accessors" +
+                "import com.onyx.persistence.annotations.*;\n" +
+                "import com.onyx.persistence.annotations.values.*;\n" +
+                "import com.onyx.persistence.collections.*;\n" +
+                "import com.onyx.persistence.query.*;\n" +
+                "import com.onyx.persistence.stream.*;\n" +
+                "import com.onyx.persistence.*;\n" +
                 "\n\n" +
                 "@Entity(fileName = \"")
                 .append(fileName)
                 .append("\")\n")
-                .append("@OnyxFields\n")
-                .append("@OnyxJoins\n")
-                .append("@Accessors\n")
-                .append("class ")
+                .append("public class ")
                 .append(className)
                 .append(" extends ManagedEntity implements IManagedEntity\n{\n\n")
                 .append("    @Attribute\n")
-                .append("    @Identifier(generator = ")
+                .append("    @Identifier(generator = IdentifierGenerator.")
                 .append(generatorType)
                 .append(", loadFactor = ")
                 .append(idLoadFactor)
@@ -153,7 +141,7 @@ object EntityClassLoader {
             if (systemEntity.partition != null && systemEntity.partition!!.name == it.name)
                 builder.append("    @Partition\n")
 
-            builder.append("    ").append(it.dataType).append(" ").append(it.name).append("\n")
+            builder.append("    ").append(it.dataType).append(" ").append(it.name).append(";\n")
         }
 
         builder.append("\n\n")
@@ -169,15 +157,15 @@ object EntityClassLoader {
                 genericType
             }
 
-            builder.append("    @Relationship(type = ")
+            builder.append("    @Relationship(type = RelationshipType.")
                     .append(RelationshipType.values()[it.relationshipType.toInt()].name)
                     .append(", inverseClass = ")
                     .append(genericType)
-                    .append(", inverse = \"")
+                    .append(".class, inverse = \"")
                     .append(it.inverse)
-                    .append("\", fetchPolicy = ")
+                    .append("\", fetchPolicy = FetchPolicy.")
                     .append(FetchPolicy.values()[it.fetchPolicy.toInt()].name)
-                    .append(", cascadePolicy = ")
+                    .append(", cascadePolicy = CascadePolicy.")
                     .append(CascadePolicy.values()[it.cascadePolicy.toInt()].name)
                     .append(", loadFactor = ")
                     .append(it.loadFactor.toString())
@@ -185,7 +173,7 @@ object EntityClassLoader {
                     .append(type)
                     .append(" ")
                     .append(it.name)
-                    .append("\n")
+                    .append(";\n")
 
             // Get the base Descriptor so that we ensure they get generated also
             catchAll {
@@ -195,7 +183,7 @@ object EntityClassLoader {
 
         builder.append("\n}\n")
 
-        writeClassContents(outputDirectory, systemEntity.name, builder.toString(), ".xtend")
+        writeClassContents(outputDirectory, systemEntity.name, builder.toString(), ".java")
     }
 
     /**
@@ -218,63 +206,4 @@ object EntityClassLoader {
         writeXtendClass(systemEntity, databaseLocation, context, attribute.dataType!!, attribute.name)
     }
 
-    /**
-     * Load the class source from file and load it into class loader.
-     *
-     * @param context Schema Context
-     * @param location Location to load classes from
-     */
-    @JvmOverloads
-    fun loadClasses(context: SchemaContext, location: String = context.location) {
-
-        val entitiesSourceDirectory = File(location + File.separator + SOURCE_ENTITIES_DIRECTORY)
-        val entitiesGeneratedDirectory = File(location + File.separator + GENERATED_ENTITIES_DIRECTORY)
-        entitiesGeneratedDirectory.mkdirs()
-        entitiesSourceDirectory.mkdirs()
-
-        val compiler = ToolProvider.getSystemJavaCompiler()
-        val fileManager = compiler.getStandardFileManager(null, null, null)
-
-        val classes = ArrayList<File>()
-
-        File(entitiesGeneratedDirectory.path).walkTopDown().filter {it.isDirectory && !it.isHidden && it.path.endsWith(".java") }.forEach { classes.add(it) }
-        fileManager.setLocation(StandardLocation.CLASS_OUTPUT, listOf(entitiesGeneratedDirectory))
-
-        // Compile the file
-        compiler.getTask(null, fileManager, null, null, null, fileManager.getJavaFileObjectsFromFiles(classes)).call()
-
-        fileManager.close()
-
-        val systemClassLoader = ClassLoader.getSystemClassLoader() as URLClassLoader
-
-        addClassPaths(context)
-
-        File(entitiesSourceDirectory.path).walkTopDown().filter {!it.isHidden && it.path.endsWith(".java") }.forEach {
-            var path = it.path.replace(entitiesSourceDirectory.path + File.separator, "")
-            path = path.replace("\\.java".toRegex(), "")
-            path = path.replace("\\\\".toRegex(), ".")
-            path = path.replace("/".toRegex(), ".")
-            try {
-                LOADED_CLASSES.add(systemClassLoader.loadClass(path).name)
-            } catch (e:Exception) { e.printStackTrace() }
-        }
-    }
-
-    /**
-     * Add class paths for a database
-     *
-     * @param schemaContext Context of the database
-     */
-    @Suppress("MemberVisibilityCanPrivate")
-    fun addClassPaths(schemaContext: SchemaContext) {
-        val systemClassLoader = ClassLoader.getSystemClassLoader() as URLClassLoader
-
-        // Add URL to class path
-        val systemClass = URLClassLoader::class.java
-
-        val method = systemClass.getDeclaredMethod("addURL", URL::class.java)
-        method.isAccessible = true
-        method.invoke(systemClassLoader, File(schemaContext.location + File.separator + GENERATED_ENTITIES_DIRECTORY).toURI().toURL())
-        method.invoke(systemClassLoader, File(schemaContext.location + File.separator + GENERATED_QUERIES_DIRECTORY).toURI().toURL())
-    }
 }

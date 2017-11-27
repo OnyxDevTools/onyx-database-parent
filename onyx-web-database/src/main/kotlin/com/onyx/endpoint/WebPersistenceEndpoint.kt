@@ -5,6 +5,7 @@ import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.extension.common.*
+import com.onyx.interactors.classfinder.ApplicationClassFinder
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -30,7 +31,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(OnyxException::class, ClassNotFoundException::class)
     fun save(request: EntityRequestBody): IManagedEntity {
-        val clazz = Class.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type!!)
         val entity = objectMapper.convertValue(request.entity, clazz)
         persistenceManager.saveEntity<IManagedEntity>(entity as IManagedEntity)
 
@@ -48,7 +49,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
     fun findByPartitionReference(request: EntityRequestBody): IManagedEntity? {
         var clazz: Class<*>? = null
         clazz = try {
-            Class.forName(request.type)
+            ApplicationClassFinder.forName(request.type)
         } catch (e: ClassNotFoundException) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND, clazz!!)
         }
@@ -71,7 +72,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(ClassNotFoundException::class, IllegalAccessException::class, InstantiationException::class, OnyxException::class)
     operator fun get(request: EntityRequestBody): IManagedEntity {
-        val clazz = Class.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type)
         var entity: IManagedEntity
 
         entity = if (request.entity == null)
@@ -98,7 +99,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
     @Throws(OnyxException::class)
     fun findWithPartitionId(request: EntityRequestBody): IManagedEntity {
         val clazz: Class<*> = try {
-            Class.forName(request.type)
+            ApplicationClassFinder.forName(request.type)
         } catch (e: ClassNotFoundException) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND)
         }
@@ -120,7 +121,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(ClassNotFoundException::class, IllegalAccessException::class, InstantiationException::class, OnyxException::class)
     fun delete(request: EntityRequestBody): Boolean {
-        val clazz = Class.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type)
         val entity: IManagedEntity
         entity = objectMapper.convertValue(request.entity, clazz) as IManagedEntity
 
@@ -152,7 +153,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(OnyxException::class, IllegalAccessException::class, InstantiationException::class, ClassNotFoundException::class)
     fun initialize(request: EntityInitializeBody): Any? {
-        val clazz = Class.forName(request.entityType)
+        val clazz = ApplicationClassFinder.forName(request.entityType)
         val entity = clazz.newInstance() as IManagedEntity
 
         if (request.entityId != null) {
@@ -179,7 +180,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(OnyxException::class, ClassNotFoundException::class)
     fun saveEntities(request: EntityListRequestBody) {
-        val clazz = Class.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type)
 
         val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, clazz)
         val entities: List<IManagedEntity>
@@ -202,7 +203,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(OnyxException::class, ClassNotFoundException::class)
     fun deleteEntities(request: EntityListRequestBody) {
-        val clazz = Class.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type)
 
         val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, clazz)
         val entities: List<IManagedEntity>
@@ -254,7 +255,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(ClassNotFoundException::class, IllegalAccessException::class, InstantiationException::class, OnyxException::class)
     fun exists(body: EntityRequestBody): Boolean {
-        val clazz = Class.forName(body.type)
+        val clazz = ApplicationClassFinder.forName(body.type)
         val entity = objectMapper.convertValue(body.entity, clazz) as IManagedEntity
         return persistenceManager.exists(entity)
     }
@@ -268,7 +269,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     @Throws(OnyxException::class, ClassNotFoundException::class)
     fun saveRelationshipsForEntity(request: SaveRelationshipRequestBody) {
-        val clazz = Class.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type)
         val entity = objectMapper.convertValue(request.entity, clazz) as IManagedEntity
 
         persistenceManager.saveRelationshipsForEntity(entity, request.relationship!!, request.identifiers!!)
