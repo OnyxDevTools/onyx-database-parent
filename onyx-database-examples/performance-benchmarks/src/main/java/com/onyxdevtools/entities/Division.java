@@ -3,6 +3,8 @@ package com.onyxdevtools.entities;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.CascadePolicy;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Id;
@@ -11,7 +13,7 @@ import javax.persistence.OneToMany;
 import java.util.List;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @Entity

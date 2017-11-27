@@ -1,6 +1,6 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -15,15 +15,13 @@ class CascadeDeferExample extends AbstractDemo
 {
 
     @SuppressWarnings("unchecked")
-    static void demo() throws EntityException
+    static void demo() throws OnyxException
     {
-        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
-
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox" +
-            File.separatorChar + "relationship-cascade-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
+                File.separatorChar + "relationship-cascade-db.oxd";
+        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
@@ -53,6 +51,7 @@ class CascadeDeferExample extends AbstractDemo
 
         // The Persistence Manager did not save the actors and associated it to the movie //2
         final Movie starWarsAfterSave1 = manager.findById(Movie.class, starWarsMovie.getMovieId());
+        assert starWarsAfterSave1 != null;
         manager.initialize(starWarsAfterSave1, "actors");
         assertEquals("Movie should not have any associated actors", 0, starWarsAfterSave1.actors.size());
 
@@ -65,6 +64,7 @@ class CascadeDeferExample extends AbstractDemo
 
         // The Persistence Manager did save the actors and associated it to the movie //4
         final Movie starWarsAfterSave2 = manager.findById(Movie.class, starWarsMovie.getMovieId());
+        assert starWarsAfterSave2 != null;
         manager.initialize(starWarsAfterSave2, "actors");
         assertEquals("Movie SHOULD have associated actors", 2, starWarsAfterSave1.actors.size());
 

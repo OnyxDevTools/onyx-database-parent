@@ -1,6 +1,6 @@
 package com.onyxdevtools.spring;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
@@ -15,6 +15,7 @@ import java.util.List;
 class MeetingController
 {
     // Persistence Manager injected by spring
+    @SuppressWarnings("unused")
     @Autowired
     private PersistenceManager persistenceManager;
 
@@ -25,8 +26,8 @@ class MeetingController
     void saveMeeting(Meeting meeting)
     {
         try {
-            persistenceManager.saveEntity(meeting);
-        } catch (EntityException e) {
+            this.persistenceManager.saveEntity(meeting);
+        } catch (OnyxException e) {
             // Log an error
         }
     }
@@ -39,14 +40,14 @@ class MeetingController
      *
      * @return A list of really boring meetings
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "SpellCheckingInspection"})
     List<Meeting> findBoringMeetings()
     {
         Query query = new Query(Meeting.class, new QueryCriteria("notes", QueryCriteriaOperator.CONTAINS, "Boring"));
         List<Meeting> boringMeetings = null;
         try {
             boringMeetings = persistenceManager.executeQuery(query);
-        } catch (EntityException e) {
+        } catch (OnyxException e) {
             // Log an error
         }
         return boringMeetings;

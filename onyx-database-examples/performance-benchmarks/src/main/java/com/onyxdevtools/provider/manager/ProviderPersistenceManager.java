@@ -5,7 +5,7 @@ import com.onyxdevtools.provider.DatabaseProvider;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * Contract for interacting with database
  *

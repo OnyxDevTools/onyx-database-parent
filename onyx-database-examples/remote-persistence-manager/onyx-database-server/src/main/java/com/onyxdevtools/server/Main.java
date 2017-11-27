@@ -1,9 +1,10 @@
 package com.onyxdevtools.server;
 
-import com.onyx.application.DatabaseServer;
+import com.onyx.application.impl.DatabaseServer;
 
 import java.io.File;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 
@@ -17,16 +18,15 @@ public class Main
      */
     public static void main(String[] args) throws Exception
     {
-        DatabaseServer server1 = new DatabaseServer();
+        String pathToOnyxDB = System.getProperty("user.home")
+                + File.separatorChar + ".onyxdb"
+                + File.separatorChar + "sandbox"
+                + File.separatorChar +"remote-db.oxd";
+
+        DatabaseServer server1 = new DatabaseServer(pathToOnyxDB);
         server1.setPort(8081);
-        String pathToOnyxDB = System.getProperty("user.home") 
-                            + File.separatorChar + ".onyxdb" 
-                            + File.separatorChar + "sandbox" 
-                            + File.separatorChar +"remote-db.oxd";
-        
         server1.setCredentials("onyx-remote", "SavingDataIsFun!");
 
-        server1.setDatabaseLocation(pathToOnyxDB);
         server1.start();
         System.out.println("Server Started");
         server1.join(); //joins the database thread with the application thread

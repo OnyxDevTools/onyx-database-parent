@@ -10,10 +10,12 @@ import java.util.List;
 
 import static java.lang.System.exit;
 
+@SuppressWarnings("WeakerAccess")
 @SpringBootApplication
 @EnableAutoConfiguration
 public class Main
 {
+    @SuppressWarnings("SpellCheckingInspection")
     public static void main(String[] args)
     {
         // Run the spring application and return the context

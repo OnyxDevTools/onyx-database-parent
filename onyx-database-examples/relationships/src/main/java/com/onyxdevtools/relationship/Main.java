@@ -1,11 +1,12 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
         OneToOneExample.demo();
         OneToManyExample.demo();

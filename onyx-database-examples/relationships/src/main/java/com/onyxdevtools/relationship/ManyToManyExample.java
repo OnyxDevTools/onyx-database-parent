@@ -1,6 +1,6 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -13,17 +13,15 @@ import java.util.List;
 
 class ManyToManyExample extends AbstractDemo
 {
-    static void demo() throws EntityException
+    static void demo() throws OnyxException
     {
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"relationship-cascade-save-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);

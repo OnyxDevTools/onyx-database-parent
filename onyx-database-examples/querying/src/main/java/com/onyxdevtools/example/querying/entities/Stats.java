@@ -3,10 +3,12 @@ package com.onyxdevtools.example.querying.entities;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @Entity

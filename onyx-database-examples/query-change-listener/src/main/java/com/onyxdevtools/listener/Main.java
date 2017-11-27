@@ -1,36 +1,34 @@
 package com.onyxdevtools.listener;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
 import com.onyx.persistence.query.QueryCriteria;
 import com.onyx.persistence.query.QueryCriteriaOperator;
-import com.onyx.query.QueryListener;
+import com.onyx.persistence.query.QueryListener;
 import com.onyxdevtools.listener.entities.Player;
 
 import java.io.File;
 
 /**
- * Created by tosborn1 on 4/1/17.
+ * Created by Tim Osborn on 4/1/17.
  *
  * This example demonstrates how to subscribe to query changes.
  */
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class Main {
 
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("username", "password");
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar + "query-change-listener.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
 
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+        factory.setCredentials("username", "password");
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();
@@ -43,7 +41,7 @@ public class Main {
 
         manager.saveEntity(johnElway);
 
-        // Define critiera to match position = QB & isHallOfFame = true
+        // Define criteria to match position = QB & isHallOfFame = true
         QueryCriteria hallOfFameQuarterbackCriteria = new QueryCriteria("position", QueryCriteriaOperator.EQUAL, "QB")
                                                             .and(new QueryCriteria("isHallOfFame", QueryCriteriaOperator.EQUAL, true));
         final Query hallOfFameQuarterBackQuery = new Query(Player.class, hallOfFameQuarterbackCriteria);

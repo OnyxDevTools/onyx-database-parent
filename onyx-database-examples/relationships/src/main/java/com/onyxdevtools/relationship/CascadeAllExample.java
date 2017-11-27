@@ -1,6 +1,6 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -12,17 +12,17 @@ import java.util.ArrayList;
 
 class CascadeAllExample extends AbstractDemo
 {
-    static void demo() throws EntityException
+    @SuppressWarnings("SpellCheckingInspection")
+    static void demo() throws OnyxException
     {
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
-
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"relationship-cascade-all-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
+
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
@@ -55,6 +55,7 @@ class CascadeAllExample extends AbstractDemo
 
         // Make sure that it has been cascaded properly
         assertNotNull("Sponge Bob Series should have been saved", spongeBobSeries);
+        assert spongeBobSeries != null;
         assertNotNull("Sponge Bob Seasons should have been saved", spongeBobSeries.getSeasons());
         assertEquals("There should have been 5 seasons saved", spongeBobSeries.getSeasons().size(), 5);
 
@@ -68,6 +69,7 @@ class CascadeAllExample extends AbstractDemo
         spongeBobSeries = manager.findById(Series.class, spongeBobSeries.getSeriesId());
 
         // Make sure that it has been cascaded properly
+        assert spongeBobSeries != null;
         assertEquals("There should have been 4 seasons saved", spongeBobSeries.getSeasons().size(), 4);
 
         factory.close();

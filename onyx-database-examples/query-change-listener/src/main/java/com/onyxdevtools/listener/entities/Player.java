@@ -4,13 +4,12 @@ import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.Attribute;
 import com.onyx.persistence.annotations.Entity;
 import com.onyx.persistence.annotations.Identifier;
-import com.onyx.persistence.annotations.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 /**
  * Simple POJO / Managed Entity for a Football Player
  */
 @Entity
-@SuppressWarnings("unused")
 public class Player extends ManagedEntity
 {
 
@@ -33,11 +32,13 @@ public class Player extends ManagedEntity
     @Attribute
     private boolean didNotCheat;
 
+    @SuppressWarnings("unused")
     public Integer getId()
     {
         return id;
     }
 
+    @SuppressWarnings("unused")
     public void setId(Integer id)
     {
         this.id = id;
@@ -63,6 +64,7 @@ public class Player extends ManagedEntity
         this.lastName = lastName;
     }
 
+    @SuppressWarnings("unused")
     public String getPosition() {
         return position;
     }
@@ -71,6 +73,7 @@ public class Player extends ManagedEntity
         this.position = position;
     }
 
+    @SuppressWarnings("unused")
     public boolean isHallOfFame() {
         return isHallOfFame;
     }
@@ -79,6 +82,7 @@ public class Player extends ManagedEntity
         isHallOfFame = hallOfFame;
     }
 
+    @SuppressWarnings("unused")
     public boolean isDidNotCheat() {
         return didNotCheat;
     }

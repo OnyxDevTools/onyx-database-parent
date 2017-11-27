@@ -1,6 +1,6 @@
 package com.onyxdevtools.persist;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -13,22 +13,21 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * @author cosborn
+ * @author Chris Osborn
  */
+@SuppressWarnings("WeakerAccess")
 public class BatchSavingDataExample {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException {
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("username", "password");
+    public static void main(String[] args) throws OnyxException {
 
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar + "persisting-data.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
 
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+        factory.setCredentials("username", "password");
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();

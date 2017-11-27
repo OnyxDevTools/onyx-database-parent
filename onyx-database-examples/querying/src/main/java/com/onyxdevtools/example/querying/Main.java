@@ -1,6 +1,6 @@
 package com.onyxdevtools.example.querying;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -10,10 +10,11 @@ import java.io.File;
 import java.util.Arrays;
 
 //J-
+@SuppressWarnings({"SpellCheckingInspection", "WeakerAccess"})
 public class Main extends AbstractDemo
 {
 
-    public static void main(final String[] args) throws EntityException
+    public static void main(final String[] args) throws OnyxException
     {
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox"
                 + File.separatorChar + "querying-db.oxd";
@@ -21,10 +22,10 @@ public class Main extends AbstractDemo
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
 
-        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
+        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
         factory.setCredentials("onyx-user", "SavingDataIsFun!");
-        factory.setDatabaseLocation(pathToOnyxDB);
         factory.initialize();
+
         final PersistenceManager manager = factory.getPersistenceManager();
 
         seedData(manager);
@@ -59,7 +60,7 @@ public class Main extends AbstractDemo
         LazyQueryExample.demo();
     }
 
-    private static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws OnyxException
     {
 
         //Create league
@@ -128,8 +129,8 @@ public class Main extends AbstractDemo
         Team broncos = new Team();
         broncos.setTeamName("Broncos");
 
-        Team cheifs = new Team();
-        cheifs.setTeamName("Cheifs");
+        Team chiefs = new Team();
+        chiefs.setTeamName("Chiefs");
 
         Team chargers = new Team();
         chargers.setTeamName("Chargers");
@@ -220,7 +221,7 @@ public class Main extends AbstractDemo
         vikings.setTeamName("Vikings");
 
         //Add teams to divisions
-        afcWest.setTeams(Arrays.asList(raiders, broncos, cheifs, chargers));
+        afcWest.setTeams(Arrays.asList(raiders, broncos, chiefs, chargers));
 
         afcSouth.setTeams(Arrays.asList(colts, texans, jaguars, titans));
 
@@ -346,7 +347,7 @@ public class Main extends AbstractDemo
 
         broncos.setPlayers(Arrays.asList(broncosQB, broncosRB1, broncosRB2, broncosWR1, broncosWR2));
 
-        cheifs.setPlayers(Arrays.asList(cheifsQB, cheifsRB1, cheifsRB2, cheifsWR1, cheifsWR2));
+        chiefs.setPlayers(Arrays.asList(cheifsQB, cheifsRB1, cheifsRB2, cheifsWR1, cheifsWR2));
 
         chargers.setPlayers(Arrays.asList(chargersQB, chargersRB1, chargersRB2, chargersWR1, chargersWR2));
 

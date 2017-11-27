@@ -3,13 +3,15 @@ package com.onyxdevtools.entities;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 import javax.persistence.*;
 import javax.persistence.Index;
 
 /**
  *
- * @author cosborn
+ * @author Chris Osborn
  */
 //J-
 @com.onyx.persistence.annotations.Entity(fileName = "stats")

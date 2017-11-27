@@ -13,7 +13,7 @@ abstract class AbstractDemo {
     static void deleteDatabase(String pathToDb)
     {
         File database = new File(pathToDb);
-        if (database != null && database.exists()) {
+        if (database.exists()) {
             delete(database);
         }
         database.delete();
@@ -26,6 +26,7 @@ abstract class AbstractDemo {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private static void delete(File f) {
         if (f.isDirectory()) {
+            //noinspection ConstantConditions
             for (File c : f.listFiles())
                 delete(c);
         }

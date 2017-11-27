@@ -9,14 +9,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This is the base level benchmark test
  */
 public abstract class BenchmarkTest {
 
     // Thread Pool used to execute the test body of work
-    protected ThreadPoolExecutor testThreadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(8);
+    protected ThreadPoolExecutor testThreadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(20);
 
     // Marks the start time of the test
     private long startTime;
@@ -46,7 +46,7 @@ public abstract class BenchmarkTest {
     /**
      * Indicates the start of the test
      */
-    public void markBeginingOfTest()
+    public void markBeginningOfTest()
     {
         this.startTime = System.currentTimeMillis();
     }
@@ -74,8 +74,8 @@ public abstract class BenchmarkTest {
     public void before() {
         System.out.println("Starting test " + this.getClass().getName());
         System.out.println("Please be patient this may take a while to run");
-        completionLatch = new CountDownLatch(getNumberOfWarmupExecutions());
-        execute(getNumberOfWarmupExecutions());
+        completionLatch = new CountDownLatch(getNumberOfWarmUpExecutions());
+        execute(getNumberOfWarmUpExecutions());
         completionLatch = new CountDownLatch(getNumberOfExecutions());
     }
 
@@ -108,7 +108,7 @@ public abstract class BenchmarkTest {
     /**
      * Number of executions to be ran
      */
-    protected abstract int getNumberOfWarmupExecutions();
+    protected abstract int getNumberOfWarmUpExecutions();
 
     /**
      * Get Thread to be executed

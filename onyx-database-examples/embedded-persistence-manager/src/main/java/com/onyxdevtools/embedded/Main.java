@@ -1,6 +1,6 @@
 package com.onyxdevtools.embedded;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -12,28 +12,26 @@ import com.onyxdevtools.embedded.entities.Person;
 import java.io.File;
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
 
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(); //1
-        
-        factory.setCredentials("onyx-remote", "SavingDataisFun!"); //2
-        
-        String pathToOnyxDB = System.getProperty("user.home") 
-                            + File.separatorChar + ".onyxdb" 
-                            + File.separatorChar + "sandbox" 
-                            + File.separatorChar +"embedded-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB); //3
-        
+        String pathToOnyxDB = System.getProperty("user.home")
+                + File.separatorChar + ".onyxdb"
+                + File.separatorChar + "sandbox"
+                + File.separatorChar +"embedded-db.oxd";
+
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB); //1
+        //noinspection SpellCheckingInspection
+        factory.setCredentials("onyx-remote", "SavingDataIsFun!"); //2
         factory.initialize();  //4
 
         PersistenceManager manager = factory.getPersistenceManager();  //5
-        
-        
+
         //Create an instance of an entity
         final Person person1 = new Person();
         person1.setId("1");

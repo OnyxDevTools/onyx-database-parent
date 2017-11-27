@@ -2,12 +2,15 @@ package com.onyxdevtools.entities;
 
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
+import com.onyx.persistence.annotations.values.RelationshipType;
 
 /**
- * Created by tosborn1 on 4/2/17.
+ * Created by Tim Osborn on 4/2/17.
  *
- * Simple POJO for a Cookbook recipee
+ * Simple POJO for a Cookbook recipe
  */
+@SuppressWarnings("unused")
 @Entity
 public class Recipe extends ManagedEntity
 {

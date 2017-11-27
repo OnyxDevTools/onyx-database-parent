@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This test illustrates the databases' ability to insert records on a single thread.
  */
@@ -14,9 +14,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class InsertionSingleThreadBenchmarkTest extends InsertionBenchmarkTest {
 
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_INSERTIONS = 20000;
+    private final int NUMBER_OF_INSERTIONS = 20000;
     @SuppressWarnings("FieldCanBeLocal")
-    private int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
+    private final int NUMBER_OF_WARM_UP_INSERTIONS = 5000;
 
     /**
      * Default Constructor
@@ -46,7 +46,7 @@ public class InsertionSingleThreadBenchmarkTest extends InsertionBenchmarkTest {
      * @return The number of iterations to warm up on.
      */
     @Override
-    public int getNumberOfWarmupExecutions() {
+    public int getNumberOfWarmUpExecutions() {
         return NUMBER_OF_WARM_UP_INSERTIONS;
     }
 

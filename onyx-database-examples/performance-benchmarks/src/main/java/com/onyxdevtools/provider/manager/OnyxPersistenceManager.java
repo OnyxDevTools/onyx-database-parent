@@ -11,7 +11,7 @@ import com.onyxdevtools.provider.DatabaseProvider;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * Onyx Persistence manager designed for CRUD operations
  */
@@ -67,6 +67,7 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
      */
     public void delete(Class clazz, Object identifier) {
         try {
+            //noinspection ConstantConditions
             persistenceManager.deleteEntity(persistenceManager.findById(clazz, identifier));
         } catch (InitializationException ignore){}
         catch (Exception e) {
@@ -105,10 +106,11 @@ public class OnyxPersistenceManager implements ProviderPersistenceManager {
     {
         QueryCriteria criteria = null;
         if(value instanceof String)
-            criteria = new QueryCriteria(key, QueryCriteriaOperator.EQUAL, (String)value);
+            criteria = new QueryCriteria(key, QueryCriteriaOperator.EQUAL, value);
         else if(value.getClass() == int.class || value instanceof Integer)
-            criteria = new QueryCriteria(key, QueryCriteriaOperator.EQUAL, (Integer) value);
+            criteria = new QueryCriteria(key, QueryCriteriaOperator.EQUAL, value);
 
+        assert criteria != null;
         Query query = new Query(clazz, criteria);
         try {
             return persistenceManager.executeLazyQuery(query);

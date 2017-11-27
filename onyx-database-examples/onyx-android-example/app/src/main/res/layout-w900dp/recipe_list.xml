@@ -12,7 +12,7 @@
               tools:context="com.onyxdevtools.RecipeListActivity">
 
     <!--
-    This layout is a two-pane layout for the Recipees
+    This layout is a two-pane layout for the Recipes
     master/detail flow.
     
     -->
@@ -33,6 +33,7 @@
             android:id="@+id/recipe_detail_container"
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="3"/>
+            android:layout_weight="3"
+            tools:ignore="InconsistentLayout" />
 
 </LinearLayout>

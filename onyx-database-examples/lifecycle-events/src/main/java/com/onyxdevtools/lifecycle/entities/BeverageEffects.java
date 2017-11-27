@@ -3,6 +3,7 @@ package com.onyxdevtools.lifecycle.entities;
 import com.onyx.persistence.IManagedEntity;
 import com.onyx.persistence.ManagedEntity;
 import com.onyx.persistence.annotations.*;
+import com.onyx.persistence.annotations.values.IdentifierGenerator;
 
 @Entity
 @SuppressWarnings("unused")

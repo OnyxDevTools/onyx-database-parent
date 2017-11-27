@@ -1,6 +1,6 @@
 package com.onyxdevtools.partition;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -14,30 +14,28 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Created by tosborn1 on 3/31/16.
+ * Created by Tim Osborn on 3/31/16.
  *
  * This demonstrates how to declare and use a partition
  */
+@SuppressWarnings("WeakerAccess")
 public class Main extends AbstractDemo {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
-
-        //Initialize the database and get a handle on the PersistenceManager
-        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
 
         String pathToOnyxDB = System.getProperty("user.home")
                 + File.separatorChar + ".onyxdb"
                 + File.separatorChar + "sandbox"
                 + File.separatorChar +"partitioned-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
 
+        //Initialize the database and get a handle on the PersistenceManager
+        PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
         factory.initialize();
 
         PersistenceManager manager = factory.getPersistenceManager();
@@ -61,6 +59,8 @@ public class Main extends AbstractDemo {
         CallLog callLogInAreaCode123 = manager.findByIdInPartition(CallLog.class, 1, 123);
 
         // Make sure the CallLog(s) are 2 different entities.
+        assert callLogInAreaCode123 != null;
+        assert callLogInAreaCode555 != null;
         assertTrue("The Destination Number should be different for each CallLog!", !callLogInAreaCode123.getDestinationNumber().equals(callLogInAreaCode555.getDestinationNumber()));
 
         // Since we have defined an IdentifierGenerator of SEQUENCE, it is possible the identifiers for call log
@@ -71,9 +71,9 @@ public class Main extends AbstractDemo {
      * Seed Cell phone log data
      *
      * @param manager Persistence Manager to use to seed data
-     * @throws EntityException Generic exception from persistence manager
+     * @throws OnyxException Generic exception from persistence manager
      */
-    private static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws OnyxException
     {
         // Create a call log for area code (555)
         CellPhone myPhoneNumber = new CellPhone();
@@ -88,7 +88,7 @@ public class Main extends AbstractDemo {
         callToMom.setCallFromAreaCode(myPhoneNumber.getAreaCode());
         manager.saveEntity(callToMom);
 
-        CallLog callToEdwardSnowden = new CallLog();
+        @SuppressWarnings("SpellCheckingInspection") CallLog callToEdwardSnowden = new CallLog();
         callToEdwardSnowden.setDestinationNumber("(555) 122-2341");
         callToEdwardSnowden.setNSAListening(false);
         callToEdwardSnowden.setCallFrom(myPhoneNumber);

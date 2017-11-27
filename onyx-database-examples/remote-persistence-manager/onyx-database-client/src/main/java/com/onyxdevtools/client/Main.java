@@ -1,6 +1,6 @@
 package com.onyxdevtools.client;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -11,19 +11,17 @@ import com.onyxdevtools.remote.Person;
 
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main
 {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
 
-        PersistenceManagerFactory factory = new RemotePersistenceManagerFactory(); //1
+        PersistenceManagerFactory factory = new RemotePersistenceManagerFactory("onx://localhost:8081"); //1
 
         factory.setCredentials("onyx-remote", "SavingDataIsFun!"); //2
-
-        factory.setDatabaseLocation("onx://localhost:8081"); //3
-
         factory.initialize();  //4
 
         // The Socket Persistence Manager is an alternative PM used to increase performance and reduce network latency

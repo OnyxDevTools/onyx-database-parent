@@ -1,6 +1,6 @@
 package com.onyxdevtools.index;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyx.persistence.query.Query;
@@ -10,11 +10,12 @@ import com.onyxdevtools.index.entities.Book;
 
 import java.util.List;
 
+@SuppressWarnings("WeakerAccess")
 public class Main extends AbstractDemo
 {
 
     @SuppressWarnings("unchecked")
-    public static void main(String[] args) throws EntityException
+    public static void main(String[] args) throws OnyxException
     {
 
         //Initialize the database and get a handle on the PersistenceManager
@@ -41,7 +42,7 @@ public class Main extends AbstractDemo
      *
      * @param manager Persistence Manager used to insert data
      */
-    private static void seedData(PersistenceManager manager) throws EntityException
+    private static void seedData(PersistenceManager manager) throws OnyxException
     {
         // Create test data
         Book harryPotter = new Book();

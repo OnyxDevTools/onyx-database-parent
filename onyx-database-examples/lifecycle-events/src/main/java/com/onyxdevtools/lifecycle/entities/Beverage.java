@@ -1,11 +1,11 @@
 package com.onyxdevtools.lifecycle.entities;
 
 /**
- * Created by tosborn1 on 4/4/16.
+ * Created by Tim Osborn on 4/4/16.
  *
  * These are the possible beverages that lead to different behaviors.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused","SpellCheckingInspection"})
 public enum Beverage
 {
     BEER("Im feeling dangerous", "Lets makeout on a plane and annoy the people around me!", "Hold my hair back"),

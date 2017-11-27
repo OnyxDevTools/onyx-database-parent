@@ -1,6 +1,6 @@
 package com.onyxdevtools.relationship;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
@@ -17,15 +17,14 @@ import java.util.List;
 class OneToManyExample extends AbstractDemo
 {
 
-    static void demo() throws EntityException
+    static void demo() throws OnyxException
     {
-        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory();
-
-        factory.setCredentials("onyx-user", "SavingDataisFun!");
-
         final String pathToOnyxDB = System.getProperty("user.home") + File.separatorChar + ".onyxdb" + File.separatorChar + "sandbox" +
-            File.separatorChar + "relationship-cascade-save-db.oxd";
-        factory.setDatabaseLocation(pathToOnyxDB);
+                File.separatorChar + "relationship-cascade-save-db.oxd";
+
+        final PersistenceManagerFactory factory = new EmbeddedPersistenceManagerFactory(pathToOnyxDB);
+
+        factory.setCredentials("onyx-user", "SavingDataIsFun!");
 
         // Delete database so you have a clean slate
         deleteDatabase(pathToOnyxDB);
@@ -61,6 +60,7 @@ class OneToManyExample extends AbstractDemo
 
         // Find sailboat with Id
         final Sailboat savedSailboat = manager.findById(Sailboat.class, "USA11");
+        assert savedSailboat != null;
         System.out.println("Sailboat has " + savedSailboat.getCrew().size() + " crew members");
         System.out.println(savedSailboat.getCrew().get(0).getFirstName() + " is the skipper on boat " +
             savedSailboat.getCrew().get(0).getSailboat().getName());

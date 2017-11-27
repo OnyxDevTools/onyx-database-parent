@@ -10,7 +10,7 @@ import javax.persistence.Persistence;
 import java.io.File;
 
 /**
- * Created by tosborn1 on 8/26/16.
+ * Created by Tim Osborn on 8/26/16.
  *
  * This class is a factory for returning the persistence manager so that we can use a single contract for persisting and fetching
  * data
@@ -29,8 +29,7 @@ public class PersistenceProviderFactory
                 return new JPAPersistenceManager(emf, databaseProvider);
             // Onyx persistence manager
             case ONYX:
-                final EmbeddedPersistenceManagerFactory embeddedPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory();
-                embeddedPersistenceManagerFactory.setDatabaseLocation(DatabaseProvider.DATABASE_LOCATION + File.separator + "onyx.oxd");
+                final EmbeddedPersistenceManagerFactory embeddedPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(DatabaseProvider.DATABASE_LOCATION + File.separator + "onyx.oxd");
                 embeddedPersistenceManagerFactory.initialize();
                 return new OnyxPersistenceManager(embeddedPersistenceManagerFactory.getPersistenceManager());
         }

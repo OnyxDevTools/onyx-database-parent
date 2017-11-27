@@ -1,19 +1,20 @@
 package com.onyxdevtools.lifecycle;
 
-import com.onyx.exception.EntityException;
+import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.impl.CacheManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.lifecycle.entities.Beverage;
 import com.onyxdevtools.lifecycle.entities.BeverageEffects;
 
 /**
- * Created by tosborn1 on 4/4/16.
+ * Created by Tim Osborn on 4/4/16.
  *
  * This demo highlights usage of lifecycle events associated to entities.
  */
+@SuppressWarnings("WeakerAccess")
 public class Main extends AbstractDemo {
 
-    public static void main(String[] args) throws EntityException {
+    public static void main(String[] args) throws OnyxException {
 
         //Initialize the database and get a handle on the PersistenceManager
         CacheManagerFactory factory = new CacheManagerFactory();
