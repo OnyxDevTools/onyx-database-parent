@@ -1,13 +1,8 @@
 package com.onyx.diskmap.store.impl
 
-import com.onyx.buffer.BufferPool
-import com.onyx.buffer.BufferStream
-import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.instance
-import com.onyx.extension.perform
 import com.onyx.persistence.context.SchemaContext
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -170,24 +165,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Write a serializable value
-     *
-     * @param position within the store
-     * @param size Amount of bytes to read
-     * @return Object buffer that was read
-     */
-    override fun read(position: Long, size: Int): BufferStream? {
-        if (!validateFileSize(position))
-            return null
-
-        val buffer = BufferPool.allocateAndLimit(size)
-        this.read(buffer, position)
-        buffer.flip()
-
-        return BufferStream(buffer)
-    }
-
-    /**
      * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
      * er "slice" of the file
      *
@@ -213,45 +190,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
     }
 
     /**
-     * Write a serializable value to
-     *
-     * @param serializable Object serializable to write to store
-     * @param position location to write to
-     */
-    override fun write(serializable: BufferStreamable, position: Long): Int = BufferStream().perform {
-        serializable.write(it!!)
-        it.flip()
-        this.write(it.byteBuffer, position)
-    }
-
-    /**
-     * Read a serializable value
-     *
-     * @param position position within store
-     * @param size size of value to read
-     * @param type Type of value to assign value to
-     * @return Instantiated value of type
-     */
-    override fun read(position: Long, size: Int, type: Class<*>): Any? {
-        if (!validateFileSize(position))
-            return null
-
-        return BufferStream(size).perform {
-            this.read(it!!.byteBuffer, position)
-            it.flip()
-
-            when {
-                BufferStreamable::class.java.isAssignableFrom(type) -> {
-                    val streamable:BufferStreamable = type.instance()
-                    streamable.read(it, context)
-                    streamable
-                }
-                else -> it.value
-            }
-        }
-    }
-
-    /**
      * Get the location within the buffer slice
      *
      * @param position Position within the store
@@ -263,26 +201,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
             index = (position % bufferSliceSize).toInt()
         }
         return index
-    }
-
-    /**
-     * Read a serializable value
-     *
-     * @param position Position to read from
-     * @param size Amount of bytes to read.
-     * @param serializable value to read into
-     * @return same value instance that was sent in.
-     */
-    override fun read(position: Long, size: Int, serializable: BufferStreamable): Any? {
-        if (!validateFileSize(position))
-            return null
-
-        return BufferPool.allocateAndLimit(size) {
-            read(it, position)
-            it.flip()
-            serializable.read(BufferStream(it))
-            return@allocateAndLimit serializable
-        }
     }
 
     /**

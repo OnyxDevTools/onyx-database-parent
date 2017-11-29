@@ -18,11 +18,12 @@ import android.widget.TextView;
 import com.onyx.exception.InitializationException;
 import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
-import com.onyx.persistence.factory.impl.CacheManagerFactory;
+import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
 import com.onyxdevtools.entities.CookBook;
 import com.onyxdevtools.entities.Recipe;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,7 +56,7 @@ public class RecipeListActivity extends AppCompatActivity {
         // Create and connect to the persistence manager factory.  In this case, it is a Cache Manager Factory
         // but, it can also be an embedded or remote persistence manager factory
         if(sPersistenceManagerFactory == null) {
-            sPersistenceManagerFactory = new CacheManagerFactory();
+            sPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(getApplicationContext().getFilesDir().getPath() + File.separator + "test.onx");
             try {
                 sPersistenceManagerFactory.initialize();
             } catch (InitializationException e) {
