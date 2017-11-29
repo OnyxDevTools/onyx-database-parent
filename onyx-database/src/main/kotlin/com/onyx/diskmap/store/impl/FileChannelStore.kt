@@ -133,7 +133,10 @@ open class FileChannelStore() : Store {
      * @param position Position within the volume to write to.
      * @return How many bytes were written
      */
-    override fun write(buffer: ByteBuffer, position: Long): Int = channel!!.write(buffer)
+    override fun write(buffer: ByteBuffer, position: Long): Int {
+        channel!!.write(buffer, position)
+        return buffer.position()
+    }
 
     /**
      * Write a serializable value to a volume.  This uses the BufferStream for serialization
@@ -144,7 +147,7 @@ open class FileChannelStore() : Store {
     override fun write(serializable: BufferStreamable, position: Long): Int = BufferStream().perform {
         serializable.write(it!!)
         it.flip()
-        channel!!.write(it.byteBuffer, position)
+        this.write(it.byteBuffer, position)
     }
 
     /**
@@ -159,15 +162,16 @@ open class FileChannelStore() : Store {
         if (!validateFileSize(position)) return null
 
         return BufferStream(size).perform {
-            channel!!.read(it!!.byteBuffer, position)
-            it.byteBuffer.flip()
+            this.read(it!!.byteBuffer, position)
+            it.flip()
 
-            if (BufferStreamable::class.java.isAssignableFrom(type)) {
-                val serializable:BufferStreamable = type.instance()
-                serializable.read(it)
-                serializable
-            } else {
-                it.value
+            when {
+                BufferStreamable::class.java.isAssignableFrom(type) -> {
+                    val streamable:BufferStreamable = type.instance()
+                    streamable.read(it, context)
+                    streamable
+                }
+                else -> it.value
             }
         }
     }
@@ -185,7 +189,7 @@ open class FileChannelStore() : Store {
             return null
 
         return BufferPool.allocateAndLimit(size) {
-            channel!!.read(it, position)
+            read(it, position)
             it.flip()
             serializable.read(BufferStream(it))
             return@allocateAndLimit serializable
@@ -204,8 +208,7 @@ open class FileChannelStore() : Store {
             return null
 
         val buffer = BufferPool.allocateAndLimit(size)
-
-        channel!!.read(buffer, position)
+        this.read(buffer, position)
         buffer.flip()
 
         return BufferStream(buffer)
@@ -219,7 +222,7 @@ open class FileChannelStore() : Store {
      */
     override fun read(buffer: ByteBuffer, position: Long) {
         channel!!.read(buffer, position)
-        buffer.flip()
+        buffer.position(buffer.limit())
     }
 
     /**
@@ -227,7 +230,7 @@ open class FileChannelStore() : Store {
      * @param position Position to validate
      * @return whether the value you seek is in a valid position
      */
-    protected fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
+    private fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
 
     /**
      * Allocates a spot in the file

@@ -181,7 +181,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
             lockFile.createNewFile()
         }
 
-        fileChannelLock = RandomAccessFile(lockFile, "rw").channel
+        fileChannelLock = RandomAccessFile(lockFile, "rws").channel
         lock = fileChannelLock!!.tryLock()
     }
 
