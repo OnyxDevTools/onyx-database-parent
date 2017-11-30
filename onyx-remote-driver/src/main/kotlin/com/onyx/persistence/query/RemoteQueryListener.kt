@@ -9,7 +9,6 @@ import com.onyx.network.push.PushConsumer
 import com.onyx.exception.BufferingException
 import java.nio.channels.ByteChannel
 
-import java.nio.channels.SocketChannel
 import java.util.Objects
 
 /**

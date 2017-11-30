@@ -12,7 +12,7 @@ import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
-import com.onyx.extension.NULL_PARTITION
+import com.onyx.extension.nullPartition
 import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
@@ -553,7 +553,7 @@ open class DefaultSchemaContext : SchemaContext {
         if(baseDescriptor.partition == null)
             return baseDescriptor
 
-        val partitionId = entity.get<Any?>(context = this, descriptor = baseDescriptor, name = baseDescriptor.partition!!.name) ?: NULL_PARTITION
+        val partitionId = entity.get<Any?>(context = this, descriptor = baseDescriptor, name = baseDescriptor.partition!!.name) ?: nullPartition
         return getDescriptorForEntity(entity, partitionId)
     }
 

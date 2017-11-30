@@ -35,7 +35,6 @@ import java.util.*
  *
  * @see com.onyx.persistence.query.Query
  */
-@Suppress("ALL")
 class QueryCriteria : BufferStreamable {
 
     constructor()
@@ -54,30 +53,50 @@ class QueryCriteria : BufferStreamable {
     // ALL of the value objects are public since they are needed for web services.  Most serializers cannot serialize Any? or Object
     // type so they are strongly typed.  Also they cannot serialize private values.  So, we will have to live with the lint
     // check.  Also, there is no way to suppress WEAKER_ACCESS in kotlin
+    @Suppress("MemberVisibilityCanPrivate")
     var dateValue: Date? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var longValue: Long? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var integerValue: Int? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var booleanValue: Boolean? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var doubleValue: Double? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var stringValue: String? = null
-
+    @Suppress("MemberVisibilityCanPrivate")
     var floatValue: Float? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var characterValue: Char? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var byteValue: Byte? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var shortValue: Short? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var entityValue: ManagedEntity? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var enumValue: Enum<*>? = null
 
+    @Suppress("MemberVisibilityCanPrivate")
     var dateValueList: List<Date>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var longValueList: List<Long>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var integerValueList: List<Int>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var doubleValueList: List<Double>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var stringValueList: List<String>? = null
-
+    @Suppress("MemberVisibilityCanPrivate")
     var floatValueList: List<Float>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var characterValueList: List<Char>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var byteValueList: List<Byte>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var shortValueList: List<Short>? = null
+    @Suppress("MemberVisibilityCanPrivate")
     var entityValueList: List<ManagedEntity>? = null
 
     var subCriteria: MutableList<QueryCriteria> = ArrayList()

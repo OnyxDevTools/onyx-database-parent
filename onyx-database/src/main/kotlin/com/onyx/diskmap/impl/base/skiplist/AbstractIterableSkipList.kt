@@ -242,7 +242,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
          *
          * @return Whether the data has a record or not
          */
-        override fun hasNext(): Boolean = current is SkipListNode<*>
+        override fun hasNext(): Boolean = current != null && current is SkipListNode<*>
 
         /**
          * Next, find the next data with a record associated to it.

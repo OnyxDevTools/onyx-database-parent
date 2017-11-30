@@ -1,6 +1,7 @@
 package com.onyx.diskmap.impl.base.skiplist
 
-import com.onyx.buffer.BufferPool
+import com.onyx.buffer.BufferPool.withIntBuffer
+import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStream
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipListHeadNode
@@ -367,9 +368,9 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      */
     protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
         var size = 0
-        BufferPool.allocateAndLimit(Integer.BYTES) {
+        withIntBuffer {
             fileStore.read(it, recordId)
-            it.flip()
+            it.rewind()
             size = it.int
         }
         return fileStore.read(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
@@ -387,9 +388,10 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             return null
 
         var size = 0
-        BufferPool.allocateAndLimit(Integer.BYTES) {
+
+        withIntBuffer {
             fileStore.read(it, position)
-            it.flip()
+            it.rewind()
             size = it.int
         }
         return fileStore.read(position + Integer.BYTES, size).perform { it!!.getObject(fileStore.context) as V? }
@@ -406,12 +408,14 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @since 1.2.0
      */
     protected open fun updateNodeValue(node: SkipListNode<K>, value: V?, recordLocation: Long, cache: Boolean) {
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
-            // Set the data values and lets write only the updated values to the store.  No need to write the key and
-            // all the other junk
-            node.recordPosition = recordLocation
+        // Set the data values and lets write only the updated values to the store.  No need to write the key and
+        // all the other junk
+
+        node.recordPosition = recordLocation
+
+        withLongBuffer {
             it.putLong(node.recordPosition)
-            it.flip()
+            it.rewind()
 
             // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // data so we want to skip over that
@@ -428,16 +432,18 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      *
      * @since 1.2.0
      */
-    private fun updateNodeDown(node: SkipListHeadNode, position: Long) = BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
-        node.down = position
-        it.putLong(node.down)
+    private fun updateNodeDown(node: SkipListHeadNode, position: Long) {
+        withLongBuffer {
+            node.down = position
+            it.putLong(node.down)
 
-        val offset = Integer.BYTES + java.lang.Long.BYTES
-        it.flip()
+            val offset = Integer.BYTES + java.lang.Long.BYTES
+            it.rewind()
 
-        // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
-        // data so we want to skip over that
-        fileStore.write(it, node.position + offset)
+            // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
+            // data so we want to skip over that
+            fileStore.write(it, node.position + offset)
+        }
     }
 
     /**
@@ -450,12 +456,13 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @since 1.2.0
      */
     protected open fun updateNodeNext(node: SkipListHeadNode, position: Long) {
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+
+        withLongBuffer {
             node.next = position
             it.putLong(node.next)
+            it.rewind()
 
             val offset = Integer.BYTES
-            it.flip()
 
             // Write the data values to the store.  The extra Integer.BYTES is used to indicate the size of the
             // data so we want to skip over that
@@ -555,7 +562,11 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         var sizeOfNode = 0
 
         // First get the size of the data since it may be variable due to the size of the key
-        fileStore.read(position, Integer.SIZE).perform { sizeOfNode = it!!.int }
+        withIntBuffer {
+            fileStore.read(it, position)
+            it.rewind()
+            sizeOfNode = it.int
+        }
 
         val node = if (sizeOfNode == SkipListNode.BASE_SKIP_LIST_NODE_SIZE)
             fileStore.read(position + Integer.BYTES, sizeOfNode, SkipListHeadNode()) as SkipListHeadNode
@@ -569,9 +580,9 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * This method will only update the record count rather than the entire header
      */
     protected fun updateHeaderRecordCount() {
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+        withLongBuffer {
             it.putLong(reference.recordCount.get())
-            it.flip()
+            it.rewind()
             fileStore.write(it, reference.position + java.lang.Long.BYTES)
         }
     }
@@ -597,9 +608,9 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      */
     protected fun forceUpdateHeaderFirstNode(header: Header, firstNode: Long) {
         this.reference.firstNode = firstNode
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+        withLongBuffer {
             it.putLong(firstNode)
-            it.flip()
+            it.rewind()
             fileStore.write(it, header.position)
         }
     }

@@ -56,7 +56,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
 
         val partitionId = java.lang.Long.valueOf(request.partitionId)!!
         val reference = Reference(partitionId, request.id as Long)
-        return persistenceManager.getWithReference(clazz!!, reference)
+        return persistenceManager.getWithReference(clazz, reference)
     }
 
 

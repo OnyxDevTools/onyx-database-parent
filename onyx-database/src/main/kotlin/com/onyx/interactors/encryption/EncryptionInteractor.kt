@@ -14,11 +14,6 @@ interface EncryptionInteractor {
     val key:String
 
     /**
-     * Encryption Salt
-     */
-    val salt:String
-
-    /**
      * Encryption IV
      */
     val iv:ByteArray
@@ -48,7 +43,7 @@ object DefaultEncryption {
     var encryption: Encryption? = null
 
     fun encrypt(interactor: EncryptionInteractor):Encryption {
-        if(encryption == null) encryption = Encryption.getDefault(interactor.key, interactor.salt, interactor.iv)
+        if(encryption == null) encryption = Encryption.getDefault(interactor.key, interactor.iv)
         return encryption!!
     }
 }

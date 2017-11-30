@@ -1,6 +1,7 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferPool
+import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
@@ -239,12 +240,12 @@ open class FileChannelStore() : Store {
      * @param size Allocate space within the store.
      * @return position of started allocated bytes
      */
-    override fun allocate(size: Int): Long = BufferPool.allocateAndLimit(8) {
+    override fun allocate(size: Int): Long = withLongBuffer {
         val newFileSize = fileSizeCounter.getAndAdd(size)
         it.putLong(newFileSize + size)
-        it.flip()
+        it.rewind()
         this.write(it, 0)
-        return@allocateAndLimit newFileSize
+        return@withLongBuffer newFileSize
     }
 
 
@@ -268,10 +269,10 @@ open class FileChannelStore() : Store {
     }
 
     companion object {
-        val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-        val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
+    val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
+    val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
 
-        fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
-    }
-
+    fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
 }
+
+    }

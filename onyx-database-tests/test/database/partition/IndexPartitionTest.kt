@@ -1,7 +1,6 @@
 package database.partition
 
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -24,28 +23,28 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun aTestSavePartitionEntityWithIndex() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
-        assertNotNull(manager.saveEntity<IManagedEntity>(IndexPartitionEntity), "Saved partition entity should not be null")
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
+        assertNotNull(manager.saveEntity<IManagedEntity>(indexPartitionEntity), "Saved partition entity should not be null")
     }
 
     @Test
     fun bTestQueryPartitionEntityWithIndex() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
         query.partition = 2L
@@ -56,19 +55,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
 
@@ -78,19 +77,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun cTestQueryFindQueryPartitionEntityWithIndex() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L).and("partitionId", QueryCriteriaOperator.EQUAL, 2L))
 
@@ -100,19 +99,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun dTestDeleteQueryPartitionEntity() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L).and("partitionId", QueryCriteriaOperator.EQUAL, 2L))
 
@@ -122,19 +121,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestDeleteQueryPartitionEntityWithIndex() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
         query.partition = 2L
@@ -145,19 +144,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
 
@@ -168,19 +167,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun dTestUpdateQueryPartitionEntity() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L).and("partitionId", QueryCriteriaOperator.EQUAL, 2L))
         query.updates = Arrays.asList(AttributeUpdate("indexVal", 6L))
@@ -191,19 +190,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestUpdateQueryPartitionEntityWithIndex() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
         query.updates = Arrays.asList(AttributeUpdate("indexVal", 6L))
@@ -215,19 +214,19 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() {
-        val IndexPartitionEntity = IndexPartitionEntity()
-        IndexPartitionEntity.id = 1L
-        IndexPartitionEntity.partitionId = 3L
-        IndexPartitionEntity.indexVal = 5L
+        val indexPartitionEntity = IndexPartitionEntity()
+        indexPartitionEntity.id = 1L
+        indexPartitionEntity.partitionId = 3L
+        indexPartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity)
 
-        val IndexPartitionEntity2 = IndexPartitionEntity()
-        IndexPartitionEntity2.id = 2L
-        IndexPartitionEntity2.partitionId = 2L
-        IndexPartitionEntity2.indexVal = 5L
+        val indexPartitionEntity2 = IndexPartitionEntity()
+        indexPartitionEntity2.id = 2L
+        indexPartitionEntity2.partitionId = 2L
+        indexPartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(IndexPartitionEntity2)
+        manager.saveEntity<IManagedEntity>(indexPartitionEntity2)
 
         val query = Query(IndexPartitionEntity::class.java, QueryCriteria("indexVal", QueryCriteriaOperator.EQUAL, 5L))
         query.updates = Arrays.asList(AttributeUpdate("indexVal", 6L))
