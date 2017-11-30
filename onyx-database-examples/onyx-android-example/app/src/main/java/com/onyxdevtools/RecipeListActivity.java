@@ -58,7 +58,10 @@ public class RecipeListActivity extends AppCompatActivity {
         if(sPersistenceManagerFactory == null) {
             sPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(getApplicationContext().getFilesDir().getPath() + File.separator + "test.onx");
             try {
+                long before = System.currentTimeMillis();
                 sPersistenceManagerFactory.initialize();
+                long after = System.currentTimeMillis();
+                Log.e(TAG, "Took " + (after - before));
             } catch (InitializationException e) {
                 Log.e(TAG, "Cannot initialize Persistence Manager Factory");
             }

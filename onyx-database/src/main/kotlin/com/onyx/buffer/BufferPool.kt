@@ -4,6 +4,7 @@ import com.onyx.extension.withBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
+import kotlin.concurrent.getOrSet
 
 /**
  * Responsible for allocating and de-allocating byte buffers
@@ -12,17 +13,17 @@ import java.util.*
  */
 object BufferPool {
 
-    private val NUMBER_SMALL_BUFFERS = 100
-    private val NUMBER_MEDIUM_BUFFERS = 25
+    private val NUMBER_SMALL_BUFFERS = 50
+    private val NUMBER_MEDIUM_BUFFERS = 20
     private val NUMBER_LARGE_BUFFERS = 10
 
     private val SMALL_BUFFER_SIZE = 512
     val MEDIUM_BUFFER_SIZE = 1024 * 6
     private val LARGE_BUFFER_SIZE = 18 * 1024
 
-    private val SMALL_BUFFER_POOL = LinkedList<ByteBuffer>()
-    private val MEDIUM_BUFFER_POOL = LinkedList<ByteBuffer>()
-    private val LARGE_BUFFER_POOL = LinkedList<ByteBuffer>()
+    private val SMALL_BUFFER_POOL = ArrayDeque<ByteBuffer>()
+    private val MEDIUM_BUFFER_POOL = ArrayDeque<ByteBuffer>()
+    private val LARGE_BUFFER_POOL = ArrayDeque<ByteBuffer>()
 
     /**
      * Pre Allocate buffers.
@@ -86,9 +87,27 @@ object BufferPool {
      * @param count Size to allocate
      * @return An Allocated ByteBuffer and limit to the amount of bytes
      */
-    fun <T> allocateAndLimit(count: Int, body:(ByteBuffer)->T ): T {
+    inline fun <T> allocateAndLimit(count: Int, body:(ByteBuffer)->T ): T {
         val buffer = allocate(count)
         buffer.limit(count)
         return withBuffer(buffer, body)
     }
+
+    @Suppress("MemberVisibilityCanPrivate")
+    val longBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
+    @Suppress("MemberVisibilityCanPrivate")
+    val intBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
+
+    inline fun <T> withIntBuffer(block:(ByteBuffer) -> T):T {
+        val buffer = intBuffer.getOrSet { ByteBuffer.allocateDirect(java.lang.Integer.BYTES).order(ByteOrder.BIG_ENDIAN) }
+        buffer.rewind()
+        return block(buffer)
+    }
+
+    inline fun <T> withLongBuffer(block:(ByteBuffer) -> T):T {
+        val buffer = longBuffer.getOrSet { ByteBuffer.allocateDirect(java.lang.Long.BYTES).order(ByteOrder.BIG_ENDIAN) }
+        buffer.rewind()
+        return block(buffer)
+    }
+
 }

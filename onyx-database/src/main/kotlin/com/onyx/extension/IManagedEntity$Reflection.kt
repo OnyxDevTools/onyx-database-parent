@@ -10,7 +10,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 
 // Indicates null value for a partition
-val NULL_PARTITION = ""
+val nullPartition = ""
 
 /**
  * Get the primary key or identifier of an entity
@@ -44,9 +44,9 @@ fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, des
 fun IManagedEntity.partitionValue(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, "")):String {
     if(descriptor!!.partition != null) {
         val propertyValue:Any? = get(context, descriptor, descriptor.partition!!.name)
-        return propertyValue?.toString() ?: NULL_PARTITION
+        return propertyValue?.toString() ?: nullPartition
     }
-    return NULL_PARTITION
+    return nullPartition
 }
 
 /**

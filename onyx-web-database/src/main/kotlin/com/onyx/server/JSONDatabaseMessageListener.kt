@@ -30,7 +30,7 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
 
     private val webPersistenceEndpoint: WebPersistenceEndpoint
 
-    private val READ_TIMEOUT = (60 * 1000).toLong()
+    private val readTimeout = (60 * 1000).toLong()
 
     init {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
@@ -104,7 +104,7 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
                         val time = System.currentTimeMillis()
                         while (buffer.hasRemaining()) {
                             channel.read(buffer)
-                            if (buffer.remaining() > 0 && time + READ_TIMEOUT > System.currentTimeMillis()) {
+                            if (buffer.remaining() > 0 && time + readTimeout > System.currentTimeMillis()) {
                                 LockSupport.parkNanos(100)
                             } else
                                 break

@@ -1,6 +1,6 @@
 package com.onyx.diskmap.impl.base.hashmatrix
 
-import com.onyx.buffer.BufferPool
+import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskSkipListMap
@@ -40,9 +40,9 @@ abstract class AbstractHashMatrix<K, V>(fileStore: Store, header: Header, detach
      */
     open fun updateHashMatrixReference(node: HashMatrixNode, index: Int, value: Long) {
         node.next[index] = value
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+        withLongBuffer {
             it.putLong(value)
-            it.flip()
+            it.rewind()
             fileStore.write(it, node.position + (java.lang.Long.BYTES * index).toLong() + java.lang.Long.BYTES.toLong() + Integer.BYTES.toLong())
         }
     }

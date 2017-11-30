@@ -1,7 +1,6 @@
 package database
 
 import com.onyx.entity.SystemEntity
-import com.onyx.exception.OnyxException
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator

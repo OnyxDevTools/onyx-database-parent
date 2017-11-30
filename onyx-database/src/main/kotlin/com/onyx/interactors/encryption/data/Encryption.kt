@@ -10,8 +10,6 @@ import java.util.Arrays
 import java.nio.charset.Charset
 import java.security.MessageDigest
 
-
-
 class Encryption private constructor(private val mBuilder: Builder) {
 
     @Throws(UnsupportedEncodingException::class, NoSuchAlgorithmException::class, NoSuchPaddingException::class, InvalidAlgorithmParameterException::class, InvalidKeyException::class, InvalidKeySpecException::class, BadPaddingException::class, IllegalBlockSizeException::class)
@@ -49,12 +47,12 @@ class Encryption private constructor(private val mBuilder: Builder) {
 
     @Throws(NoSuchAlgorithmException::class, UnsupportedEncodingException::class, InvalidKeySpecException::class)
     private fun getSecretKey(key: CharArray): SecretKey {
-        var key = (String(key)).toByteArray(Charset.forName("UTF-8"))
-        val sha = MessageDigest.getInstance("SHA-1")
-        key = sha.digest(key)
-        key = Arrays.copyOf(key, 16) // use only first 128 bit
+        var keyBytes:ByteArray = (String(key)).toByteArray(Charset.forName("UTF-8"))
+        val digest:MessageDigest = MessageDigest.getInstance("SHA-1")
+        keyBytes = digest.digest(keyBytes)
+        keyBytes = Arrays.copyOf(keyBytes, 16) // use only first 128 bit
 
-        return SecretKeySpec(key, "AES")
+        return SecretKeySpec(keyBytes, "AES")
     }
 
     @Throws(UnsupportedEncodingException::class, NoSuchAlgorithmException::class)
@@ -66,15 +64,10 @@ class Encryption private constructor(private val mBuilder: Builder) {
 
     private class Builder(
             internal var iv: ByteArray? = null,
-            internal var keyLength: Int = 0,
             internal var base64Mode: Int = 0,
-            internal var iterationCount: Int = 0,
-            internal var salt: String? = null,
             internal var key: String? = null,
             internal var algorithm: String? = null,
-            internal var keyAlgorithm: String? = null,
             internal var charsetName: String? = null,
-            internal var secretKeyType: String? = null,
             internal var digestAlgorithm: String? = null,
             internal var secureRandomAlgorithm: String? = null,
             internal var secureRandom: SecureRandom? = null,
@@ -91,16 +84,16 @@ class Encryption private constructor(private val mBuilder: Builder) {
 
         companion object {
 
-            internal fun getDefaultBuilder(key: String, salt: String, iv: ByteArray): Builder =
-                    Builder(iv = iv, key = key, salt = salt, keyLength = 128, keyAlgorithm = "AES", charsetName = "UTF8", iterationCount = 1000, digestAlgorithm = "SHA1", base64Mode = Base64.DEFAULT, algorithm = "AES/CBC/PKCS5Padding", secureRandomAlgorithm = "SHA1PRNG", secretKeyType = "HmacSHA1")
+            internal fun getDefaultBuilder(key: String, iv: ByteArray): Builder =
+                    Builder(iv = iv, key = key, charsetName = "UTF8", digestAlgorithm = "SHA1", base64Mode = Base64.DEFAULT, algorithm = "AES/CBC/PKCS5Padding", secureRandomAlgorithm = "SHA1PRNG")
 
         }
     }
 
     companion object {
-        fun getDefault(key: String, salt: String, iv: ByteArray): Encryption? {
+        fun getDefault(key: String, iv: ByteArray): Encryption? {
             return try {
-                Builder.getDefaultBuilder(key, salt, iv).build()
+                Builder.getDefaultBuilder(key, iv).build()
             } catch (e: NoSuchAlgorithmException) {
                 null
             }

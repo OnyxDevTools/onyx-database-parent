@@ -1,6 +1,6 @@
 package com.onyx.diskmap.impl.base
 
-import com.onyx.buffer.BufferPool
+import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
@@ -35,9 +35,9 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * This method will only update the record count rather than the entire header
      */
     private fun updateHeaderRecordCount() {
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+        withLongBuffer {
             it.putLong(reference.recordCount.get())
-            it.flip()
+            it.rewind()
             fileStore.write(it, reference.position + java.lang.Long.BYTES)
         }
     }
@@ -49,9 +49,9 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @param firstNode First Node location
      */
     protected open fun updateHeaderFirstNode(header: Header, firstNode: Long) {
-        BufferPool.allocateAndLimit(java.lang.Long.BYTES) {
+        withLongBuffer {
             it.putLong(firstNode)
-            it.flip()
+            it.rewind()
             fileStore.write(it, header.position)
         }
     }

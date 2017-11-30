@@ -1,6 +1,5 @@
 package com.onyx.application
 
-import com.onyx.network.ssl.SSLPeer
 import com.onyx.interactors.encryption.EncryptionInteractor
 
 /**

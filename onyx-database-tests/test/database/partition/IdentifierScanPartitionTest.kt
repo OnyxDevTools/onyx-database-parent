@@ -23,19 +23,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun bTestQueryPartitionEntityWithIndex() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 2L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 2L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1L))
         query.partition = 3L
@@ -46,19 +46,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 2L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 2L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.IN, Arrays.asList(1L, 2L)))
 
@@ -68,19 +68,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun cTestQueryFindQueryPartitionEntityWithIndex() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 1L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 1L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1L).and("partitionId", QueryCriteriaOperator.EQUAL, 3L))
 
@@ -90,24 +90,24 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun caTestQueryFindQueryPartitionEntityWithIndex() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
         var query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1L).and("partitionId", QueryCriteriaOperator.EQUAL, 3L).and("indexVal", QueryCriteriaOperator.LESS_THAN, 6L))
 
         // By adding this, it will test our cache and ensure we are properly handling partitions
         manager.executeQuery<IManagedEntity>(query)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 1L
-        FullTablePartitionEntity2.partitionId = 3L
-        FullTablePartitionEntity2.indexVal = 6L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 1L
+        fullTablePartitionEntity2.partitionId = 3L
+        fullTablePartitionEntity2.indexVal = 6L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1L).and("partitionId", QueryCriteriaOperator.EQUAL, 3L).and("indexVal", QueryCriteriaOperator.LESS_THAN, 6L))
 
@@ -117,19 +117,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun dTestDeleteQueryPartitionEntity() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 1L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 1L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1L).and("partitionId", QueryCriteriaOperator.EQUAL, 2L))
 
@@ -139,19 +139,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun bTestDeleteQueryPartitionEntityWithIndex() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 1L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 1L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 1L))
         query.partition = 2L
@@ -185,19 +185,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun dTestUpdateQueryPartitionEntity() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 2L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 2L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 2L).and("partitionId", QueryCriteriaOperator.EQUAL, 2L))
         query.updates = Arrays.asList(AttributeUpdate("indexVal", 6L))
@@ -208,19 +208,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun bTestUpdateQueryPartitionEntityWithIndex() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 1L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 1L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 2L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 2L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 2L))
         query.updates = Arrays.asList(AttributeUpdate("indexVal", 6L))
@@ -232,19 +232,19 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
 
     @Test
     fun bTestUpdatePartitionField() {
-        val FullTablePartitionEntity = FullTablePartitionEntity()
-        FullTablePartitionEntity.id = 2L
-        FullTablePartitionEntity.partitionId = 3L
-        FullTablePartitionEntity.indexVal = 5L
+        val fullTablePartitionEntity = FullTablePartitionEntity()
+        fullTablePartitionEntity.id = 2L
+        fullTablePartitionEntity.partitionId = 3L
+        fullTablePartitionEntity.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity)
 
-        val FullTablePartitionEntity2 = FullTablePartitionEntity()
-        FullTablePartitionEntity2.id = 2L
-        FullTablePartitionEntity2.partitionId = 2L
-        FullTablePartitionEntity2.indexVal = 5L
+        val fullTablePartitionEntity2 = FullTablePartitionEntity()
+        fullTablePartitionEntity2.id = 2L
+        fullTablePartitionEntity2.partitionId = 2L
+        fullTablePartitionEntity2.indexVal = 5L
 
-        manager.saveEntity<IManagedEntity>(FullTablePartitionEntity2)
+        manager.saveEntity<IManagedEntity>(fullTablePartitionEntity2)
 
         val query = Query(FullTablePartitionEntity::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, 2L))
         query.updates = Arrays.asList(AttributeUpdate("partitionId", 5L), AttributeUpdate("indexVal", 6L))
