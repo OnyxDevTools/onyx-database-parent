@@ -4,7 +4,7 @@
 
   <groupId>com.onyxdevtools</groupId>
   <artifactId>onyx-database-examples</artifactId>
-    <version>2.0.0rc3</version>
+    <version>2.0.0rc4</version>
   <packaging>pom</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>

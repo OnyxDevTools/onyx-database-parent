@@ -23,7 +23,7 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
      * @since 1.3.0
      */
     override fun createTemporaryDiskMapPool() {
-        for (i in 0..31) {
+        for (i in 1..numberOfTemporaryFiles) {
             val builder = DefaultDiskMapFactory(location, StoreType.IN_MEMORY, this@CacheSchemaContext, true)
             temporaryDiskMapQueue.add(builder)
             temporaryDiskMaps.add(builder)

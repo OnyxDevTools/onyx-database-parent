@@ -19,7 +19,6 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
     private var metadata: MutableMap<Byte, Number>
 
     init {
-
         val dataFile = context.getDataFile(entityDescriptor)
         metadata = dataFile.getHashMap(METADATA_MAP_NAME + entityDescriptor.entityClass.name, METADATA_MAP_LOAD_FACTOR)
 
@@ -31,14 +30,15 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
      * Save an entity
      *
      * @param entity Entity to save
-     * @return Entity identifier
+     * @return Pair of existing reference id and new identifier value
      * @throws OnyxException Error saving entity
      *
      * @since 1.2.3 Added an optimization so it does not do a check if it exist before
      * putting if there are no listeners for persist
+     * @since 2.0.0 Optimized to return the old reference value
      */
     @Throws(OnyxException::class)
-    override fun save(entity: IManagedEntity): Any {
+    override fun save(entity: IManagedEntity): Pair<Long, Any> {
         autoIncrementSequence(entity)
         return super.save(entity)
     }
@@ -64,7 +64,8 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
                     sequenceValue.set(identifierValue.toLong())
                     metadata.put(LAST_SEQUENCE_VALUE, identifierValue)
                 }
-                else -> {}
+                else -> {
+                }
             }
         }
     }

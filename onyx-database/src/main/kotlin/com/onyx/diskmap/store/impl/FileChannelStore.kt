@@ -222,7 +222,8 @@ open class FileChannelStore() : Store {
      */
     override fun read(buffer: ByteBuffer, position: Long) {
         channel!!.read(buffer, position)
-        buffer.position(buffer.limit())
+        while (buffer.hasRemaining()) // Fill out the rest because the File Channel may not be filled in
+            buffer.put(0.toByte())
     }
 
     /**
@@ -270,7 +271,7 @@ open class FileChannelStore() : Store {
         val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
         val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
 
-        private fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
+        fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
     }
 
 }

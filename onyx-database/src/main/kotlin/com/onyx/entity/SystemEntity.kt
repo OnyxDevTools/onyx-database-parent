@@ -16,7 +16,7 @@ import java.util.*
 @Entity(fileName = "system")
 data class SystemEntity @JvmOverloads constructor(
 
-    @Index(loadFactor = 3)
+    @Index(loadFactor = 1)
     var name: String = "",
 
     @Attribute
@@ -25,7 +25,7 @@ data class SystemEntity @JvmOverloads constructor(
     @Attribute
     var fileName: String? = null,
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class, loadFactor = 3)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class, loadFactor = 1)
     var partition: SystemPartition? = null,
 
     @Attribute

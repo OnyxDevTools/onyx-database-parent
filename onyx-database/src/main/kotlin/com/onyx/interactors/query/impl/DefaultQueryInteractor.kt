@@ -1,4 +1,4 @@
-package com.onyx.impl
+package com.onyx.interactors.query.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap

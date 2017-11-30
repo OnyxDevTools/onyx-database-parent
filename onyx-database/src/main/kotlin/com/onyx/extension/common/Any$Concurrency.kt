@@ -13,7 +13,7 @@ val defaultPool: ExecutorService = Executors.newWorkStealingPool()!!
  * @param block Block expression to execute
  * @since 2.0.0
  */
-fun runJob(interval:Long, unit:TimeUnit, block: () -> Unit): Job {
+inline fun runJob(interval:Long, unit:TimeUnit, crossinline block: () -> Unit): Job {
     val executor = Executors.newSingleThreadExecutor()
 
     val job = Job(executor = executor)
@@ -33,7 +33,7 @@ fun runJob(interval:Long, unit:TimeUnit, block: () -> Unit): Job {
  * @param block Block expression to execute
  * @since 2.0.0
  */
-fun <T> async(block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke() }
+inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke() }
 
 /**
  * Run a block in background on the default pool.  The default pool should be implemented as a ForkJoinPool
@@ -41,7 +41,7 @@ fun <T> async(block: () -> T): Future<T> = defaultPool.submit<T> { block.invoke(
  * @param block Block expression to execute
  * @since 2.0.0
  */
-fun <T> async(executor: ExecutorService, block: () -> T): Future<T> = executor.submit<T> { block.invoke() }
+inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> = executor.submit<T> { block() }
 
 /**
  * Sleep thread a fixed amount of time.

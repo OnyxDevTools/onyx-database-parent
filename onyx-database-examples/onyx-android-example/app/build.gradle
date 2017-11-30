@@ -35,5 +35,5 @@ dependencies {
     implementation 'com.android.support:support-v4:27.0.0'
     implementation 'com.android.support:recyclerview-v7:27.0.0'
     implementation 'com.android.support:design:27.0.0'
-    implementation 'com.onyxdevtools:onyx-database:2.0.0rc3'
+    implementation 'com.onyxdevtools:onyx-database:2.0.0rc4'
 }
