@@ -2,11 +2,15 @@ package com.onyx.interactors.encryption.data
 
 import javax.crypto.*
 import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import java.io.UnsupportedEncodingException
 import java.security.*
 import java.security.spec.InvalidKeySpecException
+import java.util.Arrays
+import java.nio.charset.Charset
+import java.security.MessageDigest
+
+
 
 class Encryption private constructor(private val mBuilder: Builder) {
 
@@ -45,10 +49,12 @@ class Encryption private constructor(private val mBuilder: Builder) {
 
     @Throws(NoSuchAlgorithmException::class, UnsupportedEncodingException::class, InvalidKeySpecException::class)
     private fun getSecretKey(key: CharArray): SecretKey {
-        val factory = SecretKeyFactory.getInstance(mBuilder.secretKeyType)
-        val spec = PBEKeySpec(key, mBuilder.salt!!.toByteArray(charset(mBuilder.charsetName!!)), mBuilder.iterationCount, mBuilder.keyLength)
-        val tmp = factory.generateSecret(spec)
-        return SecretKeySpec(tmp.encoded, mBuilder.keyAlgorithm!!)
+        var key = (String(key)).toByteArray(Charset.forName("UTF-8"))
+        val sha = MessageDigest.getInstance("SHA-1")
+        key = sha.digest(key)
+        key = Arrays.copyOf(key, 16) // use only first 128 bit
+
+        return SecretKeySpec(key, "AES")
     }
 
     @Throws(UnsupportedEncodingException::class, NoSuchAlgorithmException::class)
@@ -86,7 +92,7 @@ class Encryption private constructor(private val mBuilder: Builder) {
         companion object {
 
             internal fun getDefaultBuilder(key: String, salt: String, iv: ByteArray): Builder =
-                    Builder(iv = iv, key = key, salt = salt, keyLength = 128, keyAlgorithm = "AES", charsetName = "UTF8", iterationCount = 65536, digestAlgorithm = "SHA1", base64Mode = Base64.DEFAULT, algorithm = "AES/CBC/PKCS5Padding", secureRandomAlgorithm = "SHA1PRNG", secretKeyType = "PBKDF2WithHmacSHA1")
+                    Builder(iv = iv, key = key, salt = salt, keyLength = 128, keyAlgorithm = "AES", charsetName = "UTF8", iterationCount = 1000, digestAlgorithm = "SHA1", base64Mode = Base64.DEFAULT, algorithm = "AES/CBC/PKCS5Padding", secureRandomAlgorithm = "SHA1PRNG", secretKeyType = "HmacSHA1")
 
         }
     }

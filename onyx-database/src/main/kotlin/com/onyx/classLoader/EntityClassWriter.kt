@@ -2,6 +2,7 @@ package com.onyx.classLoader
 
 import com.onyx.entity.SystemEntity
 import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.FetchPolicy
@@ -88,7 +89,7 @@ object EntityClassWriter {
      * @param idType Entity identifier type
      * @param idName Name of the identifier attribute
      */
-    private fun writeXtendClass(systemEntity: SystemEntity, databaseLocation: String, schemaContext: SchemaContext, idType: String, idName: String) {
+    private fun processClass(systemEntity: SystemEntity, databaseLocation: String, schemaContext: SchemaContext, idType: String, idName: String) {
         val packageName = systemEntity.name.replace("." + systemEntity.className!!, "")
         val outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY
         val className = systemEntity.className
@@ -192,18 +193,22 @@ object EntityClassWriter {
      * @param systemEntity     System entity
      * @param databaseLocation Database location
      */
-    @Synchronized
     fun writeClass(systemEntity: SystemEntity, databaseLocation: String, context: SchemaContext) {
         if (context is CacheSchemaContext)
             return
 
-        val outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY
-        File(outputDirectory).mkdirs()
+        async {
+            synchronized(context) {
+                val outputDirectory = databaseLocation + File.separator + SOURCE_ENTITIES_DIRECTORY
+                File(outputDirectory).mkdirs()
 
-        WRITTEN_CLASSES.add(systemEntity.name)
+                WRITTEN_CLASSES.add(systemEntity.name)
 
-        val attribute = systemEntity.attributes.find { it.name == systemEntity.identifier!!.name }!!
-        writeXtendClass(systemEntity, databaseLocation, context, attribute.dataType!!, attribute.name)
+                val attribute = systemEntity.attributes.find { it.name == systemEntity.identifier!!.name }!!
+
+                processClass(systemEntity, databaseLocation, context, attribute.dataType!!, attribute.name)
+            }
+        }
     }
 
 }

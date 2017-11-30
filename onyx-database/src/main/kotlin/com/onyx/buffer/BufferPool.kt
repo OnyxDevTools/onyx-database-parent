@@ -43,10 +43,6 @@ object BufferPool {
      */
     fun recycle(buffer: ByteBuffer) {
         buffer.clear()
-        // Clean the buffer also
-        while(buffer.hasRemaining())
-            buffer.put(0.toByte())
-        buffer.clear()
         val capacity = buffer.capacity()
         when {
             capacity >= LARGE_BUFFER_SIZE && LARGE_BUFFER_POOL.size < NUMBER_LARGE_BUFFERS -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.addFirst(buffer) }

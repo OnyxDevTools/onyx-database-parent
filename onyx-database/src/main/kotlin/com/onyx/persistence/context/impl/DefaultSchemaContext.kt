@@ -7,6 +7,7 @@ import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.store.StoreType
+import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
@@ -40,13 +41,8 @@ import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.QueryOrder
+import com.onyx.persistence.query.*
 import java.io.File
-import java.math.BigInteger
-import java.security.SecureRandom
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -212,18 +208,18 @@ open class DefaultSchemaContext : SchemaContext {
      */
     private fun initializeEntityDescriptors() {
         // Added criteria for greater than 7 so that we do not disturb the system entities
-        val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_STARTS_WITH, "com.onyx.entity.System"))
-        query.selections = listOf("name")
-        val results = serializedPersistenceManager.executeQuery<Map<*, *>>(query)
+        val results = serializedPersistenceManager.select("name").from(SystemEntity::class)
+                .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
+                .list<Map<String, String>>()
 
-        results.map { it["name"] as String }.forEach { getBaseDescriptorForEntity(classForName(it)) }
+        results.map { it["name"] }.forEach { getBaseDescriptorForEntity(classForName(it!!)) }
     }
 
     /**
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
     private fun initializeSystemEntities() {
-        val classes:List<KClass<out ManagedEntity>> = listOf(SystemEntity::class,SystemAttribute::class,SystemRelationship::class,SystemIndex::class,SystemIdentifier::class,SystemPartition::class,SystemPartitionEntry::class)
+        val classes:List<KClass<out ManagedEntity>> = arrayListOf(SystemEntity::class,SystemAttribute::class,SystemRelationship::class,SystemIndex::class,SystemIdentifier::class,SystemPartition::class,SystemPartitionEntry::class)
         val systemEntities = ArrayList<SystemEntity>()
         var i = 1
 
@@ -682,7 +678,7 @@ open class DefaultSchemaContext : SchemaContext {
     protected val temporaryDiskMaps: MutableSet<DiskMapFactory> = HashSet()
 
     @JvmField
-    protected val temporaryDiskMapQueue = ArrayBlockingQueue<DiskMapFactory>(32, false)
+    protected val temporaryDiskMapQueue = ArrayBlockingQueue<DiskMapFactory>(numberOfTemporaryFiles, false)
 
     /**
      * This method will create a pool of map builders.  They are used to run queries
@@ -694,8 +690,8 @@ open class DefaultSchemaContext : SchemaContext {
         val temporaryFileLocation = this.location + File.separator + "temporary"
         File(temporaryFileLocation).mkdirs()
 
-        for (i in 0..31) {
-            val stringBuilder = temporaryFileLocation + File.separator + System.currentTimeMillis().toString() + BigInteger(20, random).toString(32)
+        for (i in 1..numberOfTemporaryFiles) {
+            val stringBuilder = temporaryFileLocation + File.separator + System.nanoTime().toString() + i.toString()
 
             val file = File(stringBuilder)
             file.createNewFile()
@@ -706,6 +702,9 @@ open class DefaultSchemaContext : SchemaContext {
             temporaryDiskMaps.add(builder)
         }
     }
+
+    protected val numberOfTemporaryFiles
+        get() = if(FileChannelStore.isSmallDevice()) Runtime.getRuntime().availableProcessors() else (Runtime.getRuntime().availableProcessors() * 3)
 
     /**
      * Create Temporary Map Builder.
@@ -765,9 +764,4 @@ open class DefaultSchemaContext : SchemaContext {
     }
 
     // endregion
-
-    companion object {
-        // Random generator for generating random temporary file names
-        private val random = SecureRandom()
-    }
 }

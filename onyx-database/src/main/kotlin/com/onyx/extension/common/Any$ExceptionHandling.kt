@@ -6,8 +6,8 @@ package com.onyx.extension.common
  * @since 2.0.0
  */
 @Suppress("UNCHECKED_CAST")
-fun <T : Any?> catchAll(body: () -> T):T = try {
-        body.invoke()
+inline fun <T : Any?> catchAll(body: () -> T):T = try {
+        body()
     } catch (ignore:Exception) {
         null as T
 }

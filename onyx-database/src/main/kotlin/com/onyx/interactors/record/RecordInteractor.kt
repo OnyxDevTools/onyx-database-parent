@@ -14,11 +14,12 @@ interface RecordInteractor {
     /**
      * Save an entity and persist it to the data file
      * @param entity Entity to save
-     * @return Entity id
+     * @return Pair of existing reference id and new identifier value
      * @throws OnyxException Attribute missing
+     * @since 2.0.0 Optimized to return the old reference value
      */
     @Throws(OnyxException::class)
-    fun save(entity: IManagedEntity): Any
+    fun save(entity: IManagedEntity): Pair<Long, Any>
 
     /**
      * Delete

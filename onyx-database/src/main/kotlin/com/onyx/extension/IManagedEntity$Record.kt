@@ -7,6 +7,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
+import com.onyx.persistence.annotations.values.IdentifierGenerator
 
 /**
  * Get the entity's reference ID from the store.
@@ -20,7 +21,7 @@ import com.onyx.interactors.relationship.data.RelationshipReference
  */
 fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Long {
     val identifier = identifier(context)
-    return if(identifier == null) 0L else recordInteractor(context, descriptor).getReferenceId(identifier)
+    return if(identifier == null || (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE && identifier == 0L)) 0L else recordInteractor(context, descriptor).getReferenceId(identifier)
 }
 
 /**
@@ -53,4 +54,4 @@ fun IManagedEntity.recordInteractor(context: SchemaContext, descriptor: EntityDe
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.save(context:SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Any = recordInteractor(context, descriptor).save(this)
+fun IManagedEntity.save(context:SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Pair<Long, Any> = recordInteractor(context, descriptor).save(this)

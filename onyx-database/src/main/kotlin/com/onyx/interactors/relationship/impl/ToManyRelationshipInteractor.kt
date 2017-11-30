@@ -61,7 +61,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
 
                 // Cascade save the entity
                 val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !transaction.contains(it, context)) {
-                    relationshipObjectIdentifier.identifier = it.save(context)
+                    relationshipObjectIdentifier.identifier = it.save(context).second
                     it.saveIndexes(context, relationshipObjectIdentifier.referenceId)
                     it.saveRelationships(context, RelationshipTransaction(entity, context))
                     true
