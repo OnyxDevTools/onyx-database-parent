@@ -48,7 +48,7 @@ class Query : BufferStreamable {
      * Setter for var args
      */
     @Suppress("UNUSED")
-    fun setSelections(vararg selections: String) {
+    fun selections(vararg selections: String) {
         this.selections = Arrays.asList(*selections)
     }
 
@@ -62,7 +62,7 @@ class Query : BufferStreamable {
      * Setter for updates using var args
      */
     @Suppress("UNUSED")
-    fun setUpdates(vararg updates: AttributeUpdate) {
+    fun updates(vararg updates: AttributeUpdate) {
         this.updates = Arrays.asList(*updates)
     }
 
