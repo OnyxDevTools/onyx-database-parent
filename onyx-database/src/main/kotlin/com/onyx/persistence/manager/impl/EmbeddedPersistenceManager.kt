@@ -55,7 +55,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity> saveEntity(entity: IManagedEntity): E {
+    override fun <E : IManagedEntity> saveEntity(entity: E): E {
         context.checkForKillSwitch()
 
         if(entity.isValid(context)) {
@@ -69,7 +69,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             entity.saveRelationships(context)
 
         }
-        return entity as E
+        return entity
     }
 
     /**

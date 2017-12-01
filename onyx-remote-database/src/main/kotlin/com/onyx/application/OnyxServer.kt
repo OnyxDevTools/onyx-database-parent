@@ -37,7 +37,7 @@ interface OnyxServer {
      * Database encryption.  In order to make more secure, implement custom encryption interactor.  Use it to override
      * the keys.
      *
-     * @see com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+     * @see com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
      */
     var encryption: EncryptionInteractor
 

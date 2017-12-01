@@ -81,7 +81,6 @@ class Encryption private constructor(private val mBuilder: Builder) {
             return Encryption(this)
         }
 
-
         companion object {
 
             internal fun getDefaultBuilder(key: String, iv: ByteArray): Builder =

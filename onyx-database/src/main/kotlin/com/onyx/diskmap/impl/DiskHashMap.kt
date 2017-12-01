@@ -1,5 +1,6 @@
 package com.onyx.diskmap.impl
 
+import com.onyx.diskmap.SortedDiskMap
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
 import com.onyx.diskmap.data.Header
@@ -10,7 +11,7 @@ import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.*
 import java.util.HashSet
 
-class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V> {
+class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,V> {
 
     private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 

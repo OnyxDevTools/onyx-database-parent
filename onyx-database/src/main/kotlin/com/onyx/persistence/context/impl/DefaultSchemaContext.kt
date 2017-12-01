@@ -1,6 +1,5 @@
 package com.onyx.persistence.context.impl
 
-import com.onyx.classLoader.EntityClassWriter
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
@@ -194,7 +193,8 @@ open class DefaultSchemaContext : SchemaContext {
     /**
      * The purpose of this is to auto number the partition ids
      */
-    private fun initializePartitionSequence() {
+    @Suppress("MemberVisibilityCanPrivate")
+    protected open fun initializePartitionSequence() {
         // Get the max partition index
         val indexInteractor = this.getIndexInteractor(descriptors[SystemPartitionEntry::class.java.name]!!.indexes["index"]!!)
         val values = indexInteractor.findAllValues()
@@ -206,7 +206,8 @@ open class DefaultSchemaContext : SchemaContext {
      * The purpose of this is to iterate through the system entities and pre-cache all of the entity descriptors
      * So that we can detect schema changes earlier.  For instance an index change can start re-building the index at startup.
      */
-    private fun initializeEntityDescriptors() {
+    @Suppress("MemberVisibilityCanPrivate")
+    protected open fun initializeEntityDescriptors() {
         // Added criteria for greater than 7 so that we do not disturb the system entities
         val results = serializedPersistenceManager.select("name").from(SystemEntity::class)
                 .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
@@ -218,7 +219,8 @@ open class DefaultSchemaContext : SchemaContext {
     /**
      * This method initializes the metadata needed to get started.  It creates the base level information about the system metadata so that we no longer have to lazy load them
      */
-    private fun initializeSystemEntities() {
+    @Suppress("MemberVisibilityCanPrivate")
+    protected open fun initializeSystemEntities() {
         val classes:List<KClass<out ManagedEntity>> = arrayListOf(SystemEntity::class,SystemAttribute::class,SystemRelationship::class,SystemIndex::class,SystemIdentifier::class,SystemPartition::class,SystemPartitionEntry::class)
         val systemEntities = ArrayList<SystemEntity>()
         var i = 1
@@ -254,7 +256,8 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.1.0
      */
     @Throws(OnyxException::class)
-    private fun checkForEntityChanges(descriptor: EntityDescriptor, systemEntityToCheck: SystemEntity): SystemEntity {
+    @Suppress("MemberVisibilityCanPrivate")
+    protected open fun checkForEntityChanges(descriptor: EntityDescriptor, systemEntityToCheck: SystemEntity): SystemEntity {
         var systemEntity = systemEntityToCheck
 
         val newSystemEntity = SystemEntity(descriptor)
@@ -374,8 +377,10 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region System Entity
 
-    private val systemEntityByIDMap = HashMap<Int, SystemEntity?>()
-    private val defaultSystemEntities = HashMap<String, SystemEntity?>()
+    @Suppress("MemberVisibilityCanPrivate")
+    protected val systemEntityByIDMap = HashMap<Int, SystemEntity?>()
+    @Suppress("MemberVisibilityCanPrivate")
+    protected val defaultSystemEntities = HashMap<String, SystemEntity?>()
 
     /**
      * Get System Entity By Name.
@@ -524,8 +529,6 @@ open class DefaultSchemaContext : SchemaContext {
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor!!.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(), "") }
-
-                EntityClassWriter.writeClass(systemEntity, location, this@DefaultSchemaContext)
 
                 return@synchronized descriptor!!
             }

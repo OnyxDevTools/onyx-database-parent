@@ -57,7 +57,7 @@ interface PersistenceManager {
      * @throws OnyxException Exception occurred while persisting an entity
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity> saveEntity(entity: IManagedEntity): E
+    fun <E : IManagedEntity> saveEntity(entity: E): E
 
     /**
      * Batch saves a list of entities.

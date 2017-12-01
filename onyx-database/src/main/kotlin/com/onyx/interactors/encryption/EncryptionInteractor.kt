@@ -19,11 +19,16 @@ interface EncryptionInteractor {
     val iv:ByteArray
 
     /**
+     * Holds the generated key
+     */
+    var encryption:Encryption?
+
+    /**
      * Performs Decryption.
      * @param encryptedText Text to Decrypt
      * @return Decrypted Text
      */
-    fun decrypt(encryptedText: String): String? = DefaultEncryption.encrypt(this).decryptOrNull(encryptedText)
+    fun decrypt(encryptedText: String): String? = encryption().decryptOrNull(encryptedText)
 
     /**
      * Performs Encryption
@@ -35,16 +40,17 @@ interface EncryptionInteractor {
      *
      * @return Encrypted String
      */
-    fun encrypt(plainText: String): String? = DefaultEncryption.encrypt(this).encryptOrNull(plainText)
+    fun encrypt(plainText: String): String? = encryption().encryptOrNull(plainText)
 
-}
-
-object DefaultEncryption {
-    var encryption: Encryption? = null
-
-    fun encrypt(interactor: EncryptionInteractor):Encryption {
-        if(encryption == null) encryption = Encryption.getDefault(interactor.key, interactor.iv)
+    /**
+     * Instantiates the encryption
+     */
+    fun encryption():Encryption {
+        if(encryption == null) {
+            encryption = Encryption.getDefault(key, iv)
+        }
         return encryption!!
     }
 }
+
 

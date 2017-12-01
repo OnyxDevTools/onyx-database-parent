@@ -37,7 +37,7 @@ data class SystemRelationship @JvmOverloads constructor(
     var relationshipType: Byte = 0,
 
     @Attribute
-    var loadFactor: Byte = 0
+    var loadFactor: Byte = 1
 
 ) : ManagedEntity() {
 
