@@ -1,6 +1,6 @@
 package encryption
 
-import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import org.junit.Test
 
 import java.io.File
@@ -20,15 +20,15 @@ class EncryptionTest {
 
     @Test
     fun shouldEncrypt() {
-        val encryptedText = DefaultEncryptionInteractor.encrypt("admin_admin")
+        val encryptedText = DefaultEncryptionInteractorInstance.encrypt("admin_admin")
         assertNotNull(encryptedText, "Encrypted text should not be null")
     }
 
     @Test
     fun shouldDecrypt() {
         val str = "admin_admin"
-        val encryptedText = DefaultEncryptionInteractor.encrypt(str)
-        val decryptedText = DefaultEncryptionInteractor.decrypt(encryptedText!!)
+        val encryptedText = DefaultEncryptionInteractorInstance.encrypt(str)
+        val decryptedText = DefaultEncryptionInteractorInstance.decrypt(encryptedText!!)
         assertEquals(str,  decryptedText, "Decrypted text should match original")
     }
 
@@ -36,7 +36,7 @@ class EncryptionTest {
     fun shouldFail() {
         val str = "admin_admin"
         val str2 = "admin_password"
-        val decryptedText = DefaultEncryptionInteractor.decrypt(DefaultEncryptionInteractor.encrypt(str2)!!)
+        val decryptedText = DefaultEncryptionInteractorInstance.decrypt(DefaultEncryptionInteractorInstance.encrypt(str2)!!)
 
         assertNotEquals(str, decryptedText, "Decrypted should not match")
     }
@@ -52,14 +52,14 @@ class EncryptionTest {
         //Next, write the encrypted bytes to the file.
 
         FileOutputStream(file).use { fileStream ->
-            fileStream.write(DefaultEncryptionInteractor.encrypt(textToSave)!!.toByteArray(StandardCharsets.UTF_8))
+            fileStream.write(DefaultEncryptionInteractorInstance.encrypt(textToSave)!!.toByteArray(StandardCharsets.UTF_8))
             fileStream.close()
         }
 
         val savedText = String(Files.readAllBytes(Paths.get(file.absolutePath)))
 
         //make assertions
-        assertEquals(savedText, DefaultEncryptionInteractor.encrypt(textToSave), "Encrypted text does not match")
+        assertEquals(savedText, DefaultEncryptionInteractorInstance.encrypt(textToSave), "Encrypted text does not match")
 
         //cleanup file
         file.delete()

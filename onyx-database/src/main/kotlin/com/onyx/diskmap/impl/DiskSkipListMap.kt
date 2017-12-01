@@ -5,6 +5,7 @@ import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.EmptyClosureReadWriteLock
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.SkipListHeadNode
 import com.onyx.diskmap.data.SkipListNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
@@ -222,7 +223,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override fun below(index: K, includeFirst: Boolean): Set<Long> = mapReadWriteLock.readLock {
         val results = HashSet<Long>()
 
-        var node = head
+        var node: SkipListHeadNode? = head ?: return@readLock HashSet()
         while (node!!.down != 0L)
             node = findNodeAtPosition(node.down)
 

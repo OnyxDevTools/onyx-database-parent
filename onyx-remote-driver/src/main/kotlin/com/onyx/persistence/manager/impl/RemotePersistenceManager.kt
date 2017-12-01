@@ -79,10 +79,10 @@ open class RemotePersistenceManager : PersistenceManager {
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity> saveEntity(entity: IManagedEntity): E {
+    override fun <E : IManagedEntity> saveEntity(entity: E): E {
         val results = proxy.saveEntity<IManagedEntity>(entity)
         entity.copy(results, context)
-        return entity as E
+        return entity
     }
 
     /**

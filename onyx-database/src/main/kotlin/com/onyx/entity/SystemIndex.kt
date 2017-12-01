@@ -18,16 +18,12 @@ data class SystemIndex @JvmOverloads constructor(
     var name: String = "",
 
     @Attribute
-    var type: String = "",
-
-    @Attribute
-    var loadFactor: Int = 0
+    var loadFactor: Int = 1
 
 ): ManagedEntity() {
 
     constructor(descriptor: IndexDescriptor):this(
         name = descriptor.name,
-        type = descriptor.type.canonicalName,
         loadFactor = descriptor.loadFactor.toInt()
     )
 }

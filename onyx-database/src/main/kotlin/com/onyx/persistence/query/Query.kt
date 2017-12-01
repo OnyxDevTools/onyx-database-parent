@@ -45,10 +45,26 @@ class Query : BufferStreamable {
     var selections: List<String>? = null
 
     /**
+     * Setter for var args
+     */
+    @Suppress("UNUSED")
+    fun setSelections(vararg selections: String) {
+        this.selections = Arrays.asList(*selections)
+    }
+
+    /**
      * Sets the update instructions
      * @since 1.0.0
      */
     var updates: List<AttributeUpdate> = arrayListOf()
+
+    /**
+     * Setter for updates using var args
+     */
+    @Suppress("UNUSED")
+    fun setUpdates(vararg updates: AttributeUpdate) {
+        this.updates = Arrays.asList(*updates)
+    }
 
     /**
      * Gets the criteria value that is used to filter when doing a fetch

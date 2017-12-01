@@ -7,7 +7,7 @@ import com.onyx.persistence.context.impl.DefaultSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
-import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import com.onyx.interactors.encryption.EncryptionInteractor
 
 import java.io.*
@@ -61,7 +61,7 @@ import java.nio.charset.StandardCharsets
  */
 open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation, override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)) : PersistenceManagerFactory {
 
-    override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
+    override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
 
     /**
      * Constructor that ensures safe shutdown
@@ -182,7 +182,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
         }
 
         fileChannelLock = RandomAccessFile(lockFile, "rws").channel
-        lock = fileChannelLock!!.tryLock()
+        lock = fileChannelLock!!.lock()
     }
 
     /**

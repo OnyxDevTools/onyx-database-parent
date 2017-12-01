@@ -21,7 +21,7 @@ data class SystemIdentifier @JvmOverloads constructor(
     var generator: Byte = 0,
 
     @Attribute
-    var loadFactor: Byte = 0
+    var loadFactor: Byte = 1
 
 ) : ManagedEntity() {
 

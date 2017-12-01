@@ -66,7 +66,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <T : IManagedEntity> saveEntity(entity: IManagedEntity): T {
+    override fun <T : IManagedEntity> saveEntity(entity: T): T {
         val body = EntityRequestBody()
         body.entity = entity
         body.type = entity.javaClass.name
@@ -75,7 +75,7 @@ class WebPersistenceManager(override var context: SchemaContext) : AbstractWebPe
         val results = this.performCall(url + AbstractWebPersistenceManager.SAVE, null, entity.javaClass, body) as IManagedEntity
         entity.copy(results, context)
 
-        return entity as T
+        return entity
     }
 
     /**

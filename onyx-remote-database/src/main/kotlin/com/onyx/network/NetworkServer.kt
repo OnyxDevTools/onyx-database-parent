@@ -11,7 +11,7 @@ import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.runJob
-import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.network.connection.Connection
@@ -44,7 +44,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
 
-    override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
+    override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
     protected var requestHandler: RequestHandler? = null // Handler for responding to requests
 
     private var selector: Selector? = null // Selector for inbound communication

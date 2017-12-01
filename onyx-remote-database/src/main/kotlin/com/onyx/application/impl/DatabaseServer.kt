@@ -11,7 +11,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.network.auth.impl.DefaultAuthenticationManager
 import com.onyx.cli.CommandLineParser
 import com.onyx.network.rmi.OnyxRMIServer
-import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractor
+import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.network.ssl.SSLPeer
 import com.onyx.persistence.IManagedEntity
@@ -44,7 +44,7 @@ import com.onyx.persistence.IManagedEntity
  */
 open class DatabaseServer(override val databaseLocation:String) : AbstractDatabaseServer(databaseLocation), OnyxServer, SSLPeer {
 
-    override var encryption: EncryptionInteractor = DefaultEncryptionInteractor
+    override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
 
     override var protocol = "TLSv1.2"
     override var sslStorePassword: String? = null
