@@ -47,7 +47,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
             partitionId = temporaryManagedEntity.partitionId(context, descriptor)
         }
 
-        records.references.map { Reference(partitionId, it.recordId) }.forEach { startingPoint.put(it, it) }
+        records.references.map { Reference(partitionId, it.position) }.forEach { startingPoint.put(it, it) }
 
         return scan(startingPoint)
     }

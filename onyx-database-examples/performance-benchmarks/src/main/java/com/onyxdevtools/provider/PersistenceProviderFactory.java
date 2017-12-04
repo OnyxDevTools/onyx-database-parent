@@ -17,6 +17,8 @@ import java.io.File;
  */
 public class PersistenceProviderFactory
 {
+    public static EmbeddedPersistenceManagerFactory embeddedPersistenceManagerFactory = null;
+
     public static ProviderPersistenceManager getPersistenceManager(DatabaseProvider databaseProvider) throws Exception
     {
         switch (databaseProvider)
@@ -29,7 +31,7 @@ public class PersistenceProviderFactory
                 return new JPAPersistenceManager(emf, databaseProvider);
             // Onyx persistence manager
             case ONYX:
-                final EmbeddedPersistenceManagerFactory embeddedPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(DatabaseProvider.DATABASE_LOCATION + File.separator + "onyx.oxd");
+                embeddedPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(DatabaseProvider.DATABASE_LOCATION + File.separator + "onyx.oxd");
                 embeddedPersistenceManagerFactory.initialize();
                 return new OnyxPersistenceManager(embeddedPersistenceManagerFactory.getPersistenceManager());
         }

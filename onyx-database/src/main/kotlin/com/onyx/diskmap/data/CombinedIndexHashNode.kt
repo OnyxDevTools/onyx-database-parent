@@ -9,7 +9,7 @@ import com.onyx.exception.BufferingException
  *
  * This indicates a head of a data structure for a Hash table with a child index of a skip list.
  */
-class CombinedIndexHashNode(var head: SkipListHeadNode, var mapId: Int) : BufferStreamable {
+class CombinedIndexHashNode(var head: SkipNode, var mapId: Int) : BufferStreamable {
 
     override fun hashCode(): Int = mapId
 
@@ -17,7 +17,7 @@ class CombinedIndexHashNode(var head: SkipListHeadNode, var mapId: Int) : Buffer
 
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {
-        head = buffer.value as SkipListHeadNode
+        head = buffer.value as SkipNode
         mapId = buffer.int
     }
 

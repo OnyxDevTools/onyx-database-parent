@@ -45,10 +45,10 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
         @Suppress("UNCHECKED_CAST")
         records.entries.filter {
             val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
-            query.meetsCriteria(entry.value!!, Reference(partitionId, entry.node.recordId), context, descriptor)
+            entry.node != null && query.meetsCriteria(entry.value!!, Reference(partitionId, entry.node!!.position), context, descriptor)
         }.forEach {
             val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
-            val reference = Reference(partitionId, entry.node.recordId)
+            val reference = Reference(partitionId, entry.node!!.position)
             matching.put(reference, reference)
         }
 

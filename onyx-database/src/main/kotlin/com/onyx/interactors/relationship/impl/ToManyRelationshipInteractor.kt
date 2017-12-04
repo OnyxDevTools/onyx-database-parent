@@ -125,13 +125,13 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         }
 
         if (relationshipDescriptor.fetchPolicy !== FetchPolicy.LAZY || force) {
-            existingRelationshipReferenceObjects.forEach {
-                val relationshipObject = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
-                relationshipObject?.hydrateRelationships(context, transaction)
-                if(relationshipObject != null)
-                    relationshipObjects!!.add(relationshipObject)
+                existingRelationshipReferenceObjects.forEach {
+                    val relationshipObject = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
+                    relationshipObject?.hydrateRelationships(context, transaction)
+                    if (relationshipObject != null)
+                        relationshipObjects!!.add(relationshipObject)
+                }
             }
-        }
 
         //sort related children if the child entity implements Comparable
         if (relationshipObjects.size > 0 && relationshipObjects !is LazyRelationshipCollection && relationshipObjects[0] is Comparable<*>) {

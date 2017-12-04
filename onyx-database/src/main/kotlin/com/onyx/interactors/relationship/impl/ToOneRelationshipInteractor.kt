@@ -58,11 +58,11 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
 
         if (relationshipObject != null) {
             saveInverseRelationship(entity, relationshipObject, parentRelationshipReference, currentRelationshipReference!!)
-            relationshipReferenceMap.put(parentRelationshipReference, hashSetOf(currentRelationshipReference))
+                relationshipReferenceMap.put(parentRelationshipReference, hashSetOf(currentRelationshipReference))
         } else {
-            relationshipReferenceMap.put(parentRelationshipReference, hashSetOf())
+                relationshipReferenceMap.put(parentRelationshipReference, hashSetOf())
+            }
         }
-    }
 
     /**
      * Hydrate relationship for entity

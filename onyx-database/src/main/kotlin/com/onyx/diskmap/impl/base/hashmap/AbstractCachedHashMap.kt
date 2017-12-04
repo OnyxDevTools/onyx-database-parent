@@ -61,15 +61,14 @@ abstract class AbstractCachedHashMap<K, V>(fileStore: Store, header: Header, hea
      * Add iteration list.  This method adds a reference so that the iterator knows what to iterate through without
      * guessing which element within the hash as a sub data structure reference.
      *
-     * @param buffer Byte Buffer to add the hash id to.
      * @param hash Identifier of the sub data structure
      * @param count The current size of the hash table
      *
      * @since 1.2.0
      */
-    override fun addSkipListIterationReference(buffer: ByteBuffer, hash: Int, count: Int) {
+    override fun addSkipListIterationReference(hash: Int, count: Int) {
         mapCache.put(count, hash)
-        super.addSkipListIterationReference(buffer, hash, count)
+        super.addSkipListIterationReference(hash, count)
     }
 
     /**

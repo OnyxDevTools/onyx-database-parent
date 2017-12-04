@@ -43,8 +43,8 @@ class SkipListTest {
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {
-            val randomNum = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE)
-            val randomValue = ThreadLocalRandom.current().nextInt(Integer.MIN_VALUE, Integer.MAX_VALUE)
+            val randomNum = DatabaseBaseTest.randomInteger
+            val randomValue = DatabaseBaseTest.randomInteger
 
             skipList.put(randomNum, randomValue)
             keyValues.put(randomNum, randomValue)
@@ -136,13 +136,13 @@ class SkipListTest {
         }
 
         val values = AtomicInteger(0)
-        keyValues.forEach({ o, o2 ->
+        keyValues.forEach { o, o2 ->
             assertEquals(skipList[o], o2)
 
             if (values.addAndGet(1) % 1000 == 0) {
                 skipList.remove(o)
             }
-        })
+        }
 
         val numberOfValues = AtomicInteger(0)
 

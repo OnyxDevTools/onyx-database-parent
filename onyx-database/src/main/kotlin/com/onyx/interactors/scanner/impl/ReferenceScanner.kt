@@ -38,7 +38,7 @@ open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: 
     @Throws(OnyxException::class)
     override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
         val matching = HashMap<Reference, Reference>()
-        (records.references.map { Reference(0L, it.recordId) } - existingValues.keys).forEach { matching.put(it, it) }
+        (records.references.map { Reference(0L, it.position) } - existingValues.keys).forEach { matching.put(it, it) }
         return matching
     }
 }

@@ -415,6 +415,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     override fun saveRelationshipsForEntity(entity: IManagedEntity, relationship: String, relationshipIdentifiers: Set<Any>) {
+        context.checkForKillSwitch()
+
         val relationships = context.getDescriptorForEntity(entity).relationships
         val relationshipDescriptor = relationships[relationship] ?: throw RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.javaClass.name)
         val references = HashSet<RelationshipReference>()
@@ -445,6 +447,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <E : IManagedEntity> getWithReference(entityType: Class<*>, reference: Reference): E? {
+        context.checkForKillSwitch()
         val managedEntity = reference.toManagedEntity(context, entityType)
         managedEntity?.hydrateRelationships(context)
         return managedEntity as E
@@ -509,6 +512,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     override fun countForQuery(query: Query): Long {
+        context.checkForKillSwitch()
 
         val clazz = query.entityType
 
@@ -539,6 +543,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> stream(query: Query, streamer: QueryStream<T>) {
+        context.checkForKillSwitch()
         val entityList = this.executeLazyQuery<IManagedEntity>(query) as LazyQueryCollection<IManagedEntity>
 
         entityList.forEachIndexed { index, iManagedEntity ->
@@ -559,6 +564,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     override fun stream(query: Query, queryStreamClass: Class<*>) {
+        context.checkForKillSwitch()
         val streamer:QueryStream<*> = try {
             queryStreamClass.instance()
         } catch (e: InstantiationException) {
@@ -595,6 +601,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     override fun listen(query: Query) {
+        context.checkForKillSwitch()
         query.validate(context)
         context.queryCacheInteractor.subscribe(query)
     }

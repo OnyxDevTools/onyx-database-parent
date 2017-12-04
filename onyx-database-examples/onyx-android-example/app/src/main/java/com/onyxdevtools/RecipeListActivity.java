@@ -56,7 +56,7 @@ public class RecipeListActivity extends AppCompatActivity {
         // Create and connect to the persistence manager factory.  In this case, it is a Cache Manager Factory
         // but, it can also be an embedded or remote persistence manager factory
         if(sPersistenceManagerFactory == null) {
-            sPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(getApplicationContext().getFilesDir().getPath() + File.separator + "test.onx");
+            sPersistenceManagerFactory = new EmbeddedPersistenceManagerFactory(getApplicationContext().getFilesDir().getPath() + File.separator + "test2.onx");
             try {
                 long before = System.currentTimeMillis();
                 sPersistenceManagerFactory.initialize();

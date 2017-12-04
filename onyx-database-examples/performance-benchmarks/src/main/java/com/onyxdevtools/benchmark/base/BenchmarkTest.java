@@ -1,7 +1,9 @@
 package com.onyxdevtools.benchmark.base;
 
 import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
+import sun.misc.Unsafe;
 
+import java.lang.reflect.Field;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.concurrent.CountDownLatch;

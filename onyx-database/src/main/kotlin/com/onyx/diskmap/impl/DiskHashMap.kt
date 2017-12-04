@@ -4,7 +4,7 @@ import com.onyx.diskmap.SortedDiskMap
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.data.SkipListHeadNode
+import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.impl.base.hashmap.AbstractIterableMultiMapHashMap
 import com.onyx.diskmap.store.Store
 import com.onyx.lang.concurrent.ClosureReadWriteLock
@@ -241,10 +241,10 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
         val skipListMapId = getSkipListKey(key)
 
         return if (forInsert) {
-            val headNode1: SkipListHeadNode
+            val headNode1: SkipNode
             val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
             if (reference == 0L) {
-                headNode1 = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
+                headNode1 = SkipNode.create(fileStore)
                 insertSkipListReference(skipListMapId, headNode1.position)
                 CombinedIndexHashNode(headNode1, skipListMapId)
             } else {

@@ -7,7 +7,7 @@ package com.onyx.diskmap.data
  *
  * @since 1.2.0
  */
-class CombinedIndexHashMatrixNode(var head: SkipListHeadNode, val bitMapNode: HashMatrixNode, val hashDigit: Int) {
+class CombinedIndexHashMatrixNode(var head: SkipNode, val bitMapNode: HashMatrixNode, val hashDigit: Int) {
 
     override fun hashCode(): Int = this.bitMapNode.position.hashCode()
 

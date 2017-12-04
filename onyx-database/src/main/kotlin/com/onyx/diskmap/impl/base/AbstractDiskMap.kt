@@ -1,10 +1,12 @@
 package com.onyx.diskmap.impl.base
 
+import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
+import com.onyx.extension.perform
 import java.util.concurrent.atomic.AtomicLong
 
 
@@ -32,11 +34,29 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
     }
 
     /**
+     * This method is intended to get a record key as a dictionary.  Note: This is only intended for ManagedEntities
+     *
+     * @param recordId Record reference to pull
+     * @return Map of key key pairs
+     *
+     * @since 1.2.0
+     */
+    protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
+        var size = 0
+        BufferPool.withIntBuffer {
+            fileStore.read(it, recordId)
+            it.rewind()
+            size = it.int
+        }
+        return fileStore.read(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
+    }
+
+    /**
      * This method will only update the record count rather than the entire header
      */
-    private fun updateHeaderRecordCount() {
+    protected fun updateHeaderRecordCount(count:Long) {
         withLongBuffer {
-            it.putLong(reference.recordCount.get())
+            it.putLong(count)
             it.rewind()
             fileStore.write(it, reference.position + java.lang.Long.BYTES)
         }
@@ -48,7 +68,21 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @param header    Data structure header
      * @param firstNode First Node location
      */
-    protected open fun updateHeaderFirstNode(header: Header, firstNode: Long) {
+    protected fun updateHeaderFirstNode(header: Header, firstNode: Long) {
+        if (!detached) {
+            forceUpdateHeaderFirstNode(header, firstNode)
+        }
+    }
+
+    /**
+     * This method is designed to bypass the detached check.  It is for use in disk maps that are detached and override
+     * the logic of calculating the data position.
+     *
+     * @param header Disk Map Header
+     * @param firstNode First data location within store
+     */
+    protected fun forceUpdateHeaderFirstNode(header: Header, firstNode: Long) {
+        this.reference.firstNode = firstNode
         withLongBuffer {
             it.putLong(firstNode)
             it.rewind()
@@ -86,8 +120,7 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @since 1.2.0
      */
     protected fun incrementSize() {
-        reference.recordCount.incrementAndGet()
-        updateHeaderRecordCount()
+        updateHeaderRecordCount(reference.recordCount.incrementAndGet())
     }
 
     /**
@@ -96,8 +129,7 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @since 1.2.0
      */
     protected fun decrementSize() {
-        reference.recordCount.decrementAndGet()
-        updateHeaderRecordCount()
+        updateHeaderRecordCount(reference.recordCount.decrementAndGet())
     }
 
     /**

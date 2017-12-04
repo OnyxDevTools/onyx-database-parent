@@ -1,19 +1,15 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.lang.concurrent.ClosureReadWriteLock
-import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
-import com.onyx.lang.concurrent.impl.EmptyClosureReadWriteLock
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.data.SkipListHeadNode
-import com.onyx.diskmap.data.SkipListNode
+import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.getAny
 import java.lang.reflect.Field
-import java.util.HashSet
+import java.util.*
 
 /**
  * Created by Tim Osborn on 1/7/17.
@@ -32,33 +28,6 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override val size: Int
         get() = longSize().toInt()
 
-    private var mapReadWriteLock: ClosureReadWriteLock = if (detached) EmptyClosureReadWriteLock() else DefaultClosureReadWriteLock()
-
-    /**
-     * Remove an item within the map
-     *
-     * @param key Key Identifier
-     * @return The value that was removed
-     */
-    override fun remove(key: K): V? = mapReadWriteLock.writeLock { super.remove(key) }
-
-    /**
-     * Put a value into a map based on its key.
-     *
-     * @param key   Key identifier of the value
-     * @param value Underlying value
-     * @return The value of the object that was just put into the map
-     */
-    override fun put(key: K, value: V): V = mapReadWriteLock.writeLock { super.put(key, value) }
-
-    /**
-     * Get an item based on its key
-     *
-     * @param key Identifier
-     * @return The corresponding value
-     */
-    override operator fun get(key: K): V?  = mapReadWriteLock.optimisticReadLock { super.get(key) }
-
     /**
      * Iterates through the entire skip list to see if it contains the value you are looking for.
      *
@@ -68,12 +37,12 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @param value Value you are looking for
      * @return Whether the value was found
      */
-    override fun containsValue(value: V): Boolean = mapReadWriteLock.readLock{
+    override fun containsValue(value: V): Boolean {
         values.forEach { next ->
             if (next == value)
-                return@readLock true
+                return true
         }
-        return@readLock false
+        return false
     }
 
     /**
@@ -89,15 +58,15 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      *
      * @since 1.2.0
      */
-    override fun clear() = mapReadWriteLock.writeLock {
+    override fun clear() {
         super.clear()
 
         if (!this.detached) {
-            head = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
+            head = SkipNode.create(fileStore)
             this.reference.firstNode = head!!.position
             updateHeaderFirstNode(reference, this.reference.firstNode)
             reference.recordCount.set(0L)
-            updateHeaderRecordCount()
+            updateHeaderRecordCount(0L)
         }
     }
 
@@ -109,7 +78,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock { find(key)?.recordId ?: -1 }
+    override fun getRecID(key: K): Long = find(key)?.position ?: -1
 
     /**
      * Hydrate a record with its record ID.  If the record value exists it will be returned
@@ -118,12 +87,11 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return The value within the map
      * @since 1.2.0
      */
-    override fun getWithRecID(recordId: Long): V? = mapReadWriteLock.optimisticReadLock {
+    override fun getWithRecID(recordId: Long): V? {
         if (recordId <= 0)
-            return@optimisticReadLock null
-        @Suppress("UNCHECKED_CAST")
-        val node:SkipListNode<K> = findNodeAtPosition(recordId) as SkipListNode<K>? ?: return@optimisticReadLock null
-        return@optimisticReadLock findValueAtPosition(node.recordPosition)
+            return null
+        val node:SkipNode = findNodeAtPosition(recordId) ?: return null
+        return findValueAtPosition(node.record)
     }
 
     /**
@@ -133,10 +101,9 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return Map of key values
      * @since 1.2.0
      */
-    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.optimisticReadLock {
-        @Suppress("UNCHECKED_CAST")
-        val node:SkipListNode<K> = findNodeAtPosition(recordId) as SkipListNode<K>? ?: return@optimisticReadLock null
-        getRecordValueAsDictionary(node.recordPosition)
+    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? {
+        val node:SkipNode = findNodeAtPosition(recordId) ?: return null
+        return getRecordValueAsDictionary(node.record)
     }
 
     /**
@@ -152,16 +119,16 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T {
-        val node = findNodeAtPosition(reference) as SkipListNode<K>? ?: return null as T
-        val value = findValueAtPosition(node.recordPosition) ?: return null as T
+        val node:SkipNode = findNodeAtPosition(reference) ?: return null as T
+        val value = findValueAtPosition(node.record) ?: return null as T
         @Suppress("RemoveExplicitTypeArguments") // This is needed to compile
         return value.getAny<T>(attribute)
     }
 
     @Throws(AttributeTypeMismatchException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipListNode<*>): T {
-        val value = findValueAtPosition(reference.recordPosition) ?: return null as T
+    override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipNode): T {
+        val value = findValueAtPosition(reference.record) ?: return null as T
         @Suppress("RemoveExplicitTypeArguments") // This is needed to compile
         return value.getAny<T>(field)
     }
@@ -175,40 +142,23 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return A Set of references
      * @since 1.2.0
      */
-    override fun above(index: K, includeFirst: Boolean): Set<Long> = mapReadWriteLock.readLock {
+    override fun above(index: K, includeFirst: Boolean): Set<Long> {
         val results = HashSet<Long>()
-        var node = nearest(index)
-        if (node != null) {
+        var node:SkipNode? = nearest(index)
 
-            do {
+        if(node != null && !node.isRecord && node.right> 0)
+            node = findNodeAtPosition(node.right)
 
-                while (node!!.down != 0L)
-                    node = findNodeAtPosition(node.down)
-
-                if (node is SkipListNode<*>) {
-                    if (node.key == index && !includeFirst) {
-                        node = if (node.next > 0L)
-                            findNodeAtPosition(node.next)
-                        else
-                            break
-
-                        continue
-                    }
-
-                    when {
-                        index.forceCompare(node.key) && includeFirst -> results.add(node.recordId)
-                        index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.recordId)
-                    }
-                }
-
-                node = if (node.next > 0L)
-                    findNodeAtPosition(node.next)
-                else
-                    null
-
-            } while (node != null)
+        while(node != null && node.isRecord) {
+            val nodeKey:K = node.getKey(fileStore)
+            when {
+                index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
+                index.forceCompare(nodeKey, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.position)
+            }
+            node = if (node.right > 0) findNodeAtPosition(node.right) else null
         }
-        return@readLock results
+
+        return results
     }
 
     /**
@@ -220,33 +170,24 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return A Set of references
      * @since 1.2.0
      */
-    override fun below(index: K, includeFirst: Boolean): Set<Long> = mapReadWriteLock.readLock {
+    override fun below(index: K, includeFirst: Boolean): Set<Long> {
         val results = HashSet<Long>()
+        var node:SkipNode? = nearest(index)
 
-        var node: SkipListHeadNode? = head ?: return@readLock HashSet()
-        while (node!!.down != 0L)
-            node = findNodeAtPosition(node.down)
+        if(node != null && !node.isRecord && node.right> 0)
+            node = findNodeAtPosition(node.right)
 
-        loop@ while (node!!.next != 0L) {
-            node = findNodeAtPosition(node.next)
-            if (node is SkipListNode<*>) {
-                val isEqual = index.forceCompare(node.key)
-                when {
-                    isEqual && !includeFirst -> break@loop
-                    isEqual && includeFirst -> {
-                        results.add(node.recordId)
-                        continue@loop
-                    }
-                    index.forceCompare(node.key, QueryCriteriaOperator.LESS_THAN) -> {
-                        results.add(node.recordId)
-                        continue@loop
-                    }
-                    index.forceCompare(node.key, QueryCriteriaOperator.GREATER_THAN) -> break@loop
-                    @Suppress("UNCHECKED_CAST")
-                    this.shouldMoveDown(index, node.key as K) -> break@loop
-                }
+        while(node != null && node.isRecord) {
+            val nodeKey:K = node.getKey(fileStore)
+
+            when {
+                index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
+                index.forceCompare(nodeKey, QueryCriteriaOperator.LESS_THAN) -> results.add(node.position)
             }
+            node = if (node.left > 0) findNodeAtPosition(node.left) else null
         }
-        return@readLock results
+
+        return results
     }
+
 }

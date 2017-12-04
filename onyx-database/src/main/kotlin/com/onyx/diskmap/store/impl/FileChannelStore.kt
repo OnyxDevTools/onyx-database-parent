@@ -5,6 +5,7 @@ import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
+import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.instance
 import com.onyx.extension.perform
@@ -31,18 +32,18 @@ import java.nio.channels.FileChannel
  */
 open class FileChannelStore() : Store {
 
-    override val context by lazy { if(contextId != null) Contexts.get(contextId!!) else null }
+    override val context by lazy { if (contextId != null) Contexts.get(contextId!!) else null }
 
     final override var filePath: String = ""
     var deleteOnClose: Boolean = false // Whether to delete this file upon closing database or JVM
     var bufferSliceSize = if (isSmallDevice()) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
 
     protected var channel: FileChannel? = null
-    protected var contextId:String? = null
+    protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
 
     constructor(filePath: String = "", context: SchemaContext? = null, deleteOnClose: Boolean = false) : this() {
-        this.bufferSliceSize = if(deleteOnClose || isSmallDevice()) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
+        this.bufferSliceSize = if (deleteOnClose || isSmallDevice()) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
         this.deleteOnClose = deleteOnClose
         this.filePath = filePath
         this.contextId = context?.contextId
@@ -54,7 +55,7 @@ open class FileChannelStore() : Store {
     /**
      * Get the size of the file
      */
-    override fun getFileSize():Long = fileSizeCounter.get()
+    override fun getFileSize(): Long = fileSizeCounter.get()
 
     /**
      * Open the data file
@@ -125,7 +126,11 @@ open class FileChannelStore() : Store {
     /**
      * Commit all file writes
      */
-    override fun commit() { this.channel?.force(true) }
+    override fun commit() {
+        if(this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+        this.channel?.force(true)
+    }
 
     /**
      * Write an Object Buffer
@@ -135,8 +140,12 @@ open class FileChannelStore() : Store {
      * @return How many bytes were written
      */
     override fun write(buffer: ByteBuffer, position: Long): Int {
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+        val before = buffer.position()
         channel!!.write(buffer, position)
-        return buffer.position()
+        val after = buffer.position()
+        return after - before
     }
 
     /**
@@ -160,6 +169,9 @@ open class FileChannelStore() : Store {
      * @return The value that was read from the store
      */
     override fun read(position: Long, size: Int, type: Class<*>): Any? {
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+
         if (!validateFileSize(position)) return null
 
         return BufferStream(size).perform {
@@ -168,7 +180,7 @@ open class FileChannelStore() : Store {
 
             when {
                 BufferStreamable::class.java.isAssignableFrom(type) -> {
-                    val streamable:BufferStreamable = type.instance()
+                    val streamable: BufferStreamable = type.instance()
                     streamable.read(it, context)
                     streamable
                 }
@@ -241,6 +253,8 @@ open class FileChannelStore() : Store {
      * @return position of started allocated bytes
      */
     override fun allocate(size: Int): Long = withLongBuffer {
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val newFileSize = fileSizeCounter.getAndAdd(size)
         it.putLong(newFileSize + size)
         it.rewind()
@@ -269,10 +283,10 @@ open class FileChannelStore() : Store {
     }
 
     companion object {
-    val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-    val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
+        val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
+        val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
 
-    fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
-}
-
+        fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
     }
+
+}

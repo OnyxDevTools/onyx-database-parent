@@ -1,7 +1,9 @@
 package com.onyx.diskmap.store
 
+import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
+import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
 import java.nio.ByteBuffer
 
@@ -120,4 +122,50 @@ interface Store {
      */
     fun reset()
 
+    /**
+     * Retrieve an object at position.  This will automatically determine its
+     * size and de-serialize the object
+     *
+     * @param position Position in the store to retrieve object
+     * @since 2.0.0
+     */
+    fun <T> getObject(position: Long):T {
+        val size = BufferPool.withIntBuffer {
+            this.read(it, position)
+            it.rewind()
+            it.int
+        }
+        return BufferPool.allocateAndLimit(size) {
+            this.read(it, position + Integer.BYTES)
+            it.rewind()
+            return@allocateAndLimit BufferStream(it).getObject(context) as T
+        }
+    }
+
+    /**
+     * Write an object to the store.  First add its size and then the byte value
+     * representation of the object.
+     *
+     * @param value Value to append to the store
+     * @since 2.0.0
+     */
+    fun writeObject(value:Any?): Pair<Int, Long> {
+        val stream = BufferStream()
+        stream.putObject(value, context)
+        stream.flip()
+        return withBuffer(stream.byteBuffer) { valueBuffer ->
+            val size = valueBuffer.limit()
+            val position = this.allocate(size + Integer.BYTES)
+
+            BufferPool.withIntBuffer {
+                it.putInt(size)
+                it.rewind()
+                this.write(it, position)
+            }
+
+            this.write(valueBuffer, position + Integer.BYTES)
+
+            return@withBuffer Pair(size, position)
+        }
+    }
 }

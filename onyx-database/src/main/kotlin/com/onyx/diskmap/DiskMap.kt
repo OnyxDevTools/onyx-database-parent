@@ -1,7 +1,7 @@
 package com.onyx.diskmap
 
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.data.SkipListNode
+import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
 import java.lang.reflect.Field
@@ -33,7 +33,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * Get the set of references.  Not values nor keys
      * @return Set of references.
      */
-    val references: Set<SkipListNode<K>>
+    val references: Set<SkipNode>
 
     /**
      * Get the record id for a key
@@ -79,7 +79,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @return Attribute key of record
      */
     @Throws(AttributeTypeMismatchException::class)
-    fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipListNode<*>): T
+    fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipNode): T
 
     /**
      * Returns the record count as a long rather than an integer.

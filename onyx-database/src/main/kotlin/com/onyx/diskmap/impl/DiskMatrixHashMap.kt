@@ -6,6 +6,7 @@ import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix
 import com.onyx.diskmap.data.CombinedIndexHashMatrixNode
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
@@ -96,13 +97,13 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
     override fun put(key: K, value: V): V = this.mapReadWriteLock.writeLock {
         val combinedNode = getHeadReferenceForKey(key, true)
         head = combinedNode?.head
-
+        val oldHead = combinedNode?.head
         val returnValue = super@DiskMatrixHashMap.put(key, value)
         val newHead = head
 
         // Only update the data if the head of the skip list has changed
-        if (combinedNode!!.bitMapNode.next[combinedNode.hashDigit] != newHead!!.position) {
-            combinedNode.head = newHead
+        if (oldHead != newHead) {
+            combinedNode!!.head = newHead!!
             this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
             this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
         }
@@ -128,8 +129,8 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
             val newHead = head
 
             // Only update the data if the head of the skip list has changed
-            if (combinedNode.bitMapNode.next[combinedNode.hashDigit] != newHead!!.position) {
-                combinedNode.head = newHead
+            if (oldHead != newHead) {
+                combinedNode.head = newHead!!
                 this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
                 this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
             }
@@ -274,7 +275,7 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
 
             if (nodePosition == 0L && forInsert) {
                 if (level == loadFactor - 1) {
-                    val headNode = createHeadNode(java.lang.Byte.MIN_VALUE, 0L, 0L)
+                    val headNode = SkipNode.create(fileStore)
                     this.updateHashMatrixReference(previousNode, hashDigit, headNode.position)
                     return CombinedIndexHashMatrixNode(headNode, previousNode, hashDigit)
                 } else {

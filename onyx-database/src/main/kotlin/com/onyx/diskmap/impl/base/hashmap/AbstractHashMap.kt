@@ -5,7 +5,6 @@ import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.Store
-import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -32,8 +31,8 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
             skipListReferenceAllocation *= 10
 
         // Find the offset
-        val numberOfReferenceBytes = skipListReferenceAllocation * java.lang.Long.BYTES
-        val numberOfListReferenceBytes = skipListReferenceAllocation * Integer.BYTES
+        val numberOfReferenceBytes = (skipListReferenceAllocation + 1) * java.lang.Long.BYTES
+        val numberOfListReferenceBytes = (skipListReferenceAllocation + 1) * Integer.BYTES
         val countBytes = Integer.BYTES
 
         // Create the header if it does not exist.  Also allocate the hash table
@@ -80,9 +79,7 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
             fileStore.write(it, reference.firstNode + referenceOffset.toLong() + (hash * java.lang.Long.BYTES).toLong())
         }
 
-        withIntBuffer {
-            addSkipListIterationReference(it, hash, count - 1)
-        }
+        addSkipListIterationReference(hash, count - 1)
         return nodeReference
     }
 
@@ -90,18 +87,18 @@ abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless:
      * Add iteration list.  This method adds a reference so that the iterator knows what to iterate through without
      * guessing which element within the hash as a sub data structure reference.
      *
-     * @param buffer Byte Buffer to add the hash id to.
      * @param hash Identifier of the sub data structure
      * @param count The current size of the hash table
      *
      * @since 1.2.0
      */
-    open protected fun addSkipListIterationReference(buffer: ByteBuffer, hash: Int, count: Int) {
+    open protected fun addSkipListIterationReference(hash: Int, count: Int) {
         // Add list reference for iterating
-        buffer.clear()
-        buffer.putInt(hash)
-        buffer.flip()
-        fileStore.write(buffer, reference.firstNode + listReferenceOffset.toLong() + (count * Integer.BYTES).toLong())
+        withIntBuffer {
+            it.putInt(hash)
+            it.rewind()
+            fileStore.write(it, reference.firstNode + listReferenceOffset.toLong() + (count * Integer.BYTES).toLong())
+        }
     }
 
     /**

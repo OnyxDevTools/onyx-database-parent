@@ -62,5 +62,4 @@ class IndexListTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fac
         val results = manager.list<AllAttributeForFetchSequenceGen>(AllAttributeForFetchSequenceGen::class.java, ("indexVal" gt 5000))
         assertEquals(0, results.size, "Results should have no entities")
     }
-
 }

@@ -1,8 +1,7 @@
 package com.onyx.diskmap.impl.base.skiplist
 
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.data.SkipListHeadNode
-import com.onyx.diskmap.data.SkipListNode
+import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 
 import java.util.*
@@ -25,8 +24,8 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
 
     // region Iterable Collections
 
-    override val references:Set<SkipListNode<K>>
-        get() = ReferenceCollection<SkipListNode<K>>()
+    override val references:Set<SkipNode>
+        get() = ReferenceCollection<SkipNode>()
 
     open val dictionaryValues: Set<Map<String, Any?>>
         get() = DictionaryCollection()
@@ -50,7 +49,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      * @see AbstractNodeCollection
      */
     inner class ValueCollection<out V> : AbstractNodeCollection<V>() {
-        override fun iterator(): MutableIterator<V> = ValueIterator()
+        override fun iterator(): MutableIterator<V?> = ValueIterator()
     }
 
     /**
@@ -68,7 +67,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      * @see AbstractNodeCollection
      */
     inner class KeyCollection<out K> : AbstractNodeCollection<K>() {
-        override fun iterator(): MutableIterator<K> = KeyIterator()
+        override fun iterator(): MutableIterator<K?> = KeyIterator()
     }
 
     /**
@@ -115,7 +114,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      *
      * Iterates through and hydrates the values in an DiskMap
      */
-    inner class ValueIterator<out V> : MutableIterator<V> {
+    inner class ValueIterator<out V> : MutableIterator<V?> {
 
         private val nodeIterator = NodeIterator()
 
@@ -126,9 +125,9 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
          *
          * @return The next dictionary object
          */
-        override fun next(): V {
+        override fun next(): V? {
             val next = nodeIterator.next()
-            return findValueAtPosition(next.recordPosition) as V
+            return if(next != null) findValueAtPosition(next.record)as V else null
         }
 
         override fun remove() = Unit
@@ -138,7 +137,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
     /**
      * Key Iterator.  Same as Value iterator except returns just the keys
      */
-    inner class KeyIterator<out V> : MutableIterator<V> {
+    inner class KeyIterator<out V> : MutableIterator<V?> {
         private val nodeIterator = NodeIterator()
 
         override fun remove() {
@@ -154,9 +153,9 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
          *
          * @return The next dictionary object
          */
-        override fun next(): V {
+        override fun next(): V? {
             val node = nodeIterator.next()
-            return node.key as V
+            return node?.key as V?
         }
     }
 
@@ -194,7 +193,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      */
     inner class DictionaryIterator<out T> : MutableIterator<T> {
 
-        override fun remove() = nodeIterator.remove()
+        override fun remove() {}
 
         private val nodeIterator = NodeIterator()
 
@@ -208,7 +207,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
         override fun next(): T {
             val next = nodeIterator.next()
             @Suppress("UNCHECKED_CAST")
-            return getRecordValueAsDictionary(next.recordPosition) as T
+            return if(next != null) getRecordValueAsDictionary(next.record) as T else null as T
         }
     }
 
@@ -218,23 +217,20 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      *
      * Iterates through nodes and gets the left, right, next values
      */
-    inner class NodeIterator : MutableIterator<SkipListNode<K>?> {
-        override fun remove() = removeNode(current!!)
+    inner class NodeIterator : MutableIterator<SkipNode?> {
+        override fun remove() {}
 
-        private var current: SkipListHeadNode? = null
+        private var current: SkipNode? = null
 
         init {
             current = head
-            while (current!!.down != 0L)
+            while (current?.down ?: 0L > 0)
                 current = findNodeAtPosition(current!!.down)
 
-            // Lets find a non header data
-            while (current != null && current !is SkipListNode<*>) {
-                current = if (current!!.next != 0L)
-                    findNodeAtPosition(current!!.next)
-                else
-                    null
-            }
+            current = if(current?.right ?: 0 > 0)
+                findNodeAtPosition(current!!.right)
+            else
+                null
         }
 
         /**
@@ -242,28 +238,22 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
          *
          * @return Whether the data has a record or not
          */
-        override fun hasNext(): Boolean = current != null && current is SkipListNode<*>
+        override fun hasNext(): Boolean = current != null
 
         /**
          * Next, find the next data with a record associated to it.
          *
          * @return Nex data with a record value.
          */
-        override fun next(): SkipListNode<K> {
+        override fun next(): SkipNode? {
 
             val previous = current
-            while (current != null) {
-                current = if (current!!.next != 0L)
-                    findNodeAtPosition(current!!.next)
-                else
-                    null
+            current = if (current != null && current!!.right > 0)
+                findNodeAtPosition(current!!.right)
+            else
+                null
 
-                if (current != null && current is SkipListNode<*>)
-                    break
-            }
-
-            @Suppress("UNCHECKED_CAST")
-            return previous as SkipListNode<K>
+            return previous
         }
     }
 
@@ -276,22 +266,22 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
      *
      */
     @Suppress("UNCHECKED_CAST")
-    inner class SkipListEntry<A,B> internal constructor(var node: SkipListNode<A>) : MutableMap.MutableEntry<A, B?> {
+    inner class SkipListEntry<A,B> internal constructor(var node: SkipNode?) : MutableMap.MutableEntry<A?, B?> {
 
         /**
          * Get Key
          *
          * @return Key from the data
          */
-        override val key: A
-            get() = node.key!!
+        override val key: A?
+            get() = node?.getKey(fileStore)
 
         /**
          * Get Value
          *
          * @return Value from the data position
          */
-        override val value: B? by lazy { findValueAtPosition(node.recordPosition) as B }
+        override val value: B? by lazy { findValueAtPosition(node!!.record) as B }
 
         override fun setValue(newValue: B?): B? = value
     }

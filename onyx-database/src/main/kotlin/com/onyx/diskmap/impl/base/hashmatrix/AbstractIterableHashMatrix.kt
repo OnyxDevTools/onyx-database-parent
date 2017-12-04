@@ -2,8 +2,7 @@ package com.onyx.diskmap.impl.base.hashmatrix
 
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.data.SkipListHeadNode
-import com.onyx.diskmap.data.SkipListNode
+import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import java.util.*
 
@@ -23,8 +22,8 @@ abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Sto
 
     // region Iterable Sets
 
-    override val references: Set<SkipListNode<K>>
-        get() = MultiMapReferenceSet<SkipListNode<K>>() as Set<SkipListNode<K>>
+    override val references: Set<SkipNode>
+        get() = MultiMapReferenceSet<SkipNode>() as Set<SkipNode>
 
     override val keys: MutableSet<K>
         get() = MultiMapKeySet<K>() as MutableSet<K>
@@ -38,8 +37,8 @@ abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Sto
     override val dictionaryValues: Set<Map<String, Any?>>
         get() = MultiMapDictionarySet<Map<String, Any?>>() as Set<Map<String, Any?>>
 
-    protected val maps: Set<SkipListHeadNode>
-        get() = SkipListMapSet<SkipListHeadNode>() as Set<SkipListHeadNode>
+    protected val maps: Set<SkipNode>
+        get() = SkipListMapSet<SkipNode>() as Set<SkipNode>
 
     // endregion
 

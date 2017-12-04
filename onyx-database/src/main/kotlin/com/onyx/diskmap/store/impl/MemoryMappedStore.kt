@@ -1,6 +1,7 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.diskmap.store.Store
+import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
@@ -68,6 +69,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
             if (!deleteOnClose) {
                 catchAll {
+                    commit()
                     channel!!.truncate(getFileSize())
                 }
             }
@@ -98,6 +100,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun write(buffer: ByteBuffer, position: Long): Int {
 
+        if(this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+
+        val before = buffer.position()
+
         val slice = getBuffer(position)
 
         val bufLocation = getBufferLocation(position)
@@ -117,12 +124,14 @@ open class MemoryMappedStore : FileChannelStore, Store {
                 for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
                     overflowSlice.buffer.put(buffer.get())
             }
-            return buffer.position()
+            val after = buffer.position()
+            return after - before
         } else {
             return synchronized(slice) {
                 slice.buffer.position(getBufferLocation(position))
                 slice.buffer.put(buffer)
-                return@synchronized buffer.position()
+                val after = buffer.position()
+                return@synchronized after - before
             }
         }
     }
@@ -134,6 +143,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position within the store
      */
     override fun read(buffer: ByteBuffer, position: Long) {
+
+        if(this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
 
         val slice = getBuffer(position)
 
@@ -172,6 +184,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @return The corresponding slice that is at that position
      */
     protected open fun getBuffer(position: Long): FileSlice {
+
+        if(this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
 
         var index = 0
         if (position > 0) {
@@ -228,8 +243,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
             synchronized(slices) {
                 this.slices.values
                         .filter { it.buffer is MappedByteBuffer }
-                        .forEach { catchAll { (it.buffer as MappedByteBuffer).force()  } }
+                        .forEach { catchAll {
+                            (it.buffer as MappedByteBuffer).force()
+                        } }
             }
+            super.commit()
         }
     }
 }

@@ -14,22 +14,22 @@ class OptimisticLockingMap<K, V>(private val m: MutableMap<K, V>) : MutableMap<K
     // region Properties
 
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
-        get() = lock.readLock { m.entries }
+        get() = lock.optimisticReadLock { m.entries }
     override val keys: MutableSet<K>
-        get() = lock.readLock { m.keys }
+        get() = lock.optimisticReadLock { m.keys }
     override val values: MutableCollection<V>
-        get() = lock.readLock { m.values }
+        get() = lock.optimisticReadLock { m.values }
     override val size: Int
-        get() = lock.readLock { m.size }
+        get() = lock.optimisticReadLock { m.size }
 
     // endregion
 
     // region Overload Read Methods
 
-    override fun isEmpty(): Boolean = lock.readLock { m.isEmpty() }
-    override fun containsKey(key: K): Boolean = lock.readLock { m.containsKey(key) }
-    override fun containsValue(value: V): Boolean = lock.readLock { m.containsValue(value) }
-    override operator fun get(key: K): V? = lock.readLock { m[key] }
+    override fun isEmpty(): Boolean = lock.optimisticReadLock { m.isEmpty() }
+    override fun containsKey(key: K): Boolean = lock.optimisticReadLock { m.containsKey(key) }
+    override fun containsValue(value: V): Boolean = lock.optimisticReadLock { m.containsValue(value) }
+    override operator fun get(key: K): V? = lock.optimisticReadLock { m[key] }
 
     // endregion
 

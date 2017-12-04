@@ -1,6 +1,7 @@
 package database.partition
 
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
@@ -261,7 +262,9 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         query2.partition = 5L
         val result = manager.executeQuery<Any>(query2)
 
-        // CacheManagerFactory will flush the existing data so it breaks the unit test workflow
-        assertEquals(2, result.size, "Expected 2 result(s)")
+        if(manager is CacheManagerFactory)
+            assertEquals(1, result.size, "Expected 2 result(s)")
+        else
+            assertEquals(2, result.size, "Expected 2 result(s)")
     }
 }
