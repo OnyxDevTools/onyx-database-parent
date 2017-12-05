@@ -11,7 +11,7 @@ import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.*
 import java.util.HashSet
 
-class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,V> {
+class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K, V> {
 
     private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
@@ -22,7 +22,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
      * @param header    Pointer to the DiskMap
      * @since 1.2.0
      */
-    constructor (fileStore: Store, header: Header, loadFactor: Int): super(fileStore, header, true, loadFactor)
+    constructor (fileStore: Store, header: Header, loadFactor: Int) : super(fileStore, header, true, loadFactor)
 
     /**
      * Constructor
@@ -32,7 +32,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
      * @since 1.2.0
      */
     @Suppress("UNUSED")
-    constructor (fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureReadWriteLock): super(fileStore, header, true, loadFactor) {
+    constructor (fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureReadWriteLock) : super(fileStore, header, true, loadFactor) {
         this.nodeCache = EmptyMap()
         this.mapCache = EmptyMap()
         this.cache = EmptyMap()
@@ -52,7 +52,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
      * we set the cache elements and lock to empty implementations.
      * @since 1.2.0
      */
-    constructor(fileStore: Store, header: Header, loadFactor: Int, stateless: Boolean): super(fileStore, header, true, loadFactor) {
+    constructor(fileStore: Store, header: Header, loadFactor: Int, stateless: Boolean) : super(fileStore, header, true, loadFactor) {
         if (!stateless) {
             cache = EmptyMap()
             mapCache = EmptyMap()
@@ -96,16 +96,15 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
      * @return The value if it exists
      * @since 1.2.0
      */
-    override operator fun get(key: K): V? {
+    override operator fun get(key: K): V? = mapReadWriteLock.readLock {
         val combinedNode = getHeadReferenceForKey(key, true)
 
         // Set the selected skip list
         head = combinedNode?.head
 
-        return if (combinedNode?.head != null) {
-             super.get(key)
-        }
-        else null
+        return@readLock if (combinedNode?.head != null) {
+            super.get(key)
+        } else null
     }
 
     /**
@@ -121,7 +120,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
         head = combinedNode?.head
 
         val mapHead = combinedNode?.head
-        if(mapHead != null) {
+        if (mapHead != null) {
             val headPosition = mapHead.position
             val returnValue = super@DiskHashMap.put(key, value)
             val newHead = head!!
@@ -141,10 +140,10 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
      * @return Whether the object exists
      * @since 1.2.0
      */
-    override fun containsKey(key: K): Boolean {
-        val combinedNode = getHeadReferenceForKey(key, true)
-        head = combinedNode?.head
-        return combinedNode?.head != null && super.containsKey(key)
+    override fun containsKey(key: K): Boolean = mapReadWriteLock.readLock {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock false
+        head = combinedNode.head
+        return@readLock super.containsKey(key)
     }
 
     /**
@@ -167,10 +166,10 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return@optimisticReadLock -1
+    override fun getRecID(key: K): Long = mapReadWriteLock.readLock {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock -1
         head = combinedNode.head
-        return@optimisticReadLock mapReadWriteLock.optimisticReadLock { super.getRecID(key) }
+        return@readLock super.getRecID(key)
     }
 
     /**
@@ -242,14 +241,14 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
 
         return if (forInsert) {
             val headNode1: SkipNode
-            val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
-            if (reference == 0L) {
+                val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
+                if (reference == 0L) {
                 headNode1 = SkipNode.create(fileStore)
                 insertSkipListReference(skipListMapId, headNode1.position)
                 CombinedIndexHashNode(headNode1, skipListMapId)
-            } else {
-                CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId)
-            }
+                } else {
+                    CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId)
+                }
         } else {
             val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
             if (reference > 0L) CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId) else null
@@ -269,7 +268,7 @@ class DiskHashMap<K,V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K,
         val hashDigits = getHashDigits(hash)
 
         var k = 0
-        for(i in 0 until hashDigits.size)
+        for (i in 0 until hashDigits.size)
             k = 10 * k + hashDigits[i]
 
         return k

@@ -23,7 +23,7 @@ import java.util.*
 abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore: Store, header: Header, headless: Boolean = false) : AbstractSkipList<K, V>(fileStore, header, headless) {
 
     // Caching maps
-    protected var keyCache: MutableMap<K, SkipNode> = OptimisticLockingMap(WeakHashMap())
+    protected var keyCache: MutableMap<K, SkipNode?> = OptimisticLockingMap(WeakHashMap())
     protected var valueByPositionCache: MutableMap<Long, V?> = OptimisticLockingMap(WeakHashMap())
 
     /**
@@ -33,14 +33,7 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      * @return The value as long as it serialized ok.
      * @since 1.2.0
      */
-    override fun findValueAtPosition(position: Long): V? {
-        var value: V? = valueByPositionCache[position]
-        if (value == null) {
-            value = super.findValueAtPosition(position)
-            valueByPositionCache.put(position, value)
-        }
-        return value
-    }
+    override fun findValueAtPosition(position: Long): V? = valueByPositionCache.getOrPut(position) { super.findValueAtPosition(position) }
 
     /**
      * Find a data at a position.  First check the cache.  If it is in there great return it otherwise go the the
@@ -50,19 +43,7 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      * @return The SkipListNode at that position.
      * @since 1.2.0
      */
-    override fun findNodeAtPosition(position: Long): SkipNode? {
-        if (position == 0L)
-            return null
-
-        var node: SkipNode? = nodeCache[position]
-
-        if (node == null) {
-            node = super.findNodeAtPosition(position)
-            if(node != null)
-                nodeCache[position] = node
-        }
-        return node
-    }
+    override fun findNodeAtPosition(position: Long): SkipNode? = nodeCache.getOrPut(position) { super.findNodeAtPosition(position) }
 
     /**
      * Find the record reference based on the key
@@ -72,32 +53,48 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      *
      * @since 1.2.0
      */
-    override fun find(key: K): SkipNode? {
-        var node: SkipNode? = keyCache[key]
-        if (node == null) {
-            node = super.find(key)
-            if(node != null)
-                keyCache[key] = node
-        }
-        return node
-    }
+    override fun find(key: K): SkipNode? = keyCache.getOrPut(key) { super.find(key) }
 
+    /**
+     * Delete node from cache
+     *
+     * @since 2.0.0
+     * @param node Node to delete
+     * @param head Current head nodes
+     */
     override fun deleteNode(node: SkipNode, head:SkipNode) {
         super.deleteNode(node, head)
         valueByPositionCache.remove(node.record)
         nodeCache.remove(node.position)
     }
 
+    /**
+     * Add node to cache
+     *
+     * @param node Node to update
+     * @since 2.0.0
+     */
     override fun updateNodeCache(node:SkipNode?) {
         if(node != null)
             nodeCache.put(node.position, node)
     }
 
+    /**
+     * Update cache by removing
+     *
+     * @param node Node to update
+     * @since 2.0.0
+     */
     override fun updateValueCache(node: SkipNode?) {
         if(node != null)
             valueByPositionCache.remove(node.position)
     }
 
+    /**
+     * Update cache by removing a key
+     *
+     * @param key to remove
+     */
     override fun updateKeyCache(key: K) {
         keyCache.remove(key)
     }

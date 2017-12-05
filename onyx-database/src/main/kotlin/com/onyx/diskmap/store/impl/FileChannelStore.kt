@@ -127,7 +127,7 @@ open class FileChannelStore() : Store {
      * Commit all file writes
      */
     override fun commit() {
-        if(this !is InMemoryStore && !channel!!.isOpen)
+        if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         this.channel?.force(true)
     }
@@ -169,9 +169,6 @@ open class FileChannelStore() : Store {
      * @return The value that was read from the store
      */
     override fun read(position: Long, size: Int, type: Class<*>): Any? {
-        if (this !is InMemoryStore && !channel!!.isOpen)
-            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-
         if (!validateFileSize(position)) return null
 
         return BufferStream(size).perform {
@@ -220,6 +217,9 @@ open class FileChannelStore() : Store {
         if (!validateFileSize(position))
             return null
 
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+
         val buffer = BufferPool.allocateAndLimit(size)
         this.read(buffer, position)
         buffer.flip()
@@ -234,6 +234,8 @@ open class FileChannelStore() : Store {
      * @param position position in store to read
      */
     override fun read(buffer: ByteBuffer, position: Long) {
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         channel!!.read(buffer, position)
         while (buffer.hasRemaining()) // Fill out the rest because the File Channel may not be filled in
             buffer.put(0.toByte())
@@ -284,9 +286,16 @@ open class FileChannelStore() : Store {
 
     companion object {
         val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-        val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
+        val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 6 // 6MB
 
-        fun isSmallDevice() = Runtime.getRuntime().maxMemory() < (1024 * 1024 * 1024) // 1G
+        fun isSmallDevice():Boolean {
+            try {
+                Class.forName("android.app.Activity")
+            } catch (e: ClassNotFoundException) {
+                return false
+            }
+            return true
+        }
     }
 
 }

@@ -75,13 +75,13 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return The value if it exists
      * @since 1.2.0
      */
-    override operator fun get(key: K): V? {
-        val combinedNode = getHeadReferenceForKey(key, true)
+    override operator fun get(key: K): V? = mapReadWriteLock.readLock {
+        val combinedNode = getHeadReferenceForKey(key, false)
 
         // Set the selected skip list
         head = combinedNode?.head
 
-        return if (combinedNode?.head != null) {
+        return@readLock if (combinedNode?.head != null) {
             super.get(key)
         } else null
     }
@@ -145,10 +145,10 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return Whether the object exists
      * @since 1.2.0
      */
-    override fun containsKey(key: K): Boolean {
+    override fun containsKey(key: K): Boolean = mapReadWriteLock.readLock {
         val combinedNode = getHeadReferenceForKey(key, true)
         head = combinedNode?.head
-        return combinedNode?.head != null && super.containsKey(key)
+        return@readLock combinedNode?.head != null && super.containsKey(key)
     }
 
     /**
@@ -190,10 +190,10 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.optimisticReadLock {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return@optimisticReadLock -1
+    override fun getRecID(key: K): Long = mapReadWriteLock.readLock {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock -1
         head = combinedNode.head
-        return@optimisticReadLock super.getRecID(key)
+        return@readLock super.getRecID(key)
     }
 
     /**

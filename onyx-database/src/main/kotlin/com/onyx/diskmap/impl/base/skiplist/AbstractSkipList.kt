@@ -25,7 +25,7 @@ import java.util.*
 abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fileStore: Store, header: Header, detached: Boolean = false) : AbstractDiskMap<K, V>(fileStore, header, detached) {
 
     private lateinit var threadLocalHead: ThreadLocal<SkipNode> // Default threadLocalHead of the SkipList
-    protected var nodeCache: MutableMap<Long, SkipNode> = OptimisticLockingMap(WeakHashMap())
+    protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     init {
         determineHead()

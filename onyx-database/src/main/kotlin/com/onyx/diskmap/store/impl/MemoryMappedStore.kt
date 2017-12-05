@@ -67,19 +67,23 @@ open class MemoryMappedStore : FileChannelStore, Store {
     @Synchronized override fun close(): Boolean {
         try {
 
-            if (!deleteOnClose) {
-                catchAll {
-                    commit()
-                    channel!!.truncate(getFileSize())
-                }
-            }
 
             async {
                 synchronized(slices) {
                     slices.values.forEach { it.flush() }
                     slices.clear()
+
+                    if (!deleteOnClose) {
+                        catchAll {
+                            commit()
+                            channel!!.truncate(getFileSize())
+                        }
+                    }
+
+                    channel?.close()
+
                 }
-                channel!!.close()
+
                 if (deleteOnClose) {
                     delete()
                 }
@@ -100,7 +104,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun write(buffer: ByteBuffer, position: Long): Int {
 
-        if(this !is InMemoryStore && !channel!!.isOpen)
+        if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
 
         val before = buffer.position()
@@ -144,7 +148,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun read(buffer: ByteBuffer, position: Long) {
 
-        if(this !is InMemoryStore && !channel!!.isOpen)
+        if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
 
         val slice = getBuffer(position)
@@ -185,7 +189,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     protected open fun getBuffer(position: Long): FileSlice {
 
-        if(this !is InMemoryStore && !channel!!.isOpen)
+        if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
 
         var index = 0
@@ -198,6 +202,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
         return synchronized(slices) {
             slices.getOrPut(index) {
                 val offset = bufferSliceSize.toLong() * finalIndex.toLong()
+                if (this !is InMemoryStore && !channel!!.isOpen)
+                    throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+
                 val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, offset, bufferSliceSize.toLong())
                 FileSlice(buffer!!)
             }
@@ -243,9 +250,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
             synchronized(slices) {
                 this.slices.values
                         .filter { it.buffer is MappedByteBuffer }
-                        .forEach { catchAll {
-                            (it.buffer as MappedByteBuffer).force()
-                        } }
+                        .forEach {
+                            catchAll {
+                                (it.buffer as MappedByteBuffer).force()
+                            }
+                        }
             }
             super.commit()
         }
