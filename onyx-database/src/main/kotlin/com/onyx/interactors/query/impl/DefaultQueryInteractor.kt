@@ -79,10 +79,10 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                     if(it.value !is IManagedEntity) {
                         @Suppress("UNCHECKED_CAST")
                         it.setValue(it.key.toManagedEntity(context = context, clazz = query.entityType!!) as T)
-                        (it.value as IManagedEntity).hydrateRelationships(context, RelationshipTransaction())
+                        (it.value as IManagedEntity?)?.hydrateRelationships(context, RelationshipTransaction())
                     }
                     it.value
-                }
+                }.filter { it != null }
     }
 
     /**

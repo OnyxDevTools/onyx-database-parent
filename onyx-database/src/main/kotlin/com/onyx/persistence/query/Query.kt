@@ -67,6 +67,14 @@ class Query : BufferStreamable {
     }
 
     /**
+     * Setter for updates using var args
+     */
+    @Suppress("UNUSED")
+    fun order(vararg orders: QueryOrder) {
+        this.queryOrders = Arrays.asList(*orders)
+    }
+
+    /**
      * Gets the criteria value that is used to filter when doing a fetch
      * @since 1.0.0
      */

@@ -71,7 +71,7 @@ data class SkipNode(
         val buffer = BufferPool.allocateAndLimit(SKIP_NODE_SIZE)
         store.read(buffer, position)
         buffer.rewind()
-        val storePosition = buffer.long
+        buffer.long
         up = buffer.long
         left = buffer.long
         right = buffer.long
@@ -79,11 +79,6 @@ data class SkipNode(
         record = buffer.long
         key = buffer.long
         level = buffer.short
-        if (storePosition != position) {
-            println(this)
-            println("Store position $storePosition")
-            throw UnknownDatabaseException()
-        }
 
         return this
     }

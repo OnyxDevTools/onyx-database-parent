@@ -203,7 +203,10 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      */
     override fun above(index: K, includeFirst: Boolean): Set<Long> {
         val returnValue = HashSet<Long>()
-        maps.forEach { returnValue.addAll(super.above(index, includeFirst)) }
+        maps.forEach {
+            head = it
+            returnValue.addAll(super.above(index, includeFirst))
+        }
         return returnValue
     }
 
@@ -218,7 +221,10 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      */
     override fun below(index: K, includeFirst: Boolean): Set<Long> {
         val returnValue = HashSet<Long>()
-        maps.forEach { returnValue.addAll(super.below(index, includeFirst)) }
+        maps.forEach {
+            head = it
+            returnValue.addAll(super.below(index, includeFirst))
+        }
         return returnValue
     }
 

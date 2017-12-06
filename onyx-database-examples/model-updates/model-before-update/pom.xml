@@ -6,14 +6,14 @@
 
     <groupId>com.onyxdevtools</groupId>
     <artifactId>model-before-update</artifactId>
-    <version>2.0.0rc4</version>
+    <version>2.0.0rc5</version>
     <name>${project.groupId}:onyx-database-examples:model-updates:${project.artifactId}</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <onyx-database.version>2.0.0rc4</onyx-database.version>
+        <onyx-database.version>2.0.0rc5</onyx-database.version>
         <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
 

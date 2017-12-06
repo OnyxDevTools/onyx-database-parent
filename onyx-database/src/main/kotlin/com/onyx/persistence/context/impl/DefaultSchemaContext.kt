@@ -266,6 +266,7 @@ open class DefaultSchemaContext : SchemaContext {
             checkForIndexChanges(systemEntity, newSystemEntity)
             checkForInvalidRelationshipChanges(systemEntity, newSystemEntity)
 
+            serializedPersistenceManager.from(SystemEntity::class).where("name" eq systemEntity.name).set("isLatestVersion" to false).update()
             serializedPersistenceManager.saveEntity<IManagedEntity>(newSystemEntity)
             systemEntity = newSystemEntity
         }

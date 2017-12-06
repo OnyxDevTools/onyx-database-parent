@@ -213,7 +213,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
      * @return an iterator over the elements in this list in proper sequence
      */
     override fun iterator(): MutableIterator<E> = object : MutableIterator<E> {
-        override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator")
+        override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
 
         internal var i = 0
 
@@ -246,6 +246,25 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
      *
      * @see .listIterator
      */
-    override fun listIterator(): MutableListIterator<E> = throw RuntimeException("Method unsupported, hydrate relationship using initialize before using listIterator")
+    override fun listIterator(): MutableListIterator<E> = object : MutableListIterator<E> {
+
+        val iterator = this@LazyRelationshipCollection.iterator()
+        var index = 0
+
+        override fun hasPrevious(): Boolean = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
+        override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
+        override fun set(element: E) = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
+        override fun previous(): E = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
+        override fun previousIndex(): Int = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
+        override fun add(element: E) = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
+        override fun nextIndex(): Int = index
+
+        override fun hasNext(): Boolean = iterator.hasNext()
+        override fun next(): E {
+            index++
+            return iterator.next()
+        }
+
+    }
 
 }
