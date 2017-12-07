@@ -364,6 +364,63 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         assertTrue(pass.await(1, TimeUnit.SECONDS), "Listener not invoked")
     }
 
+    @Test
+    fun testUpdateListenerOnBuilder() {
+        var simpleEntity = SimpleEntity()
+        simpleEntity.simpleId = "11"
+        simpleEntity.name = "2"
+        manager.saveEntity<IManagedEntity>(simpleEntity)
+
+        val pass = CountDownLatch(1)
+        val builder = manager.from(SimpleEntity::class).onItemUpdated<SimpleEntity> {
+            pass.countDown()
+            assertEquals("11", it.simpleId, "simpleId not set")
+            assertEquals("2", it.name, "name not set")
+        }.listen()
+
+        simpleEntity = SimpleEntity()
+        simpleEntity.simpleId = "11"
+        simpleEntity.name = "2"
+        manager.saveEntity<IManagedEntity>(simpleEntity)
+
+        builder.stopListening()
+
+        assertTrue(pass.await(1, TimeUnit.SECONDS), "Listener not invoked")
+    }
+
+    @Test
+    fun testUpdateListenerObjectOnBuilder() {
+        var simpleEntity = SimpleEntity()
+        simpleEntity.simpleId = "11"
+        simpleEntity.name = "2"
+        manager.saveEntity<IManagedEntity>(simpleEntity)
+
+        val pass = CountDownLatch(1)
+        val builder = manager.from(SimpleEntity::class).listen(object : QueryListener<SimpleEntity> {
+            override fun onItemUpdated(item: SimpleEntity) {
+                pass.countDown()
+                assertEquals("11", item.simpleId, "simpleId not set")
+                assertEquals("2", item.name, "name not set")
+            }
+
+            override fun onItemAdded(item: SimpleEntity) {
+            }
+
+            override fun onItemRemoved(item: SimpleEntity) {
+            }
+
+        })
+
+        simpleEntity = SimpleEntity()
+        simpleEntity.simpleId = "11"
+        simpleEntity.name = "2"
+        manager.saveEntity<IManagedEntity>(simpleEntity)
+
+        builder.stopListening()
+
+        assertTrue(pass.await(1, TimeUnit.SECONDS), "Listener not invoked")
+    }
+
     /**
      * Test an entity correctly hits an delete listener
      */

@@ -36,10 +36,42 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return manager.executeDelete(this.query)
     }
 
+    /**
+     * Stop Listening.  This method will stop listening on changes that match the specified query
+     *
+     * @since 2.0.0
+     */
+    fun stopListening():QueryBuilder {
+        manager.removeChangeListener(query)
+        return this
+    }
+
+    /**
+     * Listen to query changes using the onItemAdded, onItemRemoved, and onItemDeleted closure methods
+     *
+     * @since 2.0.0
+     */
+    fun listen():QueryBuilder {
+        this.assignListener()
+        manager.listen(query)
+        return this
+    }
+
+    /**
+     * Listen to query changes using the Query Listener implementation
+     *
+     * @since 2.0.0
+     */
+    fun <T> listen(listener: QueryListener<T>):QueryBuilder {
+        this.query.changeListener = listener
+        manager.listen(query)
+        return this
+    }
+
     private fun assignListener() {
         if(onItemAdded != null
                 || onItemDeleted != null
-                || onItemDeleted != null) {
+                || onItemUpdated != null) {
             this.query.changeListener = object : QueryListener<Any> {
                 override fun onItemUpdated(item: Any) {
                     onItemUpdated?.invoke(item)
@@ -67,6 +99,16 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
     fun where(criteria: QueryCriteria): QueryBuilder {
         this.query.criteria = criteria
+        return this
+    }
+
+    fun and(criteria: QueryCriteria): QueryBuilder {
+        this.query.criteria?.and(criteria)
+        return this
+    }
+
+    fun or(criteria: QueryCriteria): QueryBuilder {
+        this.query.criteria?.or(criteria)
         return this
     }
 

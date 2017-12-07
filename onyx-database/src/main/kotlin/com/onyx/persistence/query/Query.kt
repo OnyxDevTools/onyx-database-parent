@@ -70,8 +70,8 @@ class Query : BufferStreamable {
      * Setter for updates using var args
      */
     @Suppress("UNUSED")
-    fun order(vararg orders: QueryOrder) {
-        this.queryOrders = Arrays.asList(*orders)
+    fun order(vararg updates: QueryOrder) {
+        this.queryOrders = Arrays.asList(*updates)
     }
 
     /**
@@ -386,6 +386,10 @@ class Query : BufferStreamable {
      */
     @Transient
     private var allCriteriaValue:Array<QueryCriteria>? = null
+
+    fun resetCriteria() {
+        allCriteriaValue = null
+    }
 
     /**
      * Getter for all criteria

@@ -1,10 +1,7 @@
 package database.relationship
 
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.persistence.query.QueryOrder
+import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.AddressNoPartition
 import entities.PersonNoPartition
@@ -340,5 +337,52 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
         assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
+    }
+
+    @Test
+    fun testSelectRelationshipValuesWithNormal() {
+        for (i in 0..3) {
+            val person = PersonNoPartition()
+            person.firstName = "Cristian"
+            person.lastName = "Vogel" + i
+            person.address = AddressNoPartition()
+            person.address!!.street = "Sluisvaart"
+            person.address!!.houseNr = i
+            manager.saveEntity<IManagedEntity>(person)
+        }
+
+        var results = manager.from(PersonNoPartition::class)
+                .where("address.houseNr" eq 2).and("firstName" neq "Cristian")
+                .list<PersonNoPartition>()
+
+        assertEquals(0, results.size, "Expected 0 results")
+
+        results = manager.from(PersonNoPartition::class)
+                .where("address.houseNr" eq 2).and("firstName" eq "Cristian")
+                .list()
+
+        assertEquals(1, results.size, "Expected 1 results")
+
+        for (i in 0..3) {
+            val person = PersonNoPartition()
+            person.firstName = "Cristian"
+            person.lastName = "Vogel" + i
+            person.address = AddressNoPartition()
+            person.address!!.street = "Sluisvaart"
+            person.address!!.houseNr = i
+            manager.saveEntity<IManagedEntity>(person)
+        }
+
+        results = manager.from(PersonNoPartition::class)
+                .where("address.houseNr" eq 2).and("firstName" neq "Cristian")
+                .list<PersonNoPartition>()
+
+        assertEquals(0, results.size, "Expected 0 results")
+
+        results = manager.from(PersonNoPartition::class)
+                .where("address.houseNr" eq 2).and("firstName" eq "Cristian")
+                .list()
+
+        assertEquals(2, results.size, "Expected 1 results")
     }
 }

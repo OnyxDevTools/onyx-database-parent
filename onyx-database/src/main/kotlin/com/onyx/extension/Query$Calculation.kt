@@ -24,7 +24,7 @@ import com.onyx.interactors.record.data.Reference
  * @since 1.3.0 Simplified query criteria management
  */
 @Throws(OnyxException::class)
-fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
+fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, context: SchemaContext, descriptor: EntityDescriptor): Boolean {
 
     var subCriteria: Boolean
 
@@ -40,7 +40,7 @@ fun Query.meetsCriteria(entity: IManagedEntity, entityReference: Reference, cont
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-            subCriteria = it.value.compare(entity.get(context = context, descriptor = descriptor, name = it.attribute!!), it.operator!!)
+            subCriteria = it.value.compare(entity?.get(context = context, descriptor = descriptor, name = it.attribute!!), it.operator!!)
         }
         it.meetsCriteria = subCriteria
     }
@@ -100,15 +100,15 @@ private fun Query.calculateCriteriaMet(criteria: QueryCriteria): Boolean {
  * to do a quick reference to see if newly saved entities meet the criteria
  */
 @Throws(OnyxException::class)
-private fun relationshipMeetsCriteria(entity: IManagedEntity, entityReference: Reference, criteria: QueryCriteria, context: SchemaContext): Boolean {
+private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: Reference, criteria: QueryCriteria, context: SchemaContext): Boolean {
     var meetsCriteria = false
     val operator = criteria.operator
 
     // Grab the relationship from the store
-    val relationshipEntities = entity.getRelationshipFromStore(context, criteria.attribute!!, entityReference = entityReference)
+    val relationshipEntities = entity?.getRelationshipFromStore(context, criteria.attribute!!, entityReference = entityReference)
 
     // If there are relationship values, check to see if they meet criteria
-    if (relationshipEntities!!.isNotEmpty()) {
+    if (relationshipEntities?.isNotEmpty() == true) {
         val items = criteria.attribute!!.split(".")
         val attribute = items[items.size - 1]
 

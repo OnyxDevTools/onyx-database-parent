@@ -52,7 +52,7 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager
  *
  * Tim Osborn, 02/13/2017 - This was augmented to use the new RMI Socket Server.  It has since been optimized
  */
-class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
+open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
 
     override var protocol = "TLSv1.2"
     override var sslStorePassword: String? = null

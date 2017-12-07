@@ -7,6 +7,7 @@ import com.onyx.exception.InvalidQueryException
 import com.onyx.extension.*
 import com.onyx.extension.common.copy
 import com.onyx.extension.common.instance
+import com.onyx.interactors.query.impl.DefaultQueryInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.ScannerFactory
 import com.onyx.interactors.scanner.TableScanner
@@ -80,6 +81,10 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         val copyCriteria = queryTuple.second
         val queryCopy = queryTuple.first
 
+        val subCriteria = queryCopy.criteria?.subCriteria?.toList()
+
+        queryCopy.criteria?.subCriteria?.clear()
+
         copyCriteria.attribute = criteria.attribute!!.replaceFirst((segments[0] + "\\.").toRegex(), "")
         copyCriteria.isRelationship = false
 
@@ -92,6 +97,26 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
 
         // Swap parent / child after getting results.  This is because we can use the child when hydrating stuff
         childIndexes.keys.forEach { returnValue[relationshipIndexes[it]!!] = it }
+
+        // This is to account for a mismatch of relationship and non relationship criteria.  In order to handle this we
+        // create a new query starting from where we left off.
+        if(subCriteria?.isNotEmpty() == true) {
+            val queryInteractor = DefaultQueryInteractor(descriptor, persistenceManager, context)
+            subCriteria.forEachIndexed { index, it ->
+                if(index == 0) {
+                    queryCopy.criteria = it
+                    queryCopy.resetCriteria()
+                }
+                else {
+                    if(it.isAnd)
+                        queryCopy.criteria?.and(it)
+                    else
+                        queryCopy.criteria?.or(it)
+                }
+            }
+            val subCriteriaResults = queryInteractor.getReferencesForCriteria<Reference>(queryCopy, queryCopy.criteria!!, returnValue, false)
+            queryInteractor.aggregateFilteredReferences(queryCopy.criteria!!, returnValue, subCriteriaResults)
+        }
 
         return returnValue
     }
@@ -117,6 +142,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
             queryCopy.criteria!!.copy(criteria)
             queryCopy.to(queryCopy.criteria!!)
         }
+
     }
 
     /**

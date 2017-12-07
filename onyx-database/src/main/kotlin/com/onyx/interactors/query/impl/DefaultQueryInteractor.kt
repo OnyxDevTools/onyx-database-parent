@@ -274,7 +274,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @return Filtered references matching criteria
      */
     @Throws(OnyxException::class)
-    private fun <T : Any?> getReferencesForCriteria(query: Query, criteria: QueryCriteria, existingReferences: MutableMap<Reference, Reference>?, forceFullScan: Boolean): MutableMap<Reference, T> {
+    fun <T : Any?> getReferencesForCriteria(query: Query, criteria: QueryCriteria, existingReferences: MutableMap<Reference, Reference>?, forceFullScan: Boolean): MutableMap<Reference, T> {
         val context = Contexts.get(contextId)!!
         // Ensure query is still valid
         if (query.isTerminated) {
@@ -326,7 +326,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @param totalResults Results from previous scan iterations
      * @param criteriaResults Criteria results used to aggregate a contrived list
      */
-    private fun <T : Any?> aggregateFilteredReferences(criteria: QueryCriteria, totalResults: MutableMap<Reference, T>, criteriaResults: MutableMap<Reference, T>) {
+    fun <T : Any?> aggregateFilteredReferences(criteria: QueryCriteria, totalResults: MutableMap<Reference, T>, criteriaResults: MutableMap<Reference, T>) {
         when {
             criteria.flip ->  {totalResults.clear(); totalResults += criteriaResults}
             criteria.isOr ->  totalResults += criteriaResults
