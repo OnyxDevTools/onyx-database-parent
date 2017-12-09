@@ -50,9 +50,6 @@ class QueryCriteria : BufferStreamable {
     var operator: QueryCriteriaOperator? = null
     var type: QueryCriteriaType? = null
 
-    // ALL of the value objects are public since they are needed for web services.  Most serializers cannot serialize Any? or Object
-    // type so they are strongly typed.  Also they cannot serialize private values.  So, we will have to live with the lint
-    // check.  Also, there is no way to suppress WEAKER_ACCESS in kotlin
     @Suppress("MemberVisibilityCanPrivate")
     var dateValue: Date? = null
     @Suppress("MemberVisibilityCanPrivate")
