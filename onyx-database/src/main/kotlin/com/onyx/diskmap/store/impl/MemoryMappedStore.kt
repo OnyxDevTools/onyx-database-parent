@@ -70,7 +70,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
             async {
                 synchronized(slices) {
-                    slices.values.forEach { it.flush() }
+                    slices.values.forEach {
+                        synchronized(it) { it.flush() }
+                    }
                     slices.clear()
 
                     synchronized(channel!!) {
@@ -256,9 +258,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
                     this.slices.values
                             .filter { it.buffer is MappedByteBuffer }
                             .forEach {
-                                catchAll {
-                                    if(channel!!.isOpen)
-                                        (it.buffer as MappedByteBuffer).force()
+                                synchronized(it) {
+                                    catchAll {
+                                        if (channel!!.isOpen)
+                                            (it.buffer as MappedByteBuffer).force()
+                                    }
                                 }
                             }
                 }
