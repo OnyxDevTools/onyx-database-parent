@@ -28,7 +28,6 @@ import java.nio.file.Files
  * @see SchemaContext
  */
 class WebSchemaContext(contextId: String) : DefaultSchemaContext(contextId, generateTempLocation()), SchemaContext {
-    private var metadataDiskMapFactory: DiskMapFactory? = null
 
     var remoteEndpoint: String? = null
 
@@ -48,18 +47,6 @@ class WebSchemaContext(contextId: String) : DefaultSchemaContext(contextId, gene
             e.printStackTrace()
         }
 
-        metadataDiskMapFactory = DefaultDiskMapFactory(location + "/local", StoreType.MEMORY_MAPPED_FILE, this)
         super.start()
-    }
-
-    /**
-     * Close the local database cache store
-     * @since 1.0.0
-     */
-    override fun shutdown() {
-        if (metadataDiskMapFactory != null) {
-            metadataDiskMapFactory!!.close()
-        }
-        super.shutdown()
     }
 }

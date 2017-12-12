@@ -70,24 +70,18 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
             async {
                 synchronized(slices) {
-                    slices.values.forEach {
-                        synchronized(it) { it.flush() }
-                    }
+                    slices.values.forEach { it.flush() }
                     slices.clear()
-
-                    synchronized(channel!!) {
 
                         if (!deleteOnClose) {
                             catchAll {
                                 commit()
-                                if(channel!!.isOpen)
-                                    channel?.truncate(getFileSize())
+                            channel!!.truncate(getFileSize())
                             }
                         }
 
-                        if(channel!!.isOpen)
-                            channel?.close()
-                    }
+                    super.close()
+
                 }
 
                 if (deleteOnClose) {
@@ -253,22 +247,17 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun commit() {
         if (!deleteOnClose) {
-            synchronized(channel!!) {
                 synchronized(slices) {
                     this.slices.values
                             .filter { it.buffer is MappedByteBuffer }
                             .forEach {
-                                synchronized(it) {
                                     catchAll {
-                                        if (channel!!.isOpen)
                                             (it.buffer as MappedByteBuffer).force()
                                     }
                                 }
                             }
-                }
                 super.commit()
             }
         }
     }
-}
 

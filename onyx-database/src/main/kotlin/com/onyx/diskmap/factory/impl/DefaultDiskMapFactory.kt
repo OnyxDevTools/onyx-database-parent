@@ -55,7 +55,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @param filePath Where the file is located to store the maps
      * @since 1.0.0
      */
-    constructor(filePath: String) : this(filePath, StoreType.MEMORY_MAPPED_FILE, null)
+    constructor(filePath: String) : this(filePath, StoreType.FILE, null)
 
     /**
      * Constructor
@@ -64,7 +64,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @param context  If this is attached to an OnyxDB this will be populated
      * @since 1.0.0
      */
-    constructor(filePath: String, context: SchemaContext) : this(filePath, StoreType.MEMORY_MAPPED_FILE, context)
+    constructor(filePath: String, context: SchemaContext) : this(filePath, StoreType.FILE, context)
 
     /**
      * Constructor

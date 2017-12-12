@@ -21,7 +21,7 @@ class ScaledDiskMapTest {
 
     @Test
     fun testInsert() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE, StoreType.MEMORY_MAPPED_FILE)
+        val builder = DefaultDiskMapFactory(TEST_DATABASE, StoreType.FILE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("first", 10)
 
         val keyValues = HashMap<Int, Int>()
