@@ -73,15 +73,19 @@ open class MemoryMappedStore : FileChannelStore, Store {
                     slices.values.forEach { it.flush() }
                     slices.clear()
 
-                    if (!deleteOnClose) {
-                        catchAll {
-                            commit()
-                            channel!!.truncate(getFileSize())
+                    synchronized(channel!!) {
+
+                        if (!deleteOnClose) {
+                            catchAll {
+                                commit()
+                                if(channel!!.isOpen)
+                                    channel?.truncate(getFileSize())
+                            }
                         }
+
+                        if(channel!!.isOpen)
+                            channel?.close()
                     }
-
-                    channel?.close()
-
                 }
 
                 if (deleteOnClose) {
@@ -247,16 +251,19 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun commit() {
         if (!deleteOnClose) {
-            synchronized(slices) {
-                this.slices.values
-                        .filter { it.buffer is MappedByteBuffer }
-                        .forEach {
-                            catchAll {
-                                (it.buffer as MappedByteBuffer).force()
+            synchronized(channel!!) {
+                synchronized(slices) {
+                    this.slices.values
+                            .filter { it.buffer is MappedByteBuffer }
+                            .forEach {
+                                catchAll {
+                                    if(channel!!.isOpen)
+                                        (it.buffer as MappedByteBuffer).force()
+                                }
                             }
-                        }
+                }
+                super.commit()
             }
-            super.commit()
         }
     }
 }

@@ -129,7 +129,10 @@ open class FileChannelStore() : Store {
     override fun commit() {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        this.channel?.force(true)
+        synchronized(this.channel!!) {
+            if (this.channel?.isOpen == true)
+                this.channel?.force(true)
+        }
     }
 
     /**

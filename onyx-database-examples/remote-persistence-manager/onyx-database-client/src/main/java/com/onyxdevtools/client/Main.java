@@ -26,7 +26,6 @@ public class Main
 
         // The Socket Persistence Manager is an alternative PM used to increase performance and reduce network latency
         PersistenceManager manager = factory.getPersistenceManager();  //5
-        // PersistenceManager manager = factory.getPersistenceManager();
 
         //Create an instance of an entity
         final Person person1 = new Person();

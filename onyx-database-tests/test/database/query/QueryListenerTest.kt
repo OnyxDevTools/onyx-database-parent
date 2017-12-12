@@ -373,19 +373,18 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
 
         val pass = CountDownLatch(1)
         val builder = manager.from(SimpleEntity::class).onItemUpdated<SimpleEntity> {
-            pass.countDown()
             assertEquals("11", it.simpleId, "simpleId not set")
-            assertEquals("2", it.name, "name not set")
+            assertEquals("3", it.name, "name not set")
+            pass.countDown()
         }.listen()
 
         simpleEntity = SimpleEntity()
         simpleEntity.simpleId = "11"
-        simpleEntity.name = "2"
+        simpleEntity.name = "3"
         manager.saveEntity<IManagedEntity>(simpleEntity)
 
-        builder.stopListening()
-
         assertTrue(pass.await(1, TimeUnit.SECONDS), "Listener not invoked")
+        builder.stopListening()
     }
 
     @Test
@@ -398,9 +397,9 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         val pass = CountDownLatch(1)
         val builder = manager.from(SimpleEntity::class).listen(object : QueryListener<SimpleEntity> {
             override fun onItemUpdated(item: SimpleEntity) {
-                pass.countDown()
                 assertEquals("11", item.simpleId, "simpleId not set")
                 assertEquals("2", item.name, "name not set")
+                pass.countDown()
             }
 
             override fun onItemAdded(item: SimpleEntity) {
@@ -416,9 +415,8 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
         simpleEntity.name = "2"
         manager.saveEntity<IManagedEntity>(simpleEntity)
 
-        builder.stopListening()
-
         assertTrue(pass.await(1, TimeUnit.SECONDS), "Listener not invoked")
+        builder.stopListening()
     }
 
     /**
