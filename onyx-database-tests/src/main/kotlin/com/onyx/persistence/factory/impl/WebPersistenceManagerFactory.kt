@@ -2,6 +2,7 @@ package com.onyx.persistence.factory.impl
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
@@ -51,6 +52,8 @@ class WebPersistenceManagerFactory(location: String, instance: String) : Embedde
 
     // Executor Service.  Thread pool for running requests
     private var executorService = Executors.newCachedThreadPool()
+
+    override var storeType: StoreType = StoreType.FILE
 
     // Rest Template
     private var restTemplate: RestTemplate? = null
@@ -104,6 +107,7 @@ class WebPersistenceManagerFactory(location: String, instance: String) : Embedde
     override fun initialize() = try {
         val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.NOT_EQUAL, ""))
         persistenceManager.executeQuery<Any>(query)
+        schemaContext.storeType = this.storeType
         schemaContext.start()
     } catch (e: ResourceAccessException) {
         throw InitializationException(InitializationException.CONNECTION_EXCEPTION)
