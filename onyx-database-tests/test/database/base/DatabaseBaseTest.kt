@@ -48,7 +48,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
             EmbeddedPersistenceManagerFactory::class -> {
                 val factory = EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION)
                 factory.storeType = StoreType.FILE
-                return factory
+                factory
             }
             RemotePersistenceManagerFactory::class ->   {
                 val factory = RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)
