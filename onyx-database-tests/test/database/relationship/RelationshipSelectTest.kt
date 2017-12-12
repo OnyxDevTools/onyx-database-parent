@@ -383,6 +383,6 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
                 .where("address.houseNr" eq 2).and("firstName" eq "Cristian")
                 .list()
 
-        assertEquals(2, results.size, "Expected 1 results")
+        assertEquals(1, results.size, "Expected 1 results")
     }
 }

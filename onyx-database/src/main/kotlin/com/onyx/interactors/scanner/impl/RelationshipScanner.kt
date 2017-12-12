@@ -80,8 +80,9 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         val queryTuple = copyQuery()
         val copyCriteria = queryTuple.second
         val queryCopy = queryTuple.first
+        queryCopy.criteria?.subCriteria = queryCopy.criteria?.subCriteria?.toMutableList()!!
 
-        val subCriteria = queryCopy.criteria?.subCriteria?.toList()
+        val subCriteria = criteria.subCriteria
 
         queryCopy.criteria?.subCriteria?.clear()
 
@@ -100,7 +101,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
 
         // This is to account for a mismatch of relationship and non relationship criteria.  In order to handle this we
         // create a new query starting from where we left off.
-        if(subCriteria?.isNotEmpty() == true) {
+        if(subCriteria.isNotEmpty()) {
             val queryInteractor = DefaultQueryInteractor(descriptor, persistenceManager, context)
             subCriteria.forEachIndexed { index, it ->
                 if(index == 0) {

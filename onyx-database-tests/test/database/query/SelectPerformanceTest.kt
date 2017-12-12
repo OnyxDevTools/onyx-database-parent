@@ -113,7 +113,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
         assertEquals(20, results.size, "Query should only return 20 records")
         assertEquals(5000, query.resultsCount, "Query should have 500 records")
-        assertTrue(after - time < 500, "Query should only take a half a seconds since it is on an index")
+        assertTrue(after - time < 1000, "Query should only take a seconds since it is on an index")
     }
 
     /**
