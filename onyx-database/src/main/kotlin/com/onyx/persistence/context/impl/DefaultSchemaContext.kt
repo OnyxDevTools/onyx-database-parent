@@ -393,10 +393,15 @@ open class DefaultSchemaContext : SchemaContext {
     @Throws(OnyxException::class)
     override fun getSystemEntityByName(name: String): SystemEntity? = synchronized(defaultSystemEntities) {
         defaultSystemEntities.getOrPut(name) {
-            val query = Query(SystemEntity::class.java, QueryCriteria("name", QueryCriteriaOperator.EQUAL, name), QueryOrder("primaryKey", false))
-            query.maxResults = 1
 
-            val result = serializedPersistenceManager.executeQuery<SystemEntity>(query).firstOrNull()
+            val result = serializedPersistenceManager
+                    .from(SystemEntity::class)
+                    .where("name" eq name).and("isLatestVersion" eq true)
+                    .orderBy("primaryKey".desc())
+                    .limit(1)
+                    .list<SystemEntity>()
+                    .firstOrNull()
+
             if (result != null) {
                 synchronized(systemEntityByIDMap) {
                     systemEntityByIDMap.put(result.primaryKey, result)
