@@ -1,5 +1,6 @@
 package com.onyx.persistence.factory.impl
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
@@ -62,6 +63,8 @@ import java.nio.charset.StandardCharsets
 open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation, override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)) : PersistenceManagerFactory {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
+
+    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
 
     /**
      * Constructor that ensures safe shutdown
@@ -146,6 +149,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
         }
 
         this.persistenceManager
+        schemaContext.storeType = this.storeType
         schemaContext.start()
     } catch (e: OverlappingFileLockException) {
         releaseLock()

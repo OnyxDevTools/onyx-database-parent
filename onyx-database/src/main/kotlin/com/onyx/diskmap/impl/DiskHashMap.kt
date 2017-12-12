@@ -166,10 +166,10 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.readLock {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock -1
+    override fun getRecID(key: K): Long {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return -1
         head = combinedNode.head
-        return@readLock super.getRecID(key)
+        return super.getRecID(key)
     }
 
     /**

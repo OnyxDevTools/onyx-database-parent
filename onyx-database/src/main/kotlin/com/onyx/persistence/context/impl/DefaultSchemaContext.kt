@@ -68,6 +68,8 @@ open class DefaultSchemaContext : SchemaContext {
     // when having multiple running instances on a single machine.  By default it will be the database location
     final override val contextId: String
 
+    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+
     // Location where the database folder is
     final override lateinit var location: String
 
@@ -652,7 +654,7 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
         return dataFiles.getOrPut(key) {
-                return@getOrPut DefaultDiskMapFactory("$location/$key", this@DefaultSchemaContext)
+                return@getOrPut DefaultDiskMapFactory("$location/$key", StoreType.MEMORY_MAPPED_FILE, this@DefaultSchemaContext)
             }
         }
 

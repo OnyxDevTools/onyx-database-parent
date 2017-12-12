@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.diskmap.factory.DiskMapFactory
+import com.onyx.diskmap.store.StoreType
 import com.onyx.entity.SystemEntity
 import com.onyx.entity.SystemPartitionEntry
 import com.onyx.exception.InitializationException
@@ -32,6 +33,15 @@ interface SchemaContext {
      * @since 1.0.0
      */
     val location: String
+
+    /**
+     * Store type.  This determines if the store should use either memory mapped file or nio file
+     * Note: Using Memory mapped files could be volatile.  If the safe keeping of the data is high priority,
+     * I recommend using StoreType.FILE
+     *
+     * @since 2.0.0
+     */
+    var storeType:StoreType
 
     /**
      * Get Context ID

@@ -1,5 +1,6 @@
 package com.onyx.persistence.factory.impl
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.CacheSchemaContext
@@ -38,6 +39,7 @@ import java.io.File
  */
 open class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFAULT_INSTANCE, location:String = createTemporaryMetadataLocation(), override var schemaContext: SchemaContext = CacheSchemaContext(instance, location)) : EmbeddedPersistenceManagerFactory(location, instance, schemaContext), PersistenceManagerFactory {
 
+    override var storeType: StoreType = StoreType.IN_MEMORY
 
     /**
      * Initialize the in memory database
@@ -47,6 +49,7 @@ open class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFA
     @Throws(InitializationException::class)
     override fun initialize() {
         this.persistenceManager
+        schemaContext.storeType = storeType
         schemaContext.start()
     }
 

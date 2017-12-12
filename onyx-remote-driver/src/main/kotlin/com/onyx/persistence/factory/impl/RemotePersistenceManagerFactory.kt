@@ -1,5 +1,6 @@
 package com.onyx.persistence.factory.impl
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.network.auth.AuthenticationManager
 import com.onyx.exception.ConnectionFailedException
 import com.onyx.network.rmi.OnyxRMIClient
@@ -53,6 +54,8 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager
  * Tim Osborn, 02/13/2017 - This was augmented to use the new RMI Socket Server.  It has since been optimized
  */
 open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
+
+    override var storeType: StoreType = StoreType.FILE
 
     override var protocol = "TLSv1.2"
     override var sslStorePassword: String? = null
@@ -140,6 +143,7 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
 
         // Verify Connection by getting System Entities
         persistenceManager.findById<SystemEntity>(SystemEntity::class.java, 1)
+        schemaContext.storeType = storeType
         schemaContext.start()
     } catch (e: OnyxException) {
         if(e is InitializationException && e.message != InitializationException.INVALID_CREDENTIALS) {

@@ -1,5 +1,6 @@
 package com.onyx.persistence.factory
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -81,6 +82,15 @@ interface PersistenceManagerFactory {
      *
      */
     var encryption: EncryptionInteractor
+
+    /**
+     * Store type.  This determines if the store should use either memory mapped file or nio file
+     * Note: Using Memory mapped files could be volatile.  If the safe keeping of the data is high priority,
+     * I recommend using StoreType.FILE
+     *
+     * @since 2.0.0
+     */
+    var storeType: StoreType
 
     /**
      * Initialize the database connection and storage mechanisms
