@@ -1,5 +1,6 @@
 package com.onyx.persistence.factory.impl
 
+import com.onyx.diskmap.store.StoreType
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.ServerSchemaContext
 
@@ -40,4 +41,6 @@ import com.onyx.persistence.context.impl.ServerSchemaContext
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-class ServerPersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation, schemaContext)
+class ServerPersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation, schemaContext) {
+    override var storeType: StoreType = StoreType.FILE
+}

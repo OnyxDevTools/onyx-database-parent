@@ -52,11 +52,11 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
             }
             RemotePersistenceManagerFactory::class ->   {
                 val factory = RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)
-                factory.sslKeystoreFilePath = "securesocket.jks"
+/*                factory.sslKeystoreFilePath = "securesocket.jks"
                 factory.sslTrustStoreFilePath = "securesocket.jks"
                 factory.sslKeystorePassword = "inc0rrect"
                 factory.sslTrustStorePassword = "mu\$tch8ng3"
-                factory.sslStorePassword = "mu\$tch8ng3"
+                factory.sslStorePassword = "mu\$tch8ng3"*/
                 factory
             }
             CacheManagerFactory::class ->               CacheManagerFactory()
@@ -107,11 +107,11 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
             if(remoteServer == null) {
                 remoteServer = DatabaseServer(REMOTE_DATABASE_LOCATION)
                 remoteServer!!.port = 8095
-                remoteServer!!.sslKeystoreFilePath = "securesocket.jks"
+/*                remoteServer!!.sslKeystoreFilePath = "securesocket.jks"
                 remoteServer!!.sslTrustStoreFilePath = "securesocket.jks"
                 remoteServer!!.sslKeystorePassword = "inc0rrect"
                 remoteServer!!.sslTrustStorePassword = "mu\$tch8ng3"
-                remoteServer!!.sslStorePassword = "mu\$tch8ng3"
+                remoteServer!!.sslStorePassword = "mu\$tch8ng3"*/
                 remoteServer!!.setCredentials("admin", "admin")
                 remoteServer!!.start()
             }
