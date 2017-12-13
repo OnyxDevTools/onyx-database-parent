@@ -190,10 +190,10 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return -1
+    override fun getRecID(key: K): Long = mapReadWriteLock.readLock {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock -1
         head = combinedNode.head
-        return super.getRecID(key)
+        return@readLock super.getRecID(key)
     }
 
     /**
