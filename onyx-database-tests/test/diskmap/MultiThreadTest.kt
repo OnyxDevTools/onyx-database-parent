@@ -2,6 +2,7 @@ package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import database.base.DatabaseBaseTest
+import org.junit.BeforeClass
 import org.junit.Test
 
 import java.util.*
@@ -12,15 +13,23 @@ import kotlin.test.assertNull
 /**
  * Created by timothy.osborn on 3/27/15.
  */
-class MultiThreadTest : AbstractTest() {
+class MultiThreadTest {
+
 
     companion object {
         private var threadPool = Executors.newFixedThreadPool(10)
+
+        private val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/multiThreadMapTest.db"
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeTest() = DatabaseBaseTest.deleteDatabase(TEST_DATABASE)
+
     }
 
     @Test
     fun testMultiThread() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, String>>("second")
 
         val items = ArrayList<Future<*>>()
@@ -47,20 +56,15 @@ class MultiThreadTest : AbstractTest() {
         store.close()
     }
 
-    internal inner class MyRunnable(myMap: MutableMap<Int, String>, private var p: Int) : Runnable {
-        private var myMap: MutableMap<Int, String>? = null
-
-        init {
-            this.myMap = myMap
-        }
+    internal inner class MyRunnable(private var myMap: MutableMap<Int, String>, private var p: Int) : Runnable {
 
         override fun run() {
             for (k in 1..4999) {
                 val value:Int = (k * p)
-                myMap!!.put(value, "HIYA" + value)
-                myMap!![value] as String
-                myMap!!.remove(value)
-                assertNull(myMap!![value])
+                myMap.put(value, "HIYA" + value)
+                myMap[value] as String
+                myMap.remove(value)
+                assertNull(myMap[value])
             }
         }
     }

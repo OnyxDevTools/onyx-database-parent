@@ -6,6 +6,7 @@ import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
 import database.base.DatabaseBaseTest
 import entities.EntityYo
+import org.junit.BeforeClass
 import org.junit.Test
 
 import java.util.Date
@@ -16,11 +17,21 @@ import kotlin.test.assertNull
 /**
  * Created by Tim Osborn on 3/21/15.
  */
-class BasicMapTest : AbstractTest() {
+class BasicMapTest {
+
+    companion object {
+
+        private val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/basicMapTest.db"
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeTest() = DatabaseBaseTest.deleteDatabase(TEST_DATABASE)
+    }
+
 
     @Test
     fun putTest() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Any>>("first")
         myMap.put("MY NEW STRING", "Hi1ya1")
         assertEquals(myMap["MY NEW STRING"], "Hi1ya1", "Failed to put string into map")
@@ -29,7 +40,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun getTest() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Any>>("first")
         myMap.put("MY NEW STRING", "Hi1ya1")
         val value = myMap["MY NEW STRING"] as String
@@ -39,7 +50,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun deleteTest() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any>>("second")
 
         for (i in 0..9999) {
@@ -65,7 +76,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun deleteRoot() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any?>>("second")
 
         for (i in 0..9999) {
@@ -87,7 +98,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun largeDataSetTest() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any>>("seconds")
 
         for (i in 0..499999) {
@@ -115,7 +126,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun updateTest() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<Int, Any?>>("second")
 
         for (i in 0..99999) {
@@ -149,7 +160,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun testPushMultipleObjects() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
 
         val service = Executors.newFixedThreadPool(3)
 
@@ -166,7 +177,7 @@ class BasicMapTest : AbstractTest() {
 
     @Test
     fun testPushSingleObjects() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val service = Executors.newFixedThreadPool(3)
 
         val f1 = DatabaseBaseTest.async(service) { testPushObjects(store, 1) }

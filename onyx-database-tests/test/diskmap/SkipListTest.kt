@@ -2,6 +2,7 @@ package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import database.base.DatabaseBaseTest
+import org.junit.BeforeClass
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runners.MethodSorters
@@ -19,9 +20,18 @@ import kotlin.test.assertNull
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class SkipListTest {
 
+    companion object {
+        val SKIP_TEST_DATABASE = "C:/Sandbox/Onyx/Tests/skipTest.db"
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeTest() = DatabaseBaseTest.deleteDatabase(SKIP_TEST_DATABASE)
+
+    }
+
     @Test
     fun testInsert() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(SKIP_TEST_DATABASE)
         val skipList = builder.getSkipListMap<MutableMap<Int, Int>>("first")
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {
@@ -38,7 +48,7 @@ class SkipListTest {
     @Test
     fun testDelete() {
 
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(SKIP_TEST_DATABASE)
         val skipList = builder.getSkipListMap<MutableMap<Int, Int>>("second")
 
         val keyValues = HashMap<Int, Int>()
@@ -72,7 +82,7 @@ class SkipListTest {
 
     @Test
     fun testUpdate() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(SKIP_TEST_DATABASE)
         val skipList = builder.getSkipListMap<MutableMap<Int, Int>>("third")
 
         val keyValues = HashMap<Int, Int>()
@@ -89,7 +99,7 @@ class SkipListTest {
 
     @Test
     fun testForEach() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(SKIP_TEST_DATABASE)
         val skipList = builder.getSkipListMap<MutableMap<Int, Int>>("third")
 
         val keyValues = HashMap<Int, Int>()
@@ -123,7 +133,7 @@ class SkipListTest {
 
     @Test
     fun testKeyIterator() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(SKIP_TEST_DATABASE)
         val skipList = builder.getSkipListMap<MutableMap<Int, Int>>("fourth")
 
         val keyValues = HashMap<Int, Int>()
@@ -157,7 +167,7 @@ class SkipListTest {
 
     @Test
     fun testValueIterator() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(SKIP_TEST_DATABASE)
         val skipList = builder.getSkipListMap<MutableMap<Int, Int>>("fifth")
 
         val keyValues = HashMap<Int, Int>()
@@ -189,7 +199,4 @@ class SkipListTest {
         assertEquals(numberOfValues.get(), skipList.size)
     }
 
-    companion object {
-        val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/skipTest.db"
-    }
 }

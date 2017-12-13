@@ -1,7 +1,9 @@
 package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
+import database.base.DatabaseBaseTest
 import entities.EntityYo
+import org.junit.BeforeClass
 import org.junit.Test
 
 import java.util.*
@@ -12,11 +14,20 @@ import kotlin.test.assertTrue
 /**
  * Created by timothy.osborn on 4/2/15.
  */
-class NamedObjectMapTest : AbstractTest() {
+class NamedObjectMapTest  {
+
+    companion object {
+        private val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/namedObjectMapTest.db"
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeTest() = DatabaseBaseTest.deleteDatabase(TEST_DATABASE)
+
+    }
 
     @Test
     fun testPushObject() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, EntityYo>>("objectos")
 
         val entityYo = EntityYo()
@@ -60,7 +71,7 @@ class NamedObjectMapTest : AbstractTest() {
 
     @Test
     fun testNullObject() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, EntityYo>>("objectos")
 
         val entityYo = EntityYo()
@@ -91,7 +102,7 @@ class NamedObjectMapTest : AbstractTest() {
 
     @Test
     fun testSet() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, List<*>>>("objectos")
 
         val list = ArrayList<String>()
@@ -112,7 +123,7 @@ class NamedObjectMapTest : AbstractTest() {
 
     @Test
     fun testHashSet() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Set<*>>>("objectos")
 
         val list = HashSet<String>()
@@ -132,7 +143,7 @@ class NamedObjectMapTest : AbstractTest() {
 
     @Test
     fun testMap() {
-        val store = DefaultDiskMapFactory(AbstractTest.TEST_DATABASE)
+        val store = DefaultDiskMapFactory(TEST_DATABASE)
         val myMap = store.getHashMap<MutableMap<String, Map<*, *>>>("objectos")
 
         val list = HashMap<String, Int>()

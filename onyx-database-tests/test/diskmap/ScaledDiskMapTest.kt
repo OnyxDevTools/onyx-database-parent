@@ -2,6 +2,8 @@ package diskmap
 
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.store.StoreType
+import database.base.DatabaseBaseTest
+import org.junit.BeforeClass
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runners.MethodSorters
@@ -19,9 +21,18 @@ import kotlin.test.assertNull
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class ScaledDiskMapTest {
 
+    companion object {
+        val TEST_SCALED_DATABASE = "C:/Sandbox/Onyx/Tests/loadScaled.db"
+
+        @BeforeClass
+        @JvmStatic
+        fun beforeTest() = DatabaseBaseTest.deleteDatabase(TEST_SCALED_DATABASE)
+    }
+
+
     @Test
     fun testInsert() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE, StoreType.FILE)
+        val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE, StoreType.FILE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("first", 10)
 
         val keyValues = HashMap<Int, Int>()
@@ -43,7 +54,7 @@ class ScaledDiskMapTest {
     @Test
     fun testDelete() {
 
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("second", 10)
 
         val keyValues = HashMap<Int, Int>()
@@ -77,7 +88,7 @@ class ScaledDiskMapTest {
 
     @Test
     fun testUpdate() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("third", 10)
 
         val keyValues = HashMap<Int, Int>()
@@ -94,7 +105,7 @@ class ScaledDiskMapTest {
 
     @Test
     fun testForEach() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("third", 10)
 
         val keyValues = HashMap<Int, Int>()
@@ -126,7 +137,7 @@ class ScaledDiskMapTest {
 
     @Test
     fun testKeyIterator() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("fourth", 10)
 
         val keyValues = HashMap<Int, Int>()
@@ -161,7 +172,7 @@ class ScaledDiskMapTest {
 
     @Test
     fun testValueIterator() {
-        val builder = DefaultDiskMapFactory(TEST_DATABASE)
+        val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
         val skipList = builder.getHashMap<MutableMap<Int, Int>>("fifth", 10)
 
         val keyValues = HashMap<Int, Int>()
@@ -194,7 +205,4 @@ class ScaledDiskMapTest {
         assertEquals(skipList.size, numberOfValues.get())
     }
 
-    companion object {
-        val TEST_DATABASE = "C:/Sandbox/Onyx/Tests/load.db"
-    }
 }
