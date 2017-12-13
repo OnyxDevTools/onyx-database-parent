@@ -138,6 +138,7 @@ interface Store {
         return BufferPool.allocateAndLimit(size) {
             this.read(it, position + Integer.BYTES)
             it.rewind()
+            @Suppress("UNCHECKED_CAST")
             return@allocateAndLimit BufferStream(it).getObject(context) as T
         }
     }

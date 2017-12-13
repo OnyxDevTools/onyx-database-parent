@@ -30,7 +30,7 @@ class AllTypes : Serializable {
 
     override fun hashCode(): Int = intValue
 
-    override fun equals(`val`: Any?): Boolean = if (`val` is AllTypes) {
-        `val`.intValue == intValue
+    override fun equals(other: Any?): Boolean = if (other is AllTypes) {
+        other.intValue == intValue
     } else false
 }

@@ -7,7 +7,7 @@ class Simple : Serializable {
 
     override fun hashCode(): Int = hiya
 
-    override fun equals(`val`: Any?): Boolean = if (`val` is Simple) {
-        `val`.hiya == hiya
+    override fun equals(other: Any?): Boolean = if (other is Simple) {
+        other.hiya == hiya
     } else false
 }
