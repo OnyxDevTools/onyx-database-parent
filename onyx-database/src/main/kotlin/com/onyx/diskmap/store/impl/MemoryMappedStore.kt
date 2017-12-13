@@ -12,6 +12,9 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.AccessibleObject.setAccessible
+import java.lang.reflect.AccessibleObject.setAccessible
+
+
 
 
 
@@ -78,7 +81,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
                             .forEach {
                                 catchAll {
                                     synchronized(it) {
-                                        cleanBuffer(it.buffer as MappedByteBuffer, it.buffer::class.java)
+                                        cleanBuffer(it.buffer)
                                         it.buffer = ByteBuffer.allocate(0)
                                     }
                                 }
@@ -266,11 +269,13 @@ open class MemoryMappedStore : FileChannelStore, Store {
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
     }
 
-    private fun cleanBuffer(buffer: MappedByteBuffer, channelClass: Class<*>) {
-        buffer.force()
-        val unmap = channelClass.getDeclaredMethod("unmap", MappedByteBuffer::class.java)
-        unmap?.isAccessible = true
-        unmap?.invoke(channelClass, buffer)
+    private fun cleanBuffer(buffer: ByteBuffer) {
+        if (!buffer.isDirect) return
+        val cleaner = buffer.javaClass.getMethod("cleaner")
+        cleaner.isAccessible = true
+        val clean = Class.forName("sun.misc.Cleaner").getMethod("clean")
+        clean.isAccessible = true
+        clean.invoke(cleaner.invoke(buffer))
     }
 }
 
