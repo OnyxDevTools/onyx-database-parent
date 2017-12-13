@@ -1,7 +1,6 @@
 package database.partition
 
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
