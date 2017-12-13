@@ -2,6 +2,7 @@ package com.onyx.diskmap.store.impl
 
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
@@ -10,13 +11,6 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.AccessibleObject.setAccessible
-import java.lang.reflect.AccessibleObject.setAccessible
-
-
-
-
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -273,10 +267,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (!buffer.isDirect) return
         val cleaner = buffer.javaClass.getMethod("cleaner")
         cleaner.isAccessible = true
-        val clean = Class.forName("sun.misc.Cleaner").getMethod("clean")
+        val clean = ClassMetadata.classForName("sun.misc.Cleaner").getMethod("clean")
         clean.isAccessible = true
         clean.invoke(cleaner.invoke(buffer))
     }
+
 }
 
 
