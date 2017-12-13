@@ -56,7 +56,7 @@ class RelationshipConcurrencyTest(override var factoryClass: KClass<*>) : Databa
 
         threads.forEach { it.get() }
 
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             val newEntity = OneToOneParent()
             newEntity.identifier = it.identifier
             manager.find<IManagedEntity>(newEntity)
@@ -99,7 +99,7 @@ class RelationshipConcurrencyTest(override var factoryClass: KClass<*>) : Databa
 
         threads.forEach { it.get() }
 
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             val newEntity = ManyToManyParent()
             newEntity.identifier = it.identifier
             manager.find<IManagedEntity>(newEntity)
@@ -157,7 +157,7 @@ class RelationshipConcurrencyTest(override var factoryClass: KClass<*>) : Databa
 
         var failures = 0
 
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             val newEntity = ManyToManyParent()
             newEntity.identifier = it.identifier
             manager.find<IManagedEntity>(newEntity)

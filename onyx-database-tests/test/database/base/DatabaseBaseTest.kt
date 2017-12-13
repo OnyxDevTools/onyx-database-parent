@@ -2,7 +2,6 @@ package database.base
 
 import com.onyx.application.impl.DatabaseServer
 import com.onyx.application.impl.WebDatabaseServer
-import com.onyx.diskmap.store.StoreType
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
@@ -45,11 +44,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
     @Before
     open fun initialize() {
         factory = when (factoryClass) {
-            EmbeddedPersistenceManagerFactory::class -> {
-                val factory = EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION)
-                factory.storeType = StoreType.FILE
-                factory
-            }
+            EmbeddedPersistenceManagerFactory::class -> EmbeddedPersistenceManagerFactory(EMBEDDED_DATABASE_LOCATION)
             RemotePersistenceManagerFactory::class ->   {
                 val factory = RemotePersistenceManagerFactory(REMOTE_DATABASE_ENDPOINT)
 /*                factory.sslKeystoreFilePath = "securesocket.jks"

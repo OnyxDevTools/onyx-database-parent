@@ -10,6 +10,10 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.AccessibleObject.setAccessible
+
+
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -66,22 +70,27 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     @Synchronized override fun close(): Boolean {
         try {
-
-
             async {
                 synchronized(slices) {
-                    slices.values.forEach { it.flush() }
-                    slices.clear()
 
-                        if (!deleteOnClose) {
-                            catchAll {
-                                commit()
-                            channel!!.truncate(getFileSize())
+                    this.slices.values
+                            .filter { it.buffer is MappedByteBuffer }
+                            .forEach {
+                                catchAll {
+                                    synchronized(it) {
+                                        cleanBuffer(it.buffer as MappedByteBuffer, it.buffer::class.java)
+                                        it.buffer = ByteBuffer.allocate(0)
+                                    }
+                                }
                             }
+
+                    if (!deleteOnClose) {
+                        catchAll {
+                            ensureOpen()
+                            channel!!.truncate(getFileSize())
                         }
-
+                    }
                     super.close()
-
                 }
 
                 if (deleteOnClose) {
@@ -104,9 +113,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun write(buffer: ByteBuffer, position: Long): Int {
 
-        if (this !is InMemoryStore && !channel!!.isOpen)
-            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-
         val before = buffer.position()
 
         val slice = getBuffer(position)
@@ -119,11 +125,13 @@ open class MemoryMappedStore : FileChannelStore, Store {
             val overflowSlice = getBuffer(position + buffer.limit())
 
             synchronized(slice) {
+                ensureOpen()
                 slice.buffer.position(bufLocation)
                 for (i in 0 until bufferSliceSize - bufLocation)
                     slice.buffer.put(buffer.get())
             }
             synchronized(overflowSlice) {
+                ensureOpen()
                 overflowSlice.buffer.position(0)
                 for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
                     overflowSlice.buffer.put(buffer.get())
@@ -132,6 +140,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             return after - before
         } else {
             return synchronized(slice) {
+                ensureOpen()
                 slice.buffer.position(getBufferLocation(position))
                 slice.buffer.put(buffer)
                 val after = buffer.position()
@@ -148,9 +157,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun read(buffer: ByteBuffer, position: Long) {
 
-        if (this !is InMemoryStore && !channel!!.isOpen)
-            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-
         val slice = getBuffer(position)
 
         val bufLocation = getBufferLocation(position)
@@ -161,17 +167,20 @@ open class MemoryMappedStore : FileChannelStore, Store {
             val overflowSlice = getBuffer(position + buffer.limit())
 
             synchronized(slice) {
+                ensureOpen()
                 slice.buffer.position(bufLocation)
                 for (i in 0 until bufferSliceSize - bufLocation)
                     buffer.put(slice.buffer.get())
             }
             synchronized(overflowSlice) {
+                ensureOpen()
                 overflowSlice.buffer.position(0)
                 for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
                     buffer.put(overflowSlice.buffer.get())
             }
         } else {
             synchronized(slice) {
+                ensureOpen()
                 slice.buffer.position(getBufferLocation(position))
                 val bytesToRead = buffer.limit()
                 for (i in 0 until bytesToRead)
@@ -202,9 +211,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
         return synchronized(slices) {
             slices.getOrPut(index) {
                 val offset = bufferSliceSize.toLong() * finalIndex.toLong()
-                if (this !is InMemoryStore && !channel!!.isOpen)
-                    throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-
+                ensureOpen()
                 val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, offset, bufferSliceSize.toLong())
                 FileSlice(buffer!!)
             }
@@ -231,33 +238,40 @@ open class MemoryMappedStore : FileChannelStore, Store {
      *
      * This contains the memory mapped segment as well as a lock for it
      */
-    class FileSlice constructor(var buffer: ByteBuffer) {
-
-
-        /* Hack to unmap MappedByteBuffer.
-        * Unmap is necessary on Windows, otherwise file is locked until JVM exits or BB is GCed.
-        * There is no public JVM API to unmap buffer, so this tries to use SUN proprietary API for unmap.
-        * Any error is silently ignored (for example SUN API does not exist on Android).
-        */
-        fun flush() = Unit
-    }
+    class FileSlice constructor(var buffer: ByteBuffer)
 
     /**
      * Commit storage
      */
     override fun commit() {
         if (!deleteOnClose) {
-                synchronized(slices) {
-                    this.slices.values
-                            .filter { it.buffer is MappedByteBuffer }
-                            .forEach {
-                                    catchAll {
-                                            (it.buffer as MappedByteBuffer).force()
-                                    }
+            synchronized(slices) {
+                this.slices.values
+                        .filter { it.buffer is MappedByteBuffer }
+                        .forEach {
+                            catchAll {
+                                synchronized(it) {
+                                    ensureOpen()
+                                    (it.buffer as MappedByteBuffer).force()
                                 }
                             }
-                super.commit()
+                        }
             }
+            super.commit()
         }
     }
+
+    private fun ensureOpen() {
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+    }
+
+    private fun cleanBuffer(buffer: MappedByteBuffer, channelClass: Class<*>) {
+        buffer.force()
+        val unmap = channelClass.getDeclaredMethod("unmap", MappedByteBuffer::class.java)
+        unmap?.isAccessible = true
+        unmap?.invoke(channelClass, buffer)
+    }
+}
+
 

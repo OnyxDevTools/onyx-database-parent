@@ -104,7 +104,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
         threads.forEach { it.get() }
 
         // Validate entities to ensure it was persisted correctly
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             var newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             newEntity = manager.find<IManagedEntity>(newEntity) as InheritedLongAttributeEntity
@@ -147,7 +147,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
         threads.forEach { it.get() }
 
         // Validate entities to ensure it was persisted correctly
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             var newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             newEntity = manager.find<IManagedEntity>(newEntity) as InheritedLongAttributeEntity
@@ -234,14 +234,14 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
 
         threads.forEach { it.get() }
 
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             var newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             newEntity = manager.find(newEntity)
             assertEquals(it.longPrimitive, newEntity.longPrimitive, "longPrimitive was not persisted correctly")
         }
 
-        entitiesToValidateDeleted.forEach {
+        entitiesToValidateDeleted.parallelStream().forEach {
             val newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             var pass = false
@@ -337,7 +337,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
 
         threads.forEach { it.get() }
 
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             var newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             if (!ignore.containsKey(newEntity.id)) {
@@ -346,7 +346,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
             }
         }
 
-        entitiesToValidateDeleted.forEach {
+        entitiesToValidateDeleted.parallelStream().forEach {
             val newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             var pass = false
@@ -469,7 +469,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
         threads.forEach { it.get() }
 
         var failedEntities = 0
-        entitiesToValidate.forEach {
+        entitiesToValidate.parallelStream().forEach {
             val newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             if (!ignore.containsKey(newEntity.id)) {
@@ -483,7 +483,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
 
         assertEquals(0, failedEntities, "There were several entities that failed to be found")
 
-        entitiesToValidateDeleted.forEach {
+        entitiesToValidateDeleted.parallelStream().forEach {
             val newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             var pass = false
@@ -500,7 +500,7 @@ class SequenceIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
 
         assertEquals(0, failedEntities, "There were several entities that failed to be deleted")
 
-        entitiesToValidateUpdated.forEach {
+        entitiesToValidateUpdated.parallelStream().forEach {
             var newEntity = InheritedLongAttributeEntity()
             newEntity.id = it.id
             newEntity = manager.find(newEntity)
