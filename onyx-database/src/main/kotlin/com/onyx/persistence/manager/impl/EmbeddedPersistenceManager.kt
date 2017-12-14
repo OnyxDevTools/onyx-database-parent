@@ -12,6 +12,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
+import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
 import java.util.*
@@ -67,6 +68,9 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
             entity.saveIndexes(context, previousReferenceId)
             entity.saveRelationships(context)
+
+            // Update Cached queries
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, entity.descriptor(context), entity.reference(context), if (previousReferenceId <= 0L) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
 
         }
         return entity

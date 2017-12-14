@@ -4,6 +4,7 @@ import com.onyx.exception.OnyxException;
 import com.onyx.persistence.factory.PersistenceManagerFactory;
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory;
 import com.onyx.persistence.manager.PersistenceManager;
+import com.onyxdevtools.example.query.KotlinQueryBuilder;
 import com.onyxdevtools.example.querying.entities.*;
 
 import java.io.File;
@@ -58,6 +59,9 @@ public class Main extends AbstractDemo
 
         System.out.print("\nLazy Query Example: \n");
         LazyQueryExample.demo();
+
+        System.out.println("Kotlin Query Builder Example");
+        KotlinQueryBuilder.demo();
     }
 
     private static void seedData(PersistenceManager manager) throws OnyxException
@@ -356,6 +360,7 @@ public class Main extends AbstractDemo
         Player patriotsQB = new Player();
         patriotsQB.setFirstName("Tom");
         patriotsQB.setLastName("Brady");
+        patriotsQB.setPosition("QB");
 
         Player patriotsRB1 = new Player();
         patriotsRB1.setFirstName("LeGarrette");

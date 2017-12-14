@@ -9,6 +9,7 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
+import com.onyx.persistence.query.QueryListenerEvent
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -34,9 +35,13 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
         if (relationshipDescriptor.shouldSaveEntity
                 && relationshipObject != null
                 && !transaction.contains(relationshipObject, context)) {
-            currentRelationshipReference!!.identifier = relationshipObject.save(context).second
+            val pair = relationshipObject.save(context)
+            currentRelationshipReference!!.identifier = pair.second
             relationshipObject.saveIndexes(context, currentRelationshipReference.referenceId)
             relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
+
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(relationshipObject, relationshipObject.descriptor(context), entity.reference(context), if(pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
+
         }
 
         val existingReference = relationshipReferenceMap[parentRelationshipReference]?.firstOrNull()

@@ -192,10 +192,10 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         records.entries.asSequence()
                 .filterIndexedTo(ArrayList()) { index, _ -> index in lower..(upper - 1) }
                 .forEach {
-                    val entity:IManagedEntity? = it.key.toManagedEntity(context, query.entityType!!, descriptor)
-                    val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value)} != null
+                    val entity: IManagedEntity? = it.key.toManagedEntity(context, query.entityType!!, descriptor)
+                    val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value) } != null
 
-                    if(updatedPartitionValue) {
+                    if (updatedPartitionValue) {
                         entity?.deleteAllIndexes(context, it.key.reference)
                         entity?.deleteRelationships(context)
                         entity?.recordInteractor(context)?.delete(entity)
@@ -205,8 +205,12 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
                     entity?.save(context)
                     entity?.saveIndexes(context, it.key.reference)
-                    if(entity != null)
+
+                    // Update Cached queries
+                    if (entity != null) {
+                        context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context), QueryListenerEvent.UPDATE)
                         updateCount++
+                    }
                 }
 
         return updateCount
@@ -274,7 +278,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @return Filtered references matching criteria
      */
     @Throws(OnyxException::class)
-    fun <T : Any?> getReferencesForCriteria(query: Query, criteria: QueryCriteria, existingReferences: MutableMap<Reference, Reference>?, forceFullScan: Boolean): MutableMap<Reference, T> {
+    private fun <T : Any?> getReferencesForCriteria(query: Query, criteria: QueryCriteria, existingReferences: MutableMap<Reference, Reference>?, forceFullScan: Boolean): MutableMap<Reference, T> {
         val context = Contexts.get(contextId)!!
         // Ensure query is still valid
         if (query.isTerminated) {

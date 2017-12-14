@@ -59,8 +59,8 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
     override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
         val context = Contexts.get(contextId)!!
         return existingValues.filterTo(HashMap()) {
-            val entity = it.key.toManagedEntity(context, descriptor)
-            query.meetsCriteria(entity, it.key, context, descriptor)
+            val entity = it.value.toManagedEntity(context, descriptor)
+            query.meetsCriteria(entity, it.value, context, descriptor)
         }
     }
 }

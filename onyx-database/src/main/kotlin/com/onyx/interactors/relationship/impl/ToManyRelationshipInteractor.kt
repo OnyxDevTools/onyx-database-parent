@@ -12,6 +12,7 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
 import com.onyx.persistence.annotations.values.CascadePolicy
+import com.onyx.persistence.query.QueryListenerEvent
 
 import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
@@ -61,9 +62,11 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
 
                 // Cascade save the entity
                 val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !transaction.contains(it, context)) {
-                    relationshipObjectIdentifier.identifier = it.save(context).second
+                    val pair = it.save(context)
+                    relationshipObjectIdentifier.identifier = pair.second
                     it.saveIndexes(context, relationshipObjectIdentifier.referenceId)
                     it.saveRelationships(context, RelationshipTransaction(entity, context))
+                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, it.descriptor(context), entity.reference(context), if(pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
                     true
                 } else {
                     relationshipObjectIdentifier.referenceId > 0L

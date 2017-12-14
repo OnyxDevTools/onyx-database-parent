@@ -89,9 +89,6 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
             entity.onPostUpdate(context, entityDescriptor)
         }
 
-        // Update Cached queries
-        context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, entity.reference(context), if (isNew.get()) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
-
         // Return the id
         return Pair(oldReference, identifierValue)
     }

@@ -43,16 +43,11 @@ object ScannerFactory {
             context.getDescriptorForEntity(classToScan, query.partition)
         }
 
-        val attributeDescriptor = descriptor.attributes[criteria.attribute]
-        if (attributeDescriptor != null) {
-            return if (descriptor.hasPartition) {
-                PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
-            } else {
-                FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
-            }
+        return if (descriptor.hasPartition) {
+            PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+        } else {
+            FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
         }
-
-        throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + " " + criteria.attribute)
     }
 
     /**

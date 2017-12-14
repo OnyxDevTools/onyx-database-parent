@@ -26,7 +26,6 @@ fun Query.validate(context: SchemaContext, descriptor: EntityDescriptor = contex
     definePartition(context)
 
     this.getAllCriteria()
-    this.sortCriteria(descriptor) // Optimize Criteria
 
     this.updates.forEach {
         val attribute = descriptor.attributes[it.fieldName]

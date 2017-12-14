@@ -8,6 +8,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.extension.common.compare
 import com.onyx.interactors.record.data.Reference
+import com.onyx.persistence.query.QueryCriteriaOperator
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -114,10 +115,12 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: 
 
         // All we need is a single match.  If there is a relationship that meets the criteria, move along
         for (relationshipEntity in relationshipEntities) {
-            meetsCriteria = criteria.value.compare(relationshipEntity.get(context = context, name = attribute), operator!!)
+            meetsCriteria = criteria.value.compare(relationshipEntity?.get(context = context, name = attribute), operator!!)
             if (meetsCriteria)
                 break
         }
+    } else {
+        meetsCriteria = (operator == QueryCriteriaOperator.IS_NULL)
     }
     return meetsCriteria
 }

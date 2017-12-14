@@ -122,6 +122,10 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
+    fun <T> first(): T = list<T>().first()
+
+    fun <T> firstOrNull():T? = list<T>().firstOrNull()
+
     fun set(vararg update:AttributeUpdate): QueryBuilder {
         this.query.updates = update.toList()
         return this

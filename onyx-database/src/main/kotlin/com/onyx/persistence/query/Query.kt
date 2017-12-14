@@ -1,7 +1,6 @@
 package com.onyx.persistence.query
 
 import com.onyx.buffer.BufferStreamable
-import com.onyx.descriptor.EntityDescriptor
 import com.onyx.persistence.manager.PersistenceManager
 import java.util.*
 import kotlin.collections.LinkedHashSet
@@ -387,10 +386,6 @@ class Query : BufferStreamable {
     @Transient
     private var allCriteriaValue:Array<QueryCriteria>? = null
 
-    fun resetCriteria() {
-        allCriteriaValue = null
-    }
-
     /**
      * Getter for all criteria
      */
@@ -434,61 +429,6 @@ class Query : BufferStreamable {
         }
 
         return allCriteria
-    }
-
-    /**
-     * This method is used to optimize the criteria.  If an identifier is included, that will move that
-     * criteria to the top.  Next if an index is included, that will be moved to the top.
-     *
-     *
-     * This was added as an enhancement so that the query is self optimized
-     *
-     * @param descriptor Entity descriptor to get entity information regarding indexed, relationship, and identifier fields
-     * @since 1.3.0 An effort to cleanup query results in preparation for query caching.
-     */
-    fun sortCriteria(descriptor: EntityDescriptor?) {
-        if (criteria != null && descriptor != null) {
-            criteria!!.subCriteria.sortWith(comparator = Comparator { o1, o2 ->
-                // Check identifiers first
-                val o1isIdentifier = descriptor.identifier!!.name == o1.attribute
-                val o2isIdentifier = descriptor.identifier!!.name == o2.attribute
-
-                if (o1isIdentifier && !o2isIdentifier)
-                    return@Comparator 1
-                else if (o2isIdentifier && !o1isIdentifier)
-                    return@Comparator - 1
-
-                // Check indexes next
-                val o1isIndex = descriptor.indexes[o1.attribute] != null
-                val o2isIndex = descriptor.indexes[o2.attribute] != null
-
-                if (o1isIndex && !o2isIndex)
-                    return@Comparator 1
-                else if (o2isIndex && !o1isIndex)
-                    return@Comparator - 1
-
-                // Check relationships last.  A full table scan is preferred before a relationship
-                val o1isRelationship = descriptor.relationships[o1.attribute] != null
-                val o2isRelationship = descriptor.relationships[o2.attribute] != null
-
-                if (o1isRelationship && !o2isRelationship)
-                    return@Comparator - 1
-                else if (o2isRelationship && !o1isRelationship)
-                    return@Comparator 1
-
-                if (o1.operator!!.isIndexed && !o2.operator!!.isIndexed)
-                    return@Comparator 1
-                else if (o2.operator!!.isIndexed && !o1.operator!!.isIndexed)
-                    return@Comparator - 1
-
-                // Lastly check for operators.  EQUAL has priority since it is less granular
-                if (o1.operator == QueryCriteriaOperator.EQUAL && o2.operator == QueryCriteriaOperator.EQUAL) 0
-                else if (o1.operator == QueryCriteriaOperator.EQUAL) 1
-                else if (o2.operator == QueryCriteriaOperator.EQUAL) -1
-                else 0
-            })
-
-        }
     }
 
     // endregion

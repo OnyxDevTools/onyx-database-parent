@@ -108,33 +108,43 @@ fun IManagedEntity.hydrateRelationships(context: SchemaContext, transaction: Rel
  * @since 2.0.0
  */
 @Throws(OnyxException::class)
-fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference: Reference? = reference(context)): List<IManagedEntity>? {
-    val slices = relationship.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference: Reference? = reference(context)): List<IManagedEntity?>? {
+    var slices = relationship.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }
     var descriptor: EntityDescriptor? = descriptor(context)
     var relationshipDescriptor: RelationshipDescriptor? = null
 
-    // Iterate through and grab the right descriptor
-    try {
-        slices
-            .find { descriptor!!.relationships[it] != null }
-            .let {
-                relationshipDescriptor = descriptor!!.relationships[it]
-                descriptor = context.getBaseDescriptorForEntity(relationshipDescriptor!!.inverseClass)
-            }
-    } catch (e: NullPointerException) {
-        return null
+    var entities = ArrayList<IManagedEntity?>()
+
+    var shouldBreak = false
+    slices = slices.dropWhile {
+        relationshipDescriptor = descriptor!!.relationships[it]
+        if(relationshipDescriptor == null || shouldBreak)
+            return@dropWhile false
+
+        descriptor = context.getBaseDescriptorForEntity(relationshipDescriptor!!.inverseClass)
+
+        val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor!!)
+        val relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(entityReference!!)
+
+        relationshipReferences.forEach {
+            var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor!!.inverseClass)
+            relationshipEntity = relationshipEntity!!.recordInteractor(context).getWithId(it.identifier!!)
+            if (relationshipEntity != null)
+                entities.add(relationshipEntity)
+        }
+
+        shouldBreak = true
+        return@dropWhile true
     }
 
-    val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor!!)
-    val relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(entityReference!!)
-    val entities = ArrayList<IManagedEntity>()
-
-    relationshipReferences.forEach {
-        var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor!!.inverseClass)
-        relationshipEntity = relationshipEntity!!.recordInteractor(context).getWithId(it.identifier!!)
-        if (relationshipEntity != null)
-            entities.add(relationshipEntity)
+    if(slices.size > 1) {
+        val newEntities = ArrayList<IManagedEntity?>()
+        entities.forEach {
+            newEntities.addAll(it?.getRelationshipFromStore(context, slices.joinToString(".")) ?: ArrayList())
+        }
+        entities = newEntities
     }
 
     return entities
+
 }
