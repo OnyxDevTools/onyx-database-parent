@@ -37,6 +37,9 @@ object KotlinQueryBuilder {
         deleteExample()
         countExample()
         listenerExample()
+        forEachExample()
+        mapExample()
+        filterExample()
 
         factory.close() // close the factory so that we can use it again
 
@@ -110,6 +113,14 @@ object KotlinQueryBuilder {
             manager.from(Player::class)
                     .count()
 
+    private fun forEachExample() =
+            manager.from(Division::class).forEach<Division> { println("Division: ${it.name}")}
+
+    private fun mapExample() =
+            manager.from(Division::class).map<Division> { it.name }
+
+    private fun filterExample() =
+            manager.from(Division::class).filter<Division> { it.name.endsWith("West") }
 
     private fun listenerExample() {
         val listener = manager.from(Player::class)

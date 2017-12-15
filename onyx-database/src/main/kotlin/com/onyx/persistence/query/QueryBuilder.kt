@@ -21,6 +21,14 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return manager.executeLazyQuery(this.query)
     }
 
+    fun <T> forEach(unit:(T) -> Unit) {
+        list<T>().forEach { unit.invoke(it) }
+    }
+
+    fun <T> map(unit:(T) -> Unit) = list<T>().map { unit.invoke(it) }
+
+    fun <T> filter(unit:(T) -> Boolean) = list<T>().filter(unit)
+
     fun update():Int {
         assignListener()
         return manager.executeUpdate(this.query)
@@ -133,7 +141,7 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
     }
 
     fun set(vararg update:AttributeUpdate): QueryBuilder {
-        this.query.updates = update.toList()
+        this.query.updates += update.toList()
         return this
     }
 
@@ -194,9 +202,9 @@ fun PersistenceManager.select(vararg properties:String): QueryBuilder {
 
 infix fun <T> String.eq(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.EQUAL, value)
 infix fun <T> String.neq(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_EQUAL, value)
-infix fun <T> String.notIn(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_IN, value)
+infix fun <T> String.notIn(values:List<T>):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_IN, values)
 @Suppress("FunctionName")
-infix fun <T> String.IN(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IN, value)
+infix fun <T> String.IN(values:List<T>):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IN, values)
 infix fun <T> String.gte(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN_EQUAL, value)
 infix fun <T> String.gt(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN, value)
 infix fun <T> String.lte(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.LESS_THAN_EQUAL, value)
