@@ -150,7 +150,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
             get() = BigInteger(130, random).toString(32)
 
         val randomInteger: Int
-            get() = BigInteger(10, random).toInt()
+            get() = BigInteger(100, random).toInt()
 
         @AfterClass
         @JvmStatic

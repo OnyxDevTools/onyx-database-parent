@@ -110,24 +110,20 @@ fun IManagedEntity.hydrateRelationships(context: SchemaContext, transaction: Rel
 @Throws(OnyxException::class)
 fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference: Reference? = reference(context)): List<IManagedEntity?>? {
     var slices = relationship.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }
-    var descriptor: EntityDescriptor? = descriptor(context)
-    var relationshipDescriptor: RelationshipDescriptor? = null
-
+    val descriptor: EntityDescriptor? = descriptor(context)
     var entities = ArrayList<IManagedEntity?>()
 
     var shouldBreak = false
     slices = slices.dropWhile {
-        relationshipDescriptor = descriptor!!.relationships[it]
+        val relationshipDescriptor = descriptor!!.relationships[it]
         if(relationshipDescriptor == null || shouldBreak)
             return@dropWhile false
 
-        descriptor = context.getBaseDescriptorForEntity(relationshipDescriptor!!.inverseClass)
-
-        val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor!!)
+        val relationshipInteractor = relationshipInteractor(context, it)
         val relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(entityReference!!)
 
         relationshipReferences.forEach {
-            var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor!!.inverseClass)
+            var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
             relationshipEntity = relationshipEntity!!.recordInteractor(context).getWithId(it.identifier!!)
             if (relationshipEntity != null)
                 entities.add(relationshipEntity)
@@ -139,9 +135,7 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
 
     if(slices.size > 1) {
         val newEntities = ArrayList<IManagedEntity?>()
-        entities.forEach {
-            newEntities.addAll(it?.getRelationshipFromStore(context, slices.joinToString(".")) ?: ArrayList())
-        }
+        entities.forEach { newEntities.addAll(it?.getRelationshipFromStore(context, slices.joinToString(".")) ?: ArrayList()) }
         entities = newEntities
     }
 

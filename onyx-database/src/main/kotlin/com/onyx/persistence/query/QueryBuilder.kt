@@ -122,9 +122,15 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
-    fun <T> first(): T = list<T>().first()
+    fun <T> first(): T {
+        limit(1)
+        return list<T>().first()
+    }
 
-    fun <T> firstOrNull():T? = list<T>().firstOrNull()
+    fun <T> firstOrNull():T? {
+        limit(1)
+        return list<T>().firstOrNull()
+    }
 
     fun set(vararg update:AttributeUpdate): QueryBuilder {
         this.query.updates = update.toList()
@@ -221,5 +227,6 @@ infix fun String.to(value: Any?) = AttributeUpdate(this, value)
 
 fun String.asc():QueryOrder = QueryOrder(this, true)
 fun String.desc():QueryOrder = QueryOrder(this, false)
+
 
 // endregion

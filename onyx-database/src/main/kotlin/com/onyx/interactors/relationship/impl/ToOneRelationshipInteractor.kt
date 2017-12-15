@@ -40,7 +40,7 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
             relationshipObject.saveIndexes(context, currentRelationshipReference.referenceId)
             relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
 
-            context.queryCacheInteractor.updateCachedQueryResultsForEntity(relationshipObject, relationshipObject.descriptor(context), entity.reference(context), if(pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(relationshipObject, relationshipObject.descriptor(context), relationshipObject.reference(context), if (pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
 
         }
 

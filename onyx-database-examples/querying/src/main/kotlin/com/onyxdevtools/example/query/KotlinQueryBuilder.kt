@@ -6,6 +6,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import com.onyxdevtools.example.querying.entities.Division
 import com.onyxdevtools.example.querying.entities.Player
+import com.onyxdevtools.example.querying.entities.Stats
 import java.io.File
 
 object KotlinQueryBuilder {
@@ -26,33 +27,100 @@ object KotlinQueryBuilder {
     @JvmStatic
     fun demo() {
 
-        getDivisions()
-        getAFCDivision()
-        getBroncosReceivers()
-        getBroncoPlayers()
+        basicQueryExample()
+        compoundQueryExample()
+        findExample()
+        sortExample()
+        limitExample()
+        lazyExample()
+        updateExample()
+        deleteExample()
+        countExample()
+        listenerExample()
 
         factory.close() // close the factory so that we can use it again
 
     }
 
-    private fun getDivisions() = manager.from(Division::class).list<Division>()
+    private fun basicQueryExample() =
+            manager.from(Division::class).list<Division>()
 
-    private fun getAFCDivision():Division = manager.from(Division::class).where("name" startsWith "AFC").first()
+    private fun compoundQueryExample() =
+            manager.from(Stats::class)
+                    .where(
+                            ("rushingYards" lt 0)
+                                    and ("passingYards" gt 3)
+                                    and (("player.position" eq "QB")
+                                        or ("player.firstName" cont "a")
+                                    )
+                    )
+                    .list<Stats>()
 
-    private fun getBroncosReceivers():List<Player> =
+    private fun findExample() =
             manager.from(Player::class)
-                    .where( ((("team.teamName" eq "Broncos")
-                            or ("team.teamName" eq "Raiders"))
-                            or (
-                                ("position" eq "WR")
-                                        or (("position" eq "QB") and ("team.teamName" eq "Patriots"))
-                            )
-                            )).and("stats.season.year" lte -1)
-                    .lazy<Player>().filter { it.position == "QB" }
+                    .where(
+                        ("firstName" eq "Payton")
+                    )
+                    .firstOrNull<Player>()
 
-    private fun getBroncoPlayers():List<Player> =
+    private fun sortExample() =
             manager.from(Player::class)
-                    .where( ("team.teamName" eq "Broncos") and !("position" eq "WR") )
-                    .list()
+                    .where(
+                            ("position" eq "QB")
+                    )
+                    .orderBy("firstName".desc())
+                    .list<Player>()
 
+    private fun limitExample() =
+            manager.from(Player::class)
+                    .where(
+                        ("position" eq "RB")
+                    )
+                    .orderBy("firstName")
+                    .limit(10)
+                    .list<Player>()
+
+    private fun lazyExample() =
+            manager.from(Player::class)
+                    .where(
+                            ("position" eq "QB")
+                    )
+                    .lazy<Player>()
+
+    private fun updateExample() =
+            manager.from(Stats::class)
+                    .where(
+                            ("player.firstName" eq "Tom")
+                            and ("player.lastName" eq "Brady")
+                    )
+                    .set("rushingYards" to "-1000")
+                    .update()
+
+    private fun deleteExample() =
+            manager.from(Player::class)
+                    .where(
+                        ("position" eq "QB")
+                        and ("firstName" eq "Payton")
+                        and ("lastName" eq "Manning")
+                    )
+                    .limit(1)
+                    .delete()
+
+    private fun countExample() =
+            manager.from(Player::class)
+                    .count()
+
+
+    private fun listenerExample() {
+        val listener = manager.from(Player::class)
+                              .onItemUpdated<Player> {
+                                  println("Player updated ${it.firstName} ${it.lastName}")
+                              }.listen()
+
+        val derekCarr = manager.from(Player::class).where("firstName" eq "Derick").and("lastName" eq "Carr").first<Player>()
+        derekCarr.active = false
+        manager.saveEntity(derekCarr)
+
+        listener.stopListening()
+    }
 }
