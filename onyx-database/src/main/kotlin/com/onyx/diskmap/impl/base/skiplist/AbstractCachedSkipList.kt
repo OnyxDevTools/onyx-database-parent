@@ -93,10 +93,10 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
     /**
      * Update cache by removing a key
      *
-     * @param key to remove
+     * @param node to remove
      */
-    override fun updateKeyCache(key: K) {
-        keyCache.remove(key)
+    override fun updateKeyCache(node: K) {
+        keyCache.remove(node)
     }
 
     /**

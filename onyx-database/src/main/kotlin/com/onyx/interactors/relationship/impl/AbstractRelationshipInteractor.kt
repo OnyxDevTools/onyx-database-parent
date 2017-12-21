@@ -116,7 +116,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     @Throws(OnyxException::class)
     fun getRelationshipIdentifiersWithReferenceId(referenceId: Reference): List<RelationshipReference> {
         val entity = referenceId.toManagedEntity(context, relationshipDescriptor.entityDescriptor)
-        val existingReferences = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context))
+        val existingReferences = entity?.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context))
         return existingReferences?.toList() ?: ArrayList()
     }
 }

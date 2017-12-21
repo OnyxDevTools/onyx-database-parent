@@ -228,6 +228,7 @@
                             <args>
                                 <arg>-Xno-param-assertions</arg>
                                 <arg>-Xno-call-assertions</arg>
+                                <arg>-Werror</arg>
                             </args>
                         </configuration>
                     </execution>

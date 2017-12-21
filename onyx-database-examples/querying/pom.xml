@@ -16,7 +16,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <onyx-database.version>2.0.0</onyx-database.version>
-        <kotlin.version>1.1.60</kotlin.version>
+        <kotlin.version>1.2.10</kotlin.version>
         <maven.deploy.skip>true</maven.deploy.skip>
     </properties>
     
@@ -74,6 +74,7 @@
                             <args>
                                 <arg>-Xno-param-assertions</arg>
                                 <arg>-Xno-call-assertions</arg>
+                                <arg>-Werror</arg>
                             </args>
                         </configuration>
                     </execution>

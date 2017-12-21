@@ -1,12 +1,14 @@
 package database.partition
 
 import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.query.AttributeUpdate
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
 import database.base.DatabaseBaseTest
 import entities.partition.IndexPartitionEntity
+import org.junit.Assume
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -237,6 +239,9 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Test
     fun bTestUpdatePartitionField() {
+
+        Assume.assumeFalse("Ignore for In Memory", factory is CacheManagerFactory)
+
         val indexPartitionEntity = IndexPartitionEntity()
         indexPartitionEntity.id = 1L
         indexPartitionEntity.partitionId = 3L

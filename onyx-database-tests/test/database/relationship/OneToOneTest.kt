@@ -5,7 +5,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.relationship.*
-import org.junit.*
+import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import kotlin.reflect.KClass

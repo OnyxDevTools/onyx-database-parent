@@ -12,10 +12,10 @@ import com.onyx.persistence.context.SchemaContext
  * @param descriptor Entity's descriptor information
  * @since 2.0.0
  */
-fun Reference.toManagedEntity(context: SchemaContext, descriptor: EntityDescriptor):IManagedEntity {
+fun Reference.toManagedEntity(context: SchemaContext, descriptor: EntityDescriptor):IManagedEntity? {
     val entity: IManagedEntity = descriptor.entityClass.instance()
     val records = entity.records(context = context, descriptor = descriptor, partitionId = partition)
-    return records.getWithRecID(reference)!!
+    return records.getWithRecID(reference)
 }
 
 /**

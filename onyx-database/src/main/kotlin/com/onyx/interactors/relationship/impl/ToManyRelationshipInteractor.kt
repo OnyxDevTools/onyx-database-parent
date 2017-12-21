@@ -132,7 +132,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                     val relationshipObject = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
                     relationshipObject?.hydrateRelationships(context, transaction)
                     if (relationshipObject != null)
-                        relationshipObjects!!.add(relationshipObject)
+                        relationshipObjects.add(relationshipObject)
                 }
             }
 
