@@ -116,8 +116,8 @@ object KotlinQueryBuilder {
     private fun forEachExample() =
             manager.from(Division::class).forEach<Division> { println("Division: ${it.name}")}
 
-    private fun mapExample() =
-            manager.from(Division::class).map<Division> { it.name }
+    private fun mapExample():List<String> =
+            manager.from(Division::class).map<Division, String> { it.name }
 
     private fun filterExample() =
             manager.from(Division::class).filter<Division> { it.name.endsWith("West") }
