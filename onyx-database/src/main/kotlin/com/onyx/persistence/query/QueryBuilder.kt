@@ -25,7 +25,7 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         list<T>().forEach { unit.invoke(it) }
     }
 
-    fun <T> map(unit:(T) -> Unit) = list<T>().map { unit.invoke(it) }
+    fun <T, R> map(unit:(T) -> R):List<R> = list<T>().map { unit.invoke(it) }
 
     fun <T> filter(unit:(T) -> Boolean) = list<T>().filter(unit)
 
@@ -127,6 +127,11 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
     fun first(first:Int): QueryBuilder {
         this.query.firstRow = first
+        return this
+    }
+
+    fun distinct():QueryBuilder {
+        this.query.isDistinct = true
         return this
     }
 

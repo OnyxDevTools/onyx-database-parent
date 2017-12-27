@@ -193,7 +193,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
         val className = buffer.string
         this.contextId = buffer.string
 
-        val context = Contexts.get(contextId!!) ?: Contexts.first()
+        val context = Contexts.get(contextId!!) ?: Contexts.firstRemote()
         this.entityDescriptor = context.getBaseDescriptorForEntity(classForName(className))!!
         this.persistenceManager = context.systemPersistenceManager
     }

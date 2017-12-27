@@ -1,5 +1,9 @@
 package com.onyx.persistence.context
 
+import com.onyx.persistence.context.impl.CacheSchemaContext
+import com.onyx.persistence.context.impl.DefaultSchemaContext
+import java.util.*
+
 
 /**
  * Created by Tim Osborn on 9/6/17.
@@ -11,7 +15,7 @@ package com.onyx.persistence.context
  */
 object Contexts {
 
-    private val contexts = HashMap<String, SchemaContext>()
+    private val contexts = TreeMap<String, SchemaContext>()
 
     /**
      * Add Context to catalog.  This will uniquely store via contextId
@@ -43,6 +47,17 @@ object Contexts {
      */
     @JvmStatic
     fun first() = synchronized(contexts) { contexts.values.first() }
+
+    /**
+     * Get Last context within the catalog.  This is in the event it has not been added
+     * correctly
+     *
+     * @since 2.0.0
+     *
+     * @return Last context within catalog
+     */
+    @JvmStatic
+    fun firstRemote() = synchronized(contexts) { contexts.values.first { it::class != DefaultSchemaContext::class && it::class != CacheSchemaContext::class }}
 
     @JvmStatic
     fun clear() = contexts.clear()
