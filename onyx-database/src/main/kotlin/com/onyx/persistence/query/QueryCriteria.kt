@@ -2,8 +2,6 @@ package com.onyx.persistence.query
 
 import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.AttributeDescriptor
-import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.ManagedEntity
 
 import java.util.*
 
@@ -48,54 +46,7 @@ class QueryCriteria : BufferStreamable {
 
     var attribute: String? = null
     var operator: QueryCriteriaOperator? = null
-    var type: QueryCriteriaType? = null
-
-    @Suppress("MemberVisibilityCanPrivate")
-    var dateValue: Date? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var longValue: Long? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var integerValue: Int? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var booleanValue: Boolean? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var doubleValue: Double? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var stringValue: String? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var floatValue: Float? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var characterValue: Char? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var byteValue: Byte? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var shortValue: Short? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var entityValue: ManagedEntity? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var enumValue: Enum<*>? = null
-
-    @Suppress("MemberVisibilityCanPrivate")
-    var dateValueList: List<Date>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var longValueList: List<Long>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var integerValueList: List<Int>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var doubleValueList: List<Double>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var stringValueList: List<String>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var floatValueList: List<Float>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var characterValueList: List<Char>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var byteValueList: List<Byte>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var shortValueList: List<Short>? = null
-    @Suppress("MemberVisibilityCanPrivate")
-    var entityValueList: List<ManagedEntity>? = null
-
+    var value:Any? = null
     var subCriteria: MutableList<QueryCriteria> = ArrayList()
 
     @Transient
@@ -133,37 +84,7 @@ class QueryCriteria : BufferStreamable {
     constructor(attribute: String, criteriaEnum: QueryCriteriaOperator, value: Any?) {
         this.attribute = attribute
         this.operator = criteriaEnum
-
-        @Suppress("UNCHECKED_CAST")
-        when(value)  {
-            is Int -> { integerValue = value;                               type = QueryCriteriaType.INTEGER }
-            is Long -> { longValue = value;                                 type = QueryCriteriaType.LONG }
-            is Boolean -> { booleanValue = value;                           type = QueryCriteriaType.BOOLEAN }
-            is Date -> { dateValue = value;                                 type = QueryCriteriaType.DATE }
-            is Double -> { doubleValue = value;                             type = QueryCriteriaType.DOUBLE }
-            is String -> { stringValue = value;                             type = QueryCriteriaType.STRING }
-            is Float -> { floatValue = value;                               type = QueryCriteriaType.FLOAT }
-            is Short -> { shortValue = value;                               type = QueryCriteriaType.SHORT }
-            is Byte -> { byteValue = value;                                 type = QueryCriteriaType.BYTE }
-            is Char -> { characterValue = value;                            type = QueryCriteriaType.CHARACTER }
-            is IManagedEntity -> { entityValue = value as ManagedEntity;    type = QueryCriteriaType.ENTITY }
-            is Enum<*> -> { enumValue = value;                              type = QueryCriteriaType.ENUM }
-            is List<*> -> {
-                when(value[0]) {
-                    is Int -> { integerValueList = value as List<Int>;                     type = QueryCriteriaType.LIST_INTEGER }
-                    is Long -> { longValueList = value as List<Long>;                      type = QueryCriteriaType.LIST_LONG }
-                    is Date -> { dateValueList = value as List<Date>;                      type = QueryCriteriaType.LIST_DATE }
-                    is Double -> { doubleValueList = value as List<Double>;                type = QueryCriteriaType.LIST_DOUBLE }
-                    is String -> { stringValueList = value as List<String>;                type = QueryCriteriaType.LIST_STRING }
-                    is Float -> { floatValueList = value as List<Float>;                   type = QueryCriteriaType.LIST_FLOAT }
-                    is Short -> { shortValueList = value as List<Short>;                   type = QueryCriteriaType.LIST_SHORT }
-                    is Byte -> { byteValueList = value as List<Byte>;                      type = QueryCriteriaType.LIST_BYTE }
-                    is Char -> { characterValueList = value as List<Char>;                 type = QueryCriteriaType.LIST_CHARACTER }
-                    is IManagedEntity -> { entityValueList = value as List<ManagedEntity>; type = QueryCriteriaType.LIST_ENTITY }
-                }
-            }
-
-        }
+        this.value = value
     }
 
     /**
@@ -261,40 +182,6 @@ class QueryCriteria : BufferStreamable {
         return this
     }
 
-    /**
-     * Get Query attribute key
-     * @since 1.0.0
-     * @return attribute key
-     */
-    val value: Any?
-        get() {
-            return when (type) {
-                QueryCriteriaType.BOOLEAN -> return booleanValue
-                QueryCriteriaType.DATE -> return dateValue
-                QueryCriteriaType.INTEGER -> return integerValue
-                QueryCriteriaType.LONG -> return longValue
-                QueryCriteriaType.DOUBLE -> return doubleValue
-                QueryCriteriaType.STRING -> return stringValue
-                QueryCriteriaType.FLOAT -> return floatValue
-                QueryCriteriaType.CHARACTER -> return characterValue
-                QueryCriteriaType.BYTE -> return byteValue
-                QueryCriteriaType.SHORT -> return shortValue
-                QueryCriteriaType.ENTITY -> return entityValue
-                QueryCriteriaType.ENUM -> return enumValue
-                QueryCriteriaType.LIST_DATE -> return dateValueList
-                QueryCriteriaType.LIST_DOUBLE -> return doubleValueList
-                QueryCriteriaType.LIST_INTEGER -> return integerValueList
-                QueryCriteriaType.LIST_LONG -> return longValueList
-                QueryCriteriaType.LIST_STRING -> return stringValueList
-                QueryCriteriaType.LIST_FLOAT -> return floatValueList
-                QueryCriteriaType.LIST_CHARACTER -> return characterValueList
-                QueryCriteriaType.LIST_BYTE -> return byteValueList
-                QueryCriteriaType.LIST_SHORT -> return shortValueList
-                QueryCriteriaType.LIST_ENTITY -> return entityValueList
-                else -> null
-            }
-        }
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -306,7 +193,6 @@ class QueryCriteria : BufferStreamable {
         if (isOr != other.isOr) return false
         if (attribute != other.attribute) return false
         if (operator != other.operator) return false
-        if (type != other.type) return false
         if (value != other.value) return false
         if (subCriteria != other.subCriteria) return false
 
@@ -321,7 +207,6 @@ class QueryCriteria : BufferStreamable {
         result = 31 * result + (attribute?.hashCode() ?: 0)
         result = 31 * result + (operator?.hashCode() ?: 0)
         result = 31 * result + (value?.hashCode() ?: 0)
-        result = 31 * result + (type?.hashCode() ?: 0)
         result = 31 * result + subCriteria.hashCode()
         return result
     }

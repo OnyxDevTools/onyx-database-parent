@@ -2,10 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.InvalidConstructorException
-import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.getAny
-import com.onyx.extension.common.instance
-import com.onyx.extension.common.setAny
+import com.onyx.extension.common.*
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 
@@ -33,6 +30,12 @@ fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, des
     catchAll {
         this.setAny(it,from.getAny(it))
     }
+}
+
+fun IManagedEntity.toMap():Map<String, Any?> {
+    val map = HashMap<String, Any?>()
+    this.getFields().forEach { map.put(it.name, getAny(it)) }
+    return map
 }
 
 /**

@@ -3,10 +3,8 @@ package database.partition
 import com.onyx.exception.NoResultsException
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory
 import database.base.DatabaseBaseTest
 import entities.partition.*
-import org.junit.Assume
 import org.junit.FixMethodOrder
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -276,8 +274,6 @@ class RelationshipPartitionTest(override var factoryClass: KClass<*>) : Database
         manager.find<IManagedEntity>(parent)
         manager.initialize(parent, "child")
 
-        Assume.assumeFalse("Initialize is unsupported for web persistence manager factory for partitions", factory is WebPersistenceManagerFactory)
-
         assertNotNull(parent.child, "Child relationship did not persist")
         assertEquals(1, parent.child!!.size, "Child has invalid number of relationships")
         assertEquals(3L, parent.child!![0].partitionId, "Partition id does not match")
@@ -302,8 +298,6 @@ class RelationshipPartitionTest(override var factoryClass: KClass<*>) : Database
         parent.partitionId = 3L
 
         manager.initialize(parent, "child")
-
-        Assume.assumeFalse("Initialize is unsupported for web persistence manager factory for partitions", factory is WebPersistenceManagerFactory)
 
         assertNotNull(parent.child, "Child relationship was not persisted")
         assertEquals(1, parent.child!!.size, "Parent inverse relationship was not hydrated")

@@ -9,7 +9,7 @@ import com.onyx.buffer.BufferStreamable
  */
 class EntityListRequestBody : BufferStreamable {
 
-    var entities: String? = null
+    var entities: List<Map<String, Any?>>? = null
     var type: String? = null
 
 }

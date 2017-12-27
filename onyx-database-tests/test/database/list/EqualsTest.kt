@@ -1,7 +1,6 @@
 package database.list
 
 import com.onyx.persistence.query.eq
-import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory
 import com.onyx.persistence.query.QueryCriteriaOperator
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
@@ -125,7 +124,6 @@ class EqualsTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTes
 
     @Test
     fun testEntityEquals() {
-        Assume.assumeFalse("Ignore test for WebPersistenceManagerFactory", factoryClass == WebPersistenceManagerFactory::class)
         val entity = AllAttributeV2Entity()
         entity.id = "ASDF"
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, "entity" eq  entity)
@@ -135,7 +133,6 @@ class EqualsTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTes
 
     @Test
     fun testEnumEquals() {
-        Assume.assumeFalse("Ignore test for WebPersistenceManagerFactory", factoryClass == WebPersistenceManagerFactory::class)
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, "operator" eq QueryCriteriaOperator.CONTAINS)
         assertEquals(2, results.size, "There should be 2 entities with operator = QueryCriteriaOperator.CONTAINS")
         assertEquals(QueryCriteriaOperator.CONTAINS, results[0].operator, "operator does not match")

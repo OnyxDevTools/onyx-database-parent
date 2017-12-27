@@ -2,6 +2,7 @@ package com.onyx.server
 
 import com.onyx.entity.SystemUser
 import com.onyx.exception.OnyxException
+import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.persistence.manager.PersistenceManager
 import io.undertow.security.idm.Account
 import io.undertow.security.idm.Credential
@@ -13,7 +14,7 @@ import io.undertow.security.idm.PasswordCredential
  *
  * This is an undertow implementation
  */
-class DatabaseIdentityManager(private val persistenceManager: PersistenceManager) : IdentityManager {
+class DatabaseIdentityManager(private val persistenceManager: PersistenceManager, private val encryptionInteractor: EncryptionInteractor) : IdentityManager {
 
     override fun verify(account: Account): Account = account
     override fun verify(credential: Credential): Account? = null
@@ -31,7 +32,7 @@ class DatabaseIdentityManager(private val persistenceManager: PersistenceManager
             val password = credential.password
             val sentPassword = String(password)
 
-            return account != null && sentPassword == (account as DatabaseUserAccount).password
+            return account != null && (sentPassword == (account as DatabaseUserAccount).password || sentPassword == encryptionInteractor.decrypt(account.password!!))
 
         }
         return false

@@ -69,7 +69,7 @@ open class WebDatabaseServer(databaseLocation: String) : DatabaseServer(database
         val sessionConfig = SessionCookieConfig()
 
         // Setup Authentication classes
-        val databaseAuthenticationManager = DatabaseIdentityManager(this.persistenceManagerFactory!!.persistenceManager)
+        val databaseAuthenticationManager = DatabaseIdentityManager(this.persistenceManagerFactory!!.persistenceManager, this.persistenceManagerFactory!!.encryption)
 
         // Persistence Handler
         val persistenceHandler = Handlers.path().addPrefixPath("/onyx", JSONDatabaseMessageListener(this.persistenceManagerFactory!!.persistenceManager, this.persistenceManagerFactory!!.schemaContext))

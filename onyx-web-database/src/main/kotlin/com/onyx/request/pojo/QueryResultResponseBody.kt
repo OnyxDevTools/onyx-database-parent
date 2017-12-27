@@ -10,16 +10,10 @@ import com.onyx.buffer.BufferStreamable
 class QueryResultResponseBody constructor() : BufferStreamable {
 
     var maxResults: Int = 0
-    var resultList: MutableList<Any> = ArrayList()
-    var results: Int = 0
-
-    constructor(maxResults: Int, results: Int):this() {
-        this.maxResults = maxResults
-        this.results = results
-    }
+    var results: MutableList<Any> = ArrayList()
 
     constructor(maxResults: Int, results: MutableList<Any>):this() {
         this.maxResults = maxResults
-        this.resultList = results
+        this.results = results
     }
 }

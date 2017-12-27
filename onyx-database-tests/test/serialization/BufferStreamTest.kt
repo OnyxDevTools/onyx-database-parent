@@ -437,9 +437,8 @@ class BufferStreamTest {
         BufferPool.recycle(buffer)
 
         assertEquals(query.entityType, query1!!.entityType)
-        assertEquals(query.criteria!!.type, query1.criteria!!.type)
         assertEquals(query.criteria!!.attribute, query1.criteria!!.attribute)
-        assertEquals(query.criteria!!.longValue, query1.criteria!!.longValue)
+        assertEquals(query.criteria!!.value, query1.criteria!!.value)
     }
 
     @Test
@@ -469,10 +468,9 @@ class BufferStreamTest {
         BufferPool.recycle(buffer)
 
         assertEquals(findQuery.entityType, query!!.entityType)
-        assertEquals(findQuery.criteria!!.integerValue, query.criteria!!.integerValue)
-        assertEquals(findQuery.criteria!!.type, query.criteria!!.type)
+        assertEquals(findQuery.criteria!!.value, query.criteria!!.value)
         assertEquals(findQuery.criteria!!.subCriteria[0].attribute, query.criteria!!.subCriteria[0].attribute)
-        assertEquals(findQuery.criteria!!.subCriteria[0].stringValue, query.criteria!!.subCriteria[0].stringValue)
+        assertEquals(findQuery.criteria!!.subCriteria[0].value, query.criteria!!.subCriteria[0].value)
         assertEquals(findQuery.criteria!!.operator, query.criteria!!.operator)
         assertEquals(findQuery.maxResults, query.maxResults)
     }

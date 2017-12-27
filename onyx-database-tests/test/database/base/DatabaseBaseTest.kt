@@ -9,7 +9,6 @@ import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.factory.impl.CacheManagerFactory
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
-import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import org.junit.After
 import org.junit.AfterClass
@@ -55,7 +54,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
                 factory
             }
             CacheManagerFactory::class ->               CacheManagerFactory()
-            WebPersistenceManagerFactory::class ->      WebPersistenceManagerFactory(WEB_DATABASE_ENDPOINT)
             else -> CacheManagerFactory()
         }
         factory.setCredentials("admin", "admin")
@@ -75,7 +73,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         protected val EMBEDDED_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/embeddedOnyx.oxd"
         protected val REMOTE_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/remoteOnyx.oxd"
         protected val WEB_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/webOnyx.oxd"
-        protected val WEB_DATABASE_ENDPOINT = "http://localhost:8090"
         protected val REMOTE_DATABASE_ENDPOINT = "onx://localhost:8095"
 
         /**
@@ -87,7 +84,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
             deleteDatabase(WEB_DATABASE_LOCATION)
         }
 
-        private var webServer:WebDatabaseServer? = null
         private var remoteServer:DatabaseServer? = null
 
         /**
@@ -95,7 +91,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
          */
         private fun startServers() {
             startRemoteDatabase()
-            startWebDatabase()
         }
 
         private fun startRemoteDatabase() {
@@ -109,16 +104,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
                 remoteServer!!.sslStorePassword = "mu\$tch8ng3"*/
                 remoteServer!!.setCredentials("admin", "admin")
                 remoteServer!!.start()
-            }
-        }
-
-        private fun startWebDatabase() {
-            if(webServer == null) {
-                webServer = WebDatabaseServer(WEB_DATABASE_LOCATION)
-                webServer!!.port = 4555
-                webServer!!.webServicePort = 8090
-                webServer!!.setCredentials("admin", "admin")
-                webServer!!.start()
             }
         }
 
@@ -173,6 +158,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         @JvmStatic
         @Parameterized.Parameters
-        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(CacheManagerFactory::class, EmbeddedPersistenceManagerFactory::class, WebPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
+        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(CacheManagerFactory::class, EmbeddedPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
     }
 }

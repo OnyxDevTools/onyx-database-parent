@@ -3,7 +3,6 @@ package database.save
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
-import com.onyx.persistence.factory.impl.WebPersistenceManagerFactory
 import database.base.DatabaseBaseTest
 import entities.identifiers.ImmutableIntSequenceIdentifierEntity
 import entities.identifiers.ImmutableSequenceIdentifierEntity
@@ -276,6 +275,6 @@ class SaveSequenceIdentifierTest(override var factoryClass: KClass<*>) : Databas
          */
         @JvmStatic
         @Parameterized.Parameters
-        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(EmbeddedPersistenceManagerFactory::class, WebPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
+        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(EmbeddedPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
     }
 }

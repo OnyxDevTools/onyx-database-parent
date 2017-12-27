@@ -10,6 +10,7 @@ import com.onyx.exception.UnknownDatabaseException
 import com.onyx.extension.withBuffer
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
+import com.onyx.persistence.query.Query
 import com.onyx.request.pojo.*
 import com.onyx.serialization.CustomAnnotationInspector
 import io.undertow.server.HttpHandler
@@ -45,8 +46,9 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
      * @return class to deserialize packet to
      */
     private fun getClassForEndpoint(path: RestServicePath): Class<*> = when (path) {
-        RestServicePath.SAVE, RestServicePath.DELETE, RestServicePath.FIND, RestServicePath.FIND_BY_PARTITION, RestServicePath.FIND_BY_PARTITION_REFERENCE, RestServicePath.EXISTS -> EntityRequestBody::class.java
-        RestServicePath.EXECUTE, RestServicePath.EXECUTE_DELETE, RestServicePath.EXECUTE_UPDATE, RestServicePath.QUERY_COUNT -> EntityQueryBody::class.java
+        RestServicePath.FIND_BY_ID, RestServicePath.EXISTS_WITH_ID -> EntityFindRequest::class.java
+        RestServicePath.SAVE, RestServicePath.DELETE -> EntityRequestBody::class.java
+        RestServicePath.EXECUTE, RestServicePath.EXECUTE_DELETE, RestServicePath.EXECUTE_UPDATE, RestServicePath.QUERY_COUNT -> Query::class.java
         RestServicePath.INITIALIZE -> EntityInitializeBody::class.java
         RestServicePath.BATCH_DELETE, RestServicePath.BATCH_SAVE -> EntityListRequestBody::class.java
         RestServicePath.SAVE_RELATIONSHIPS -> SaveRelationshipRequestBody::class.java
@@ -68,18 +70,16 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
         when (path) {
             RestServicePath.SAVE -> return webPersistenceEndpoint.save(body as EntityRequestBody)
             RestServicePath.DELETE -> return webPersistenceEndpoint.delete(body as EntityRequestBody)
-            RestServicePath.FIND -> return webPersistenceEndpoint[body as EntityRequestBody]
-            RestServicePath.FIND_BY_PARTITION -> return webPersistenceEndpoint.findWithPartitionId(body as EntityRequestBody)
-            RestServicePath.FIND_BY_PARTITION_REFERENCE -> return webPersistenceEndpoint.findByPartitionReference(body as EntityRequestBody)
-            RestServicePath.EXISTS -> return webPersistenceEndpoint.exists(body as EntityRequestBody)
-            RestServicePath.EXECUTE -> return webPersistenceEndpoint.executeQuery(body as EntityQueryBody)
-            RestServicePath.EXECUTE_DELETE -> return webPersistenceEndpoint.executeDelete(body as EntityQueryBody)
-            RestServicePath.EXECUTE_UPDATE -> return webPersistenceEndpoint.executeUpdate(body as EntityQueryBody)
+            RestServicePath.FIND_BY_ID -> return webPersistenceEndpoint.find(body as EntityFindRequest)
+            RestServicePath.EXISTS_WITH_ID -> return webPersistenceEndpoint.existsWithId(body as EntityFindRequest)
+            RestServicePath.EXECUTE -> return webPersistenceEndpoint.executeQuery(body as Query)
+            RestServicePath.EXECUTE_DELETE -> return webPersistenceEndpoint.executeDelete(body as Query)
+            RestServicePath.EXECUTE_UPDATE -> return webPersistenceEndpoint.executeUpdate(body as Query)
             RestServicePath.INITIALIZE -> return webPersistenceEndpoint.initialize(body as EntityInitializeBody)
             RestServicePath.BATCH_DELETE -> webPersistenceEndpoint.deleteEntities(body as EntityListRequestBody)
             RestServicePath.BATCH_SAVE -> webPersistenceEndpoint.saveEntities(body as EntityListRequestBody)
             RestServicePath.SAVE_RELATIONSHIPS -> webPersistenceEndpoint.saveRelationshipsForEntity(body as SaveRelationshipRequestBody)
-            RestServicePath.QUERY_COUNT -> return webPersistenceEndpoint.countForQuery(body as EntityQueryBody)
+            RestServicePath.QUERY_COUNT -> return webPersistenceEndpoint.countForQuery(body as Query)
         }
         return null
     }
@@ -161,7 +161,7 @@ class JSONDatabaseMessageListener(persistenceManager: PersistenceManager, contex
         exchange.responseHeaders.put(Headers.CONTENT_LENGTH, responseBytes.size.toLong())
 
         // Set OK or ERROR aka SEE_OTHER
-        exchange.responseCode = responseCode
+        exchange.statusCode = responseCode
 
         // Package response in a buffer
         val responseBuffer = ByteBuffer.allocate(responseBytes.size)

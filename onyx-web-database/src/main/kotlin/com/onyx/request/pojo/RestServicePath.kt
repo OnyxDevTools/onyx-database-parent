@@ -7,18 +7,16 @@ package com.onyx.request.pojo
 enum class RestServicePath constructor(val path: String) {
 
     SAVE("/saveEntity"),
-    FIND_BY_PARTITION_REFERENCE("/findByPartitionReference"),
-    FIND_BY_PARTITION("/findWithPartitionId"),
-    FIND("/find"),
+    FIND_BY_ID("/findById"),
     DELETE("/deleteEntity"),
-    EXECUTE("/execute"),
     INITIALIZE("/initialize"),
-    BATCH_SAVE("/batchSave"),
-    BATCH_DELETE("/batchDelete"),
+    BATCH_SAVE("/saveEntities"),
+    BATCH_DELETE("/deleteEntities"),
+    EXECUTE("/executeQuery"),
     EXECUTE_UPDATE("/executeUpdate"),
     EXECUTE_DELETE("/executeDelete"),
-    EXISTS("/exists"),
-    QUERY_COUNT("/queryCount"),
+    EXISTS_WITH_ID("/existsWithId"),
+    QUERY_COUNT("/count"),
     SAVE_RELATIONSHIPS("/saveRelationships");
 
     companion object {
