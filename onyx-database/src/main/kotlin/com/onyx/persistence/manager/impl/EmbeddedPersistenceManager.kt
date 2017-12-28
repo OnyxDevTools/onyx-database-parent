@@ -231,8 +231,12 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     matchingReferences
             }
 
-            return if (query.selections != null) {
-                queryController.referencesToSelectionResults(query, results) as List<E>
+            return if (query.selections != null && query.selections!!.isNotEmpty()) {
+                var selectionResults= queryController.referencesToSelectionResults(query, results) as List<E>
+                if(query.shouldSortGroupedBy()) {
+                    selectionResults = queryController.sort(query, selectionResults)
+                }
+                selectionResults
             } else {
                 queryController.referencesToResults(query, results) as List<E>
             }

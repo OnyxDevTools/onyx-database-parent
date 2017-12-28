@@ -29,6 +29,14 @@ interface QueryInteractor {
     fun <T : Any?> sort(query: Query, referenceValues: MutableMap<Reference, T>): MutableMap<Reference, T>
 
     /**
+     * Sort a set of hydrated results.  This is in the event of aggregation or grouping on data that
+     * sorting the references is not sufficient
+     *
+     * @since 2.1.0
+     */
+    fun <T : Any?> sort(query: Query, referenceValues: List<T>): List<T>
+
+    /**
      * Hydrate a subset of records with the given identifiers
      *
      * @param query      Query containing all the munging instructions
@@ -38,6 +46,22 @@ interface QueryInteractor {
      */
     @Throws(OnyxException::class)
     fun <T : Any?> referencesToResults(query: Query, references: MutableMap<Reference, T>): List<T>
+
+    /**
+     * Get grouped by results.  This is in the event a query has specified groupBy and has selections.
+     *
+     * This will aggregate and bunch results by a unique attribute value.
+     *
+     * @since 2.1.0 Added Group by and query functions
+     */
+    fun <T> getGroupByResults(query:Query, results:List<T>):HashMap<String, MutableMap<Any?,ArrayList<Any?>>>
+
+    /**
+     * Aggregate grouped results and calculate query functions.
+     *
+     * @since 2.1.0 Added Group by and query functions
+     */
+    fun <T> getQueryFunctionResults(query:Query, groupedResults:HashMap<String, MutableMap<Any?, ArrayList<Any?>>>):List<T>
 
     /**
      * Return a subset of records based on query maxResults & firstRow

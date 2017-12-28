@@ -135,6 +135,11 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
+    fun groupBy(vararg properties:String):QueryBuilder {
+        this.query.groupBy(*properties)
+        return this
+    }
+
     fun <T> first(): T {
         limit(1)
         return list<T>().first()
@@ -241,5 +246,18 @@ infix fun String.to(value: Any?) = AttributeUpdate(this, value)
 fun String.asc():QueryOrder = QueryOrder(this, true)
 fun String.desc():QueryOrder = QueryOrder(this, false)
 
+// endregion
+
+// region Field Functions
+
+fun avg(attribute:String) = "avg($attribute)"
+fun sum(attribute:String) = "sum($attribute)"
+fun count(attribute:String) = "count($attribute)"
+fun min(attribute:String) = "min($attribute)"
+fun max(attribute:String) = "max($attribute)"
+fun upper(attribute:String) = "upper($attribute)"
+fun lower(attribute:String) = "lower($attribute)"
+fun substring(attribute:String, from:Int, length:Int) = "substring($attribute, $from, $length)"
+fun replace(attribute:String, pattern:String, replace:String) = "replace($attribute, '$pattern', '$replace')"
 
 // endregion

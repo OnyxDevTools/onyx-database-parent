@@ -14,13 +14,13 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.extension.*
+import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.compare
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
 import com.onyx.interactors.query.data.QuerySortComparator
 import com.onyx.interactors.query.data.QueryAttributeResource
 
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 /**
@@ -56,6 +56,43 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      */
     @Throws(OnyxException::class)
     override fun <T : Any?> sort(query: Query, referenceValues: MutableMap<Reference, T>): MutableMap<Reference, T> = referenceValues.toSortedMap(QuerySortComparator(query, if (query.queryOrders == null) arrayOf() else query.queryOrders!!.toTypedArray(), descriptor, Contexts.get(contextId)!!))
+
+    /**
+     * Sort using order by query order objects with included values
+     *
+     * @param query           Query containing order instructions
+     * @param referenceValues Query reference values from result of scan
+     * @return Sorted references
+     * @throws OnyxException Error sorting objects
+     */
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : Any?> sort(query: Query, referenceValues: List<T>): List<T> {
+        val orders = query.queryOrders
+        return referenceValues.sortedWith(Comparator { o1, o2 ->
+            val map1 = o1 as Map<String, Any?>
+            val map2 = o2 as Map<String, Any?>
+
+            var compareValue = 0
+            orders?.forEach {
+                if(map1.containsKey(it.attribute)) {
+                    val attribute1 = map1[it.attribute]
+                    val attribute2 = map2[it.attribute]
+
+                    catchAll {
+                        compareValue = when {
+                            attribute2.compare(attribute1, QueryCriteriaOperator.GREATER_THAN) -> if (it.isAscending) 1 else -1
+                            attribute2.compare(attribute1, QueryCriteriaOperator.LESS_THAN) -> if (it.isAscending) -1 else 1
+                            else -> 0
+                        }
+                    }
+
+                    if(compareValue != 0)
+                        return@Comparator compareValue
+                }
+            }
+            0
+        })
+    }
 
     /**
      * Hydrate a subset of records with the given identifiers
@@ -113,6 +150,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @throws OnyxException Cannot hydrate entities
      */
     @Throws(OnyxException::class)
+    @Suppress("UNCHECKED_CAST")
     override fun <T : Any?> referencesToSelectionResults(query: Query, references: Map<Reference, T>): List<T> {
         val context = Contexts.get(contextId)!!
         val scanObjects = QueryAttributeResource.create(query.selections!!.toTypedArray(), descriptor, query, context)
@@ -129,9 +167,10 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                     else {
                         val record = HashMap<String, Any?>()
                         scanObjects.forEach {
-                            record.put(it.attribute, when {
+                            record.put(it.selection, when {
                                 it.relationshipDescriptor != null && it.relationshipDescriptor.isToOne -> entry.key.toOneRelationshipAsMap(context, it)
                                 it.relationshipDescriptor != null && it.relationshipDescriptor.isToMany -> entry.key.toManyRelationshipAsMap(context, it)
+                                it.function != null -> it.function.execute(entry.key.attribute(context, it.attribute, descriptor))
                                 else -> entry.key.attribute(context, it.attribute, descriptor)
                             })
                         }
@@ -140,7 +179,88 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                     }
                 }
 
-        return if(query.isDistinct) results.toHashSet().toList() else results
+        val selectionResults = if(query.isDistinct) results.toHashSet().toList() else results
+
+        if(!query.shouldGroupResults())
+            return selectionResults
+
+        val groupedResults = this.getGroupByResults(query, selectionResults)
+
+        if(!query.shouldAggregateFunctions())
+            return groupedResults.values.toList() as List<T>
+
+        return getQueryFunctionResults(query, groupedResults)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> getQueryFunctionResults(query:Query, groupedResults:HashMap<String, MutableMap<Any?, ArrayList<Any?>>>):List<T> {
+        groupedResults.forEach { entry ->
+            val mutableEntry = entry as MutableMap.MutableEntry
+
+            mutableEntry.value.map { innerEntry ->
+                val mutableInnerEntry = innerEntry as MutableMap.MutableEntry
+                val newValue = HashMap<String, Any?>()
+                newValue[entry.key] = innerEntry.key
+
+                query.functions().filter { it.type.isGroupFunction }.forEach {
+                    val functionResult = when(it.type) {
+                        QueryFunctionType.SUM -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).sum()
+                        QueryFunctionType.MIN -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).min()
+                        QueryFunctionType.MAX -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).max()
+                        QueryFunctionType.AVG -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).avg()
+                        QueryFunctionType.COUNT -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).count()
+                        else -> throw Exception("Invalid function")
+                    }
+                    newValue[it.type.toString().toLowerCase() + "(" + it.attribute + ")"] = functionResult
+                }
+
+                (mutableInnerEntry as MutableMap.MutableEntry<String, Any?>).setValue(newValue)
+            }
+        }
+
+        val noReallyTheseResults = ArrayList<MutableMap<String, Any?>>()
+
+        groupedResults.entries.forEachIndexed { index, entry ->
+            entry.value.forEach { subEntry ->
+                val mapEntry = subEntry as Map.Entry<String, Map<String,Any?>>
+                if(index == 0) {
+                    val map = HashMap<String, Any?>()
+                    map += mapEntry.value
+                    noReallyTheseResults.add(map)
+                }
+                else {
+                    @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
+                    noReallyTheseResults[index]!! += subEntry.value
+                }
+            }
+
+        }
+
+        return noReallyTheseResults as List<T>
+    }
+
+    /**
+     * Get grouped by results.  This is in the event a query has specified groupBy and has selections.
+     *
+     * This will aggregate and bunch results by a unique attribute value.
+     *
+     * @since 2.1.0 Added Group by and query functions
+     */
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> getGroupByResults(query:Query, results:List<T>):HashMap<String, MutableMap<Any?, ArrayList<Any?>>> {
+        val groupedResults = HashMap<String, MutableMap<Any?, ArrayList<Any?>>>()
+
+        results.forEach { record ->
+            val mapValue:Map<String, Any?> = (record as Map<String, Any?>)
+            query.groupBy?.forEach { attribute ->
+                val value = mapValue[attribute]
+                val map = groupedResults.getOrPut(attribute) { HashMap() }
+                val list:ArrayList<Any?> = map.getOrPut(value) { ArrayList() }
+                list.add(record)
+            }
+        }
+
+        return groupedResults
     }
 
     /**
@@ -330,7 +450,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @param totalResults Results from previous scan iterations
      * @param criteriaResults Criteria results used to aggregate a contrived list
      */
-    fun <T : Any?> aggregateFilteredReferences(criteria: QueryCriteria, totalResults: MutableMap<Reference, T>, criteriaResults: MutableMap<Reference, T>) {
+    private fun <T : Any?> aggregateFilteredReferences(criteria: QueryCriteria, totalResults: MutableMap<Reference, T>, criteriaResults: MutableMap<Reference, T>) {
         when {
             criteria.flip ->  {totalResults.clear(); totalResults += criteriaResults}
             criteria.isOr ->  totalResults += criteriaResults
