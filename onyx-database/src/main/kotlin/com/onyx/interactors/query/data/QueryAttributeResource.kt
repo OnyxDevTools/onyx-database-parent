@@ -6,8 +6,11 @@ import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.createNewEntity
+import com.onyx.extension.getAttributeWithinSelection
+import com.onyx.extension.getFunctionWithinSelection
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryFunction
 
 import java.util.ArrayList
 
@@ -21,7 +24,8 @@ class QueryAttributeResource private constructor(
     val descriptor: EntityDescriptor,
     val attributeDescriptor: AttributeDescriptor? = null,
     val relationshipDescriptor: RelationshipDescriptor? = null,
-    val attribute: String, context: SchemaContext) {
+    val attribute: String, val selection:String, context: SchemaContext,
+    val function:QueryFunction? = null) {
     val contextId = context.contextId
 
     companion object {
@@ -47,7 +51,10 @@ class QueryAttributeResource private constructor(
             // We need to go through the attributes and get the correct serializer and attribute that we need to scan
             // The information is then stored in the ScanObject class name.  That is a utility class to keep a handle on
             // what we are looking for and what file we are looking in for the object type
-            for (attribute in attributes) {
+            for (it in attributes) {
+                val attribute = it.getAttributeWithinSelection()
+                val function = it.getFunctionWithinSelection()
+
                 attributeTokens = attribute.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
                 if (attributeTokens.size > 1) {
@@ -65,7 +72,7 @@ class QueryAttributeResource private constructor(
 
                     // Hey we found what we want, lets get the attribute and than decide what descriptor we got
                     val attributeDescriptor = previousDescriptor.attributes[relationshipsAttributeName]
-                    scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, attributeDescriptor = attributeDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute))
+                    scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, attributeDescriptor = attributeDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = if(function?.type?.isGroupFunction == true) attribute else it, function = function))
                 } else {
                     val attributeDescriptor = descriptor.attributes[attribute]
                     if (attributeDescriptor == null) {
@@ -76,10 +83,10 @@ class QueryAttributeResource private constructor(
                             tmpObject = relationshipDescriptor.inverseClass.createNewEntity() // Keep on getting the descriptors until we get what we need
                             previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
 
-                            scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute))
+                            scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = if(function?.type?.isGroupFunction == true) attribute else it, function = function))
                         }
                     } else {
-                        scanObjects.add(QueryAttributeResource(descriptor = descriptor, attributeDescriptor = attributeDescriptor, context = context, attribute = attribute))
+                        scanObjects.add(QueryAttributeResource(descriptor = descriptor, attributeDescriptor = attributeDescriptor, context = context, attribute = attribute, selection = if(function?.type?.isGroupFunction == true) attribute else it, function = function))
                     }
                 }
             }

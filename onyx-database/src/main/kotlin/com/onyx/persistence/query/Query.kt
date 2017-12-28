@@ -1,8 +1,10 @@
 package com.onyx.persistence.query
 
 import com.onyx.buffer.BufferStreamable
+import com.onyx.extension.getFunctionWithinSelection
 import com.onyx.persistence.manager.PersistenceManager
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashSet
 
 /**
@@ -49,6 +51,18 @@ class Query : BufferStreamable {
     @Suppress("UNUSED")
     fun selections(vararg selections: String) {
         this.selections = Arrays.asList(*selections)
+    }
+
+    var groupBy: List<String>? = null
+
+    /**
+     * Setter for var args group by
+     *
+     * These are used to group results by field
+     * @since 2.1.0
+     */
+    fun groupBy(vararg groups: String) {
+        this.groupBy = Arrays.asList(*groups)
     }
 
     /**
@@ -128,7 +142,27 @@ class Query : BufferStreamable {
     /**
      * Indicates whether the query was terminated
      */
-    var isTerminated:Boolean = false
+    var isTerminated: Boolean = false
+
+
+    private var functions: List<QueryFunction>? = null
+
+    /**
+     * Get the functions associated to the query selection
+     *
+     * @since 2.1.0
+     */
+    fun functions(): List<QueryFunction> {
+        if (functions == null) {
+            functions = selections?.filter {
+                it.getFunctionWithinSelection() != null
+            }?.map {
+                it.getFunctionWithinSelection()!!
+            } ?: ArrayList()
+        }
+
+        return functions ?: ArrayList()
+    }
 
     /**
      * Constructor creates an empty Query value
@@ -438,6 +472,12 @@ class Query : BufferStreamable {
     fun shouldSortForUpdate():Boolean = (this.firstRow > 0 || this.maxResults != -1 && this.updates.isNotEmpty())
 
     fun shouldSortForDelete():Boolean = (this.firstRow > 0 || this.maxResults != -1)
+
+    fun shouldGroupResults():Boolean = (groupBy?.isNotEmpty() == true)
+
+    fun shouldAggregateFunctions():Boolean = functions().isNotEmpty()
+
+    fun shouldSortGroupedBy(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
