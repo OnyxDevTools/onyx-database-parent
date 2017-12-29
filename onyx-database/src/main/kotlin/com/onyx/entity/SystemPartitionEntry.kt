@@ -44,15 +44,20 @@ data class SystemPartitionEntry @JvmOverloads constructor(
         primaryKey = 0
     )
 
-    override fun hashCode(): Int = if (id == null) 0 else id!!.hashCode()
-
     override fun equals(other: Any?): Boolean {
-        if (other is SystemPartitionEntry) {
-            if (other.id == null && id == null)
-                return true
-            if (other.id == id)
-                return true
-        }
-        return false
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as SystemPartitionEntry
+        if (primaryKey != other.primaryKey) return false
+        if (id != other.id) return false
+
+        return true
     }
+
+    override fun hashCode(): Int {
+        var result = primaryKey
+        result = 31 * result + (id?.hashCode() ?: 0)
+        return result
+    }
+
 }

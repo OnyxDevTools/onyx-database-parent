@@ -157,4 +157,35 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     }
 
+    @Test
+    fun testFlatFunctions() {
+        val result = manager.select(count("otherString"), avg("longPrimitive"), max("longPrimitive"), min("longPrimitive"),sum("longPrimitive"))
+                .from(AllAttributeEntityWithRelationship::class)
+                .distinct()
+                .list<Map<String, Any>>()
+                .first()
+
+        assertEquals(14L, result["avg(longPrimitive)"], "Invalid Average")
+        assertEquals(162L, result["sum(longPrimitive)"], "Invalid Sum")
+        assertEquals(2L, result["min(longPrimitive)"], "Invalid Min")
+        assertEquals(6, result["count(otherString)"], "Invalid Count")
+        assertEquals(99L, result["max(longPrimitive)"], "Invalid Max")
+
+    }
+
+    @Test
+    fun testFlatFunctionsNonDistinct() {
+        val result = manager.select("id", count("otherString"), avg("longPrimitive"), max("longPrimitive"), min("longPrimitive"),sum("longPrimitive"))
+                .from(AllAttributeEntityWithRelationship::class)
+                .list<Map<String, Any>>()
+                .first()
+
+        assertEquals(14L, result["avg(longPrimitive)"], "Invalid Average")
+        assertEquals(162L, result["sum(longPrimitive)"], "Invalid Sum")
+        assertEquals(2L, result["min(longPrimitive)"], "Invalid Min")
+        assertEquals(11, result["count(otherString)"], "Invalid Count")
+        assertEquals(99L, result["max(longPrimitive)"], "Invalid Max")
+
+    }
+
 }

@@ -477,6 +477,8 @@ class Query : BufferStreamable {
 
     fun shouldAggregateFunctions():Boolean = functions().isNotEmpty()
 
+    fun shouldAggregateGroupFunctions():Boolean = functions().any { it.type.isGroupFunction }
+
     fun shouldSortGroupedBy(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty()
 
     override fun equals(other: Any?): Boolean {

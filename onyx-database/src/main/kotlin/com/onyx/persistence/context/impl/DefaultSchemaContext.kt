@@ -268,6 +268,11 @@ open class DefaultSchemaContext : SchemaContext {
             checkForIndexChanges(systemEntity, newSystemEntity)
             checkForInvalidRelationshipChanges(systemEntity, newSystemEntity)
 
+            if(newSystemEntity.partition != null
+                    && systemEntity.partition != null
+                    && newSystemEntity.partition == systemEntity.partition)
+                newSystemEntity.partition = systemEntity.partition
+
             serializedPersistenceManager.from(SystemEntity::class).where("name" eq systemEntity.name).set("isLatestVersion" to false).update()
             serializedPersistenceManager.saveEntity<IManagedEntity>(newSystemEntity)
             systemEntity = newSystemEntity
@@ -528,8 +533,8 @@ open class DefaultSchemaContext : SchemaContext {
                     serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
                 }
 
+                systemEntity = checkForEntityChanges(descriptor!!, systemEntity)
                 checkForValidDescriptorPartition(descriptor!!, systemEntity)
-                checkForEntityChanges(descriptor!!, systemEntity)
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor!!.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }

@@ -64,6 +64,13 @@ interface QueryInteractor {
     fun <T> getQueryFunctionResults(query:Query, groupedResults:HashMap<String, MutableMap<Any?, ArrayList<Any?>>>):List<T>
 
     /**
+     * Pivot results to only get function results
+     *
+     * @since 2.1.0 Added query functions such as count(), avg(), min(), max()
+     */
+    fun <T> getFlatQueryFunctionResults(query:Query, groupedResults:List<T>):List<T>
+
+    /**
      * Return a subset of records based on query maxResults & firstRow
      *
      * @param query      Query containing all the munging instructions

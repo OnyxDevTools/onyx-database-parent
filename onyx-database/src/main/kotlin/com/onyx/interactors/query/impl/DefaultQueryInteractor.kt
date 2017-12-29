@@ -181,7 +181,10 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
         val selectionResults = if(query.isDistinct) results.toHashSet().toList() else results
 
-        if(!query.shouldGroupResults())
+        if(!query.shouldGroupResults() && query.shouldAggregateGroupFunctions()) {
+            return getFlatQueryFunctionResults(query, results)
+        }
+        else if(!query.shouldGroupResults())
             return selectionResults
 
         val groupedResults = this.getGroupByResults(query, selectionResults)
@@ -190,6 +193,33 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             return groupedResults.values.toList() as List<T>
 
         return getQueryFunctionResults(query, groupedResults)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> getFlatQueryFunctionResults(query:Query, groupedResults:List<T>):List<T> {
+        val functionResults = HashMap<String, Any?>()
+            query.functions().filter { it.type.isGroupFunction }.forEach {
+                val flatList = groupedResults.map { result ->
+                    (result as Map<String, Any?>)[it.attribute]
+                }
+
+                val functionResult = if(query.isDistinct && it.type == QueryFunctionType.COUNT) {
+                    flatList.toHashSet().count()
+                } else {
+                    when (it.type) {
+                        QueryFunctionType.SUM -> flatList.sum()
+                        QueryFunctionType.MIN -> flatList.min()
+                        QueryFunctionType.MAX -> flatList.max()
+                        QueryFunctionType.AVG -> flatList.avg()
+                        QueryFunctionType.COUNT -> flatList.count()
+                        else -> throw Exception("Invalid function")
+                    }
+                }
+
+                functionResults[it.type.name.toLowerCase() + "(${it.attribute})"] = functionResult
+            }
+
+        return arrayListOf(functionResults) as List<T>
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -203,14 +233,19 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                 newValue[entry.key] = innerEntry.key
 
                 query.functions().filter { it.type.isGroupFunction }.forEach {
-                    val functionResult = when(it.type) {
-                        QueryFunctionType.SUM -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).sum()
-                        QueryFunctionType.MIN -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).min()
-                        QueryFunctionType.MAX -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).max()
-                        QueryFunctionType.AVG -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).avg()
-                        QueryFunctionType.COUNT -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).count()
-                        else -> throw Exception("Invalid function")
-                    }
+
+                    val functionResult = if(query.isDistinct && it.type == QueryFunctionType.COUNT) {
+                                ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).toHashSet().count()
+                            } else {
+                                when (it.type) {
+                                    QueryFunctionType.SUM -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).sum()
+                                    QueryFunctionType.MIN -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).min()
+                                    QueryFunctionType.MAX -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).max()
+                                    QueryFunctionType.AVG -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).avg()
+                                    QueryFunctionType.COUNT -> ((mutableInnerEntry.value).map { item -> (item as Map<String, Any?>)[it.attribute] }).count()
+                                    else -> throw Exception("Invalid function")
+                                }
+                            }
                     newValue[it.type.toString().toLowerCase() + "(" + it.attribute + ")"] = functionResult
                 }
 
