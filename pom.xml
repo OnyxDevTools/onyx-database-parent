@@ -229,7 +229,6 @@
                                 <arg>-Xno-param-assertions</arg>
                                 <arg>-Xno-call-assertions</arg>
                                 <arg>-Werror</arg>
-                                <arg></arg>
                             </args>
                         </configuration>
                     </execution>
@@ -242,6 +241,7 @@
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/test</sourceDir>
                             </sourceDirs>
+                            <jvmTarget>1.8</jvmTarget>
                         </configuration>
                     </execution>
                 </executions>
