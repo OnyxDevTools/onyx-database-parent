@@ -241,7 +241,7 @@
                             <sourceDirs>
                                 <sourceDir>${project.basedir}/test</sourceDir>
                             </sourceDirs>
-                            <jvmTarget>1.8</jvmTarget>
+                            <jvmTarget>1.6</jvmTarget>
                         </configuration>
                     </execution>
                 </executions>
