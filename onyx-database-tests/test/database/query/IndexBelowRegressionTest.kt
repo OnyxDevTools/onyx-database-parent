@@ -29,11 +29,10 @@ class IndexBelowRegressionTest(override var factoryClass: KClass<*>) : PrePopula
             item.path = "asdf/asdf/asdf" + i
 
             item.requestDate = Date(abs(randomInteger.toLong()) + 1513000000000)
-            println(item.requestDate)
             manager.saveEntity(item)
         }
 
-        val dateFormat = SimpleDateFormat("MM-dd-yyyy");
+        val dateFormat = SimpleDateFormat("MM-dd-yyyy")
         val endDate = dateFormat.parse("12-31-2023")
         assertEquals(1001, manager.from(PageAnalytic::class).where("requestDate" lt endDate).list<IManagedEntity>().size)
     }
