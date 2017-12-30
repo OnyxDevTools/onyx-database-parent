@@ -40,6 +40,8 @@ object KotlinQueryBuilder {
         forEachExample()
         mapExample()
         filterExample()
+        groupByExample()
+        queryFunctionExample()
 
         factory.close() // close the factory so that we can use it again
 
@@ -134,4 +136,17 @@ object KotlinQueryBuilder {
 
         listener.stopListening()
     }
+
+    private fun groupByExample() = manager.select(count("player.playerId"), "rushingYards")
+            .from(Stats::class)
+            .where("rushingYards" neq 0)
+            .groupBy("rushingYards")
+            .distinct()
+            .list<Map<String, Any?>>()
+
+    private fun queryFunctionExample() = manager.select(max("rushingYards"), "player.firstName", "player.lastName")
+            .from(Stats::class)
+            .where("rushingYards" neq 0)
+            .first<Map<String, Int>>()
+
 }

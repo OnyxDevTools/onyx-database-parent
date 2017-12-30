@@ -60,8 +60,12 @@ public class Main extends AbstractDemo
         System.out.print("\nLazy Query Example: \n");
         LazyQueryExample.demo();
 
+        System.out.println("Group By Example");
+        GroupByExample.demo();
+
         System.out.println("Kotlin Query Builder Example");
         KotlinQueryBuilder.demo();
+
     }
 
     private static void seedData(PersistenceManager manager) throws OnyxException

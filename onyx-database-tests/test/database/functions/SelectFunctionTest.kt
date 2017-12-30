@@ -78,6 +78,9 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         entity.longPrimitive = 99L
         entity.stringValue = "9"
         entity.id = "10"
+        entity.relationship = AllAttributeEntity()
+        entity.relationship?.stringValue = "RELTN"
+        entity.relationship!!.id = "OTHER"
         manager.saveEntity(entity)
         entity.longPrimitive = 9L
         entity.stringValue = "99"
@@ -188,4 +191,22 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     }
 
+    @Test
+    fun testFlatFunctionsForSingleMax() {
+        val result = manager.select(max("longPrimitive"), "stringValue")
+                .from(AllAttributeEntityWithRelationship::class)
+                .list<Map<String, Any?>>().first()
+
+        assertEquals("9", result["stringValue"], "String value did not return as expected")
+    }
+
+    @Test
+    fun testFlatFunctionsForSingleMaxWithRelationshipValue() {
+        val result = manager.select(max("longPrimitive"), "stringValue", "relationship.stringValue")
+                .from(AllAttributeEntityWithRelationship::class)
+                .list<Map<String, Any?>>().first()
+
+        assertEquals("RELTN", result["relationship.stringValue"], "String value did not return as expected")
+        assertEquals("9", result["stringValue"], "String value did not return as expected")
+    }
 }

@@ -198,26 +198,44 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
     @Suppress("UNCHECKED_CAST")
     override fun <T> getFlatQueryFunctionResults(query:Query, groupedResults:List<T>):List<T> {
         val functionResults = HashMap<String, Any?>()
-            query.functions().filter { it.type.isGroupFunction }.forEach {
-                val flatList = groupedResults.map { result ->
-                    (result as Map<String, Any?>)[it.attribute]
-                }
+        var originalRecord: Map<String, Any?>? = null
 
-                val functionResult = if(query.isDistinct && it.type == QueryFunctionType.COUNT) {
-                    flatList.toHashSet().count()
-                } else {
-                    when (it.type) {
-                        QueryFunctionType.SUM -> flatList.sum()
-                        QueryFunctionType.MIN -> flatList.min()
-                        QueryFunctionType.MAX -> flatList.max()
-                        QueryFunctionType.AVG -> flatList.avg()
-                        QueryFunctionType.COUNT -> flatList.count()
-                        else -> throw Exception("Invalid function")
-                    }
-                }
+        var hasFullResultFunction = false
 
-                functionResults[it.type.name.toLowerCase() + "(${it.attribute})"] = functionResult
+        query.functions().filter { it.type.isGroupFunction }.forEach {
+            val flatList = groupedResults.map { result ->
+                (result as Map<String, Any?>)[it.attribute]
             }
+
+            val functionResult = if(query.isDistinct && it.type == QueryFunctionType.COUNT) {
+                flatList.toHashSet().count()
+            } else {
+                when (it.type) {
+                    QueryFunctionType.SUM -> flatList.sum()
+                    QueryFunctionType.MIN -> flatList.min()
+                    QueryFunctionType.MAX -> flatList.max()
+                    QueryFunctionType.AVG -> flatList.avg()
+                    QueryFunctionType.COUNT -> flatList.count()
+                    else -> throw Exception("Invalid function")
+                }
+            }
+
+            if(it.type == QueryFunctionType.AVG || it.type == QueryFunctionType.COUNT || it.type == QueryFunctionType.SUM) {
+                hasFullResultFunction = true
+            } else {
+                val index = flatList.indexOf(functionResult)
+                if(index > -1)
+                    originalRecord = groupedResults[index] as Map<String, Any?>
+            }
+
+            functionResults[it.type.name.toLowerCase() + "(${it.attribute})"] = functionResult
+        }
+
+        if(!hasFullResultFunction) {
+            query.selections?.filter { it.getFunctionWithinSelection() == null }?.forEach {
+                functionResults[it] = originalRecord?.get(it)
+            }
+        }
 
         return arrayListOf(functionResults) as List<T>
     }
