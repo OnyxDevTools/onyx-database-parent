@@ -28,7 +28,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @return Managed entity after save with populated id
      */
     fun save(request: EntityRequestBody): IManagedEntity {
-        val clazz = ApplicationClassFinder.forName(request.type!!)
+        val clazz = ApplicationClassFinder.forName(request.type!!, context)
         val entity = objectMapper.convertValue(request.entity, clazz)
         persistenceManager.saveEntity(entity as IManagedEntity)
 
@@ -42,7 +42,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @return Hydrated entity
      */
     operator fun get(request: EntityRequestBody): IManagedEntity {
-        val clazz = ApplicationClassFinder.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type, context)
         var entity: IManagedEntity
 
         entity = if (request.entity == null)
@@ -63,7 +63,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * Find an entity by id and partition value
      */
     fun find(request: EntityFindRequest): IManagedEntity? {
-        val clazz = ApplicationClassFinder.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type, context)
         return persistenceManager.findByIdInPartition(clazz, request.id!!, request.partitionValue ?: "")
     }
 
@@ -74,7 +74,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @return Whether the entity was deleted or not
      */
     fun delete(request: EntityRequestBody): Boolean {
-        val clazz = ApplicationClassFinder.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type, context)
         val entity: IManagedEntity
         entity = objectMapper.convertValue(request.entity, clazz) as IManagedEntity
 
@@ -99,7 +99,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @return List of relationship objects
      */
     fun initialize(request: EntityInitializeBody): Any? {
-        val clazz = ApplicationClassFinder.forName(request.entityType)
+        val clazz = ApplicationClassFinder.forName(request.entityType, context)
         val entity = clazz.newInstance() as IManagedEntity
 
         if (request.entityId != null) {
@@ -123,7 +123,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @param request List of entity body
      */
     fun saveEntities(request: EntityListRequestBody) {
-        val clazz = ApplicationClassFinder.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type, context)
 
         val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, clazz)
         val entities: List<IManagedEntity>
@@ -143,7 +143,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @param request Entity List body
      */
     fun deleteEntities(request: EntityListRequestBody) {
-        val clazz = ApplicationClassFinder.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type, context)
 
         val javaType = objectMapper.typeFactory.constructCollectionType(List::class.java, clazz)
         val entities: List<IManagedEntity>
@@ -187,7 +187,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * @param request Save Relationship Request Body
      */
     fun saveRelationshipsForEntity(request: SaveRelationshipRequestBody) {
-        val clazz = ApplicationClassFinder.forName(request.type)
+        val clazz = ApplicationClassFinder.forName(request.type, context)
         val entity = objectMapper.convertValue(request.entity, clazz) as IManagedEntity
 
         persistenceManager.saveRelationshipsForEntity(entity, request.relationship!!, request.identifiers!!)

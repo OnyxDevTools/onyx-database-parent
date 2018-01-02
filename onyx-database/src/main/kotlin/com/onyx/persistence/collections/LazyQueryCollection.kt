@@ -196,7 +196,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
 
         val context = Contexts.get(contextId) ?: Contexts.firstRemote()
 
-        this.entityDescriptor = context.getBaseDescriptorForEntity(classForName(className))!!
+        this.entityDescriptor = context.getBaseDescriptorForEntity(classForName(className, context))!!
         this.persistenceManager = context.systemPersistenceManager
     }
 

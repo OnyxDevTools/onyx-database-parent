@@ -41,6 +41,6 @@ import com.onyx.persistence.context.impl.ServerSchemaContext
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-class ServerPersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation, schemaContext) {
+open class ServerPersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, override var schemaContext: SchemaContext = ServerSchemaContext(databaseLocation, databaseLocation)) : EmbeddedPersistenceManagerFactory(databaseLocation, databaseLocation, schemaContext) {
     override var storeType: StoreType = StoreType.FILE
 }

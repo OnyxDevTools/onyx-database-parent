@@ -70,6 +70,12 @@ interface SchemaContext {
     var systemPersistenceManager: PersistenceManager?
 
     /**
+     * Enables dynamic loading of classes
+     * @since 2.2.0
+     */
+    var classLoader:ClassLoader
+
+    /**
      * This is used to indicate what persistence manager should be serialized.
      * In some cases the embedded or the remote could be injected but we need
      * to use a contract so we can tell which persistence manager pertains the

@@ -85,6 +85,9 @@ open class DefaultSchemaContext : SchemaContext {
 
     private var transactionStore: TransactionStore? = null
 
+    // Class loader to dynamically add classes
+    override var classLoader:ClassLoader = DefaultSchemaContext::class.java.classLoader
+
     // endregion
 
     // region Constructors
@@ -215,7 +218,7 @@ open class DefaultSchemaContext : SchemaContext {
                 .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
                 .list<Map<String, String>>()
 
-        results.map { it["name"] }.forEach { getBaseDescriptorForEntity(classForName(it!!)) }
+        results.map { it["name"] }.forEach { getBaseDescriptorForEntity(classForName(it!!, this)) }
     }
 
     /**
@@ -482,7 +485,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(classForName(entityClass))
+    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(classForName(entityClass, this))
 
     private val descriptorLockCount = AtomicInteger(0)
 

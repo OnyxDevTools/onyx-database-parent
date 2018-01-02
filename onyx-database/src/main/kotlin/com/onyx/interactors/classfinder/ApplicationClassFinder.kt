@@ -1,6 +1,7 @@
 package com.onyx.interactors.classfinder
 
 import com.onyx.interactors.classfinder.impl.DefaultEntityClassFinder
+import com.onyx.persistence.context.SchemaContext
 
 /**
  * Default implementation of the class finder.  This is a wrapper for Java9 compatibility.  Since, in some
@@ -18,15 +19,6 @@ object ApplicationClassFinder : EntityClassFinder {
      * @param name Full qualified name of class
      * @since 2.0.0
      */
-    override fun forName(name:String?) = instance.forName(name)
-
-    /**
-     * Load class from module named
-     *
-     * @param module Sub Class loader to get class from
-     * @param name Full qualified name of class
-     * @since 2.0.0
-     */
-    override fun forName(module:String, name:String) = instance.forName(module, name)
+    override fun forName(name:String?, schemaContext: SchemaContext?) = instance.forName(name, schemaContext)
 
 }

@@ -54,10 +54,12 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     override var sslTrustStorePassword: String? = null
 
     // RMI Server.  This is the underlying network io server
-    private lateinit var rmiServer: OnyxRMIServer
+    @Suppress("MemberVisibilityCanPrivate")
+    protected lateinit var rmiServer: OnyxRMIServer
 
     protected var persistenceManagerFactory: PersistenceManagerFactory? = null
-    private var authenticationManager: AuthenticationManager? = null
+    @Suppress("MemberVisibilityCanPrivate")
+    protected var authenticationManager: AuthenticationManager? = null
 
     /**
      * Start the database socket server
@@ -99,7 +101,8 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     /**
      * Register services.  This method registers all of the proxy objects and makes them public
      */
-    private fun registerServices() {
+    @Suppress("MemberVisibilityCanPrivate")
+    protected fun registerServices() {
         // Register the Persistence Manager
         rmiServer.register(PERSISTENCE_MANAGER_SERVICE, this.persistenceManagerFactory!!.persistenceManager, PersistenceManager::class.java)
         rmiServer.register(AUTHENTICATION_MANAGER_SERVICE, this.authenticationManager!!, AuthenticationManager::class.java)

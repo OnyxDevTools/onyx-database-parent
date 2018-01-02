@@ -102,12 +102,20 @@ abstract class NetworkPeer : SSLPeer {
                         packetSizeBuffer.flip()
                         val packetSize = packetSizeBuffer.int
                         val packetBuffer = BufferPool.allocateAndLimit(packetSize)
+                        var readIterations = 0
                         while (packetBuffer.hasRemaining()) {
                             bytesRead = connection.socketChannel.read(packetBuffer)
                             if (bytesRead < 0)
                                 closeConnection(connection)
-                            else if (bytesRead == 0)
-                                delay(10, TimeUnit.MICROSECONDS)
+                            else if (bytesRead == 0) {
+                                delay(1, TimeUnit.MILLISECONDS)
+                                readIterations++
+                                if(readIterations >= maxWriteIterations) {
+                                    closeConnection(connection)
+                                    return
+                                }
+
+                            }
                         }
                         packetBuffer.flip()
                         async {

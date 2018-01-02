@@ -25,7 +25,7 @@ import com.onyx.interactors.query.impl.RemoteQueryCacheInteractor
  * fac.close();
  *
  */
-class ServerSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
+open class ServerSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
 
     override var queryCacheInteractor:QueryCacheInteractor = RemoteQueryCacheInteractor(this)
 

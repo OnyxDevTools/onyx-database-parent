@@ -61,7 +61,7 @@ public class BenchmarkRunner {
         // If the arguments exist through command line use them
         int databaseProviderIndex = Integer.valueOf(args[0]);
         String test = args[1];
-        Class testClass = ApplicationClassFinder.INSTANCE.forName("com.onyxdevtools.benchmark." + test);
+        Class testClass = ApplicationClassFinder.INSTANCE.forName("com.onyxdevtools.benchmark." + test, null);
         Constructor<?> constructor = testClass.getConstructor(ProviderPersistenceManager.class);
         databaseProvider = DatabaseProvider.values()[databaseProviderIndex];
         benchmarkBenchmarkTest = (BenchmarkTest) constructor.newInstance(PersistenceProviderFactory.getPersistenceManager(databaseProvider));

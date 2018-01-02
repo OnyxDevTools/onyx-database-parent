@@ -366,7 +366,7 @@ class BufferStream(buffer: ByteBuffer) {
             expandableByteBuffer!!.buffer.get(stringBytes)
             val className = String(stringBytes)
             return try {
-                val returnValue = classForName(className)
+                val returnValue = classForName(className, context)
                 addReference(returnValue)
                 returnValue
             } catch (e: ClassNotFoundException) {
@@ -761,7 +761,7 @@ class BufferStream(buffer: ByteBuffer) {
     fun putCollection(collection: Collection<*>) {
 
         try {
-            val clazz = classForName(collection.javaClass.name)
+            val clazz = classForName(collection.javaClass.name, context)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
             putObject(ArrayList::class.java)
@@ -785,7 +785,7 @@ class BufferStream(buffer: ByteBuffer) {
     fun putMap(map: Map<*, *>) {
 
         try {
-            val clazz = classForName(map.javaClass.name)
+            val clazz = classForName(map.javaClass.name, context)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
             putObject(HashMap::class.java)
