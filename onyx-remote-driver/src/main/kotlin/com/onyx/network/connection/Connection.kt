@@ -1,5 +1,6 @@
 package com.onyx.network.connection
 
+import java.nio.ByteBuffer
 import java.nio.channels.ByteChannel
 
 /**
@@ -11,4 +12,5 @@ import java.nio.channels.ByteChannel
  */
 class Connection(val socketChannel: ByteChannel) {
     var isAuthenticated = false
+    var lastReadPacket:ByteBuffer? = null
 }

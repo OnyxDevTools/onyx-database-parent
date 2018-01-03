@@ -90,6 +90,41 @@ abstract class NetworkPeer : SSLPeer {
      */
     protected fun read(connection: Connection) {
         try {
+            // Read an existing packet
+            if(connection.lastReadPacket != null) {
+                existingPacketLoop@while (connection.lastReadPacket != null && connection.lastReadPacket!!.hasRemaining()) {
+                    val bytesRead = connection.socketChannel.read(connection.lastReadPacket)
+                    when {
+                        bytesRead < 0 -> {
+                            closeConnection(connection); read@ return
+                        }
+                        bytesRead == 0 -> read@ return
+                        else -> {
+                            if (!connection.lastReadPacket!!.hasRemaining()) {
+
+                                connection.lastReadPacket!!.flip()
+                                val packet = connection.lastReadPacket!!
+                                connection.lastReadPacket = null
+
+                                async {
+                                    withBuffer(packet) {
+                                        var token: RequestToken? = null
+                                        try {
+                                            token = serverSerializer.deserialize(it)
+                                            handleMessage(connection.socketChannel, connection, token)
+                                        } catch (e: Exception) {
+                                            failure(e, token)
+                                        }
+                                    }
+                                }
+                                break@existingPacketLoop
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Start a read for a new packet
             while (true) {
                 packetSizeBuffer.clear()
                 var bytesRead = connection.socketChannel.read(packetSizeBuffer)
@@ -101,29 +136,24 @@ abstract class NetworkPeer : SSLPeer {
                     bytesRead >= Integer.BYTES -> {
                         packetSizeBuffer.flip()
                         val packetSize = packetSizeBuffer.int
-                        val packetBuffer = BufferPool.allocateAndLimit(packetSize)
-                        var readIterations = 0
-                        while (packetBuffer.hasRemaining()) {
-                            bytesRead = connection.socketChannel.read(packetBuffer)
+                        connection.lastReadPacket = BufferPool.allocateAndLimit(packetSize)
+                        while (connection.lastReadPacket!!.hasRemaining()) {
+                            bytesRead = connection.socketChannel.read(connection.lastReadPacket)
                             if (bytesRead < 0)
                                 closeConnection(connection)
                             else if (bytesRead == 0) {
-                                delay(1, TimeUnit.MILLISECONDS)
-                                readIterations++
-                                if(readIterations >= maxWriteIterations) {
-                                    closeConnection(connection)
-                                    return
-                                }
-
+                                return
                             }
                         }
-                        packetBuffer.flip()
+                        connection.lastReadPacket!!.flip()
+                        val packet = connection.lastReadPacket!!
+                        connection.lastReadPacket = null
                         async {
-                            withBuffer(packetBuffer) {
+                            withBuffer(packet) {
                                 var token: RequestToken? = null
                                 try {
-                                    token = serverSerializer.deserialize(packetBuffer)
-                                    handleMessage(connection.socketChannel, connection, token)
+                                    token = serverSerializer.deserialize(it)
+                                    handleMessage(connection.socketChannel, connection, token!!)
                                 } catch (e: Exception) {
                                     failure(e, token)
                                 }
