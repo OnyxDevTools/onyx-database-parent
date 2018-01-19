@@ -20,6 +20,9 @@ class SystemDirectory(
         @Attribute
         override var name:String = "",
 
+        @Attribute
+        var isRoot: Boolean = true,
+
         @Relationship(type = RelationshipType.ONE_TO_MANY,
                 inverseClass = SystemDirectory::class,
                 loadFactor = 2,
@@ -41,7 +44,14 @@ class SystemDirectory(
                 fetchPolicy = FetchPolicy.EAGER,
                 loadFactor = 2,
                 cascadePolicy = CascadePolicy.NONE)
-        var queries:MutableList<SystemQuery> = ArrayList()
+        var queries:MutableList<SystemQuery> = ArrayList(),
+
+        @Relationship(type = RelationshipType.MANY_TO_ONE,
+                inverse = "directories",
+                inverseClass = SystemUser::class,
+                loadFactor = 1,
+                cascadePolicy = CascadePolicy.NONE)
+        var user: SystemUser? = null
 
 ) : ManagedEntity(), NamedEntity {
 

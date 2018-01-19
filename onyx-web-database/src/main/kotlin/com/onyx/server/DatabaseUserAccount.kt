@@ -11,7 +11,7 @@ import java.util.HashSet
  *
  * Auth account object
  */
-internal class DatabaseUserAccount(private val user: SystemUser?) : Account {
+class DatabaseUserAccount(@Suppress("MemberVisibilityCanPrivate") val user: SystemUser?) : Account {
 
     private var roles: MutableSet<String>? = null
 
