@@ -74,7 +74,8 @@ open class DefaultSchemaContext : SchemaContext {
     final override lateinit var location: String
 
     // Controls the interaction of how the queries are cached.
-    @Suppress("LeakingThis") // Does not matter there should always be a 1 - 1 on database factories and Schema Contexts
+    // Does not matter there should always be a 1 - 1 on database factories and Schema Contexts
+    @Suppress("LeakingThis")
     override var queryCacheInteractor: QueryCacheInteractor = DefaultQueryCacheInteractor(this)
 
     // Wait to initialize when the system persistence manager is set
@@ -484,6 +485,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
+    @Suppress("MemberVisibilityCanPrivate")
     @Throws(OnyxException::class)
     fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(classForName(entityClass, this))
 
@@ -751,6 +753,10 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Partitions
 
+    data class PartitionInfo(val classToGet: Class<*>, val partitionValue:Any)
+
+    private val partitionsByValue = OptimisticLockingMap<PartitionInfo, SystemPartitionEntry?>(HashMap())
+
     /**
      * Get Partition Entry for entity.
      *
@@ -760,12 +766,13 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(OnyxException::class)
-    override fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry? {
+    override fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry? = partitionsByValue.getOrPut(PartitionInfo(classToGet, partitionValue)) {
         val query = Query(SystemPartitionEntry::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, classToGet.name + partitionValue.toString()))
         val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
-        return if (partitions.isEmpty()) null else partitions[0]
+        partitions.firstOrNull()
     }
+
+    private val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(HashMap())
 
     /**
      * Get System Partition with Id.
@@ -775,11 +782,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    @Throws(OnyxException::class)
-    override fun getPartitionWithId(partitionId: Long): SystemPartitionEntry? {
+    override fun getPartitionWithId(partitionId: Long): SystemPartitionEntry? = partitionsById.getOrPut(partitionId) {
         val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
         val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
-        return if (partitions.isEmpty()) null else partitions[0]
+        partitions.firstOrNull()
     }
 
     // endregion

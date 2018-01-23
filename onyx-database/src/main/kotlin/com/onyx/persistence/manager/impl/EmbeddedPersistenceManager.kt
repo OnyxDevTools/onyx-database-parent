@@ -233,7 +233,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
             return if (query.selections != null && query.selections!!.isNotEmpty()) {
                 var selectionResults= queryController.referencesToSelectionResults(query, results) as List<E>
-                if(query.shouldSortGroupedBy()) {
+                if(query.shouldSortSelections()) {
                     selectionResults = queryController.sort(query, selectionResults)
                 }
                 selectionResults

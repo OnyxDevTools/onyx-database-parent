@@ -30,6 +30,12 @@ data class SystemUser @JvmOverloads constructor(
 
 ) : AbstractSystemEntity(), IManagedEntity, Principal {
 
+    @Attribute
+    var firstName: String? = null
+
+    @Attribute
+    var lastName: String? = null
+
     @Suppress("UNUSED")
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "user",

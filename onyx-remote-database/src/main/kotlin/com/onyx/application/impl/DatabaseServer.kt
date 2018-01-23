@@ -77,6 +77,8 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
             user.username = this.user
             user.password = encryption.encrypt(this.password)
             user.role = SystemUserRole.ROLE_ADMIN
+            user.firstName = "Admin"
+            user.lastName = "Admin"
 
             // Default User and password
             this.persistenceManagerFactory?.persistenceManager?.saveEntity<IManagedEntity>(user)

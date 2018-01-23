@@ -43,6 +43,39 @@ inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit
  */
 inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> = executor.submit<T> { block() }
 
+
+inline fun <A, B>List<A>.parallelMap(parallel:Boolean = true, crossinline block: (A) -> B): List<B> {
+    return if(parallel) {
+        val returnValue: MutableList<B> = ArrayList()
+        this.parallelForEach {
+            val value = block(it)
+            synchronized(returnValue) {
+                returnValue.add(value)
+            }
+        }
+        returnValue
+    } else {
+        map(block)
+    }
+}
+
+inline fun <A> List<A>.parallelForEach(crossinline block: (A) -> Unit) {
+    val futures:MutableList<Future<Unit>> = ArrayList()
+    this.forEach {
+        futures.add(async {
+            block.invoke(it)
+        })
+
+        if(futures.size > 100) {
+            futures.forEach {
+                it.get()
+            }
+            futures.clear()
+        }
+    }
+    futures.forEach { it.get() }
+}
+
 /**
  * Sleep thread a fixed amount of time.
  *

@@ -467,8 +467,6 @@ class Query : BufferStreamable {
 
     // endregion
 
-    fun shouldSortResults(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty()
-
     fun shouldSortForUpdate():Boolean = (this.firstRow > 0 || this.maxResults != -1 && this.updates.isNotEmpty())
 
     fun shouldSortForDelete():Boolean = (this.firstRow > 0 || this.maxResults != -1)
@@ -479,7 +477,9 @@ class Query : BufferStreamable {
 
     fun shouldAggregateGroupFunctions():Boolean = functions().any { it.type.isGroupFunction }
 
-    fun shouldSortGroupedBy(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty()
+    fun shouldSortResults(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty() && !shouldSortSelections()
+
+    fun shouldSortSelections(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty() && this.selections?.isNotEmpty() == true && this.queryOrders?.firstOrNull { this.selections?.contains(it.attribute) == false } == null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

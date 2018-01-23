@@ -1,6 +1,8 @@
 package com.onyx.persistence.factory.impl
 
 import com.onyx.diskmap.store.StoreType
+import com.onyx.entity.SystemUser
+import com.onyx.entity.SystemUserRole
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
@@ -10,6 +12,8 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.impl.EmbeddedPersistenceManager
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import com.onyx.interactors.encryption.EncryptionInteractor
+import com.onyx.persistence.query.eq
+import com.onyx.persistence.query.from
 
 import java.io.*
 import java.nio.channels.ClosedChannelException
@@ -126,37 +130,40 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      * @throws InitializationException Failure to start database due to either invalid credentials or a lock on the database already exists.
      */
     @Throws(InitializationException::class)
-    override fun initialize() = try {
+    override fun initialize() {
+        try {
 
-        // Ensure the database file exists
-        val databaseDirectory = File(this.databaseLocation)
+            // Ensure the database file exists
+            val databaseDirectory = File(this.databaseLocation)
 
-        if (!databaseDirectory.exists()) {
-            databaseDirectory.mkdirs()
-            createCredentialsFile()
+            if (!databaseDirectory.exists()) {
+                databaseDirectory.mkdirs()
+                createCredentialsFile()
+            }
+
+            acquireLock()
+
+            if (!databaseDirectory.canWrite()) {
+                releaseLock()
+                throw InitializationException(InitializationException.DATABASE_FILE_PERMISSION_ERROR)
+            }
+
+            this.persistenceManager
+            schemaContext.storeType = this.storeType
+            schemaContext.start()
+
+            if (!checkCredentials()) {
+                close()
+                throw InitializationException(InitializationException.INVALID_CREDENTIALS)
+            }
+
+        } catch (e: OverlappingFileLockException) {
+            close()
+            throw InitializationException(InitializationException.DATABASE_LOCKED)
+        } catch (e: IOException) {
+            close()
+            throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
         }
-
-        acquireLock()
-
-        if (!databaseDirectory.canWrite()) {
-            releaseLock()
-            throw InitializationException(InitializationException.DATABASE_FILE_PERMISSION_ERROR)
-        }
-
-        if (!checkCredentials()) {
-            releaseLock()
-            throw InitializationException(InitializationException.INVALID_CREDENTIALS)
-        }
-
-        this.persistenceManager
-        schemaContext.storeType = this.storeType
-        schemaContext.start()
-    } catch (e: OverlappingFileLockException) {
-        releaseLock()
-        throw InitializationException(InitializationException.DATABASE_LOCKED)
-    } catch (e: IOException) {
-        releaseLock()
-        throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
     }
 
     /**
@@ -214,16 +221,27 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      */
     @Throws(InitializationException::class)
     private fun checkCredentials(): Boolean {
-        val databaseFile = File(databaseLocation)
-        if (!databaseFile.exists()) {
+
+        try {
+
+            if(this.persistenceManager.from(SystemUser::class).count() == 0L) {
+                val defaultUser = SystemUser()
+                defaultUser.firstName = "Admin"
+                defaultUser.lastName = "Admin"
+                defaultUser.role = SystemUserRole.ROLE_ADMIN
+                defaultUser.username = this.user
+                defaultUser.password = encryptCredentials()
+                persistenceManager.saveEntity(defaultUser)
+            }
+
+            if(this.persistenceManager.from(SystemUser::class)
+                    .where("username" eq this.user)
+                    .and("password" eq encryptCredentials()).firstOrNull<SystemUser>() == null) {
+                return false
+            }
+
             return true
-        }
-        return try {
-            // Read the credentials and compare
-            val credFile = File(databaseLocation + File.separator + CREDENTIALS_FILE)
-            val credentials = String(readContentIntoByteArray(credFile), StandardCharsets.UTF_16)
-            credentials == encryptCredentials()
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
         }
     }
@@ -236,7 +254,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      */
     @Throws(InitializationException::class)
     private fun encryptCredentials(): String = try {
-        encryption.encrypt(user + password)!!
+        encryption.encrypt(password)!!
     } catch (e: Exception) {
         throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
     }
@@ -273,21 +291,5 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
         @JvmField
         val DEFAULT_INSTANCE = "ONYX_DATABASE"
-
-        /**
-         * Helper method for reading they contents of a file into a byte array
-         *
-         * @param file File to read
-         * @return byte array of contents
-         * @throws IOException Failure to read file
-         */
-        private fun readContentIntoByteArray(file: File): ByteArray {
-            val fileInputStream = FileInputStream(file)
-            val bFile = ByteArray(file.length().toInt())
-            //convert file into array of bytes
-            fileInputStream.read(bFile)
-            fileInputStream.close()
-            return bFile
-        }
     }
 }

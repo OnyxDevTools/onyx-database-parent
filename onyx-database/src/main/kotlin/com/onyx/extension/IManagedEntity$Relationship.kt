@@ -124,9 +124,11 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
 
         relationshipReferences.forEach {
             var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
-            relationshipEntity = relationshipEntity!!.recordInteractor(context).getWithId(it.identifier!!)
-            if (relationshipEntity != null)
-                entities.add(relationshipEntity)
+            if(relationshipEntity != null) {
+                relationshipEntity = relationshipEntity.recordInteractor(context).getWithId(it.identifier!!)
+                if (relationshipEntity != null)
+                    entities.add(relationshipEntity)
+            }
         }
 
         shouldBreak = true

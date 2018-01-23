@@ -6,5 +6,5 @@ package com.onyx.entity
  * User roles
  */
 enum class SystemUserRole {
-    ROLE_ADMIN, ROLE_USER
+    ROLE_ADMIN, ROLE_USER, ROLE_USER_READ_ONLY
 }

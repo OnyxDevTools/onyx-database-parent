@@ -16,6 +16,7 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.extension.*
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.compare
+import com.onyx.extension.common.parallelMap
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
 import com.onyx.interactors.query.data.QuerySortComparator
@@ -155,26 +156,30 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         val context = Contexts.get(contextId)!!
         val scanObjects = QueryAttributeResource.create(query.selections!!.toTypedArray(), descriptor, query, context)
 
+        val hasRelationship = scanObjects.firstOrNull { it.relationshipDescriptor != null } != null
         val lower = query.firstRow
         val upper = lower + if(query.maxResults > 0) query.maxResults else references.size
 
         val results = references.entries.asSequence()
                 .filterIndexedTo(ArrayList()) { index, _ -> index in lower..(upper - 1) }
-                .map { entry ->
+                .parallelMap(!hasRelationship && !query.shouldSortResults()) { entry ->
                     @Suppress("UNCHECKED_CAST")
                     if(entry.value is Map<*,*>)
                         entry.value
                     else {
                         val record = HashMap<String, Any?>()
                         scanObjects.forEach {
-                            record.put(it.selection, when {
+                            val recVal = when {
                                 it.relationshipDescriptor != null && it.relationshipDescriptor.isToOne -> entry.key.toOneRelationshipAsMap(context, it)
                                 it.relationshipDescriptor != null && it.relationshipDescriptor.isToMany -> entry.key.toManyRelationshipAsMap(context, it)
                                 it.function != null -> it.function.execute(entry.key.attribute(context, it.attribute, descriptor))
                                 else -> entry.key.attribute(context, it.attribute, descriptor)
-                            })
+                            }
+                            record.put(it.selection, recVal)
                         }
-                        (entry as MutableMap.MutableEntry<Reference, Any?>).setValue(record)
+                        synchronized(references) {
+                            (entry as MutableMap.MutableEntry<Reference, Any?>).setValue(record)
+                        }
                         record as T
                     }
                 }
