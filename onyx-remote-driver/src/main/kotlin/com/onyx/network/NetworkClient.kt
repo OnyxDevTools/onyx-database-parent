@@ -95,9 +95,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
         try {
             socketChannel = SocketChannel.open()
             socketChannel!!.socket().keepAlive = true
-            socketChannel!!.socket().tcpNoDelay = false
             socketChannel!!.socket().reuseAddress = false // Prevented so the server does not re-use the old connection
-            socketChannel!!.socket().oobInline = false
             socketChannel!!.socket().receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
             socketChannel!!.socket().sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
             socketChannel!!.socket().setPerformancePreferences(0,2,1)
