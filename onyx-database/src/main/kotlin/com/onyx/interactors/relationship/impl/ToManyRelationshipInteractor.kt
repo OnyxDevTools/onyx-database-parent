@@ -46,7 +46,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         val parentRelationshipReference     = entity.toRelationshipReference(context)
         val relationshipReferenceMap        = entity.relationshipReferenceMap(context, relationshipDescriptor.name)
         val existingRelationshipReferences: MutableSet<RelationshipReference> = synchronized(relationshipReferenceMap!!) { HashSet(relationshipReferenceMap[parentRelationshipReference] ?: HashSet()) }
-
+        val existingRelationshipReferencesBefore = HashSet(existingRelationshipReferences)
         var existingRelationshipReferencesCopy: MutableSet<RelationshipReference?> = java.util.HashSet()
 
         if (relationshipObjects != null) {
@@ -101,8 +101,10 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
             }
         }
 
-        synchronized(relationshipReferenceMap) {
-            relationshipReferenceMap.put(parentRelationshipReference, existingRelationshipReferences)
+        if(existingRelationshipReferences != existingRelationshipReferencesBefore) {
+            synchronized(relationshipReferenceMap) {
+                relationshipReferenceMap.put(parentRelationshipReference, existingRelationshipReferences)
+            }
         }
     }
 

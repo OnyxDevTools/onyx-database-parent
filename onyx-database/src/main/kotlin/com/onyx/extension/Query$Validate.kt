@@ -99,5 +99,5 @@ fun Query.hasPartitionField(context: SchemaContext): Boolean = context.getBaseDe
  *
  * @param descriptor Descriptor for entity type to query
  */
-fun Query.isDefaultQuery(descriptor: EntityDescriptor): Boolean = this.criteria == null || this.criteria!!.subCriteria.size <= 0 && this.criteria!!.operator === QueryCriteriaOperator.NOT_NULL && this.criteria!!.attribute == descriptor.identifier!!.name
+fun Query.isDefaultQuery(descriptor: EntityDescriptor): Boolean = this.criteria == null || (this.criteria!!.subCriteria.size <= 0 && this.criteria!!.operator === QueryCriteriaOperator.NOT_NULL && this.criteria!!.attribute == descriptor.identifier!!.name)
 

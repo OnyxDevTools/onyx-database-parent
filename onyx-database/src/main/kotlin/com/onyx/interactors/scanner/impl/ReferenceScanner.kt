@@ -1,7 +1,6 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.OnyxException
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
@@ -15,7 +14,7 @@ import com.onyx.persistence.query.QueryCriteria
  *
  * It can either scan the entire table or a subset of index values
  */
-open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
 
     /**
      * Not supported for all references
@@ -25,7 +24,7 @@ open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(): MutableMap<Reference, Reference> = HashMap()
+    override fun scan(): MutableSet<Reference> = HashSet()
 
     /**
      * Retrieve all references except those that are passed in
@@ -36,9 +35,11 @@ open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 2.0.0 To support the .not() method
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
-        val matching = HashMap<Reference, Reference>()
-        (records.references.map { Reference(0L, it.position) } - existingValues.keys).forEach { matching.put(it, it) }
+    override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
+        val matching = HashSet<Reference>()
+        (records.references.map { Reference(0L, it.position) } - existingValues).forEach {
+            matching.add(it)
+        }
         return matching
     }
 }

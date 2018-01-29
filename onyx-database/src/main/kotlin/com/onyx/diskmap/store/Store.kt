@@ -150,7 +150,7 @@ interface Store {
      * @param value Value to append to the store
      * @since 2.0.0
      */
-    fun writeObject(value:Any?): Pair<Int, Long> {
+    fun writeObject(value:Any?): Long {
         val stream = BufferStream()
         stream.putObject(value, context)
         stream.flip()
@@ -166,7 +166,7 @@ interface Store {
 
             this.write(valueBuffer, position + Integer.BYTES)
 
-            return@withBuffer Pair(size, position)
+            return@withBuffer position
         }
     }
 }

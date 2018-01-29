@@ -14,9 +14,9 @@ import java.util.HashSet
  *
  * @since 1.3.0 When query caching was implemented
  */
-class CachedResults(references: MutableMap<Reference, Any?>? = null) {
+class CachedResults(references: MutableSet<Reference>? = null) {
 
-    var references: MutableMap<Reference, Any?>? = references
+    var references: MutableSet<Reference>? = references
         set(value) = synchronized(this) { field = value}
 
     val listeners = HashSet<QueryListener<Any>>()
@@ -97,7 +97,7 @@ class CachedResults(references: MutableMap<Reference, Any?>? = null) {
      */
     fun put(reference: Reference, value: Any, event: QueryListenerEvent) {
         synchronized(this) {
-            references?.put(reference, value)
+            references?.add(reference)
         }
         when(event) {
             QueryListenerEvent.UPDATE -> dispatchUpdateEvent(value)

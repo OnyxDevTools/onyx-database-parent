@@ -1,5 +1,6 @@
 package com.onyx.descriptor
 
+import com.onyx.extension.common.ClassMetadata
 import kotlin.jvm.internal.Intrinsics
 
 /**
@@ -10,7 +11,7 @@ import kotlin.jvm.internal.Intrinsics
 open class IndexDescriptor(
     open var loadFactor: Byte = 1,
     override var name: String = "",
-    open var type: Class<*> = Any::class.java
+    open var type: Class<*> = ClassMetadata.ANY_CLASS
 ) : AbstractBaseDescriptor(), BaseDescriptor {
 
     open lateinit var entityDescriptor: EntityDescriptor

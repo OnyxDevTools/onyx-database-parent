@@ -47,12 +47,40 @@ data class SkipNode(
 
     fun setRecord(store:Store, record:Long) = withLongBuffer {
         this.record = record
+        this.recordValue = null
         it.putLong(record)
         it.rewind()
         store.write(it, position + (java.lang.Long.BYTES * 5))
     }
 
-    fun <T> getKey(store: Store):T = store.getObject(key)
+    @Volatile
+    private var keyValue:Any? = null
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> getKey(store: Store):T {
+        if(keyValue == null) {
+            synchronized(this) {
+                if(keyValue == null) {
+                    keyValue = store.getObject(key)
+                }
+            }
+        }
+        return keyValue as T
+    }
+
+    private var recordValue:Any? = null
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> getRecord(store: Store):T {
+        if(recordValue == null) {
+            synchronized(this) {
+                if(recordValue == null) {
+                    recordValue = store.getObject(record)
+                }
+            }
+        }
+        return recordValue as T
+    }
 
     fun write(store: Store) = BufferPool.allocateAndLimit(SKIP_NODE_SIZE) {
         it.putLong(position)
@@ -79,17 +107,17 @@ data class SkipNode(
         record = buffer.long
         key = buffer.long
         level = buffer.short
-
+        recordValue = null
         return this
     }
 
     val isRecord:Boolean
-        get() = key > 0
+        get() = record > 0
 
     companion object {
         val SKIP_NODE_SIZE = (java.lang.Long.BYTES * 7) + java.lang.Short.BYTES
 
-        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short):SkipNode {
+        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short, keyValue:Any? = null):SkipNode {
             val node = SkipNode()
             node.key = key
             node.record = value
@@ -98,6 +126,7 @@ data class SkipNode(
             node.down = bottom
             node.position = store.allocate(SKIP_NODE_SIZE)
             node.level = level
+            node.keyValue = keyValue
             node.write(store)
             return node
         }

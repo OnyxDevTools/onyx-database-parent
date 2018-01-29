@@ -38,8 +38,8 @@ annotation class Identifier(
          * to change.  Always plan for scale when designing your data model.
          *
          *
-         * Value from 1-10.  The default is 5
+         * Value from 1-10.  The default is 2
          *
          * @since 1.2.0
          */
-        val loadFactor: Int = 5)
+        val loadFactor: Int = 2)

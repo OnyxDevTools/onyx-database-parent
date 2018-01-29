@@ -8,7 +8,6 @@ import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
-import java.util.ArrayList
 
 /**
  * Get fields for a class that apply to its reflection and serialization.  All transient fields and or fields
@@ -91,10 +90,43 @@ fun Any.setChar(field: Field, value: Char) = field.setChar(this, value)
 fun Any.setObject(field: Field, value: Any?) = field.set(this, value)
 fun Any.setAny(field: Field, child: Any?) = catchAll {
     when {
-        child != null && field.type === child::class.javaPrimitiveType -> field.set(this, child)
+        child != null && (field.type === child.javaClass || field.type === child.javaClass.primitiveType()) -> field.set(this, child)
         child != null && !field.type.isAssignableFrom(child.javaClass) -> field.set(this, child.castTo(field.type))
         else -> field.set(this, child)
     }
+}
+
+fun Class<*>.primitiveType() = when {
+    this.isPrimitive -> this
+    this.name == "java.lang.Boolean" -> ClassMetadata.BOOLEAN_TYPE
+    this.name == "java.lang.Character" -> ClassMetadata.CHAR_TYPE
+    this.name == "java.lang.Byte" -> ClassMetadata.BYTE_TYPE
+    this.name == "java.lang.Short" -> ClassMetadata.SHORT_TYPE
+    this.name == "java.lang.Integer" -> ClassMetadata.INT_TYPE
+    this.name == "java.lang.Float" -> ClassMetadata.FLOAT_TYPE
+    this.name == "java.lang.Long" -> ClassMetadata.LONG_TYPE
+    this.name == "java.lang.Double" -> ClassMetadata.DOUBLE_TYPE
+    else -> null
+}
+
+fun Class<*>.isSmallDataType() = when(this) {
+    ClassMetadata.LONG_TYPE -> true
+    ClassMetadata.INT_TYPE -> true
+    ClassMetadata.DOUBLE_TYPE -> true
+    ClassMetadata.FLOAT_TYPE -> true
+    ClassMetadata.BOOLEAN_TYPE -> true
+    ClassMetadata.CHAR_TYPE -> true
+    ClassMetadata.BYTE_TYPE -> true
+    ClassMetadata.SHORT_TYPE -> true
+    ClassMetadata.LONG_PRIMITIVE_TYPE -> true
+    ClassMetadata.INT_PRIMITIVE_TYPE -> true
+    ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> true
+    ClassMetadata.FLOAT_PRIMITIVE_TYPE -> true
+    ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> true
+    ClassMetadata.CHAR_PRIMITIVE_TYPE -> true
+    ClassMetadata.BYTE_PRIMITIVE_TYPE -> true
+    ClassMetadata.SHORT_PRIMITIVE_TYPE -> true
+    else -> false
 }
 
 // endregion
@@ -104,6 +136,39 @@ fun Any.setAny(field: Field, child: Any?) = catchAll {
  * will use optimistic locking caching to speed the lookup up.
  */
 object ClassMetadata {
+
+    val STRING_TYPE = String::class.java
+    val BOOLEAN_TYPE = Boolean::class.javaObjectType
+    val CHAR_TYPE = Char::class.javaObjectType
+    val BYTE_TYPE = Byte::class.javaObjectType
+    val SHORT_TYPE = Short::class.javaObjectType
+    val INT_TYPE = Int::class.javaObjectType
+    val FLOAT_TYPE = Float::class.javaObjectType
+    val LONG_TYPE = Long::class.javaObjectType
+    val DOUBLE_TYPE = Double::class.javaObjectType
+    val LONG_PRIMITIVE_TYPE = Long::class.javaPrimitiveType!!
+    val INT_PRIMITIVE_TYPE = Int::class.javaPrimitiveType!!
+    val DOUBLE_PRIMITIVE_TYPE = Double::class.javaPrimitiveType!!
+    val FLOAT_PRIMITIVE_TYPE = Float::class.javaPrimitiveType!!
+    val BYTE_PRIMITIVE_TYPE = Byte::class.javaPrimitiveType!!
+    val CHAR_PRIMITIVE_TYPE = Char::class.javaPrimitiveType!!
+    val SHORT_PRIMITIVE_TYPE = Short::class.javaPrimitiveType!!
+    val BOOLEAN_PRIMITIVE_TYPE = Boolean::class.javaPrimitiveType!!
+    val BYTE_ARRAY = ByteArray::class.java
+    val INT_ARRAY = IntArray::class.java
+    val LONG_ARRAY = LongArray::class.java
+    val FLOAT_ARRAY = FloatArray::class.java
+    val DOUBLE_ARRAY = DoubleArray::class.java
+    val BOOLEAN_ARRAY = BooleanArray::class.java
+    val CHAR_ARRAY = CharArray::class.java
+    val SHORT_ARRAY = ShortArray::class.java
+    val ATTRIBUTE_ANNOTATION = Attribute::class.java
+    val PARTITION_ANNOTATION = Partition::class.java
+    val INDEX_ANNOTATION = Index::class.java
+    val IDENTIFIER_ANNOTATION = Identifier::class.java
+    val RELATIONSHIP_ANNOTATION = Relationship::class.java
+    val ENTITY_ANNOTATION = Entity::class.java
+    val ANY_CLASS = Any::class.java
 
     private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
     private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())
@@ -135,12 +200,12 @@ object ClassMetadata {
      * @since 2.0.0
      */
     fun fields(clazz:Class<*>) : List<Field> {
-        val isManagedEntity = clazz.isAnnotationPresent(Entity::class.java)
+        val isManagedEntity = clazz.isAnnotationPresent(ENTITY_ANNOTATION)
 
         return classFields.getOrPut(clazz) {
             val fields = ArrayList<Field>()
             var aClass:Class<*> = clazz
-            while (aClass != Any::class.java
+            while (aClass != ClassMetadata.ANY_CLASS
                     && aClass != Exception::class.java
                     && aClass != Throwable::class.java) {
                 aClass.declaredFields
@@ -150,11 +215,11 @@ object ClassMetadata {
                             if (!isManagedEntity) {
                                 it.isAccessible = true
                                 fields.add(it)
-                            } else if (it.isAnnotationPresent(Attribute::class.java)
-                                    || it.isAnnotationPresent(Index::class.java)
-                                    || it.isAnnotationPresent(Partition::class.java)
-                                    || it.isAnnotationPresent(Identifier::class.java)
-                                    || it.isAnnotationPresent(Relationship::class.java)) {
+                            } else if (it.isAnnotationPresent(ATTRIBUTE_ANNOTATION)
+                                    || it.isAnnotationPresent(INDEX_ANNOTATION)
+                                    || it.isAnnotationPresent(PARTITION_ANNOTATION)
+                                    || it.isAnnotationPresent(IDENTIFIER_ANNOTATION)
+                                    || it.isAnnotationPresent(RELATIONSHIP_ANNOTATION)) {
                                 it.isAccessible = true
                                 fields.add(it)
                             }

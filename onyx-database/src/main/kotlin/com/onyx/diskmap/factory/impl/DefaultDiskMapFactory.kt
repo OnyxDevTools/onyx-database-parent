@@ -1,11 +1,9 @@
 package com.onyx.diskmap.factory.impl
 
-import com.onyx.diskmap.factory.data.MapType
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskHashMap
 import com.onyx.diskmap.impl.DiskMatrixHashMap
-import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.diskmap.store.impl.InMemoryStore
@@ -40,14 +38,9 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private val mapsByHeader = WeakHashMap<Header, Map<*, *>>()
 
     // Internal map that runs on storage
-    private lateinit var internalMaps: MutableMap<String, Long>
+    private var internalMaps: MutableMap<String, Long>
 
     // region constructors
-
-    /**
-     * Default Constructor
-     */
-    constructor()
 
     /**
      * Constructor
@@ -56,15 +49,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.0.0
      */
     constructor(filePath: String) : this(filePath, StoreType.FILE, null)
-
-    /**
-     * Constructor
-     *
-     * @param filePath Where the location of the factory feeds off of
-     * @param context  If this is attached to an OnyxDB this will be populated
-     * @since 1.0.0
-     */
-    constructor(filePath: String, context: SchemaContext) : this(filePath, StoreType.FILE, context)
 
     /**
      * Constructor
@@ -85,18 +69,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.0.0
      */
     constructor(filePath: String, type: StoreType, context: SchemaContext?) : this("", filePath, type, context, false)
-
-    /**
-     * Constructor with option to force or not
-     *
-     * @param filePath      File path to hold the disk structure data
-     * @param type          Storage type
-     * @param context       Database Schema context
-     * @param deleteOnClose Whether to delete storage volumes upon close.  This is used for temporary maps
-     *
-     * @since 1.2.0
-     */
-    constructor(filePath: String, type: StoreType, context: SchemaContext, deleteOnClose: Boolean) : this("", filePath, type, context, deleteOnClose)
 
     /**
      * Constructor
@@ -209,14 +181,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
      */
     private fun <T : Map<*,*>> newScalableMap(store: Store, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskHashMap<Any, Any?>(store, header, loadFactor) as T else DiskMatrixHashMap<Any, Any?>(store, header, loadFactor) as T
 
-    /**
-     * Create a new Disk Map.  This uses both a skip list
-     *
-     * @param store  File Storage
-     * @param header Reference Node
-     * @return Instantiated disk map
-     */
-    private fun <T : Map<*,*>> newSkipListMap(store: Store, header: Header): T = DiskSkipListMap<Any, Any?>(store, header) as T
 
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless
@@ -233,16 +197,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @since 1.2.0
      */
     override fun <T : Map<*,*>> newHashMap(header: Header, loadFactor: Int): T = DiskHashMap<Any, Any?>(store, header, loadFactor, false) as T
-
-    /**
-     * Get Hash Map by Name.  This will default the map with a loadFactor of 10.  In that case, it will return an
-     * instance of the hash matrix followed by a skip list.
-     *
-     * @param name Unique Map name
-     * @return Disk Map implementation
-     * @since 1.2.0
-     */
-    override fun <T : Map<*,*>> getHashMap(name: String): T = getHashMap(name, 10)
 
     /**
      * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
@@ -263,15 +217,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
      * It is now an implementation of an inter-changeable index followed by a skip list.
      */
-    override fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T = getMapWithType(name, MapType.LOAD, loadFactor)
-
-    /**
-     * Get a map with a skip list index
-     *
-     * @param name Name of the map to uniquely identify it
-     * @return Instantiated map with skip list
-     */
-    override fun <T : Map<*,*>> getSkipListMap(name: String): T = getMapWithType(name, MapType.SKIP_LIST, 10)
+    override fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T = getMapWithType(name, loadFactor)
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
@@ -296,12 +242,11 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
      *
      * @param name identifier of a map
-     * @param type Type of map
      * @return Created map
      *
      * @since 1.2.0
      */
-    private fun <T : Map<*,*>> getMapWithType(name: String, type: MapType, loadFactor: Int): T = synchronized(maps) {
+    private fun <T : Map<*,*>> getMapWithType(name: String, loadFactor: Int): T = synchronized(maps) {
         return maps.getOrPut(name) {
             var header: Header? = null
             val headerReference = internalMaps[name]
@@ -316,10 +261,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
                 internalMaps.put(name, header.position)
             }
 
-            return@getOrPut when (type) {
-                MapType.SKIP_LIST -> newSkipListMap<T>(store, header)
-                MapType.LOAD      -> newScalableMap(store, header, loadFactor)
-            }
+            return@getOrPut newScalableMap(store, header, loadFactor)
         } as T
     }
 

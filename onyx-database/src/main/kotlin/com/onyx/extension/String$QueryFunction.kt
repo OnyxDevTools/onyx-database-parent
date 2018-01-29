@@ -1,6 +1,7 @@
 package com.onyx.extension
 
-import com.onyx.persistence.query.QueryFunction
+import com.onyx.persistence.function.QueryFunction
+import com.onyx.persistence.function.QueryFunctionFactory
 import com.onyx.persistence.query.QueryFunctionType
 
 /**
@@ -12,7 +13,7 @@ fun String.getFunctionWithinSelection(): QueryFunction? {
     val match = "(\\w+)\\((.+)\\)".toRegex().find(this)
 
     return if(match != null) {
-        val function = match.groupValues.get(1)
+        val function = match.groupValues[1]
         var attribute = match.groupValues[2]
 
         val tokens = attribute.split(",").map { it.trim().replace("'", "").replace("\"", "") }
@@ -20,9 +21,9 @@ fun String.getFunctionWithinSelection(): QueryFunction? {
             attribute = tokens[0]
             val param1 = tokens[1]
             val param2 = if(tokens.size > 2) tokens[2] else null
-            QueryFunction(QueryFunctionType.value(function), attribute, param1, param2)
+            QueryFunctionFactory.create(QueryFunctionType.value(function), attribute, param1, param2)
         } else {
-            QueryFunction(QueryFunctionType.value(function), attribute)
+            QueryFunctionFactory.create(QueryFunctionType.value(function), attribute)
         }
     } else {
         null

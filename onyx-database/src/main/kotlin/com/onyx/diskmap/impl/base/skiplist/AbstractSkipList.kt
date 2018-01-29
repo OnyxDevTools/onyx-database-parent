@@ -5,7 +5,7 @@ import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.forceCompare
-import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.lang.map.WriteSynchronizedMap
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.util.*
 
@@ -21,11 +21,10 @@ import java.util.*
  * @since 1.2.0
  * @since 2.0.0 This was refactored to make simpler.  It now conforms better to an actual skip list
  */
-@Suppress("UNCHECKED_CAST", "LeakingThis")
+@Suppress("UNCHECKED_CAST")
 abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fileStore: Store, header: Header, detached: Boolean = false) : AbstractDiskMap<K, V>(fileStore, header, detached) {
 
-    private lateinit var threadLocalHead: ThreadLocal<SkipNode> // Default threadLocalHead of the SkipList
-    protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
+    protected var nodeCache: MutableMap<Long, SkipNode?> = WriteSynchronizedMap(WeakHashMap())
 
     init {
         determineHead()
@@ -56,9 +55,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      *
      */
     private fun determineHead() {
-        if (detached) {
-            threadLocalHead = ThreadLocal()
-        } else {
+        if (!detached) {
             if (reference.firstNode > 0L) {
                 head = findNodeAtPosition(reference.firstNode)
             } else {
@@ -71,7 +68,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
     }
 
     open protected fun findNodeAtPosition(position: Long):SkipNode? = if(position == 0L) null else SkipNode.get(fileStore, position)
-    open protected fun findValueAtPosition(position: Long):V? = if(position == 0L) null else fileStore.getObject(position)
 
     override fun containsKey(key: K): Boolean = find(key) != null
 
@@ -83,30 +79,29 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * @return What we just put in
      */
     override fun put(key: K, value: V): V {
-        val valueLocation:Pair<Int, Long> = fileStore.writeObject(value)
+        val valueLocation:Long = fileStore.writeObject(value)
         var nearest:SkipNode = nearest(key)!!
 
         if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore))) {
 
-            nearest.setRecord(fileStore, valueLocation.second)
+            nearest.setRecord(fileStore, valueLocation)
             updateNodeCache(nearest)
-            updateValueCache(nearest)
             updateKeyCache(key)
 
             // Update Entire column
             while(nearest.up > 0) {
                 nearest = findNodeAtPosition(nearest.up)!!
-                nearest.setRecord(fileStore, valueLocation.second)
+                nearest.setRecord(fileStore, valueLocation)
                 updateNodeCache(nearest)
             }
 
         } else {
 
             var head:SkipNode = this.head!!
-            val keyLocation:Pair<Int, Long> = fileStore.writeObject(key)
+            val keyLocation:Long = fileStore.writeObject(key)
 
             //Stuff in between nearest and its right partner
-            var insertedNode:SkipNode = insertNode(keyLocation.second, valueLocation.second, nearest, null, 0)
+            var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0, key)
             updateNodeCache(insertedNode)
             var level:Short = 0.toShort()
 
@@ -131,12 +126,13 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                 if(nearest.up > 0)
                     nearest = findNodeAtPosition(nearest.up)!!
 
-                insertedNode = insertNode(keyLocation.second, valueLocation.second, nearest, insertedNode, level)
+                insertedNode = insertNode(keyLocation, valueLocation, nearest, insertedNode, level, key)
                 updateNodeCache(insertedNode)
                 level++
             }
 
             incrementSize()
+
         }
 
         return value
@@ -146,10 +142,10 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * Insert a new node between 2 other nodes
      * @since 2.0.0
      */
-    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short):SkipNode {
+    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short, keyValue:K):SkipNode {
         val right:SkipNode? = if(left?.right ?: 0L > 0L) findNodeAtPosition(left!!.right) else null
 
-        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level)
+        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level, keyValue)
         updateNodeCache(newNode)
         right?.setLeft(fileStore, newNode.position)
         updateNodeCache(right)
@@ -174,7 +170,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
         if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore))) {
 
-            returnValue = findValueAtPosition(nearest.record)
+            returnValue = nearest.getRecord(fileStore)
             deleteNode(nearest, head)
             var foundNode:SkipNode = nearest
 
@@ -210,10 +206,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
     /**
      * Get value from map
      */
-    override fun get(key: K): V? {
-        val node:SkipNode = find(key) ?: return null
-        return findValueAtPosition(node.record)
-    }
+    override fun get(key: K): V? = find(key)?.getRecord(fileStore)
 
     /**
      * Find matching value.  This is different than nearest because it will return null
@@ -266,11 +259,6 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
     /**
      * Abstract method for updating cache for a value
      */
-    abstract fun updateValueCache(node:SkipNode?)
-
-    /**
-     * Abstract method for updating cache for a value
-     */
     abstract fun updateKeyCache(node:K)
 
     companion object {
@@ -278,6 +266,8 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
         private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
         private fun coinToss() = Math.random() < 0.5
+
+        private val threadLocalHead: ThreadLocal<SkipNode> = ThreadLocal()
 
     }
 }

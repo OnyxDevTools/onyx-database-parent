@@ -10,6 +10,8 @@ import com.onyx.interactors.cache.data.CachedResults
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.extension.meetsCriteria
+import com.onyx.interactors.query.QueryCollector
+import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.map.OptimisticLockingMap
 
@@ -43,9 +45,9 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      *
      * @param results Result as references
      */
-    override fun setCachedQueryResults(query: Query, results: MutableMap<Reference, Any?>): CachedResults {
+    override fun setCachedQueryResults(query: Query, results: MutableList<Reference>): CachedResults {
         val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }
-        val cachedResults = CachedResults(results)
+        val cachedResults = CachedResults(results.toHashSet())
 
         // Set a strong reference if this is a query listener.  In that
         // case we do not want it to get cleaned up.
@@ -134,33 +136,44 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      * @since 2.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Any?> cache(query: Query, body: () -> MutableMap<Reference, T>): MutableMap<Reference, T> {
+    override fun <E> cache(query: Query, body: () -> QueryCollector<E>): QueryCollector<E> {
         var cachedResults:CachedResults? = null
         try {
 
             // Check for cached query results.
             cachedResults = getCachedQueryResults(query)
-            val results: MutableMap<Reference, T>
+            val results: QueryCollector<E>
 
             // The query has already been cached.  Return the results from the cache
             if (cachedResults?.references != null) {
-                results = cachedResults.references as MutableMap<Reference, T>
+                results = QueryCollectorFactory.create(context, context.getBaseDescriptorForEntity(query.entityType!!)!!, query)
+                results.setReferenceSet(cachedResults.references!!)
             } else {
                 // There were no cached results, load them from the store
                 results = body.invoke()
-                if(cachedResults == null)
-                    cachedResults = setCachedQueryResults(query, results as MutableMap<Reference, Any?>)
-                else
-                    cachedResults.references = results as MutableMap<Reference, Any?>
+
+                // Only cache if it is not over the max cachable references
+                if(results.shouldCacheResults()) {
+                    if (cachedResults == null)
+                        cachedResults = setCachedQueryResults(query, results.references)
+                    else
+                        cachedResults.references = results.references.toHashSet()
+                }
             }
 
-            query.resultsCount = results.size
+            results.finalizeResults()
+            query.resultsCount = results.getNumberOfResults()
+
             return results
         } finally {
             if (query.changeListener != null) {
                 subscribe(cachedResults!!, query.changeListener!!)
             }
         }
+    }
+
+    companion object {
+        val MAX_CACHED_REFERENCES = 100000000 // Cannot cache more than this amount
     }
 }
 

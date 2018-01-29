@@ -64,7 +64,6 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
         this.mapReadWriteLock = closureLock
         this.loadFactor = loadFactor.toByte()
         this.hashMatrixNodeCache = EmptyMap()
-        this.valueByPositionCache = EmptyMap()
         this.keyCache = EmptyMap()
     }
 

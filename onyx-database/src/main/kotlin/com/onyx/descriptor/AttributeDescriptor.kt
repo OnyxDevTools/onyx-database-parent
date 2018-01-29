@@ -1,5 +1,7 @@
 package com.onyx.descriptor
 
+import com.onyx.extension.common.ClassMetadata
+
 /**
  * Created by timothy.osborn on 12/11/14.
  *
@@ -11,5 +13,5 @@ data class AttributeDescriptor(
     var isEnum: Boolean = false,
     var enumValues: String? = null,
     var name: String = "",
-    var type: Class<*> = Any::class.java
+    var type: Class<*> = ClassMetadata.ANY_CLASS
 ) : AbstractBaseDescriptor()

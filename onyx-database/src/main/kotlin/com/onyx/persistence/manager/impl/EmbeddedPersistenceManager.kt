@@ -3,6 +3,7 @@ package com.onyx.persistence.manager.impl
 import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.extension.common.instance
+import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.impl.DefaultQueryInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.*
@@ -151,21 +152,14 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
-        return try {
-            val results = queryController.getReferencesForQuery<Reference>(query)
-            if(query.shouldSortForDelete())
-                queryController.sort(query, results)
+        val results:QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+        query.resultsCount = results.getNumberOfResults()
 
-            query.resultsCount = results.size
-
-            journal {
-                context.transactionInteractor.writeDeleteQuery(query)
-            }
-
-            queryController.deleteRecordsWithReferences(results, query)
-        } finally {
-            queryController.cleanup()
+        journal {
+            context.transactionInteractor.writeDeleteQuery(query)
         }
+
+        return queryController.deleteRecordsWithReferences(results.references, query)
     }
 
     /**
@@ -188,20 +182,14 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
-        return try {
-            val results = queryController.getReferencesForQuery<Reference>(query)
-            query.resultsCount = results.size
-            if(query.shouldSortForUpdate())
-                queryController.sort(query, results)
+        val results:QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+        query.resultsCount = results.getNumberOfResults()
 
-            journal {
-                context.transactionInteractor.writeQueryUpdate(query)
-            }
-
-            queryController.updateRecordsWithReferences(query, results)
-        } finally {
-            queryController.cleanup()
+        journal {
+            context.transactionInteractor.writeQueryUpdate(query)
         }
+
+        return queryController.updateRecordsWithReferences(query, results.references)
     }
 
     /**
@@ -221,29 +209,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-
-        try {
-            val results: MutableMap<Reference, IManagedEntity> = cache(query) {
-                val matchingReferences = queryController.getReferencesForQuery<IManagedEntity>(query)
-                return@cache if (query.shouldSortResults())
-                    queryController.sort(query, matchingReferences)
-                else
-                    matchingReferences
-            }
-
-            return if (query.selections != null && query.selections!!.isNotEmpty()) {
-                var selectionResults= queryController.referencesToSelectionResults(query, results) as List<E>
-                if(query.shouldSortSelections()) {
-                    selectionResults = queryController.sort(query, selectionResults)
-                }
-                selectionResults
-            } else {
-                queryController.referencesToResults(query, results) as List<E>
-            }
-
-        } finally {
-            queryController.cleanup()
-        }
+        val results:QueryCollector<E> = cache(query) { queryController.getReferencesForQuery<E>(query) }
+        return results.results as List<E>
     }
 
     /**
@@ -259,23 +226,13 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun <E : IManagedEntity> executeLazyQuery(query: Query): List<E> {
         context.checkForKillSwitch()
 
+        query.isLazy = true
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-        return try {
-            val results:MutableMap<Reference,IManagedEntity?> = cache(query) {
-                val matchingReferences = queryController.getReferencesForQuery<IManagedEntity?>(query)
-
-                return@cache if (query.shouldSortResults())
-                    queryController.sort(query, matchingReferences)
-                else
-                    matchingReferences
-            }
-            LazyQueryCollection(descriptor, queryController.filterReferences(query, results), context) as List<E>
-        } finally {
-            queryController.cleanup()
-        }
+        val results:QueryCollector<E> = cache(query) { queryController.getReferencesForQuery<E>(query) }
+        return LazyQueryCollection<IManagedEntity>(descriptor, results.getLimitedReferences(), context) as List<E>
     }
 
     /**
@@ -532,12 +489,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             return cachedResults.references!!.size.toLong()
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-
-        return try {
-            queryController.getCountForQuery(query)
-        } finally {
-            queryController.cleanup()
-        }
+        return queryController.getCountForQuery(query)
     }
 
     /**
@@ -632,5 +584,5 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      *
      * @since 2.0.0
      */
-    private fun <T : Any?> cache(query: Query, body: () -> MutableMap<Reference, T>) = context.queryCacheInteractor.cache(query, body)
+    private fun <E> cache(query: Query, body: () -> QueryCollector<E>) = context.queryCacheInteractor.cache(query, body)
 }

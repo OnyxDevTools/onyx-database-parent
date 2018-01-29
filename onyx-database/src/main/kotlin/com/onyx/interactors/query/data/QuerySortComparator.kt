@@ -3,15 +3,14 @@ package com.onyx.interactors.query.data
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
+import com.onyx.extension.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryOrder
-import com.onyx.extension.attribute
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.compare
-import com.onyx.extension.toManyRelationshipAsMap
-import com.onyx.extension.toOneRelationshipAsMap
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.Contexts
 
 import java.util.*
@@ -35,8 +34,8 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
         scanObjects.forEachIndexed { index, scannerProperties ->
             val queryOrder = orderBy[index]
             val attributeValues = parentObjects[index]
-            val attribute1 = attributeValues.getOrPut(reference1) { getAttributeToCompare(scannerProperties, reference1, context)}
-            val attribute2 = attributeValues.getOrPut(reference2) { getAttributeToCompare(scannerProperties, reference2, context)}
+            val attribute1 = attributeValues.getOrPut(reference1) { getAttribute(scannerProperties, reference1, context)}
+            val attribute2 = attributeValues.getOrPut(reference2) { getAttribute(scannerProperties, reference2, context)}
 
             var compareValue = 0
             catchAll {
@@ -54,6 +53,52 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
         return if (reference1 == reference2) 0 else -1
     }
 
+    fun compare(entity1: IManagedEntity, entity2: IManagedEntity): Int {
+        val context = Contexts.get(contextId)!!
+
+        scanObjects.forEachIndexed { index, scannerProperties ->
+            val queryOrder = orderBy[index]
+            val attribute1 = getAttribute(scannerProperties, entity1, context)
+            val attribute2 = getAttribute(scannerProperties, entity2, context)
+
+            var compareValue = 0
+            catchAll {
+                compareValue = when {
+                    attribute2.compare(attribute1, QueryCriteriaOperator.GREATER_THAN) -> if (queryOrder.isAscending) 1 else -1
+                    attribute2.compare(attribute1, QueryCriteriaOperator.LESS_THAN) -> if (queryOrder.isAscending) -1 else 1
+                    else -> 0
+                }
+            }
+
+            if(compareValue != 0)
+                return@compare compareValue
+        }
+
+        return if (entity1 === entity2) 0 else -1
+    }
+
+    fun compare(entity1: Map<String, Any?>, entity2: Map<String, Any?>): Int {
+        orderBy.forEach {
+            val attribute1 = entity1[it.attribute]
+            val attribute2 = entity2[it.attribute]
+
+            var compareValue = 0
+            catchAll {
+                compareValue = when {
+                    attribute2.compare(attribute1, QueryCriteriaOperator.GREATER_THAN) -> if (it.isAscending) 1 else -1
+                    attribute2.compare(attribute1, QueryCriteriaOperator.LESS_THAN) -> if (it.isAscending) -1 else 1
+                    else -> 0
+                }
+            }
+
+            if(compareValue != 0)
+                return@compare compareValue
+        }
+
+        return if (entity1 === entity2) 0 else -1
+    }
+
+
     /**
      * Get an attribute value
      *
@@ -63,9 +108,26 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
      * @throws OnyxException Exception when trying to hydrate attribute
      */
     @Throws(OnyxException::class)
-    private fun getAttributeToCompare(queryAttributeResource: QueryAttributeResource, reference: Reference, context: SchemaContext): Any? = when {
-        queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> reference.toOneRelationshipAsMap(context, queryAttributeResource)
-        queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> reference.toManyRelationshipAsMap(context, queryAttributeResource)
-        else -> reference.attribute(context, queryAttributeResource.attribute, queryAttributeResource.descriptor)
+    private fun getAttribute(queryAttributeResource: QueryAttributeResource, reference: Reference, context: SchemaContext): Any? = getAttribute(queryAttributeResource, reference.toManagedEntity(context, queryAttributeResource.descriptor)!!, context)
+
+    /**
+     * Get an attribute value
+     *
+     * @param queryAttributeResource Scanner property
+     * @param entity Entity to get relationship for
+     * @return The attribute value.  Can also be a relationship attribute value
+     * @throws OnyxException Exception when trying to hydrate attribute
+     */
+    fun getAttribute(queryAttributeResource: QueryAttributeResource, entity: IManagedEntity, context: SchemaContext): Any? {
+        val parts = queryAttributeResource.attributeParts
+
+        return when {
+            parts.size == 1 && queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)?.firstOrNull()
+            parts.size == 1 && queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)
+            queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)?.firstOrNull()?.get(context, queryAttributeResource.descriptor, parts.last())
+            queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)?.map { it?.get<Any?>(context, queryAttributeResource.descriptor, parts.last()) }
+            else -> entity[context, entity.descriptor(context), queryAttributeResource.attribute]
+        }
     }
+
 }

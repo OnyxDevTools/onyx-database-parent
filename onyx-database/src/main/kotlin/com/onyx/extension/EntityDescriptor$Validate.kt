@@ -2,6 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.*
 import com.onyx.exception.*
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Entity
@@ -161,7 +162,8 @@ private fun EntityDescriptor.validateAttributes() =
                 IManagedEntity::class.java.isAssignableFrom(type) ||
                 List::class.java.isAssignableFrom(type) ||
                 Set::class.java.isAssignableFrom(type) ||
-                type.isEnum)) {
+             type.isEnum)) {
+
             throw EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " + type)
         }
     }
@@ -181,18 +183,18 @@ private fun EntityDescriptor.validateIdentifier() {
     try {
         val idField = entityClass.getDeclaredField(identifier!!.name)
 
-        if (!(idField.type == java.lang.Integer.TYPE
-                || idField.type == java.lang.Long.TYPE
-                || idField.type == java.lang.Double.TYPE
-                || idField.type == java.lang.Float.TYPE
-                || idField.type == java.lang.Short.TYPE
-                || idField.type == java.lang.Byte.TYPE
-                || idField.type == java.lang.Integer::class.java
-                || idField.type == java.lang.Long::class.java
-                || idField.type == java.lang.Double::class.java
-                || idField.type == java.lang.Float::class.java
-                || idField.type == java.lang.Short::class.java
-                || idField.type == java.lang.Byte::class.java
+        if (!(idField.type == ClassMetadata.INT_TYPE
+                || idField.type == ClassMetadata.LONG_TYPE
+                || idField.type == ClassMetadata.DOUBLE_TYPE
+                || idField.type == ClassMetadata.FLOAT_TYPE
+                || idField.type == ClassMetadata.SHORT_TYPE
+                || idField.type == ClassMetadata.LONG_TYPE
+                || idField.type == ClassMetadata.INT_PRIMITIVE_TYPE
+                || idField.type == ClassMetadata.LONG_PRIMITIVE_TYPE
+                || idField.type == ClassMetadata.DOUBLE_PRIMITIVE_TYPE
+                || idField.type == ClassMetadata.FLOAT_PRIMITIVE_TYPE
+                || idField.type == ClassMetadata.SHORT_PRIMITIVE_TYPE
+                || idField.type == ClassMetadata.BYTE_PRIMITIVE_TYPE
                 ) && identifier!!.generator == IdentifierGenerator.SEQUENCE) {
             throw InvalidIdentifierException(InvalidIdentifierException.INVALID_GENERATOR)
         }

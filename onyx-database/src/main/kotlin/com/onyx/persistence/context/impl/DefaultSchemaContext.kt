@@ -6,7 +6,6 @@ import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.store.StoreType
-import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
@@ -41,9 +40,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
-import java.io.File
-import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -148,7 +144,6 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun start() {
         killSwitch = false
-        createTemporaryDiskMapPool()
 
         initializeSystemEntities()
         initializePartitionSequence()
@@ -169,15 +164,6 @@ open class DefaultSchemaContext : SchemaContext {
                 it.value.commit()
                 it.value.close()
             }
-        }
-
-        // Shutdown all databases temporary disk map builders
-        temporaryDiskMapQueue.clear()
-
-        // Added to ensure all builders are closed whether they are checked out or not
-        temporaryDiskMaps.forEach {
-            it.close()
-            it.delete()
         }
 
         // Close transaction file
@@ -689,64 +675,6 @@ open class DefaultSchemaContext : SchemaContext {
         val partition = partitions[0]
 
         return getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
-    }
-
-    // endregion
-
-    // region Map Builder Queue
-
-    @JvmField
-    protected val temporaryDiskMaps: MutableSet<DiskMapFactory> = HashSet()
-
-    @JvmField
-    protected val temporaryDiskMapQueue = ArrayBlockingQueue<DiskMapFactory>(numberOfTemporaryFiles, false)
-
-    /**
-     * This method will create a pool of map builders.  They are used to run queries
-     * and then be recycled and put back on the queue.
-     *
-     * @since 1.3.0
-     */
-    open protected fun createTemporaryDiskMapPool() {
-        val temporaryFileLocation = this.location + File.separator + "temporary"
-        File(temporaryFileLocation).mkdirs()
-
-        for (i in 1..numberOfTemporaryFiles) {
-            val stringBuilder = temporaryFileLocation + File.separator + System.nanoTime().toString() + i.toString()
-
-            val file = File(stringBuilder)
-            file.createNewFile()
-            file.deleteOnExit() // Must delete since there is no more functionality to delete from references
-
-            val builder = DefaultDiskMapFactory(file.path, StoreType.MEMORY_MAPPED_FILE, this, true)
-            temporaryDiskMapQueue.add(builder)
-            temporaryDiskMaps.add(builder)
-        }
-    }
-
-    protected val numberOfTemporaryFiles
-        get() = if(FileChannelStore.isSmallDevice()) Runtime.getRuntime().availableProcessors() else (Runtime.getRuntime().availableProcessors() * 3)
-
-    /**
-     * Create Temporary Map Builder.
-     *
-     * @return Create new storage mechanism factory
-     * @since 1.3.0 Changed to use a pool of map builders.
-     * The intent of this is to increase performance.  There was a performance
-     * issue with map builders being destroyed invoking the DirectBuffer cleanup.
-     * That did not perform well
-     */
-    override fun createTemporaryMapBuilder(): DiskMapFactory = temporaryDiskMapQueue.take()
-
-    /**
-     * Recycle a temporary map factory so that it may be re-used
-     *
-     * @param diskMapFactory Discarded map factory
-     * @since 1.3.0
-     */
-    override fun releaseMapBuilder(diskMapFactory: DiskMapFactory) {
-        diskMapFactory.reset()
-        temporaryDiskMapQueue.offer(diskMapFactory)
     }
 
     // endregion

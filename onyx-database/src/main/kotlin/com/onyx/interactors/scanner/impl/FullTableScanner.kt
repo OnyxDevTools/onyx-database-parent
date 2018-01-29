@@ -1,7 +1,6 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
@@ -13,14 +12,13 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
-import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 1/3/15.
  *
  * It can either scan the entire table or a subset of index values
  */
-open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
 
     /**
      * Full Table Scan
@@ -30,18 +28,18 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(): MutableMap<Reference, Reference> {
-        val matching = HashMap<Reference, Reference>()
+    override fun scan(): MutableSet<Reference> {
+        val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
 
         @Suppress("UNCHECKED_CAST")
-        records.entries.filter {
+        records.entries.forEach {
             val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
-            entry.node != null && query.meetsCriteria(entry.value!!, Reference(partitionId, entry.node!!.position), context, descriptor)
-        }.forEach {
-            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
-            val reference = Reference(partitionId, entry.node!!.position)
-            matching.put(reference, reference)
+            val reference = Reference(partitionId, entry.node?.position ?: 0)
+            if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
+                collector?.collect(reference, entry.value)
+                matching.add(reference)
+            }
         }
 
         return matching
@@ -56,11 +54,14 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
      * @since 1.3.0 Simplified to check all criteria rather than only a single criteria
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
+    override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
-        return existingValues.filterTo(HashMap()) {
-            val entity = it.value.toManagedEntity(context, descriptor)
-            query.meetsCriteria(entity, it.value, context, descriptor)
+        return existingValues.filterTo(HashSet()) {
+            val entity = it.toManagedEntity(context, descriptor)
+            val meetsCriteria = query.meetsCriteria(entity, it, context, descriptor)
+            if(meetsCriteria)
+                collector?.collect(it, entity)
+            meetsCriteria
         }
     }
 }

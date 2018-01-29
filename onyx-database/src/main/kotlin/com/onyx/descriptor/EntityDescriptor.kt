@@ -1,5 +1,7 @@
+
 package com.onyx.descriptor
 
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.annotations.*
 import com.onyx.persistence.context.SchemaContext
@@ -50,7 +52,7 @@ constructor(
 
         var tmpClass: Class<*> = entityClass
 
-        while (tmpClass != Any::class.java) {
+        while (tmpClass != ClassMetadata.ANY_CLASS) {
             val newFields = Arrays.asList(*tmpClass.declaredFields)
             // Only add ones that have not already been added
             fields.addAll(newFields.filter { newField ->
@@ -69,7 +71,7 @@ constructor(
         val methodMap:MutableMap<String, Method> = HashMap()
         var tmpClass: Class<*> = entityClass
 
-        while (tmpClass != Any::class.java) {
+        while (tmpClass != ClassMetadata.ANY_CLASS) {
             val declaredMethods = tmpClass.declaredMethods
             declaredMethods.filter { methodMap[it.name] == null }.forEach { methodMap[it.name] = it}
             tmpClass = tmpClass.superclass
@@ -93,7 +95,7 @@ constructor(
 
         validateIsManagedEntity()
 
-        this.entity = entityClass.getAnnotation(Entity::class.java) as Entity
+        this.entity = entityClass.getAnnotation(ClassMetadata.ENTITY_ANNOTATION) as Entity
 
         assignIdentifier()
         assignAttributes()
@@ -111,11 +113,11 @@ constructor(
      */
     private fun assignIdentifier() = // Find the first identifier annotation
             fields.find {
-                it.getAnnotation(Identifier::class.java) != null
+                it.getAnnotation(ClassMetadata.IDENTIFIER_ANNOTATION) != null
             }.let {
                 // Build relationship descriptor
                 if(it != null) {
-                    val annotation = it.getAnnotation(Identifier::class.java)
+                    val annotation = it.getAnnotation(ClassMetadata.IDENTIFIER_ANNOTATION)
                     identifier = IdentifierDescriptor()
                     identifier!!.name = it.name
                     identifier!!.generator = annotation.generator
@@ -132,11 +134,11 @@ constructor(
      */
     private fun assignAttributes() =
             fields.filter {
-                it.getAnnotation(Attribute::class.java) != null || it.getAnnotation(Identifier::class.java) != null || it.getAnnotation(Index::class.java) != null || it.getAnnotation(Partition::class.java) != null
+                it.getAnnotation(ClassMetadata.ATTRIBUTE_ANNOTATION) != null || it.getAnnotation(ClassMetadata.IDENTIFIER_ANNOTATION) != null || it.getAnnotation(ClassMetadata.INDEX_ANNOTATION) != null || it.getAnnotation(ClassMetadata.PARTITION_ANNOTATION) != null
             }
             .forEach {
                 // Build Attribute descriptor
-                val annotation = it.getAnnotation(Attribute::class.java)
+                val annotation = it.getAnnotation(ClassMetadata.ATTRIBUTE_ANNOTATION)
                 val attribute = AttributeDescriptor()
                 attribute.name = it.name
                 attribute.type = it.type
@@ -165,10 +167,10 @@ constructor(
      */
     private fun assignRelationships() =
         fields.filter {
-            it.getAnnotation(Relationship::class.java) != null
+            it.getAnnotation(ClassMetadata.RELATIONSHIP_ANNOTATION) != null
         }.forEach {
             // Build relationship descriptor
-            val annotation = it.getAnnotation(Relationship::class.java)
+            val annotation = it.getAnnotation(ClassMetadata.RELATIONSHIP_ANNOTATION)
             val relationship = RelationshipDescriptor(cascadePolicy = annotation.cascadePolicy, fetchPolicy = annotation.fetchPolicy, inverse = annotation.inverse, inverseClass = annotation.inverseClass.java, parentClass = entityClass, relationshipType = annotation.type)
             relationship.name = it.name
             relationship.type = it.type
@@ -185,9 +187,9 @@ constructor(
      */
     private fun assignIndexes() =
         fields.filter {
-            it.getAnnotation(Index::class.java) != null
+            it.getAnnotation(ClassMetadata.INDEX_ANNOTATION) != null
         }.forEach {
-            val annotation = it.getAnnotation(Index::class.java)
+            val annotation = it.getAnnotation(ClassMetadata.INDEX_ANNOTATION)
 
             // Build Index descriptor
             val index = IndexDescriptor()
@@ -207,9 +209,9 @@ constructor(
      */
     private fun assignPartition() =
         fields.filter {
-            it.getAnnotation(Partition::class.java) != null
+            it.getAnnotation(ClassMetadata.PARTITION_ANNOTATION) != null
         }.forEach {
-            if (it.getAnnotation(Partition::class.java) != null) {
+            if (it.getAnnotation(ClassMetadata.PARTITION_ANNOTATION) != null) {
                 this.partition = PartitionDescriptor()
                 this.partition!!.name = it.name
                 this.partition!!.type = it.type

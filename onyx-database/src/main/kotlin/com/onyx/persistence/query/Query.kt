@@ -2,6 +2,7 @@ package com.onyx.persistence.query
 
 import com.onyx.buffer.BufferStreamable
 import com.onyx.extension.getFunctionWithinSelection
+import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.manager.PersistenceManager
 import java.util.*
 import kotlin.collections.ArrayList
@@ -145,6 +146,7 @@ class Query : BufferStreamable {
     var isTerminated: Boolean = false
 
 
+    @Transient
     private var functions: List<QueryFunction>? = null
 
     /**
@@ -467,19 +469,13 @@ class Query : BufferStreamable {
 
     // endregion
 
-    fun shouldSortForUpdate():Boolean = (this.firstRow > 0 || this.maxResults != -1 && this.updates.isNotEmpty())
+    fun shouldSortResults(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty()
 
-    fun shouldSortForDelete():Boolean = (this.firstRow > 0 || this.maxResults != -1)
+    @Transient
+    internal var isUpdateOrDelete:Boolean = false
 
-    fun shouldGroupResults():Boolean = (groupBy?.isNotEmpty() == true)
-
-    fun shouldAggregateFunctions():Boolean = functions().isNotEmpty()
-
-    fun shouldAggregateGroupFunctions():Boolean = functions().any { it.type.isGroupFunction }
-
-    fun shouldSortResults(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty() && !shouldSortSelections()
-
-    fun shouldSortSelections(): Boolean = this.queryOrders != null && this.queryOrders!!.isNotEmpty() && this.selections?.isNotEmpty() == true && this.queryOrders?.firstOrNull { this.selections?.contains(it.attribute) == false } == null
+    @Transient
+    var isLazy:Boolean = false
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -9,7 +9,6 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
-import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.persistence.context.Contexts
 
@@ -19,7 +18,7 @@ import com.onyx.persistence.context.Contexts
  *
  * Scan identifier values
  */
-open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
 
     /**
      * Full scan with ids
@@ -28,21 +27,21 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      * @throws OnyxException Cannot scan records
      */
     @Throws(OnyxException::class)
-    override fun scan(): MutableMap<Reference, Reference> {
+    override fun scan(): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
         val recordInteractor = context.getRecordInteractor(descriptor)
         return scan(recordInteractor)
     }
 
-    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):MutableMap<Reference, Reference> {
-        val matching = HashMap<Reference, Reference>()
+    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):MutableSet<Reference> {
+        val matching = HashSet<Reference>()
 
         // If it is an in clause
         if (criteria.value is List<*>) {
             (criteria.value as List<*>)
                     .map { Reference(partitionId, recordInteractor.getReferenceId(it!!)) }
                     .filter { it.reference > 0L }
-                    .forEach { matching.put(it, it) }
+                    .forEach { matching.add(it) }
         } else {
             val values: Set<Long> = when {
                 criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         recordInteractor.findAllAbove(criteria.value!!, false)
@@ -54,7 +53,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
 
             values.filter { it > 0L }
                     .map { Reference(partitionId, it) }
-                    .forEach { matching.put(it, it) }
+                    .forEach { matching.add(it) }
         }
 
         return matching
@@ -68,8 +67,8 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      * @throws OnyxException Cannot scan records
      */
     @Throws(OnyxException::class)
-    override fun scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference> {
+    override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         val matching = scan()
-        return existingValues.filterTo(HashMap()) { matching.containsKey(it.key) }
+        return existingValues.filterTo(HashSet()) { matching.contains(it) }
     }
 }

@@ -244,14 +244,6 @@ interface SchemaContext {
     fun getRelationshipInteractor(relationshipDescriptor: RelationshipDescriptor): RelationshipInteractor
 
     /**
-     * Create Temporary Map Builder
-     * @since 1.0.0
-     *
-     * @return Create new storage mechanism factory
-     */
-    fun createTemporaryMapBuilder(): DiskMapFactory
-
-    /**
      * Get System Entity By Name
      * @since 1.0.0
      * @param name System entity name
@@ -268,17 +260,6 @@ interface SchemaContext {
      * @return System Entity matching ID
      */
     fun getSystemEntityById(systemEntityId: Int): SystemEntity?
-
-    /**
-     * Release a map factory and prepare it for re-use
-     * This was added to prevent direct buffers from being destroyed.
-     * That caused performance issues
-     *
-     * @param diskMapFactory Map factory to recycle
-     *
-     * @since 1.3.0
-     */
-    fun releaseMapBuilder(diskMapFactory: DiskMapFactory)
 
     @Throws(InitializationException::class)
     fun checkForKillSwitch() {

@@ -125,10 +125,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
          *
          * @return The next dictionary object
          */
-        override fun next(): V? {
-            val next = nodeIterator.next()
-            return if(next != null) findValueAtPosition(next.record)as V else null
-        }
+        override fun next(): V? = nodeIterator.next()?.getRecord<V>(fileStore)
 
         override fun remove() = Unit
 
@@ -281,7 +278,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, head
          *
          * @return Value from the data position
          */
-        override val value: B? by lazy { findValueAtPosition(node!!.record) as B }
+        override val value: B? = node?.getRecord<B>(fileStore)
 
         override fun setValue(newValue: B?): B? = value
     }

@@ -9,8 +9,8 @@ import com.onyx.extension.createNewEntity
 import com.onyx.extension.getAttributeWithinSelection
 import com.onyx.extension.getFunctionWithinSelection
 import com.onyx.persistence.context.SchemaContext
+import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryFunction
 
 import java.util.ArrayList
 
@@ -19,7 +19,7 @@ import java.util.ArrayList
  *
  * Properties to use to scan an entity
  */
-class QueryAttributeResource private constructor(
+class QueryAttributeResource constructor(
 
     val descriptor: EntityDescriptor,
     val attributeDescriptor: AttributeDescriptor? = null,
@@ -27,6 +27,7 @@ class QueryAttributeResource private constructor(
     val attribute: String, val selection:String, context: SchemaContext,
     val function:QueryFunction? = null) {
     val contextId = context.contextId
+    val attributeParts:List<String> by lazy { attribute.split(".") }
 
     companion object {
 
@@ -72,7 +73,7 @@ class QueryAttributeResource private constructor(
 
                     // Hey we found what we want, lets get the attribute and than decide what descriptor we got
                     val attributeDescriptor = previousDescriptor.attributes[relationshipsAttributeName]
-                    scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, attributeDescriptor = attributeDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = if(function?.type?.isGroupFunction == true) attribute else it, function = function))
+                    scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, attributeDescriptor = attributeDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = it, function = function))
                 } else {
                     val attributeDescriptor = descriptor.attributes[attribute]
                     if (attributeDescriptor == null) {
@@ -83,10 +84,10 @@ class QueryAttributeResource private constructor(
                             tmpObject = relationshipDescriptor.inverseClass.createNewEntity() // Keep on getting the descriptors until we get what we need
                             previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
 
-                            scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = if(function?.type?.isGroupFunction == true) attribute else it, function = function))
+                            scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = it, function = function))
                         }
                     } else {
-                        scanObjects.add(QueryAttributeResource(descriptor = descriptor, attributeDescriptor = attributeDescriptor, context = context, attribute = attribute, selection = if(function?.type?.isGroupFunction == true) attribute else it, function = function))
+                        scanObjects.add(QueryAttributeResource(descriptor = descriptor, attributeDescriptor = attributeDescriptor, context = context, attribute = attribute, selection = it, function = function))
                     }
                 }
             }

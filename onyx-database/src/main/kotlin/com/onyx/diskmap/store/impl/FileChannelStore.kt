@@ -36,14 +36,14 @@ open class FileChannelStore() : Store {
 
     final override var filePath: String = ""
     var deleteOnClose: Boolean = false // Whether to delete this file upon closing database or JVM
-    var bufferSliceSize = if (isSmallDevice()) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
+    var bufferSliceSize = if (isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
 
     protected var channel: FileChannel? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
 
     constructor(filePath: String = "", context: SchemaContext? = null, deleteOnClose: Boolean = false) : this() {
-        this.bufferSliceSize = if (deleteOnClose || isSmallDevice()) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
+        this.bufferSliceSize = if (deleteOnClose || isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE
         this.deleteOnClose = deleteOnClose
         this.filePath = filePath
         this.contextId = context?.contextId
@@ -291,13 +291,13 @@ open class FileChannelStore() : Store {
         val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
         val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 6 // 6MB
 
-        fun isSmallDevice():Boolean {
+        val isSmallDevice:Boolean by lazy {
             try {
                 Class.forName("android.app.Activity")
             } catch (e: ClassNotFoundException) {
-                return false
+                return@lazy false
             }
-            return true
+            return@lazy true
         }
     }
 

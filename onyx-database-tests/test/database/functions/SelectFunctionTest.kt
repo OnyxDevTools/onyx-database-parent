@@ -18,6 +18,7 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     @Before
     fun insertTestData() {
+        manager.from(AllAttributeEntityWithRelationship::class).delete()
         val entity = AllAttributeEntityWithRelationship()
 
         entity.longPrimitive = 2L

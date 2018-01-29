@@ -25,9 +25,9 @@ annotation class Index(
          * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
          * to change.  Always plan for scale when designing your data model.
          *
-         * This defaults to 5 in order to account for efficiency for smaller data sets.  The footprint will be smaller
+         * This defaults to 2 in order to account for efficiency for smaller data sets.  The footprint will be smaller
          * the smaller the value.
          *
          * @since 1.2.0
          */
-        val loadFactor: Byte = 5)
+        val loadFactor: Byte = 2)

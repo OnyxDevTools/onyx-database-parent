@@ -1,5 +1,6 @@
 package com.onyx.descriptor
 
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.FetchPolicy
 import com.onyx.persistence.annotations.values.RelationshipType
@@ -19,7 +20,7 @@ data class RelationshipDescriptor(
         var cascadePolicy: CascadePolicy,
         var loadFactor: Byte = 1,
         var name: String = "",
-        var type: Class<*> = Any::class.java
+        var type: Class<*> = ClassMetadata.ANY_CLASS
 ) : AbstractBaseDescriptor() {
 
     lateinit var entityDescriptor: EntityDescriptor

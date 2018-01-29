@@ -2,7 +2,6 @@ package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
-import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
@@ -18,7 +17,6 @@ import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.extension.meetsCriteria
 import com.onyx.persistence.context.Contexts
 import java.util.concurrent.Future
-import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 1/3/15.
@@ -26,7 +24,7 @@ import kotlin.collections.HashMap
  *
  * It can either scan the entire table or a subset of index values
  */
-class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, temporaryDataFile: DiskMapFactory, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager), TableScanner {
+class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
 
     private var systemEntity: SystemEntity = context.getSystemEntityByName(query.entityType!!.name)!!
 
@@ -38,18 +36,18 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): MutableMap<Reference, Reference> {
-        val matching = HashMap<Reference, Reference>()
+    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): MutableSet<Reference> {
+        val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
 
         @Suppress("UNCHECKED_CAST")
-        records.entries.filter {
-            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
-            entry.node != null && query.meetsCriteria(entry.value!!, Reference(partitionId, entry.node!!.position), context, descriptor)
-        }.forEach {
-            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any, IManagedEntity>
-            val reference = Reference(partitionId, entry.node!!.position)
-            matching.put(reference, reference)
+        records.entries.forEach {
+            val entry = it as AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
+            val reference = Reference(partitionId, entry.node?.position ?: 0)
+            if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
+                collector?.collect(reference, entry.value)
+                matching.add(reference)
+            }
         }
 
         return matching
@@ -62,12 +60,12 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    override fun scan(): MutableMap<Reference, Reference> {
+    override fun scan(): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
 
         if (query.partition === QueryPartitionMode.ALL) {
-            val matching = HashMap<Reference, Reference>()
-            val units = ArrayList<Future<Map<Reference, Reference>>>()
+            val matching = HashSet<Reference>()
+            val units = ArrayList<Future<Set<Reference>>>()
 
             systemEntity.partition!!.entries.forEach {
                 units.add(

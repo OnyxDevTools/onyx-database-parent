@@ -29,7 +29,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
         val after = System.currentTimeMillis()
 
         val timeToComplete  = after - time
-        assertTrue(timeToComplete < 100, "Full table scan with 100k records should take under 100 ms when cached")
+        assertTrue(timeToComplete < 20, "Full table scan with 100k records should take under 100 ms when cached")
     }
 
     /**
@@ -52,7 +52,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
         assertEquals(20, results.size, "Only 20 records should be returned")
         assertEquals(100000, builder.query.resultsCount, "100k records total matching criteria")
-        assertTrue(after - before < 6000, "Query took more than 6 seconds.  Something has gone wrong")
+        assertTrue(after - before < 1000, "Query took more than 1 seconds.  Something has gone wrong")
     }
 
     /**
@@ -79,7 +79,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
         val timeToComplete = after - before
         assertEquals(20, results.size, "Query should only return 20 records")
-        assertTrue(timeToComplete < 300, "Query should not take that much time to complete")
+        assertTrue(timeToComplete < 20, "Query should not take that much time to complete")
     }
 
     /**
@@ -113,7 +113,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
         assertEquals(20, results.size, "Query should only return 20 records")
         assertEquals(5000, query.resultsCount, "Query should have 500 records")
-        assertTrue(after - time < 1000, "Query should only take a seconds since it is on an index")
+        assertTrue(after - time < 100, "Query should only take a seconds since it is on an index")
     }
 
     /**

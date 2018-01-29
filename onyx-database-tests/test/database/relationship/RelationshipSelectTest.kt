@@ -122,8 +122,8 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         query.selections = Arrays.asList("firstName", "address")
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Missing query data")
-        assertTrue(addresses[0]["address"] is Map<*, *>)
-        assertEquals("Sluisvaart", (addresses[0]["address"] as Map<*, *>)["street"], "Incorrect Query Data")
+        assertTrue(addresses[0]["address"] is AddressNoPartition)
+        assertEquals("Sluisvaart", (addresses[0]["address"] as AddressNoPartition).street, "Incorrect Query Data")
     }
 
     @Test
@@ -159,9 +159,9 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
-        assertNotNull(((addresses[0]["occupants"] as List<*>)[0] as Map<*, *>)["firstName"])
-        assertNotNull(((addresses[0]["occupants"] as List<*>)[1] as Map<*, *>)["firstName"])
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is PersonNoPartition)
+        assertNotNull(((addresses[0]["occupants"] as List<*>)[0] as PersonNoPartition).firstName)
+        assertNotNull(((addresses[0]["occupants"] as List<*>)[1] as PersonNoPartition).firstName)
     }
 
     @Test
@@ -196,9 +196,9 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
-        assertNotNull(((addresses[0]["occupants"] as List<*>)[0] as Map<*, *>)["firstName"])
-        assertNotNull(((addresses[0]["occupants"] as List<*>)[1] as Map<*, *>)["firstName"])
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is PersonNoPartition)
+        assertNotNull(((addresses[0]["occupants"] as List<*>)[0] as PersonNoPartition).firstName)
+        assertNotNull(((addresses[0]["occupants"] as List<*>)[1] as PersonNoPartition).firstName)
     }
 
     @Test
@@ -262,8 +262,8 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         query.queryOrders = Arrays.asList(QueryOrder("firstName"), QueryOrder("address.street"))
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Missing query data")
-        assertTrue(addresses[0]["address"] is Map<*, *>)
-        assertEquals("Sluisvaart", (addresses[0]["address"] as Map<*, *>)["street"])
+        assertTrue(addresses[0]["address"] is AddressNoPartition)
+        assertEquals("Sluisvaart", (addresses[0]["address"] as AddressNoPartition).street)
 
     }
 
@@ -302,7 +302,7 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is PersonNoPartition)
     }
 
     @Test
@@ -336,7 +336,7 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is PersonNoPartition)
     }
 
     @Test

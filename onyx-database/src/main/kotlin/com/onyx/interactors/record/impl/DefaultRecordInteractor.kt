@@ -70,15 +70,15 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
             }
         } else {
             entity.onPrePersist(context, entityDescriptor)
-                val recordId = records.getRecID(identifierValue!!)
-                if (recordId > 0L) {
-                    oldReference = recordId
-                    isNew.set(false)
-                    // Update Cached queries
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
-                } else {
-                    isNew.set(true)
-                }
+            val recordId = records.getRecID(identifierValue!!)
+            if (recordId > 0L) {
+                oldReference = recordId
+                isNew.set(false)
+                // Update Cached queries
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
+            } else {
+                isNew.set(true)
+            }
             records.put(identifierValue, entity)
         }
 

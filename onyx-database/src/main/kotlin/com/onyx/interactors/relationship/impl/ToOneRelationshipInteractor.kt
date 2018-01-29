@@ -46,6 +46,9 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
 
         val existingReference = relationshipReferenceMap[parentRelationshipReference]?.firstOrNull()
 
+        if(existingReference == null && currentRelationshipReference == null)
+            return
+
         // Cascade Delete. Make sure it is either ALL, or DELETE.
         if (relationshipDescriptor.shouldDeleteEntity) {
             if (currentRelationshipReference == null && existingReference != null) {
@@ -62,12 +65,14 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
         }
 
         if (relationshipObject != null) {
-            saveInverseRelationship(entity, relationshipObject, parentRelationshipReference, currentRelationshipReference!!)
+            if(existingReference != currentRelationshipReference) {
+                saveInverseRelationship(entity, relationshipObject, parentRelationshipReference, currentRelationshipReference!!)
                 relationshipReferenceMap.put(parentRelationshipReference, hashSetOf(currentRelationshipReference))
-        } else {
-                relationshipReferenceMap.put(parentRelationshipReference, hashSetOf())
             }
+        } else if(existingReference != null) {
+            relationshipReferenceMap.put(parentRelationshipReference, hashSetOf())
         }
+    }
 
     /**
      * Hydrate relationship for entity

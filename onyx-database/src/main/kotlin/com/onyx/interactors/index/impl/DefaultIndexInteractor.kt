@@ -9,6 +9,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.identifier
 
 import java.util.*
@@ -44,6 +45,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      */
     @Throws(OnyxException::class)
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
+
         // Delete the old index key
         if (oldReferenceId > 0) {
             delete(oldReferenceId)

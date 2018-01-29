@@ -88,10 +88,11 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         val first = QueryCriteria("firstName", QueryCriteriaOperator.EQUAL, "Cristian")
         val second = QueryCriteria("address.street", QueryCriteriaOperator.EQUAL, "Sluisvaart")
         val query = Query(Person::class.java, first.and(second))
-        query.selections = Arrays.asList("firstName", "address.street")
+        query.selections = Arrays.asList("firstName", "address.street", "address.occupants.address.street")
         query.partition = "ASDF"
-        val addresses = manager.executeQuery<Person>(query)
+        val addresses = manager.executeQuery<Map<String, String>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
+        assertTrue(addresses[0]["address.street"] is String)
     }
 
     @Test
@@ -113,8 +114,8 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         query.partition = "ASDF"
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
-        assertTrue(addresses[0]["address"] is Map<*, *>, "Result format should be a map")
-        assertEquals("Sluisvaart", (addresses[0]["address"] as Map<*, *>)["street"], "Addresses does not have correct data")
+        assertTrue(addresses[0]["address"] is Address, "Result format should be a map")
+        assertEquals("Sluisvaart", (addresses[0]["address"] as Address).street, "Addresses does not have correct data")
     }
 
     @Test
@@ -151,9 +152,9 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
-        assertTrue(((addresses[0]["occupants"] as List<*>)[0] as Map<*, *>)["firstName"] is String)
-        assertTrue(((addresses[0]["occupants"] as List<*>)[1] as Map<*, *>)["firstName"] is String)
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Person)
+        assertTrue(((addresses[0]["occupants"] as List<*>)[0] as Person).firstName is String)
+        assertTrue(((addresses[0]["occupants"] as List<*>)[1] as Person).firstName is String)
     }
 
     @Test
@@ -189,7 +190,7 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Person)
     }
 
     @Test
@@ -256,8 +257,8 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         query.queryOrders = Arrays.asList(QueryOrder("firstName"), QueryOrder("address.street"))
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
-        assertTrue(addresses[0]["address"] is Map<*, *>)
-        assertTrue((addresses[0]["address"] as Map<*, *>)["street"] == "Sluisvaart")
+        assertTrue(addresses[0]["address"] is Address)
+        assertTrue((addresses[0]["address"] as Address).street == "Sluisvaart")
 
     }
 
@@ -296,7 +297,7 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Person)
     }
 
     @Test
@@ -330,6 +331,6 @@ class RelationshipPartitionSelectTest(override var factoryClass: KClass<*>) : Da
         val addresses = manager.executeQuery<Map<*, *>>(query)
         assertTrue(addresses.isNotEmpty(), "Query missing results")
         assertTrue(addresses[0]["occupants"] is List<*>)
-        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Map<*, *>)
+        assertTrue((addresses[0]["occupants"] as List<*>)[0] is Person)
     }
 }

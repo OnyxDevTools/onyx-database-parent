@@ -3,6 +3,7 @@ package com.onyx.diskmap.data
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
+import com.onyx.extension.common.ClassMetadata
 
 import java.util.concurrent.atomic.AtomicLong
 

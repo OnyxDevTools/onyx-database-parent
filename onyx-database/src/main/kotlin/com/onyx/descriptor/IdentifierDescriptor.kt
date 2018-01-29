@@ -1,5 +1,6 @@
 package com.onyx.descriptor
 
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 
 /**
@@ -10,7 +11,7 @@ import com.onyx.persistence.annotations.values.IdentifierGenerator
 data class IdentifierDescriptor(
         var generator: IdentifierGenerator = IdentifierGenerator.NONE,
         override var name: String = "",
-        override var type: Class<*> = Any::class.java,
+        override var type: Class<*> = ClassMetadata.ANY_CLASS,
         override var loadFactor: Byte = 1
 ) : IndexDescriptor(),BaseDescriptor {
 

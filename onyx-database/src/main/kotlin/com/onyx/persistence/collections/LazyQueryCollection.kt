@@ -44,11 +44,11 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
 
     private var hasSelections = false
 
-    constructor(entityDescriptor: EntityDescriptor, references: MutableMap<Reference, E?>, context: SchemaContext):this() {
+    constructor(entityDescriptor: EntityDescriptor, references: List<Reference>, context: SchemaContext):this() {
         this.entityDescriptor = entityDescriptor
         this.contextId = context.contextId
         this.persistenceManager = context.serializedPersistenceManager
-        this.identifiers = synchronized(references) { ArrayList(references.keys) }
+        this.identifiers = synchronized(references) { ArrayList(references) }
     }
 
     /**

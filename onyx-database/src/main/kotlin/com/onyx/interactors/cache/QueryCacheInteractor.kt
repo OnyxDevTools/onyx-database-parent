@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.interactors.cache.data.CachedResults
+import com.onyx.interactors.query.QueryCollector
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.query.QueryListenerEvent
@@ -24,7 +25,7 @@ interface QueryCacheInteractor {
      *
      * @since 2.0.0
      */
-    fun <T : Any?> cache(query: Query, body: () -> MutableMap<Reference, T>): MutableMap<Reference, T>
+    fun <E> cache(query: Query, body: () -> QueryCollector<E>): QueryCollector<E>
 
     /**
      * Get Cached results for a query. This method will return a cached query result if it exist.
@@ -43,7 +44,7 @@ interface QueryCacheInteractor {
      *
      * @param results Result as references
      */
-    fun setCachedQueryResults(query: Query, results: MutableMap<Reference, Any?>): CachedResults?
+    fun setCachedQueryResults(query: Query, results: MutableList<Reference>): CachedResults?
 
     /**
      * Update all of the cached results if an entity has been modified.  It will re-check the criteria and

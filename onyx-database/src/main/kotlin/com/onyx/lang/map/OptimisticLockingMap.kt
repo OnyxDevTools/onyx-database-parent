@@ -7,9 +7,9 @@ import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
  *
  * This map only locks on write access.  It is non blocking for read access.
  */
-class OptimisticLockingMap<K, V>(private val m: MutableMap<K, V>) : MutableMap<K, V> {
+open class OptimisticLockingMap<K, V>(@Suppress("MemberVisibilityCanPrivate") val m: MutableMap<K, V>) : MutableMap<K, V> {
 
-    private val lock = DefaultClosureReadWriteLock()
+    val lock = DefaultClosureReadWriteLock()
 
     // region Properties
 
@@ -54,7 +54,7 @@ class OptimisticLockingMap<K, V>(private val m: MutableMap<K, V>) : MutableMap<K
      *
      * @since 2.0.0
      */
-    fun getOrPut(key: K, body: () -> V): V {
+    inline fun getOrPut(key: K, crossinline body: () -> V): V {
         val value: V? = get(key)
         return value ?: lock.writeLock {
             var newValue = m[key]

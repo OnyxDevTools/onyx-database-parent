@@ -30,11 +30,11 @@ object BufferPool {
      */
     init {
         for (i in 1..NUMBER_SMALL_BUFFERS)
-            SMALL_BUFFER_POOL.add(ByteBuffer.allocateDirect(SMALL_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
+            SMALL_BUFFER_POOL.add(ByteBuffer.allocateDirect(SMALL_BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN))
         for (i in 1..NUMBER_MEDIUM_BUFFERS)
-            MEDIUM_BUFFER_POOL.add(ByteBuffer.allocateDirect(MEDIUM_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
+            MEDIUM_BUFFER_POOL.add(ByteBuffer.allocateDirect(MEDIUM_BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN))
         for (i in 1..NUMBER_LARGE_BUFFERS)
-            LARGE_BUFFER_POOL.add(ByteBuffer.allocateDirect(LARGE_BUFFER_SIZE).order(ByteOrder.BIG_ENDIAN))
+            LARGE_BUFFER_POOL.add(ByteBuffer.allocateDirect(LARGE_BUFFER_SIZE).order(ByteOrder.LITTLE_ENDIAN))
     }
 
     /**
@@ -63,10 +63,10 @@ object BufferPool {
             count <= SMALL_BUFFER_SIZE && !SMALL_BUFFER_POOL.isEmpty() -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.removeLast() }
             count <= MEDIUM_BUFFER_SIZE && !MEDIUM_BUFFER_POOL.isEmpty() -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.removeLast() }
             count <= LARGE_BUFFER_SIZE && !LARGE_BUFFER_POOL.isEmpty() -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.removeLast() }
-            else -> ByteBuffer.allocate(count).order(ByteOrder.BIG_ENDIAN)
+            else -> ByteBuffer.allocate(count).order(ByteOrder.LITTLE_ENDIAN)
         }
     } catch (e:Exception) {
-        ByteBuffer.allocate(count).order(ByteOrder.BIG_ENDIAN)
+        ByteBuffer.allocate(count).order(ByteOrder.LITTLE_ENDIAN)
     }
 
     /**
@@ -99,13 +99,13 @@ object BufferPool {
     val intBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
 
     inline fun <T> withIntBuffer(block:(ByteBuffer) -> T):T {
-        val buffer = intBuffer.getOrSet { ByteBuffer.allocateDirect(java.lang.Integer.BYTES).order(ByteOrder.BIG_ENDIAN) }
+        val buffer = intBuffer.getOrSet { ByteBuffer.allocateDirect(java.lang.Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN) }
         buffer.rewind()
         return block(buffer)
     }
 
     inline fun <T> withLongBuffer(block:(ByteBuffer) -> T):T {
-        val buffer = longBuffer.getOrSet { ByteBuffer.allocateDirect(java.lang.Long.BYTES).order(ByteOrder.BIG_ENDIAN) }
+        val buffer = longBuffer.getOrSet { ByteBuffer.allocateDirect(java.lang.Long.BYTES).order(ByteOrder.LITTLE_ENDIAN) }
         buffer.rewind()
         return block(buffer)
     }

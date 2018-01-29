@@ -44,7 +44,8 @@ inline fun <T> async(crossinline block: () -> T): Future<T> = defaultPool.submit
 inline fun <T> async(executor: ExecutorService, crossinline block: () -> T): Future<T> = executor.submit<T> { block() }
 
 
-inline fun <A, B>List<A>.parallelMap(parallel:Boolean = true, crossinline block: (A) -> B): List<B> {
+/*
+inline fun <A, B>Collection<A>.parallelMap(parallel:Boolean = true, crossinline block: (A) -> B): List<B> {
     return if(parallel) {
         val returnValue: MutableList<B> = ArrayList()
         this.parallelForEach {
@@ -59,7 +60,7 @@ inline fun <A, B>List<A>.parallelMap(parallel:Boolean = true, crossinline block:
     }
 }
 
-inline fun <A> List<A>.parallelForEach(crossinline block: (A) -> Unit) {
+inline fun <A> Collection<A>.parallelForEach(crossinline block: (A) -> Unit) {
     val futures:MutableList<Future<Unit>> = ArrayList()
     this.forEach {
         futures.add(async {
@@ -75,6 +76,7 @@ inline fun <A> List<A>.parallelForEach(crossinline block: (A) -> Unit) {
     }
     futures.forEach { it.get() }
 }
+*/
 
 /**
  * Sleep thread a fixed amount of time.

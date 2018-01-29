@@ -29,7 +29,8 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
      * @param context Owning schema context
      * @since 2.0.0
      */
-    private fun getDescriptor(context: SchemaContext):EntityDescriptor {
+    @Suppress("MemberVisibilityCanPrivate")
+    protected fun getDescriptor(context: SchemaContext):EntityDescriptor {
         if (descriptor == null) {
             descriptor = context.getDescriptorForEntity(this, "")
         }
@@ -52,7 +53,7 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
     override fun write(buffer: BufferStream, context: SchemaContext?) {
 
-        val systemEntity = context!!.getSystemEntityByName(this::class.java.name)
+        val systemEntity = context!!.getSystemEntityByName(this.javaClass.name)
         buffer.putInt(systemEntity!!.primaryKey)
 
         systemEntity.attributes.forEach {

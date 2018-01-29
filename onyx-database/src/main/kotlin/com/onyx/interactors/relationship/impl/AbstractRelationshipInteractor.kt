@@ -68,8 +68,10 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
         synchronized(relationshipMap) {
             val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
             if(inverseRelationshipDescriptor.isToOne) relationshipReferences.clear() // Just like the Highlander, there can only be one
-            relationshipReferences.add(parentIdentifier)
-            relationshipMap.put(childIdentifier, relationshipReferences)
+            if(!relationshipReferences.contains(parentIdentifier)) {
+                relationshipReferences.add(parentIdentifier)
+                relationshipMap.put(childIdentifier, relationshipReferences)
+            }
         }
 
         if(inverseRelationshipDescriptor.isToOne)

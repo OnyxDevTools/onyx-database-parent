@@ -39,26 +39,6 @@ interface DiskMapFactory {
     fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T
 
     /**
-     * Get Hash Map by Name.  This will default the map with a loadFactor of 10.  In that case, it will return an
-     * instance of the hash matrix followed by a skip list.
-     *
-     * @param name Unique Map name
-     * @return Disk Map implementation
-     * @since 1.2.0
-     */
-    fun <T : Map<*,*>> getHashMap(name: String): T
-
-    /**
-     * Get Skip list map.  This will return a map with a bare bones skip list index.  This usually is for unit
-     * testing purposes.  It is not recommended since it is not as scalable as the multi index maps.
-     *
-     * @param name Skip list map name
-     * @return Implementation of a disk map using a skip list index
-     * @since 1.2.0
-     */
-    fun <T : Map<*,*>> getSkipListMap(name: String): T
-
-    /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
      * @param header reference within storage
@@ -76,6 +56,16 @@ interface DiskMapFactory {
      * @since 1.0.0
      */
     fun <T : Map<*,*>> getHashMap(header: Header, loadFactor: Int): T
+
+    /**
+     * Get Hash Map by Name.  This will default the map with a loadFactor of 10.  In that case, it will return an
+     * instance of the hash matrix followed by a skip list.
+     *
+     * @param name Unique Map name
+     * @return Disk Map implementation
+     * @since 1.2.0
+     */
+    fun <T : Map<*,*>> getHashMap(name: String): T = getHashMap(name, 10)
 
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless

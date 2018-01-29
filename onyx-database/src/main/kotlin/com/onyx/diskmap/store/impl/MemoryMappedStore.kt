@@ -67,32 +67,29 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     @Synchronized override fun close(): Boolean {
         try {
-            async {
-                synchronized(slices) {
-
-                    this.slices.values
-                            .filter { it.buffer is MappedByteBuffer }
-                            .forEach {
-                                catchAll {
-                                    synchronized(it) {
-                                        cleanBuffer(it.buffer)
-                                        it.buffer = ByteBuffer.allocate(0)
-                                    }
+            synchronized(slices) {
+                this.slices.values
+                        .filter { it.buffer is MappedByteBuffer }
+                        .forEach {
+                            catchAll {
+                                synchronized(it) {
+                                    cleanBuffer(it.buffer)
+                                    it.buffer = ByteBuffer.allocate(0)
                                 }
                             }
-
-                    if (!deleteOnClose) {
-                        catchAll {
-                            ensureOpen()
-                            channel!!.truncate(getFileSize())
                         }
-                    }
-                    super.close()
-                }
 
-                if (deleteOnClose) {
-                    delete()
+                if (!deleteOnClose) {
+                    catchAll {
+                        ensureOpen()
+                        channel!!.truncate(getFileSize())
+                    }
                 }
+                super.close()
+            }
+
+            if (deleteOnClose) {
+                delete()
             }
             return !this.channel!!.isOpen
         } catch (e: Exception) {

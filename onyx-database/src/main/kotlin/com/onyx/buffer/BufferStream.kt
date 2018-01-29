@@ -327,14 +327,14 @@ class BufferStream(buffer: ByteBuffer) {
 
                 instance.getFields().forEach {
                     when {
-                        it.type == Long::class.javaPrimitiveType -> instance.setLong(it, long)
-                        it.type == Int::class.javaPrimitiveType -> instance.setInt(it, int)
-                        it.type == Double::class.javaPrimitiveType -> instance.setDouble(it, double)
-                        it.type == Float::class.javaPrimitiveType -> instance.setFloat(it, float)
-                        it.type == Byte::class.javaPrimitiveType -> instance.setByte(it, byte)
-                        it.type == Char::class.javaPrimitiveType -> instance.setChar(it, char)
-                        it.type == Short::class.javaPrimitiveType -> instance.setShort(it, short)
-                        it.type == Boolean::class.javaPrimitiveType -> instance.setBoolean(it, boolean)
+                        it.type == ClassMetadata.LONG_PRIMITIVE_TYPE -> instance.setLong(it, long)
+                        it.type == ClassMetadata.INT_PRIMITIVE_TYPE -> instance.setInt(it, int)
+                        it.type == ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> instance.setDouble(it, double)
+                        it.type == ClassMetadata.FLOAT_PRIMITIVE_TYPE -> instance.setFloat(it, float)
+                        it.type == ClassMetadata.BYTE_PRIMITIVE_TYPE -> instance.setByte(it, byte)
+                        it.type == ClassMetadata.CHAR_PRIMITIVE_TYPE -> instance.setChar(it, char)
+                        it.type == ClassMetadata.SHORT_PRIMITIVE_TYPE -> instance.setShort(it, short)
+                        it.type == ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> instance.setBoolean(it, boolean)
                         else -> instance.setObject(it, value)
                     }
                 }
@@ -524,7 +524,7 @@ class BufferStream(buffer: ByteBuffer) {
     @Throws(BufferingException::class)
     fun getArray(type: BufferObjectType): Any {
         when {
-            type === BufferObjectType.LONG_ARRAY -> {
+            type == BufferObjectType.LONG_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = LongArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Long.BYTES * arr.size)
@@ -532,7 +532,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.long
                 return arr
             }
-            type === BufferObjectType.INT_ARRAY -> {
+            type == BufferObjectType.INT_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = IntArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES * arr.size)
@@ -540,7 +540,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.int
                 return arr
             }
-            type === BufferObjectType.FLOAT_ARRAY -> {
+            type == BufferObjectType.FLOAT_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = FloatArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Float.BYTES * arr.size)
@@ -548,7 +548,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.float
                 return arr
             }
-            type === BufferObjectType.BYTE_ARRAY -> {
+            type == BufferObjectType.BYTE_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = ByteArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
@@ -556,7 +556,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.get()
                 return arr
             }
-            type === BufferObjectType.CHAR_ARRAY -> {
+            type == BufferObjectType.CHAR_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = CharArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(Character.BYTES * arr.size)
@@ -564,7 +564,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.char
                 return arr
             }
-            type === BufferObjectType.SHORT_ARRAY -> {
+            type == BufferObjectType.SHORT_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = ShortArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Short.BYTES * arr.size)
@@ -572,7 +572,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.short
                 return arr
             }
-            type === BufferObjectType.BOOLEAN_ARRAY -> {
+            type == BufferObjectType.BOOLEAN_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = BooleanArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
@@ -580,7 +580,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.get().toInt() == 1
                 return arr
             }
-            type === BufferObjectType.DOUBLE_ARRAY -> {
+            type == BufferObjectType.DOUBLE_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = DoubleArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Double.BYTES * arr.size)
@@ -588,7 +588,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.double
                 return arr
             }
-            type === BufferObjectType.OTHER_ARRAY -> {
+            type == BufferObjectType.OTHER_ARRAY -> {
                 val arr = Array.newInstance(objectClass, int)
                 for (i in 0 until Array.getLength(arr)) {
                     val value = value
@@ -635,49 +635,49 @@ class BufferStream(buffer: ByteBuffer) {
      */
     @Throws(BufferingException::class)
     fun putArray(array: Any?) = when {
-        array!!.javaClass == LongArray::class.java -> {
+        array!!.javaClass == ClassMetadata.LONG_ARRAY-> {
             val arr = array as LongArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.putLong(anArr)
         }
-        array.javaClass == IntArray::class.java -> {
+        array.javaClass == ClassMetadata.INT_ARRAY -> {
             val arr = array as IntArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(Integer.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.putInt(anArr)
         }
-        array.javaClass == FloatArray::class.java -> {
+        array.javaClass == ClassMetadata.FLOAT_ARRAY -> {
             val arr = array as FloatArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Float.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.putFloat(anArr)
         }
-        array.javaClass == ByteArray::class.java -> {
+        array.javaClass == ClassMetadata.BYTE_ARRAY -> {
             val arr = array as ByteArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.put(anArr)
         }
-        array.javaClass == CharArray::class.java -> {
+        array.javaClass == ClassMetadata.CHAR_ARRAY -> {
             val arr = array as CharArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(Character.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.putChar(anArr)
         }
-        array.javaClass == ShortArray::class.java -> {
+        array.javaClass == ClassMetadata.SHORT_ARRAY -> {
             val arr = array as ShortArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Short.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.putShort(anArr)
         }
-        array.javaClass == BooleanArray::class.java -> {
+        array.javaClass == ClassMetadata.BOOLEAN_ARRAY -> {
             val arr = array as BooleanArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Byte.BYTES * arr.size)
             for (anArr in arr) expandableByteBuffer!!.buffer.put((if (anArr) 1 else 0).toByte())
         }
-        array.javaClass == DoubleArray::class.java -> {
+        array.javaClass == ClassMetadata.DOUBLE_ARRAY -> {
             val arr = array as DoubleArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
@@ -840,14 +840,14 @@ class BufferStream(buffer: ByteBuffer) {
         value?.getFields()?.forEach {
             try {
                 when {
-                    it.type == Int::class.javaPrimitiveType -> putInt(value.getInt(it))
-                    it.type == Long::class.javaPrimitiveType -> putLong(value.getLong(it))
-                    it.type == Byte::class.javaPrimitiveType -> putByte(value.getByte(it))
-                    it.type == Float::class.javaPrimitiveType -> putFloat(value.getFloat(it))
-                    it.type == Double::class.javaPrimitiveType -> putDouble(value.getDouble(it))
-                    it.type == Boolean::class.javaPrimitiveType -> putBoolean(value.getBoolean(it))
-                    it.type == Short::class.javaPrimitiveType -> putShort(value.getShort(it))
-                    it.type == Char::class.javaPrimitiveType -> putChar(value.getChar(it))
+                    it.type == ClassMetadata.INT_PRIMITIVE_TYPE -> putInt(value.getInt(it))
+                    it.type == ClassMetadata.LONG_PRIMITIVE_TYPE -> putLong(value.getLong(it))
+                    it.type == ClassMetadata.BYTE_PRIMITIVE_TYPE -> putByte(value.getByte(it))
+                    it.type == ClassMetadata.FLOAT_PRIMITIVE_TYPE -> putFloat(value.getFloat(it))
+                    it.type == ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> putDouble(value.getDouble(it))
+                    it.type == ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> putBoolean(value.getBoolean(it))
+                    it.type == ClassMetadata.SHORT_PRIMITIVE_TYPE -> putShort(value.getShort(it))
+                    it.type == ClassMetadata.CHAR_PRIMITIVE_TYPE -> putChar(value.getChar(it))
                     else -> putObject(value.getObject(it))
                 }
             } catch (e: IllegalAccessException) {
@@ -936,7 +936,7 @@ class BufferStream(buffer: ByteBuffer) {
      * @throws BufferingException Generic Buffer Exception
      */
     @Throws(BufferingException::class)
-    private fun putDouble(value: Double) {
+    fun putDouble(value: Double) {
         expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES)
         expandableByteBuffer!!.buffer.putDouble(value)
     }

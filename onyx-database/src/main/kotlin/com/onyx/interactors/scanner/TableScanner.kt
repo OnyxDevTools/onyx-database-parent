@@ -1,6 +1,7 @@
 package com.onyx.interactors.scanner
 
 import com.onyx.exception.OnyxException
+import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.record.data.Reference
 
 /**
@@ -10,6 +11,9 @@ import com.onyx.interactors.record.data.Reference
  */
 interface TableScanner {
 
+    var isLast:Boolean
+    var collector: QueryCollector<Any>?
+
     /**
      * Full scan
      *
@@ -17,7 +21,7 @@ interface TableScanner {
      * @throws OnyxException Cannot scan entity
      */
     @Throws(OnyxException::class)
-    fun scan(): MutableMap<Reference, Reference>
+    fun scan(): MutableSet<Reference>
 
     /**
      * Scan with indexes
@@ -27,6 +31,6 @@ interface TableScanner {
      * @throws OnyxException Cannot scan entity
      */
     @Throws(OnyxException::class)
-    fun  scan(existingValues: MutableMap<Reference, Reference>): MutableMap<Reference, Reference>
+    fun  scan(existingValues: Set<Reference>): MutableSet<Reference>
 
 }

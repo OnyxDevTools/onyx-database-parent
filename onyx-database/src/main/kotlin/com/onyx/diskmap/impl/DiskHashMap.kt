@@ -36,7 +36,6 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
         this.nodeCache = EmptyMap()
         this.mapCache = EmptyMap()
         this.cache = EmptyMap()
-        this.valueByPositionCache = EmptyMap()
         this.keyCache = EmptyMap()
         this.mapReadWriteLock = closureLock
     }
@@ -57,7 +56,6 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
             cache = EmptyMap()
             mapCache = EmptyMap()
             keyCache = EmptyMap()
-            valueByPositionCache = EmptyMap()
             nodeCache = EmptyMap()
             mapReadWriteLock = EmptyClosureReadWriteLock()
         }
@@ -96,13 +94,13 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      * @return The value if it exists
      * @since 1.2.0
      */
-    override operator fun get(key: K): V? = mapReadWriteLock.readLock {
-        val combinedNode = getHeadReferenceForKey(key, true)
+    override operator fun get(key: K): V? {
+        val combinedNode = getHeadReferenceForKey(key, false)
 
         // Set the selected skip list
         head = combinedNode?.head
 
-        return@readLock if (combinedNode?.head != null) {
+        return if (combinedNode?.head != null) {
             super.get(key)
         } else null
     }
@@ -166,10 +164,10 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.readLock {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock -1
+    override fun getRecID(key: K): Long {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return -1
         head = combinedNode.head
-        return@readLock super.getRecID(key)
+        return super.getRecID(key)
     }
 
     /**
@@ -249,9 +247,9 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
             val headNode1: SkipNode
                 val reference = super@DiskHashMap.getSkipListReference(skipListMapId)
                 if (reference == 0L) {
-                headNode1 = SkipNode.create(fileStore)
-                insertSkipListReference(skipListMapId, headNode1.position)
-                CombinedIndexHashNode(headNode1, skipListMapId)
+                    headNode1 = SkipNode.create(fileStore)
+                    insertSkipListReference(skipListMapId, headNode1.position)
+                    CombinedIndexHashNode(headNode1, skipListMapId)
                 } else {
                     CombinedIndexHashNode(findNodeAtPosition(reference)!!, skipListMapId)
                 }

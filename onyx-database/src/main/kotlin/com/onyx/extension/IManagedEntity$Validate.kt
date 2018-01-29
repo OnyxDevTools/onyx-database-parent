@@ -4,6 +4,7 @@ import com.onyx.exception.AttributeNonNullException
 import com.onyx.exception.AttributeSizeException
 import com.onyx.exception.IdentifierRequiredException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.context.SchemaContext
@@ -28,7 +29,7 @@ fun IManagedEntity.isValid(context:SchemaContext):Boolean {
         if(!it.isNullable && attributeValue == null) throw AttributeNonNullException(AttributeNonNullException.ATTRIBUTE_NULL_EXCEPTION, it.name)
 
         // Size
-        if(it.type.isAssignableFrom(String::class.java) && attributeValue != null && (attributeValue as String).length > it.size && it.size > -1)
+        if(it.type.isAssignableFrom(ClassMetadata.STRING_TYPE) && attributeValue != null && (attributeValue as String).length > it.size && it.size > -1)
             throw AttributeSizeException(AttributeSizeException.ATTRIBUTE_SIZE_EXCEPTION, it.name)
     }
 

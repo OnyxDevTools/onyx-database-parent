@@ -9,7 +9,6 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
-import com.onyx.diskmap.factory.DiskMapFactory
 
 /**
  * Created by timothy.osborn on 1/6/15.
@@ -27,7 +26,6 @@ object ScannerFactory {
      * @param context Context contains database resources
      * @param criteria Criteria used to determine entity attribute
      * @param classToScan Entity class to scan
-     * @param temporaryDataFile Query temporary data file to inject into the scanner
      * @param query Query definitions
      * @param persistenceManager Persistence manager
      * @return An implementation of a full table scanner
@@ -36,7 +34,7 @@ object ScannerFactory {
      * @since 1.3.0
      */
     @Throws(OnyxException::class)
-    fun getFullTableScanner(context:SchemaContext, criteria: QueryCriteria, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
+    fun getFullTableScanner(context:SchemaContext, criteria: QueryCriteria, classToScan: Class<*>, query: Query, persistenceManager: PersistenceManager): TableScanner {
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")
         } else {
@@ -44,9 +42,9 @@ object ScannerFactory {
         }
 
         return if (descriptor.hasPartition) {
-            PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+            PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
         } else {
-            FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+            FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
         }
     }
 
@@ -58,7 +56,7 @@ object ScannerFactory {
      * @return Scanner implementation
      */
     @Throws(OnyxException::class)
-    fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria, classToScan: Class<*>, temporaryDataFile: DiskMapFactory, query: Query, persistenceManager: PersistenceManager): TableScanner {
+    fun getScannerForQueryCriteria(context:SchemaContext, criteria: QueryCriteria, classToScan: Class<*>, query: Query, persistenceManager: PersistenceManager): TableScanner {
 
         val descriptor: EntityDescriptor = if (query.partition === QueryPartitionMode.ALL) {
             context.getDescriptorForEntity(classToScan, "")
@@ -71,22 +69,22 @@ object ScannerFactory {
 
         // This has a dot in it, it must be a relationship or a typo
         if (segments.size > 1) {
-            return RelationshipScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+            return RelationshipScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
         }
 
         if(criteria.flip) {
             return if(descriptor.hasPartition)
-                PartitionReferenceScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                PartitionReferenceScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             else
-                ReferenceScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                ReferenceScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
         }
 
         // Identifiers criteria must be either an equal or in so that it can make exact matches
         if (descriptor.identifier!!.name == attributeToScan && criteria.operator!!.isIndexed) {
             return if (descriptor.hasPartition) {
-                PartitionIdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                PartitionIdentifierScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {
-                IdentifierScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                IdentifierScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             }
         }
 
@@ -94,18 +92,18 @@ object ScannerFactory {
         val indexDescriptor = descriptor.indexes[attributeToScan]
         if (indexDescriptor != null && criteria.operator!!.isIndexed) {
             return if (descriptor.hasPartition) {
-                PartitionIndexScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                PartitionIndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {
-                IndexScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                IndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             }
         }
 
         val attributeDescriptor = descriptor.attributes[attributeToScan]
         if (attributeDescriptor != null) {
             return if (descriptor.hasPartition) {
-                PartitionFullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {
-                FullTableScanner(criteria, classToScan, descriptor, temporaryDataFile, query, context, persistenceManager)
+                FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             }
         }
 

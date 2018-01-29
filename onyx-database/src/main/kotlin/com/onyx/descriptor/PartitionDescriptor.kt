@@ -1,5 +1,7 @@
 package com.onyx.descriptor
 
+import com.onyx.extension.common.ClassMetadata
+
 /**
  * Created by timothy.osborn on 12/11/14.
  *
@@ -8,5 +10,5 @@ package com.onyx.descriptor
 data class PartitionDescriptor(
     var partitionValue:String = "",
     var name: String = "",
-    var type: Class<*> = Any::class.java
+    var type: Class<*> = ClassMetadata.ANY_CLASS
 ) : AbstractBaseDescriptor()

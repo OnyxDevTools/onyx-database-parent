@@ -16,6 +16,8 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
 
     @Before
     fun insertTestData() {
+        manager.from(AllAttributeEntityWithRelationship::class).delete()
+
         val entity = AllAttributeEntityWithRelationship()
 
         entity.longPrimitive = 2L
@@ -75,18 +77,22 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
         entity.stringValue = "99"
         entity.id = "11"
         manager.saveEntity(entity)
-
+        entity.longPrimitive = 9L
+        entity.stringValue = "99"
+        entity.id = "12"
+        manager.saveEntity(entity)
     }
 
     @Test
     fun testGroupBy() {
-        val results = manager.select("longPrimitive", "stringValue")
+        val results = manager.select("longPrimitive", "lower(stringValue)")
                 .from(AllAttributeEntityWithRelationship::class)
                 .groupBy("longPrimitive", "stringValue")
-                .list<Map<Any?, List<Any?>?>>()
+                .orderBy("id".desc())
+                .list<Map<String, Any?>>()
 
-        assertEquals(2, results[1][9L]!!.count(), "There should have been 2 grouped by 9 longPrimitiveValue results")
-        assertEquals(2, results[0]["9"]!!.count(), "There should have been 2 grouped by 9 stringValue results")
+        assertEquals(11, results.size, "Only 11 results should have been returned")
+        assertEquals("some other value", results[0]["lower(stringValue)"], "Invalid result")
     }
 
     @Test
@@ -96,7 +102,7 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
                 .groupBy("stringValue")
                 .list<Map<String, Any?>>()
 
-        assertEquals(9L, results.first { it["stringValue"] == "9" }["min(longPrimitive)"] , "99 should be the max result")
+        assertEquals(9L, results.first { it["stringValue"] == "9" }["min(longPrimitive)"] , "9 should be the min result")
     }
 
     @Test
@@ -174,8 +180,8 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
                 .groupBy("relationship.id")
                 .list<Map<String, Any?>>()
 
-        assertEquals(148L, results.first { it["relationship.id"] == "HI5" }["sum(longPrimitive)"] , "148L should be the sum result")
-        assertEquals(35, results.first { it["relationship.id"] == "HI5"}["sum(relationship.intValue)"] , "Relationship intValue is invalid")
+        assertEquals(157L, results.first { it["relationship.id"] == "HI5" }["sum(longPrimitive)"] , "148L should be the sum result")
+        assertEquals(40, results.first { it["relationship.id"] == "HI5"}["sum(relationship.intValue)"] , "Relationship intValue is invalid")
     }
 
     @Test
@@ -186,8 +192,8 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
                 .orderBy(sum("relationship.intValue").desc())
                 .list<Map<String, Any?>>()
 
-        assertEquals(148L, results.first { it["relationship.id"] == "HI5" }["sum(longPrimitive)"] , "148L should be the sum result")
-        assertEquals(35, results.first { it["relationship.id"] == "HI5"}["sum(relationship.intValue)"] , "Relationship intValue is invalid")
+        assertEquals(157L, results.first { it["relationship.id"] == "HI5" }["sum(longPrimitive)"] , "148L should be the sum result")
+        assertEquals(40, results.first { it["relationship.id"] == "HI5"}["sum(relationship.intValue)"] , "Relationship intValue is invalid")
         assertEquals(results.first(), results.first { it["relationship.id"] == "HI5" }, "Failure to sort")
     }
 }
