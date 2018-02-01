@@ -3,6 +3,7 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
+import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -35,13 +36,17 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
 
     fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):MutableSet<Reference> {
         val matching = HashSet<Reference>()
+        val context = Contexts.get(contextId)!!
 
         // If it is an in clause
         if (criteria.value is List<*>) {
             (criteria.value as List<*>)
                     .map { Reference(partitionId, recordInteractor.getReferenceId(it!!)) }
                     .filter { it.reference > 0L }
-                    .forEach { matching.add(it) }
+                    .forEach {
+                        collector?.collect(it, it.toManagedEntity(context, descriptor))
+                        matching.add(it)
+                    }
         } else {
             val values: Set<Long> = when {
                 criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         recordInteractor.findAllAbove(criteria.value!!, false)
@@ -53,7 +58,10 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
 
             values.filter { it > 0L }
                     .map { Reference(partitionId, it) }
-                    .forEach { matching.add(it) }
+                    .forEach {
+                        collector?.collect(it, it.toManagedEntity(context, descriptor))
+                        matching.add(it)
+                    }
         }
 
         return matching

@@ -96,7 +96,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
                 val tmpList = ArrayList<IManagedEntity>(entities)
                 entities.clear()
                 tmpList.forEach {
-                    manager.saveEntity<IManagedEntity>(it)
+                    manager.saveEntity(it)
                 }
             }
         }
@@ -189,7 +189,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
                 entities.clear()
                 threads.add(async(threadPool) {
                     tmpList.forEach {
-                        manager.saveEntity<IManagedEntity>(it)
+                        manager.saveEntity(it)
                     }
                 })
             }
@@ -222,7 +222,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
                 val deletedIndex = deleteCount
 
                 threads.add(async(threadPool) {
-                    tmpList.forEach { manager.saveEntity<IManagedEntity>(it) }
+                    tmpList.forEach { manager.saveEntity(it) }
 
                     var t = deletedIndex
                     while (t < deletedIndex + 5 && t < entitiesToValidateDeleted.size) {

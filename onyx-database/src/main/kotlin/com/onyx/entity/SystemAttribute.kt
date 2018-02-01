@@ -14,9 +14,10 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemAttribute @JvmOverloads constructor(
 
-    @Identifier
+    @Identifier(loadFactor = 5)
     var name: String = "",
 
+    @Suppress("MemberVisibilityCanPrivate")
     @Attribute
     var dataType: String? = null,
 
@@ -27,9 +28,11 @@ data class SystemAttribute @JvmOverloads constructor(
     private var isNullable: Boolean = false,
 
     @Attribute
+    @Suppress("MemberVisibilityCanPrivate")
     var isEnum: Boolean = false,
 
     @Attribute
+    @Suppress("MemberVisibilityCanPrivate")
     var enumValues: String? = null
 
 ): ManagedEntity() {

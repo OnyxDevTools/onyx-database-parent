@@ -19,8 +19,11 @@ class CountQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Q
     override fun getFunctionValue():Int = count.get()
 
     override fun preProcess(query: Query, value: Any?): Boolean {
-        if(query.isDistinct )
-            uniqueValues.add(value)
+        if(query.isDistinct ) {
+            synchronized(uniqueValues) {
+                uniqueValues.add(value)
+            }
+        }
         else
             count.incrementAndGet()
         return false

@@ -149,6 +149,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         // We want to lock the index controller so that it does not do background indexing
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
 
+        query.isUpdateOrDelete = true
         query.validate(context, descriptor)
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
@@ -178,6 +179,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         // We want to lock the index controller so that it does not do background indexing
         val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
+        query.isUpdateOrDelete = true
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)

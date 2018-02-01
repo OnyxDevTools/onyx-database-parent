@@ -12,6 +12,7 @@ import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryPartitionMode
 import com.onyx.extension.common.async
+import com.onyx.extension.toManagedEntity
 import com.onyx.persistence.context.Contexts
 
 import java.util.*
@@ -76,11 +77,14 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
     @Suppress("UNCHECKED_CAST")
     private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): MutableSet<Reference> {
         val matching = HashSet<Reference>()
-
+        val context = Contexts.get(contextId)!!
         if (criteria.value is List<*>)
             (criteria.value as List<Any>).forEach { find(it, indexInteractor, partitionId).forEach { matching.add(it) } }
         else
-            find(criteria.value, indexInteractor, partitionId).forEach { matching.add(it) }
+            find(criteria.value, indexInteractor, partitionId).forEach {
+                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                matching.add(it)
+            }
 
         return matching
     }

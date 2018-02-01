@@ -58,19 +58,15 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
         val context = Contexts.get(contextId)!!
         var deleteCount = 0
-        val lower = query.firstRow
-        val upper = lower + if(query.maxResults > 0) query.maxResults else records.size
 
-        records.asSequence()
-                .filterIndexedTo(ArrayList()) { index, _ -> index in lower..(upper - 1) }
-                .forEach {
-                    val entity:IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
-                    entity?.deleteAllIndexes(context, it.reference)
-                    entity?.deleteRelationships(context)
-                    entity?.recordInteractor(context)?.delete(entity)
-                    if(entity != null)
-                        deleteCount++
-                }
+        records.forEach {
+            val entity:IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
+            entity?.deleteAllIndexes(context, it.reference)
+            entity?.deleteRelationships(context)
+            entity?.recordInteractor(context)?.delete(entity)
+            if(entity != null)
+                deleteCount++
+        }
 
         return deleteCount
     }
@@ -87,32 +83,28 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
         val context = Contexts.get(contextId)!!
         var updateCount = 0
-        val lower = query.firstRow
-        val upper = lower + if(query.maxResults > 0) query.maxResults else records.size
 
-        records.asSequence()
-                .filterIndexedTo(ArrayList()) { index, _ -> index in lower..(upper - 1) }
-                .forEach {
-                    val entity: IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
-                    val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value) } != null
+        records.forEach {
+            val entity: IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
+            val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value) } != null
 
-                    if (updatedPartitionValue) {
-                        entity?.deleteAllIndexes(context, it.reference)
-                        entity?.deleteRelationships(context)
-                        entity?.recordInteractor(context)?.delete(entity)
-                    }
+            if (updatedPartitionValue) {
+                entity?.deleteAllIndexes(context, it.reference)
+                entity?.deleteRelationships(context)
+                entity?.recordInteractor(context)?.delete(entity)
+            }
 
-                    query.updates.forEach { entity?.set(context = context, descriptor = descriptor, name = it.fieldName!!, value = it.value) }
+            query.updates.forEach { entity?.set(context = context, descriptor = descriptor, name = it.fieldName!!, value = it.value) }
 
-                    entity?.save(context)
-                    entity?.saveIndexes(context, it.reference)
+            entity?.save(context)
+            entity?.saveIndexes(context, it.reference)
 
-                    // Update Cached queries
-                    if (entity != null) {
-                        context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context), QueryListenerEvent.UPDATE)
-                        updateCount++
-                    }
-                }
+            // Update Cached queries
+            if (entity != null) {
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context), QueryListenerEvent.UPDATE)
+                updateCount++
+            }
+        }
 
         return updateCount
     }
@@ -183,7 +175,11 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             ScannerFactory.getScannerForQueryCriteria(context, criteria, query.entityType!!, query, persistenceManager)
         }
 
-        if((scanner is FullTableScanner || scanner is PartitionFullTableScanner || criteria == query.getAllCriteria().last())) {
+        if(scanner is FullTableScanner || scanner is PartitionFullTableScanner || (
+                    criteria == query.getAllCriteria().last()
+                    && !criteria.isNot
+                    && !criteria.flip
+                    && !criteria.isOr)){
             scanner.isLast = true
         }
 
@@ -208,10 +204,9 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                 val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults, false)
                 aggregateFilteredReferences(subCriteriaObject, criteriaResults, subCriteriaResults.first)
             }
-            return Pair(criteriaResults, null)
         }
 
-        return Pair(criteriaResults, scanner.collector as QueryCollector<T>)
+        return Pair(criteriaResults, scanner.collector as QueryCollector<T>?)
     }
 
     /**

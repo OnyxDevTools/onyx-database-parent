@@ -121,7 +121,7 @@ class EntityStreamTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(
                 freshEntity.fromMap(entity, persistenceManager.context)
 
                 // Save the entity
-                persistenceManager.saveEntity<ImmutableSequenceIdentifierEntity>(freshEntity)
+                persistenceManager.saveEntity(freshEntity)
                 assertEquals(5, freshEntity.correlation, "Stream updated dictionary value")
 
                 hadDataToStream.set(true)

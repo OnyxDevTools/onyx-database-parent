@@ -32,12 +32,6 @@ fun IManagedEntity.copy(from:IManagedEntity, context: SchemaContext? = null, des
     }
 }
 
-fun IManagedEntity.toMap():Map<String, Any?> {
-    val map = HashMap<String, Any?>()
-    this.getFields().forEach { map.put(it.name, getAny(it)) }
-    return map
-}
-
 /**
  * Get the partition field value from the entity.  If the partition field does not exist it will return an empty value
  *

@@ -13,7 +13,7 @@ import com.onyx.persistence.annotations.values.RelationshipType
 @Suppress("UNUSED")
 class SystemQuery(
 
-        @Identifier(generator = IdentifierGenerator.SEQUENCE)
+        @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 5)
         var queryId:Long = 0,
 
         @Attribute

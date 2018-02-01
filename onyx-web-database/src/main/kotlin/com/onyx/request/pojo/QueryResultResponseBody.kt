@@ -9,6 +9,7 @@ import com.onyx.buffer.BufferStreamable
  */
 class QueryResultResponseBody constructor() : BufferStreamable {
 
+    @Suppress("MemberVisibilityCanPrivate")
     var maxResults: Int = 0
     var results: MutableList<Any> = ArrayList()
 

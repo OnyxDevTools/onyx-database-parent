@@ -11,6 +11,7 @@ import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
 import com.onyx.extension.*
+import com.onyx.extension.common.catchAll
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.query.QueryListenerEvent
 
@@ -139,9 +140,13 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
             }
 
         //sort related children if the child entity implements Comparable
-        if (relationshipObjects.size > 0 && relationshipObjects !is LazyRelationshipCollection && relationshipObjects[0] is Comparable<*>) {
-            @Suppress("UNCHECKED_CAST")
-            (relationshipObjects as MutableList<Comparable<Any>>).sortBy { it }
+        catchAll {
+            if (relationshipObjects.size > 0 && relationshipObjects !is LazyRelationshipCollection && relationshipDescriptor.inverseClass.isAssignableFrom(Comparable::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                synchronized(relationshipObjects) {
+                    (relationshipObjects as MutableList<Comparable<Any>>).sortBy { it }
+                }
+            }
         }
 
         entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipObjects

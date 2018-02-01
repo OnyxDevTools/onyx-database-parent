@@ -1,7 +1,6 @@
 package database.base
 
 import com.onyx.application.impl.DatabaseServer
-import com.onyx.application.impl.WebDatabaseServer
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext

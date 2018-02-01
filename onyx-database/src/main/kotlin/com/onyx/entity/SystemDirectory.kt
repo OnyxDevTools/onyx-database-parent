@@ -14,7 +14,7 @@ import com.onyx.persistence.annotations.values.RelationshipType
 @Entity(fileName = "query.dat")
 class SystemDirectory(
 
-        @Identifier(generator = IdentifierGenerator.SEQUENCE)
+        @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 5)
         var directoryId:Long = 0,
 
         @Attribute

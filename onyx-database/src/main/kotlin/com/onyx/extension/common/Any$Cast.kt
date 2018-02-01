@@ -17,12 +17,12 @@ fun Any?.castTo(clazz: Class<*>): Any? {
 
     val kotlinClass: KClass<*> = clazz.kotlin
 
-    if((this != null && clazz == this.javaClass)
-            || (this != null && clazz == this::class.javaPrimitiveType))
+    if((this != null && clazz === this::class.java)
+            || (this != null && clazz === this::class.javaPrimitiveType))
         return this
 
     return when {
-        // Cast to numeric value when value is null
+    // Cast to numeric value when value is null
         this == null -> when(kotlinClass) {
             Int::class -> 0
             Long::class -> 0L
@@ -34,7 +34,7 @@ fun Any?.castTo(clazz: Class<*>): Any? {
             Short::class -> 0.toShort()
             else -> null
         }
-        // When value is number
+    // When value is number
         this is Number -> when (kotlinClass) {
             Int::class -> this.toInt()
             Long::class -> this.toLong()
@@ -80,26 +80,3 @@ fun Any?.castTo(clazz: Class<*>): Any? {
         else -> null
     }
 }
-
-
-@Suppress("UNCHECKED_CAST", "JAVA_CLASS_ON_COMPANION")
-fun <T> Number.quickCast(clazz: Class<*>): T = when {
-    clazz == ClassMetadata.LONG_TYPE -> this.toLong()
-    clazz == ClassMetadata.INT_TYPE -> this.toInt()
-    clazz == ClassMetadata.DOUBLE_TYPE -> this.toDouble()
-    clazz == ClassMetadata.FLOAT_TYPE -> this.toFloat()
-    clazz == ClassMetadata.BOOLEAN_TYPE -> this.toInt() == 1
-    clazz == ClassMetadata.CHAR_TYPE -> this.toChar()
-    clazz == ClassMetadata.BYTE_TYPE -> this.toByte()
-    clazz == ClassMetadata.SHORT_TYPE -> this.toShort()
-    clazz == ClassMetadata.LONG_PRIMITIVE_TYPE -> this.toLong()
-    clazz == ClassMetadata.INT_PRIMITIVE_TYPE -> this.toInt()
-    clazz == ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> this.toDouble()
-    clazz == ClassMetadata.FLOAT_PRIMITIVE_TYPE -> this.toFloat()
-    clazz == ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> this.toInt() == 1
-    clazz == ClassMetadata.CHAR_PRIMITIVE_TYPE -> this.toChar()
-    clazz == ClassMetadata.BYTE_PRIMITIVE_TYPE -> this.toByte()
-    clazz == ClassMetadata.SHORT_PRIMITIVE_TYPE -> this.toShort()
-    else -> castTo(clazz)
-} as T
-

@@ -17,7 +17,7 @@ import java.io.StringWriter
 @Suppress("UNUSED")
 data class SystemError @JvmOverloads constructor(
 
-    @Identifier(generator = IdentifierGenerator.SEQUENCE)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 5)
     var id: Long? = null,
 
     @Attribute

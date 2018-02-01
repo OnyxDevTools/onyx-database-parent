@@ -23,9 +23,11 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
         val maxDouble:Double = (max as? Number)?.toDouble() ?: 0.0
 
-        if(valueDouble > maxDouble || max == null) {
-            max = value
-            return true
+        synchronized(this) {
+            if (valueDouble > maxDouble || max == null) {
+                max = value
+                return true
+            }
         }
         return false
     }

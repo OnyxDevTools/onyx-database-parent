@@ -22,7 +22,7 @@ class BasicPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
     fun aTestSavePartitionEntityTest() {
         val entity = BasicPartitionEntity()
         entity.partitionId = 2L
-        assertTrue(manager.saveEntity<BasicPartitionEntity>(entity).id!! > 0L, "Failed to save entity with partition")
+        assertTrue(manager.saveEntity(entity).id!! > 0L, "Failed to save entity with partition")
     }
 
     @Test

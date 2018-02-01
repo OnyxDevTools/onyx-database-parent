@@ -2,8 +2,10 @@ package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.OnyxException
+import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
+import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
@@ -36,8 +38,10 @@ open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
+        val context = Contexts.get(contextId)!!
         val matching = HashSet<Reference>()
         (records.references.map { Reference(0L, it.position) } - existingValues).forEach {
+            collector?.collect(it, it.toManagedEntity(context, descriptor))
             matching.add(it)
         }
         return matching

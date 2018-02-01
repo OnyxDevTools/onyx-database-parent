@@ -9,7 +9,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
-import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.identifier
 
 import java.util.*

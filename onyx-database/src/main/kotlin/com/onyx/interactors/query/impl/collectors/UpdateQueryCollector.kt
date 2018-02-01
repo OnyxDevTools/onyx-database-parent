@@ -13,6 +13,10 @@ class UpdateQueryCollector(
         descriptor: EntityDescriptor
 ) : BaseQueryCollector<Reference>(query, context, descriptor) {
 
+    init {
+        shouldCacheResults = false
+    }
+
     override val references: MutableList<Reference> = if(query.shouldSortResults()) SortedList(ReferenceComparator(comparator)) else ArrayList()
 
     override fun collect(reference: Reference, entity: IManagedEntity?) {

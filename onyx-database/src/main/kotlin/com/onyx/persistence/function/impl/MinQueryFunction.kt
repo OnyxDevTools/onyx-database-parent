@@ -23,9 +23,11 @@ class MinQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
         val minDouble:Double = (min as? Number)?.toDouble() ?: 0.0
 
-        if(valueDouble < minDouble || min == null) {
-            min = value
-            return true
+        synchronized(this) {
+            if (valueDouble < minDouble || min == null) {
+                min = value
+                return true
+            }
         }
         return false
     }

@@ -31,10 +31,14 @@ class FlatFunctionSelectionQueryCollector(
             val selectionValue = comparator.getAttribute(it, entity, context)
             if(it.function?.preProcess(query, selectionValue) == true) {
                 otherSelections.forEach { selection ->
-                    if (selection.function == null)
-                        result[selection.selection] = comparator.getAttribute(selection, entity, context)
+                    val resultAttribute = if (selection.function == null)
+                        comparator.getAttribute(selection, entity, context)
                     else
-                        result[selection.selection] = selection.function.execute(comparator.getAttribute(selection, entity, context))
+                        selection.function.execute(comparator.getAttribute(selection, entity, context))
+
+                    synchronized(result) {
+                        result[selection.selection] = resultAttribute
+                    }
                 }
             }
         }

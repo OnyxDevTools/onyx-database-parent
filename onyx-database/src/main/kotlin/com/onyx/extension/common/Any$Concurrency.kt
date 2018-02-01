@@ -58,7 +58,7 @@ inline fun <A, B>Collection<A>.parallelMap(parallel:Boolean = true, crossinline 
     } else {
         map(block)
     }
-}
+}*/
 
 inline fun <A> Collection<A>.parallelForEach(crossinline block: (A) -> Unit) {
     val futures:MutableList<Future<Unit>> = ArrayList()
@@ -76,7 +76,7 @@ inline fun <A> Collection<A>.parallelForEach(crossinline block: (A) -> Unit) {
     }
     futures.forEach { it.get() }
 }
-*/
+
 
 /**
  * Sleep thread a fixed amount of time.

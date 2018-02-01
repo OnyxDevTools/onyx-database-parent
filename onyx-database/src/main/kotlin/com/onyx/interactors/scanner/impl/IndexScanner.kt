@@ -3,8 +3,10 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
+import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.interactors.index.IndexInteractor
+import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
@@ -29,12 +31,15 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
     @Throws(OnyxException::class)
     override fun scan(): MutableSet<Reference> {
         val matching = HashSet<Reference>()
-
+        val context = Contexts.get(contextId)!!
         // If it is an in clause
         if (criteria.value is List<*>) {
             (criteria.value as List<*>).forEach { find(it).forEach { matching.add(it) } }
         } else {
-            find(criteria.value).forEach { matching.add(it) }
+            find(criteria.value).forEach {
+                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                matching.add(it)
+            }
         }
 
         return matching
@@ -49,8 +54,15 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      */
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
+        val context = Contexts.get(contextId)!!
         val matching = scan()
-        return existingValues.filterTo(HashSet()) { matching.contains(it) }
+        return existingValues.filterTo(HashSet()) {
+            if(matching.contains(it)) {
+                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                return@filterTo true
+            }
+            return@filterTo false
+        }
     }
 
     /**

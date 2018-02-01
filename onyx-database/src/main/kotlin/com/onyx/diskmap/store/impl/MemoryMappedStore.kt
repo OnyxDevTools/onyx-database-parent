@@ -3,7 +3,6 @@ package com.onyx.diskmap.store.impl
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.ClassMetadata
-import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
 import com.onyx.persistence.context.SchemaContext
 import java.io.FileNotFoundException

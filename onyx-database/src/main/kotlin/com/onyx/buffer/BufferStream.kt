@@ -524,7 +524,7 @@ class BufferStream(buffer: ByteBuffer) {
     @Throws(BufferingException::class)
     fun getArray(type: BufferObjectType): Any {
         when {
-            type == BufferObjectType.LONG_ARRAY -> {
+            type === BufferObjectType.LONG_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = LongArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Long.BYTES * arr.size)
@@ -532,7 +532,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.long
                 return arr
             }
-            type == BufferObjectType.INT_ARRAY -> {
+            type === BufferObjectType.INT_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = IntArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES * arr.size)
@@ -540,7 +540,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.int
                 return arr
             }
-            type == BufferObjectType.FLOAT_ARRAY -> {
+            type === BufferObjectType.FLOAT_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = FloatArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Float.BYTES * arr.size)
@@ -548,7 +548,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.float
                 return arr
             }
-            type == BufferObjectType.BYTE_ARRAY -> {
+            type === BufferObjectType.BYTE_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = ByteArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
@@ -556,7 +556,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.get()
                 return arr
             }
-            type == BufferObjectType.CHAR_ARRAY -> {
+            type === BufferObjectType.CHAR_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = CharArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(Character.BYTES * arr.size)
@@ -564,7 +564,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.char
                 return arr
             }
-            type == BufferObjectType.SHORT_ARRAY -> {
+            type === BufferObjectType.SHORT_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = ShortArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Short.BYTES * arr.size)
@@ -572,7 +572,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.short
                 return arr
             }
-            type == BufferObjectType.BOOLEAN_ARRAY -> {
+            type === BufferObjectType.BOOLEAN_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = BooleanArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES * arr.size)
@@ -580,7 +580,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.get().toInt() == 1
                 return arr
             }
-            type == BufferObjectType.DOUBLE_ARRAY -> {
+            type === BufferObjectType.DOUBLE_ARRAY -> {
                 expandableByteBuffer!!.ensureRequiredSize(Integer.BYTES)
                 val arr = DoubleArray(expandableByteBuffer!!.buffer.int)
                 expandableByteBuffer!!.ensureRequiredSize(java.lang.Double.BYTES * arr.size)
@@ -588,7 +588,7 @@ class BufferStream(buffer: ByteBuffer) {
                     arr[i] = expandableByteBuffer!!.buffer.double
                 return arr
             }
-            type == BufferObjectType.OTHER_ARRAY -> {
+            type === BufferObjectType.OTHER_ARRAY -> {
                 val arr = Array.newInstance(objectClass, int)
                 for (i in 0 until Array.getLength(arr)) {
                     val value = value

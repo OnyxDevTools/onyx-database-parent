@@ -19,7 +19,6 @@ import java.io.*
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
-import java.nio.charset.StandardCharsets
 
 /**
  * Persistence manager factory for an embedded Java based database.
@@ -138,7 +137,6 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
             if (!databaseDirectory.exists()) {
                 databaseDirectory.mkdirs()
-                createCredentialsFile()
             }
 
             acquireLock()
@@ -259,35 +257,9 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
         throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
     }
 
-    /**
-     * Create Credentials File
-     *
-     * @throws InitializationException Cannot create or write to credentials file
-     * @since 1.0.0
-     */
-    @Throws(InitializationException::class)
-    private fun createCredentialsFile() {
-        var fileStream: FileOutputStream? = null
-        try {
-            //create a temporary file
-            val credentialsFile = File(databaseLocation + File.separator + CREDENTIALS_FILE)
-            credentialsFile.parentFile.mkdirs()
-            credentialsFile.createNewFile()
-            fileStream = FileOutputStream(credentialsFile)
-            fileStream.write(encryptCredentials().toByteArray(StandardCharsets.UTF_16))
-        } catch (e: IOException) {
-            throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
-        } finally {
-            // Close the fileStream regardless of what happens...
-            fileStream?.close()
-        }
-    }
-
     // endregion
 
     companion object {
-
-        private val CREDENTIALS_FILE = "tmp"
 
         @JvmField
         val DEFAULT_INSTANCE = "ONYX_DATABASE"

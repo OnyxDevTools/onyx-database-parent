@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.query.data.QueryAttributeResource
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.SortedList
+import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.function.QueryFunction
@@ -22,7 +23,7 @@ class GroupFunctionQueryCollector(
     override var results: MutableCollection<Map<String, Any?>> = if(query.shouldSortResults()) SortedList(MapComparator(comparator)) else ArrayList()
 
     // Group results
-    private val groups = HashMap<List<Any?>, MutableMap<String, Any?>>()
+    private val groups = OptimisticLockingMap(HashMap<List<Any?>, MutableMap<String, Any?>>())
 
     // Functions that require group aggregation
     private val selectionFunctions = selections.filter { it.function?.type?.isGroupFunction == true }
@@ -46,29 +47,30 @@ class GroupFunctionQueryCollector(
         if(entity == null)
             return
 
+        super.collect(reference, entity)
+
         val groupResult = getGroupResults(entity)
 
-        val map = synchronized(groups) {
-            groups.getOrPut(groupResult) {
-                increment()
-                HashMap()
-            }
+        val map = groups.getOrPut(groupResult) {
+            increment()
+            HashMap()
         }
 
-        synchronized(map) {
-            allQueryAttributes.forEach { attribute ->
-                if (attribute.function?.type?.isGroupFunction == true) {
-                    (map.getOrPut(attribute.selection) {
-                        attribute.function.newInstance()
-                    } as QueryFunction).preProcess(query, comparator.getAttribute(attribute, entity, context)) // Process function
-                } else {
+        allQueryAttributes.forEach { attribute ->
+            if (attribute.function?.type?.isGroupFunction == true) {
+                val function = synchronized(map) {
                     map.getOrPut(attribute.selection) {
-                        comparator.getAttribute(attribute, entity, context)
+                        attribute.function.newInstance()
                     }
+                } as QueryFunction
+                function.preProcess(query, comparator.getAttribute(attribute, entity, context)) // Process function
+            } else {
+                val attributeValue = comparator.getAttribute(attribute, entity, context)
+                map.getOrPut(attribute.selection) {
+                    attributeValue
                 }
             }
         }
-
     }
 
     /**

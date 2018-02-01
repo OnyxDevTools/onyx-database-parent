@@ -14,7 +14,7 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemIndex @JvmOverloads constructor(
 
-    @Identifier
+    @Identifier(loadFactor = 5)
     var name: String = "",
 
     @Attribute

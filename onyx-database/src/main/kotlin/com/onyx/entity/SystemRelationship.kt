@@ -15,7 +15,7 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemRelationship @JvmOverloads constructor(
 
-    @Identifier
+    @Identifier(loadFactor = 5)
     var name: String = "",
 
     @Attribute

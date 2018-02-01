@@ -304,6 +304,7 @@ interface PersistenceManager {
     @Suppress("UNCHECKED_CAST")
     fun <T : Any?> getRelationship(entity: IManagedEntity, attribute: String): T {
         initialize(entity, attribute)
+        @Suppress("RemoveExplicitTypeArguments")
         return entity.get<T>(context = context, name = attribute) as T
     }
 
@@ -646,6 +647,7 @@ interface PersistenceManager {
      * @since 1.3.1
      */
     @Throws(OnyxException::class)
+    @Suppress("UNUSED")
     fun listen(query: Query, queryListener: QueryListener<*>) {
         query.changeListener = queryListener
         listen(query)
@@ -660,6 +662,7 @@ interface PersistenceManager {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
+    @Suppress("UNUSED")
     fun executeLazyQueryForResults(query: Query): QueryResult = QueryResult(query, this.executeLazyQuery<IManagedEntity>(query = query))
 
     /**
@@ -670,6 +673,7 @@ interface PersistenceManager {
      * @throws OnyxException Error when hydrating relationship.  The attribute must exist and be a relationship.
      * @since 1.0.0
      */
+    @Suppress("UNUSED")
     @Throws(OnyxException::class)
     fun findRelationship(entity: IManagedEntity, attribute: String): Any? = getRelationship(entity, attribute)
 }

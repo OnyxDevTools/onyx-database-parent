@@ -109,26 +109,6 @@ fun Class<*>.primitiveType() = when {
     else -> null
 }
 
-fun Class<*>.isSmallDataType() = when(this) {
-    ClassMetadata.LONG_TYPE -> true
-    ClassMetadata.INT_TYPE -> true
-    ClassMetadata.DOUBLE_TYPE -> true
-    ClassMetadata.FLOAT_TYPE -> true
-    ClassMetadata.BOOLEAN_TYPE -> true
-    ClassMetadata.CHAR_TYPE -> true
-    ClassMetadata.BYTE_TYPE -> true
-    ClassMetadata.SHORT_TYPE -> true
-    ClassMetadata.LONG_PRIMITIVE_TYPE -> true
-    ClassMetadata.INT_PRIMITIVE_TYPE -> true
-    ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> true
-    ClassMetadata.FLOAT_PRIMITIVE_TYPE -> true
-    ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> true
-    ClassMetadata.CHAR_PRIMITIVE_TYPE -> true
-    ClassMetadata.BYTE_PRIMITIVE_TYPE -> true
-    ClassMetadata.SHORT_PRIMITIVE_TYPE -> true
-    else -> false
-}
-
 // endregion
 
 /**

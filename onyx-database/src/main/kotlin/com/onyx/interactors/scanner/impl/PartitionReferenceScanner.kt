@@ -5,6 +5,7 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
+import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
 import com.onyx.persistence.IManagedEntity
@@ -60,6 +61,7 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
                             val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
                             (records.references.map { Reference(partitionId, it.position) } - existingValues).forEach {
                                 matching.add(it)
+                                collector?.collect(it, it.toManagedEntity(context, descriptor))
                             }
                             return@async matching
                         }

@@ -21,7 +21,9 @@ class SumQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
             itemType = value.javaClass
 
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
-        sumDouble += valueDouble
+        synchronized(this) {
+            sumDouble += valueDouble
+        }
         return false
     }
 

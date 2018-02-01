@@ -1,6 +1,7 @@
 package com.onyx.interactors.query.impl.collectors
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.extension.common.parallelForEach
 import com.onyx.extension.hydrateRelationships
 import com.onyx.extension.toManagedEntity
 import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
@@ -31,6 +32,8 @@ abstract class BaseQueryCollector<T>(
 
     // Used for real-time limiting of results so we know our offset index of truncated items
     private var startIndex:Int = 0
+
+    protected var shouldCacheResults:Boolean = true
 
     // Used to compare values and a base comparator that pulls info from the store rather than memory
     protected val comparator: QuerySortComparator by lazy { QuerySortComparator(query, query.queryOrders?.toTypedArray() ?: emptyArray(), descriptor, context) }
@@ -76,7 +79,10 @@ abstract class BaseQueryCollector<T>(
      * @since 2.1.3
      */
     override fun setReferenceSet(value: MutableSet<Reference>) {
-        value.forEach { collect(it, it.toManagedEntity(context, descriptor)) }
+        if(value.size > 1000)
+            value.parallelForEach { collect(it, it.toManagedEntity(context, descriptor)) }
+        else
+            value.forEach { collect(it, it.toManagedEntity(context, descriptor)) }
     }
 
     /**
@@ -88,12 +94,11 @@ abstract class BaseQueryCollector<T>(
         if(entity == null)
             return
 
-        if(numberOfResults.get() == DefaultQueryCacheInteractor.MAX_CACHED_REFERENCES)
-            synchronized(references) {
+        synchronized(references) {
+            if(references.size >= DefaultQueryCacheInteractor.MAX_CACHED_REFERENCES) {
+                shouldCacheResults = false
                 references.clear()
-            }
-        else {
-            synchronized(references) {
+            } else {
                 references.add(reference)
             }
         }
@@ -108,7 +113,7 @@ abstract class BaseQueryCollector<T>(
      *
      * @since 2.1.3
      */
-    override fun shouldCacheResults():Boolean = references.size == numberOfResults.toInt()
+    override fun shouldCacheResults():Boolean = shouldCacheResults
 
     /**
      * Limit the results.  This is done per item so that there are less records to sort in the event the query is ordered

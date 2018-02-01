@@ -100,7 +100,7 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
                     val newAppSize = appSize + plainIn!!.remaining()
                     if (newAppSize > appSize * 2)
                         throw IOException("Failed to enlarge application input buffer ")
-                    val newPlainIn = ByteBuffer.allocate(newAppSize).order(ByteOrder.LITTLE_ENDIAN)
+                    val newPlainIn = ByteBuffer.allocateDirect(newAppSize).order(ByteOrder.BIG_ENDIAN)
                     newPlainIn.put(plainIn)
                     plainIn = newPlainIn
                 }
@@ -108,7 +108,7 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
                     val curNetSize = cipherIn!!.capacity()
                     val netSize = sslEngine!!.session.packetBufferSize
                     if (netSize > curNetSize) {
-                        val newCipherIn = ByteBuffer.allocate(netSize).order(ByteOrder.LITTLE_ENDIAN)
+                        val newCipherIn = ByteBuffer.allocateDirect(netSize).order(ByteOrder.BIG_ENDIAN)
                         newCipherIn.put(cipherIn)
                         cipherIn = newCipherIn
                     } else {
@@ -144,7 +144,7 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
                     throw IOException("Failed to enlarge network buffer")
                 }
 
-                cipherOut = ByteBuffer.allocate(netSize).order(ByteOrder.LITTLE_ENDIAN)
+                cipherOut = ByteBuffer.allocateDirect(netSize).order(ByteOrder.BIG_ENDIAN)
             }
             else -> throw IOException("Unexpected status $status")
         }
@@ -159,10 +159,10 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
         val appBufferSize = session.applicationBufferSize
         val netBufferSize = session.packetBufferSize
 
-        plainOut = ByteBuffer.allocate(appBufferSize).order(ByteOrder.LITTLE_ENDIAN)
-        plainIn = ByteBuffer.allocate(appBufferSize).order(ByteOrder.LITTLE_ENDIAN)
-        cipherOut = ByteBuffer.allocate(netBufferSize).order(ByteOrder.LITTLE_ENDIAN)
-        cipherIn = ByteBuffer.allocate(netBufferSize).order(ByteOrder.LITTLE_ENDIAN)
+        plainOut = ByteBuffer.allocateDirect(appBufferSize).order(ByteOrder.BIG_ENDIAN)
+        plainIn = ByteBuffer.allocateDirect(appBufferSize).order(ByteOrder.BIG_ENDIAN)
+        cipherOut = ByteBuffer.allocateDirect(netBufferSize).order(ByteOrder.BIG_ENDIAN)
+        cipherIn = ByteBuffer.allocateDirect(netBufferSize).order(ByteOrder.BIG_ENDIAN)
     }
 
     /**

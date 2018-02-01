@@ -24,9 +24,11 @@ class AvgQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
             itemType = value.javaClass
 
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
-        sumDouble += valueDouble
 
-        numberOfRecords++
+        synchronized(this) {
+            sumDouble += valueDouble
+            numberOfRecords++
+        }
         return false
     }
 

@@ -4,7 +4,6 @@ import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
-import com.onyx.exception.UnknownDatabaseException
 
 data class SkipNode(
         var position:Long = 0L,

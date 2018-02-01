@@ -78,7 +78,7 @@ abstract class NetworkPeer : SSLPeer {
 
     // region Read I/O
 
-    private val packetSizeBuffer = ByteBuffer.allocateDirect(Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN)
+    private val packetSizeBuffer = ByteBuffer.allocateDirect(Integer.BYTES).order(ByteOrder.BIG_ENDIAN)
 
     /**
      * Read from a socket channel.  This will read and interpret the packets in order to decipher a message.
