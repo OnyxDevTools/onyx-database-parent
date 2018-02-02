@@ -98,7 +98,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
             newScalableMap(this.store, newMapHeader(), 1)
         } else {
-            getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header::class.java) as Header?)!!, 1)
+            getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
         }
 
     }
@@ -157,7 +157,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
             newScalableMap(this.store, newMapHeader(), 1)
         } else {
-            getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header::class.java) as Header?)!!, 1)
+            getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
         }
     }
 
@@ -251,7 +251,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
             var header: Header? = null
             val headerReference = internalMaps[name]
             if (headerReference != null)
-                header = store.read(headerReference, Header.HEADER_SIZE, Header::class.java) as Header?
+                header = store.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
 
             // Create a new header for the new structure we are creating
             if (header == null) {

@@ -5,6 +5,8 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.*
 import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.persistence.IManagedEntity
+import com.onyx.persistence.ManagedEntity
 
 import java.lang.reflect.Array
 import java.nio.BufferUnderflowException
@@ -289,6 +291,7 @@ class BufferStream(buffer: ByteBuffer) {
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return null
                 BufferObjectType.REFERENCE -> return referenceOf(short.toInt())
+                BufferObjectType.ENTITY -> return entity
                 BufferObjectType.ENUM -> return enum
                 BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> return byte
                 BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> return int
@@ -372,6 +375,21 @@ class BufferStream(buffer: ByteBuffer) {
             } catch (e: ClassNotFoundException) {
                 throw BufferingException(BufferingException.UNKNOWN_CLASS + className, null, e)
             }
+        }
+
+    /**
+     * Get an entity from the buffer
+     *
+     * @since 2.1.3 Optimize entity store serialization
+     */
+    val entity:IManagedEntity
+        get() {
+            val serializerId = expandableByteBuffer!!.buffer.int
+            expandableByteBuffer!!.buffer.position(expandableByteBuffer!!.buffer.position() - Integer.BYTES)
+            val systemEntity = context!!.getSystemEntityById(serializerId)
+            val entity:ManagedEntity = systemEntity!!.type.instance()
+            entity.read(this, context)
+            return entity
         }
 
     /**
@@ -800,6 +818,15 @@ class BufferStream(buffer: ByteBuffer) {
     }
 
     /**
+     * Put an entity without putting the class information
+     *
+     * @since 2.1.3 Optimize serialization
+     */
+    private fun putEntity(entity: ManagedEntity, context: SchemaContext?) {
+        entity.write(this, context)
+    }
+
+    /**
      * Put an value that implements BufferStreamable to the buffer.
      *
      * @since 1.1.0
@@ -1001,6 +1028,7 @@ class BufferStream(buffer: ByteBuffer) {
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return byteBuffer.position() - position
                 BufferObjectType.REFERENCE -> putShort(referenceNumber)
+                BufferObjectType.ENTITY -> putEntity(value as ManagedEntity, context)
                 BufferObjectType.ENUM -> putEnum(value as Enum<*>)
                 BufferObjectType.BYTE, BufferObjectType.MUTABLE_BYTE -> putByte(value as Byte)
                 BufferObjectType.INT, BufferObjectType.MUTABLE_INT -> putInt(value as Int)
@@ -1043,8 +1071,9 @@ class BufferStream(buffer: ByteBuffer) {
     fun toMap(context: SchemaContext): Map<String, Any?> {
         val results = HashMap<String, Any?>()
 
-        byte  // Read the buffer value metadata
-        value // Read the entity type
+        val type = byte  // Read the buffer value metadata
+        if(type != BufferObjectType.ENTITY.ordinal.toByte())
+            value // Read the entity type
         val systemEntity = context.getSystemEntityById(int)!!
 
         for ((name) in systemEntity.attributes) results.put(name, value)

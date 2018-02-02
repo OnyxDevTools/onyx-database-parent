@@ -7,7 +7,6 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.async
-import com.onyx.extension.common.instance
 import com.onyx.extension.perform
 import com.onyx.lang.concurrent.AtomicCounter
 import com.onyx.lang.concurrent.impl.DefaultAtomicCounter
@@ -19,6 +18,7 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import kotlin.concurrent.getOrSet
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -164,32 +164,6 @@ open class FileChannelStore() : Store {
     }
 
     /**
-     * Read a serializable value from the store
-     *
-     * @param position Position to read from
-     * @param size Amount of bytes to read.
-     * @param type class type
-     * @return The value that was read from the store
-     */
-    override fun read(position: Long, size: Int, type: Class<*>): Any? {
-        if (!validateFileSize(position)) return null
-
-        return BufferStream(size).perform {
-            this.read(it!!.byteBuffer, position)
-            it.flip()
-
-            when {
-                BufferStreamable::class.java.isAssignableFrom(type) -> {
-                    val streamable: BufferStreamable = type.instance()
-                    streamable.read(it, context)
-                    streamable
-                }
-                else -> it.value
-            }
-        }
-    }
-
-    /**
      * Read a serializable value
      *
      * @param position Position to read from
@@ -267,7 +241,6 @@ open class FileChannelStore() : Store {
         return@withLongBuffer newFileSize
     }
 
-
     /**
      * Delete File
      */
@@ -277,6 +250,41 @@ open class FileChannelStore() : Store {
     }
 
     /**
+     * Retrieve an object at position.  This will automatically determine its
+     * size and de-serialize the object
+     *
+     * @param position Position in the store to retrieve object
+     * @since 2.0.0
+     */
+    @Suppress("UNCHECKED_CAST")
+    override fun <T> getObject(position: Long):T {
+        val size = BufferPool.withIntBuffer {
+            this.read(it, position)
+            it.rewind()
+            it.int
+        }
+        val shouldAllocBuffer = size > READ_BUFFER_SIZE
+
+        if(shouldAllocBuffer) {
+            return BufferPool.allocateAndLimit(size) {
+                this.read(it, position + Integer.BYTES)
+                it.rewind()
+                @Suppress("UNCHECKED_CAST")
+                return@allocateAndLimit BufferStream(it).getObject(context) as T
+            }
+        }
+
+        val buffer = readBuffer.getOrSet { BufferPool.allocateExact(READ_BUFFER_SIZE) }
+        buffer.clear()
+        buffer.limit(size)
+
+        this.read(buffer, position + Integer.BYTES)
+        buffer.rewind()
+        return BufferStream(buffer).getObject(context) as T
+    }
+
+    /**
+     *
      * Reset the storage so that it has a clean slate
      * and truncates all relative data.
      *
@@ -299,6 +307,10 @@ open class FileChannelStore() : Store {
             }
             return@lazy true
         }
+
+        private val READ_BUFFER_SIZE = 20 * 1024
+
+        val readBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
     }
 
 }

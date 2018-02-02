@@ -126,7 +126,7 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
             parts.size == 1 && queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)
             queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)?.firstOrNull()?.get(context, queryAttributeResource.descriptor, parts.last())
             queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)?.map { it?.get<Any?>(context, queryAttributeResource.descriptor, parts.last()) }
-            else -> entity[context, entity.descriptor(context), queryAttributeResource.attribute]
+            else -> entity[context, queryAttributeResource.descriptor, queryAttributeResource.attribute]
         }
     }
 

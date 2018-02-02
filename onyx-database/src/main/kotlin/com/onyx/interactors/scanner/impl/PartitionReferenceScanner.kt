@@ -60,15 +60,20 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
                             val dataFile = context.getDataFile(partitionDescriptor)
                             val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
                             (records.references.map { Reference(partitionId, it.position) } - existingValues).forEach {
-                                matching.add(it)
                                 collector?.collect(it, it.toManagedEntity(context, descriptor))
+                                if(collector == null)
+                                    matching.add(it)
                             }
                             return@async matching
                         }
                 )
             }
 
-            units.forEach { allMatching += it.get() }
+            units.forEach {
+                val results =  it.get()
+                if(collector == null) allMatching += results
+            }
+
             return allMatching
         } else {
             val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L

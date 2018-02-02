@@ -55,7 +55,7 @@ abstract class AbstractHashMatrix<K, V>(fileStore: Store, header: Header, detach
      *
      * @since 1.2.0
      */
-    protected open fun getHashMatrixNode(position: Long): HashMatrixNode = fileStore.read(position, hashMatrixNodeSize, HashMatrixNode::class.java) as HashMatrixNode
+    protected open fun getHashMatrixNode(position: Long): HashMatrixNode = fileStore.read(position, hashMatrixNodeSize, HashMatrixNode()) as HashMatrixNode
 
     /**
      * Write the hash matrix data to the store.

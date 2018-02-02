@@ -39,7 +39,7 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
     private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
     // Cache of skip lists
-    private val skipListMapCache:MutableMap<Int, CombinedIndexHashMatrixNode> = OptimisticLockingMap(WeakHashMap())
+    private val skipListMapCache:MutableMap<Int, CombinedIndexHashMatrixNode?> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * Constructor
@@ -208,11 +208,7 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
         val hash = Math.abs(hash(key))
         val hashDigits = getHashDigits(hash)
         val skipListMapId = getSkipListKey(key)
-        return try {
-            skipListMapCache.getOrPut(skipListMapId) { return@getOrPut seek(forInsert, hashDigits)!! }
-        } catch (e: KotlinNullPointerException) {
-            null
-        }
+        return skipListMapCache.getOrPut(skipListMapId) { return@getOrPut seek(forInsert, hashDigits) }
     }
 
 

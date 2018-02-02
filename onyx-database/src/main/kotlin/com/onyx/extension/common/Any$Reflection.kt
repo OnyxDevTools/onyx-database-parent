@@ -3,6 +3,7 @@ package com.onyx.extension.common
 import com.onyx.interactors.classfinder.ApplicationClassFinder
 import com.onyx.persistence.annotations.*
 import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -149,6 +150,7 @@ object ClassMetadata {
     val RELATIONSHIP_ANNOTATION = Relationship::class.java
     val ENTITY_ANNOTATION = Entity::class.java
     val ANY_CLASS = Any::class.java
+    val MANAGED_ENTITY = IManagedEntity::class.java
 
     private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
     private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())

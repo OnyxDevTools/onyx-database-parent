@@ -34,7 +34,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
         return scan(recordInteractor)
     }
 
-    fun scan(recordInteractor: RecordInteractor, partitionId:Long = this.partitionId):MutableSet<Reference> {
+    fun scan(recordInteractor: RecordInteractor, scanExisting:Boolean = false, partitionId:Long = this.partitionId):MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
 
@@ -44,8 +44,10 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
                     .map { Reference(partitionId, recordInteractor.getReferenceId(it!!)) }
                     .filter { it.reference > 0L }
                     .forEach {
-                        collector?.collect(it, it.toManagedEntity(context, descriptor))
-                        matching.add(it)
+                        if(!scanExisting)
+                            collector?.collect(it, it.toManagedEntity(context, descriptor))
+                        if(collector == null)
+                            matching.add(it)
                     }
         } else {
             val values: Set<Long> = when {
@@ -59,8 +61,10 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
             values.filter { it > 0L }
                     .map { Reference(partitionId, it) }
                     .forEach {
-                        collector?.collect(it, it.toManagedEntity(context, descriptor))
-                        matching.add(it)
+                        if(!scanExisting)
+                            collector?.collect(it, it.toManagedEntity(context, descriptor))
+                        if(collector == null)
+                            matching.add(it)
                     }
         }
 
@@ -76,7 +80,14 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
      */
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
-        val matching = scan()
-        return existingValues.filterTo(HashSet()) { matching.contains(it) }
+        val context = Contexts.get(contextId)!!
+        val matching = scan(context.getRecordInteractor(descriptor), true)
+        return existingValues.filterTo(HashSet()) {
+            if(matching.contains(it)) {
+                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                return@filterTo (collector == null)
+            }
+            return@filterTo false
+        }
     }
 }

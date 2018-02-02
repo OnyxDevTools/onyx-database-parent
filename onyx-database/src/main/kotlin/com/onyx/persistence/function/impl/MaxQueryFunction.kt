@@ -16,7 +16,7 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
 
     override fun getFunctionValue():Any? = max
 
-    override fun preProcess(query: Query, value: Any?):Boolean = synchronized(this) {
+    override fun preProcess(query: Query, value: Any?):Boolean {
         if(value != null && itemType == null)
             itemType = value.javaClass
 

@@ -173,7 +173,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
     }
 
     companion object {
-        val MAX_CACHED_REFERENCES = 100000000 // Cannot cache more than this amount
+        val MAX_CACHED_REFERENCES = 1000000 // Cannot cache more than this amount
     }
 }
 

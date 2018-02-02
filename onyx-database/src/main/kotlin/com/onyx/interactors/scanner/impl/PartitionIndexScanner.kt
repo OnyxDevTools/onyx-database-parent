@@ -53,7 +53,10 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
                 )
             }
 
-            units.forEach { matching += it.get() }
+            units.forEach {
+                val results =  it.get()
+                if(collector == null) matching += results
+            }
             return matching
 
         } else {
@@ -79,11 +82,16 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
         if (criteria.value is List<*>)
-            (criteria.value as List<Any>).forEach { find(it, indexInteractor, partitionId).forEach { matching.add(it) } }
+            (criteria.value as List<Any>).forEach { find(it, indexInteractor, partitionId).forEach {
+                collector?.collect(it, it.toManagedEntity(context, descriptor))
+                if(collector == null)
+                    matching.add(it)
+            } }
         else
             find(criteria.value, indexInteractor, partitionId).forEach {
                 collector?.collect(it, it.toManagedEntity(context, descriptor))
-                matching.add(it)
+                if(collector == null)
+                    matching.add(it)
             }
 
         return matching

@@ -1,5 +1,6 @@
 package com.onyx.buffer
 
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import java.util.Date
@@ -55,6 +56,8 @@ enum class BufferObjectType constructor(private val type: Class<*>?) {
     COLLECTION(Collection::class.java),
     MAP(Map::class.java),
 
+    ENTITY(IManagedEntity::class.java),
+
     OTHER(null);
 
 
@@ -72,6 +75,9 @@ enum class BufferObjectType constructor(private val type: Class<*>?) {
                 return NULL
 
             val type = value.javaClass
+
+            if(context != null && ClassMetadata.MANAGED_ENTITY.isAssignableFrom(type))
+                return ENTITY
 
             if (type.isEnum)
                 return ENUM

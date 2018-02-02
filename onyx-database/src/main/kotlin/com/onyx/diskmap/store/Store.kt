@@ -62,16 +62,6 @@ interface Store {
     fun read(buffer: ByteBuffer, position: Long)
 
     /**
-     * Read a serializable value from the store
-     *
-     * @param position Position to read from
-     * @param size Amount of bytes to read.
-     * @param type class type
-     * @return The value that was read from the store
-     */
-    fun read(position: Long, size: Int, type: Class<*>): Any?
-
-    /**
      * Read a serializable value
      *
      * @param position Position to read from
@@ -129,19 +119,7 @@ interface Store {
      * @param position Position in the store to retrieve object
      * @since 2.0.0
      */
-    fun <T> getObject(position: Long):T {
-        val size = BufferPool.withIntBuffer {
-            this.read(it, position)
-            it.rewind()
-            it.int
-        }
-        return BufferPool.allocateAndLimit(size) {
-            this.read(it, position + Integer.BYTES)
-            it.rewind()
-            @Suppress("UNCHECKED_CAST")
-            return@allocateAndLimit BufferStream(it).getObject(context) as T
-        }
-    }
+    fun <T> getObject(position: Long):T
 
     /**
      * Write an object to the store.  First add its size and then the byte value

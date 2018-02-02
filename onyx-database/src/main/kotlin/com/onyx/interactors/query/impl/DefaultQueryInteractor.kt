@@ -162,7 +162,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @return Filtered references matching criteria
      */
     @Suppress("UNCHECKED_CAST")
-    private fun <T> getReferencesForCriteria(query: Query, criteria: QueryCriteria, existingReferences: MutableSet<Reference>?, forceFullScan: Boolean):Pair<MutableSet<Reference>, QueryCollector<T>?> {
+    private fun <T> getReferencesForCriteria(query: Query, criteria: QueryCriteria, existingReferences: MutableSet<Reference>?, forceFullScan: Boolean, collect:Boolean = true):Pair<MutableSet<Reference>, QueryCollector<T>?> {
         val context = Contexts.get(contextId)!!
         // Ensure query is still valid
         if (query.isTerminated) {
@@ -175,11 +175,12 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             ScannerFactory.getScannerForQueryCriteria(context, criteria, query.entityType!!, query, persistenceManager)
         }
 
-        if(scanner is FullTableScanner || scanner is PartitionFullTableScanner || (
+        if(collect &&
+                (scanner is FullTableScanner || scanner is PartitionFullTableScanner || (
                     criteria == query.getAllCriteria().last()
                     && !criteria.isNot
                     && !criteria.flip
-                    && !criteria.isOr)){
+                    && !criteria.isOr))){
             scanner.isLast = true
         }
 
@@ -201,7 +202,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         if(!(scanner is FullTableScanner || scanner is PartitionFullTableScanner)) {
             // Go through and ensure all the sub criteria is met
             for (subCriteriaObject in criteria.subCriteria) {
-                val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults, false)
+                val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults, false, false)
                 aggregateFilteredReferences(subCriteriaObject, criteriaResults, subCriteriaResults.first)
             }
         }

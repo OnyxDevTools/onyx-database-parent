@@ -222,10 +222,10 @@ abstract class BaseQueryCollector<T>(
      */
     override fun getLimitedReferences(): MutableList<Reference> =
         if(query.firstRow > 0 || query.maxResults > 0) {
-            if(query.firstRow > references.size)
+            if(query.firstRow >= references.size)
                 ArrayList()
             else {
-                val end = if((query.firstRow + query.maxResults) > references.size) query.firstRow + query.maxResults else references.size
+                val end = if((query.firstRow + query.maxResults) >= references.size) (references.size - 1) else (references.size -1)
                 references.subList(query.firstRow, end)
             }
         }

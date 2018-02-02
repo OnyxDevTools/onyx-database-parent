@@ -16,7 +16,7 @@ class SumQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
 
     override fun getFunctionValue():Any? = sum
 
-    override fun preProcess(query: Query, value: Any?): Boolean = synchronized(this) {
+    override fun preProcess(query: Query, value: Any?): Boolean {
         if(value != null && itemType == null)
             itemType = value.javaClass
 

@@ -42,7 +42,8 @@ open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: 
         val matching = HashSet<Reference>()
         (records.references.map { Reference(0L, it.position) } - existingValues).forEach {
             collector?.collect(it, it.toManagedEntity(context, descriptor))
-            matching.add(it)
+            if(collector == null)
+                matching.add(it)
         }
         return matching
     }

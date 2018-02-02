@@ -29,22 +29,37 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      * @throws OnyxException Cannot scan index
      */
     @Throws(OnyxException::class)
-    override fun scan(): MutableSet<Reference> {
+    override fun scan(): MutableSet<Reference> = scan(false)
+
+    /**
+     * Scan indexes
+     *
+     * @return Indexes meeting criteria
+     * @throws OnyxException Cannot scan index
+     */
+    fun scan(includesExisting:Boolean = false): MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
         // If it is an in clause
         if (criteria.value is List<*>) {
-            (criteria.value as List<*>).forEach { find(it).forEach { matching.add(it) } }
+            (criteria.value as List<*>).forEach { find(it).forEach {
+                    if(!includesExisting)
+                        collector?.collect(it, it.toManagedEntity(context, descriptor))
+                    if(collector == null)
+                        matching.add(it)
+                }
+            }
         } else {
             find(criteria.value).forEach {
-                collector?.collect(it, it.toManagedEntity(context, descriptor))
-                matching.add(it)
+                if(!includesExisting)
+                    collector?.collect(it, it.toManagedEntity(context, descriptor))
+                if(collector == null)
+                    matching.add(it)
             }
         }
 
         return matching
     }
-
     /**
      * Scan indexes that are within the existing values
      *
@@ -55,11 +70,11 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
-        val matching = scan()
+        val matching = scan(true)
         return existingValues.filterTo(HashSet()) {
             if(matching.contains(it)) {
                 collector?.collect(it, it.toManagedEntity(context, descriptor))
-                return@filterTo true
+                return@filterTo collector == null
             }
             return@filterTo false
         }

@@ -654,6 +654,8 @@ open class DefaultSchemaContext : SchemaContext {
             }
         }
 
+    @JvmField internal val partitionDataFiles = OptimisticLockingMap<Long, DiskMapFactory>(HashMap())
+
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.
      *
@@ -670,11 +672,13 @@ open class DefaultSchemaContext : SchemaContext {
             return getDataFile(descriptor)
         }
 
-        val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
-        val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
-        val partition = partitions[0]
+        return partitionDataFiles.getOrPut(partitionId) {
+            val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
+            val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
+            val partition = partitions[0]
 
-        return getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
+            return@getOrPut getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
+        }
     }
 
     // endregion

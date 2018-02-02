@@ -4,6 +4,8 @@ import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
+import java.nio.ByteBuffer
+import kotlin.concurrent.getOrSet
 
 data class SkipNode(
         var position:Long = 0L,
@@ -81,21 +83,24 @@ data class SkipNode(
         return recordValue as T
     }
 
-    fun write(store: Store) = BufferPool.allocateAndLimit(SKIP_NODE_SIZE) {
-        it.putLong(position)
-        it.putLong(up)
-        it.putLong(left)
-        it.putLong(right)
-        it.putLong(down)
-        it.putLong(record)
-        it.putLong(key)
-        it.putShort(level)
-        it.rewind()
-        store.write(it, position)
+    fun write(store: Store) {
+        val buffer = skipNodeBuffer.getOrSet { BufferPool.allocateExact(SKIP_NODE_SIZE) }
+        buffer.clear()
+        buffer.putLong(position)
+        buffer.putLong(up)
+        buffer.putLong(left)
+        buffer.putLong(right)
+        buffer.putLong(down)
+        buffer.putLong(record)
+        buffer.putLong(key)
+        buffer.putShort(level)
+        buffer.flip()
+        store.write(buffer, position)
     }
 
     fun read(store: Store):SkipNode {
-        val buffer = BufferPool.allocateAndLimit(SKIP_NODE_SIZE)
+        val buffer = skipNodeBuffer.getOrSet { BufferPool.allocateExact(SKIP_NODE_SIZE) }
+        buffer.clear()
         store.read(buffer, position)
         buffer.rewind()
         buffer.long
@@ -139,5 +144,6 @@ data class SkipNode(
 
         fun get(store: Store, position: Long) = SkipNode(position).read(store)
 
+        val skipNodeBuffer = ThreadLocal<ByteBuffer>()
     }
 }

@@ -38,7 +38,8 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
             val reference = Reference(partitionId, entry.node?.position ?: 0)
             if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
                 collector?.collect(reference, entry.value)
-                matching.add(reference)
+                if(collector == null)
+                    matching.add(reference)
             }
         }
 
@@ -61,7 +62,7 @@ open class FullTableScanner @Throws(OnyxException::class) constructor(criteria: 
             val meetsCriteria = query.meetsCriteria(entity, it, context, descriptor)
             if(meetsCriteria)
                 collector?.collect(it, entity)
-            meetsCriteria
+            (collector == null) && meetsCriteria
         }
     }
 }

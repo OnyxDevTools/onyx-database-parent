@@ -46,7 +46,8 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
             val reference = Reference(partitionId, entry.node?.position ?: 0)
             if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
                 collector?.collect(reference, entry.value)
-                matching.add(reference)
+                if(collector == null)
+                    matching.add(reference)
             }
         }
 
@@ -78,7 +79,11 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
                 )
             }
 
-            units.forEach { matching += it.get() }
+            units.forEach {
+                val results =  it.get()
+                if(collector == null) matching += results
+            }
+
             return matching
         } else {
             val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
