@@ -2,12 +2,12 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.recordInteractor
-import com.onyx.interactors.record.data.Reference
-import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.record.RecordInteractor
+import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.relationship.data.RelationshipReference
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.values.IdentifierGenerator
+import com.onyx.persistence.context.SchemaContext
 
 /**
  * Get the entity's reference ID from the store.
@@ -29,7 +29,7 @@ fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescrip
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.reference(context: SchemaContext): Reference = Reference(partitionId(context), referenceId(context))
+fun IManagedEntity.reference(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): Reference = Reference(partitionId(context, descriptor), referenceId(context, descriptor))
 
 /**
  * Generate a relationship reference based on the entity's record information
@@ -37,7 +37,7 @@ fun IManagedEntity.reference(context: SchemaContext): Reference = Reference(part
  * @param descriptor Default the descriptor to the entity descriptor
  * @since 2.0.0
  */
-fun IManagedEntity.toRelationshipReference(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): RelationshipReference = RelationshipReference(identifier(context, descriptor), partitionId(context, descriptor), referenceId(context, descriptor))
+fun IManagedEntity.toRelationshipReference(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): RelationshipReference = RelationshipReference(identifier(context, descriptor), partitionId(context, descriptor))
 
 /**
  * Get the record controller associated to this entity.

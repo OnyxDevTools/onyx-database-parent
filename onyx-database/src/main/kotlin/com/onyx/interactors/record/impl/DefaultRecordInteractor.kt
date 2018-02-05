@@ -209,4 +209,20 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
     @Suppress("UNCHECKED_CAST")
     override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).below(indexValue, includeValue)
 
+    /**
+     * Find all the references between from and to values.
+     *
+     * This has one prerequisite.  You must be using a DiskMatrixHashMap as the storage mechanism.  Otherwise it will not be
+     * sorted.
+     *
+     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeFromValue Whether to compare above and equal or not.
+     * @param toValue Key to end range to
+     * @param includeToValue Whether to compare equal or not.
+     * @return A set of record references
+     *
+     * @since 1.2.0
+     */
+    @Suppress("UNCHECKED_CAST")
+    override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).between(fromValue, includeFromValue, toValue, includeToValue)
 }

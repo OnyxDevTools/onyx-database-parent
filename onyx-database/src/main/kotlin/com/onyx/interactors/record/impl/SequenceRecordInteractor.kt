@@ -5,6 +5,7 @@ import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.extension.common.castTo
 import com.onyx.interactors.record.RecordInteractor
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import java.util.concurrent.atomic.AtomicLong
@@ -17,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context), RecordInteractor {
     private val sequenceValue = AtomicLong(0)
     private var metadata: MutableMap<Byte, Number>
+    private val sequenceLock = DefaultClosureLock()
 
     init {
         val dataFile = context.getDataFile(entityDescriptor)
@@ -53,7 +55,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
     private fun autoIncrementSequence(entity:IManagedEntity) {
         var identifierValue:Number = entity.identifier(context) as Number? ?: 0L
 
-        synchronized(sequenceValue) {
+        sequenceLock.perform {
             when {
                 identifierValue.toLong() == 0L -> {
                     identifierValue = sequenceValue.incrementAndGet().castTo(entityDescriptor.identifier!!.type) as Number

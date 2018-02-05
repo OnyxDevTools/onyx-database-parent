@@ -9,11 +9,13 @@ import com.onyx.diskmap.store.impl.FileChannelStore
 import com.onyx.diskmap.store.impl.InMemoryStore
 import com.onyx.diskmap.store.impl.MemoryMappedStore
 import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
 
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -32,13 +34,15 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private lateinit var store: Store
 
     // Contains all initialized maps
-    private val maps: MutableMap<String, Map<*,*>> = WeakHashMap<String, Map<*,*>>()
+    private val maps: MutableMap<String, Map<*,*>> = OptimisticLockingMap(HashMap())
 
     // Contains all initialized maps
-    private val mapsByHeader = WeakHashMap<Header, Map<*, *>>()
+    private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
 
     // Internal map that runs on storage
     private var internalMaps: MutableMap<String, Long>
+
+    private var canStoreKeyInNode:Boolean = false
 
     // region constructors
 
@@ -79,6 +83,8 @@ class DefaultDiskMapFactory : DiskMapFactory {
     constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean) {
         val path: String =  if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
 
+        val isNew = !File(path).exists()
+
         when {
             type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported ->
                 this.store = MemoryMappedStore(path, context, deleteOnClose)
@@ -101,6 +107,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
             getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
         }
 
+        determineKeyStore(isNew)
     }
 
     // endregion
@@ -181,7 +188,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
      */
     private fun <T : Map<*,*>> newScalableMap(store: Store, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskHashMap<Any, Any?>(store, header, loadFactor) as T else DiskMatrixHashMap<Any, Any?>(store, header, loadFactor) as T
 
-
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless
      * instance of a disk map.  Stateless meaning, the header has already been setup.  Note, this is not thread safe
@@ -236,7 +242,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*,*>> getHashMap(header: Header, loadFactor: Int): T = synchronized(mapsByHeader) { mapsByHeader.getOrPut(header) { newScalableMap<T>(store, header, loadFactor) } as T }
+    override fun <T : Map<*,*>> getHashMap(header: Header, loadFactor: Int): T = mapsByHeader.getOrPut(header) { newScalableMap<T>(store, header, loadFactor) } as T
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -246,26 +252,35 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    private fun <T : Map<*,*>> getMapWithType(name: String, loadFactor: Int): T = synchronized(maps) {
-        return maps.getOrPut(name) {
-            var header: Header? = null
-            val headerReference = internalMaps[name]
-            if (headerReference != null)
-                header = store.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
+    private fun <T : Map<*,*>> getMapWithType(name: String, loadFactor: Int): T = maps.getOrPut(name) {
+        var header: Header? = null
+        val headerReference = internalMaps[name]
+        if (headerReference != null)
+            header = store.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
 
-            // Create a new header for the new structure we are creating
-            if (header == null) {
-                header = Header()
-                header.position = store.allocate(Header.HEADER_SIZE)
-                store.write(header, header.position)
-                internalMaps.put(name, header.position)
-            }
+        // Create a new header for the new structure we are creating
+        if (header == null) {
+            header = Header()
+            header.position = store.allocate(Header.HEADER_SIZE)
+            store.write(header, header.position)
+            internalMaps.put(name, header.position)
+        }
 
-            return@getOrPut newScalableMap(store, header, loadFactor)
-        } as T
-    }
+        return@getOrPut newScalableMap(store, header, loadFactor)
+    } as T
 
     // endregion
+
+    /**
+     * This method determines whether we can store the key value within the key node rather than somewhere outside the
+     * store.  If the file is new or was created after this functionality was put in place, the app will support storing
+     * the key within the SkipNode.
+     *
+     * @since 2.1.3 Improve performance
+     */
+    private fun determineKeyStore(isNew:Boolean) {
+        canStoreKeyInNode = internalMaps.getOrPut("_KEY_") { if(isNew) 1L else 0L } == 1L
+    }
 
     companion object {
 

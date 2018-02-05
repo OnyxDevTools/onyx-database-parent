@@ -1,5 +1,6 @@
 package com.onyx.persistence.function.impl
 
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryFunctionType
@@ -13,6 +14,7 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
 
     private var itemType:Class<*>? = null
     private var max: Any? = null
+    private val valueLock = DefaultClosureLock()
 
     override fun getFunctionValue():Any? = max
 
@@ -23,13 +25,13 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
         val maxDouble:Double = (max as? Number)?.toDouble() ?: 0.0
 
-        synchronized(this) {
+        return valueLock.perform {
             if (valueDouble > maxDouble || max == null) {
                 max = value
-                return true
+                return@perform true
             }
+            return@perform false
         }
-        return false
     }
 
 }

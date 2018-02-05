@@ -1,9 +1,11 @@
 package com.onyx.buffer
 
+import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.withBuffer
+import sun.nio.ch.DirectBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.util.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.concurrent.getOrSet
 
 /**
@@ -21,9 +23,9 @@ object BufferPool {
     const val MEDIUM_BUFFER_SIZE = 1024 * 6
     const private val LARGE_BUFFER_SIZE = 18 * 1024
 
-    private val SMALL_BUFFER_POOL = ArrayDeque<ByteBuffer>(NUMBER_SMALL_BUFFERS + 1)
-    private val MEDIUM_BUFFER_POOL = ArrayDeque<ByteBuffer>(NUMBER_MEDIUM_BUFFERS + 1)
-    private val LARGE_BUFFER_POOL = ArrayDeque<ByteBuffer>(NUMBER_LARGE_BUFFERS + 1)
+    private val SMALL_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
+    private val MEDIUM_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
+    private val LARGE_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
 
     /**
      * Pre Allocate buffers.
@@ -43,12 +45,15 @@ object BufferPool {
      * @param buffer byte buffer to recycle and reuse
      */
     fun recycle(buffer: ByteBuffer) {
-        buffer.clear()
         val capacity = buffer.capacity()
-        when {
-            capacity >= LARGE_BUFFER_SIZE && LARGE_BUFFER_POOL.size < NUMBER_LARGE_BUFFERS -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.addLast(buffer) }
-            capacity >= MEDIUM_BUFFER_SIZE && MEDIUM_BUFFER_POOL.size < NUMBER_MEDIUM_BUFFERS -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.addLast(buffer) }
-            capacity >= SMALL_BUFFER_SIZE && SMALL_BUFFER_POOL.size < NUMBER_SMALL_BUFFERS -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.addLast(buffer) }
+        if(buffer is DirectBuffer) {
+            buffer.clear()
+            when (capacity) {
+                LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.add(buffer)
+                MEDIUM_BUFFER_SIZE -> MEDIUM_BUFFER_POOL.add(buffer)
+                SMALL_BUFFER_SIZE -> SMALL_BUFFER_POOL.add(buffer)
+                else -> {}
+            }
         }
     }
 
@@ -60,14 +65,14 @@ object BufferPool {
      */
     fun allocate(count: Int): ByteBuffer = try {
         when {
-            count <= SMALL_BUFFER_SIZE && !SMALL_BUFFER_POOL.isEmpty() -> synchronized(SMALL_BUFFER_POOL) { SMALL_BUFFER_POOL.pollFirst() }
-            count <= MEDIUM_BUFFER_SIZE && !MEDIUM_BUFFER_POOL.isEmpty() -> synchronized(MEDIUM_BUFFER_POOL) { MEDIUM_BUFFER_POOL.pollFirst() }
-            count <= LARGE_BUFFER_SIZE && !LARGE_BUFFER_POOL.isEmpty() -> synchronized(LARGE_BUFFER_POOL) { LARGE_BUFFER_POOL.pollFirst() }
+            count <= SMALL_BUFFER_SIZE -> SMALL_BUFFER_POOL.poll()
+            count <= MEDIUM_BUFFER_SIZE -> MEDIUM_BUFFER_POOL.poll()
+            count <= LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.poll()
             else -> allocateExactHeap(count)
         }
     } catch (e:Exception) {
         allocateExactHeap(count)
-    }
+    } ?: allocateExactHeap(count)
 
     /**
      * Allocation that will encapsulate the endian as well as the allocation method
@@ -110,18 +115,28 @@ object BufferPool {
     }
 
     @Suppress("MemberVisibilityCanPrivate")
-    val longBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
+    val longBuffer = ThreadLocal<ByteBuffer>()
     @Suppress("MemberVisibilityCanPrivate")
     val intBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
 
     inline fun <T> withIntBuffer(block:(ByteBuffer) -> T):T {
-        val buffer = intBuffer.getOrSet { allocateExact(java.lang.Integer.BYTES)}
+        val thread = Thread.currentThread()
+        val buffer = if(thread is OnyxThread) {
+            thread.intBuffer
+        } else {
+            intBuffer.getOrSet { BufferPool.allocateExact(Integer.BYTES) }
+        }
         buffer.rewind()
         return block(buffer)
     }
 
     inline fun <T> withLongBuffer(block:(ByteBuffer) -> T):T {
-        val buffer = longBuffer.getOrSet { allocateExact(java.lang.Long.BYTES) }
+        val thread = Thread.currentThread()
+        val buffer = if(thread is OnyxThread) {
+            thread.longBuffer
+        } else {
+            longBuffer.getOrSet { BufferPool.allocateExact(java.lang.Long.BYTES) }
+        }
         buffer.rewind()
         return block(buffer)
     }

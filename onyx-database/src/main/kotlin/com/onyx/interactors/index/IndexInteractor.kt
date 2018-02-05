@@ -51,6 +51,14 @@ interface IndexInteractor {
     fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long>
 
     /**
+     * Find all references between from and to values.  The includeFrom indicates greater than equal
+     * and the includeToValue indicates less than equal
+     *
+     * @since 2.1.3 Optimize range queries
+     */
+    fun findAllBetween(fromValue:Any?, includeFromValue:Boolean, toValue:Any?, includeToValue:Boolean):Set<Long>
+
+    /**
      * Find all the references blow and perhaps equal to the key parameter
      * @param indexValue The key to compare.  This must be comparable.  It is only sorted by comparable values
      * @param includeValue Whether to compare below and equal or not.

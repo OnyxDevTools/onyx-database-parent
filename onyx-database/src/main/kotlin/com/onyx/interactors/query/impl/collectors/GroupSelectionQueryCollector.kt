@@ -27,13 +27,18 @@ class GroupSelectionQueryCollector(
             return
 
         val selections = getGroupResults(entity)
+        val selectionResult = getSelectionRecord(entity)
 
-        synchronized(groupedResults) {
+        resultLock.perform {
             if (!groupedResults.contains(selections)) {
-                super.collect(reference, entity)
+                if(results.add(selectionResult))
+                    increment()
                 groupedResults.add(selections)
             }
         }
+
+        limit()
+
     }
 
     /**

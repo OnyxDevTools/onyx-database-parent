@@ -18,9 +18,14 @@ import com.onyx.persistence.query.QueryCriteriaOperator
  *
  * Scan index values for given criteria
  */
-open class IndexScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
+open class IndexScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner, RangeScanner {
 
     private var indexInteractor: IndexInteractor = context.getIndexInteractor(descriptor.indexes[criteria.attribute]!!)
+    override var isBetween: Boolean = false
+    override var rangeFrom: Any? = null
+    override var rangeTo: Any? = null
+    override var fromOperator:QueryCriteriaOperator? = null
+    override var toOperator:QueryCriteriaOperator? = null
 
     /**
      * Scan indexes
@@ -87,12 +92,16 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      *
      * @since 2.0.0
      */
-    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<Reference> = when {
-        criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         interactor.findAllAbove(indexValue, false)
-        criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL ->   interactor.findAllAbove(indexValue, true)
-        criteria.operator === QueryCriteriaOperator.LESS_THAN ->            interactor.findAllBelow(indexValue, false)
-        criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->      interactor.findAllBelow(indexValue, true)
-        else ->                                                             interactor.findAll(indexValue).keys
+    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<Reference> = if(isBetween) {
+        interactor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
+    } else {
+        when {
+            criteria.operator === QueryCriteriaOperator.GREATER_THAN -> interactor.findAllAbove(indexValue, false)
+            criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL -> interactor.findAllAbove(indexValue, true)
+            criteria.operator === QueryCriteriaOperator.LESS_THAN -> interactor.findAllBelow(indexValue, false)
+            criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL -> interactor.findAllBelow(indexValue, true)
+            else -> interactor.findAll(indexValue).keys
+        }
     }.map {
         Reference(partition, it)
     }

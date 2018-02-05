@@ -1,5 +1,6 @@
 package com.onyx.persistence.context
 
+import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import com.onyx.persistence.context.impl.CacheSchemaContext
 import com.onyx.persistence.context.impl.DefaultSchemaContext
 import java.util.*
@@ -15,6 +16,7 @@ import java.util.*
  */
 object Contexts {
 
+    private val lock = DefaultClosureReadWriteLock()
     private val contexts = TreeMap<String, SchemaContext>()
 
     /**
@@ -24,7 +26,7 @@ object Contexts {
      * @since 2.0.0
      */
     @JvmStatic
-    fun put(context:SchemaContext) = synchronized(contexts) {
+    fun put(context:SchemaContext) = lock.writeLock {
         contexts[context.contextId] = context
     }
 
@@ -35,7 +37,7 @@ object Contexts {
      * @return Schema context within the catalog
      */
     @JvmStatic
-    fun get(contextId:String) = synchronized(contexts) { contexts[contextId] }
+    fun get(contextId:String) = lock.optimisticReadLock { contexts[contextId] }
 
     /**
      * Get First context within the catalog.  This is in the event it has not been added
@@ -46,7 +48,7 @@ object Contexts {
      * @return First context within catalog
      */
     @JvmStatic
-    fun first() = synchronized(contexts) { contexts.values.first() }
+    fun first() = lock.optimisticReadLock { contexts.values.first() }
 
     /**
      * Get Last context within the catalog.  This is in the event it has not been added
@@ -57,7 +59,7 @@ object Contexts {
      * @return Last context within catalog
      */
     @JvmStatic
-    fun firstRemote() = synchronized(contexts) { contexts.values.first { it::class != DefaultSchemaContext::class && it::class != CacheSchemaContext::class }}
+    fun firstRemote() = lock.optimisticReadLock { contexts.values.first { it::class != DefaultSchemaContext::class && it::class != CacheSchemaContext::class }}
 
     @JvmStatic
     fun clear() = contexts.clear()

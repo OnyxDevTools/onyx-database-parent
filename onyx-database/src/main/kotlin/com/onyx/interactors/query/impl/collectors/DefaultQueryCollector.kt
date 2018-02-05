@@ -18,15 +18,16 @@ class DefaultQueryCollector(
 ) : BaseQueryCollector<IManagedEntity>(query, context, descriptor) {
 
     override var results: MutableCollection<IManagedEntity> = if(query.queryOrders?.isNotEmpty() == true) SortedList(EntityComparator(comparator)) else ArrayList()
+    override val references: MutableList<Reference> = if(query.isLazy) SortedList(ReferenceComparator(comparator)) else ArrayList()
 
     override fun collect(reference: Reference, entity: IManagedEntity?) {
         super.collect(reference, entity)
         if (entity == null)
             return
 
-        synchronized(results) { results.add(entity) }
+        if(!query.isLazy)
+            resultLock.perform { results.add(entity) }
         increment()
-
         limit()
     }
 

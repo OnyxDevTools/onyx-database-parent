@@ -21,7 +21,6 @@ import kotlin.collections.HashMap
  */
 class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, private val context: SchemaContext) : IndexInteractor {
 
-
     private var references: DiskMap<Any, Header>// Stores the references for an index key
     private var indexValues: DiskMap<Long, Any>
     private var recordInteractor: RecordInteractor? = null
@@ -157,6 +156,32 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
     override fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long> {
         val allReferences = HashSet<Long>()
         val diskReferences = references.below(indexValue!!, includeValue)
+        val dataFile = context.getDataFile(descriptor)
+        diskReferences
+                .map { references.getWithRecID(it) }
+                .map { dataFile.newHashMap<DiskMap<Long, Any?>>(it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
+                .forEach { allReferences.addAll(it.keys) }
+
+        return allReferences
+    }
+
+    /**
+     * Find all the references between from and to values.
+     *
+     * This has one prerequisite.  You must be using a DiskMatrixHashMap as the storage mechanism.  Otherwise it will not be
+     * sorted.
+     *
+     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeFromValue Whether to compare above and equal or not.
+     * @param toValue Key to end range to
+     * @param includeToValue Whether to compare equal or not.
+     * @return A set of record references
+     *
+     * @since 1.2.0
+     */
+    override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Long> {
+        val allReferences = HashSet<Long>()
+        val diskReferences = references.between(fromValue, includeFromValue, toValue, includeToValue)
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }

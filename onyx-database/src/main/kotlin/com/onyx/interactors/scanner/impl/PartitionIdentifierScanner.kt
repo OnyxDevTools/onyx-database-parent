@@ -21,7 +21,7 @@ import java.util.concurrent.Future
  *
  * This scans a partition for matching identifiers
  */
-class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : IdentifierScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
+class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : IdentifierScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner, RangeScanner {
 
     private var systemEntity: SystemEntity = context.getSystemEntityByName(query.entityType!!.name)!!
 
@@ -82,7 +82,10 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
                 )
             }
 
-            units.forEach { if(collector == null) matching += it.get() }
+            units.forEach {
+                val results =  it.get()
+                if(collector == null) matching += results
+            }
         } else {
 
             val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L

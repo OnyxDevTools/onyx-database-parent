@@ -85,14 +85,18 @@ enum class BufferObjectType constructor(private val type: Class<*>?) {
             else if (value is IManagedEntity && context == null)
                 return BufferObjectType.OTHER
 
-            return BufferObjectType.values()
+            return BufferObjectType.enumValues
                     .firstOrNull { it.type != null && it.type.isAssignableFrom(type) }
                     ?.let {
-                        if (it == BufferObjectType.OBJECT_ARRAY && type != Array<Any>::class.java) {
+                        if (it === BufferObjectType.OBJECT_ARRAY && type != Array<Any>::class.java) {
                             OTHER_ARRAY
                         } else it
                     }
                     ?: BufferObjectType.OTHER
         }
+
+        // Java in all of its wisdom clones the array each time you invoke values.
+        // Surprisingly this is expensive so, this is a way around that.
+        val enumValues = BufferObjectType.values()
     }
 }

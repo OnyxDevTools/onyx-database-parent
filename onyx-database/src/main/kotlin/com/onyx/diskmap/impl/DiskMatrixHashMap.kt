@@ -328,4 +328,25 @@ class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<
         }
         return returnValue
     }
+
+    /**
+     * Find all references between from and to value.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeFrom Whether to compare above and equal or not.
+     * @param toValue Key to end range to
+     * @param includeTo Whether to compare equal or not.
+     *
+     * @since 2.1.3
+     */
+    override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Long> {
+        val returnValue = HashSet<Long>()
+        maps.forEach {
+            head = it
+            returnValue += super.between(fromValue, includeFrom, toValue, includeTo)
+        }
+        return returnValue
+    }
+
 }

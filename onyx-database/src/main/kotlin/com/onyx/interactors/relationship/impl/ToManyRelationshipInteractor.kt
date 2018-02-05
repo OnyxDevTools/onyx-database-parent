@@ -63,14 +63,17 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
 
                 // Cascade save the entity
                 val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !transaction.contains(it, context)) {
+                    val relationshipDescriptor = it.descriptor(context)
                     val pair = it.save(context)
                     relationshipObjectIdentifier.identifier = pair.second
-                    it.saveIndexes(context, relationshipObjectIdentifier.referenceId)
+
+                    val reference = it.reference(context, relationshipDescriptor)
+                    it.saveIndexes(context, reference.reference)
                     it.saveRelationships(context, RelationshipTransaction(entity, context))
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, it.descriptor(context), it.reference(context), if(pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
+                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, relationshipDescriptor, reference, if(pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
                     true
                 } else {
-                    relationshipObjectIdentifier.referenceId > 0L
+                    it.reference(context).reference > 0L
                 }
 
                 // The entity exists yay, that means we can save it
@@ -95,7 +98,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 deleteInverseRelationshipReference(entity, parentRelationshipReference, it)
                 if(relationshipDescriptor.shouldDeleteEntity) {
                     val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
-                    entityToDelete?.deleteAllIndexes(context, it.referenceId)
+                    entityToDelete?.deleteAllIndexes(context, entityToDelete.referenceId(context))
                     entityToDelete?.deleteRelationships(context, transaction)
                     entityToDelete?.recordInteractor(context)?.delete(entityToDelete)
                 }

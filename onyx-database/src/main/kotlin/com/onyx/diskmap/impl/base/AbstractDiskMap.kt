@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * This class was intended to abstract some of the common actions and values that all disk data structures use.
  *
- * I kept running into various different areas of teh application I would have to update if I had to modify say a
+ * I kept running into various different areas of the application I would have to update if I had to modify say a
  * header class.  I would then have to make sure I modified several different implementations.  No longer!!!
  *
  * @since 1.2.0

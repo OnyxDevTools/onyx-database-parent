@@ -52,6 +52,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     first == null && second == null -> false
                     second == null -> true
                     first == null -> false
+                    first is String && second is String -> first.compareTo(second, true) > 0
                     else -> (first as Comparable<Any?>) > (second as Comparable<Any?>)
                 }
             }
@@ -60,6 +61,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     first == null && second == null -> false
                     second == null -> false
                     first == null -> true
+                    first is String && second is String -> first.compareTo(second, true) < 0
                     else -> (first as Comparable<Any?>) < (second as Comparable<Any?>)
                 }
             }
@@ -68,6 +70,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     first == null && second == null -> true
                     second == null -> false
                     first == null -> true
+                    first is String && second is String -> first.compareTo(second, true) <= 0
                     else -> (first as Comparable<Any?>) <= (second as Comparable<Any?>)
                 }
             }
@@ -76,6 +79,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     first == null && second == null -> true
                     second == null -> true
                     first == null -> false
+                    first is String && second is String -> first.compareTo(second, true) >= 0
                     else -> (first as Comparable<Any?>) >= (second as Comparable<Any?>)
                 }
             }

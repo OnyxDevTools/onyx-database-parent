@@ -205,4 +205,36 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
         return results
     }
 
+    /**
+     * Find all references between from and to value.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeFrom Whether to compare above and equal or not.
+     * @param toValue Key to end range to
+     * @param includeTo Whether to compare equal or not.
+     *
+     * @since 2.1.3
+     */
+    override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Long> {
+        val results = HashSet<Long>()
+        var node:SkipNode? = nearest(fromValue!!)
+
+        if(node != null && !node.isRecord && node.right> 0)
+            node = findNodeAtPosition(node.right)
+
+        node@while(node != null && node.isRecord) {
+            val nodeKey:K = node.getKey(fileStore)
+            when {
+                toValue.forceCompare(nodeKey) && includeTo -> results.add(node.position)
+                !toValue.forceCompare(nodeKey, QueryCriteriaOperator.LESS_THAN) -> break@node
+                fromValue.forceCompare(nodeKey) && includeFrom -> results.add(node.position)
+                fromValue.forceCompare(nodeKey, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.position)
+            }
+            node = if (node.right > 0) findNodeAtPosition(node.right) else null
+        }
+
+        return results
+    }
+
 }

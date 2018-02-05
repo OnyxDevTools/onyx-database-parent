@@ -56,7 +56,7 @@ public class InsertionBenchmarkTest extends BenchmarkTest {
     }
 
     /**
-     * Get the unit of work to run during the test.  In this case, we are inserting 3 entities.  One of which is a related entity.
+     * Get the unit of work to run during the test.  In this case, we are inserting 3 entities.
      *
      * @return A runnable thread
      */

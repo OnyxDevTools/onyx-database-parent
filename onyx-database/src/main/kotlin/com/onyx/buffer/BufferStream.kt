@@ -286,7 +286,7 @@ class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES)
-            val bufferObjectType = BufferObjectType.values()[expandableByteBuffer!!.buffer.get().toInt()]
+            val bufferObjectType = BufferObjectType.enumValues[expandableByteBuffer!!.buffer.get().toInt()]
 
             when (bufferObjectType) {
                 BufferObjectType.NULL -> return null

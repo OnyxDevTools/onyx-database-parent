@@ -47,7 +47,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
             val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
             deleteInverseRelationshipReference(entity, entityRelationshipReference, it)
             if (relationshipDescriptor.shouldDeleteEntity && !transaction.contains(entityToDelete!!, context)) {
-                entityToDelete.deleteAllIndexes(context, it.referenceId)
+                entityToDelete.deleteAllIndexes(context, entityToDelete.referenceId(context))
                 entityToDelete.recordInteractor(context).delete(entityToDelete)
                 entityToDelete.deleteRelationships(context, transaction)
             }

@@ -112,6 +112,19 @@ interface DiskMap<K, V> : MutableMap<K, V> {
     fun below(index: K, includeFirst: Boolean): Set<Long>
 
     /**
+     * Find all references between from and to value.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeFrom Whether to compare above and equal or not.
+     * @param toValue Key to end range to
+     * @param includeTo Whether to compare equal or not.
+     *
+     * @since 2.1.3
+     */
+    fun between(fromValue: K?, includeFrom:Boolean, toValue: K?, includeTo:Boolean): Set<Long>
+
+    /**
      * Added in order to get around requiring Java 8.  This is a workaround
      * for Android older devices.  Works as intended for Map interface
      *

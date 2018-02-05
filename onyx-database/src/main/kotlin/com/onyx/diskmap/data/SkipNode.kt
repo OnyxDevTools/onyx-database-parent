@@ -4,8 +4,9 @@ import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
+import com.onyx.extension.common.OnyxThread
+import com.onyx.persistence.IManagedEntity
 import java.nio.ByteBuffer
-import kotlin.concurrent.getOrSet
 
 data class SkipNode(
         var position:Long = 0L,
@@ -54,7 +55,6 @@ data class SkipNode(
         store.write(it, position + (java.lang.Long.BYTES * 5))
     }
 
-    @Volatile
     private var keyValue:Any? = null
 
     @Suppress("UNCHECKED_CAST")
@@ -77,6 +77,8 @@ data class SkipNode(
             synchronized(this) {
                 if(recordValue == null) {
                     recordValue = store.getObject(record)
+                    if(recordValue is IManagedEntity)
+                        (recordValue as IManagedEntity).referenceId = this.position
                 }
             }
         }
@@ -84,34 +86,40 @@ data class SkipNode(
     }
 
     fun write(store: Store) {
-        val buffer = skipNodeBuffer.getOrSet { BufferPool.allocateExact(SKIP_NODE_SIZE) }
-        buffer.clear()
-        buffer.putLong(position)
-        buffer.putLong(up)
-        buffer.putLong(left)
-        buffer.putLong(right)
-        buffer.putLong(down)
-        buffer.putLong(record)
-        buffer.putLong(key)
-        buffer.putShort(level)
-        buffer.flip()
-        store.write(buffer, position)
+        val buffer = getBuffer()
+        try {
+            buffer.putLong(position)
+            buffer.putLong(up)
+            buffer.putLong(left)
+            buffer.putLong(right)
+            buffer.putLong(down)
+            buffer.putLong(record)
+            buffer.putLong(key)
+            buffer.putShort(level)
+            buffer.flip()
+            store.write(buffer, position)
+        } finally {
+            recycleBuffer(buffer)
+        }
     }
 
     fun read(store: Store):SkipNode {
-        val buffer = skipNodeBuffer.getOrSet { BufferPool.allocateExact(SKIP_NODE_SIZE) }
-        buffer.clear()
-        store.read(buffer, position)
-        buffer.rewind()
-        buffer.long
-        up = buffer.long
-        left = buffer.long
-        right = buffer.long
-        down = buffer.long
-        record = buffer.long
-        key = buffer.long
-        level = buffer.short
-        recordValue = null
+        val buffer = getBuffer()
+        try {
+            store.read(buffer, position)
+            buffer.rewind()
+            buffer.long
+            up = buffer.long
+            left = buffer.long
+            right = buffer.long
+            down = buffer.long
+            record = buffer.long
+            key = buffer.long
+            level = buffer.short
+            recordValue = null
+        } finally {
+            recycleBuffer(buffer)
+        }
         return this
     }
 
@@ -144,6 +152,21 @@ data class SkipNode(
 
         fun get(store: Store, position: Long) = SkipNode(position).read(store)
 
-        val skipNodeBuffer = ThreadLocal<ByteBuffer>()
+        fun getBuffer(): ByteBuffer {
+            val thread = Thread.currentThread()
+            return if(thread is OnyxThread) {
+                thread.nodeBuffer.clear()
+                thread.nodeBuffer
+            } else {
+                BufferPool.allocateAndLimit(SKIP_NODE_SIZE)
+            }
+        }
+
+        fun recycleBuffer(buffer: ByteBuffer) {
+            val thread = Thread.currentThread()
+            if (thread !is OnyxThread) {
+                BufferPool.recycle(buffer)
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.onyx.persistence.function.impl
 
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryFunctionType
@@ -15,12 +16,12 @@ class CountQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Q
 
     private val count: AtomicInteger = AtomicInteger(0)
     private val uniqueValues:MutableSet<Any?> by lazy { HashSet<Any?>() }
-
+    private val valueLock = DefaultClosureLock()
     override fun getFunctionValue():Int = count.get()
 
     override fun preProcess(query: Query, value: Any?): Boolean {
         if(query.isDistinct ) {
-            synchronized(uniqueValues) {
+            valueLock.perform {
                 uniqueValues.add(value)
             }
         }

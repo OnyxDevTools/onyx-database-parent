@@ -26,7 +26,7 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
      */
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val path = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        return synchronized(dataFiles) { dataFiles.getOrPut(path) { DefaultDiskMapFactory("$location/$path", StoreType.IN_MEMORY, this@CacheSchemaContext) } }
+        return dataFiles.getOrPut(path) { DefaultDiskMapFactory("$location/$path", StoreType.IN_MEMORY, this@CacheSchemaContext) }
     }
 
 }

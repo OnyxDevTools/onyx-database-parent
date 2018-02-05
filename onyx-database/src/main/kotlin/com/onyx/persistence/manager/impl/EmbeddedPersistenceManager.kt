@@ -70,7 +70,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             entity.saveRelationships(context)
 
             // Update Cached queries
-            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, entity.descriptor(context), entity.reference(context), if (previousReferenceId <= 0L) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
+            val descriptor =  entity.descriptor(context)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context, descriptor), if (previousReferenceId <= 0L) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
 
         }
         return entity

@@ -19,7 +19,13 @@ import com.onyx.persistence.context.Contexts
  *
  * Scan identifier values
  */
-open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
+open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : AbstractTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner, RangeScanner {
+
+    override var isBetween: Boolean = false
+    override var rangeFrom: Any? = null
+    override var rangeTo: Any? = null
+    override var fromOperator:QueryCriteriaOperator? = null
+    override var toOperator:QueryCriteriaOperator? = null
 
     /**
      * Full scan with ids
@@ -50,12 +56,16 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
                             matching.add(it)
                     }
         } else {
-            val values: Set<Long> = when {
-                criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         recordInteractor.findAllAbove(criteria.value!!, false)
-                criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL ->   recordInteractor.findAllAbove(criteria.value!!, true)
-                criteria.operator === QueryCriteriaOperator.LESS_THAN ->            recordInteractor.findAllBelow(criteria.value!!, false)
-                criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->      recordInteractor.findAllBelow(criteria.value!!, true)
-                else ->                                                             hashSetOf(recordInteractor.getReferenceId(criteria.value!!))
+            val values: Set<Long> = if(isBetween) {
+                recordInteractor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
+            } else {
+                when {
+                    criteria.operator === QueryCriteriaOperator.GREATER_THAN ->         recordInteractor.findAllAbove(criteria.value!!, false)
+                    criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL ->   recordInteractor.findAllAbove(criteria.value!!, true)
+                    criteria.operator === QueryCriteriaOperator.LESS_THAN ->            recordInteractor.findAllBelow(criteria.value!!, false)
+                    criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->      recordInteractor.findAllBelow(criteria.value!!, true)
+                    else ->                                                             hashSetOf(recordInteractor.getReferenceId(criteria.value!!))
+                }
             }
 
             values.filter { it > 0L }

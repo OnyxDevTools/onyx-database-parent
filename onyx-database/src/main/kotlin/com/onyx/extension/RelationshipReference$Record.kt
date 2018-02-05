@@ -38,16 +38,3 @@ fun RelationshipReference.recordInteractor(context: SchemaContext, clazz: Class<
     val descriptor = descriptor(context, clazz, defaultDescriptor)
     return descriptor.recordInteractor()
 }
-
-fun RelationshipReference.referenceID(context: SchemaContext, clazz: Class<*>, defaultDescriptor: EntityDescriptor? = null):Long {
-    if(referenceId == 0L)
-        referenceId = recordInteractor(context, clazz, defaultDescriptor).getReferenceId(identifier!!)
-    return referenceId
-}
-
-fun <T : Any?> RelationshipReference.attribute(context: SchemaContext, clazz:Class<*>, name:String, defaultDescriptor: EntityDescriptor? = null):T {
-    val recordInteractor = recordInteractor(context, clazz, defaultDescriptor)
-    val descriptor = descriptor(context, clazz, defaultDescriptor)
-    @Suppress("UNCHECKED_CAST")
-    return recordInteractor.getAttributeWithReferenceId(descriptor.attributes[name]!!.field, referenceID(context, clazz, descriptor)) as T
-}

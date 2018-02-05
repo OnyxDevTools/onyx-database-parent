@@ -2,12 +2,12 @@ package com.onyx.interactors.query.impl.collectors
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
+import com.onyx.lang.SortedHashSet
 import com.onyx.lang.SortedList
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import java.util.ArrayList
-import java.util.TreeSet
 
 /**
  * Used for basic selection queries
@@ -21,7 +21,7 @@ open class BasicSelectionQueryCollector(
     override var results: MutableCollection<Map<String, Any?>> =
             if(query.isDistinct) {
                 if(query.queryOrders?.isNotEmpty() == true) {
-                    TreeSet(MapComparator(comparator))
+                    SortedHashSet(MapComparator(comparator))
                 } else {
                     HashSet()
                 }
@@ -36,7 +36,7 @@ open class BasicSelectionQueryCollector(
 
         val selectionResult = getSelectionRecord(entity)
 
-        synchronized(results) {
+        resultLock.perform {
             if(results.add(selectionResult))
                 increment()
         }

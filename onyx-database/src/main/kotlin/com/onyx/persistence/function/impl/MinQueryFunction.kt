@@ -1,5 +1,6 @@
 package com.onyx.persistence.function.impl
 
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryFunctionType
@@ -13,7 +14,7 @@ class MinQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
 
     private var itemType:Class<*>? = null
     private var min: Any? = null
-
+    private val valueLock = DefaultClosureLock()
     override fun getFunctionValue():Any? = min
 
     override fun preProcess(query: Query, value: Any?):Boolean {
@@ -23,13 +24,13 @@ class MinQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
         val minDouble:Double = (min as? Number)?.toDouble() ?: 0.0
 
-        synchronized(this) {
+        return valueLock.perform {
             if (valueDouble < minDouble || min == null) {
                 min = value
-                return true
+                return@perform true
             }
+            return@perform false
         }
-        return false
     }
 
 }

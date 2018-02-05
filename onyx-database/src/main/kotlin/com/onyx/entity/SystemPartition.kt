@@ -9,7 +9,7 @@ import com.onyx.persistence.annotations.Relationship
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.FetchPolicy
 import com.onyx.persistence.annotations.values.RelationshipType
-import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Created by timothy.osborn on 3/2/15.
@@ -37,6 +37,6 @@ data class SystemPartition @JvmOverloads constructor(
     )
 
     @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry::class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
-    var entries: MutableList<SystemPartitionEntry> = ArrayList()
+    var entries: CopyOnWriteArrayList<SystemPartitionEntry> = CopyOnWriteArrayList()
 
 }

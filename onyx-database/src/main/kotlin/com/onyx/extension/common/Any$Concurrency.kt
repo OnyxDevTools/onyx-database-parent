@@ -1,10 +1,13 @@
 package com.onyx.extension.common
 
+import com.onyx.buffer.BufferPool
+import com.onyx.diskmap.data.SkipNode
+import java.nio.ByteBuffer
 import java.util.concurrent.*
 
 typealias Block = Any
 
-val defaultPool: ExecutorService = Executors.newWorkStealingPool()!!
+val defaultPool: ExecutorService = ForkJoinPool(Runtime.getRuntime().availableProcessors(), OnyxForkJoinThreadFactory, null, true)
 
 /**
  * Run a job using a single thread executor.  This will run a daemon thread and pause between iterations to save CPU
@@ -138,4 +141,11 @@ class DeferredValue<T> {
             throw TimeoutException()
         return value
     }
+}
+
+class OnyxThread(pool: ForkJoinPool) : ForkJoinWorkerThread(pool) {
+    val intBuffer:ByteBuffer = BufferPool.allocateExact(Integer.BYTES)
+    val longBuffer:ByteBuffer = BufferPool.allocateExact(java.lang.Long.BYTES)
+    val buffer:ByteBuffer = BufferPool.allocateExact(20000)
+    val nodeBuffer:ByteBuffer = BufferPool.allocateExact(SkipNode.SKIP_NODE_SIZE)
 }

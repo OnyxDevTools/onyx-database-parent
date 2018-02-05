@@ -36,7 +36,7 @@ class FlatFunctionSelectionQueryCollector(
                     else
                         selection.function.execute(comparator.getAttribute(selection, entity, context))
 
-                    synchronized(result) {
+                    resultLock.perform {
                         result[selection.selection] = resultAttribute
                     }
                 }

@@ -4,8 +4,6 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.ScannerFactory
-import com.onyx.interactors.scanner.impl.FullTableScanner
-import com.onyx.interactors.scanner.impl.PartitionFullTableScanner
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
@@ -17,6 +15,7 @@ import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.persistence.context.Contexts
 import com.onyx.interactors.query.QueryInteractor
+import com.onyx.interactors.scanner.impl.*
 
 /**
  * Created by timothy.osborn on 3/5/15.
@@ -101,7 +100,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
             // Update Cached queries
             if (entity != null) {
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context), QueryListenerEvent.UPDATE)
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context, descriptor), QueryListenerEvent.UPDATE)
                 updateCount++
             }
         }
@@ -184,6 +183,31 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             scanner.isLast = true
         }
 
+        // Check to see if it is a range criteria
+        var subCriteriaIsRange = false
+        if((criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL || criteria.operator === QueryCriteriaOperator.GREATER_THAN)
+                && (criteria.subCriteria.isNotEmpty() && criteria.subCriteria.first().isAnd && !criteria.subCriteria.first().isNot && (criteria.subCriteria.first().operator === QueryCriteriaOperator.LESS_THAN || criteria.subCriteria.first().operator === QueryCriteriaOperator.LESS_THAN_EQUAL))
+                && criteria.attribute == criteria.subCriteria.first().attribute
+                && scanner is RangeScanner) {
+            scanner.isBetween = true
+            scanner.rangeFrom = criteria.value
+            scanner.rangeTo = criteria.subCriteria.first().value
+            scanner.toOperator = criteria.subCriteria.first().operator
+            scanner.fromOperator = criteria.operator
+            subCriteriaIsRange = true
+        } else if((criteria.operator === QueryCriteriaOperator.LESS_THAN || criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL)
+                && (criteria.subCriteria.isNotEmpty() && criteria.subCriteria.first().isAnd && !criteria.subCriteria.first().isNot && (criteria.subCriteria.first().operator === QueryCriteriaOperator.GREATER_THAN || criteria.subCriteria.first().operator === QueryCriteriaOperator.GREATER_THAN_EQUAL))
+                && criteria.attribute == criteria.subCriteria.first().attribute
+                && scanner is RangeScanner) {
+            scanner.isBetween = true
+            scanner.rangeTo = criteria.value
+            scanner.rangeFrom = criteria.subCriteria.first().value
+            scanner.fromOperator = criteria.subCriteria.first().operator
+            scanner.toOperator = criteria.operator
+            subCriteriaIsRange = true
+        }
+
+
         // Scan for records
         // If there are existing references, use those to narrow it down.  Otherwise
         // start from a clean slate
@@ -201,7 +225,9 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
         if(!(scanner is FullTableScanner || scanner is PartitionFullTableScanner)) {
             // Go through and ensure all the sub criteria is met
-            for (subCriteriaObject in criteria.subCriteria) {
+            criteria.subCriteria.forEachIndexed { index, subCriteriaObject ->
+                if(index == 0 && subCriteriaIsRange)
+                    return@forEachIndexed
                 val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults, false, false)
                 aggregateFilteredReferences(subCriteriaObject, criteriaResults, subCriteriaResults.first)
             }

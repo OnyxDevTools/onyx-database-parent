@@ -1,6 +1,7 @@
 package com.onyx.persistence.function.impl
 
 import com.onyx.extension.common.castTo
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryFunctionType
@@ -16,6 +17,7 @@ class AvgQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
     private var itemType:Class<*>? = null
     private var avg: Any? = null
     private var sumDouble: Double = 0.0
+    private val valueLock = DefaultClosureLock()
 
     override fun getFunctionValue():Any? = avg
 
@@ -25,7 +27,7 @@ class AvgQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
 
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
 
-        synchronized(this) {
+        valueLock.perform {
             sumDouble += valueDouble
             numberOfRecords++
         }

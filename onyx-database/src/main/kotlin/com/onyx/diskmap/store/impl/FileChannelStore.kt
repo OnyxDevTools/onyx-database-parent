@@ -6,6 +6,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
+import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.common.async
 import com.onyx.extension.perform
 import com.onyx.lang.concurrent.AtomicCounter
@@ -18,7 +19,6 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import kotlin.concurrent.getOrSet
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -129,10 +129,8 @@ open class FileChannelStore() : Store {
     override fun commit() {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        synchronized(this.channel!!) {
-            if (this.channel?.isOpen == true)
-                this.channel?.force(true)
-        }
+        if (this.channel?.isOpen == true)
+            this.channel?.force(true)
     }
 
     /**
@@ -263,24 +261,16 @@ open class FileChannelStore() : Store {
             it.rewind()
             it.int
         }
-        val shouldAllocBuffer = size > READ_BUFFER_SIZE
 
-        if(shouldAllocBuffer) {
-            return BufferPool.allocateAndLimit(size) {
-                this.read(it, position + Integer.BYTES)
-                it.rewind()
-                @Suppress("UNCHECKED_CAST")
-                return@allocateAndLimit BufferStream(it).getObject(context) as T
-            }
+        val buffer = getBuffer(size)
+        try {
+            this.read(buffer, position + Integer.BYTES)
+            buffer.rewind()
+            @Suppress("UNCHECKED_CAST")
+            return BufferStream(buffer).getObject(context) as T
+        } finally {
+            recycleBuffer(buffer)
         }
-
-        val buffer = readBuffer.getOrSet { BufferPool.allocateExact(READ_BUFFER_SIZE) }
-        buffer.clear()
-        buffer.limit(size)
-
-        this.read(buffer, position + Integer.BYTES)
-        buffer.rewind()
-        return BufferStream(buffer).getObject(context) as T
     }
 
     /**
@@ -308,9 +298,22 @@ open class FileChannelStore() : Store {
             return@lazy true
         }
 
-        private val READ_BUFFER_SIZE = 20 * 1024
+        fun getBuffer(size:Int): ByteBuffer {
+            val thread = Thread.currentThread()
+            return if(thread is OnyxThread && size <= thread.buffer.capacity()) {
+                thread.buffer.clear()
+                thread.buffer.limit(size)
+                thread.buffer
+            } else {
+                BufferPool.allocateAndLimit(size)
+            }
+        }
 
-        val readBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
+        fun recycleBuffer(buffer: ByteBuffer) {
+            val thread = Thread.currentThread()
+            if (thread !is OnyxThread) {
+                BufferPool.recycle(buffer)
+            }
+        }
     }
-
 }

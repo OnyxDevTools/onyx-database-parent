@@ -6,6 +6,7 @@ import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.forceCompare
 import com.onyx.lang.map.WriteSynchronizedMap
+import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.util.*
 
@@ -95,6 +96,9 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                 updateNodeCache(nearest)
             }
 
+            if(value is IManagedEntity)
+                value.referenceId = nearest.position
+
         } else {
 
             var head:SkipNode = this.head!!
@@ -102,6 +106,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
 
             //Stuff in between nearest and its right partner
             var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0, key)
+            val rootNode = insertedNode
             updateNodeCache(insertedNode)
             var level:Short = 0.toShort()
 
@@ -132,6 +137,9 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             }
 
             incrementSize()
+
+            if(value is IManagedEntity)
+                value.referenceId = rootNode.position
 
         }
 

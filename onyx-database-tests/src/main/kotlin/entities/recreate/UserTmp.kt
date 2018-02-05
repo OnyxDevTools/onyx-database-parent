@@ -17,6 +17,8 @@ import java.util.Date
 @Suppress("unused")
 class UserTmp : IManagedEntity {
 
+    override var referenceId: Long = 0L
+
     @Attribute
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     var id: Long? = null

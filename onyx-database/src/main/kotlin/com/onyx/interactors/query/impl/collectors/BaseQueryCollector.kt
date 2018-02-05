@@ -9,12 +9,13 @@ import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.data.QueryAttributeResource
 import com.onyx.interactors.query.data.QuerySortComparator
 import com.onyx.interactors.record.data.Reference
+import com.onyx.lang.SortedHashSet
 import com.onyx.lang.SortedList
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import java.util.Comparator
-import java.util.TreeSet
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -34,6 +35,8 @@ abstract class BaseQueryCollector<T>(
     private var startIndex:Int = 0
 
     protected var shouldCacheResults:Boolean = true
+    private var referenceLock = DefaultClosureLock()
+    protected var resultLock = DefaultClosureLock()
 
     // Used to compare values and a base comparator that pulls info from the store rather than memory
     protected val comparator: QuerySortComparator by lazy { QuerySortComparator(query, query.queryOrders?.toTypedArray() ?: emptyArray(), descriptor, context) }
@@ -42,7 +45,7 @@ abstract class BaseQueryCollector<T>(
     override var results: MutableCollection<T> =
             if(query.isDistinct) {
                 if(query.queryOrders?.isNotEmpty() == true) {
-                    TreeSet(EntityComparator(comparator)) as TreeSet<T>
+                    SortedHashSet(EntityComparator(comparator)) as MutableCollection<T>
                 } else {
                     HashSet()
                 }
@@ -94,7 +97,7 @@ abstract class BaseQueryCollector<T>(
         if(entity == null)
             return
 
-        synchronized(references) {
+        referenceLock.perform {
             if(references.size >= DefaultQueryCacheInteractor.MAX_CACHED_REFERENCES) {
                 shouldCacheResults = false
                 references.clear()
@@ -126,19 +129,21 @@ abstract class BaseQueryCollector<T>(
                 && query.maxResults > 0
                 && query.maxResults < results.size) {
 
-            synchronized(results) {
+            return resultLock.perform {
                 if(query.maxResults < results.size) {
                     results.remove(results.first())
                     startIndex++
+                    return@perform true
                 }
-                return limit@true
+                return@perform false
             }
         } else if (query.maxResults > 0) {
-            synchronized(results) {
+            return resultLock.perform {
                 if(query.maxResults < results.size) {
                     results.remove(results.last())
-                    return limit@true
+                    return@perform true
                 }
+                return@perform false
             }
         }
         return false
@@ -154,19 +159,21 @@ abstract class BaseQueryCollector<T>(
         if(query.firstRow > 0
                 && startIndex <= query.firstRow
                 && query.maxResults > 0) {
-                synchronized(references) {
-                    if (query.maxResults < references.size) {
+            return referenceLock.perform {
+                if (query.maxResults < references.size) {
                         references.removeAt(0)
                         startIndex++
+                        return@perform true
                     }
-                    return@limitReferences true
+                    return@perform false
                 }
         } else if (query.maxResults > 0) {
-            synchronized(references) {
+            return referenceLock.perform {
                 if (query.maxResults < references.size) {
                     references.removeAt(references.lastIndex)
-                    return@limitReferences true
+                    return@perform true
                 }
+                return@perform false
             }
         }
         return false

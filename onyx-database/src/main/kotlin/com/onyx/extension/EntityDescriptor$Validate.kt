@@ -61,7 +61,7 @@ private fun EntityDescriptor.validateRelationships() {
             try {
                 val inverseField = inverseClass.getDeclaredField(inverse)
 
-                if (relationshipType == RelationshipType.MANY_TO_ONE && inverseField.type != List::class.java) {
+                if (relationshipType == RelationshipType.MANY_TO_ONE && !List::class.java.isAssignableFrom(inverseField.type)) {
                     throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)
                 } else if (relationshipType == RelationshipType.ONE_TO_ONE && inverseField.type != parentClass) {
                     throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)

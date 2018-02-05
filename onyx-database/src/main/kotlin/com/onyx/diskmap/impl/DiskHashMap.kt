@@ -1,5 +1,6 @@
 package com.onyx.diskmap.impl
 
+import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
@@ -222,6 +223,26 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
         maps.forEach {
             head = it
             returnValue.addAll(super.below(index, includeFirst))
+        }
+        return returnValue
+    }
+
+    /**
+     * Find all references between from and to value.  The underlying data structure
+     * is sorted so this should be very efficient
+     *
+     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param includeFrom Whether to compare above and equal or not.
+     * @param toValue Key to end range to
+     * @param includeTo Whether to compare equal or not.
+     *
+     * @since 2.1.3
+     */
+    override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Long> {
+        val returnValue = HashSet<Long>()
+        maps.forEach {
+            head = it
+            returnValue.addAll(super.between(fromValue, includeFrom, toValue, includeTo))
         }
         return returnValue
     }

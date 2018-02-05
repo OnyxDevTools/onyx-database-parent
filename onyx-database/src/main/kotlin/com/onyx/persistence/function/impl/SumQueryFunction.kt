@@ -1,6 +1,7 @@
 package com.onyx.persistence.function.impl
 
 import com.onyx.extension.common.castTo
+import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryFunctionType
@@ -13,6 +14,7 @@ class SumQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
     private var sum:Any? = null
     private var itemType:Class<*>? = null
     private var sumDouble: Double = 0.0
+    private val valueLock = DefaultClosureLock()
 
     override fun getFunctionValue():Any? = sum
 
@@ -21,7 +23,7 @@ class SumQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
             itemType = value.javaClass
 
         val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
-        synchronized(this) {
+        valueLock.perform {
             sumDouble += valueDouble
         }
         return false
