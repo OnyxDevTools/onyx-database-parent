@@ -13,6 +13,4 @@ import java.io.Serializable
  *
  * @see com.onyx.persistence.manager.PersistenceManager
  */
-interface IManagedEntity : Serializable {
-    var referenceId:Long
-}
+interface IManagedEntity : Serializable

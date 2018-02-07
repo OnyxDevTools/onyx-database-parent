@@ -125,6 +125,14 @@ interface DiskMap<K, V> : MutableMap<K, V> {
     fun between(fromValue: K?, includeFrom:Boolean, toValue: K?, includeTo:Boolean): Set<Long>
 
     /**
+     * This was added because if you are scanning an unused partition, there is no way to expunge stale entries since
+     * weak hash maps do not just do it on your own.  This caused a memory leak...ish...
+     *
+     * @since 2.1.3
+     */
+    fun clearCache()
+
+    /**
      * Added in order to get around requiring Java 8.  This is a workaround
      * for Android older devices.  Works as intended for Map interface
      *

@@ -32,7 +32,7 @@ class BasicMapTest {
     @Test
     fun putTest() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, Any>>("first")
+        val myMap = store.getHashMap<MutableMap<String, Any>>(String::class.java, "first")
         myMap.put("MY NEW STRING", "Hi1ya1")
         assertEquals(myMap["MY NEW STRING"], "Hi1ya1", "Failed to put string into map")
         store.close()
@@ -41,7 +41,7 @@ class BasicMapTest {
     @Test
     fun getTest() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, Any>>("first")
+        val myMap = store.getHashMap<MutableMap<String, Any>>(String::class.java, "first")
         myMap.put("MY NEW STRING", "Hi1ya1")
         val value = myMap["MY NEW STRING"] as String
         assertEquals("Hi1ya1", value)
@@ -51,7 +51,7 @@ class BasicMapTest {
     @Test
     fun deleteTest() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<Int, Any>>("second")
+        val myMap = store.getHashMap<MutableMap<Int, Any>>(Int::class.java, "second")
 
         for (i in 0..9999) {
             myMap.put(i, "Hiya")
@@ -77,7 +77,7 @@ class BasicMapTest {
     @Test
     fun deleteRoot() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<Int, Any?>>("second")
+        val myMap = store.getHashMap<MutableMap<Int, Any?>>(Int::class.java, "second")
 
         for (i in 0..9999) {
             myMap.put(i, "Hi1ya1")
@@ -99,7 +99,7 @@ class BasicMapTest {
     @Test
     fun largeDataSetTest() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<Int, Any>>("seconds")
+        val myMap = store.getHashMap<MutableMap<Int, Any>>(Int::class.java, "seconds")
 
         for (i in 0..499999) {
             myMap.put(i, "Hiya")
@@ -127,7 +127,7 @@ class BasicMapTest {
     @Test
     fun updateTest() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<Int, Any?>>("second")
+        val myMap = store.getHashMap<MutableMap<Int, Any?>>(Int::class.java, "second")
 
         for (i in 0..99999) {
             myMap.put(i, "Hiya")
@@ -187,7 +187,7 @@ class BasicMapTest {
     }
 
     private fun testPushObjects(store: DiskMapFactory, hashMapId: Int) {
-        val myMap = store.getHashMap<MutableMap<String, EntityYo>>("objectos" + hashMapId)
+        val myMap = store.getHashMap<MutableMap<String, EntityYo>>(String::class.java, "objectos" + hashMapId)
 
         var entityYo: EntityYo? = null
 

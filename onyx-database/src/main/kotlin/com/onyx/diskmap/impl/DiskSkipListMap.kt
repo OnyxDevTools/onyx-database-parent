@@ -26,7 +26,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Boolean = false) : AbstractIterableSkipList<K, V>(fileStore, header, detached) {
+open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Boolean = false, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractIterableSkipList<K, V>(fileStore, header, detached, keyType, canStoreKeyWithinNode) {
 
     override val size: Int
         get() = longSize().toInt()
@@ -165,7 +165,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
             node = findNodeAtPosition(node.right)
 
         while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore)
+            val nodeKey:K = node.getKey(fileStore, storeKeyWithinNode, keyType)
             when {
                 index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
                 index.forceCompare(nodeKey, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.position)
@@ -193,7 +193,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
             node = findNodeAtPosition(node.right)
 
         while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore)
+            val nodeKey:K = node.getKey(fileStore, storeKeyWithinNode, keyType)
 
             when {
                 index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
@@ -224,7 +224,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
             node = findNodeAtPosition(node.right)
 
         node@while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore)
+            val nodeKey:K = node.getKey(fileStore, storeKeyWithinNode, keyType)
             when {
                 toValue.forceCompare(nodeKey) && includeTo -> results.add(node.position)
                 !toValue.forceCompare(nodeKey, QueryCriteriaOperator.LESS_THAN) -> break@node

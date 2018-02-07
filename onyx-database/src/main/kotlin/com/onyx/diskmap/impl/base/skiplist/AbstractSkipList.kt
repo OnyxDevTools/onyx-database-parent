@@ -5,8 +5,8 @@ import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.forceCompare
+import com.onyx.extension.common.long
 import com.onyx.lang.map.WriteSynchronizedMap
-import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.util.*
 
@@ -23,7 +23,7 @@ import java.util.*
  * @since 2.0.0 This was refactored to make simpler.  It now conforms better to an actual skip list
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fileStore: Store, header: Header, detached: Boolean = false) : AbstractDiskMap<K, V>(fileStore, header, detached) {
+abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fileStore: Store, header: Header, detached: Boolean = false, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractDiskMap<K, V>(fileStore, header, detached, keyType, canStoreKeyWithinNode) {
 
     protected var nodeCache: MutableMap<Long, SkipNode?> = WriteSynchronizedMap(WeakHashMap())
 
@@ -83,7 +83,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         val valueLocation:Long = fileStore.writeObject(value)
         var nearest:SkipNode = nearest(key)!!
 
-        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore))) {
+        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))) {
 
             nearest.setRecord(fileStore, valueLocation)
             updateNodeCache(nearest)
@@ -96,17 +96,13 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                 updateNodeCache(nearest)
             }
 
-            if(value is IManagedEntity)
-                value.referenceId = nearest.position
-
         } else {
 
             var head:SkipNode = this.head!!
-            val keyLocation:Long = fileStore.writeObject(key)
+            val keyLocation:Long = if(storeKeyWithinNode) key!!.long() else fileStore.writeObject(key)
 
             //Stuff in between nearest and its right partner
-            var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0, key)
-            val rootNode = insertedNode
+            var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0)
             updateNodeCache(insertedNode)
             var level:Short = 0.toShort()
 
@@ -131,16 +127,12 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
                 if(nearest.up > 0)
                     nearest = findNodeAtPosition(nearest.up)!!
 
-                insertedNode = insertNode(keyLocation, valueLocation, nearest, insertedNode, level, key)
+                insertedNode = insertNode(keyLocation, valueLocation, nearest, insertedNode, level)
                 updateNodeCache(insertedNode)
                 level++
             }
 
             incrementSize()
-
-            if(value is IManagedEntity)
-                value.referenceId = rootNode.position
-
         }
 
         return value
@@ -150,10 +142,10 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * Insert a new node between 2 other nodes
      * @since 2.0.0
      */
-    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short, keyValue:K):SkipNode {
+    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short):SkipNode {
         val right:SkipNode? = if(left?.right ?: 0L > 0L) findNodeAtPosition(left!!.right) else null
 
-        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level, keyValue)
+        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level)
         updateNodeCache(newNode)
         right?.setLeft(fileStore, newNode.position)
         updateNodeCache(right)
@@ -176,7 +168,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         var returnValue:V? = null
         val head = head!!
 
-        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore))) {
+        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))) {
 
             returnValue = nearest.getRecord(fileStore)
             deleteNode(nearest, head)
@@ -223,7 +215,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      */
     protected open fun find(key: K): SkipNode? {
         val nearest:SkipNode = nearest(key) ?: return null
-        return if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore)))
+        return if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType)))
             nearest
         else
             null
@@ -238,7 +230,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         moveDownLoop@while(true) {
             moveRightLoop@ while (current.right > 0L && !found) {
                 val next: SkipNode? = findNodeAtPosition(current.right)
-                val nextKey: K = next?.getKey(fileStore)!!
+                val nextKey: K = next?.getKey(fileStore, storeKeyWithinNode, keyType)!!
 
                 current = when {
                     isEqual(key, nextKey) -> {
@@ -257,6 +249,10 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         }
 
         return current
+    }
+
+    override fun clearCache() {
+        nodeCache.clear()
     }
 
     /**

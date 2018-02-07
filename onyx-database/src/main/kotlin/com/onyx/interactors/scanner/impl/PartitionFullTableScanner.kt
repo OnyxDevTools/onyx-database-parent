@@ -49,6 +49,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
                 if(collector == null)
                     matching.add(reference)
             }
+            records.clearCache()
         }
 
         return matching
@@ -73,7 +74,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
                     async {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
                         val dataFile = context.getDataFile(partitionDescriptor)
-                        val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
+                        val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
                         scanPartition(records, it.index)
                     }
                 )
@@ -92,7 +93,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
 
             val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
             val dataFile = context.getDataFile(partitionDescriptor)
-            val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
+            val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
             return scanPartition(records, partitionId)
         }
     }

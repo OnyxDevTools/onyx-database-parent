@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.OnyxThread
-import com.onyx.persistence.IManagedEntity
+import com.onyx.extension.common.toType
 import java.nio.ByteBuffer
 
 data class SkipNode(
@@ -58,7 +58,14 @@ data class SkipNode(
     private var keyValue:Any? = null
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getKey(store: Store):T {
+    fun <T> getKey(store: Store, storedInNode:Boolean, type:Class<*>):T {
+        if(keyValue != null) return keyValue as T
+
+        if(storedInNode) {
+            keyValue = key.toType(type)
+            return keyValue as T
+        }
+
         if(keyValue == null) {
             synchronized(this) {
                 if(keyValue == null) {
@@ -77,8 +84,6 @@ data class SkipNode(
             synchronized(this) {
                 if(recordValue == null) {
                     recordValue = store.getObject(record)
-                    if(recordValue is IManagedEntity)
-                        (recordValue as IManagedEntity).referenceId = this.position
                 }
             }
         }
@@ -129,7 +134,7 @@ data class SkipNode(
     companion object {
         val SKIP_NODE_SIZE = (java.lang.Long.BYTES * 7) + java.lang.Short.BYTES
 
-        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short, keyValue:Any? = null):SkipNode {
+        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short):SkipNode {
             val node = SkipNode()
             node.key = key
             node.record = value
@@ -138,7 +143,6 @@ data class SkipNode(
             node.down = bottom
             node.position = store.allocate(SKIP_NODE_SIZE)
             node.level = level
-            node.keyValue = keyValue
             node.write(store)
             return node
         }

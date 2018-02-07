@@ -1,6 +1,7 @@
 package com.onyx.interactors.query.impl.collectors
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.SortedList
 import com.onyx.persistence.IManagedEntity
@@ -20,10 +21,13 @@ class UpdateQueryCollector(
     override val references: MutableList<Reference> = if(query.shouldSortResults()) SortedList(ReferenceComparator(comparator)) else ArrayList()
 
     override fun collect(reference: Reference, entity: IManagedEntity?) {
-        super.collect(reference, entity)
+
         if(entity == null)
             return
 
+        referenceLock.perform {
+            references.add(reference)
+        }
         increment()
         limitReferences()
     }

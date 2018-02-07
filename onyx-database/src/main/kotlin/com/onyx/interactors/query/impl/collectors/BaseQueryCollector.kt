@@ -35,7 +35,7 @@ abstract class BaseQueryCollector<T>(
     private var startIndex:Int = 0
 
     protected var shouldCacheResults:Boolean = true
-    private var referenceLock = DefaultClosureLock()
+    protected var referenceLock = DefaultClosureLock()
     protected var resultLock = DefaultClosureLock()
 
     // Used to compare values and a base comparator that pulls info from the store rather than memory
@@ -97,12 +97,15 @@ abstract class BaseQueryCollector<T>(
         if(entity == null)
             return
 
-        referenceLock.perform {
-            if(references.size >= DefaultQueryCacheInteractor.MAX_CACHED_REFERENCES) {
-                shouldCacheResults = false
-                references.clear()
-            } else {
-                references.add(reference)
+        if(shouldCacheResults) {
+            referenceLock.perform {
+                if (references.size >= DefaultQueryCacheInteractor.MAX_CACHED_REFERENCES) {
+                    shouldCacheResults = false
+                    references.clear()
+                    (references as? ArrayList)?.trimToSize()
+                } else {
+                    references.add(reference)
+                }
             }
         }
     }

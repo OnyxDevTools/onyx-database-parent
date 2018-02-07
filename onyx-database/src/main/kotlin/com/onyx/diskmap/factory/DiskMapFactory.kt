@@ -36,7 +36,7 @@ interface DiskMapFactory {
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
      * It is now an implementation of an inter changeable index followed by a skip list.
      */
-    fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T
+    fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String, loadFactor: Int): T
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
@@ -55,7 +55,7 @@ interface DiskMapFactory {
      *
      * @since 1.0.0
      */
-    fun <T : Map<*,*>> getHashMap(header: Header, loadFactor: Int): T
+    fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T
 
     /**
      * Get Hash Map by Name.  This will default the map with a loadFactor of 10.  In that case, it will return an
@@ -65,7 +65,7 @@ interface DiskMapFactory {
      * @return Disk Map implementation
      * @since 1.2.0
      */
-    fun <T : Map<*,*>> getHashMap(name: String): T = getHashMap(name, 10)
+    fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String): T = getHashMap(keyType, name, 10)
 
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless
@@ -81,7 +81,7 @@ interface DiskMapFactory {
      *
      * @since 1.2.0
      */
-    fun <T : Map<*,*>> newHashMap(header: Header, loadFactor: Int): T
+    fun <T : Map<*,*>> newHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T
 
     /**
      * Close Map Builder.  Flush the file writes

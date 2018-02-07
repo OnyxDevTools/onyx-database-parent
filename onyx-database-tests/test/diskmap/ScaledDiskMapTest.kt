@@ -33,7 +33,7 @@ class ScaledDiskMapTest {
     @Test
     fun testInsert() {
         val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE, StoreType.FILE)
-        val skipList = builder.getHashMap<MutableMap<Int, Int>>("first", 10)
+        val skipList = builder.getHashMap<MutableMap<Int, Int>>(Int::class.java, "first", 10)
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {
@@ -55,7 +55,7 @@ class ScaledDiskMapTest {
     fun testDelete() {
 
         val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
-        val skipList = builder.getHashMap<MutableMap<Int, Int>>("second", 10)
+        val skipList = builder.getHashMap<MutableMap<Int, Int>>(Int::class.java, "second", 10)
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {
@@ -89,7 +89,7 @@ class ScaledDiskMapTest {
     @Test
     fun testUpdate() {
         val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
-        val skipList = builder.getHashMap<MutableMap<Int, Int>>("third", 10)
+        val skipList = builder.getHashMap<MutableMap<Int, Int>>(Int::class.java, "third", 10)
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..9999) {
@@ -106,7 +106,7 @@ class ScaledDiskMapTest {
     @Test
     fun testForEach() {
         val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
-        val skipList = builder.getHashMap<MutableMap<Int, Int>>("third", 10)
+        val skipList = builder.getHashMap<MutableMap<Int, Int>>(Int::class.java, "third", 10)
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {
@@ -138,7 +138,7 @@ class ScaledDiskMapTest {
     @Test
     fun testKeyIterator() {
         val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
-        val skipList = builder.getHashMap<MutableMap<Int, Int>>("fourth", 10)
+        val skipList = builder.getHashMap<MutableMap<Int, Int>>(Int::class.java, "fourth", 10)
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {
@@ -173,7 +173,7 @@ class ScaledDiskMapTest {
     @Test
     fun testValueIterator() {
         val builder = DefaultDiskMapFactory(TEST_SCALED_DATABASE)
-        val skipList = builder.getHashMap<MutableMap<Int, Int>>("fifth", 10)
+        val skipList = builder.getHashMap<MutableMap<Int, Int>>(Int::class.java, "fifth", 10)
 
         val keyValues = HashMap<Int, Int>()
         for (i in 0..49999) {

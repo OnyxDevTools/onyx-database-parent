@@ -18,7 +18,7 @@ import java.util.*
  * @since 1.2.0
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Store, header: Header, detached: Boolean) : AbstractCachedHashMatrix<K, V>(store, header, detached), Map<K, V> {
+abstract class AbstractIterableHashMatrix<K, V> protected constructor(store: Store, header: Header, detached: Boolean, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractCachedHashMatrix<K, V>(store, header, detached, keyType, canStoreKeyWithinNode), Map<K, V> {
 
     // region Iterable Sets
 

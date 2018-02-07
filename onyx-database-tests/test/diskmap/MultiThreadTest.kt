@@ -30,7 +30,7 @@ class MultiThreadTest {
     @Test
     fun testMultiThread() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<Int, String>>("second")
+        val myMap = store.getHashMap<MutableMap<Int, String>>(Int::class.java, "second")
 
         val items = ArrayList<Future<*>>()
         for (i in 1..19) {

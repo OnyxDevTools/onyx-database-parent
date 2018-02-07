@@ -97,6 +97,26 @@ fun Any.setAny(field: Field, child: Any?) = catchAll {
     }
 }
 
+fun Class<*>.canBeCastToPrimitive():Boolean = when (this) {
+    ClassMetadata.LONG_TYPE ->              true
+    ClassMetadata.LONG_PRIMITIVE_TYPE ->    true
+    ClassMetadata.INT_TYPE ->               true
+    ClassMetadata.INT_PRIMITIVE_TYPE ->     true
+    ClassMetadata.FLOAT_TYPE ->             true
+    ClassMetadata.FLOAT_PRIMITIVE_TYPE ->   true
+    ClassMetadata.DOUBLE_TYPE ->            true
+    ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->  true
+    ClassMetadata.BYTE_TYPE ->              true
+    ClassMetadata.BYTE_PRIMITIVE_TYPE ->    true
+    ClassMetadata.CHAR_TYPE ->              true
+    ClassMetadata.CHAR_PRIMITIVE_TYPE ->    true
+    ClassMetadata.SHORT_TYPE ->             true
+    ClassMetadata.SHORT_PRIMITIVE_TYPE ->   true
+    ClassMetadata.BOOLEAN_TYPE ->           true
+    ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> true
+    else -> false
+}
+
 fun Class<*>.primitiveType() = when {
     this.isPrimitive -> this
     this.name == "java.lang.Boolean" -> ClassMetadata.BOOLEAN_TYPE

@@ -262,14 +262,22 @@ open class FileChannelStore() : Store {
             it.int
         }
 
-        val buffer = getBuffer(size)
-        try {
+        val thread = Thread.currentThread()
+        if(thread is OnyxThread && size <= thread.buffer.capacity()) {
+            val buffer = thread.buffer
+            buffer.clear()
+            buffer.limit(size)
             this.read(buffer, position + Integer.BYTES)
             buffer.rewind()
             @Suppress("UNCHECKED_CAST")
             return BufferStream(buffer).getObject(context) as T
-        } finally {
-            recycleBuffer(buffer)
+        } else {
+            BufferPool.allocateAndLimit(size) {
+                this.read(it, position + Integer.BYTES)
+                it.rewind()
+                @Suppress("UNCHECKED_CAST")
+                return BufferStream(it).getObject(context) as T
+            }
         }
     }
 
@@ -298,22 +306,5 @@ open class FileChannelStore() : Store {
             return@lazy true
         }
 
-        fun getBuffer(size:Int): ByteBuffer {
-            val thread = Thread.currentThread()
-            return if(thread is OnyxThread && size <= thread.buffer.capacity()) {
-                thread.buffer.clear()
-                thread.buffer.limit(size)
-                thread.buffer
-            } else {
-                BufferPool.allocateAndLimit(size)
-            }
-        }
-
-        fun recycleBuffer(buffer: ByteBuffer) {
-            val thread = Thread.currentThread()
-            if (thread !is OnyxThread) {
-                BufferPool.recycle(buffer)
-            }
-        }
     }
 }

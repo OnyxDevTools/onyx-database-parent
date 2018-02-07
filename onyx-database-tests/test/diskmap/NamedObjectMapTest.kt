@@ -28,7 +28,7 @@ class NamedObjectMapTest  {
     @Test
     fun testPushObject() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, EntityYo>>("objectos")
+        val myMap = store.getHashMap<MutableMap<String, EntityYo>>(String::class.java, "objectos")
 
         val entityYo = EntityYo()
         entityYo.id = "OOO, this is an id"
@@ -72,7 +72,7 @@ class NamedObjectMapTest  {
     @Test
     fun testNullObject() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, EntityYo>>("objectos")
+        val myMap = store.getHashMap<MutableMap<String, EntityYo>>(String::class.java, "objectos")
 
         val entityYo = EntityYo()
         entityYo.id = "OOO, this is an id"
@@ -103,7 +103,7 @@ class NamedObjectMapTest  {
     @Test
     fun testSet() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, List<*>>>("objectos")
+        val myMap = store.getHashMap<MutableMap<String, List<*>>>(String::class.java, "objectos")
 
         val list = ArrayList<String>()
         list.add("HIYA1")
@@ -124,7 +124,7 @@ class NamedObjectMapTest  {
     @Test
     fun testHashSet() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, Set<*>>>("objectos")
+        val myMap = store.getHashMap<MutableMap<String, Set<*>>>(String::class.java, "objectos")
 
         val list = HashSet<String>()
         list.add("HIYA1")
@@ -144,7 +144,7 @@ class NamedObjectMapTest  {
     @Test
     fun testMap() {
         val store = DefaultDiskMapFactory(TEST_DATABASE)
-        val myMap = store.getHashMap<MutableMap<String, Map<*, *>>>("objectos")
+        val myMap = store.getHashMap<MutableMap<String, Map<*, *>>>(String::class.java, "objectos")
 
         val list = HashMap<String, Int>()
         list.put("HIYA1", 1)

@@ -12,7 +12,7 @@ import java.util.AbstractCollection
  * @param <V> Value
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int) : AbstractCachedHashMap<K, V>(fileStore, header, headless, loadFactor) {
+abstract class AbstractIterableHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractCachedHashMap<K, V>(fileStore, header, headless, loadFactor, keyType, canStoreKeyWithinNode) {
 
     /**
      * Collection of skip list references

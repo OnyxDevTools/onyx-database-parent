@@ -80,3 +80,36 @@ fun Any?.castTo(clazz: Class<*>): Any? {
         else -> null
     }
 }
+
+fun Any.long():Long =
+    when {
+        this::class.java == ClassMetadata.FLOAT_TYPE ->             java.lang.Float.floatToIntBits(this as Float).toLong()
+        this::class.java == ClassMetadata.FLOAT_PRIMITIVE_TYPE ->   java.lang.Float.floatToIntBits(this as Float).toLong()
+        this::class.java == ClassMetadata.DOUBLE_TYPE ->            java.lang.Double.doubleToLongBits(this as Double)
+        this::class.java == ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->  java.lang.Double.doubleToLongBits(this as Double)
+        this is Number -> this.toLong()
+        this is Boolean -> if(this) 1L else 0L
+        this is Char -> this.toLong()
+        else -> throw Exception("Invalid Cast ${this::class.java}")
+    }
+
+@Suppress("UNCHECKED_CAST")
+fun Long.toType(type:Class<*>):Any = when (type) {
+    ClassMetadata.LONG_TYPE ->              this
+    ClassMetadata.LONG_PRIMITIVE_TYPE ->    this
+    ClassMetadata.INT_TYPE ->               this.toInt()
+    ClassMetadata.INT_PRIMITIVE_TYPE ->     this.toInt()
+    ClassMetadata.FLOAT_TYPE ->             java.lang.Float.intBitsToFloat(this.toInt())
+    ClassMetadata.FLOAT_PRIMITIVE_TYPE ->   java.lang.Float.intBitsToFloat(this.toInt())
+    ClassMetadata.DOUBLE_TYPE ->            java.lang.Double.longBitsToDouble(this)
+    ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->  java.lang.Double.longBitsToDouble(this)
+    ClassMetadata.BYTE_TYPE ->              this.toByte()
+    ClassMetadata.BYTE_PRIMITIVE_TYPE ->    this.toByte()
+    ClassMetadata.CHAR_TYPE ->              this.toChar()
+    ClassMetadata.CHAR_PRIMITIVE_TYPE ->    this.toChar()
+    ClassMetadata.SHORT_TYPE ->             this.toShort()
+    ClassMetadata.SHORT_PRIMITIVE_TYPE ->   this.toShort()
+    ClassMetadata.BOOLEAN_TYPE ->           this == 1L
+    ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> this == 1L
+    else -> throw Exception("Invalid Cast $type")
+}

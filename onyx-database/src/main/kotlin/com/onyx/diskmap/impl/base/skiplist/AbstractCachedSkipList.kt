@@ -20,7 +20,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore: Store, header: Header, headless: Boolean = false) : AbstractSkipList<K, V>(fileStore, header, headless) {
+abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore: Store, header: Header, headless: Boolean = false, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractSkipList<K, V>(fileStore, header, headless, keyType, canStoreKeyWithinNode) {
 
     // Caching maps
     protected var keyCache: MutableMap<K, SkipNode?> = WriteSynchronizedMap(WeakHashMap())
@@ -75,6 +75,14 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      */
     override fun updateKeyCache(node: K) {
         keyCache.remove(node)
+    }
+
+    /**
+     * Clear Node and key cache
+     */
+    override fun clearCache() {
+        super.clearCache()
+        keyCache.clear()
     }
 
     /**

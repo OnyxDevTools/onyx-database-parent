@@ -15,7 +15,6 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -34,7 +33,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private lateinit var store: Store
 
     // Contains all initialized maps
-    private val maps: MutableMap<String, Map<*,*>> = OptimisticLockingMap(HashMap())
+    private val maps: MutableMap<String, Map<*,*>> = Collections.synchronizedMap(WeakHashMap())
 
     // Contains all initialized maps
     private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
@@ -102,9 +101,9 @@ class DefaultDiskMapFactory : DiskMapFactory {
         // to be changed.
 
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
-            newScalableMap(this.store, newMapHeader(), 1)
+            newScalableMap(String::class.java, this.store, newMapHeader(), 1)
         } else {
-            getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
+            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
         }
 
         determineKeyStore(isNew)
@@ -162,9 +161,9 @@ class DefaultDiskMapFactory : DiskMapFactory {
         store.reset()
 
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
-            newScalableMap(this.store, newMapHeader(), 1)
+            newScalableMap(String::class.java, this.store, newMapHeader(), 1)
         } else {
-            getHashMap((store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
+            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
         }
     }
 
@@ -186,7 +185,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * to change.  Always plan for scale when designing your data model.
      * @return Instantiated disk map
      */
-    private fun <T : Map<*,*>> newScalableMap(store: Store, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskHashMap<Any, Any?>(store, header, loadFactor) as T else DiskMatrixHashMap<Any, Any?>(store, header, loadFactor) as T
+    private fun <T : Map<*,*>> newScalableMap(keyType:Class<*>, store: Store, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskHashMap<Any, Any?>(store, header, loadFactor, keyType, canStoreKeyInNode) as T else DiskMatrixHashMap<Any, Any?>(store, header, loadFactor, keyType, canStoreKeyInNode) as T
 
     /**
      * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless
@@ -202,7 +201,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    override fun <T : Map<*,*>> newHashMap(header: Header, loadFactor: Int): T = DiskHashMap<Any, Any?>(store, header, loadFactor, false) as T
+    override fun <T : Map<*,*>> newHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T = DiskHashMap<Any, Any?>(store, header, loadFactor, false, keyType, canStoreKeyInNode) as T
 
     /**
      * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
@@ -223,7 +222,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
      * It is now an implementation of an inter-changeable index followed by a skip list.
      */
-    override fun <T : Map<*,*>> getHashMap(name: String, loadFactor: Int): T = getMapWithType(name, loadFactor)
+    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String, loadFactor: Int): T = getMapWithType(keyType, name, loadFactor)
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
@@ -242,7 +241,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*,*>> getHashMap(header: Header, loadFactor: Int): T = mapsByHeader.getOrPut(header) { newScalableMap<T>(store, header, loadFactor) } as T
+    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T = mapsByHeader.getOrPut(header) { newScalableMap<T>(keyType, store, header, loadFactor) } as T
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -252,7 +251,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    private fun <T : Map<*,*>> getMapWithType(name: String, loadFactor: Int): T = maps.getOrPut(name) {
+    private fun <T : Map<*,*>> getMapWithType(keyType:Class<*>, name: String, loadFactor: Int): T = maps.getOrPut(name) {
         var header: Header? = null
         val headerReference = internalMaps[name]
         if (headerReference != null)
@@ -266,7 +265,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
             internalMaps.put(name, header.position)
         }
 
-        return@getOrPut newScalableMap(store, header, loadFactor)
+        return@getOrPut newScalableMap(keyType, store, header, loadFactor)
     } as T
 
     // endregion
@@ -277,9 +276,10 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * the key within the SkipNode.
      *
      * @since 2.1.3 Improve performance
+     * @return Whether the store supports storing the key within the skip node
      */
     private fun determineKeyStore(isNew:Boolean) {
-        canStoreKeyInNode = internalMaps.getOrPut("_KEY_") { if(isNew) 1L else 0L } == 1L
+        canStoreKeyInNode = internalMaps.getOrPut("_KEY_STORE_IN_NODE_") { if(isNew) 1L else 0L } == 1L
     }
 
     companion object {

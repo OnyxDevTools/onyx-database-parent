@@ -131,7 +131,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                     systemEntity!!.partition!!.entries.forEach {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
                         val dataFile = context.getDataFile(partitionDescriptor)
-                        val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
+                        val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
                         resultCount += records.longSize()
                     }
 
@@ -140,7 +140,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                 else -> {
                     val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
                     val dataFile = context.getDataFile(partitionDescriptor)
-                    val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
+                    val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
                     return records.longSize()
                 }
             }

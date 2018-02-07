@@ -16,7 +16,7 @@ import com.onyx.diskmap.store.Store
  * @since 1.2.0 This was migrated from the AbstractBitMap and simplified to be only a part of an index rather than have
  * record management
  */
-abstract class AbstractHashMatrix<K, V>(fileStore: Store, header: Header, detached: Boolean) : DiskSkipListMap<K, V>(fileStore, header, detached) {
+abstract class AbstractHashMatrix<K, V>(fileStore: Store, header: Header, detached: Boolean, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : DiskSkipListMap<K, V>(fileStore, header, detached, keyType, canStoreKeyWithinNode) {
 
     /**
      * Get the size of a hash matrix data.

@@ -13,7 +13,7 @@ import java.util.*
  * @param <V> Value
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableMultiMapHashMap<K, V> protected constructor(store: Store, header: Header, isHeadless: Boolean, loadFactor: Int) : AbstractIterableHashMap<K, V>(store, header, isHeadless, loadFactor) {
+abstract class AbstractIterableMultiMapHashMap<K, V> protected constructor(store: Store, header: Header, isHeadless: Boolean, loadFactor: Int, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractIterableHashMap<K, V>(store, header, isHeadless, loadFactor, keyType, canStoreKeyWithinNode) {
 
     // region Iterable Sets
 

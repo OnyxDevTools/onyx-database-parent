@@ -2,7 +2,6 @@ package com.onyx.buffer
 
 import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.withBuffer
-import sun.nio.ch.DirectBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -46,7 +45,7 @@ object BufferPool {
      */
     fun recycle(buffer: ByteBuffer) {
         val capacity = buffer.capacity()
-        if(buffer is DirectBuffer) {
+        if(buffer.isDirect) {
             buffer.clear()
             when (capacity) {
                 LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.add(buffer)

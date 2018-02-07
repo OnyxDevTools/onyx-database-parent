@@ -10,8 +10,6 @@ import com.onyx.persistence.annotations.values.RelationshipType
 @Entity
 class RelationshipNoEntityType : IManagedEntity {
 
-    override var referenceId: Long = 0L
-
     @Identifier
     @Attribute
     var id = "234"

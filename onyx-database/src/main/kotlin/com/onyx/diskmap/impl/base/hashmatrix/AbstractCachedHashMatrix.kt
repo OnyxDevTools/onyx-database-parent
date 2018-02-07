@@ -15,7 +15,7 @@ import java.util.*
  *
  * @since 1.2.0
  */
-abstract class AbstractCachedHashMatrix<K, V>(fileStore: Store, header: Header, detached: Boolean) : AbstractHashMatrix<K, V>(fileStore, header, detached) {
+abstract class AbstractCachedHashMatrix<K, V>(fileStore: Store, header: Header, detached: Boolean, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractHashMatrix<K, V>(fileStore, header, detached, keyType, canStoreKeyWithinNode) {
 
     protected var hashMatrixNodeCache: MutableMap<Long, HashMatrixNode> = OptimisticLockingMap(WeakHashMap())
 
@@ -65,7 +65,15 @@ abstract class AbstractCachedHashMatrix<K, V>(fileStore: Store, header: Header, 
      */
     override fun updateHashMatrixReference(node: HashMatrixNode, index: Int, value: Long) {
         super.updateHashMatrixReference(node, index, value)
-        hashMatrixNodeCache[node.position] = node
+        hashMatrixNodeCache[java.lang.Long(node.position) as Long] = node
+    }
+
+    /**
+     * Clear Hash Matrix cache
+     */
+    override fun clearCache() {
+        super.clearCache()
+        hashMatrixNodeCache.clear()
     }
 
     /**

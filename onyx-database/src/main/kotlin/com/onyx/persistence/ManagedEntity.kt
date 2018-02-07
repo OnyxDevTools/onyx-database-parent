@@ -20,8 +20,6 @@ import com.onyx.persistence.context.Contexts
  */
 abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
-    override var referenceId:Long = -1L
-
     @Transient private var descriptor: EntityDescriptor? = null
     @Transient internal var ignoreListeners = false
 

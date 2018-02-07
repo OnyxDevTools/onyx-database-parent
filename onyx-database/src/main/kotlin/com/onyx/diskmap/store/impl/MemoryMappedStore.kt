@@ -1,10 +1,9 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.diskmap.store.Store
+import com.onyx.exception.InitializationException
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.common.catchAll
-import com.onyx.lang.concurrent.ClosureReadWriteLock
-import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
 import java.io.FileNotFoundException
@@ -37,7 +36,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param filePath File location for the store
      * @return Whether the file was opened and the first file slice was allocated
      */
-    @Synchronized
     override fun open(filePath: String): Boolean {
         try {
 
@@ -64,14 +62,14 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @return  Close the memory mapped file and truncate to get rid of the remainder of allocated space for the last
      * file slice
      */
-    @Synchronized override fun close(): Boolean {
+    override fun close(): Boolean {
         try {
             synchronized(slices) {
                 this.slices.values
                         .filter { it.buffer is MappedByteBuffer }
                         .forEach {
                             catchAll {
-                                it.lock.writeLock {
+                                synchronized(it) {
                                     cleanBuffer(it.buffer)
                                     it.buffer = ByteBuffer.allocate(0)
                                 }
@@ -80,6 +78,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
                 if (!deleteOnClose) {
                     catchAll {
+                        ensureOpen()
                         channel!!.truncate(getFileSize())
                     }
                 }
@@ -114,24 +113,28 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
         // This occurs when we bridge from one slice to another
         if (endBufLocation > bufferSliceSize) {
-            slice.lock.writeLock {
-                slice.buffer.position(bufLocation)
+
+            var bufferToWriteTo = slice.buffer
+            synchronized(slice) {
+                bufferToWriteTo.position(bufLocation)
                 for (i in 0 until bufferSliceSize - bufLocation)
-                    slice.buffer.put(buffer.get())
+                    bufferToWriteTo.put(buffer.get())
             }
-            if(buffer.hasRemaining()) {
+            if (buffer.hasRemaining()) {
                 val overflowSlice = getBuffer(position + buffer.limit())
-                overflowSlice.lock.writeLock {
-                    overflowSlice.buffer.position(0)
+                bufferToWriteTo = overflowSlice.buffer
+                synchronized(overflowSlice) {
+                    bufferToWriteTo.position(0)
                     for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
-                        overflowSlice.buffer.put(buffer.get())
+                        bufferToWriteTo.put(buffer.get())
                 }
             }
+
             val after = buffer.position()
             return after - before
         } else {
             val location = getBufferLocation(position)
-            slice.lock.writeLock {
+            synchronized(slice) {
                 slice.buffer.position(location)
                 slice.buffer.put(buffer)
             }
@@ -155,27 +158,27 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
         // This occurs when we bridge from one slice to another
         if (endBufLocation >= bufferSliceSize) {
-            var bufferToRead = slice.buffer.duplicate()
 
-            slice.lock.readLock {
+            var bufferToRead = slice.buffer
+            synchronized(slice) {
                 bufferToRead.position(bufLocation)
                 for (i in 0 until bufferSliceSize - bufLocation)
                     buffer.put(bufferToRead.get())
             }
             if(buffer.hasRemaining()) {
                 val overflowSlice = getBuffer(position + buffer.limit())
-                bufferToRead = overflowSlice.buffer.duplicate()
-                overflowSlice.lock.readLock {
+                bufferToRead = overflowSlice.buffer
+                synchronized(overflowSlice) {
                     bufferToRead.position(0)
                     for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
                         buffer.put(bufferToRead.get())
                 }
             }
         } else {
-            val bufferToRead = slice.buffer.duplicate()
+            val bufferToRead = slice.buffer
             val location = getBufferLocation(position)
             val bytesToRead = buffer.limit()
-            slice.lock.readLock {
+            synchronized(slice) {
                 bufferToRead.position(location)
                 for (i in 0 until bytesToRead)
                     buffer.put(bufferToRead.get())
@@ -192,6 +195,9 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     protected open fun getBuffer(position: Long): FileSlice {
 
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+
         var index = 0
         if (position > 0) {
             index = (position / bufferSliceSize).toInt()
@@ -201,6 +207,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
 
         return slices.getOrPut(index) {
             val offset = bufferSliceSize.toLong() * finalIndex.toLong()
+            ensureOpen()
             val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, offset, bufferSliceSize.toLong())
             FileSlice(buffer!!)
         }
@@ -226,7 +233,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      *
      * This contains the memory mapped segment as well as a lock for it
      */
-    class FileSlice constructor(var buffer: ByteBuffer, val lock:ClosureReadWriteLock = DefaultClosureReadWriteLock())
+    class FileSlice constructor(var buffer: ByteBuffer)
 
     /**
      * Commit storage
@@ -239,6 +246,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
                         .forEach {
                             catchAll {
                                 synchronized(it) {
+                                    ensureOpen()
                                     (it.buffer as MappedByteBuffer).force()
                                 }
                             }
@@ -246,6 +254,11 @@ open class MemoryMappedStore : FileChannelStore, Store {
             }
             super.commit()
         }
+    }
+
+    private fun ensureOpen() {
+        if (this !is InMemoryStore && !channel!!.isOpen)
+            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
     }
 
     private fun cleanBuffer(buffer: ByteBuffer) {

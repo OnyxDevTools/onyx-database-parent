@@ -48,7 +48,7 @@ public class BenchmarkRunner {
             //Default values to run via the IDE
             args = new String[2];
             args[0] = "1";
-            args[1] = "InsertionBenchmarkTest";
+            args[1] = "RandomTransactionBenchmarkTest";
         }
 
         // Delete the existing database so we start with a clean slate

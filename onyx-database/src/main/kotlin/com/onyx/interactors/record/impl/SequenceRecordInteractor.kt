@@ -3,6 +3,7 @@ package com.onyx.interactors.record.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
+import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.common.castTo
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.lang.concurrent.impl.DefaultClosureLock
@@ -22,7 +23,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
 
     init {
         val dataFile = context.getDataFile(entityDescriptor)
-        metadata = dataFile.getHashMap(METADATA_MAP_NAME + entityDescriptor.entityClass.name, METADATA_MAP_LOAD_FACTOR)
+        metadata = dataFile.getHashMap(ClassMetadata.BYTE_TYPE, METADATA_MAP_NAME + entityDescriptor.entityClass.name, METADATA_MAP_LOAD_FACTOR)
 
         // Initialize the sequence value
         sequenceValue.set((metadata[LAST_SEQUENCE_VALUE]?:0L).toLong())

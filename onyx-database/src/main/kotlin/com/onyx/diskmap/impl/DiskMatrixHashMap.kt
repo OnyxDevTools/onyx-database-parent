@@ -1,6 +1,5 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix
 import com.onyx.diskmap.data.CombinedIndexHashMatrixNode
@@ -34,37 +33,15 @@ import java.util.*
  *
  * @since 1.2.0 This was re-factored not to have a dependent sub map.
  */
-class DiskMatrixHashMap<K, V> : AbstractIterableHashMatrix<K, V>, SortedDiskMap<K,V> {
+class DiskMatrixHashMap<K, V> (fileStore: Store, header: Header, loadFactor: Int, keyType: Class<*>, canStoreKeyWithinNode: Boolean) : AbstractIterableHashMatrix<K, V>(fileStore, header, true, keyType, canStoreKeyWithinNode), SortedDiskMap<K,V> {
 
     private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
     // Cache of skip lists
     private val skipListMapCache:MutableMap<Int, CombinedIndexHashMatrixNode?> = OptimisticLockingMap(WeakHashMap())
 
-    /**
-     * Constructor
-     *
-     * @param fileStore File storage mechanism
-     * @param header    Pointer to the DiskMap˚
-     * @since 1.2.0
-     */
-    constructor(fileStore: Store, header: Header, loadFactor: Int) : super(fileStore, header, true) {
+    init {
         this.loadFactor = loadFactor.toByte()
-    }
-
-    /**
-     * Constructor
-     *
-     * @param fileStore File storage mechanism
-     * @param header    Pointer to the DiskMap
-     * @since 1.2.1 Added constructor in the event you wanted a different locking implementation
-     */
-    @Suppress("UNUSED")
-    constructor(fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureReadWriteLock) : super(fileStore, header, true) {
-        this.mapReadWriteLock = closureLock
-        this.loadFactor = loadFactor.toByte()
-        this.hashMatrixNodeCache = EmptyMap()
-        this.keyCache = EmptyMap()
     }
 
     /**

@@ -27,7 +27,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
 
     init {
         val dataFile = context.getDataFile(entityDescriptor)
-        records = dataFile.getHashMap(entityDescriptor.entityClass.name, entityDescriptor.identifier!!.loadFactor.toInt())
+        records = dataFile.getHashMap(entityDescriptor.identifier!!.type, entityDescriptor.entityClass.name, entityDescriptor.identifier!!.loadFactor.toInt())
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.onyx.diskmap.impl
 
-import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
@@ -23,23 +22,7 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      * @param header    Pointer to the DiskMap
      * @since 1.2.0
      */
-    constructor (fileStore: Store, header: Header, loadFactor: Int) : super(fileStore, header, true, loadFactor)
-
-    /**
-     * Constructor
-     *
-     * @param fileStore File storage mechanism
-     * @param header    Pointer to the DiskMap
-     * @since 1.2.0
-     */
-    @Suppress("UNUSED")
-    constructor (fileStore: Store, header: Header, loadFactor: Int, closureLock: ClosureReadWriteLock) : super(fileStore, header, true, loadFactor) {
-        this.nodeCache = EmptyMap()
-        this.mapCache = EmptyMap()
-        this.cache = EmptyMap()
-        this.keyCache = EmptyMap()
-        this.mapReadWriteLock = closureLock
-    }
+    constructor (fileStore: Store, header: Header, loadFactor: Int, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : super(fileStore, header, true, loadFactor, keyType, canStoreKeyWithinNode)
 
     /**
      * Constructor
@@ -52,7 +35,7 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      * we set the cache elements and lock to empty implementations.
      * @since 1.2.0
      */
-    constructor(fileStore: Store, header: Header, loadFactor: Int, stateless: Boolean) : super(fileStore, header, true, loadFactor) {
+    constructor(fileStore: Store, header: Header, loadFactor: Int, stateless: Boolean, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : super(fileStore, header, true, loadFactor, keyType, canStoreKeyWithinNode) {
         if (!stateless) {
             cache = EmptyMap()
             mapCache = EmptyMap()
@@ -139,10 +122,10 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
      * @return Whether the object exists
      * @since 1.2.0
      */
-    override fun containsKey(key: K): Boolean = mapReadWriteLock.readLock {
-        val combinedNode = getHeadReferenceForKey(key, false) ?: return@readLock false
+    override fun containsKey(key: K): Boolean {
+        val combinedNode = getHeadReferenceForKey(key, false) ?: return false
         head = combinedNode.head
-        return@readLock super.containsKey(key)
+        return super.containsKey(key)
     }
 
     /**

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * @param <K> Key
  * @param <V> Value
  */
-abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int) : DiskSkipListMap<K, V>(fileStore, header, headless) {
+abstract class AbstractHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : DiskSkipListMap<K, V>(fileStore, header, headless, keyType, canStoreKeyWithinNode) {
 
     var mapCount = AtomicInteger(0) // Count of allocated hash table used
     private val referenceOffset: Int // Offset of the map references

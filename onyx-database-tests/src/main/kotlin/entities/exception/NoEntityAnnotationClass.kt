@@ -9,8 +9,6 @@ import com.onyx.persistence.annotations.Identifier
  */
 class NoEntityAnnotationClass : IManagedEntity {
 
-    override var referenceId: Long = 0L
-
     @Identifier
     @Attribute
     var id: String? = null

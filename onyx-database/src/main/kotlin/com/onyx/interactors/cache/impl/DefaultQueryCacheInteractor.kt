@@ -72,7 +72,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      * @since 1.3.0
      */
     override fun updateCachedQueryResultsForEntity(entity: IManagedEntity, descriptor: EntityDescriptor, entityReference: Reference, type: QueryListenerEvent) {
-        val queryCacheMap = cachedQueriesByClass[entity::class.java] ?: return
+        val queryCacheMap = cachedQueriesByClass[descriptor.entityClass] ?: return
 
         queryCacheMap.forEach { query, cachedResults ->
             // If indicated to remove the record, delete it and move on

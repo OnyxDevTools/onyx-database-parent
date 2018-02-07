@@ -62,7 +62,7 @@ class StandardIdentifierConcurrencyTest(override var factoryClass: KClass<*>) : 
 
         val after = System.currentTimeMillis()
 
-        assertTrue(after - before < 1500, "Should not take more than 1.5 seconds to complete")
+        assertTrue(after - before < 350, "Should not take more than 1.5 seconds to complete")
     }
 
     /**

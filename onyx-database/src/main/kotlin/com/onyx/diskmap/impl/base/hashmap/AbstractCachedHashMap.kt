@@ -13,7 +13,7 @@ import java.util.*
  *
  * @since 1.2.0
  */
-abstract class AbstractCachedHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int) : AbstractHashMap<K, V>(fileStore, header, headless, loadFactor) {
+abstract class AbstractCachedHashMap<K, V>(fileStore: Store, header: Header, headless: Boolean, loadFactor: Int, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractHashMap<K, V>(fileStore, header, headless, loadFactor, keyType, canStoreKeyWithinNode) {
 
     protected var cache: MutableMap<Int, Long> = OptimisticLockingMap(WeakHashMap())
     protected var mapCache: MutableMap<Int, Int> = OptimisticLockingMap(WeakHashMap())
@@ -77,6 +77,15 @@ abstract class AbstractCachedHashMap<K, V>(fileStore: Store, header: Header, hea
      * @since 1.2.0
      */
     override fun getSkipListIdentifier(index: Int): Int = mapCache.getOrPut(index) { super@AbstractCachedHashMap.getSkipListIdentifier(index) }
+
+    /**
+     * Clear Hash Matrix cache
+     */
+    override fun clearCache() {
+        super.clearCache()
+        cache.clear()
+        mapCache.clear()
+    }
 
     /**
      * Clear the cache

@@ -6,9 +6,9 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
+import com.onyx.extension.common.canBeCastToPrimitive
 import com.onyx.extension.perform
 import java.util.concurrent.atomic.AtomicLong
-
 
 /**
  * Created by Tim Osborn on 1/11/17.
@@ -20,11 +20,12 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.2.0
  */
-abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val detached: Boolean) : DiskMap<K, V> {
+abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val detached: Boolean, val keyType:Class<*>, canStoreKeyWithinNode:Boolean) : DiskMap<K, V> {
 
     final override val reference: Header = Header()
 
     var loadFactor = HashMatrixNode.DEFAULT_BITMAP_ITERATIONS.toByte()
+    val storeKeyWithinNode:Boolean = canStoreKeyWithinNode && keyType.canBeCastToPrimitive()
 
     init {
         // Clone the header so that we do not have a cross reference
