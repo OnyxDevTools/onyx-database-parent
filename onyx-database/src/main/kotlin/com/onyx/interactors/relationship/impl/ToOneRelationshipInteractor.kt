@@ -27,7 +27,7 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
     @Throws(OnyxException::class)
     override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         val relationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]
-        val relationshipReferenceMap:MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)!!
+        val relationshipReferenceMap:MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)
         val currentRelationshipReference: RelationshipReference? = relationshipObject?.toRelationshipReference(context)
         val parentRelationshipReference = entity.toRelationshipReference(context)
 
@@ -35,12 +35,14 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
         if (relationshipDescriptor.shouldSaveEntity
                 && relationshipObject != null
                 && !transaction.contains(relationshipObject, context)) {
-            val pair = relationshipObject.save(context)
-            currentRelationshipReference!!.identifier = pair.second
-            relationshipObject.saveIndexes(context, relationshipObject.referenceId(context))
+            val putResult = relationshipObject.save(context)
+            currentRelationshipReference!!.identifier = putResult.key
+            relationshipObject.saveIndexes(context, if(putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
             relationshipObject.saveRelationships(context, RelationshipTransaction(entity, context))
+
             val relationshipDescriptor = relationshipObject.descriptor(context)
-            context.queryCacheInteractor.updateCachedQueryResultsForEntity(relationshipObject, relationshipDescriptor, relationshipObject.reference(context, relationshipDescriptor), if (pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(relationshipObject, relationshipDescriptor, relationshipObject.reference(putResult.recordId, context, relationshipDescriptor), if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
+
         }
 
         val existingReference = relationshipReferenceMap[parentRelationshipReference]?.firstOrNull()
@@ -84,7 +86,7 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
     override fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean) {
         transaction.add(entity, context)
 
-        val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context)) ?: HashSet()
+        val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(context)] ?: HashSet()
 
         if(!existingRelationshipReferenceObjects.isEmpty()) {
             val relationshipEntity:IManagedEntity? = existingRelationshipReferenceObjects.first().toManagedEntity(context, relationshipDescriptor.inverseClass)

@@ -20,14 +20,13 @@ fun IManagedEntity.indexInteractor(context: SchemaContext, name:String, descript
  *
  * @param context Schema context entity belongs to
  * @param previousReferenceId Previous entity reference id before updating entity
+ * @param newReferenceId The newly saved reference id
  *
  * @since 2.0.0
  *
  */
-fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
+fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long, newReferenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
-        val newReferenceId = referenceId(context, descriptor)
-
         // Save All Indexes
         descriptor.indexes.values.forEach {
             val indexInteractor = indexInteractor(context, it.name, descriptor)

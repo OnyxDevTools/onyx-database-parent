@@ -46,7 +46,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
 
         val parentRelationshipReference     = entity.toRelationshipReference(context)
         val relationshipReferenceMap        = entity.relationshipReferenceMap(context, relationshipDescriptor.name)
-        val existingRelationshipReferences: MutableSet<RelationshipReference> = synchronized(relationshipReferenceMap!!) { HashSet(relationshipReferenceMap[parentRelationshipReference] ?: HashSet()) }
+        val existingRelationshipReferences: MutableSet<RelationshipReference> = HashSet(relationshipReferenceMap[parentRelationshipReference] ?: HashSet())
         val existingRelationshipReferencesBefore = HashSet(existingRelationshipReferences)
         var existingRelationshipReferencesCopy: MutableSet<RelationshipReference?> = java.util.HashSet()
 
@@ -64,13 +64,13 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 // Cascade save the entity
                 val entityDoesExist = if (relationshipDescriptor.shouldSaveEntity && !transaction.contains(it, context)) {
                     val relationshipDescriptor = it.descriptor(context)
-                    val pair = it.save(context)
-                    relationshipObjectIdentifier.identifier = pair.second
+                    val putResult = it.save(context, relationshipDescriptor)
+                    relationshipObjectIdentifier.identifier = putResult.key
 
-                    val reference = it.reference(context, relationshipDescriptor)
-                    it.saveIndexes(context, reference.reference)
+                    val reference = it.reference(putResult.recordId, context, relationshipDescriptor)
+                    it.saveIndexes(context, if(putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
                     it.saveRelationships(context, RelationshipTransaction(entity, context))
-                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, relationshipDescriptor, reference, if(pair.first > 0L) QueryListenerEvent.UPDATE else QueryListenerEvent.INSERT)
+                    context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, relationshipDescriptor, reference, if(putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
                     true
                 } else {
                     it.reference(context).reference > 0L
@@ -106,9 +106,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         }
 
         if(existingRelationshipReferences != existingRelationshipReferencesBefore) {
-            synchronized(relationshipReferenceMap) {
-                relationshipReferenceMap.put(parentRelationshipReference, existingRelationshipReferences)
-            }
+            relationshipReferenceMap.put(parentRelationshipReference, existingRelationshipReferences)
         }
     }
 
@@ -123,7 +121,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
     override fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean) {
         transaction.add(entity, context)
 
-        val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context)) ?: HashSet()
+        val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(context)] ?: HashSet()
         var relationshipObjects: MutableList<IManagedEntity>? = entity[context, entityDescriptor, relationshipDescriptor.name]
 
         when {
@@ -146,9 +144,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         catchAll {
             if (relationshipObjects.size > 0 && relationshipObjects !is LazyRelationshipCollection && relationshipDescriptor.inverseClass.isAssignableFrom(Comparable::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                synchronized(relationshipObjects) {
-                    (relationshipObjects as MutableList<Comparable<Any>>).sortBy { it }
-                }
+                (relationshipObjects as MutableList<Comparable<Any>>).sortBy { it }
             }
         }
 
@@ -163,7 +159,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
      */
     @Throws(OnyxException::class)
     override fun updateAll(entity: IManagedEntity, relationshipIdentifiers: MutableSet<RelationshipReference>) {
-        entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.put(entity.toRelationshipReference(context), relationshipIdentifiers)
+        entity.relationshipReferenceMap(context, relationshipDescriptor.name).put(entity.toRelationshipReference(context), relationshipIdentifiers)
     }
 
 }

@@ -2,7 +2,6 @@ package com.onyx.diskmap.store.impl
 
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
-import com.onyx.extension.common.ClassMetadata
 import com.onyx.extension.common.catchAll
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
@@ -64,26 +63,25 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun close(): Boolean {
         try {
-            synchronized(slices) {
-                this.slices.values
-                        .filter { it.buffer is MappedByteBuffer }
-                        .forEach {
-                            catchAll {
-                                synchronized(it) {
-                                    cleanBuffer(it.buffer)
-                                    it.buffer = ByteBuffer.allocate(0)
-                                }
-                            }
-                        }
-
-                if (!deleteOnClose) {
+            this.slices.values
+                .filter { it.buffer is MappedByteBuffer }
+                .forEach {
                     catchAll {
-                        ensureOpen()
-                        channel!!.truncate(getFileSize())
+                        synchronized(it) {
+                            it.buffer = ByteBuffer.allocate(0)
+                        }
                     }
                 }
-                super.close()
+
+            this.slices.clear()
+
+            if (!deleteOnClose) {
+                catchAll {
+                    ensureOpen()
+                    channel!!.truncate(getFileSize())
+                }
             }
+            super.close()
 
             if (deleteOnClose) {
                 delete()
@@ -105,9 +103,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
     override fun write(buffer: ByteBuffer, position: Long): Int {
 
         val before = buffer.position()
-
         val slice = getBuffer(position)
-
         val bufLocation = getBufferLocation(position)
         val endBufLocation = bufLocation + buffer.limit()
 
@@ -240,18 +236,16 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun commit() {
         if (!deleteOnClose) {
-            synchronized(slices) {
-                this.slices.values
-                        .filter { it.buffer is MappedByteBuffer }
-                        .forEach {
-                            catchAll {
-                                synchronized(it) {
-                                    ensureOpen()
-                                    (it.buffer as MappedByteBuffer).force()
-                                }
+            this.slices.values
+                    .filter { it.buffer is MappedByteBuffer }
+                    .forEach {
+                        catchAll {
+                            synchronized(it) {
+                                ensureOpen()
+                                (it.buffer as MappedByteBuffer).force()
                             }
                         }
-            }
+                    }
             super.commit()
         }
     }
@@ -261,15 +255,4 @@ open class MemoryMappedStore : FileChannelStore, Store {
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
     }
 
-    private fun cleanBuffer(buffer: ByteBuffer) {
-        if (!buffer.isDirect) return
-        val cleaner = buffer.javaClass.getMethod("cleaner")
-        cleaner.isAccessible = true
-        val clean = ClassMetadata.classForName("sun.misc.Cleaner").getMethod("clean")
-        clean.isAccessible = true
-        clean.invoke(cleaner.invoke(buffer))
-    }
-
 }
-
-

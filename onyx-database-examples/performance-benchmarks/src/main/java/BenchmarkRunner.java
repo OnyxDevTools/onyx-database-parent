@@ -7,7 +7,6 @@ import com.onyxdevtools.provider.manager.ProviderPersistenceManager;
 import java.io.File;
 import java.lang.reflect.Constructor;
 
-
 /**
  * Created by Tim Osborn on 8/26/16.
  *

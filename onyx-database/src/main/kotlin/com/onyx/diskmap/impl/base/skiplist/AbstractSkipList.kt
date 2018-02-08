@@ -1,6 +1,7 @@
 package com.onyx.diskmap.impl.base.skiplist
 
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
@@ -73,17 +74,34 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
     override fun containsKey(key: K): Boolean = find(key) != null
 
     /**
-     * Put a key value into the Map.  The underlying algorithm for searching is a Skip List
+     * Put key value.  This is the same as map.put(K,V) except
+     * rather than the value you just put into the map, it will
+     * return the record id.  The purpose of this is so you
+     * do not have to fetch the record id and search the skip list
+     * again after inserting the record.
      *
-     * @param key   Key identifier of the value
-     * @param value Underlying value
-     * @return What we just put in
+     * @param key Primary Key
+     * @param value Value to insert or update
+     * @since 2.1.3
+     * @return Value for previous record ID and if the value is been updated or inserted
      */
-    override fun put(key: K, value: V): V {
-        val valueLocation:Long = fileStore.writeObject(value)
+    fun internalPutAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult {
         var nearest:SkipNode = nearest(key)!!
 
-        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))) {
+        val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))))
+        result.recordId = if(!result.isInsert) nearest.position else -1L
+
+        if(preUpdate != null) {
+            // The purpose of getting and setting the head is in the event there is a recursive call within the pre-update
+            // method.  That would scratch out the head and we have to re-set it
+            val tempHead = head
+            preUpdate.invoke(result.recordId)
+            head = tempHead
+        }
+
+        val valueLocation:Long = fileStore.writeObject(value)
+
+        if(!result.isInsert) {
 
             nearest.setRecord(fileStore, valueLocation)
             updateNodeCache(nearest)
@@ -99,12 +117,14 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
         } else {
 
             var head:SkipNode = this.head!!
-            val keyLocation:Long = if(storeKeyWithinNode) key!!.long() else fileStore.writeObject(key)
+            val keyLocation:Long = if(storeKeyWithinNode) key.long() else fileStore.writeObject(key)
 
             //Stuff in between nearest and its right partner
             var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0)
             updateNodeCache(insertedNode)
             var level:Short = 0.toShort()
+
+            result.recordId = insertedNode.position
 
             // Create Layers
             while(coinToss()) {
@@ -133,8 +153,21 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
             }
 
             incrementSize()
+
         }
 
+        return result
+    }
+
+    /**
+     * Put a key value into the Map.  The underlying algorithm for searching is a Skip List
+     *
+     * @param key   Key identifier of the value
+     * @param value Underlying value
+     * @return What we just put in
+     */
+    override fun put(key: K, value: V): V {
+        this@AbstractSkipList.internalPutAndGet(key, value, null)
         return value
     }
 

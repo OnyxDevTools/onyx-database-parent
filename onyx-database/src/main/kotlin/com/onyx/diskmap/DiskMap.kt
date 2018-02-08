@@ -1,6 +1,7 @@
 package com.onyx.diskmap
 
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
@@ -34,6 +35,20 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @return Set of references.
      */
     val references: Set<SkipNode>
+
+    /**
+     * Put key value.  This is the same as map.put(K,V) except
+     * rather than the value you just put into the map, it will
+     * return the record id.  The purpose of this is so you
+     * do not have to fetch the record id and search the skip list
+     * again after inserting the record.
+     *
+     * @param key Primary Key
+     * @param value Value to insert or update
+     * @since 2.1.3
+     * @return Value for previous record ID and if the value is been updated or inserted
+     */
+    fun putAndGet(key:K, value:V, preUpdate:((Long) -> Unit)? = null): PutResult
 
     /**
      * Get the record id for a key

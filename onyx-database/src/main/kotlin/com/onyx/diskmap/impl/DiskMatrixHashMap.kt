@@ -1,11 +1,8 @@
 package com.onyx.diskmap.impl
 
 import com.onyx.diskmap.SortedDiskMap
+import com.onyx.diskmap.data.*
 import com.onyx.diskmap.impl.base.hashmatrix.AbstractIterableHashMatrix
-import com.onyx.diskmap.data.CombinedIndexHashMatrixNode
-import com.onyx.diskmap.data.HashMatrixNode
-import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
@@ -75,6 +72,34 @@ class DiskMatrixHashMap<K, V> (fileStore: Store, header: Header, loadFactor: Int
         head = combinedNode?.head
         val oldHead = combinedNode?.head
         val returnValue = super@DiskMatrixHashMap.put(key, value)
+        val newHead = head
+
+        // Only update the data if the head of the skip list has changed
+        if (oldHead != newHead) {
+            combinedNode!!.head = newHead!!
+            this@DiskMatrixHashMap.updateHashMatrixReference(combinedNode.bitMapNode, combinedNode.hashDigit, newHead.position)
+            this@DiskMatrixHashMap.hashMatrixNodeCache.remove(combinedNode.bitMapNode.position)
+        }
+        return@writeLock returnValue
+    }
+
+    /**
+     * Put key value.  This is the same as map.put(K,V) except
+     * rather than the value you just put into the map, it will
+     * return the record id.  The purpose of this is so you
+     * do not have to fetch the record id and search the skip list
+     * again after inserting the record.
+     *
+     * @param key Primary Key
+     * @param value Value to insert or update
+     * @since 2.1.3
+     * @return Value for previous record ID and if the value is been updated or inserted
+     */
+    override fun putAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult = mapReadWriteLock.writeLock {
+        val combinedNode = getHeadReferenceForKey(key, true)
+        head = combinedNode?.head
+        val oldHead = combinedNode?.head
+        val returnValue = super@DiskMatrixHashMap.putAndGet(key, value, preUpdate)
         val newHead = head
 
         // Only update the data if the head of the skip list has changed

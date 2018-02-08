@@ -45,7 +45,7 @@ class EntityWithCallbacksTest(override var factoryClass: KClass<*>) : DatabaseBa
         entity = manager.saveEntity(entity)
 
         //retrieve the entity
-        val savedEntity = manager.find<IManagedEntity>(entity) as SequencedEntityWithCallbacks
+        val savedEntity = manager.find<SequencedEntityWithCallbacks>(entity)
 
         //Update the entity
         savedEntity.name = savedEntity.name + "&UPDATE"

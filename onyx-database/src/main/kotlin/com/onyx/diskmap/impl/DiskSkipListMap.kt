@@ -2,6 +2,7 @@ package com.onyx.diskmap.impl
 
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
@@ -49,6 +50,20 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return The value of the object that was just put into the map
      */
     override fun put(key: K, value: V): V = mapReadWriteLock.writeLock { super.put(key, value) }
+
+    /**
+     * Put key value.  This is the same as map.put(K,V) except
+     * rather than the value you just put into the map, it will
+     * return the record id.  The purpose of this is so you
+     * do not have to fetch the record id and search the skip list
+     * again after inserting the record.
+     *
+     * @param key Primary Key
+     * @param value Value to insert or update
+     * @since 2.1.3
+     * @return Value for previous record ID and if the value is been updated or inserted
+     */
+    override fun putAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult = mapReadWriteLock.writeLock { super.internalPutAndGet(key, value, preUpdate) }
 
     /**
      * Iterates through the entire skip list to see if it contains the value you are looking for.

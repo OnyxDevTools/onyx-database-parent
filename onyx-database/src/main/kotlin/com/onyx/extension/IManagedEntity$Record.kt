@@ -2,6 +2,7 @@ package com.onyx.extension
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.recordInteractor
+import com.onyx.diskmap.data.PutResult
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.relationship.data.RelationshipReference
@@ -32,6 +33,14 @@ fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescrip
 fun IManagedEntity.reference(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): Reference = Reference(partitionId(context, descriptor), referenceId(context, descriptor))
 
 /**
+ * Returns the full reference object including the partition for the entity
+ * @param referenceId Existing record reference id
+ * @param context Schema context entity belongs to
+ * @since 2.0.0
+ */
+fun IManagedEntity.reference(referenceId:Long, context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): Reference = Reference(partitionId(context, descriptor), referenceId)
+
+/**
  * Generate a relationship reference based on the entity's record information
  * @param context Schema context entity belongs to
  * @param descriptor Default the descriptor to the entity descriptor
@@ -54,4 +63,4 @@ fun IManagedEntity.recordInteractor(context: SchemaContext, descriptor: EntityDe
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.save(context:SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Pair<Long, Any> = recordInteractor(context, descriptor).save(this)
+fun IManagedEntity.save(context:SchemaContext, descriptor: EntityDescriptor = descriptor(context)):PutResult = recordInteractor(context, descriptor).save(this)

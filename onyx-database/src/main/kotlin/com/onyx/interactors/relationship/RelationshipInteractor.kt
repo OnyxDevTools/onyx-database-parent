@@ -47,15 +47,6 @@ interface RelationshipInteractor {
     /**
      * Retrieves the identifiers for a given entity
      *
-     * @param referenceId reference of the entity with relationships
-     * @return List of relationship references
-     */
-    @Throws(OnyxException::class)
-    fun getRelationshipIdentifiersWithReferenceId(referenceId: Long?): List<RelationshipReference>
-
-    /**
-     * Retrieves the identifiers for a given entity
-     *
      * @param referenceId reference of the entity within partition with relationships
      * @return List of relationship references
      */

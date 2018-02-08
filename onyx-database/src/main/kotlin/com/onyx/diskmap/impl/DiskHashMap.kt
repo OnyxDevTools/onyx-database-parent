@@ -4,6 +4,7 @@ import com.onyx.diskmap.SortedDiskMap
 import com.onyx.lang.map.EmptyMap
 import com.onyx.diskmap.data.CombinedIndexHashNode
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.impl.base.hashmap.AbstractIterableMultiMapHashMap
 import com.onyx.diskmap.store.Store
@@ -113,6 +114,36 @@ class DiskHashMap<K, V> : AbstractIterableMultiMapHashMap<K, V>, SortedDiskMap<K
         }
 
         return@writeLock value
+    }
+
+    /**
+     * Put key value.  This is the same as map.put(K,V) except
+     * rather than the value you just put into the map, it will
+     * return the record id.  The purpose of this is so you
+     * do not have to fetch the record id and search the skip list
+     * again after inserting the record.
+     *
+     * @param key Primary Key
+     * @param value Value to insert or update
+     * @since 2.1.3
+     * @return Value for previous record ID and if the value is been updated or inserted
+     */
+    override fun putAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult = mapReadWriteLock.writeLock {
+        val combinedNode = getHeadReferenceForKey(key, true)
+        head = combinedNode?.head
+
+        val mapHead = combinedNode?.head
+        if (mapHead != null) {
+            val headPosition = mapHead.position
+            val returnValue = super.putAndGet(key, value, preUpdate)
+            val newHead = head!!
+            combinedNode.head = newHead
+            if (newHead.position != headPosition)
+                updateSkipListReference(combinedNode.mapId, newHead.position)
+            return@writeLock returnValue
+        }
+
+        return@writeLock PutResult(key as Any, false, -1)
     }
 
     /**

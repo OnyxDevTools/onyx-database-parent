@@ -1,5 +1,6 @@
 package com.onyx.interactors.record
 
+import com.onyx.diskmap.data.PutResult
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.IManagedEntity
 import java.lang.reflect.Field
@@ -19,7 +20,7 @@ interface RecordInteractor {
      * @since 2.0.0 Optimized to return the old reference value
      */
     @Throws(OnyxException::class)
-    fun save(entity: IManagedEntity): Pair<Long, Any>
+    fun save(entity: IManagedEntity): PutResult
 
     /**
      * Delete

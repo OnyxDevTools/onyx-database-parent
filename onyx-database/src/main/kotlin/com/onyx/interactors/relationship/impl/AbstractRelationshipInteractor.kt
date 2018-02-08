@@ -34,14 +34,10 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     fun deleteRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         transaction.add(entity, context)
 
-        val relationshipReferenceMap = entity.relationshipReferenceMap(context, relationship = relationshipDescriptor.name)!!
+        val relationshipReferenceMap = entity.relationshipReferenceMap(context, relationship = relationshipDescriptor.name)
         val entityRelationshipReference = entity.toRelationshipReference(context)
-        var relationshipsToRemove:MutableSet<RelationshipReference> = HashSet()
-
-        synchronized(relationshipReferenceMap) {
-            relationshipsToRemove = HashSet(relationshipReferenceMap[entityRelationshipReference] ?: HashSet())
-            relationshipReferenceMap.put(entityRelationshipReference, HashSet())
-        }
+        var relationshipsToRemove:MutableSet<RelationshipReference> = HashSet(relationshipReferenceMap[entityRelationshipReference] ?: HashSet())
+        relationshipReferenceMap.put(entityRelationshipReference, HashSet())
 
         relationshipsToRemove.forEach {
             val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
@@ -63,19 +59,18 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     @Throws(OnyxException::class)
     protected fun saveInverseRelationship(parentEntity: IManagedEntity, childEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
-        val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name) ?: return
+        val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name)
 
-        synchronized(relationshipMap) {
+        if(inverseRelationshipDescriptor.isToOne) {
+            relationshipMap.put(childIdentifier, hashSetOf(parentIdentifier))
+            childEntity[context, inverseRelationshipDescriptor.entityDescriptor, inverseRelationshipDescriptor.name] = parentEntity
+        } else {
             val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
-            if(inverseRelationshipDescriptor.isToOne) relationshipReferences.clear() // Just like the Highlander, there can only be one
             if(!relationshipReferences.contains(parentIdentifier)) {
                 relationshipReferences.add(parentIdentifier)
                 relationshipMap.put(childIdentifier, relationshipReferences)
             }
         }
-
-        if(inverseRelationshipDescriptor.isToOne)
-            childEntity[context, inverseRelationshipDescriptor.entityDescriptor, inverseRelationshipDescriptor.name] = parentEntity
     }
 
     /**
@@ -90,24 +85,9 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
         val relationshipMap = childIdentifier.toManagedEntity(context, inverseRelationshipDescriptor.entityDescriptor.entityClass, inverseRelationshipDescriptor.entityDescriptor)?.relationshipReferenceMap(context, inverseRelationshipDescriptor.name) ?: return
 
         // Synchronized since we are saving the entire set
-        synchronized(relationshipMap) {
-            val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
-            relationshipReferences.remove(parentIdentifier)
-            relationshipMap.put(childIdentifier, relationshipReferences)
-        }
-    }
-
-    /**
-     * Get Relationship Identifiers
-     *
-     * @param referenceId Relationship reference
-     * @return List of relationship references
-     */
-    @Throws(OnyxException::class)
-    fun getRelationshipIdentifiersWithReferenceId(referenceId: Long?): List<RelationshipReference> {
-        val entity = recordInteractor.getWithReferenceId(referenceId!!)!!
-        val existingReferences = entity.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context))
-        return existingReferences?.toList() ?: ArrayList()
+        val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
+        relationshipReferences.remove(parentIdentifier)
+        relationshipMap.put(childIdentifier, relationshipReferences)
     }
 
     /**

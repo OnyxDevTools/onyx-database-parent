@@ -80,7 +80,7 @@ fun IManagedEntity.inverseRelationshipDescriptor(context: SchemaContext, name:St
  * @param relationship Name of relationship
  * @since 2.0.0
  */
-fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship: String):MutableMap<RelationshipReference, MutableSet<RelationshipReference>>? = getDataFile(context).getHashMap(RelationshipReference::class.java, this::class.java.name + relationship, relationshipMapLoadFactor)
+fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship: String):MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = getDataFile(context).getHashMap(RelationshipReference::class.java, this::class.java.name + relationship, relationshipMapLoadFactor)
 
 /**
  * Hydrate all relationships for this entity

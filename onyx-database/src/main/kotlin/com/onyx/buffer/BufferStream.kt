@@ -5,13 +5,16 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.*
 import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.lang.SortedList
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 
 import java.lang.reflect.Array
+import java.lang.reflect.Modifier
 import java.nio.BufferUnderflowException
 import java.nio.ByteBuffer
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 /**
@@ -439,7 +442,10 @@ class BufferStream(buffer: ByteBuffer) {
             val size = expandableByteBuffer!!.buffer.int
 
             val collection = try {
-                collectionClass!!.instance<MutableCollection<Any?>>()
+                if(collectionClass == ArrayList::class.java || collectionClass == SortedList::class.java || Modifier.isPrivate(collectionClass!!.modifiers))
+                    ArrayList()
+                else
+                    collectionClass.instance<MutableCollection<Any?>>()
             } catch (e: Exception) {
                 ArrayList<Any?>()
             }

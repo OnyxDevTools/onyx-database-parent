@@ -43,6 +43,8 @@ class DefaultDiskMapFactory : DiskMapFactory {
 
     private var canStoreKeyInNode:Boolean = false
 
+    private var version:Int = 0
+
     // region constructors
 
     /**
@@ -279,8 +281,11 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @return Whether the store supports storing the key within the skip node
      */
     private fun determineKeyStore(isNew:Boolean) {
-        canStoreKeyInNode = internalMaps.getOrPut("_KEY_STORE_IN_NODE_") { if(isNew) 1L else 0L } == 1L
+        version = internalMaps.getOrPut("_VERSION_") { if(isNew) 1L else 0L }.toInt()
+        canStoreKeyInNode = (version > 0)
     }
+
+    override fun getDefaultLoadFactor(): Int = if(version > 0) 2 else 1
 
     companion object {
 

@@ -81,6 +81,9 @@ fun Any?.castTo(clazz: Class<*>): Any? {
     }
 }
 
+/**
+ * This method will convert any other primitive value to a long
+ */
 fun Any.long():Long =
     when {
         this::class.java == ClassMetadata.FLOAT_TYPE ->             java.lang.Float.floatToIntBits(this as Float).toLong()
@@ -93,6 +96,9 @@ fun Any.long():Long =
         else -> throw Exception("Invalid Cast ${this::class.java}")
     }
 
+/**
+ * This function will convert a long to any other primitive type
+ */
 @Suppress("UNCHECKED_CAST")
 fun Long.toType(type:Class<*>):Any = when (type) {
     ClassMetadata.LONG_TYPE ->              this

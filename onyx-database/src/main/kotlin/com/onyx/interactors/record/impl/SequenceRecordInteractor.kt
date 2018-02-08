@@ -1,6 +1,7 @@
 package com.onyx.interactors.record.impl
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.diskmap.data.PutResult
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.extension.common.ClassMetadata
@@ -41,7 +42,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
      * @since 2.0.0 Optimized to return the old reference value
      */
     @Throws(OnyxException::class)
-    override fun save(entity: IManagedEntity): Pair<Long, Any> {
+    override fun save(entity: IManagedEntity): PutResult {
         autoIncrementSequence(entity)
         return super.save(entity)
     }

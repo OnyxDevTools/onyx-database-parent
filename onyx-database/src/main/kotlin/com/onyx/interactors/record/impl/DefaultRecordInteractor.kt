@@ -3,8 +3,8 @@ package com.onyx.interactors.record.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.SortedDiskMap
+import com.onyx.diskmap.data.PutResult
 import com.onyx.exception.AttributeTypeMismatchException
-import com.onyx.exception.EntityCallbackException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
@@ -13,8 +13,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
 import java.lang.reflect.Field
-
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Created by timothy.osborn on 2/5/15.
@@ -40,57 +38,26 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @since 1.2.3 Optimized to only do a put if there are not pre persist callbacks
      * @since 2.0.0 Optimized to return the old reference value
      */
-    @Throws(OnyxException::class)
-    override fun save(entity: IManagedEntity): Pair<Long, Any> {
-        val identifierValue = entity.identifier(context)
 
-        var oldReference = 0L
+    override fun save(entity: IManagedEntity): PutResult {
+        val identifierValue = entity.identifier(context)!!
+        val partitionId = entity.partitionId(context)
 
-        val isNew = AtomicBoolean(false) // Keeps track of whether the record is new or not
-
-        if (this.entityDescriptor.preInsertCallback != null || this.entityDescriptor.preUpdateCallback != null) {
-
-            records.compute(identifierValue!!) { _, current ->
-                try {
-                    if (current == null) {
-                        isNew.set(true)
-                        entity.onPreInsert(context, entityDescriptor)
-                    } else {
-                            val recordId = records.getRecID(identifierValue)
-                            if (recordId > 0L) {
-                                // Update Cached queries
-                                oldReference = recordId
-                                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
-                            }
-                        entity.onPreUpdate(context, entityDescriptor)
-                    }
-                } catch (ignore: EntityCallbackException) { }
-
-                entity
-            }
-        } else {
-            entity.onPrePersist(context, entityDescriptor)
-            val recordId = records.getRecID(identifierValue!!)
-            if (recordId > 0L) {
-                oldReference = recordId
-                isNew.set(false)
-                // Update Cached queries
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(entity.partitionId(context), recordId), QueryListenerEvent.PRE_UPDATE)
+        val result = records.putAndGet(identifierValue, entity) {
+            if(it > 0L) {
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, this.entityDescriptor, Reference(partitionId, it), QueryListenerEvent.PRE_UPDATE)
+                entity.onPreUpdate(context, entityDescriptor)
             } else {
-                isNew.set(true)
+                entity.onPreInsert(context, entityDescriptor)
             }
-            records.put(identifierValue, entity)
         }
 
-        // Invoke Post insert or update callback
-        if (isNew.get()) {
+        if(result.isInsert)
             entity.onPostInsert(context, entityDescriptor)
-        } else {
+        else
             entity.onPostUpdate(context, entityDescriptor)
-        }
 
-        // Return the id
-        return Pair(oldReference, identifierValue)
+        return result
     }
 
     /**

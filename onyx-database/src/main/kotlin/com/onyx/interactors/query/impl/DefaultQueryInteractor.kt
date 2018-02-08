@@ -95,12 +95,12 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
 
             query.updates.forEach { entity?.set(context = context, descriptor = descriptor, name = it.fieldName!!, value = it.value) }
 
-            entity?.save(context)
-            entity?.saveIndexes(context, it.reference)
+            val putResult = entity?.save(context)
+            entity?.saveIndexes(context, it.reference, putResult!!.recordId)
 
             // Update Cached queries
             if (entity != null) {
-                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(context, descriptor), QueryListenerEvent.UPDATE)
+                context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, descriptor, entity.reference(putResult!!.recordId, context, descriptor), QueryListenerEvent.UPDATE)
                 updateCount++
             }
         }
