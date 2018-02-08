@@ -83,6 +83,7 @@ public class InsertionBenchmarkTest extends BenchmarkTest {
             stats.setReceptions(generateRandomInt());
             stats.setRushingTouchdowns(generateRandomInt());
             stats.setRushingAttempts(generateRandomInt());
+            stats.setRushingYards(generateRandomInt());
 
             player.setStats(Collections.singletonList(stats));
 

@@ -285,8 +285,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
         canStoreKeyInNode = (version > 0)
     }
 
-    override fun getDefaultLoadFactor(): Int = if(version > 0) 2 else 1
-
     companion object {
 
         private val storeIdCounter = AtomicInteger(0)

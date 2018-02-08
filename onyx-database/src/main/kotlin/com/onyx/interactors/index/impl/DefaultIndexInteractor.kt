@@ -24,7 +24,6 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
     private var references: DiskMap<Any, Header>// Stores the references for an index key
     private var indexValues: DiskMap<Long, Any>
     private var recordInteractor: RecordInteractor? = null
-    private val indexLoadFactor:Int
 
     init {
 
@@ -33,7 +32,6 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
 
         references = dataFile.getHashMap(indexDescriptor.type, descriptor.entityClass.name + indexDescriptor.name, indexDescriptor.loadFactor.toInt())
         indexValues = dataFile.getHashMap(Long::class.java, descriptor.entityClass.name + indexDescriptor.name + "indexValues", indexDescriptor.loadFactor.toInt())
-        indexLoadFactor = dataFile.getDefaultLoadFactor()
     }
 
     /**
@@ -55,7 +53,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
 
         references.compute(indexValue!!) { _, existingHeader ->
             val header = existingHeader ?: dataFile.newMapHeader()
-            val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(Long::class.java, header, indexLoadFactor)
+            val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(Long::class.java, header, INDEX_VALUE_MAP_LOAD_FACTOR)
             indexes.put(newReferenceId, null)
             header.firstNode = indexes.reference.firstNode
             header.position = indexes.reference.position
@@ -78,7 +76,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
                 val dataFile = context.getDataFile(descriptor)
 
                 references.computeIfPresent(indexValue) { _, header ->
-                    val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(Long::class.java, header!!, indexLoadFactor)
+                    val indexes: DiskMap<Long, Any?> = dataFile.newHashMap(Long::class.java, header!!, INDEX_VALUE_MAP_LOAD_FACTOR)
                     indexes.remove(reference)
                     header.firstNode = indexes.reference.firstNode
                     header.position = indexes.reference.position
@@ -100,7 +98,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
         val header = references[indexValue] ?: return HashMap()
         val dataFile = context.getDataFile(descriptor)
 
-        return dataFile.newHashMap(Long::class.java, header, indexLoadFactor)
+        return dataFile.newHashMap(Long::class.java, header, INDEX_VALUE_MAP_LOAD_FACTOR)
     }
 
     /**
@@ -134,7 +132,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
 
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.newHashMap<Map<Long, Set<Long>>>(Long::class.java, it!!, indexLoadFactor) }
+                .map { dataFile.newHashMap<Map<Long, Set<Long>>>(Long::class.java, it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences
@@ -161,7 +159,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.newHashMap<DiskMap<Long, Any?>>(Long::class.java, it!!, indexLoadFactor) }
+                .map { dataFile.newHashMap<DiskMap<Long, Any?>>(Long::class.java, it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences
@@ -187,7 +185,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.newHashMap<DiskMap<Long, Any?>>(Long::class.java, it!!, indexLoadFactor) }
+                .map { dataFile.newHashMap<DiskMap<Long, Any?>>(Long::class.java, it!!, INDEX_VALUE_MAP_LOAD_FACTOR) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences
@@ -209,5 +207,9 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
                     save(indexValue, recId, recId)
             }
         }
+    }
+
+    companion object {
+        private val INDEX_VALUE_MAP_LOAD_FACTOR = 1
     }
 }

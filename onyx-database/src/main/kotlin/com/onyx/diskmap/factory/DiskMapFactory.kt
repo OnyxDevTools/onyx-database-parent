@@ -84,15 +84,6 @@ interface DiskMapFactory {
     fun <T : Map<*,*>> newHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T
 
     /**
-     * Get the default index load factor.  This will check to see if the version of database supports a newer default
-     * load factor vs maintaining the existing load factor for previous versions.  That was a default of one
-     * whereas the new is 1
-     *
-     * @since 2.3.1
-     */
-    fun getDefaultLoadFactor():Int
-
-    /**
      * Close Map Builder.  Flush the file writes
      * @since 1.0.0
      */
