@@ -171,7 +171,7 @@ abstract class NetworkPeer : SSLPeer {
 
     // region Write I/O
 
-    private val maxWriteIterations = 40
+    private val maxWriteIterations = 500000
 
     /**
      * Write data to a socket and handle write issues that could cause connection loss
@@ -189,8 +189,6 @@ abstract class NetworkPeer : SSLPeer {
                     throw InitializationException(InitializationException.CONNECTION_EXCEPTION)
                 }
                 iterations++
-                if(buffer.hasRemaining())
-                    delay(5, TimeUnit.MILLISECONDS)
             } catch (e: ClosedChannelException) {
                 closeConnection(connection)
                 throw InitializationException(InitializationException.CONNECTION_EXCEPTION)

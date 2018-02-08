@@ -292,6 +292,7 @@ open class NetworkServer : NetworkPeer(), OnyxServer, PushPublisher {
 
         socketChannel.socket().receiveBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
         socketChannel.socket().sendBufferSize = DEFAULT_SOCKET_BUFFER_SIZE
+        socketChannel.socket().tcpNoDelay = false
         socketChannel.socket().setPerformancePreferences(0,2,1)
 
 
