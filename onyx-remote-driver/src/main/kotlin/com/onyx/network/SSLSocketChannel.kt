@@ -1,5 +1,6 @@
 package com.onyx.network
 
+import com.onyx.extension.common.delay
 import javax.net.ssl.SSLEngineResult
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -8,6 +9,7 @@ import java.nio.channels.ByteChannel
 import javax.net.ssl.SSLEngineResult.HandshakeStatus
 import javax.net.ssl.SSLEngine
 import java.nio.channels.SocketChannel
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 
 /**
@@ -42,6 +44,7 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
      */
     private fun doHandshake() {
         sslEngine!!.beginHandshake()
+        var iteration = 0
         var handshakeStatus = sslEngine!!.handshakeStatus
         while (handshakeStatus != HandshakeStatus.FINISHED && handshakeStatus != HandshakeStatus.NOT_HANDSHAKING) {
             when (handshakeStatus) {
@@ -54,6 +57,13 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
                 SSLEngineResult.HandshakeStatus.NEED_WRAP ->
                     handshakeStatus = wrap(plainOut)
                 else -> { }
+            }
+
+            delay(2, TimeUnit.MILLISECONDS)
+            iteration++
+            if(iteration > MAX_HANDSHAKE_ITERATIONS) {
+                this.close()
+                break
             }
         }
 
@@ -217,6 +227,8 @@ class SSLSocketChannel(private val channel: SocketChannel, sslContext: SSLContex
     }
 
     companion object {
+
+        const val MAX_HANDSHAKE_ITERATIONS = 5000
 
         /**
          * Helper method to copy a buffer

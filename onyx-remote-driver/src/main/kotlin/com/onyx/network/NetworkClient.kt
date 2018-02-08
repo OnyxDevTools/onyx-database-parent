@@ -104,12 +104,11 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
             throw ConnectionFailedException()
         }
 
-
         try {
             socketChannel?.socket()?.connect(InetSocketAddress(host, port), connectTimeout * 1000)
             while (!socketChannel!!.finishConnect())
                 delay(100, TimeUnit.MICROSECONDS)
-            socketChannel?.configureBlocking(true)
+            socketChannel?.configureBlocking(false)
         } catch (e: IOException) {
             // Create a buffer and set the transport wrapper
             this.connection = Connection(socketChannel!!)
@@ -118,7 +117,7 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
 
         // Create a buffer and set the transport wrapper
         this.connection = Connection(if(useSSL()) SSLSocketChannel(socketChannel!!, sslContext, true) else socketChannel!!)
-
+        socketChannel?.configureBlocking(true)
         active = true
 
         startReadQueue()
