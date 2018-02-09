@@ -49,8 +49,9 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
                 if(collector == null)
                     matching.add(reference)
             }
-            records.clearCache()
         }
+
+        records.clearCache()
 
         return matching
     }
