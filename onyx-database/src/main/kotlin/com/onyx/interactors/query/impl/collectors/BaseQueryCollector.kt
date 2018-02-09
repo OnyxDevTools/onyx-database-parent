@@ -235,7 +235,7 @@ abstract class BaseQueryCollector<T>(
             if(query.firstRow >= references.size)
                 ArrayList()
             else {
-                val end = if((query.firstRow + query.maxResults) >= references.size) (references.size - 1) else (references.size -1)
+                val end = if(query.maxResults <= 0) references.size else if((query.firstRow + query.maxResults) >= references.size) (references.size) else (query.firstRow + query.maxResults)
                 references.subList(query.firstRow, end)
             }
         }
