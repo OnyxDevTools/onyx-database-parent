@@ -37,6 +37,14 @@ data class SystemUser @JvmOverloads constructor(
     var lastName: String? = null
 
     @Suppress("UNUSED")
+    @Attribute
+    var phoneNumber: String?  = null
+
+    @Suppress("UNUSED")
+    @Attribute
+    var emailAddress: String?  = null
+
+    @Suppress("UNUSED")
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "user",
             inverseClass = SystemDirectory::class,

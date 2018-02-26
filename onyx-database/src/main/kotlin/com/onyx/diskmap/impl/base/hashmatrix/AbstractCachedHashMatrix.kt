@@ -65,7 +65,7 @@ abstract class AbstractCachedHashMatrix<K, V>(fileStore: Store, header: Header, 
      */
     override fun updateHashMatrixReference(node: HashMatrixNode, index: Int, value: Long) {
         super.updateHashMatrixReference(node, index, value)
-        hashMatrixNodeCache[java.lang.Long(node.position) as Long] = node
+        hashMatrixNodeCache[node.position] = node
     }
 
     /**
