@@ -96,9 +96,9 @@ abstract class NetworkPeer : SSLPeer {
                     val bytesRead = connection.socketChannel.read(connection.lastReadPacket)
                     when {
                         bytesRead < 0 -> {
-                            closeConnection(connection); read@ return
+                            closeConnection(connection); return
                         }
-                        bytesRead == 0 -> read@ return
+                        bytesRead == 0 -> return
                         else -> {
                             if (!connection.lastReadPacket!!.hasRemaining()) {
 
@@ -130,9 +130,9 @@ abstract class NetworkPeer : SSLPeer {
                 var bytesRead = connection.socketChannel.read(packetSizeBuffer)
                 when {
                     bytesRead < 0 -> {
-                        closeConnection(connection); read@ return
+                        closeConnection(connection); return
                     }
-                    bytesRead == 0 -> read@ return
+                    bytesRead == 0 -> return
                     bytesRead >= Integer.BYTES -> {
                         packetSizeBuffer.flip()
                         val packetSize = packetSizeBuffer.int
