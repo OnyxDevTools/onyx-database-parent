@@ -9,7 +9,6 @@ import com.onyx.network.serialization.ServerSerializer
 import com.onyx.extension.common.Job
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.delay
 import com.onyx.extension.withBuffer
 import com.onyx.network.ssl.SSLPeer
 
@@ -19,7 +18,6 @@ import java.nio.ByteOrder
 import java.nio.channels.ByteChannel
 import java.nio.channels.ClosedChannelException
 import java.security.SecureRandom
-import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 
 /**
