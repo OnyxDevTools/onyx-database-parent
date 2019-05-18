@@ -9,7 +9,6 @@ import com.onyx.network.serialization.ServerSerializer
 import com.onyx.extension.common.Job
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.delay
 import com.onyx.extension.withBuffer
 import com.onyx.network.ssl.SSLPeer
 
@@ -19,7 +18,6 @@ import java.nio.ByteOrder
 import java.nio.channels.ByteChannel
 import java.nio.channels.ClosedChannelException
 import java.security.SecureRandom
-import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 
 /**
@@ -96,9 +94,9 @@ abstract class NetworkPeer : SSLPeer {
                     val bytesRead = connection.socketChannel.read(connection.lastReadPacket)
                     when {
                         bytesRead < 0 -> {
-                            closeConnection(connection); read@ return
+                            closeConnection(connection); return
                         }
-                        bytesRead == 0 -> read@ return
+                        bytesRead == 0 -> return
                         else -> {
                             if (!connection.lastReadPacket!!.hasRemaining()) {
 
@@ -130,9 +128,9 @@ abstract class NetworkPeer : SSLPeer {
                 var bytesRead = connection.socketChannel.read(packetSizeBuffer)
                 when {
                     bytesRead < 0 -> {
-                        closeConnection(connection); read@ return
+                        closeConnection(connection); return
                     }
-                    bytesRead == 0 -> read@ return
+                    bytesRead == 0 -> return
                     bytesRead >= Integer.BYTES -> {
                         packetSizeBuffer.flip()
                         val packetSize = packetSizeBuffer.int
