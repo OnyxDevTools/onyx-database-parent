@@ -102,41 +102,25 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun write(buffer: ByteBuffer, position: Long): Int {
 
-        val before = buffer.position()
-        val slice = getBuffer(position)
-        val bufLocation = getBufferLocation(position)
-        val endBufLocation = bufLocation + buffer.limit()
+        var currentIndex = position
 
-        // This occurs when we bridge from one slice to another
-        if (endBufLocation > bufferSliceSize) {
+        while (buffer.hasRemaining()) {
 
-            var bufferToWriteTo = slice.buffer
+            val bufLocation = getBufferLocation(currentIndex)
+            val slice = getBuffer(currentIndex)
+            val bufferToWriteTo = slice.buffer
+
             synchronized(slice) {
                 bufferToWriteTo.position(bufLocation)
-                for (i in 0 until bufferSliceSize - bufLocation)
+                while(buffer.hasRemaining() && bufferToWriteTo.hasRemaining()) {
                     bufferToWriteTo.put(buffer.get())
-            }
-            if (buffer.hasRemaining()) {
-                val overflowSlice = getBuffer(position + buffer.limit())
-                bufferToWriteTo = overflowSlice.buffer
-                synchronized(overflowSlice) {
-                    bufferToWriteTo.position(0)
-                    for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
-                        bufferToWriteTo.put(buffer.get())
+                    currentIndex++
                 }
             }
-
-            val after = buffer.position()
-            return after - before
-        } else {
-            val location = getBufferLocation(position)
-            synchronized(slice) {
-                slice.buffer.position(location)
-                slice.buffer.put(buffer)
-            }
-            val after = buffer.position()
-            return after - before
         }
+
+        return (currentIndex - position).toInt()
+
     }
 
     /**
@@ -146,40 +130,23 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position within the store
      */
     override fun read(buffer: ByteBuffer, position: Long) {
+        var currentIndex = position
 
-        val slice = getBuffer(position)
+        while (buffer.hasRemaining()) {
 
-        val bufLocation = getBufferLocation(position)
-        val endBufLocation = bufLocation + buffer.limit()
+            val bufLocation = getBufferLocation(currentIndex)
+            val slice = getBuffer(currentIndex)
+            val bufferToReadFrom = slice.buffer
 
-        // This occurs when we bridge from one slice to another
-        if (endBufLocation >= bufferSliceSize) {
-
-            var bufferToRead = slice.buffer
             synchronized(slice) {
-                bufferToRead.position(bufLocation)
-                for (i in 0 until bufferSliceSize - bufLocation)
-                    buffer.put(bufferToRead.get())
-            }
-            if(buffer.hasRemaining()) {
-                val overflowSlice = getBuffer(position + buffer.limit())
-                bufferToRead = overflowSlice.buffer
-                synchronized(overflowSlice) {
-                    bufferToRead.position(0)
-                    for (i in 0 until endBufLocation - bufLocation - (bufferSliceSize - bufLocation))
-                        buffer.put(bufferToRead.get())
+                bufferToReadFrom.position(bufLocation)
+                while(buffer.hasRemaining() && bufferToReadFrom.hasRemaining()) {
+                    buffer.put(bufferToReadFrom.get())
+                    currentIndex++
                 }
             }
-        } else {
-            val bufferToRead = slice.buffer
-            val location = getBufferLocation(position)
-            val bytesToRead = buffer.limit()
-            synchronized(slice) {
-                bufferToRead.position(location)
-                for (i in 0 until bytesToRead)
-                    buffer.put(bufferToRead.get())
-            }
         }
+
     }
 
     /**
