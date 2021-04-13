@@ -13,6 +13,7 @@ import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.interactors.cache.QueryCacheInteractor
+import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.relationship.RelationshipInteractor
@@ -42,6 +43,21 @@ interface SchemaContext {
      * @since 2.0.0
      */
     var storeType:StoreType
+
+    /**
+     * Encryption.  Define the encryption implementation for the schema context
+     *
+     * @since 2.2.0
+     */
+    var encryption: EncryptionInteractor?
+
+    /**
+     * Indicate the database should be encrypted.  If you choose to do this, you should also implement your own encryption
+     * interactor.
+     *
+     * @since 2.2.0
+     */
+    var encryptDatabase: Boolean
 
     /**
      * Get Context ID

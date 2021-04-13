@@ -19,6 +19,7 @@ import java.io.*
 import java.nio.channels.ClosedChannelException
 import java.nio.channels.FileChannel
 import java.nio.channels.OverlappingFileLockException
+import javax.crypto.IllegalBlockSizeException
 
 /**
  * Persistence manager factory for an embedded Java based database.
@@ -68,6 +69,8 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
 
     override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+
+    override var encryptDatabase: Boolean = false
 
     /**
      * Constructor that ensures safe shutdown
@@ -148,6 +151,8 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
             this.persistenceManager
             schemaContext.storeType = this.storeType
+            schemaContext.encryption = this.encryption
+            schemaContext.encryptDatabase = this.encryptDatabase
             schemaContext.start()
 
             if (!checkCredentials()) {
@@ -159,6 +164,9 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
             close()
             throw InitializationException(InitializationException.DATABASE_LOCKED)
         } catch (e: IOException) {
+            close()
+            throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
+        } catch (e: IllegalBlockSizeException) {
             close()
             throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)
         }

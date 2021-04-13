@@ -16,6 +16,9 @@ import com.onyx.diskmap.store.StoreType
  */
 class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
 
+    override var encryptDatabase: Boolean = false
+        get() = false
+
     /**
      * Return the corresponding data file for the descriptor
      *

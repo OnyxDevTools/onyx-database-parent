@@ -25,6 +25,13 @@ interface EncryptionInteractor {
 
     /**
      * Performs Decryption.
+     * @param encryptedBytes ByteArray to Decrypt
+     * @return Decrypted Text
+     */
+    fun decrypt(encryptedBytes: ByteArray): ByteArray = encryption().decrypt(encryptedBytes)
+
+    /**
+     * Performs Decryption.
      * @param encryptedText Text to Decrypt
      * @return Decrypted Text
      */
@@ -41,6 +48,15 @@ interface EncryptionInteractor {
      * @return Encrypted String
      */
     fun encrypt(plainText: String): String? = encryption().encryptOrNull(plainText)
+
+    /**
+     * Performs Encryption
+     *
+     * @param bytes Bytes to Encrypt.
+     *
+     * @return Encrypted String
+     */
+    fun encrypt(bytes: ByteArray): ByteArray? = encryption().encrypt(bytes)
 
     /**
      * Instantiates the encryption

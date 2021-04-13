@@ -84,6 +84,14 @@ interface PersistenceManagerFactory {
     var encryption: EncryptionInteractor
 
     /**
+     * Indicate the database should be encrypted.  If you choose to do this, you should also implement your own encryption
+     * interactor.
+     *
+     * @since 2.2.0
+     */
+    var encryptDatabase: Boolean
+
+    /**
      * Store type.  This determines if the store should use either memory mapped file or nio file
      * Note: Using Memory mapped files could be volatile.  If the safe keeping of the data is high priority,
      * I recommend using StoreType.FILE

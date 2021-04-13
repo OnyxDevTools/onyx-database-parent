@@ -112,7 +112,7 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
         val locationParts = databaseLocation.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
         val port = locationParts[locationParts.size - 1]
-        val host = databaseLocation.replace(":" + port, "")
+        val host = databaseLocation.replace(":$port", "")
 
         onyxRMIClient.setCredentials(this.user, this.password)
         copySSLPeerTo(onyxRMIClient)
@@ -121,7 +121,7 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
         onyxRMIClient.authenticationManager = authenticationManager
 
         try {
-            onyxRMIClient.connect(host, Integer.valueOf(port)!!)
+            onyxRMIClient.connect(host, Integer.valueOf(port))
         } catch (e: ConnectionFailedException) {
             throw InitializationException(InitializationException.CONNECTION_EXCEPTION)
         }

@@ -18,6 +18,7 @@ import com.onyx.extension.createNewEntity
 import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
+import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.interactors.record.RecordInteractor
@@ -65,6 +66,8 @@ open class DefaultSchemaContext : SchemaContext {
     final override val contextId: String
 
     override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+    override var encryption: EncryptionInteractor? = null
+    override var encryptDatabase: Boolean = false
 
     // Location where the database folder is
     final override lateinit var location: String

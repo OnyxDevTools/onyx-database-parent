@@ -5,9 +5,7 @@ import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskHashMap
 import com.onyx.diskmap.impl.DiskMatrixHashMap
 import com.onyx.diskmap.store.*
-import com.onyx.diskmap.store.impl.FileChannelStore
-import com.onyx.diskmap.store.impl.InMemoryStore
-import com.onyx.diskmap.store.impl.MemoryMappedStore
+import com.onyx.diskmap.store.impl.*
 import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
@@ -81,19 +79,25 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @param filePath File path to hold the disk structure data
      * @since 1.0.0
      */
-    constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean) {
+    constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean, predefinedStore: Store? = null) {
         val path: String =  if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
 
         val isNew = !File(path).exists()
 
-        when {
-            type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported ->
-                this.store = MemoryMappedStore(path, context, deleteOnClose)
-            type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported ->
-                this.store = FileChannelStore(path, context, deleteOnClose)
-            type === StoreType.IN_MEMORY -> {
-                val storeId = storeIdCounter.incrementAndGet().toString()
-                this.store = InMemoryStore(context, storeId)
+        if(predefinedStore != null) {
+            this.store = predefinedStore
+        } else {
+            when {
+                type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported -> {
+                    this.store = if(context?.encryptDatabase == true) EncryptedMemoryMappedStore(path, context, deleteOnClose) else MemoryMappedStore(path, context, deleteOnClose)
+                }
+                type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported -> {
+                    this.store = if(context?.encryptDatabase == true) EncryptedFileChannelStore(path, context, deleteOnClose) else FileChannelStore(path, context, deleteOnClose)
+                }
+                type === StoreType.IN_MEMORY -> {
+                    val storeId = storeIdCounter.incrementAndGet().toString()
+                    this.store = InMemoryStore(context, storeId)
+                }
             }
         }
 

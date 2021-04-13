@@ -454,7 +454,7 @@ class BufferStreamTest {
         BufferPool.recycle(buffer)
 
         assertNotNull(bufferableObject1)
-        assertEquals(33, bufferableObject1!!.myInt)
+        assertEquals(33, bufferableObject1.myInt)
         assertEquals("This", bufferableObject1.myString)
         assertEquals(2, bufferableObject1.simple!!.hiya)
 
