@@ -12,15 +12,30 @@ import java.security.MessageDigest
 
 class Encryption private constructor(private val mBuilder: Builder) {
 
+    private val encryptionCipher: Cipher by lazy {
+        val secretKey = getSecretKey(hashTheKey(mBuilder.key))
+        val cipher = Cipher.getInstance(mBuilder.algorithm!!)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, mBuilder.ivParameterSpec, mBuilder.secureRandom)
+        return@lazy cipher
+    }
+
+    private val decryptionCipher: Cipher by lazy {
+        val secretKey = getSecretKey(hashTheKey(mBuilder.key))
+        val cipher = Cipher.getInstance(mBuilder.algorithm!!)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, mBuilder.ivParameterSpec, mBuilder.secureRandom)
+        return@lazy cipher
+    }
+
     @Throws(UnsupportedEncodingException::class, NoSuchAlgorithmException::class, NoSuchPaddingException::class, InvalidAlgorithmParameterException::class, InvalidKeyException::class, InvalidKeySpecException::class, BadPaddingException::class, IllegalBlockSizeException::class)
     private fun encrypt(data: String?): String? {
         if (data == null) return null
-        val secretKey = getSecretKey(hashTheKey(mBuilder.key))
         val dataBytes = data.toByteArray(charset(mBuilder.charsetName!!))
-        val cipher = Cipher.getInstance(mBuilder.algorithm!!)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, mBuilder.ivParameterSpec, mBuilder.secureRandom)
-        return Base64.encodeToString(cipher.doFinal(dataBytes), mBuilder.base64Mode)
+        return Base64.encodeToString(encryptionCipher.doFinal(dataBytes), mBuilder.base64Mode)
     }
+
+    @Synchronized
+    fun encrypt(bytes: ByteArray): ByteArray =
+            encryptionCipher.doFinal(bytes)
 
     fun encryptOrNull(data: String): String? = try {
         encrypt(data)
@@ -32,12 +47,14 @@ class Encryption private constructor(private val mBuilder: Builder) {
     private fun decrypt(data: String?): String? {
         if (data == null) return null
         val dataBytes = Base64.decode(data, mBuilder.base64Mode)
-        val secretKey = getSecretKey(hashTheKey(mBuilder.key))
-        val cipher = Cipher.getInstance(mBuilder.algorithm!!)
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, mBuilder.ivParameterSpec, mBuilder.secureRandom)
-        val dataBytesDecrypted = cipher.doFinal(dataBytes)
-        return String(dataBytesDecrypted)
+        val dataBytesDecrypted = decryptionCipher.doFinal(dataBytes)
+        return String(dataBytesDecrypted, charset(mBuilder.charsetName!!))
     }
+
+    @Synchronized
+    @Throws(UnsupportedEncodingException::class, NoSuchAlgorithmException::class, InvalidKeySpecException::class, NoSuchPaddingException::class, InvalidAlgorithmParameterException::class, InvalidKeyException::class, BadPaddingException::class, IllegalBlockSizeException::class)
+    fun decrypt(data: ByteArray): ByteArray =
+            decryptionCipher.doFinal(data)
 
     fun decryptOrNull(data: String): String? = try {
         decrypt(data)
@@ -62,6 +79,7 @@ class Encryption private constructor(private val mBuilder: Builder) {
         return Base64.encodeToString(messageDigest.digest(), Base64.NO_PADDING).toCharArray()
     }
 
+    @Suppress("RedundantVisibilityModifier")
     private class Builder(
             internal var iv: ByteArray? = null,
             internal var base64Mode: Int = 0,

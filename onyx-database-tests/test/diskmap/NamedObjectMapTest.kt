@@ -160,6 +160,6 @@ class NamedObjectMapTest  {
         assertEquals(list2!!.size, list.size)
         assertTrue(list2 is HashMap<*, *>)
 
-        assertEquals(6, (list2 as HashMap<*, *>)["HIYA2"])
+        assertEquals(6, list2["HIYA2"])
     }
 }

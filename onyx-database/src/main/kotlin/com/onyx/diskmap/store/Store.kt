@@ -147,4 +147,7 @@ interface Store {
             return@withBuffer position
         }
     }
+
+    fun readObject(position: Long, size: Int): BufferStream? =
+            read(position, size)
 }

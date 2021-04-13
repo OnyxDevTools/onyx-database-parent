@@ -50,7 +50,7 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
             it.rewind()
             size = it.int
         }
-        return fileStore.read(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
+        return fileStore.readObject(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
     }
 
     /**
