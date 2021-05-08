@@ -19,6 +19,7 @@
 
   <modules>
     <module>quickstart</module>
+    <module>encryption</module>
     <module>embedded-persistence-manager</module>
     <module>cache-manager</module>
     <module>remote-persistence-manager</module>
