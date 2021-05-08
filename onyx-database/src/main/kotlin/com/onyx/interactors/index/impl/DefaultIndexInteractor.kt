@@ -42,6 +42,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @param newReferenceId New entity reference for the index
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
 
         // Delete the old index key
@@ -69,6 +70,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @param reference Entity reference
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun delete(reference: Long) {
         if (reference > 0) {
             val indexValue = indexValues.remove(reference)

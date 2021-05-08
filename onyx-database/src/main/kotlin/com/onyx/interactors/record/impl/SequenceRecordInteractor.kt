@@ -42,6 +42,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
      * @since 2.0.0 Optimized to return the old reference value
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun save(entity: IManagedEntity): PutResult {
         autoIncrementSequence(entity)
         return super.save(entity)

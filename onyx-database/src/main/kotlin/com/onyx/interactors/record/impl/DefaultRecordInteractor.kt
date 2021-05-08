@@ -38,7 +38,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @since 1.2.3 Optimized to only do a put if there are not pre persist callbacks
      * @since 2.0.0 Optimized to return the old reference value
      */
-
+    @Synchronized
     override fun save(entity: IManagedEntity): PutResult {
         val identifierValue = entity.identifier(context)!!
         val partitionId = entity.partitionId(context)
@@ -84,6 +84,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @param entity Entity to delete
      * @throws OnyxException Error deleting an entity
      */
+    @Synchronized
     @Throws(OnyxException::class)
     override fun delete(entity: IManagedEntity) {
         val identifierValue = entity.identifier(context)
@@ -102,6 +103,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      *
      * @param primaryKey Identifier of an entity
      */
+    @Synchronized
     override fun deleteWithId(primaryKey: Any) = records.remove(primaryKey)
 
     /**
