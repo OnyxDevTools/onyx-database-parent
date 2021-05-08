@@ -20,7 +20,7 @@
     <properties>
         <httpclient.version>4.4</httpclient.version>
         <tyrus.version>1.10</tyrus.version>
-        <spring.version>4.1.4.RELEASE</spring.version>
+        <spring.version>4.3.21.RELEASE</spring.version>
         <spring-security.version>3.2.5.RELEASE</spring-security.version>
         <junit.version>4.12</junit.version>
         <maven.deploy.skip>true</maven.deploy.skip>
