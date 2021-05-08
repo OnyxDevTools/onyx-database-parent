@@ -11,7 +11,7 @@ import com.onyx.persistence.annotations.values.IdentifierGenerator
  */
 @Entity
 class InheritedLongAttributeEntity : AbstractInheritedAttributes(), IManagedEntity {
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 1)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE)
     @Attribute
     var id: Long = 0
 

@@ -57,7 +57,6 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
-
         // Get the next scanner because we are not at the end of the line.  Otherwise, we would not have gotten to this place
         val tableScanner = ScannerFactory.getFullTableScanner(context, criteria, descriptor.entityClass, query, persistenceManager)
         if(isLast) {

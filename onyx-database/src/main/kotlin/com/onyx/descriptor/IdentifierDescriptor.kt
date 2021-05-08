@@ -11,8 +11,7 @@ import com.onyx.persistence.annotations.values.IdentifierGenerator
 data class IdentifierDescriptor(
         var generator: IdentifierGenerator = IdentifierGenerator.NONE,
         override var name: String = "",
-        override var type: Class<*> = ClassMetadata.ANY_CLASS,
-        override var loadFactor: Byte = 1
+        override var type: Class<*> = ClassMetadata.ANY_CLASS
 ) : IndexDescriptor(),BaseDescriptor {
 
     override lateinit var entityDescriptor: EntityDescriptor

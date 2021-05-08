@@ -15,10 +15,10 @@ import com.onyx.persistence.annotations.values.RelationshipType
 @Entity(fileName = "system")
 data class SystemPartitionEntry @JvmOverloads constructor(
 
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE)
     var primaryKey: Int = 0,
 
-    @Index(loadFactor = 3)
+    @Index
     var id: String? = null,
 
     @Attribute(size = 1024)
@@ -27,10 +27,10 @@ data class SystemPartitionEntry @JvmOverloads constructor(
     @Attribute(size = 2048)
     var fileName: String = "",
 
-    @Index(loadFactor = 3)
+    @Index
     var index: Long = 0,
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition::class, inverse = "entries", loadFactor = 3)
+    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition::class, inverse = "entries")
     var partition: SystemPartition? = null
 
 ) : AbstractSystemEntity(), IManagedEntity {

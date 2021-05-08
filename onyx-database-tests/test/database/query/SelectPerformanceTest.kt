@@ -99,7 +99,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
     /**
      * Scans entities with an identifier less than or equal to 5k.  This should of course return 5k records.  Also,
-     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     * This should run under 20 milliseconds
      */
     @Test
     fun eTestLessThanOnIdValue() {
@@ -118,7 +118,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
     /**
      * Scans entities with an index less than or equal to 5k.  This should of course return 5k records.  Also,
-     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     * This should run under 20 milliseconds
      */
     @Test
     fun fTestLessThanOnIndexValue() {
@@ -135,7 +135,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
     /**
      * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
-     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     * This should run under 20 milliseconds
      */
     @Test
     fun gTestGreaterThanOnIdValue() {
@@ -163,7 +163,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
     /**
      * The purpose of this test is to see if the index on an identifier is working and efficient for greater than equal.
-     * This should run under 20 milliseconds for a loadFactor of 1 and 200 ms for loadFactor of 5.
+     * This should run under 20 milliseconds
      */
     @Test
     fun iTestGreaterThanOnIdValueCompound() {

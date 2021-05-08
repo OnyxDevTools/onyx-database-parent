@@ -14,16 +14,12 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemIndex @JvmOverloads constructor(
 
-    @Identifier(loadFactor = 5)
-    var name: String = "",
-
-    @Attribute
-    var loadFactor: Int = 1
+    @Identifier
+    var name: String = ""
 
 ): ManagedEntity() {
 
     constructor(descriptor: IndexDescriptor):this(
-        name = descriptor.name,
-        loadFactor = descriptor.loadFactor.toInt()
+        name = descriptor.name
     )
 }

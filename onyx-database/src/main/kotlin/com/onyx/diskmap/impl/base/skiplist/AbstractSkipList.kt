@@ -7,7 +7,7 @@ import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.long
-import com.onyx.lang.map.WriteSynchronizedMap
+import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.util.*
 
@@ -24,31 +24,15 @@ import java.util.*
  * @since 2.0.0 This was refactored to make simpler.  It now conforms better to an actual skip list
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fileStore: Store, header: Header, detached: Boolean = false, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractDiskMap<K, V>(fileStore, header, detached, keyType, canStoreKeyWithinNode) {
+abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractDiskMap<K, V>(fileStore, header, keyType, canStoreKeyWithinNode) {
 
-    protected var nodeCache: MutableMap<Long, SkipNode?> = WriteSynchronizedMap(WeakHashMap())
+    protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     init {
         determineHead()
     }
 
-    /**
-     * If the map is detached it means there could be any number of threads using it as a different map.  For that
-     * reason there was a thread-local pool of heads.
-     *
-     * @since 1.2.0
-     *
-     * @return The head data.
-     */
     protected var head: SkipNode? = null
-        get() = if (detached)
-            threadLocalHead.get()
-        else
-            field
-        set(value) = if (detached)
-            threadLocalHead.set(value)
-        else
-            field = value
 
     /**
      * Determine the head.  This will vary based on if it is attached or detached.
@@ -57,19 +41,17 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      *
      */
     private fun determineHead() {
-        if (!detached) {
-            if (reference.firstNode > 0L) {
-                head = findNodeAtPosition(reference.firstNode)
-            } else {
-                val newHead = SkipNode.create(fileStore)
-                head = newHead
-                this.reference.firstNode = newHead.position
-                updateHeaderFirstNode(this.reference, this.reference.firstNode)
-            }
+        if (reference.firstNode > 0L) {
+            head = findNodeAtPosition(reference.firstNode)
+        } else {
+            val newHead = SkipNode.create(fileStore)
+            head = newHead
+            this.reference.firstNode = newHead.position
+            updateHeaderFirstNode(this.reference, this.reference.firstNode)
         }
     }
 
-    open protected fun findNodeAtPosition(position: Long):SkipNode? = if(position == 0L) null else SkipNode.get(fileStore, position)
+    protected open fun findNodeAtPosition(position: Long):SkipNode? = if(position == 0L) null else SkipNode.get(fileStore, position)
 
     override fun containsKey(key: K): Boolean = find(key) != null
 
@@ -224,7 +206,7 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
      * Delete a node and set values for neighboring nodes
      *
      */
-    open protected fun deleteNode(node:SkipNode, head:SkipNode) {
+    protected open fun deleteNode(node:SkipNode, head:SkipNode) {
         val leftNode:SkipNode? = if(node.left > 0) findNodeAtPosition(node.left) else null
         val rightNode:SkipNode? = if(node.right > 0) findNodeAtPosition(node.right) else null
         leftNode?.setRight(fileStore, rightNode?.position ?: 0L)
@@ -299,12 +281,8 @@ abstract class AbstractSkipList<K, V> @JvmOverloads constructor(override val fil
     abstract fun updateKeyCache(node:K)
 
     companion object {
-
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
         private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
         private fun coinToss() = Math.random() < 0.5
-
-        private val threadLocalHead: ThreadLocal<SkipNode> = ThreadLocal()
-
     }
 }

@@ -14,20 +14,15 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemIdentifier @JvmOverloads constructor(
 
-    @Identifier(loadFactor = 5)
+    @Identifier
     var name: String = "",
 
     @Attribute
-    var generator: Byte = 0,
-
-    @Attribute
-    var loadFactor: Byte = 1
-
+    var generator: Byte = 0
 ) : ManagedEntity() {
 
     constructor(descriptor: IdentifierDescriptor) : this(
         name  = descriptor.name,
-        loadFactor = descriptor.loadFactor,
         generator = descriptor.generator.ordinal.toByte()
     )
 

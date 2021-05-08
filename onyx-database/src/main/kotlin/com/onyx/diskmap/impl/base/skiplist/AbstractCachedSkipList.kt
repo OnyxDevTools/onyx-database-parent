@@ -3,7 +3,7 @@ package com.onyx.diskmap.impl.base.skiplist
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
-import com.onyx.lang.map.WriteSynchronizedMap
+import com.onyx.lang.map.OptimisticLockingMap
 import java.util.*
 
 /**
@@ -20,10 +20,10 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore: Store, header: Header, headless: Boolean = false, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractSkipList<K, V>(fileStore, header, headless, keyType, canStoreKeyWithinNode) {
+abstract class AbstractCachedSkipList<K, V> constructor(fileStore: Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractSkipList<K, V>(fileStore, header, keyType, canStoreKeyWithinNode) {
 
     // Caching maps
-    protected var keyCache: MutableMap<K, SkipNode?> = WriteSynchronizedMap(WeakHashMap())
+    private var keyCache: MutableMap<K, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * Find a data at a position.  First check the cache.  If it is in there great return it otherwise go the the
@@ -65,7 +65,7 @@ abstract class AbstractCachedSkipList<K, V> @JvmOverloads constructor(fileStore:
      */
     override fun updateNodeCache(node:SkipNode?) {
         if(node != null)
-            nodeCache.put(node.position, node)
+            nodeCache[node.position] = node
     }
 
     /**

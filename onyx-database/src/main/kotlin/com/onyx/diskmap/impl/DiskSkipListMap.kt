@@ -1,5 +1,6 @@
 package com.onyx.diskmap.impl
 
+import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.PutResult
@@ -11,7 +12,6 @@ import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.getAny
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
-import com.onyx.lang.concurrent.impl.EmptyClosureReadWriteLock
 import java.lang.reflect.Field
 import java.util.*
 
@@ -27,12 +27,12 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Boolean = false, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractIterableSkipList<K, V>(fileStore, header, detached, keyType, canStoreKeyWithinNode) {
+open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractIterableSkipList<K, V>(fileStore, header, keyType, canStoreKeyWithinNode), SortedDiskMap<K,V> {
 
     override val size: Int
         get() = longSize().toInt()
 
-    private var mapReadWriteLock: ClosureReadWriteLock = if (detached) EmptyClosureReadWriteLock() else DefaultClosureReadWriteLock()
+    private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
     /**
      * Remove an item within the map
@@ -87,7 +87,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      *
      * @param from Map to convert from
      */
-    override fun putAll(from: Map<out K, V>) = from.forEach { this.put(it.key, it.value) }
+    override fun putAll(from: Map<out K, V>) = from.forEach { this[it.key] = it.value }
 
     /**
      * Clear all the elements of the array.  If it is not detached we must handle
@@ -98,13 +98,11 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
     override fun clear() = mapReadWriteLock.writeLock {
         super.clear()
 
-        if (!this.detached) {
-            head = SkipNode.create(fileStore)
-            this.reference.firstNode = head!!.position
-            updateHeaderFirstNode(reference, this.reference.firstNode)
-            reference.recordCount.set(0L)
-            updateHeaderRecordCount(0L)
-        }
+        head = SkipNode.create(fileStore)
+        this.reference.firstNode = head!!.position
+        updateHeaderFirstNode(reference, this.reference.firstNode)
+        reference.recordCount.set(0L)
+        updateHeaderRecordCount(0L)
     }
 
     /**
@@ -115,7 +113,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = find(key)?.position ?: -1
+    override fun getRecID(key: K): Long = mapReadWriteLock.readLock { find(key)?.position ?: -1  }
 
     /**
      * Hydrate a record with its record ID.  If the record value exists it will be returned
@@ -138,9 +136,9 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @return Map of key values
      * @since 1.2.0
      */
-    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? {
-        val node:SkipNode = findNodeAtPosition(recordId) ?: return null
-        return getRecordValueAsDictionary(node.record)
+    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.readLock{
+        val node:SkipNode = findNodeAtPosition(recordId) ?: return@readLock null
+        return@readLock getRecordValueAsDictionary(node.record)
     }
 
     /**
@@ -154,10 +152,10 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, detached: Bool
      * @since 1.3.0 Optimized to require the reflection field so it does not have to re-instantiate one.
      */
     @Throws(AttributeTypeMismatchException::class)
-    override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T {
+    override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T = mapReadWriteLock.readLock {
         @Suppress("UNCHECKED_CAST")
-        val node:SkipNode = findNodeAtPosition(reference) ?: return null as T
-        return node.getRecord<Any>(fileStore).getAny(attribute)
+        val node:SkipNode = findNodeAtPosition(reference) ?: return@readLock  null as T
+        return@readLock node.getRecord<Any>(fileStore).getAny(attribute)
     }
 
     @Throws(AttributeTypeMismatchException::class)

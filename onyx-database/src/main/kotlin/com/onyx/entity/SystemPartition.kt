@@ -19,7 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 @Entity(fileName = "system")
 data class SystemPartition @JvmOverloads constructor(
 
-    @Identifier(loadFactor = 3)
+    @Identifier
     var id: String = "",
 
     @Attribute
@@ -36,7 +36,7 @@ data class SystemPartition @JvmOverloads constructor(
         entityClass = entity.name
     )
 
-    @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry::class, fetchPolicy = FetchPolicy.EAGER, loadFactor = 3)
+    @Relationship(type = RelationshipType.ONE_TO_MANY, cascadePolicy = CascadePolicy.SAVE, inverse = "partition", inverseClass = SystemPartitionEntry::class, fetchPolicy = FetchPolicy.EAGER)
     var entries: CopyOnWriteArrayList<SystemPartitionEntry> = CopyOnWriteArrayList()
 
 }
