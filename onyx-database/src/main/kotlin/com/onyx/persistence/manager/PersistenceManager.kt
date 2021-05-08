@@ -8,7 +8,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.*
 import com.onyx.persistence.query.QueryListener
 import com.onyx.persistence.stream.QueryStream
-import java.util.*
 
 /**
  * Persistence manager supplies a public API for performing database persistence and querying operations.
@@ -467,7 +466,7 @@ interface PersistenceManager {
         tmpQuery.maxResults = maxResults
         tmpQuery.firstRow = start
         if (orderBy != null) {
-            tmpQuery.queryOrders = Arrays.asList(*orderBy)
+            tmpQuery.queryOrders = listOf(*orderBy)
         }
         return executeQuery(tmpQuery)
     }
@@ -503,7 +502,7 @@ interface PersistenceManager {
         tmpQuery.maxResults = maxResults
         tmpQuery.firstRow = start
         if (orderBy != null) {
-            tmpQuery.queryOrders = Arrays.asList(*orderBy)
+            tmpQuery.queryOrders = listOf(*orderBy)
         }
 
         return executeQuery(tmpQuery)
@@ -677,3 +676,9 @@ interface PersistenceManager {
     @Throws(OnyxException::class)
     fun findRelationship(entity: IManagedEntity, attribute: String): Any? = getRelationship(entity, attribute)
 }
+
+@Suppress("unused")
+inline fun <reified E : IManagedEntity> PersistenceManager.findById(id: Any): E? = findById(E::class.java, id)
+
+@Suppress("unused")
+inline fun <reified E : IManagedEntity> PersistenceManager.findByIdInPartition(id: Any, partitionId: Any): E? = findByIdInPartition(E::class.java, id, partitionId)
