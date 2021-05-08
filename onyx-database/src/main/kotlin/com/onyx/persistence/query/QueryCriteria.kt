@@ -5,6 +5,7 @@ import com.onyx.descriptor.AttributeDescriptor
 
 import java.util.*
 
+
 /**
  * Specified query filter criteria.  This equates to a query predicates as well as relationship joins.  This can have nested query criteria.
  *

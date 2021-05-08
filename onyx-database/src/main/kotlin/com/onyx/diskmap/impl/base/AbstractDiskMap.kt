@@ -3,7 +3,6 @@ package com.onyx.diskmap.impl.base
 import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.DiskMap
-import com.onyx.diskmap.data.HashMatrixNode
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.canBeCastToPrimitive
@@ -20,11 +19,10 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.2.0
  */
-abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val detached: Boolean, val keyType:Class<*>, canStoreKeyWithinNode:Boolean) : DiskMap<K, V> {
+abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val keyType:Class<*>, canStoreKeyWithinNode:Boolean) : DiskMap<K, V> {
 
     final override val reference: Header = Header()
 
-    var loadFactor = HashMatrixNode.DEFAULT_BITMAP_ITERATIONS.toByte()
     val storeKeyWithinNode:Boolean = canStoreKeyWithinNode && keyType.canBeCastToPrimitive()
 
     init {
@@ -50,7 +48,7 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
             it.rewind()
             size = it.int
         }
-        return fileStore.read(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
+        return fileStore.readObject(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
     }
 
     /**
@@ -71,19 +69,6 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @param firstNode First Node location
      */
     protected fun updateHeaderFirstNode(header: Header, firstNode: Long) {
-        if (!detached) {
-            forceUpdateHeaderFirstNode(header, firstNode)
-        }
-    }
-
-    /**
-     * This method is designed to bypass the detached check.  It is for use in disk maps that are detached and override
-     * the logic of calculating the data position.
-     *
-     * @param header Disk Map Header
-     * @param firstNode First data location within store
-     */
-    protected fun forceUpdateHeaderFirstNode(header: Header, firstNode: Long) {
         this.reference.firstNode = firstNode
         withLongBuffer {
             it.putLong(firstNode)
@@ -133,25 +118,4 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
     protected fun decrementSize() {
         updateHeaderRecordCount(reference.recordCount.decrementAndGet())
     }
-
-    /**
-     * Helper method for getting the digits of a hash number.  This relies on it being a 10 digit number max
-     *
-     * @param hash Hash value
-     * @return the hash value in format of an array of single digits
-     */
-    protected fun getHashDigits(hash: Int): IntArray {
-        var code = hash
-        code = Math.abs(code)
-        val digits = IntArray(loadFactor.toInt())
-        if (code == 0)
-            return digits
-
-        for (i in loadFactor - 1 downTo 0) {
-            digits[i] = code % 10
-            code /= 10
-        }
-        return digits
-    }
-
 }

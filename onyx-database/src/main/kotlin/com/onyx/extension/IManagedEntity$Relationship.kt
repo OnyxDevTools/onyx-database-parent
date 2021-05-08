@@ -11,8 +11,6 @@ import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.data.RelationshipReference
 import java.util.ArrayList
 
-val relationshipMapLoadFactor = 2
-
 /**
  * Get relationship controller
  *
@@ -80,7 +78,7 @@ fun IManagedEntity.inverseRelationshipDescriptor(context: SchemaContext, name:St
  * @param relationship Name of relationship
  * @since 2.0.0
  */
-fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship: String):MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = getDataFile(context).getHashMap(RelationshipReference::class.java, this::class.java.name + relationship, relationshipMapLoadFactor)
+fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship: String):MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = getDataFile(context).getHashMap(RelationshipReference::class.java, this::class.java.name + relationship)
 
 /**
  * Hydrate all relationships for this entity
@@ -121,7 +119,6 @@ fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship
 
         val relationshipInteractor = relationshipInteractor(context, it)
         val relationshipReferences = relationshipInteractor.getRelationshipIdentifiersWithReferenceId(entityReference!!)
-
         relationshipReferences.forEach {
             var relationshipEntity = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
             if(relationshipEntity != null) {

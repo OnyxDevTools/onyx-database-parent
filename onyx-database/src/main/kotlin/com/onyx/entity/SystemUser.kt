@@ -19,7 +19,7 @@ import javax.security.auth.Subject
 @Entity
 data class SystemUser @JvmOverloads constructor(
 
-    @Identifier(loadFactor = 3)
+    @Identifier
     var username: String? = null,
 
     @Attribute(size = 255)
@@ -48,7 +48,6 @@ data class SystemUser @JvmOverloads constructor(
     @Relationship(type = RelationshipType.ONE_TO_MANY,
             inverse = "user",
             inverseClass = SystemDirectory::class,
-            loadFactor = 1,
             cascadePolicy = CascadePolicy.NONE,
             fetchPolicy = FetchPolicy.LAZY)
     var directories: MutableList<SystemDirectory> = ArrayList()

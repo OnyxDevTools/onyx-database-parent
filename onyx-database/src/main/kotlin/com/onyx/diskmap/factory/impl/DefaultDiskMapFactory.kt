@@ -2,12 +2,9 @@ package com.onyx.diskmap.factory.impl
 
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
-import com.onyx.diskmap.impl.DiskHashMap
-import com.onyx.diskmap.impl.DiskMatrixHashMap
+import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.*
-import com.onyx.diskmap.store.impl.FileChannelStore
-import com.onyx.diskmap.store.impl.InMemoryStore
-import com.onyx.diskmap.store.impl.MemoryMappedStore
+import com.onyx.diskmap.store.impl.*
 import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
@@ -15,6 +12,7 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -33,7 +31,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private lateinit var store: Store
 
     // Contains all initialized maps
-    private val maps: MutableMap<String, Map<*,*>> = Collections.synchronizedMap(WeakHashMap())
+    private val maps: MutableMap<String, Map<*,*>> = OptimisticLockingMap(HashMap())
 
     // Contains all initialized maps
     private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
@@ -63,6 +61,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
+    @Suppress("unused")
     constructor(filePath: String, type: StoreType) : this(filePath, type, null)
 
     /**
@@ -81,19 +80,25 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @param filePath File path to hold the disk structure data
      * @since 1.0.0
      */
-    constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean) {
+    constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean, predefinedStore: Store? = null) {
         val path: String =  if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
 
         val isNew = !File(path).exists()
 
-        when {
-            type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported ->
-                this.store = MemoryMappedStore(path, context, deleteOnClose)
-            type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported ->
-                this.store = FileChannelStore(path, context, deleteOnClose)
-            type === StoreType.IN_MEMORY -> {
-                val storeId = storeIdCounter.incrementAndGet().toString()
-                this.store = InMemoryStore(context, storeId)
+        if(predefinedStore != null) {
+            this.store = predefinedStore
+        } else {
+            when {
+                type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported -> {
+                    this.store = if(context?.encryptDatabase == true) EncryptedMemoryMappedStore(path, context, deleteOnClose) else MemoryMappedStore(path, context, deleteOnClose)
+                }
+                type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported -> {
+                    this.store = if(context?.encryptDatabase == true) EncryptedFileChannelStore(path, context, deleteOnClose) else FileChannelStore(path, context, deleteOnClose)
+                }
+                type === StoreType.IN_MEMORY -> {
+                    val storeId = storeIdCounter.incrementAndGet().toString()
+                    this.store = InMemoryStore(context, storeId)
+                }
             }
         }
 
@@ -103,9 +108,9 @@ class DefaultDiskMapFactory : DiskMapFactory {
         // to be changed.
 
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
-            newScalableMap(String::class.java, this.store, newMapHeader(), 1)
+            getHashMap(String::class.java, newMapHeader())
         } else {
-            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
+            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!)
         }
 
         determineKeyStore(isNew)
@@ -163,9 +168,9 @@ class DefaultDiskMapFactory : DiskMapFactory {
         store.reset()
 
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
-            newScalableMap(String::class.java, this.store, newMapHeader(), 1)
+            getHashMap(String::class.java, newMapHeader())
         } else {
-            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!, 1)
+            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!)
         }
     }
 
@@ -174,49 +179,9 @@ class DefaultDiskMapFactory : DiskMapFactory {
     // region Builders
 
     /**
-     * Create a new Disk Map.  This uses both a skip list and a Bitmap index
-     *
-     * @param store      File Storage
-     * @param header     Reference Node
-     * @param loadFactor Value from 1-10.
-     *
-     *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
-     * @return Instantiated disk map
-     */
-    private fun <T : Map<*,*>> newScalableMap(keyType:Class<*>, store: Store, header: Header, loadFactor: Int):T = if (loadFactor < 5) DiskHashMap<Any, Any?>(store, header, loadFactor, keyType, canStoreKeyInNode) as T else DiskMatrixHashMap<Any, Any?>(store, header, loadFactor, keyType, canStoreKeyInNode) as T
-
-    /**
-     * Create a hash map with a given header.  This should not be invoked unless it is used to grab a stateless
-     * instance of a disk map.  Stateless meaning, the header has already been setup.  Note, this is not thread safe
-     * If you were to invoke this with the same header and use the maps concurrently you WILL corrupt your data.
-     * You must use alternative means of thread safety.
-     *
-     * Since this implementation is stateless, it does not provide caching nor thread safety.
-     *
-     * @param header     Head of the disk map
-     * @param loadFactor Load factor in which the map was instantiated with.
-     * @return Stateless instance of a disk map
-     *
-     * @since 1.2.0
-     */
-    override fun <T : Map<*,*>> newHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T = DiskHashMap<Any, Any?>(store, header, loadFactor, false, keyType, canStoreKeyInNode) as T
-
-    /**
-     * Get the instance of a map.  Based on the loadFactor it may be a multi map with a hash index followed by a skip list
-     * or a multi map with a hash matrix followed by a skip list.
+     * Get the instance of a map.
      *
      * @param name       Name of the map to uniquely identify it
-     *
-     * @param loadFactor Value from 1-10.
-     *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
      *
      * @return Instantiated map with storage
      * @since 1.1.0
@@ -224,26 +189,17 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
      * It is now an implementation of an inter-changeable index followed by a skip list.
      */
-    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String, loadFactor: Int): T = getMapWithType(keyType, name, loadFactor)
+    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String): T = getMapWithType(keyType, name)
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
      *
      * @param header     reference within storage
-     *
-     *
-     * @param loadFactor Value from 1-10.
-     *
-     * The load factor value is to determine what scale the underlying structure should be.  The values are from 1-10.
-     * 1 is the fastest for small data sets.  10 is to span huge data sets intended that the performance of the index
-     * does not degrade over time.  Note: You can not change this ad-hoc.  You must re-build the index if you intend
-     * to change.  Always plan for scale when designing your data model.
-     *
      * @return Instantiated disk structure
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header, loadFactor: Int): T = mapsByHeader.getOrPut(header) { newScalableMap<T>(keyType, store, header, loadFactor) } as T
+    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T = mapsByHeader.getOrPut(header) { DiskSkipListMap<Any, Any>(store, header, keyType, canStoreKeyInNode) } as T
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -253,7 +209,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    private fun <T : Map<*,*>> getMapWithType(keyType:Class<*>, name: String, loadFactor: Int): T = maps.getOrPut(name) {
+    private fun <T : Map<*,*>> getMapWithType(keyType:Class<*>, name: String): T = maps.getOrPut(name) {
         var header: Header? = null
         val headerReference = internalMaps[name]
         if (headerReference != null)
@@ -264,10 +220,10 @@ class DefaultDiskMapFactory : DiskMapFactory {
             header = Header()
             header.position = store.allocate(Header.HEADER_SIZE)
             store.write(header, header.position)
-            internalMaps.put(name, header.position)
+            internalMaps[name] = header.position
         }
 
-        return@getOrPut newScalableMap(keyType, store, header, loadFactor)
+        return@getOrPut DiskSkipListMap<Any, Any>(store, header, keyType, canStoreKeyInNode)
     } as T
 
     // endregion
@@ -288,7 +244,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
     companion object {
 
         private val storeIdCounter = AtomicInteger(0)
-        private val FIRST_HEADER_LOCATION = 8L
+        private const val FIRST_HEADER_LOCATION = 8L
 
         /**
          * Check if large files can be mapped into memory.

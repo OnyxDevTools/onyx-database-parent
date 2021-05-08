@@ -58,7 +58,7 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
                             val matching = HashSet<Reference>()
                             val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
                             val dataFile = context.getDataFile(partitionDescriptor)
-                            val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
+                            val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
                             (records.references.map { Reference(partitionId, it.position) } - existingValues).forEach {
                                 collector?.collect(it, it.toManagedEntity(context, descriptor))
                                 if(collector == null)
@@ -82,7 +82,7 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
 
             val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
             val dataFile = context.getDataFile(partitionDescriptor)
-            records = dataFile.getHashMap(descriptor.identifier!!.type, partitionDescriptor.entityClass.name, partitionDescriptor.identifier!!.loadFactor.toInt())
+            records = dataFile.getHashMap(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
             return super.scan(existingValues)
         }
     }

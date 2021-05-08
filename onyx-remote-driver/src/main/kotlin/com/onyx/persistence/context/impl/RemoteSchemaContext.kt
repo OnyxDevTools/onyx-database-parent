@@ -15,6 +15,10 @@ import java.io.File
  */
 open class RemoteSchemaContext : DefaultSchemaContext, SchemaContext {
 
+    override var encryptDatabase: Boolean
+        get() = false
+        set(@Suppress("UNUSED_PARAMETER") value) {}
+
     // region Constructors
 
     constructor() : super()

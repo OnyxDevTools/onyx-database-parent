@@ -15,7 +15,7 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemRelationship @JvmOverloads constructor(
 
-    @Identifier(loadFactor = 5)
+    @Identifier
     var name: String = "",
 
     @Attribute
@@ -34,10 +34,7 @@ data class SystemRelationship @JvmOverloads constructor(
     var cascadePolicy: Byte = 0,
 
     @Attribute
-    var relationshipType: Byte = 0,
-
-    @Attribute
-    var loadFactor: Byte = 1
+    var relationshipType: Byte = 0
 
 ) : ManagedEntity() {
 
@@ -48,7 +45,6 @@ data class SystemRelationship @JvmOverloads constructor(
         inverseClass = relationshipDescriptor.inverseClass.name,
         relationshipType = relationshipDescriptor.relationshipType.ordinal.toByte(),
         name = relationshipDescriptor.name,
-        parentClass = relationshipDescriptor.parentClass.name,
-        loadFactor = relationshipDescriptor.loadFactor
+        parentClass = relationshipDescriptor.parentClass.name
     )
 }

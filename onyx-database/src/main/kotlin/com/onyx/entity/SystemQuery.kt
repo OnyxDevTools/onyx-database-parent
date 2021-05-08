@@ -13,7 +13,7 @@ import com.onyx.persistence.annotations.values.RelationshipType
 @Suppress("UNUSED")
 class SystemQuery(
 
-        @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 5)
+        @Identifier(generator = IdentifierGenerator.SEQUENCE)
         var queryId:Long = 0,
 
         @Attribute
@@ -31,7 +31,6 @@ class SystemQuery(
         @Relationship(type = RelationshipType.MANY_TO_ONE,
                 inverse = "queries",
                 inverseClass = SystemDirectory::class,
-                loadFactor = 2,
                 cascadePolicy = CascadePolicy.NONE)
         var directory: SystemDirectory? = null
 

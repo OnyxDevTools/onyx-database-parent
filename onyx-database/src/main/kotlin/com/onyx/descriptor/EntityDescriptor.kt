@@ -53,7 +53,7 @@ constructor(
         var tmpClass: Class<*> = entityClass
 
         while (tmpClass != ClassMetadata.ANY_CLASS) {
-            val newFields = Arrays.asList(*tmpClass.declaredFields)
+            val newFields = listOf(*tmpClass.declaredFields)
             // Only add ones that have not already been added
             fields.addAll(newFields.filter { newField ->
                 fields.find { it.name == newField.name } == null
@@ -122,7 +122,6 @@ constructor(
                     identifier!!.name = it.name
                     identifier!!.generator = annotation.generator
                     identifier!!.type = it.type
-                    identifier!!.loadFactor = annotation.loadFactor.toByte()
                     identifier!!.entityDescriptor = this
                     it.isAccessible = true
                     identifier!!.field = it
@@ -136,7 +135,7 @@ constructor(
             fields.filter {
                 it.getAnnotation(ClassMetadata.ATTRIBUTE_ANNOTATION) != null || it.getAnnotation(ClassMetadata.IDENTIFIER_ANNOTATION) != null || it.getAnnotation(ClassMetadata.INDEX_ANNOTATION) != null || it.getAnnotation(ClassMetadata.PARTITION_ANNOTATION) != null
             }
-            .forEach {
+            .forEach { it ->
                 // Build Attribute descriptor
                 val annotation = it.getAnnotation(ClassMetadata.ATTRIBUTE_ANNOTATION)
                 val attribute = AttributeDescriptor()
@@ -151,7 +150,7 @@ constructor(
                     attribute.type.enumConstants
                             .asSequence()
                             .map { it as Enum<*> }
-                            .forEach { enumValues = enumValues + it.toString() + "," }
+                            .forEach { enumValues = "$enumValues$it," }
                     enumValues = enumValues.substring(0, enumValues.length - 1)
                     enumValues += ";"
                     attribute.enumValues = enumValues
@@ -159,7 +158,7 @@ constructor(
 
                 it.isAccessible = true
                 attribute.field = it
-                attributes.put(it.name, attribute)
+                attributes[it.name] = attribute
             }
 
     /**
@@ -174,11 +173,10 @@ constructor(
             val relationship = RelationshipDescriptor(cascadePolicy = annotation.cascadePolicy, fetchPolicy = annotation.fetchPolicy, inverse = annotation.inverse, inverseClass = annotation.inverseClass.java, parentClass = entityClass, relationshipType = annotation.type)
             relationship.name = it.name
             relationship.type = it.type
-            relationship.loadFactor = annotation.loadFactor.toByte()
             relationship.entityDescriptor = this
             it.isAccessible = true
             relationship.field = it
-            relationships.put(it.name, relationship)
+            relationships[it.name] = relationship
         }
 
 
@@ -189,18 +187,15 @@ constructor(
         fields.filter {
             it.getAnnotation(ClassMetadata.INDEX_ANNOTATION) != null
         }.forEach {
-            val annotation = it.getAnnotation(ClassMetadata.INDEX_ANNOTATION)
-
             // Build Index descriptor
             val index = IndexDescriptor()
             index.name = it.name
-            index.loadFactor = annotation.loadFactor
             index.type = it.type
             index.entityDescriptor = this
             it.isAccessible = true
             index.field = it
 
-            indexes.put(it.name, index)
+            indexes[it.name] = index
         }
 
 

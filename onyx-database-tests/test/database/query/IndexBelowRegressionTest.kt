@@ -18,9 +18,7 @@ import kotlin.test.assertEquals
 class IndexBelowRegressionTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(factoryClass) {
 
     /**
-     * This test tests a regression with the Kotlin refactor.  The loadFactor caused the map builder
-     * to create a DiskHashMap that had a bug in the below method whereas it did not set the map head
-     * and caused things to crap out
+     * This test tests a regression with the Kotlin refactor.
      */
     @Test
     fun testDateIndexSelect() {

@@ -25,17 +25,17 @@ import kotlin.collections.HashMap
  * and how it interacts with the Externalized interface.  An exception to that is that the underlying io is to
  * a ByteBuffer.
  */
-class BufferStream(buffer: ByteBuffer) {
+open class BufferStream(buffer: ByteBuffer) {
 
     // region Properties
 
-    private var context: SchemaContext? = null
+    protected var context: SchemaContext? = null
 
     // Number of references to retain the index number of the said reference
     private var referenceCount = 0
 
     // Wrapper for a ByteBuffer to retain reference
-    private var expandableByteBuffer: ExpandableByteBuffer? = ExpandableByteBuffer(buffer)
+    var expandableByteBuffer: ExpandableByteBuffer? = ExpandableByteBuffer(buffer)
 
     // Indicates whether we are pulling from the expandableByteBuffer or putting into the expandableByteBuffer.
     private var isComingFromBuffer = false
@@ -130,7 +130,7 @@ class BufferStream(buffer: ByteBuffer) {
      */
     fun recycle() {
         clear()
-        BufferPool.recycle(byteBuffer)
+        BufferPool.recycle(expandableByteBuffer!!.buffer)
         expandableByteBuffer = null
     }
 
@@ -138,7 +138,7 @@ class BufferStream(buffer: ByteBuffer) {
      * Clear byte buffer and references
      */
     fun clear() {
-        byteBuffer.clear()
+        this.expandableByteBuffer!!.buffer.clear()
         clearReferences()
     }
 
@@ -385,7 +385,7 @@ class BufferStream(buffer: ByteBuffer) {
      *
      * @since 2.1.3 Optimize entity store serialization
      */
-    val entity:IManagedEntity
+    open val entity:IManagedEntity
         get() {
             val serializerId = expandableByteBuffer!!.buffer.int
             expandableByteBuffer!!.buffer.position(expandableByteBuffer!!.buffer.position() - Integer.BYTES)
@@ -828,7 +828,7 @@ class BufferStream(buffer: ByteBuffer) {
      *
      * @since 2.1.3 Optimize serialization
      */
-    private fun putEntity(entity: ManagedEntity, context: SchemaContext?) {
+    protected open fun putEntity(entity: ManagedEntity, context: SchemaContext?) {
         entity.write(this, context)
     }
 
@@ -1020,7 +1020,7 @@ class BufferStream(buffer: ByteBuffer) {
      */
     @Throws(BufferingException::class)
     fun putObject(value: Any?): Int {
-        val position = byteBuffer.position()
+        val position = this.expandableByteBuffer!!.buffer.position()
 
         var bufferObjectType = BufferObjectType.getTypeCodeForClass(value, context)
         val referenceNumber = referenceIndex(value).toShort()
@@ -1032,7 +1032,7 @@ class BufferStream(buffer: ByteBuffer) {
             putByte(bufferObjectType.ordinal.toByte())
 
             when (bufferObjectType) {
-                BufferObjectType.NULL -> return byteBuffer.position() - position
+                BufferObjectType.NULL -> return this.expandableByteBuffer!!.buffer.position() - position
                 BufferObjectType.REFERENCE -> putShort(referenceNumber)
                 BufferObjectType.ENTITY -> putEntity(value as ManagedEntity, context)
                 BufferObjectType.ENUM -> putEnum(value as Enum<*>)
@@ -1062,7 +1062,7 @@ class BufferStream(buffer: ByteBuffer) {
             }
         }
 
-        return byteBuffer.position() - position
+        return this.expandableByteBuffer!!.buffer.position() - position
     }
 
 
@@ -1074,7 +1074,7 @@ class BufferStream(buffer: ByteBuffer) {
      * @param context Schema context
      * @return Map representation of the value
      */
-    fun toMap(context: SchemaContext): Map<String, Any?> {
+    open fun toMap(context: SchemaContext): Map<String, Any?> {
         val results = HashMap<String, Any?>()
 
         val type = byte  // Read the buffer value metadata
@@ -1082,7 +1082,7 @@ class BufferStream(buffer: ByteBuffer) {
             value // Read the entity type
         val systemEntity = context.getSystemEntityById(int)!!
 
-        for ((name) in systemEntity.attributes) results.put(name, value)
+        for ((name) in systemEntity.attributes) results[name] = value
 
         return results
     }
@@ -1104,11 +1104,11 @@ class BufferStream(buffer: ByteBuffer) {
         fun toBuffer(any: Any, context: SchemaContext? = null): ByteBuffer {
 
             val bufferStream = BufferStream(context)
-            bufferStream.byteBuffer.position(Integer.BYTES)
+            bufferStream.expandableByteBuffer!!.buffer.position(Integer.BYTES)
             bufferStream.putObject(any)
-            bufferStream.byteBuffer.flip()
-            bufferStream.byteBuffer.putInt(bufferStream.byteBuffer.limit())
-            bufferStream.byteBuffer.rewind()
+            bufferStream.expandableByteBuffer!!.buffer.flip()
+            bufferStream.expandableByteBuffer!!.buffer.putInt(bufferStream.expandableByteBuffer!!.buffer.limit())
+            bufferStream.expandableByteBuffer!!.buffer.rewind()
 
             return bufferStream.byteBuffer
         }

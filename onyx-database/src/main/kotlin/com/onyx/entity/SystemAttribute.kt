@@ -14,7 +14,7 @@ import com.onyx.persistence.annotations.Identifier
 @Entity(fileName = "system")
 data class SystemAttribute @JvmOverloads constructor(
 
-    @Identifier(loadFactor = 5)
+    @Identifier
     var name: String = "",
 
     @Suppress("MemberVisibilityCanPrivate")

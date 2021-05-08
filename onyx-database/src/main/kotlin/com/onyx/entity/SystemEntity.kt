@@ -17,7 +17,7 @@ import java.util.*
 @Entity(fileName = "system")
 data class SystemEntity @JvmOverloads constructor(
 
-    @Index(loadFactor = 1)
+    @Index
     var name: String = "",
 
     @Attribute
@@ -26,7 +26,7 @@ data class SystemEntity @JvmOverloads constructor(
     @Attribute
     var fileName: String? = null,
 
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class, loadFactor = 1)
+    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class)
     var partition: SystemPartition? = null,
 
     @Attribute
@@ -42,7 +42,7 @@ data class SystemEntity @JvmOverloads constructor(
     var identifier: SystemIdentifier? = null
 ) : ManagedEntity() {
 
-    @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 3)
+    @Identifier(generator = IdentifierGenerator.SEQUENCE)
     var primaryKey: Int = 0
 
     @Suppress("unused")

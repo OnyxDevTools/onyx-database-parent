@@ -24,7 +24,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
 
     init {
         val dataFile = context.getDataFile(entityDescriptor)
-        metadata = dataFile.getHashMap(ClassMetadata.BYTE_TYPE, METADATA_MAP_NAME + entityDescriptor.entityClass.name, METADATA_MAP_LOAD_FACTOR)
+        metadata = dataFile.getHashMap(ClassMetadata.BYTE_TYPE, METADATA_MAP_NAME + entityDescriptor.entityClass.name)
 
         // Initialize the sequence value
         sequenceValue.set((metadata[LAST_SEQUENCE_VALUE]?:0L).toLong())
@@ -75,8 +75,7 @@ class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: Sche
     }
 
     companion object {
-        private val LAST_SEQUENCE_VALUE = 1.toByte()
-        private val METADATA_MAP_LOAD_FACTOR = 1
-        private val METADATA_MAP_NAME = "_meta_"
+        private const val LAST_SEQUENCE_VALUE = 1.toByte()
+        private const val METADATA_MAP_NAME = "_meta_"
     }
 }
