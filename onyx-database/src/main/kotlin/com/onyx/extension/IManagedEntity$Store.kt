@@ -31,4 +31,4 @@ fun IManagedEntity.getDataFile(context: SchemaContext, partitionId:Long = partit
  * @param partitionId SystemPartitionEntry primary key
  * @since 2.0.0
  */
-fun IManagedEntity.records(context: SchemaContext, partitionId: Long = partitionId(context), descriptor: EntityDescriptor = descriptor(context)):DiskMap<Any, IManagedEntity> = getDataFile(context, partitionId, descriptor).getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name, descriptor.identifier!!.loadFactor.toInt())
+fun IManagedEntity.records(context: SchemaContext, partitionId: Long = partitionId(context), descriptor: EntityDescriptor = descriptor(context)):DiskMap<Any, IManagedEntity> = getDataFile(context, partitionId, descriptor).getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)

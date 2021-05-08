@@ -235,51 +235,6 @@ class RelationshipPartitionTest(override var factoryClass: KClass<*>) : Database
     }
 
     @Test
-    fun testUpdateEntityWithRelationshipManyToMany() {
-        var parent = ToManyPartitionEntityParent()
-        parent.id = 23L
-        parent.partitionId = 3L
-        parent.child = ArrayList()
-
-        var child = ToManyPartitionEntityChild()
-        parent.child!!.add(child)
-
-        child.id = 34L
-
-        manager.saveEntity<IManagedEntity>(parent)
-
-        parent = ToManyPartitionEntityParent()
-        parent.id = 23L
-        parent.partitionId = 3L
-
-        manager.find<IManagedEntity>(parent)
-
-        assertNotNull(parent.child, "Child relationship was not persisted")
-        assertEquals(1, parent.child!!.size, "Child relationship count has invalid result")
-
-        manager.find<IManagedEntity>(parent.child!![0])
-
-        assertEquals(1, parent.child!![0].parent!!.size, "Parent relationship was not persisted")
-        assertEquals(23L, parent.child!![0].parent!![0].id, "Parent has invalid id")
-
-        child = parent.child!![0]
-        manager.initialize(child, "parent")
-        child.partitionId = 3L
-        manager.saveEntity<IManagedEntity>(child)
-
-        parent = ToManyPartitionEntityParent()
-        parent.id = 23L
-        parent.partitionId = 3L
-
-        manager.find<IManagedEntity>(parent)
-        manager.initialize(parent, "child")
-
-        assertNotNull(parent.child, "Child relationship did not persist")
-        assertEquals(1, parent.child!!.size, "Child has invalid number of relationships")
-        assertEquals(3L, parent.child!![0].partitionId, "Partition id does not match")
-    }
-
-    @Test
     fun testInitializeToMany() {
         var parent = ToManyPartitionEntityParent()
         parent.id = 23L

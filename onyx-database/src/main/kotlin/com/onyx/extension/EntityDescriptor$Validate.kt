@@ -41,7 +41,7 @@ fun EntityDescriptor.validateIsManagedEntity() {
  */
 @Throws(EntityClassNotFoundException::class, InvalidRelationshipTypeException::class)
 private fun EntityDescriptor.validateRelationships() {
-    for ((inverse, parentClass, relationshipType, inverseClass, _, _, _, name, type) in relationships.values) {
+    for ((inverse, parentClass, relationshipType, inverseClass, _, _, name, type) in relationships.values) {
 
         if (!ManagedEntity::class.java.isAssignableFrom(entityClass)) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_BASE_NOT_FOUND + ": " + inverseClass.name, entityClass)
@@ -84,7 +84,7 @@ private fun EntityDescriptor.validateRelationships() {
 
                 attributeField.type.interfaces
                         .filter { it == List::class.java }
-                        .forEach { listFound = true }
+                        .forEach { _ -> listFound = true }
 
                 if (!listFound) {
                     throw InvalidRelationshipTypeException(EntityClassNotFoundException.TO_MANY_INVALID_TYPE)

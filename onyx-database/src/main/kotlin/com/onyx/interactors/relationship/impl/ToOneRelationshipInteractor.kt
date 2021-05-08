@@ -42,7 +42,6 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
 
             val relationshipDescriptor = relationshipObject.descriptor(context)
             context.queryCacheInteractor.updateCachedQueryResultsForEntity(relationshipObject, relationshipDescriptor, relationshipObject.reference(putResult.recordId, context, relationshipDescriptor), if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
-
         }
 
         val existingReference = relationshipReferenceMap[parentRelationshipReference]?.firstOrNull()
@@ -68,10 +67,10 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
         if (relationshipObject != null) {
             if(existingReference != currentRelationshipReference) {
                 saveInverseRelationship(entity, relationshipObject, parentRelationshipReference, currentRelationshipReference!!)
-                relationshipReferenceMap.put(parentRelationshipReference, hashSetOf(currentRelationshipReference))
+                relationshipReferenceMap[parentRelationshipReference] = hashSetOf(currentRelationshipReference)
             }
         } else if(existingReference != null) {
-            relationshipReferenceMap.put(parentRelationshipReference, hashSetOf())
+            relationshipReferenceMap[parentRelationshipReference] = hashSetOf()
         }
     }
 
@@ -88,7 +87,7 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
 
         val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(context)] ?: HashSet()
 
-        if(!existingRelationshipReferenceObjects.isEmpty()) {
+        if(existingRelationshipReferenceObjects.isNotEmpty()) {
             val relationshipEntity:IManagedEntity? = existingRelationshipReferenceObjects.first().toManagedEntity(context, relationshipDescriptor.inverseClass)
             relationshipEntity?.hydrateRelationships(context, transaction)
             val existingRelationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]

@@ -14,7 +14,7 @@ import com.onyx.persistence.annotations.values.RelationshipType
 @Entity(fileName = "query.dat")
 class SystemDirectory(
 
-        @Identifier(generator = IdentifierGenerator.SEQUENCE, loadFactor = 5)
+        @Identifier(generator = IdentifierGenerator.SEQUENCE)
         var directoryId:Long = 0,
 
         @Attribute
@@ -25,7 +25,6 @@ class SystemDirectory(
 
         @Relationship(type = RelationshipType.ONE_TO_MANY,
                 inverseClass = SystemDirectory::class,
-                loadFactor = 2,
                 fetchPolicy = FetchPolicy.EAGER,
                 inverse = "parent",
                 cascadePolicy = CascadePolicy.NONE)
@@ -33,7 +32,6 @@ class SystemDirectory(
 
         @Relationship(type = RelationshipType.MANY_TO_ONE,
                 inverseClass = SystemDirectory::class,
-                loadFactor = 2,
                 inverse = "children",
                 cascadePolicy = CascadePolicy.NONE)
         var parent: SystemDirectory? = null,
@@ -42,14 +40,12 @@ class SystemDirectory(
                 inverse = "directory",
                 inverseClass = SystemQuery::class,
                 fetchPolicy = FetchPolicy.EAGER,
-                loadFactor = 2,
                 cascadePolicy = CascadePolicy.NONE)
         var queries:MutableList<SystemQuery> = ArrayList(),
 
         @Relationship(type = RelationshipType.MANY_TO_ONE,
                 inverse = "directories",
                 inverseClass = SystemUser::class,
-                loadFactor = 1,
                 cascadePolicy = CascadePolicy.NONE)
         var user: SystemUser? = null
 

@@ -20,7 +20,7 @@ import java.util.Date
 class PageAnalytic : ManagedEntity() {
 
     @Attribute
-    @Index(loadFactor = 2)
+    @Index
     var requestDate: Date? = null
 
     @Partition

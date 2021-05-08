@@ -36,8 +36,8 @@ open class NetworkClient : NetworkPeer(), OnyxClient, PushRegistrar {
 
     // region Variables
 
-    override var timeout = 60 // 60 second timeout
-    override var connectTimeout = 5 // 5 second connection timeout
+    override var timeout = 120 // 60 second timeout
+    override var connectTimeout = 10 // 5 second connection timeout
 
     private lateinit var host: String
 

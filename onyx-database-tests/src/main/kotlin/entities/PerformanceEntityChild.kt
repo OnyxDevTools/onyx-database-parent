@@ -22,5 +22,4 @@ class PerformanceEntityChild : AbstractEntity(), IManagedEntity {
 
     @Relationship(type = RelationshipType.ONE_TO_ONE, inverseClass = PerformanceEntity::class, inverse = "child")
     var parent: PerformanceEntity? = null
-
 }
