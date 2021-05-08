@@ -103,8 +103,7 @@ class OnyxRMIServer : NetworkServer() {
                         return MethodInvocationException(MethodInvocationException.NO_SUCH_METHOD, e)
                     }
 
-                    if (!method.isAccessible)
-                        method.isAccessible = true
+                    method.isAccessible = true
                     return try {
                         // Invoke the method
                         val result = method.invoke(registeredObject, *`object`.params!!)
