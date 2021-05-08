@@ -100,7 +100,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      */
     fun initialize(request: EntityInitializeBody): Any? {
         val clazz = ApplicationClassFinder.forName(request.entityType, context)
-        val entity = clazz.newInstance() as IManagedEntity
+        val entity = clazz.getDeclaredConstructor().newInstance() as IManagedEntity
 
         if (request.entityId != null) {
             val descriptor = entity.descriptor(context)
