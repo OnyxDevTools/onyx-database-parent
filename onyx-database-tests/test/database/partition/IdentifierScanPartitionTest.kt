@@ -1,11 +1,9 @@
 package database.partition
 
 import com.onyx.persistence.IManagedEntity
-import com.onyx.persistence.query.AttributeUpdate
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
+import entities.History
 import entities.partition.FullTablePartitionEntity
 import org.junit.FixMethodOrder
 import org.junit.Test
@@ -13,8 +11,10 @@ import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 import org.junit.runners.Parameterized
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -257,5 +257,25 @@ class IdentifierScanPartitionTest(override var factoryClass: KClass<*>) : Databa
         val result = manager.executeQuery<Any>(query2)
 
         assertEquals(1, result.size, "Expected 1 result(s)")
+    }
+
+    @Test
+    fun testScanIndexFirst() {
+        val history = History(
+            "historyID1",
+            33.3,
+            "A",
+            "TSLA",
+            Date(Date().time - TimeUnit.DAYS.toMillis(1))
+        )
+        manager.saveEntity(history)
+        val value = manager.select(avg("volume"))
+            .from(History::class)
+            .where("symbolId" eq "TSLA")
+            .and("dateTime" lt Date())
+            .groupBy("dateTime")
+            .firstOrNull<Map<String, Double>>()?.get("avg(volume)")
+
+        assertNotNull(value, "There should be a value returned from indexed")
     }
 }

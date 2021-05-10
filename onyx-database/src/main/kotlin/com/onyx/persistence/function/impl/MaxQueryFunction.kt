@@ -4,6 +4,7 @@ import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryFunctionType
+import java.util.*
 
 /**
  * Get Max value
@@ -22,8 +23,8 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         if(value != null && itemType == null)
             itemType = value.javaClass
 
-        val valueDouble:Double = (value as? Number)?.toDouble() ?: 0.0
-        val maxDouble:Double = (max as? Number)?.toDouble() ?: 0.0
+        val valueDouble:Float =  if(value is Date) value.time.toFloat() else (value as? Number)?.toFloat() ?: 0.0f
+        val maxDouble:Float =  if(max is Date) (max as Date).time.toFloat() else (max as? Number)?.toFloat() ?: 0.0f
 
         return valueLock.perform {
             if (valueDouble > maxDouble || max == null) {

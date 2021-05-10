@@ -28,6 +28,36 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
 
     private var systemEntity: SystemEntity = context.getSystemEntityByName(query.entityType!!.name)!!
 
+    override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
+        if(query.partition === QueryPartitionMode.ALL) {
+            val context = Contexts.get(contextId)!!
+            val units = ArrayList<Future<Set<Reference>>>()
+            systemEntity.partition!!.entries.forEach {
+                units.add(
+                    async {
+                        val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
+                        val indexInteractor = context.getIndexInteractor(partitionDescriptor.indexes[criteria.attribute]!!)
+                        scanPartition(indexInteractor, it.index)
+                    }
+                )
+            }
+
+            val results: MutableSet<Reference> = hashSetOf()
+            units.forEach {
+                results += it.get()
+            }
+            return existingValues.filterTo(HashSet()) {
+                if(results.contains(it)) {
+                    collector?.collect(it, it.toManagedEntity(context, descriptor))
+                    return@filterTo collector == null
+                }
+                return@filterTo false
+            }
+        } else {
+            return super.scan(existingValues)
+        }
+    }
+
     /**
      * Full Table Scan
      *
@@ -82,7 +112,8 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
         if (criteria.value is List<*>)
-            (criteria.value as List<Any>).forEach { find(it, indexInteractor, partitionId).forEach {
+            (criteria.value as List<Any>).forEach { value ->
+                find(value, indexInteractor, partitionId).forEach {
                 collector?.collect(it, it.toManagedEntity(context, descriptor))
                 if(collector == null)
                     matching.add(it)

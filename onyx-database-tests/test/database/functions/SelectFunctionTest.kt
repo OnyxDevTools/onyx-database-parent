@@ -4,10 +4,13 @@ import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.AllAttributeEntity
 import entities.AllAttributeEntityWithRelationship
+import entities.History
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -209,5 +212,34 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
         assertEquals("RELTN", result["relationship.stringValue"], "String value did not return as expected")
         assertEquals("9", result["stringValue"], "String value did not return as expected")
+    }
+
+    @Test
+    fun testMaxDate() {
+        val history = History(
+            "historyID1",
+            33.3,
+            "A",
+            "TSLA",
+            Date(Date().time - TimeUnit.DAYS.toMillis(1))
+        )
+        manager.saveEntity(history)
+        val history2 = History(
+            "historyID2",
+            33.3,
+            "A",
+            "TSLA",
+            Date()
+        )
+        manager.saveEntity(history2)
+        val value = manager.select(max("dateTime"))
+            .from(History::class)
+            .where("symbolId" eq "TSLA")
+            .and("dateTime" lt Date())
+            .groupBy("symbolId")
+            .first<Map<String, Date>>()["max(dateTime)"]!!
+
+        @Suppress("DEPRECATION")
+        assertEquals(value.date , Date().date, "Date does not match expected max value")
     }
 }
