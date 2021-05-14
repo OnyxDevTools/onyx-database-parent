@@ -23,8 +23,8 @@ class InvalidRelationshipTypeException : OnyxException {
     constructor(message: String, cause: Throwable) : super(message, cause)
 
     companion object {
-        @JvmField val INVERSE_RELATIONSHIP_INVALID = "Relationship inverse is invalid"
-        @JvmField val INVERSE_RELATIONSHIP_MISMATCH = "Relationship inverse type does not match declared type"
-        @JvmField val CANNOT_UPDATE_RELATIONSHIP = "Cannot update relationship.  You are attempting to change a to many relationship to a to many."
+        const val INVERSE_RELATIONSHIP_INVALID = "Relationship inverse is invalid"
+        const val INVERSE_RELATIONSHIP_MISMATCH = "Relationship inverse type does not match declared type"
+        const val CANNOT_UPDATE_RELATIONSHIP = "Cannot update relationship.  You are attempting to change a to many relationship to a to many."
     }
 }

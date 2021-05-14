@@ -44,7 +44,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             slices = OptimisticLockingMap(HashMap())
             // Load the first chunk into memory
             val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, 0, bufferSliceSize.toLong())
-            slices.put(0, FileSlice(buffer))
+            slices[0] = FileSlice(buffer)
 
         } catch (e: FileNotFoundException) {
             return false

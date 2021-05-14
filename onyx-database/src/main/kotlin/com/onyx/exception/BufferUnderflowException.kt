@@ -13,6 +13,6 @@ class BufferUnderflowException : BufferingException {
 
     companion object {
 
-        @JvmField val BUFFER_UNDERFLOW = "Buffer Underflow exception "
+        const val BUFFER_UNDERFLOW = "Buffer Underflow exception "
     }
 }

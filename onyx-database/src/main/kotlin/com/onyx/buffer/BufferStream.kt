@@ -89,12 +89,12 @@ open class BufferStream(buffer: ByteBuffer) {
         // especially since they are not fully hydrated and may not have valid hashes yet.
         if (isComingFromBuffer) {
             referenceCount++
-            referencesByIndex.put(referenceCount, reference)
+            referencesByIndex[referenceCount] = reference
         } else {
             references.getOrPut(reference.javaClass) { HashMap() }
                     .getOrPut(reference) {
                         referenceCount++
-                        referencesByIndex.put(referenceCount, reference)
+                        referencesByIndex[referenceCount] = reference
                         referenceCount
                     }
         }
@@ -289,9 +289,8 @@ open class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             expandableByteBuffer!!.ensureRequiredSize(java.lang.Byte.BYTES)
-            val bufferObjectType = BufferObjectType.enumValues[expandableByteBuffer!!.buffer.get().toInt()]
 
-            when (bufferObjectType) {
+            when (val bufferObjectType = BufferObjectType.enumValues[expandableByteBuffer!!.buffer.get().toInt()]) {
                 BufferObjectType.NULL -> return null
                 BufferObjectType.REFERENCE -> return referenceOf(short.toInt())
                 BufferObjectType.ENTITY -> return entity
@@ -332,15 +331,15 @@ open class BufferStream(buffer: ByteBuffer) {
                 addReference(instance)
 
                 instance.getFields().forEach {
-                    when {
-                        it.type == ClassMetadata.LONG_PRIMITIVE_TYPE -> instance.setLong(it, long)
-                        it.type == ClassMetadata.INT_PRIMITIVE_TYPE -> instance.setInt(it, int)
-                        it.type == ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> instance.setDouble(it, double)
-                        it.type == ClassMetadata.FLOAT_PRIMITIVE_TYPE -> instance.setFloat(it, float)
-                        it.type == ClassMetadata.BYTE_PRIMITIVE_TYPE -> instance.setByte(it, byte)
-                        it.type == ClassMetadata.CHAR_PRIMITIVE_TYPE -> instance.setChar(it, char)
-                        it.type == ClassMetadata.SHORT_PRIMITIVE_TYPE -> instance.setShort(it, short)
-                        it.type == ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> instance.setBoolean(it, boolean)
+                    when (it.type) {
+                        ClassMetadata.LONG_PRIMITIVE_TYPE -> instance.setLong(it, long)
+                        ClassMetadata.INT_PRIMITIVE_TYPE -> instance.setInt(it, int)
+                        ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> instance.setDouble(it, double)
+                        ClassMetadata.FLOAT_PRIMITIVE_TYPE -> instance.setFloat(it, float)
+                        ClassMetadata.BYTE_PRIMITIVE_TYPE -> instance.setByte(it, byte)
+                        ClassMetadata.CHAR_PRIMITIVE_TYPE -> instance.setChar(it, char)
+                        ClassMetadata.SHORT_PRIMITIVE_TYPE -> instance.setShort(it, short)
+                        ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> instance.setBoolean(it, boolean)
                         else -> instance.setObject(it, value)
                     }
                 }
@@ -447,7 +446,7 @@ open class BufferStream(buffer: ByteBuffer) {
                 else
                     collectionClass.instance<MutableCollection<Any?>>()
             } catch (e: Exception) {
-                ArrayList<Any?>()
+                ArrayList()
             }
 
             for (i in 0 until size)
@@ -480,7 +479,7 @@ open class BufferStream(buffer: ByteBuffer) {
             val mapSize = expandableByteBuffer!!.buffer.int
 
             for (i in 0 until mapSize)
-                map.put(value!!, value)
+                map[value!!] = value
 
             return map
         }
@@ -872,15 +871,15 @@ open class BufferStream(buffer: ByteBuffer) {
         // Iterate through the fields and put them on the expandableByteBuffer
         value?.getFields()?.forEach {
             try {
-                when {
-                    it.type == ClassMetadata.INT_PRIMITIVE_TYPE -> putInt(value.getInt(it))
-                    it.type == ClassMetadata.LONG_PRIMITIVE_TYPE -> putLong(value.getLong(it))
-                    it.type == ClassMetadata.BYTE_PRIMITIVE_TYPE -> putByte(value.getByte(it))
-                    it.type == ClassMetadata.FLOAT_PRIMITIVE_TYPE -> putFloat(value.getFloat(it))
-                    it.type == ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> putDouble(value.getDouble(it))
-                    it.type == ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> putBoolean(value.getBoolean(it))
-                    it.type == ClassMetadata.SHORT_PRIMITIVE_TYPE -> putShort(value.getShort(it))
-                    it.type == ClassMetadata.CHAR_PRIMITIVE_TYPE -> putChar(value.getChar(it))
+                when (it.type) {
+                    ClassMetadata.INT_PRIMITIVE_TYPE -> putInt(value.getInt(it))
+                    ClassMetadata.LONG_PRIMITIVE_TYPE -> putLong(value.getLong(it))
+                    ClassMetadata.BYTE_PRIMITIVE_TYPE -> putByte(value.getByte(it))
+                    ClassMetadata.FLOAT_PRIMITIVE_TYPE -> putFloat(value.getFloat(it))
+                    ClassMetadata.DOUBLE_PRIMITIVE_TYPE -> putDouble(value.getDouble(it))
+                    ClassMetadata.BOOLEAN_PRIMITIVE_TYPE -> putBoolean(value.getBoolean(it))
+                    ClassMetadata.SHORT_PRIMITIVE_TYPE -> putShort(value.getShort(it))
+                    ClassMetadata.CHAR_PRIMITIVE_TYPE -> putChar(value.getChar(it))
                     else -> putObject(value.getObject(it))
                 }
             } catch (e: IllegalAccessException) {
@@ -1134,9 +1133,8 @@ open class BufferStream(buffer: ByteBuffer) {
 
             bufferStream.expandableByteBuffer = ExpandableByteBuffer(buffer, bufferStartingPosition, maxBufferSize)
             bufferStream.isComingFromBuffer = true
-            val returnValue: Any?
 
-            returnValue = try {
+            val returnValue: Any? = try {
                 bufferStream.value
             } catch (e: BufferingException) {
                 buffer.position(maxBufferSize + bufferStartingPosition)

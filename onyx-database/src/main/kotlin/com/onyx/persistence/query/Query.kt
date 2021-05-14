@@ -4,7 +4,6 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.extension.getFunctionWithinSelection
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.manager.PersistenceManager
-import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashSet
 
@@ -51,7 +50,7 @@ class Query : BufferStreamable {
      */
     @Suppress("UNUSED")
     fun selections(vararg selections: String) {
-        this.selections = Arrays.asList(*selections)
+        this.selections = listOf(*selections)
     }
 
     var groupBy: List<String>? = null
@@ -63,7 +62,7 @@ class Query : BufferStreamable {
      * @since 2.1.0
      */
     fun groupBy(vararg groups: String) {
-        this.groupBy = Arrays.asList(*groups)
+        this.groupBy = listOf(*groups)
     }
 
     /**
@@ -77,7 +76,7 @@ class Query : BufferStreamable {
      */
     @Suppress("UNUSED")
     fun updates(vararg updates: AttributeUpdate) {
-        this.updates = Arrays.asList(*updates)
+        this.updates = listOf(*updates)
     }
 
     /**
@@ -85,7 +84,7 @@ class Query : BufferStreamable {
      */
     @Suppress("UNUSED")
     fun order(vararg updates: QueryOrder) {
-        this.queryOrders = Arrays.asList(*updates)
+        this.queryOrders = listOf(*updates)
     }
 
     /**
@@ -258,7 +257,7 @@ class Query : BufferStreamable {
      */
     constructor(entityType: Class<*>, vararg queryOrders: QueryOrder) {
         this.entityType = entityType
-        this.queryOrders = Arrays.asList(*queryOrders)
+        this.queryOrders = listOf(*queryOrders)
     }
 
     /**
@@ -279,7 +278,7 @@ class Query : BufferStreamable {
     constructor(entityType: Class<*>, criteria: QueryCriteria, vararg queryOrders: QueryOrder) {
         this.entityType = entityType
         this.criteria = criteria
-        this.queryOrders = Arrays.asList(*queryOrders)
+        this.queryOrders = listOf(*queryOrders)
     }
 
     /**
@@ -372,7 +371,7 @@ class Query : BufferStreamable {
      */
     constructor(entityType: Class<*>, criteria: QueryCriteria, vararg selections: String) {
         this.entityType = entityType
-        this.selections = Arrays.asList(*selections)
+        this.selections = listOf(*selections)
         this.criteria = criteria
     }
 

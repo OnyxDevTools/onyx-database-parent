@@ -60,7 +60,7 @@ open class OptimisticLockingMap<K, V>(@Suppress("MemberVisibilityCanPrivate") va
             var newValue = m[key]
             if (newValue == null) {
                 newValue = body.invoke()
-                m.put(key, newValue)
+                m[key] = newValue
             }
             return@writeLock newValue
         }!!

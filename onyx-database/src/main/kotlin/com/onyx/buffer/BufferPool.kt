@@ -14,13 +14,13 @@ import kotlin.concurrent.getOrSet
  */
 object BufferPool {
 
-    const private val NUMBER_SMALL_BUFFERS = 50
-    const private val NUMBER_MEDIUM_BUFFERS = 20
-    const private val NUMBER_LARGE_BUFFERS = 10
+    private const val NUMBER_SMALL_BUFFERS = 50
+    private const val NUMBER_MEDIUM_BUFFERS = 20
+    private const val NUMBER_LARGE_BUFFERS = 10
 
-    const private val SMALL_BUFFER_SIZE = 512
+    private const val SMALL_BUFFER_SIZE = 512
     const val MEDIUM_BUFFER_SIZE = 1024 * 6
-    const private val LARGE_BUFFER_SIZE = 18 * 1024
+    private const val LARGE_BUFFER_SIZE = 18 * 1024
 
     private val SMALL_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
     private val MEDIUM_BUFFER_POOL = ConcurrentLinkedQueue<ByteBuffer>()
@@ -123,7 +123,7 @@ object BufferPool {
         val buffer = if(thread is OnyxThread) {
             thread.intBuffer
         } else {
-            intBuffer.getOrSet { BufferPool.allocateExact(Integer.BYTES) }
+            intBuffer.getOrSet { allocateExact(Integer.BYTES) }
         }
         buffer.rewind()
         return block(buffer)
@@ -134,7 +134,7 @@ object BufferPool {
         val buffer = if(thread is OnyxThread) {
             thread.longBuffer
         } else {
-            longBuffer.getOrSet { BufferPool.allocateExact(java.lang.Long.BYTES) }
+            longBuffer.getOrSet { allocateExact(java.lang.Long.BYTES) }
         }
         buffer.rewind()
         return block(buffer)

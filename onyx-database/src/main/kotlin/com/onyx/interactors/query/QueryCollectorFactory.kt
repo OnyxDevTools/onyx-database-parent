@@ -32,12 +32,12 @@ object QueryCollectorFactory {
             BasicSelectionQueryCollector(query, context, descriptor) as QueryCollector<T>
         }
         else if(query.groupBy?.isEmpty() != false
-                && !query.functions().isEmpty()
+                && query.functions().isNotEmpty()
                 && query.functions().firstOrNull { it.type.isGroupFunction } != null) {
             FlatFunctionSelectionQueryCollector(query, context, descriptor) as QueryCollector<T>
         }
         else if(query.groupBy?.isNotEmpty() == true
-                && !query.functions().isEmpty()
+                && query.functions().isNotEmpty()
                 && query.functions().firstOrNull { it.type.isGroupFunction } != null ) {
             GroupFunctionQueryCollector(query, context, descriptor) as QueryCollector<T>
         }

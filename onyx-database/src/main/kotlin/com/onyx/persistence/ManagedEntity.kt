@@ -39,14 +39,14 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
     override fun write(buffer: BufferStream) {
         val descriptor = getDescriptor(Contexts.first())
-        descriptor.reflectionFields.forEach { name, _ ->
+        descriptor.reflectionFields.forEach { (name, _) ->
             buffer.putOther(this.get(descriptor = descriptor, name = name))
         }
     }
 
     override fun read(buffer: BufferStream) {
         val descriptor = getDescriptor(Contexts.first())
-        descriptor.reflectionFields.forEach { name, _ ->
+        descriptor.reflectionFields.forEach { (name, _) ->
             this.set(descriptor = descriptor, name = name, value = buffer.other)
         }
     }

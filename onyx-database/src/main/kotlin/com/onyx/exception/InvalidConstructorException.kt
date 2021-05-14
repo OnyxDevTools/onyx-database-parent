@@ -7,6 +7,6 @@ package com.onyx.exception
 class InvalidConstructorException @JvmOverloads constructor(message: String? = "", cause: Throwable? = null) : OnyxException(message, cause) {
 
     companion object {
-        @JvmField val CONSTRUCTOR_NOT_FOUND = "No constructor found for entity"
+        const val CONSTRUCTOR_NOT_FOUND = "No constructor found for entity"
     }
 }

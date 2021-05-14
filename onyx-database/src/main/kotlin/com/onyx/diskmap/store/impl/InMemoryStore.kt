@@ -32,7 +32,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
         // using an int for position.  We are gonna bust that.
         val buffer = BufferPool.allocateAndLimit(bufferSliceSize)
-        slices.put(0, FileSlice(buffer))
+        slices[0] = FileSlice(buffer)
         return true
     }
 

@@ -5,7 +5,7 @@ package com.onyx.exception
  */
 class StreamException @JvmOverloads constructor(message: String = "") : OnyxException(message) {
     companion object {
-        @JvmField val CANNOT_INSTANTIATE_STREAM = "Unable to instantiate stream.  Define a valid constructor."
-        @JvmField val UNSUPPORTED_FUNCTION_ALTERNATIVE = "Unable to instantiate stream.  This function is unsupported."
+        const val CANNOT_INSTANTIATE_STREAM = "Unable to instantiate stream.  Define a valid constructor."
+        const val UNSUPPORTED_FUNCTION_ALTERNATIVE = "Unable to instantiate stream.  This function is unsupported."
     }
 }

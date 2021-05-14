@@ -7,6 +7,6 @@ package com.onyx.exception
 class InvalidDataTypeForOperator @JvmOverloads constructor(message: String? = "") : OnyxException(message) {
 
     companion object {
-        @JvmField val INVALID_DATA_TYPE_FOR_OPERATOR = "Invalid Data Type to be used for comparison operator"
+        const val INVALID_DATA_TYPE_FOR_OPERATOR = "Invalid Data Type to be used for comparison operator"
     }
 }

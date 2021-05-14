@@ -10,6 +10,6 @@ class LowerQueryFunction(attribute:String) : BaseQueryFunction(attribute, QueryF
 
     override fun newInstance(): QueryFunction = LowerQueryFunction(attribute)
 
-    override fun execute(value: Any?): Any? = value.toString().toLowerCase()
+    override fun execute(value: Any?): Any = value.toString().toLowerCase()
 
 }

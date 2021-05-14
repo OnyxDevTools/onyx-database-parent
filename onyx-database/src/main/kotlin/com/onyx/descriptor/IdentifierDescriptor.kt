@@ -13,9 +13,6 @@ data class IdentifierDescriptor(
         override var name: String = "",
         override var type: Class<*> = ClassMetadata.ANY_CLASS
 ) : IndexDescriptor(),BaseDescriptor {
-
-    override lateinit var entityDescriptor: EntityDescriptor
-
     override fun hashCode(): Int = super.hashCode() + generator.hashCode()
     override fun equals(other: Any?): Boolean = super.equals(other) && (other as IdentifierDescriptor).generator == generator
 }

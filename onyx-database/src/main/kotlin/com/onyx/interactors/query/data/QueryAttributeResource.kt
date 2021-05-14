@@ -1,6 +1,5 @@
 package com.onyx.interactors.query.data
 
-import com.onyx.descriptor.AttributeDescriptor
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.AttributeMissingException
@@ -19,13 +18,13 @@ import java.util.ArrayList
  *
  * Properties to use to scan an entity
  */
-class QueryAttributeResource constructor(
+class QueryAttributeResource(
 
     val descriptor: EntityDescriptor,
-    val attributeDescriptor: AttributeDescriptor? = null,
     val relationshipDescriptor: RelationshipDescriptor? = null,
-    val attribute: String, val selection:String, context: SchemaContext,
-    val function:QueryFunction? = null) {
+    val attribute: String,
+    val selection: String, context: SchemaContext, val function: QueryFunction? = null
+) {
     val contextId = context.contextId
     val attributeParts:List<String> by lazy { attribute.split(".") }
 
@@ -73,7 +72,14 @@ class QueryAttributeResource constructor(
 
                     // Hey we found what we want, lets get the attribute and than decide what descriptor we got
                     val attributeDescriptor = previousDescriptor.attributes[relationshipsAttributeName]
-                    scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, attributeDescriptor = attributeDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = it, function = function))
+                    scanObjects.add(QueryAttributeResource(
+                        descriptor = previousDescriptor,
+                        relationshipDescriptor = relationshipDescriptor,
+                        attribute = attribute,
+                        selection = it,
+                        context = context,
+                        function = function
+                    ))
                 } else {
                     val attributeDescriptor = descriptor.attributes[attribute]
                     if (attributeDescriptor == null) {
@@ -84,10 +90,23 @@ class QueryAttributeResource constructor(
                             tmpObject = relationshipDescriptor.inverseClass.createNewEntity() // Keep on getting the descriptors until we get what we need
                             previousDescriptor = context.getDescriptorForEntity(tmpObject, query.partition)
 
-                            scanObjects.add(QueryAttributeResource(descriptor = previousDescriptor, relationshipDescriptor = relationshipDescriptor, context = context, attribute = attribute, selection = it, function = function))
+                            scanObjects.add(QueryAttributeResource(
+                                descriptor = previousDescriptor,
+                                relationshipDescriptor = relationshipDescriptor,
+                                attribute = attribute,
+                                selection = it,
+                                context = context,
+                                function = function
+                            ))
                         }
                     } else {
-                        scanObjects.add(QueryAttributeResource(descriptor = descriptor, attributeDescriptor = attributeDescriptor, context = context, attribute = attribute, selection = it, function = function))
+                        scanObjects.add(QueryAttributeResource(
+                            descriptor = descriptor,
+                            attribute = attribute,
+                            selection = it,
+                            context = context,
+                            function = function
+                        ))
                     }
                 }
             }

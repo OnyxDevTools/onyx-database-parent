@@ -54,6 +54,8 @@ open class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFA
     }
 
     companion object {
-        internal fun createTemporaryMetadataLocation(): String = File.createTempFile("temp", java.lang.Long.toString(System.nanoTime())).path
+        internal fun createTemporaryMetadataLocation(): String = File.createTempFile("temp",
+            System.nanoTime().toString()
+        ).path
     }
 }

@@ -7,7 +7,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 
 // Indicates null value for a partition
-val nullPartition = ""
+const val nullPartition = ""
 
 /**
  * Get the primary key or identifier of an entity

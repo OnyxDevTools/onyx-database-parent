@@ -211,7 +211,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-        val results:QueryCollector<E> = cache(query) { queryController.getReferencesForQuery<E>(query) }
+        val results:QueryCollector<E> = cache(query) { queryController.getReferencesForQuery(query) }
         return results.results as List<E>
     }
 
@@ -233,7 +233,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-        val results:QueryCollector<E> = cache(query) { queryController.getReferencesForQuery<E>(query) }
+        val results:QueryCollector<E> = cache(query) { queryController.getReferencesForQuery(query) }
         return LazyQueryCollection<IManagedEntity>(descriptor, results.getLimitedReferences(), context) as List<E>
     }
 

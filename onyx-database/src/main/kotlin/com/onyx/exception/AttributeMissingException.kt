@@ -10,6 +10,6 @@ package com.onyx.exception
 class AttributeMissingException @JvmOverloads constructor(message: String? = null) : OnyxException(message ?: "") {
 
     companion object {
-        @JvmField val ENTITY_MISSING_ATTRIBUTE = "Entity attribute does not exist"
+        const val ENTITY_MISSING_ATTRIBUTE = "Entity attribute does not exist"
     }
 }

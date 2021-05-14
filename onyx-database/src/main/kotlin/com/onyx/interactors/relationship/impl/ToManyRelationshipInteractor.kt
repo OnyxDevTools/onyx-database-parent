@@ -38,9 +38,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
     override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         if (relationshipDescriptor.cascadePolicy === CascadePolicy.DEFER_SAVE) return
 
-        val reflectionRelationshipObjects:Any? = entity[context, relationshipDescriptor.entityDescriptor, relationshipDescriptor.name]
-
-        val relationshipObjects: MutableList<IManagedEntity?>? = when (reflectionRelationshipObjects) {
+        val relationshipObjects: MutableList<IManagedEntity?>? = when (val reflectionRelationshipObjects:Any? = entity[context, relationshipDescriptor.entityDescriptor, relationshipDescriptor.name]) {
             is List<*> -> reflectionRelationshipObjects as MutableList<IManagedEntity?>
             else -> null
         }
@@ -83,7 +81,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 }
 
                 // Save the inverse relationship
-                if (!transaction.contains(it, context) && relationshipDescriptor.inverse != null && !relationshipDescriptor.inverse!!.isEmpty()) {
+                if (!transaction.contains(it, context) && relationshipDescriptor.inverse != null && relationshipDescriptor.inverse!!.isNotEmpty()) {
                     saveInverseRelationship(entity, it, parentRelationshipReference, relationshipObjectIdentifier)
                 }
             }
@@ -107,7 +105,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
         }
 
         if(existingRelationshipReferences != existingRelationshipReferencesBefore) {
-            relationshipReferenceMap.put(parentRelationshipReference, existingRelationshipReferences)
+            relationshipReferenceMap[parentRelationshipReference] = existingRelationshipReferences
         }
     }
 

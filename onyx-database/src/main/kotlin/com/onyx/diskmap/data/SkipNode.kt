@@ -132,7 +132,7 @@ data class SkipNode(
         get() = record > 0
 
     companion object {
-        val SKIP_NODE_SIZE = (java.lang.Long.BYTES * 7) + java.lang.Short.BYTES
+        const val SKIP_NODE_SIZE = (java.lang.Long.BYTES * 7) + java.lang.Short.BYTES
 
         fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short):SkipNode {
             val node = SkipNode()

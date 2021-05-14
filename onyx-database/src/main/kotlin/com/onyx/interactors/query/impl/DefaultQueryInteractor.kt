@@ -83,7 +83,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         val context = Contexts.get(contextId)!!
         var updateCount = 0
 
-        records.forEach {
+        records.forEach { it ->
             val entity: IManagedEntity? = it.toManagedEntity(context, query.entityType!!, descriptor)
             val updatedPartitionValue = query.updates.firstOrNull { entity != null && it.fieldName == descriptor.partition?.name && !entity.get<Any?>(context, descriptor, it.fieldName!!).compare(it.value) } != null
 
@@ -124,8 +124,8 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         if (query.isDefaultQuery(descriptor)) {
             val systemEntity = context.getSystemEntityByName(query.entityType!!.name)
 
-            when {
-                QueryPartitionMode.ALL == query.partition -> {
+            when (QueryPartitionMode.ALL) {
+                query.partition -> {
                     var resultCount = 0L
 
                     systemEntity!!.partition!!.entries.forEach {
@@ -211,9 +211,8 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         // Scan for records
         // If there are existing references, use those to narrow it down.  Otherwise
         // start from a clean slate
-        val criteriaResults: MutableSet<Reference>
 
-        criteriaResults = if (existingReferences == null) {
+        val criteriaResults: MutableSet<Reference> = if (existingReferences == null) {
             scanner.scan()
         } else {
             if (criteria.isOr || criteria.isNot) {
@@ -228,7 +227,10 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             criteria.subCriteria.forEachIndexed { index, subCriteriaObject ->
                 if(index == 0 && subCriteriaIsRange)
                     return@forEachIndexed
-                val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults, false, false)
+                val subCriteriaResults = getReferencesForCriteria<T>(query, subCriteriaObject, criteriaResults,
+                    forceFullScan = false,
+                    collect = false
+                )
                 aggregateFilteredReferences(subCriteriaObject, criteriaResults, subCriteriaResults.first)
             }
         }

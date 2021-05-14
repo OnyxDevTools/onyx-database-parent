@@ -51,16 +51,14 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
                 val directoryListing = File(directory).list()
                 Arrays.sort(directoryListing!!)
 
-                val lastWalFile: File
-
                 if (directoryListing.isNotEmpty()) {
                     var fileName = directoryListing[directoryListing.size - 1]
                     fileName = fileName.replace(".wal", "")
 
-                    journalFileIndex.addAndGet(Integer.valueOf(fileName)!!.toLong())
+                    journalFileIndex.addAndGet(Integer.valueOf(fileName).toLong())
                 }
 
-                lastWalFile = File(directory + journalFileIndex.get() + ".wal")
+                val lastWalFile = File(directory + journalFileIndex.get() + ".wal")
 
                 if (!lastWalFile.exists()) {
                     lastWalFile.createNewFile()
@@ -107,6 +105,6 @@ open class DefaultTransactionStore(val location:String): TransactionStore {
 
     companion object {
         // Maximum WAL File longSize
-        private val MAX_JOURNAL_SIZE = 1024 * 1024 * 20
+        private const val MAX_JOURNAL_SIZE = 1024 * 1024 * 20
     }
 }

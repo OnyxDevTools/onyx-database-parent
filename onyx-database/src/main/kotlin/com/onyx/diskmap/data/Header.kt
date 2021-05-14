@@ -48,6 +48,6 @@ class Header : BufferStreamable {
     }
 
     companion object {
-        val HEADER_SIZE = java.lang.Long.BYTES * 3
+        const val HEADER_SIZE = java.lang.Long.BYTES * 3
     }
 }

@@ -39,7 +39,7 @@ open class OnyxException : Exception {
     constructor(message: String? = UNKNOWN_EXCEPTION, cause: Throwable?) : super(message, cause) { this.message = message }
 
     companion object {
-        @JvmField val UNKNOWN_EXCEPTION = "Unknown exception occurred"
+        const val UNKNOWN_EXCEPTION = "Unknown exception occurred"
     }
 
 }

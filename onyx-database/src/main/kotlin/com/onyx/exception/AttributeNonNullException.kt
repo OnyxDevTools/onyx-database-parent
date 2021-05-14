@@ -5,9 +5,11 @@ package com.onyx.exception
  *
  * Null check exception
  */
-class AttributeNonNullException @JvmOverloads constructor(message: String? = "", attribute: String? = "") : OnyxException(message + " : " + attribute) {
+class AttributeNonNullException @JvmOverloads constructor(message: String? = "", attribute: String? = "") : OnyxException(
+    "$message : $attribute"
+) {
 
     companion object {
-        @JvmField val ATTRIBUTE_NULL_EXCEPTION = "Attribute must not be null"
+        const val ATTRIBUTE_NULL_EXCEPTION = "Attribute must not be null"
     }
 }

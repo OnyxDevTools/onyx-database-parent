@@ -20,11 +20,11 @@ class EntityClassNotFoundException @JvmOverloads constructor(message: String? = 
 
     companion object {
 
-        @JvmField val RELATIONSHIP_ENTITY_BASE_NOT_FOUND = "Relationship type does not extend from ManagedEntity"
-        @JvmField val RELATIONSHIP_ENTITY_NOT_FOUND = "Relationship type does not have entity annotation"
-        @JvmField val ENTITY_NOT_FOUND = "Entity is not able to persist because entity annotation does not exist"
-        @JvmField val PERSISTED_NOT_FOUND = "Entity is not able to persist because entity does not implement IManagedEntity"
-        @JvmField val EXTENSION_NOT_FOUND = "Entity is not able to persist because entity does not extend from ManagedEntity"
-        @JvmField val TO_MANY_INVALID_TYPE = "To Many relationship must by type List.class"
+        const val RELATIONSHIP_ENTITY_BASE_NOT_FOUND = "Relationship type does not extend from ManagedEntity"
+        const val RELATIONSHIP_ENTITY_NOT_FOUND = "Relationship type does not have entity annotation"
+        const val ENTITY_NOT_FOUND = "Entity is not able to persist because entity annotation does not exist"
+        const val PERSISTED_NOT_FOUND = "Entity is not able to persist because entity does not implement IManagedEntity"
+        const val EXTENSION_NOT_FOUND = "Entity is not able to persist because entity does not extend from ManagedEntity"
+        const val TO_MANY_INVALID_TYPE = "To Many relationship must by type List.class"
     }
 }

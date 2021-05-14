@@ -195,9 +195,9 @@ class DefaultTransactionInteractor(private val transactionStore: TransactionStor
     }
 
     companion object {
-        private val SAVE: Byte = 1
-        private val DELETE: Byte = 2
-        private val DELETE_QUERY: Byte = 3
-        private val UPDATE_QUERY: Byte = 4
+        private const val SAVE: Byte = 1
+        private const val DELETE: Byte = 2
+        private const val DELETE_QUERY: Byte = 3
+        private const val UPDATE_QUERY: Byte = 4
     }
 }

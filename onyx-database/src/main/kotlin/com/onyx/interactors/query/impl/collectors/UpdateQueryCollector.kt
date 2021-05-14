@@ -1,7 +1,6 @@
 package com.onyx.interactors.query.impl.collectors
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.SortedList
 import com.onyx.persistence.IManagedEntity

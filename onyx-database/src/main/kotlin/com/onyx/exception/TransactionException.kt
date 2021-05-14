@@ -23,10 +23,10 @@ class TransactionException @JvmOverloads constructor(message: String? = "") : On
     }
 
     companion object {
-        @JvmField val TRANSACTION_FAILED_TO_OPEN_FILE = "Failed to open transaction file"
-        @JvmField val TRANSACTION_FAILED_TO_WRITE_FILE = "Failed to write to transaction file"
-        @JvmField val TRANSACTION_FAILED_TO_READ_FILE = "Failed to read from a transaction file"
-        @JvmField val TRANSACTION_FAILED_TO_RECOVER_FROM_DIRECTORY = "Failed to recover database.  The WAL directory does not exist or is not a directory"
-        @JvmField val TRANSACTION_FAILED_TO_EXECUTE = "Failed to execute transaction."
+        const val TRANSACTION_FAILED_TO_OPEN_FILE = "Failed to open transaction file"
+        const val TRANSACTION_FAILED_TO_WRITE_FILE = "Failed to write to transaction file"
+        const val TRANSACTION_FAILED_TO_READ_FILE = "Failed to read from a transaction file"
+        const val TRANSACTION_FAILED_TO_RECOVER_FROM_DIRECTORY = "Failed to recover database.  The WAL directory does not exist or is not a directory"
+        const val TRANSACTION_FAILED_TO_EXECUTE = "Failed to execute transaction."
     }
 }

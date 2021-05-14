@@ -294,8 +294,8 @@ open class FileChannelStore() : Store {
     }
 
     companion object {
-        val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-        val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 6 // 6MB
+        const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
+        const val LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 6 // 6MB
 
         val isSmallDevice:Boolean by lazy {
             try {

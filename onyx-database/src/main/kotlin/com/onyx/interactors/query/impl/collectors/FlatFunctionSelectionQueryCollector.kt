@@ -46,7 +46,7 @@ class FlatFunctionSelectionQueryCollector(
 
     override fun finalizeResults() {
         if(!isFinalized) {
-            selections.forEach {
+            repeat(selections.size) {
                 selectionFunctions.forEach {
                     it.function?.postProcess(query)
                     result[it.selection] = it.function?.getFunctionValue()

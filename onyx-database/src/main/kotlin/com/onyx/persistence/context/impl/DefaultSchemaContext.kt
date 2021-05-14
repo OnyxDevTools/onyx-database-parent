@@ -226,9 +226,9 @@ open class DefaultSchemaContext : SchemaContext {
             val systemEntity = SystemEntity(descriptor)
             systemEntity.primaryKey = i
 
-            this.descriptors.put(it.java.name, descriptor)
-            this.defaultSystemEntities.put(it.java.name, systemEntity)
-            this.systemEntityByIDMap.put(i, systemEntity)
+            this.descriptors[it.java.name] = descriptor
+            this.defaultSystemEntities[it.java.name] = systemEntity
+            this.systemEntityByIDMap[i] = systemEntity
             systemEntities.add(systemEntity)
             i++
         }
@@ -271,8 +271,8 @@ open class DefaultSchemaContext : SchemaContext {
             systemEntity = newSystemEntity
         }
 
-        defaultSystemEntities.put(systemEntity.name, systemEntity)
-        systemEntityByIDMap.put(systemEntity.primaryKey, systemEntity)
+        defaultSystemEntities[systemEntity.name] = systemEntity
+        systemEntityByIDMap[systemEntity.primaryKey] = systemEntity
 
         return systemEntity
     }
@@ -312,8 +312,8 @@ open class DefaultSchemaContext : SchemaContext {
      * @param newRevision Entity Descriptor with new potential index changes
      */
     private fun checkForIndexChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
-        val oldIndexes = systemEntity.indexes.associate { Pair(it.name, it) }
-        val newIndexes = newRevision.indexes.associate { Pair(it.name, it) }
+        val oldIndexes = systemEntity.indexes.associateBy { it.name }
+        val newIndexes = newRevision.indexes.associateBy { it.name }
 
         (oldIndexes - newIndexes).values.forEach { rebuildIndex(systemEntity, it.name) }
     }
@@ -329,8 +329,8 @@ open class DefaultSchemaContext : SchemaContext {
     @Throws(InvalidRelationshipTypeException::class)
     private fun checkForInvalidRelationshipChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
 
-        val oldRelationships = systemEntity.relationships.associate { Pair(it.name, it) }
-        val newRelationships = newRevision.relationships.associate { Pair(it.name, it) }
+        val oldRelationships = systemEntity.relationships.associateBy { it.name }
+        val newRelationships = newRevision.relationships.associateBy { it.name }
 
         (newRelationships - oldRelationships).values.forEach {
             val old = oldRelationships[it.name]
@@ -353,7 +353,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     private fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
         val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
-        val indexDescriptor = entityDescriptor!!.indexes[indexName]
+        val indexDescriptor = entityDescriptor.indexes[indexName]
         if (systemEntity.partition != null) {
             systemEntity.partition!!.entries.forEach {
                 val partitionEntityDescriptor = getDescriptorForEntity(entityDescriptor.entityClass, it.value)
@@ -476,7 +476,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Suppress("MemberVisibilityCanPrivate")
     @Throws(OnyxException::class)
-    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor? = getDescriptorForEntity(classForName(entityClass, this))
+    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor = getDescriptorForEntity(classForName(entityClass, this))
 
     private val descriptorLockCount = AtomicInteger(0)
 
@@ -516,7 +516,7 @@ open class DefaultSchemaContext : SchemaContext {
                 descriptor = EntityDescriptor(entityClass)
                 descriptor!!.context = this
                 descriptor!!.partition?.partitionValue = partitionIdVar.toString()
-                descriptors.put(entityKey, descriptor!!)
+                descriptors[entityKey] = descriptor!!
 
                 // Get the latest System Entity
                 var systemEntity: SystemEntity? = getSystemEntityByName(descriptor!!.entityClass.name)

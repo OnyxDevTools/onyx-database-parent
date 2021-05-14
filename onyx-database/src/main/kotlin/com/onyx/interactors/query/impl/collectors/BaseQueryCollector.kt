@@ -126,7 +126,7 @@ abstract class BaseQueryCollector<T>(
      *
      * @since 2.1.3
      */
-    open protected fun limit():Boolean {
+    protected open fun limit():Boolean {
         if(query.firstRow > 0
                 && startIndex <= query.firstRow
                 && query.maxResults > 0
@@ -158,7 +158,7 @@ abstract class BaseQueryCollector<T>(
      *
      * @since 2.1.3
      */
-    open protected fun limitReferences():Boolean {
+    protected open fun limitReferences():Boolean {
         if(query.firstRow > 0
                 && startIndex <= query.firstRow
                 && query.maxResults > 0) {
@@ -214,6 +214,7 @@ abstract class BaseQueryCollector<T>(
             // Limit results.  This is dome to ensure the results are limited.  If the query was marked as distinct
             // real-time limiting may not have been ran
             if(query.firstRow > 0 || query.maxResults > 0) {
+                @Suppress("ControlFlowWithEmptyBody")
                 while (limit()) {}
             }
 

@@ -37,8 +37,8 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
 
         val relationshipReferenceMap = entity.relationshipReferenceMap(context, relationship = relationshipDescriptor.name)
         val entityRelationshipReference = entity.toRelationshipReference(context)
-        var relationshipsToRemove:MutableSet<RelationshipReference> = HashSet(relationshipReferenceMap[entityRelationshipReference] ?: HashSet())
-        relationshipReferenceMap.put(entityRelationshipReference, HashSet())
+        val relationshipsToRemove:MutableSet<RelationshipReference> = HashSet(relationshipReferenceMap[entityRelationshipReference] ?: HashSet())
+        relationshipReferenceMap[entityRelationshipReference] = HashSet()
 
         relationshipsToRemove.forEach {
             val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
@@ -64,13 +64,13 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
         val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name)
 
         if(inverseRelationshipDescriptor.isToOne) {
-            relationshipMap.put(childIdentifier, hashSetOf(parentIdentifier))
+            relationshipMap[childIdentifier] = hashSetOf(parentIdentifier)
             childEntity[context, inverseRelationshipDescriptor.entityDescriptor, inverseRelationshipDescriptor.name] = parentEntity
         } else {
             val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
             if(!relationshipReferences.contains(parentIdentifier)) {
                 relationshipReferences.add(parentIdentifier)
-                relationshipMap.put(childIdentifier, relationshipReferences)
+                relationshipMap[childIdentifier] = relationshipReferences
             }
         }
     }
@@ -90,7 +90,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
         // Synchronized since we are saving the entire set
         val relationshipReferences = HashSet(relationshipMap.getOrElse(childIdentifier) { HashSet() })
         relationshipReferences.remove(parentIdentifier)
-        relationshipMap.put(childIdentifier, relationshipReferences)
+        relationshipMap[childIdentifier] = relationshipReferences
     }
 
     /**

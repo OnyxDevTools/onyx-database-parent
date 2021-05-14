@@ -8,6 +8,6 @@ package com.onyx.exception
 class EntityTypeMatchException @JvmOverloads constructor(message: String? = "") : OnyxException(message) {
 
     companion object {
-        @JvmField val ATTRIBUTE_TYPE_IS_NOT_SUPPORTED = "Attribute type is not supported"
+        const val ATTRIBUTE_TYPE_IS_NOT_SUPPORTED = "Attribute type is not supported"
     }
 }

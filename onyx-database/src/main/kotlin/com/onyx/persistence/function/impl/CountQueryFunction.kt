@@ -15,7 +15,7 @@ class CountQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Q
     override fun newInstance(): QueryFunction = CountQueryFunction(attribute)
 
     private val count: AtomicInteger = AtomicInteger(0)
-    private val uniqueValues:MutableSet<Any?> by lazy { HashSet<Any?>() }
+    private val uniqueValues:MutableSet<Any?> by lazy { HashSet() }
     private val valueLock = DefaultClosureLock()
     override fun getFunctionValue():Int = count.get()
 

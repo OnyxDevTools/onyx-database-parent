@@ -132,7 +132,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
                 null
             }
 
-            values.put(index, entity as E)
+            values[index] = entity as E
         }
         return entity as E
     }
@@ -215,7 +215,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
     override fun iterator(): MutableIterator<E> = object : MutableIterator<E> {
         override fun remove() = throw RuntimeException("Method unsupported, hydrate relationship using initialize")
 
-        internal var i = 0
+        var i = 0
 
         override fun hasNext(): Boolean = i < size
 

@@ -31,10 +31,10 @@ open class BufferingException : OnyxException {
 
     companion object {
 
-        @JvmField val UNKNOWN_DESERIALIZE = "Unknown exception occurred while de-serializing "
-        @JvmField val CANNOT_INSTANTIATE = "Cannot instantiate class "
-        @JvmField val UNKNOWN_CLASS = "Unknown class "
-        @JvmField val ILLEGAL_ACCESS_EXCEPTION = "Illegal Access Exception "
+        const val UNKNOWN_DESERIALIZE = "Unknown exception occurred while de-serializing "
+        const val CANNOT_INSTANTIATE = "Cannot instantiate class "
+        const val UNKNOWN_CLASS = "Unknown class "
+        const val ILLEGAL_ACCESS_EXCEPTION = "Illegal Access Exception "
     }
 }
 

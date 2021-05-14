@@ -47,7 +47,8 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
         val context = Contexts.get(contextId)!!
         // If it is an in clause
         if (criteria.value is List<*>) {
-            (criteria.value as List<*>).forEach { find(it).forEach {
+            (criteria.value as List<*>).forEach { it ->
+                find(it).forEach {
                     if(!includesExisting)
                         collector?.collect(it, it.toManagedEntity(context, descriptor))
                     if(collector == null)

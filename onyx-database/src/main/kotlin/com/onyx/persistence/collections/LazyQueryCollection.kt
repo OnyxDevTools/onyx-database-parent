@@ -36,7 +36,8 @@ import java.util.function.Consumer
 class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, BufferStreamable {
 
     @Transient private var values: MutableMap<Any, E?> = WeakHashMap()
-    @Transient lateinit private var contextId: String
+    @Transient
+    private lateinit var contextId: String
     @Transient private var persistenceManager: PersistenceManager? = null
     @Transient lateinit var entityDescriptor: EntityDescriptor
 
@@ -121,7 +122,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
                 null
             }
 
-            values.put(index, entity)
+            values[index] = entity
         }
         return entity!!
     }
@@ -216,7 +217,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
      * @return an iterator over the elements in this list in proper sequence
      */
     override fun iterator(): MutableIterator<E> = object : MutableIterator<E> {
-        internal var i = 0
+        var i = 0
 
         override fun hasNext(): Boolean = i < size
 
@@ -245,7 +246,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
      * {@inheritDoc}
      */
     override fun listIterator(): MutableListIterator<E> = object : MutableListIterator<E> {
-        internal var i = -1
+        var i = -1
 
         override fun hasNext(): Boolean = i + 1 < size
 

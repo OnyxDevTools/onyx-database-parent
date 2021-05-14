@@ -16,4 +16,4 @@ package com.onyx.persistence.annotations
  * @see com.onyx.persistence.annotations.Identifier
  */
 @Target(AnnotationTarget.FIELD)
-annotation class Index()
+annotation class Index

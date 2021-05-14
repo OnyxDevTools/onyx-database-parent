@@ -7,8 +7,8 @@ package com.onyx.exception
 class InvalidIdentifierException @JvmOverloads constructor(message: String? = "") : OnyxException(message) {
 
     companion object {
-        @JvmField val IDENTIFIER_MISSING = "Entity is missing primary key"
-        @JvmField val IDENTIFIER_TYPE = "Entity identifier type is invalid"
-        @JvmField val INVALID_GENERATOR = "Invalid generator for declared type"
+        const val IDENTIFIER_MISSING = "Entity is missing primary key"
+        const val IDENTIFIER_TYPE = "Entity identifier type is invalid"
+        const val INVALID_GENERATOR = "Invalid generator for declared type"
     }
 }

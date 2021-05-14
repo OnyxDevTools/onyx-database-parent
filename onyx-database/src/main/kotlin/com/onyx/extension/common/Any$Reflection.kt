@@ -207,7 +207,7 @@ object ClassMetadata {
         return classFields.getOrPut(clazz) {
             val fields = ArrayList<Field>()
             var aClass:Class<*> = clazz
-            while (aClass != ClassMetadata.ANY_CLASS
+            while (aClass != ANY_CLASS
                     && aClass != Exception::class.java
                     && aClass != Throwable::class.java) {
                 aClass.declaredFields

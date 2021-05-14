@@ -16,6 +16,7 @@ import com.onyx.diskmap.store.StoreType
  */
 class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaContext(contextId, location) {
 
+    @Suppress("SuspiciousVarProperty")
     override var encryptDatabase: Boolean = false
         get() = false
 

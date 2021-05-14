@@ -269,7 +269,6 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
     companion object {
 
-        @JvmField
-        val DEFAULT_INSTANCE = "ONYX_DATABASE"
+        const val DEFAULT_INSTANCE = "ONYX_DATABASE"
     }
 }

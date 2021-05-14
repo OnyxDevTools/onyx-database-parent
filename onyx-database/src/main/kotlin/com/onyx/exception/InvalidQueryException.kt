@@ -8,6 +8,6 @@ package com.onyx.exception
  */
 class InvalidQueryException : OnyxException(RELATIONSHIP_PARTITION_ALL_EXCEPTION) {
     companion object {
-        private val RELATIONSHIP_PARTITION_ALL_EXCEPTION = "Invalid Query Predicates.  When applying relationship query predicates you cannot specify QueryPartitionMode.ALL"
+        private const val RELATIONSHIP_PARTITION_ALL_EXCEPTION = "Invalid Query Predicates.  When applying relationship query predicates you cannot specify QueryPartitionMode.ALL"
     }
 }

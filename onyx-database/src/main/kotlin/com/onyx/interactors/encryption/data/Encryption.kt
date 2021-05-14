@@ -6,7 +6,6 @@ import javax.crypto.spec.SecretKeySpec
 import java.io.UnsupportedEncodingException
 import java.security.*
 import java.security.spec.InvalidKeySpecException
-import java.util.Arrays
 import java.nio.charset.Charset
 import java.security.MessageDigest
 
@@ -67,7 +66,7 @@ class Encryption private constructor(private val mBuilder: Builder) {
         var keyBytes:ByteArray = (String(key)).toByteArray(Charset.forName("UTF-8"))
         val digest:MessageDigest = MessageDigest.getInstance("SHA-1")
         keyBytes = digest.digest(keyBytes)
-        keyBytes = Arrays.copyOf(keyBytes, 16) // use only first 128 bit
+        keyBytes = keyBytes.copyOf(16) // use only first 128 bit
 
         return SecretKeySpec(keyBytes, "AES")
     }

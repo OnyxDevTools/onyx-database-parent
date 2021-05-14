@@ -21,7 +21,7 @@ class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsed
      * @return the value just entered
      * @since 1.3.0
      */
-    fun putStrongReference(key: K, value: V): V = lock.writeLock { hardReferenceSet.put(key, value); value }
+    fun putStrongReference(key: K, value: V): V = lock.writeLock { hardReferenceSet[key] = value; value }
 
     /**
      * Get the object for key.  Also indicate it as touched so it marks the record as recently used
@@ -80,11 +80,11 @@ class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsed
             var newValue = hardReferenceSet[key]
             if(newValue == null) {
                 newValue = super.get(key)
-                hardReferenceSet.put(key, newValue)
+                hardReferenceSet[key] = newValue
             }
             if (newValue == null) {
                 newValue = body.invoke()
-                hardReferenceSet.put(key, newValue)
+                hardReferenceSet[key] = newValue
             }
             return@writeLock newValue
         }!!

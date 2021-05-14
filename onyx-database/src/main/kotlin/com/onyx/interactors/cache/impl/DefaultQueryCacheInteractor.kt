@@ -54,7 +54,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
         if (query.changeListener != null)
             queryCachedResultsMap.putStrongReference(query, cachedResults)
         else
-            queryCachedResultsMap.put(query, cachedResults)
+            queryCachedResultsMap[query] = cachedResults
 
         return cachedResults
 
@@ -173,7 +173,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
     }
 
     companion object {
-        val MAX_CACHED_REFERENCES = 1000000 // Cannot cache more than this amount
+        const val MAX_CACHED_REFERENCES = 1000000 // Cannot cache more than this amount
     }
 }
 

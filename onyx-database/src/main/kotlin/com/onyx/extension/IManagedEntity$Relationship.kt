@@ -106,14 +106,14 @@ fun IManagedEntity.hydrateRelationships(context: SchemaContext, transaction: Rel
  * @since 2.0.0
  */
 @Throws(OnyxException::class)
-fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference: Reference? = reference(context)): List<IManagedEntity?>? {
+fun IManagedEntity.getRelationshipFromStore(context: SchemaContext, relationship: String, entityReference: Reference? = reference(context)): List<IManagedEntity?> {
     var slices = relationship.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }
-    val descriptor: EntityDescriptor? = descriptor(context)
+    val descriptor: EntityDescriptor = descriptor(context)
     var entities = ArrayList<IManagedEntity?>()
 
     var shouldBreak = false
-    slices = slices.dropWhile {
-        val relationshipDescriptor = descriptor!!.relationships[it]
+    slices = slices.dropWhile { it ->
+        val relationshipDescriptor = descriptor.relationships[it]
         if(relationshipDescriptor == null || shouldBreak)
             return@dropWhile false
 
