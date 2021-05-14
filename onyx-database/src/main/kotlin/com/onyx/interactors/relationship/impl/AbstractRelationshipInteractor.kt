@@ -31,6 +31,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      * @param transaction Holder of the transaction information
      */
     @Throws(OnyxException::class)
+    @Synchronized
     fun deleteRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         transaction.add(entity, context)
 
@@ -57,6 +58,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      * @param childIdentifier Child entity identifier
      */
     @Throws(OnyxException::class)
+    @Synchronized
     protected fun saveInverseRelationship(parentEntity: IManagedEntity, childEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
         val relationshipMap = childEntity.relationshipReferenceMap(context, inverseRelationshipDescriptor.name)
@@ -80,6 +82,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      * @param childIdentifier Child entity identifier
      */
     @Throws(OnyxException::class)
+    @Synchronized
     protected fun deleteInverseRelationshipReference(parentEntity: IManagedEntity, parentIdentifier: RelationshipReference, childIdentifier: RelationshipReference) {
         val inverseRelationshipDescriptor = parentEntity.inverseRelationshipDescriptor(context, relationshipDescriptor.name) ?: return
         val relationshipMap = childIdentifier.toManagedEntity(context, inverseRelationshipDescriptor.entityDescriptor.entityClass, inverseRelationshipDescriptor.entityDescriptor)?.relationshipReferenceMap(context, inverseRelationshipDescriptor.name) ?: return

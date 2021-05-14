@@ -79,7 +79,7 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
 
         val timeToComplete = after - before
         assertEquals(20, results.size, "Query should only return 20 records")
-        assertTrue(timeToComplete < 20, "Query should not take that much time to complete")
+        assertTrue(timeToComplete < 30, "Query should not take that much time to complete")
     }
 
     /**

@@ -53,5 +53,5 @@ class SystemDirectory(
 
     @Suppress("UNCHECKED_CAST")
     val allChildren: List<NamedEntity>
-        get() = (children + queries) as List<NamedEntity>
+        get() = (children + queries)
 }

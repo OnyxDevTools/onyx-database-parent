@@ -24,6 +24,7 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
      * @param entity Entity to save relationships for
      * @param transaction Prevents recursion
      */
+    @Synchronized
     @Throws(OnyxException::class)
     override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         val relationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]

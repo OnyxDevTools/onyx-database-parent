@@ -235,7 +235,7 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         val value = manager.select(max("dateTime"))
             .from(History::class)
             .where("symbolId" eq "TSLA")
-            .and("dateTime" lt Date())
+            .and("dateTime" lte Date())
             .groupBy("symbolId")
             .first<Map<String, Date>>()["max(dateTime)"]!!
 

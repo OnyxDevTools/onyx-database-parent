@@ -194,7 +194,7 @@ open class DefaultSchemaContext : SchemaContext {
         val indexInteractor = this.getIndexInteractor(descriptors[SystemPartitionEntry::class.java.name]!!.indexes["index"]!!)
         val values = indexInteractor.findAllValues()
 
-        partitionCounter.set(if (!values.isEmpty()) values.maxBy { it as Long } as Long else 0L)
+        partitionCounter.set(if (values.isNotEmpty()) values.maxByOrNull { it as Long } as Long else 0L)
     }
 
     /**

@@ -34,6 +34,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
+    @Synchronized
     override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         if (relationshipDescriptor.cascadePolicy === CascadePolicy.DEFER_SAVE) return
 
@@ -158,8 +159,10 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
      * @param relationshipIdentifiers Relationship references
      */
     @Throws(OnyxException::class)
+    @Synchronized
     override fun updateAll(entity: IManagedEntity, relationshipIdentifiers: MutableSet<RelationshipReference>) {
-        entity.relationshipReferenceMap(context, relationshipDescriptor.name).put(entity.toRelationshipReference(context), relationshipIdentifiers)
+        entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(context)] =
+            relationshipIdentifiers
     }
 
 }
