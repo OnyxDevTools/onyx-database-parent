@@ -43,7 +43,6 @@ class QueryAttributeResource(
             val scanObjects = ArrayList<QueryAttributeResource>()
 
             var attributeTokens: Array<String> // Contains the . notation attribute name or relationship designation say for instance child.sampleAttribute.id
-            var relationshipsAttributeName: String // Get the last in the list so we know what the actual relationship's attribute name is
             var previousDescriptor: EntityDescriptor // This is so we can keep track of what the final descriptor is in the DOM
             var relationshipDescriptor: RelationshipDescriptor? = null
             var tmpObject: Any // Temporary object instantiated so that we can gather descriptor information
@@ -58,8 +57,6 @@ class QueryAttributeResource(
                 attributeTokens = attribute.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
                 if (attributeTokens.size > 1) {
-                    relationshipsAttributeName = attributeTokens[attributeTokens.size - 1] // Get the last in the list so we know what the actual relationship's attribute name is
-
                     previousDescriptor = descriptor // This is so we can keep track of what the final descriptor is in the DOM
 
                     // -2 because we ignore the last
@@ -71,7 +68,6 @@ class QueryAttributeResource(
                     }
 
                     // Hey we found what we want, lets get the attribute and than decide what descriptor we got
-                    val attributeDescriptor = previousDescriptor.attributes[relationshipsAttributeName]
                     scanObjects.add(QueryAttributeResource(
                         descriptor = previousDescriptor,
                         relationshipDescriptor = relationshipDescriptor,
