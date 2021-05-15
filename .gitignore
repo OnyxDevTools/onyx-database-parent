@@ -22,3 +22,4 @@ gradle.properties
 */.DS_Store
 /onyx-database/nbproject/
 /target/
+.gradle/
