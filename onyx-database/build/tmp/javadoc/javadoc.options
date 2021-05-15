@@ -1,7 +1,0 @@
--classpath '/Users/tosborn/OnyxWorkspace/onyx-database-parent/onyx-database/build/classes/java/main:/Users/tosborn/OnyxWorkspace/onyx-database-parent/onyx-database/build/classes/kotlin/main:/Users/tosborn/OnyxWorkspace/onyx-database-parent/onyx-database/build/resources/main:/Users/tosborn/.m2/repository/org/jetbrains/kotlin/kotlin-reflect/1.4.30/kotlin-reflect-1.4.30.jar:/Users/tosborn/.m2/repository/org/jetbrains/kotlin/kotlin-stdlib/1.4.30/kotlin-stdlib-1.4.30.jar:/Users/tosborn/.m2/repository/org/jetbrains/kotlin/kotlin-stdlib-common/1.4.30/kotlin-stdlib-common-1.4.30.jar:/Users/tosborn/.m2/repository/org/jetbrains/annotations/13.0/annotations-13.0.jar'
--d '/Users/tosborn/OnyxWorkspace/onyx-database-parent/onyx-database/build/docs/javadoc'
--doctitle 'onyx-database 2.2.0 API'
--notimestamp 
--quiet 
--windowtitle 'onyx-database 2.2.0 API'
-'/Users/tosborn/OnyxWorkspace/onyx-database-parent/onyx-database/src/main/java/com/onyx/interactors/encryption/data/Base64.java'

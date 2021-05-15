@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="zstartup.TestDatabaseRecovery" tests="2" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:27:06" hostname="Tims-MBP" time="11.574">
-  <properties/>
-  <testcase name="aTestDatabaseRecovery" classname="zstartup.TestDatabaseRecovery" time="8.199"/>
-  <testcase name="bTestDatabaseApplyTransactions" classname="zstartup.TestDatabaseRecovery" time="3.369"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

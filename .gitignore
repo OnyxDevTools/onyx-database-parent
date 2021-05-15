@@ -1,4 +1,5 @@
 */target/**
+*/build/**
 */C:**
 */onx:**
 */hs*.log
@@ -10,10 +11,13 @@ onyx-database-tests/C:/
 **/dependency-reduced-pom.xml
 *.oxd
 gradle.properties
+/build
 /*/target
+/*/build
 /*/*/target
+/*/*/build
 /*/*/*/target
-
+/*/*/*/build
 .DS_Store
 */.DS_Store
 /onyx-database/nbproject/
