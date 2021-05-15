@@ -1,0 +1,14 @@
+com/onyxdevtools/persist/BatchDeletingDataExample.java
+ com.onyxdevtools.persist.BatchDeletingDataExample
+com/onyxdevtools/persist/entities/RandomNumber.java
+ com.onyxdevtools.persist.entities.RandomNumber
+com/onyxdevtools/persist/BatchSavingDataExample.java
+ com.onyxdevtools.persist.BatchSavingDataExample
+com/onyxdevtools/persist/entities/Person.java
+ com.onyxdevtools.persist.entities.Person
+com/onyxdevtools/persist/Main.java
+ com.onyxdevtools.persist.Main
+com/onyxdevtools/persist/SavingAnEntityExample.java
+ com.onyxdevtools.persist.SavingAnEntityExample
+com/onyxdevtools/persist/DeletingAnEntityExample.java
+ com.onyxdevtools.persist.DeletingAnEntityExample

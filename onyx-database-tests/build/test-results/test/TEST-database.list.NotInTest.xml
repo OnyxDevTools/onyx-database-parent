@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.NotInTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:20" hostname="Tims-MBP" time="0.108">
+  <properties/>
+  <testcase name="testNotInString[0]" classname="database.list.NotInTest" time="0.009"/>
+  <testcase name="testNumberNotIn[0]" classname="database.list.NotInTest" time="0.003"/>
+  <testcase name="testDateNotIn[0]" classname="database.list.NotInTest" time="0.004"/>
+  <testcase name="testDoubleNotIn[0]" classname="database.list.NotInTest" time="0.003"/>
+  <testcase name="testNotInString[1]" classname="database.list.NotInTest" time="0.009"/>
+  <testcase name="testNumberNotIn[1]" classname="database.list.NotInTest" time="0.011"/>
+  <testcase name="testDateNotIn[1]" classname="database.list.NotInTest" time="0.009"/>
+  <testcase name="testDoubleNotIn[1]" classname="database.list.NotInTest" time="0.008"/>
+  <testcase name="testNotInString[2]" classname="database.list.NotInTest" time="0.015"/>
+  <testcase name="testNumberNotIn[2]" classname="database.list.NotInTest" time="0.01"/>
+  <testcase name="testDateNotIn[2]" classname="database.list.NotInTest" time="0.013"/>
+  <testcase name="testDoubleNotIn[2]" classname="database.list.NotInTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

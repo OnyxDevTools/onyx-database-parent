@@ -1,0 +1,18 @@
+com/onyxdevtools/modelUpdate/after/ManualMigrationDemo.java
+ com.onyxdevtools.modelUpdate.after.ManualMigrationDemo
+com/onyxdevtools/modelUpdate/entities/Account.java
+ com.onyxdevtools.modelUpdate.entities.Account
+com/onyxdevtools/modelUpdate/after/UpdateIdentifierDemo.java
+ com.onyxdevtools.modelUpdate.after.UpdateIdentifierDemo
+com/onyxdevtools/modelUpdate/after/Main.java
+ com.onyxdevtools.modelUpdate.after.Main
+com/onyxdevtools/modelUpdate/entities/Payment.java
+ com.onyxdevtools.modelUpdate.entities.Payment
+com/onyxdevtools/modelUpdate/after/UpdateIndexDemo.java
+ com.onyxdevtools.modelUpdate.after.UpdateIndexDemo
+com/onyxdevtools/modelUpdate/entities/Invoice.java
+ com.onyxdevtools.modelUpdate.entities.Invoice
+com/onyxdevtools/modelUpdate/after/UpdateRelationshipDemo.java
+ com.onyxdevtools.modelUpdate.after.UpdateRelationshipDemo
+com/onyxdevtools/modelUpdate/after/UpdateFieldDemo.java
+ com.onyxdevtools.modelUpdate.after.UpdateFieldDemo

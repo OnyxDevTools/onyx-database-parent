@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.LessThanEqualTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:19" hostname="Tims-MBP" time="0.314">
+  <properties/>
+  <testcase name="testDoubleLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.009"/>
+  <testcase name="testPrimitiveLongLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.004"/>
+  <testcase name="testIntegerLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.008"/>
+  <testcase name="testLongLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.004"/>
+  <testcase name="testPrimitiveIntegerLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.003"/>
+  <testcase name="testStringStringLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.002"/>
+  <testcase name="testStringIDLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.003"/>
+  <testcase name="testPrimitiveDoubleLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.003"/>
+  <testcase name="testDateLessThanEqual[0]" classname="database.list.LessThanEqualTest" time="0.006"/>
+  <testcase name="testDoubleLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.014"/>
+  <testcase name="testPrimitiveLongLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.009"/>
+  <testcase name="testIntegerLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.012"/>
+  <testcase name="testLongLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.01"/>
+  <testcase name="testPrimitiveIntegerLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.017"/>
+  <testcase name="testStringStringLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.014"/>
+  <testcase name="testStringIDLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.032"/>
+  <testcase name="testPrimitiveDoubleLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.009"/>
+  <testcase name="testDateLessThanEqual[1]" classname="database.list.LessThanEqualTest" time="0.014"/>
+  <testcase name="testDoubleLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.021"/>
+  <testcase name="testPrimitiveLongLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.015"/>
+  <testcase name="testIntegerLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.024"/>
+  <testcase name="testLongLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.011"/>
+  <testcase name="testPrimitiveIntegerLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.009"/>
+  <testcase name="testStringStringLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.009"/>
+  <testcase name="testStringIDLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.01"/>
+  <testcase name="testPrimitiveDoubleLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.01"/>
+  <testcase name="testDateLessThanEqual[2]" classname="database.list.LessThanEqualTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

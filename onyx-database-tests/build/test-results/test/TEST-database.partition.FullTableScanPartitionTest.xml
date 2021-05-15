@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.partition.FullTableScanPartitionTest" tests="33" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:29" hostname="Tims-MBP" time="0.414">
+  <properties/>
+  <testcase name="aTestSavePartitionEntityWithIndex[0]" classname="database.partition.FullTableScanPartitionTest" time="0.005"/>
+  <testcase name="bTestDeleteQueryPartitionEntityWithIndex[0]" classname="database.partition.FullTableScanPartitionTest" time="0.012"/>
+  <testcase name="bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[0]" classname="database.partition.FullTableScanPartitionTest" time="0.003"/>
+  <testcase name="bTestQueryPartitionEntityWithIndex[0]" classname="database.partition.FullTableScanPartitionTest" time="0.003"/>
+  <testcase name="bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[0]" classname="database.partition.FullTableScanPartitionTest" time="0.004"/>
+  <testcase name="bTestUpdatePartitionField[0]" classname="database.partition.FullTableScanPartitionTest" time="0.006"/>
+  <testcase name="bTestUpdateQueryPartitionEntityWithIndex[0]" classname="database.partition.FullTableScanPartitionTest" time="0.009"/>
+  <testcase name="bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[0]" classname="database.partition.FullTableScanPartitionTest" time="0.005"/>
+  <testcase name="cTestQueryFindQueryPartitionEntityWithIndex[0]" classname="database.partition.FullTableScanPartitionTest" time="0.006"/>
+  <testcase name="dTestDeleteQueryPartitionEntity[0]" classname="database.partition.FullTableScanPartitionTest" time="0.003"/>
+  <testcase name="dTestUpdateQueryPartitionEntity[0]" classname="database.partition.FullTableScanPartitionTest" time="0.002"/>
+  <testcase name="aTestSavePartitionEntityWithIndex[1]" classname="database.partition.FullTableScanPartitionTest" time="0.019"/>
+  <testcase name="bTestDeleteQueryPartitionEntityWithIndex[1]" classname="database.partition.FullTableScanPartitionTest" time="0.015"/>
+  <testcase name="bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[1]" classname="database.partition.FullTableScanPartitionTest" time="0.015"/>
+  <testcase name="bTestQueryPartitionEntityWithIndex[1]" classname="database.partition.FullTableScanPartitionTest" time="0.015"/>
+  <testcase name="bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[1]" classname="database.partition.FullTableScanPartitionTest" time="0.014"/>
+  <testcase name="bTestUpdatePartitionField[1]" classname="database.partition.FullTableScanPartitionTest" time="0.029"/>
+  <testcase name="bTestUpdateQueryPartitionEntityWithIndex[1]" classname="database.partition.FullTableScanPartitionTest" time="0.018"/>
+  <testcase name="bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[1]" classname="database.partition.FullTableScanPartitionTest" time="0.014"/>
+  <testcase name="cTestQueryFindQueryPartitionEntityWithIndex[1]" classname="database.partition.FullTableScanPartitionTest" time="0.019"/>
+  <testcase name="dTestDeleteQueryPartitionEntity[1]" classname="database.partition.FullTableScanPartitionTest" time="0.025"/>
+  <testcase name="dTestUpdateQueryPartitionEntity[1]" classname="database.partition.FullTableScanPartitionTest" time="0.025"/>
+  <testcase name="aTestSavePartitionEntityWithIndex[2]" classname="database.partition.FullTableScanPartitionTest" time="0.027"/>
+  <testcase name="bTestDeleteQueryPartitionEntityWithIndex[2]" classname="database.partition.FullTableScanPartitionTest" time="0.008"/>
+  <testcase name="bTestDeleteQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[2]" classname="database.partition.FullTableScanPartitionTest" time="0.006"/>
+  <testcase name="bTestQueryPartitionEntityWithIndex[2]" classname="database.partition.FullTableScanPartitionTest" time="0.011"/>
+  <testcase name="bTestQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[2]" classname="database.partition.FullTableScanPartitionTest" time="0.007"/>
+  <testcase name="bTestUpdatePartitionField[2]" classname="database.partition.FullTableScanPartitionTest" time="0.013"/>
+  <testcase name="bTestUpdateQueryPartitionEntityWithIndex[2]" classname="database.partition.FullTableScanPartitionTest" time="0.019"/>
+  <testcase name="bTestUpdateQueryPartitionEntityWithIndexNoDefinedPartitionInQuery[2]" classname="database.partition.FullTableScanPartitionTest" time="0.01"/>
+  <testcase name="cTestQueryFindQueryPartitionEntityWithIndex[2]" classname="database.partition.FullTableScanPartitionTest" time="0.007"/>
+  <testcase name="dTestDeleteQueryPartitionEntity[2]" classname="database.partition.FullTableScanPartitionTest" time="0.006"/>
+  <testcase name="dTestUpdateQueryPartitionEntity[2]" classname="database.partition.FullTableScanPartitionTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

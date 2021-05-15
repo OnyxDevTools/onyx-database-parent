@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.save.StandardIdentifierConcurrencyTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:25:39" hostname="Tims-MBP" time="17.515">
+  <properties/>
+  <testcase name="aConcurrencyStandardPerformanceTest[0]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.173"/>
+  <testcase name="concurrencyStandardAllIntegrityTest[0]" classname="database.save.StandardIdentifierConcurrencyTest" time="2.237"/>
+  <testcase name="concurrencyStandardDeleteBatchIntegrityTest[0]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.63"/>
+  <testcase name="concurrencyStandardDeleteIntegrityTest[0]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.649"/>
+  <testcase name="concurrencyStandardSaveIntegrityTest[0]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.156"/>
+  <testcase name="concurrencyStandardSaveIntegrityTestWithBatching[0]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.368"/>
+  <testcase name="aConcurrencyStandardPerformanceTest[1]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.201"/>
+  <testcase name="concurrencyStandardAllIntegrityTest[1]" classname="database.save.StandardIdentifierConcurrencyTest" time="2.365"/>
+  <testcase name="concurrencyStandardDeleteBatchIntegrityTest[1]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.974"/>
+  <testcase name="concurrencyStandardDeleteIntegrityTest[1]" classname="database.save.StandardIdentifierConcurrencyTest" time="1.16"/>
+  <testcase name="concurrencyStandardSaveIntegrityTest[1]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.301"/>
+  <testcase name="concurrencyStandardSaveIntegrityTestWithBatching[1]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.527"/>
+  <testcase name="aConcurrencyStandardPerformanceTest[2]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.177"/>
+  <testcase name="concurrencyStandardAllIntegrityTest[2]" classname="database.save.StandardIdentifierConcurrencyTest" time="3.196"/>
+  <testcase name="concurrencyStandardDeleteBatchIntegrityTest[2]" classname="database.save.StandardIdentifierConcurrencyTest" time="1.254"/>
+  <testcase name="concurrencyStandardDeleteIntegrityTest[2]" classname="database.save.StandardIdentifierConcurrencyTest" time="1.801"/>
+  <testcase name="concurrencyStandardSaveIntegrityTest[2]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.729"/>
+  <testcase name="concurrencyStandardSaveIntegrityTestWithBatching[2]" classname="database.save.StandardIdentifierConcurrencyTest" time="0.556"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

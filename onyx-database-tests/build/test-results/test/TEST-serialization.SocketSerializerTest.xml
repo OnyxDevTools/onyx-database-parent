@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="serialization.SocketSerializerTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:26:06" hostname="Tims-MBP" time="0.016">
+  <properties/>
+  <testcase name="testEnum" classname="serialization.SocketSerializerTest" time="0.004"/>
+  <testcase name="testListObject" classname="serialization.SocketSerializerTest" time="0.006"/>
+  <testcase name="testArrayObject" classname="serialization.SocketSerializerTest" time="0.001"/>
+  <testcase name="testMapSerialization" classname="serialization.SocketSerializerTest" time="0.002"/>
+  <testcase name="testAllValues" classname="serialization.SocketSerializerTest" time="0.001"/>
+  <testcase name="testComplexObject" classname="serialization.SocketSerializerTest" time="0.001"/>
+  <testcase name="testSimple" classname="serialization.SocketSerializerTest" time="0.0"/>
+  <testcase name="testTransient" classname="serialization.SocketSerializerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

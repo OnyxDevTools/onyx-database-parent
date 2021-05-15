@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.exceptions.TestRelationshipExceptions" tests="15" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:23:48" hostname="Tims-MBP" time="0.292">
+  <properties/>
+  <testcase name="testInvalidType[0]" classname="database.exceptions.TestRelationshipExceptions" time="0.008"/>
+  <testcase name="testInvalidTypeInverse[0]" classname="database.exceptions.TestRelationshipExceptions" time="0.008"/>
+  <testcase name="testInvalidInverse[0]" classname="database.exceptions.TestRelationshipExceptions" time="0.01"/>
+  <testcase name="testRelationshipNotFound[0]" classname="database.exceptions.TestRelationshipExceptions" time="0.084"/>
+  <testcase name="testInvalidTypeInverseNoMatch[0]" classname="database.exceptions.TestRelationshipExceptions" time="0.009"/>
+  <testcase name="testInvalidType[1]" classname="database.exceptions.TestRelationshipExceptions" time="0.017"/>
+  <testcase name="testInvalidTypeInverse[1]" classname="database.exceptions.TestRelationshipExceptions" time="0.018"/>
+  <testcase name="testInvalidInverse[1]" classname="database.exceptions.TestRelationshipExceptions" time="0.012"/>
+  <testcase name="testRelationshipNotFound[1]" classname="database.exceptions.TestRelationshipExceptions" time="0.011"/>
+  <testcase name="testInvalidTypeInverseNoMatch[1]" classname="database.exceptions.TestRelationshipExceptions" time="0.022"/>
+  <testcase name="testInvalidType[2]" classname="database.exceptions.TestRelationshipExceptions" time="0.02"/>
+  <testcase name="testInvalidTypeInverse[2]" classname="database.exceptions.TestRelationshipExceptions" time="0.011"/>
+  <testcase name="testInvalidInverse[2]" classname="database.exceptions.TestRelationshipExceptions" time="0.009"/>
+  <testcase name="testRelationshipNotFound[2]" classname="database.exceptions.TestRelationshipExceptions" time="0.022"/>
+  <testcase name="testInvalidTypeInverseNoMatch[2]" classname="database.exceptions.TestRelationshipExceptions" time="0.023"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

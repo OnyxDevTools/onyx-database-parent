@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.GreaterThanTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:18" hostname="Tims-MBP" time="0.473">
+  <properties/>
+  <testcase name="testPrimitiveIntegerGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.015"/>
+  <testcase name="testIntegerGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.005"/>
+  <testcase name="testStringStringGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.01"/>
+  <testcase name="testDoubleGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.005"/>
+  <testcase name="testPrimitiveLongGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.004"/>
+  <testcase name="testStringIDGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.008"/>
+  <testcase name="testLongGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.005"/>
+  <testcase name="testDateGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.007"/>
+  <testcase name="testPrimitiveDoubleGreaterThan[0]" classname="database.list.GreaterThanTest" time="0.008"/>
+  <testcase name="testPrimitiveIntegerGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.04"/>
+  <testcase name="testIntegerGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.019"/>
+  <testcase name="testStringStringGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.02"/>
+  <testcase name="testDoubleGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.024"/>
+  <testcase name="testPrimitiveLongGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.021"/>
+  <testcase name="testStringIDGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.023"/>
+  <testcase name="testLongGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.02"/>
+  <testcase name="testDateGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.017"/>
+  <testcase name="testPrimitiveDoubleGreaterThan[1]" classname="database.list.GreaterThanTest" time="0.042"/>
+  <testcase name="testPrimitiveIntegerGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.039"/>
+  <testcase name="testIntegerGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.019"/>
+  <testcase name="testStringStringGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.017"/>
+  <testcase name="testDoubleGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.01"/>
+  <testcase name="testPrimitiveLongGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.016"/>
+  <testcase name="testStringIDGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.017"/>
+  <testcase name="testLongGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.011"/>
+  <testcase name="testDateGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.019"/>
+  <testcase name="testPrimitiveDoubleGreaterThan[2]" classname="database.list.GreaterThanTest" time="0.015"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

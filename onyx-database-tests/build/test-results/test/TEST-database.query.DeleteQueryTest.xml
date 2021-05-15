@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.DeleteQueryTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:25:39" hostname="Tims-MBP" time="0.091">
+  <properties/>
+  <testcase name="testExecuteDeleteRangeQuery[0]" classname="database.query.DeleteQueryTest" time="0.013"/>
+  <testcase name="testExecuteDeleteQuery[0]" classname="database.query.DeleteQueryTest" time="0.003"/>
+  <testcase name="testCascadeRelationship[0]" classname="database.query.DeleteQueryTest" time="0.004"/>
+  <testcase name="testExecuteDeleteRangeQuery[1]" classname="database.query.DeleteQueryTest" time="0.015"/>
+  <testcase name="testExecuteDeleteQuery[1]" classname="database.query.DeleteQueryTest" time="0.012"/>
+  <testcase name="testCascadeRelationship[1]" classname="database.query.DeleteQueryTest" time="0.011"/>
+  <testcase name="testExecuteDeleteRangeQuery[2]" classname="database.query.DeleteQueryTest" time="0.009"/>
+  <testcase name="testExecuteDeleteQuery[2]" classname="database.query.DeleteQueryTest" time="0.011"/>
+  <testcase name="testCascadeRelationship[2]" classname="database.query.DeleteQueryTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

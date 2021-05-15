@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.exceptions.TestCallbackException" tests="3" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:23:49" hostname="Tims-MBP" time="0.08">
+  <properties/>
+  <testcase name="testPersistCallbackException[0]" classname="database.exceptions.TestCallbackException" time="0.023"/>
+  <testcase name="testPersistCallbackException[1]" classname="database.exceptions.TestCallbackException" time="0.047"/>
+  <testcase name="testPersistCallbackException[2]" classname="database.exceptions.TestCallbackException" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

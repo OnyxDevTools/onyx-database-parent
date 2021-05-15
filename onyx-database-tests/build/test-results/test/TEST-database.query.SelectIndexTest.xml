@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.SelectIndexTest" tests="33" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:31" hostname="Tims-MBP" time="0.418">
+  <properties/>
+  <testcase name="testIdentifierOrCriteriaWithNot[0]" classname="database.query.SelectIndexTest" time="0.004"/>
+  <testcase name="testIdentifierAndCriteriaWithNotGroup[0]" classname="database.query.SelectIndexTest" time="0.002"/>
+  <testcase name="testIdentifierCompoundCriteria[0]" classname="database.query.SelectIndexTest" time="0.015"/>
+  <testcase name="testMixMatchOfCriteriaIncludeFull[0]" classname="database.query.SelectIndexTest" time="0.035"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNot[0]" classname="database.query.SelectIndexTest" time="0.011"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNotFullScan[0]" classname="database.query.SelectIndexTest" time="0.004"/>
+  <testcase name="testMixMatchOfCriteria[0]" classname="database.query.SelectIndexTest" time="0.016"/>
+  <testcase name="testIdentifierOrCriteria[0]" classname="database.query.SelectIndexTest" time="0.005"/>
+  <testcase name="testIdentifierOrCriteriaWithNotGroup[0]" classname="database.query.SelectIndexTest" time="0.002"/>
+  <testcase name="testIdentifierAndCriteriaWithNot[0]" classname="database.query.SelectIndexTest" time="0.003"/>
+  <testcase name="testIdentifierAndCriteria[0]" classname="database.query.SelectIndexTest" time="0.028"/>
+  <testcase name="testIdentifierOrCriteriaWithNot[1]" classname="database.query.SelectIndexTest" time="0.042"/>
+  <testcase name="testIdentifierAndCriteriaWithNotGroup[1]" classname="database.query.SelectIndexTest" time="0.03"/>
+  <testcase name="testIdentifierCompoundCriteria[1]" classname="database.query.SelectIndexTest" time="0.013"/>
+  <testcase name="testMixMatchOfCriteriaIncludeFull[1]" classname="database.query.SelectIndexTest" time="0.013"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNot[1]" classname="database.query.SelectIndexTest" time="0.01"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNotFullScan[1]" classname="database.query.SelectIndexTest" time="0.011"/>
+  <testcase name="testMixMatchOfCriteria[1]" classname="database.query.SelectIndexTest" time="0.009"/>
+  <testcase name="testIdentifierOrCriteria[1]" classname="database.query.SelectIndexTest" time="0.009"/>
+  <testcase name="testIdentifierOrCriteriaWithNotGroup[1]" classname="database.query.SelectIndexTest" time="0.009"/>
+  <testcase name="testIdentifierAndCriteriaWithNot[1]" classname="database.query.SelectIndexTest" time="0.01"/>
+  <testcase name="testIdentifierAndCriteria[1]" classname="database.query.SelectIndexTest" time="0.011"/>
+  <testcase name="testIdentifierOrCriteriaWithNot[2]" classname="database.query.SelectIndexTest" time="0.03"/>
+  <testcase name="testIdentifierAndCriteriaWithNotGroup[2]" classname="database.query.SelectIndexTest" time="0.009"/>
+  <testcase name="testIdentifierCompoundCriteria[2]" classname="database.query.SelectIndexTest" time="0.008"/>
+  <testcase name="testMixMatchOfCriteriaIncludeFull[2]" classname="database.query.SelectIndexTest" time="0.012"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNot[2]" classname="database.query.SelectIndexTest" time="0.01"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNotFullScan[2]" classname="database.query.SelectIndexTest" time="0.008"/>
+  <testcase name="testMixMatchOfCriteria[2]" classname="database.query.SelectIndexTest" time="0.007"/>
+  <testcase name="testIdentifierOrCriteria[2]" classname="database.query.SelectIndexTest" time="0.008"/>
+  <testcase name="testIdentifierOrCriteriaWithNotGroup[2]" classname="database.query.SelectIndexTest" time="0.008"/>
+  <testcase name="testIdentifierAndCriteriaWithNot[2]" classname="database.query.SelectIndexTest" time="0.01"/>
+  <testcase name="testIdentifierAndCriteria[2]" classname="database.query.SelectIndexTest" time="0.008"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

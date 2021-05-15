@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.index.delete.DeleteStandardIndexTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:27" hostname="Tims-MBP" time="0.148">
+  <properties/>
+  <testcase name="testDeleteRight[0]" classname="database.index.delete.DeleteStandardIndexTest" time="0.006"/>
+  <testcase name="testDeleteEntity[0]" classname="database.index.delete.DeleteStandardIndexTest" time="0.003"/>
+  <testcase name="testDeleteHashAndReSave[0]" classname="database.index.delete.DeleteStandardIndexTest" time="0.002"/>
+  <testcase name="testDeleteParent[0]" classname="database.index.delete.DeleteStandardIndexTest" time="0.002"/>
+  <testcase name="testDeleteLeft[0]" classname="database.index.delete.DeleteStandardIndexTest" time="0.009"/>
+  <testcase name="testDeleteRoot[0]" classname="database.index.delete.DeleteStandardIndexTest" time="0.002"/>
+  <testcase name="testDeleteRight[1]" classname="database.index.delete.DeleteStandardIndexTest" time="0.011"/>
+  <testcase name="testDeleteEntity[1]" classname="database.index.delete.DeleteStandardIndexTest" time="0.01"/>
+  <testcase name="testDeleteHashAndReSave[1]" classname="database.index.delete.DeleteStandardIndexTest" time="0.01"/>
+  <testcase name="testDeleteParent[1]" classname="database.index.delete.DeleteStandardIndexTest" time="0.009"/>
+  <testcase name="testDeleteLeft[1]" classname="database.index.delete.DeleteStandardIndexTest" time="0.015"/>
+  <testcase name="testDeleteRoot[1]" classname="database.index.delete.DeleteStandardIndexTest" time="0.01"/>
+  <testcase name="testDeleteRight[2]" classname="database.index.delete.DeleteStandardIndexTest" time="0.017"/>
+  <testcase name="testDeleteEntity[2]" classname="database.index.delete.DeleteStandardIndexTest" time="0.008"/>
+  <testcase name="testDeleteHashAndReSave[2]" classname="database.index.delete.DeleteStandardIndexTest" time="0.006"/>
+  <testcase name="testDeleteParent[2]" classname="database.index.delete.DeleteStandardIndexTest" time="0.008"/>
+  <testcase name="testDeleteLeft[2]" classname="database.index.delete.DeleteStandardIndexTest" time="0.007"/>
+  <testcase name="testDeleteRoot[2]" classname="database.index.delete.DeleteStandardIndexTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

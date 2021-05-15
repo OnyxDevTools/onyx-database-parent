@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.EqualsTest" tests="39" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:20" hostname="Tims-MBP" time="0.327">
+  <properties/>
+  <testcase name="testBooleanEquals[0]" classname="database.list.EqualsTest" time="0.005"/>
+  <testcase name="testByteEquals[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testCharEquals[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testDateEquals[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testDoubleEquals[0]" classname="database.list.EqualsTest" time="0.002"/>
+  <testcase name="testEntityEquals[0]" classname="database.list.EqualsTest" time="0.005"/>
+  <testcase name="testEnumEquals[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testEqualsStringId[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testFloatEquals[0]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testIntegerEquals[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testNumberEquals[0]" classname="database.list.EqualsTest" time="0.004"/>
+  <testcase name="testShortEquals[0]" classname="database.list.EqualsTest" time="0.004"/>
+  <testcase name="testStringEquals[0]" classname="database.list.EqualsTest" time="0.003"/>
+  <testcase name="testBooleanEquals[1]" classname="database.list.EqualsTest" time="0.011"/>
+  <testcase name="testByteEquals[1]" classname="database.list.EqualsTest" time="0.011"/>
+  <testcase name="testCharEquals[1]" classname="database.list.EqualsTest" time="0.012"/>
+  <testcase name="testDateEquals[1]" classname="database.list.EqualsTest" time="0.008"/>
+  <testcase name="testDoubleEquals[1]" classname="database.list.EqualsTest" time="0.01"/>
+  <testcase name="testEntityEquals[1]" classname="database.list.EqualsTest" time="0.01"/>
+  <testcase name="testEnumEquals[1]" classname="database.list.EqualsTest" time="0.008"/>
+  <testcase name="testEqualsStringId[1]" classname="database.list.EqualsTest" time="0.01"/>
+  <testcase name="testFloatEquals[1]" classname="database.list.EqualsTest" time="0.011"/>
+  <testcase name="testIntegerEquals[1]" classname="database.list.EqualsTest" time="0.01"/>
+  <testcase name="testNumberEquals[1]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testShortEquals[1]" classname="database.list.EqualsTest" time="0.012"/>
+  <testcase name="testStringEquals[1]" classname="database.list.EqualsTest" time="0.014"/>
+  <testcase name="testBooleanEquals[2]" classname="database.list.EqualsTest" time="0.013"/>
+  <testcase name="testByteEquals[2]" classname="database.list.EqualsTest" time="0.011"/>
+  <testcase name="testCharEquals[2]" classname="database.list.EqualsTest" time="0.014"/>
+  <testcase name="testDateEquals[2]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testDoubleEquals[2]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testEntityEquals[2]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testEnumEquals[2]" classname="database.list.EqualsTest" time="0.008"/>
+  <testcase name="testEqualsStringId[2]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testFloatEquals[2]" classname="database.list.EqualsTest" time="0.01"/>
+  <testcase name="testIntegerEquals[2]" classname="database.list.EqualsTest" time="0.01"/>
+  <testcase name="testNumberEquals[2]" classname="database.list.EqualsTest" time="0.011"/>
+  <testcase name="testShortEquals[2]" classname="database.list.EqualsTest" time="0.009"/>
+  <testcase name="testStringEquals[2]" classname="database.list.EqualsTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

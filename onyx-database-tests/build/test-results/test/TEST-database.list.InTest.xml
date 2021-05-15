@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.InTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:18" hostname="Tims-MBP" time="0.219">
+  <properties/>
+  <testcase name="testNumberIn[0]" classname="database.list.InTest" time="0.007"/>
+  <testcase name="testInEquals[0]" classname="database.list.InTest" time="0.004"/>
+  <testcase name="testInString[0]" classname="database.list.InTest" time="0.003"/>
+  <testcase name="testDateIn[0]" classname="database.list.InTest" time="0.004"/>
+  <testcase name="testDoubleIn[0]" classname="database.list.InTest" time="0.002"/>
+  <testcase name="testNumberIn[1]" classname="database.list.InTest" time="0.013"/>
+  <testcase name="testInEquals[1]" classname="database.list.InTest" time="0.01"/>
+  <testcase name="testInString[1]" classname="database.list.InTest" time="0.016"/>
+  <testcase name="testDateIn[1]" classname="database.list.InTest" time="0.011"/>
+  <testcase name="testDoubleIn[1]" classname="database.list.InTest" time="0.009"/>
+  <testcase name="testNumberIn[2]" classname="database.list.InTest" time="0.02"/>
+  <testcase name="testInEquals[2]" classname="database.list.InTest" time="0.02"/>
+  <testcase name="testInString[2]" classname="database.list.InTest" time="0.022"/>
+  <testcase name="testDateIn[2]" classname="database.list.InTest" time="0.046"/>
+  <testcase name="testDoubleIn[2]" classname="database.list.InTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

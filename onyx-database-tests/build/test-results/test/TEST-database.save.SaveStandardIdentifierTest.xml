@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.save.SaveStandardIdentifierTest" tests="45" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:25:39" hostname="Tims-MBP" time="0.401">
+  <properties/>
+  <testcase name="aTestSaveStringHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.008"/>
+  <testcase name="bTestUpdateStringHashIndex2[0]" classname="database.save.SaveStandardIdentifierTest" time="0.002"/>
+  <testcase name="cTestSaveStringHashIndex2[0]" classname="database.save.SaveStandardIdentifierTest" time="0.002"/>
+  <testcase name="dTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.002"/>
+  <testcase name="eTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.001"/>
+  <testcase name="fTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.001"/>
+  <testcase name="gTestUpdateIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.007"/>
+  <testcase name="hTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.004"/>
+  <testcase name="iTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.009"/>
+  <testcase name="jTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.005"/>
+  <testcase name="kTestUpdateIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.004"/>
+  <testcase name="lTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.003"/>
+  <testcase name="mTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.001"/>
+  <testcase name="nTestSaveIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.002"/>
+  <testcase name="oTestUpdateIntegerHashIndex[0]" classname="database.save.SaveStandardIdentifierTest" time="0.009"/>
+  <testcase name="aTestSaveStringHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.025"/>
+  <testcase name="bTestUpdateStringHashIndex2[1]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="cTestSaveStringHashIndex2[1]" classname="database.save.SaveStandardIdentifierTest" time="0.011"/>
+  <testcase name="dTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.013"/>
+  <testcase name="eTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.014"/>
+  <testcase name="fTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.011"/>
+  <testcase name="gTestUpdateIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.01"/>
+  <testcase name="hTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="iTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="jTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.017"/>
+  <testcase name="kTestUpdateIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="lTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.013"/>
+  <testcase name="mTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="nTestSaveIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="oTestUpdateIntegerHashIndex[1]" classname="database.save.SaveStandardIdentifierTest" time="0.011"/>
+  <testcase name="aTestSaveStringHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.009"/>
+  <testcase name="bTestUpdateStringHashIndex2[2]" classname="database.save.SaveStandardIdentifierTest" time="0.011"/>
+  <testcase name="cTestSaveStringHashIndex2[2]" classname="database.save.SaveStandardIdentifierTest" time="0.008"/>
+  <testcase name="dTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.005"/>
+  <testcase name="eTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.007"/>
+  <testcase name="fTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.006"/>
+  <testcase name="gTestUpdateIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.008"/>
+  <testcase name="hTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.005"/>
+  <testcase name="iTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.009"/>
+  <testcase name="jTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.006"/>
+  <testcase name="kTestUpdateIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.009"/>
+  <testcase name="lTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.007"/>
+  <testcase name="mTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.012"/>
+  <testcase name="nTestSaveIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.015"/>
+  <testcase name="oTestUpdateIntegerHashIndex[2]" classname="database.save.SaveStandardIdentifierTest" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

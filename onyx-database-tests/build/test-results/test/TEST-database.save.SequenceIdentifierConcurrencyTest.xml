@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.save.SequenceIdentifierConcurrencyTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:25:57" hostname="Tims-MBP" time="8.67">
+  <properties/>
+  <testcase name="aConcurrencySequencePerformanceTest[0]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.106"/>
+  <testcase name="concurrencySequenceAllIntegrityTest[0]" classname="database.save.SequenceIdentifierConcurrencyTest" time="1.269"/>
+  <testcase name="concurrencySequenceDeleteBatchIntegrityTest[0]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.428"/>
+  <testcase name="concurrencySequenceDeleteIntegrityTest[0]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.491"/>
+  <testcase name="concurrencySequenceSaveIntegrityTest[0]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.107"/>
+  <testcase name="concurrencySequenceSaveIntegrityTestWithBatching[0]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.229"/>
+  <testcase name="aConcurrencySequencePerformanceTest[1]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.107"/>
+  <testcase name="concurrencySequenceAllIntegrityTest[1]" classname="database.save.SequenceIdentifierConcurrencyTest" time="1.272"/>
+  <testcase name="concurrencySequenceDeleteBatchIntegrityTest[1]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.409"/>
+  <testcase name="concurrencySequenceDeleteIntegrityTest[1]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.642"/>
+  <testcase name="concurrencySequenceSaveIntegrityTest[1]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.186"/>
+  <testcase name="concurrencySequenceSaveIntegrityTestWithBatching[1]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.214"/>
+  <testcase name="aConcurrencySequencePerformanceTest[2]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.108"/>
+  <testcase name="concurrencySequenceAllIntegrityTest[2]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.688"/>
+  <testcase name="concurrencySequenceDeleteBatchIntegrityTest[2]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.316"/>
+  <testcase name="concurrencySequenceDeleteIntegrityTest[2]" classname="database.save.SequenceIdentifierConcurrencyTest" time="1.134"/>
+  <testcase name="concurrencySequenceSaveIntegrityTest[2]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.574"/>
+  <testcase name="concurrencySequenceSaveIntegrityTestWithBatching[2]" classname="database.save.SequenceIdentifierConcurrencyTest" time="0.351"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

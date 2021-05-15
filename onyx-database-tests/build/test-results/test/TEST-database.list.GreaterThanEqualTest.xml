@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.GreaterThanEqualTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:20" hostname="Tims-MBP" time="0.228">
+  <properties/>
+  <testcase name="testPrimitiveDoubleGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.005"/>
+  <testcase name="testDateGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.004"/>
+  <testcase name="testStringStringGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.003"/>
+  <testcase name="testDoubleGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.002"/>
+  <testcase name="testLongGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.007"/>
+  <testcase name="testIntegerGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.003"/>
+  <testcase name="testPrimitiveLongGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.003"/>
+  <testcase name="testPrimitiveIntegerGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.002"/>
+  <testcase name="testStringIDGreaterThanEqual[0]" classname="database.list.GreaterThanEqualTest" time="0.002"/>
+  <testcase name="testPrimitiveDoubleGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.013"/>
+  <testcase name="testDateGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.012"/>
+  <testcase name="testStringStringGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.01"/>
+  <testcase name="testDoubleGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.008"/>
+  <testcase name="testLongGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.008"/>
+  <testcase name="testIntegerGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.011"/>
+  <testcase name="testPrimitiveLongGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.009"/>
+  <testcase name="testPrimitiveIntegerGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.011"/>
+  <testcase name="testStringIDGreaterThanEqual[1]" classname="database.list.GreaterThanEqualTest" time="0.016"/>
+  <testcase name="testPrimitiveDoubleGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.015"/>
+  <testcase name="testDateGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.012"/>
+  <testcase name="testStringStringGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.008"/>
+  <testcase name="testDoubleGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.009"/>
+  <testcase name="testLongGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.008"/>
+  <testcase name="testIntegerGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.008"/>
+  <testcase name="testPrimitiveLongGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.01"/>
+  <testcase name="testPrimitiveIntegerGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.009"/>
+  <testcase name="testStringIDGreaterThanEqual[2]" classname="database.list.GreaterThanEqualTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

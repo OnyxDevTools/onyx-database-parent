@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.SelectPerformanceTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:32" hostname="Tims-MBP" time="65.975">
+  <properties/>
+  <testcase name="aTestNoResultsSingleFullTableScanFor100kRecords[0]" classname="database.query.SelectPerformanceTest" time="5.928"/>
+  <testcase name="bTestSortingResultsFullTableScanForRecords[0]" classname="database.query.SelectPerformanceTest" time="5.678"/>
+  <testcase name="cTestJoiningResultsForRecords[0]" classname="database.query.SelectPerformanceTest" time="5.651"/>
+  <testcase name="dTestGreaterThanOnIdValue[0]" classname="database.query.SelectPerformanceTest" time="5.641"/>
+  <testcase name="eTestLessThanOnIdValue[0]" classname="database.query.SelectPerformanceTest" time="5.557"/>
+  <testcase name="fTestLessThanOnIndexValue[0]" classname="database.query.SelectPerformanceTest" time="5.535"/>
+  <testcase name="gTestGreaterThanOnIdValue[0]" classname="database.query.SelectPerformanceTest" time="5.406"/>
+  <testcase name="hTestLessThanOnIndexValueCompound[0]" classname="database.query.SelectPerformanceTest" time="5.491"/>
+  <testcase name="iTestGreaterThanOnIdValueCompound[0]" classname="database.query.SelectPerformanceTest" time="5.489"/>
+  <testcase name="aTestNoResultsSingleFullTableScanFor100kRecords[1]" classname="database.query.SelectPerformanceTest" time="6.119"/>
+  <testcase name="bTestSortingResultsFullTableScanForRecords[1]" classname="database.query.SelectPerformanceTest" time="0.458"/>
+  <testcase name="cTestJoiningResultsForRecords[1]" classname="database.query.SelectPerformanceTest" time="0.417"/>
+  <testcase name="dTestGreaterThanOnIdValue[1]" classname="database.query.SelectPerformanceTest" time="0.019"/>
+  <testcase name="eTestLessThanOnIdValue[1]" classname="database.query.SelectPerformanceTest" time="0.043"/>
+  <testcase name="fTestLessThanOnIndexValue[1]" classname="database.query.SelectPerformanceTest" time="0.044"/>
+  <testcase name="gTestGreaterThanOnIdValue[1]" classname="database.query.SelectPerformanceTest" time="0.02"/>
+  <testcase name="hTestLessThanOnIndexValueCompound[1]" classname="database.query.SelectPerformanceTest" time="0.236"/>
+  <testcase name="iTestGreaterThanOnIdValueCompound[1]" classname="database.query.SelectPerformanceTest" time="0.246"/>
+  <testcase name="aTestNoResultsSingleFullTableScanFor100kRecords[2]" classname="database.query.SelectPerformanceTest" time="7.43"/>
+  <testcase name="bTestSortingResultsFullTableScanForRecords[2]" classname="database.query.SelectPerformanceTest" time="0.152"/>
+  <testcase name="cTestJoiningResultsForRecords[2]" classname="database.query.SelectPerformanceTest" time="0.162"/>
+  <testcase name="dTestGreaterThanOnIdValue[2]" classname="database.query.SelectPerformanceTest" time="0.013"/>
+  <testcase name="eTestLessThanOnIdValue[2]" classname="database.query.SelectPerformanceTest" time="0.015"/>
+  <testcase name="fTestLessThanOnIndexValue[2]" classname="database.query.SelectPerformanceTest" time="0.029"/>
+  <testcase name="gTestGreaterThanOnIdValue[2]" classname="database.query.SelectPerformanceTest" time="0.02"/>
+  <testcase name="hTestLessThanOnIndexValueCompound[2]" classname="database.query.SelectPerformanceTest" time="0.052"/>
+  <testcase name="iTestGreaterThanOnIdValueCompound[2]" classname="database.query.SelectPerformanceTest" time="0.038"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

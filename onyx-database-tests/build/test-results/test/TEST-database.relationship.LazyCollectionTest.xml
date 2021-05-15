@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.relationship.LazyCollectionTest" tests="24" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:17" hostname="Tims-MBP" time="0.211">
+  <properties/>
+  <testcase name="testAdd[0]" classname="database.relationship.LazyCollectionTest" time="0.005"/>
+  <testcase name="testClear[0]" classname="database.relationship.LazyCollectionTest" time="0.003"/>
+  <testcase name="testEmpty[0]" classname="database.relationship.LazyCollectionTest" time="0.002"/>
+  <testcase name="testExists[0]" classname="database.relationship.LazyCollectionTest" time="0.002"/>
+  <testcase name="testRemove[0]" classname="database.relationship.LazyCollectionTest" time="0.002"/>
+  <testcase name="testRemoveByObject[0]" classname="database.relationship.LazyCollectionTest" time="0.003"/>
+  <testcase name="testSet[0]" classname="database.relationship.LazyCollectionTest" time="0.003"/>
+  <testcase name="testSize[0]" classname="database.relationship.LazyCollectionTest" time="0.004"/>
+  <testcase name="testAdd[1]" classname="database.relationship.LazyCollectionTest" time="0.013"/>
+  <testcase name="testClear[1]" classname="database.relationship.LazyCollectionTest" time="0.012"/>
+  <testcase name="testEmpty[1]" classname="database.relationship.LazyCollectionTest" time="0.009"/>
+  <testcase name="testExists[1]" classname="database.relationship.LazyCollectionTest" time="0.011"/>
+  <testcase name="testRemove[1]" classname="database.relationship.LazyCollectionTest" time="0.01"/>
+  <testcase name="testRemoveByObject[1]" classname="database.relationship.LazyCollectionTest" time="0.015"/>
+  <testcase name="testSet[1]" classname="database.relationship.LazyCollectionTest" time="0.009"/>
+  <testcase name="testSize[1]" classname="database.relationship.LazyCollectionTest" time="0.01"/>
+  <testcase name="testAdd[2]" classname="database.relationship.LazyCollectionTest" time="0.01"/>
+  <testcase name="testClear[2]" classname="database.relationship.LazyCollectionTest" time="0.009"/>
+  <testcase name="testEmpty[2]" classname="database.relationship.LazyCollectionTest" time="0.011"/>
+  <testcase name="testExists[2]" classname="database.relationship.LazyCollectionTest" time="0.011"/>
+  <testcase name="testRemove[2]" classname="database.relationship.LazyCollectionTest" time="0.011"/>
+  <testcase name="testRemoveByObject[2]" classname="database.relationship.LazyCollectionTest" time="0.01"/>
+  <testcase name="testSet[2]" classname="database.relationship.LazyCollectionTest" time="0.009"/>
+  <testcase name="testSize[2]" classname="database.relationship.LazyCollectionTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

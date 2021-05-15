@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="diskmap.BasicMapTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:27:18" hostname="Tims-MBP" time="34.219">
+  <properties/>
+  <testcase name="updateTest" classname="diskmap.BasicMapTest" time="2.012"/>
+  <testcase name="putTest" classname="diskmap.BasicMapTest" time="0.003"/>
+  <testcase name="getTest" classname="diskmap.BasicMapTest" time="0.001"/>
+  <testcase name="testPushMultipleObjects" classname="diskmap.BasicMapTest" time="12.065"/>
+  <testcase name="testPushSingleObjects" classname="diskmap.BasicMapTest" time="5.58"/>
+  <testcase name="largeDataSetTest" classname="diskmap.BasicMapTest" time="14.016"/>
+  <testcase name="deleteRoot" classname="diskmap.BasicMapTest" time="0.26"/>
+  <testcase name="deleteTest" classname="diskmap.BasicMapTest" time="0.258"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

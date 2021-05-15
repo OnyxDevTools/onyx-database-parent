@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.list.FullTableScanTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:21" hostname="Tims-MBP" time="0.146">
+  <properties/>
+  <testcase name="testBasicAndSub[0]" classname="database.list.FullTableScanTest" time="0.004"/>
+  <testcase name="testBasicAndOr[0]" classname="database.list.FullTableScanTest" time="0.005"/>
+  <testcase name="testBasicOrSub[0]" classname="database.list.FullTableScanTest" time="0.003"/>
+  <testcase name="testBasicOrsSub[0]" classname="database.list.FullTableScanTest" time="0.002"/>
+  <testcase name="testBasicAnd[0]" classname="database.list.FullTableScanTest" time="0.009"/>
+  <testcase name="testBasicAndSub[1]" classname="database.list.FullTableScanTest" time="0.01"/>
+  <testcase name="testBasicAndOr[1]" classname="database.list.FullTableScanTest" time="0.01"/>
+  <testcase name="testBasicOrSub[1]" classname="database.list.FullTableScanTest" time="0.007"/>
+  <testcase name="testBasicOrsSub[1]" classname="database.list.FullTableScanTest" time="0.01"/>
+  <testcase name="testBasicAnd[1]" classname="database.list.FullTableScanTest" time="0.009"/>
+  <testcase name="testBasicAndSub[2]" classname="database.list.FullTableScanTest" time="0.017"/>
+  <testcase name="testBasicAndOr[2]" classname="database.list.FullTableScanTest" time="0.023"/>
+  <testcase name="testBasicOrSub[2]" classname="database.list.FullTableScanTest" time="0.016"/>
+  <testcase name="testBasicOrsSub[2]" classname="database.list.FullTableScanTest" time="0.01"/>
+  <testcase name="testBasicAnd[2]" classname="database.list.FullTableScanTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

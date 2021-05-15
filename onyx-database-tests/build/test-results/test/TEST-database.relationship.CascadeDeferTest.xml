@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.relationship.CascadeDeferTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:18" hostname="Tims-MBP" time="0.03">
+  <properties/>
+  <testcase name="testCascadeDefer[0]" classname="database.relationship.CascadeDeferTest" time="0.009"/>
+  <testcase name="testCascadeDefer[1]" classname="database.relationship.CascadeDeferTest" time="0.01"/>
+  <testcase name="testCascadeDefer[2]" classname="database.relationship.CascadeDeferTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

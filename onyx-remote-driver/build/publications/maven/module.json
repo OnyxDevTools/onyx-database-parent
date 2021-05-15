@@ -1,0 +1,127 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.onyxdevtools",
+    "module": "onyx-remote-driver",
+    "version": "2.2.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "7.0.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.localToProject": "public",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "onyx-remote-driver-2.2.0.jar",
+          "url": "onyx-remote-driver-2.2.0.jar",
+          "size": 91140,
+          "sha512": "5843397f83b47aa7cdcecd332b4900cca90e1003de7d3e41c008107c6e9e99dbdd3742507555e70632bf4eb7c6dc6845aa5e2943b506c8647d496b30463c01d1",
+          "sha256": "af0c52fa2d9c887d8b07a6de3ceeb2ba8ab188d514c5c0086c531558f3c7ca13",
+          "sha1": "bb9ae4a782b1f79539e81fe5912609fb73209e74",
+          "md5": "1b3430419d180b7eaa40d3736d8749ff"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.localToProject": "public",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "1.4.30"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-reflect",
+          "version": {
+            "requires": "1.4.30"
+          }
+        },
+        {
+          "group": "com.onyxdevtools",
+          "module": "onyx-database",
+          "version": {
+            "requires": "2.2.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "onyx-remote-driver-2.2.0.jar",
+          "url": "onyx-remote-driver-2.2.0.jar",
+          "size": 91140,
+          "sha512": "5843397f83b47aa7cdcecd332b4900cca90e1003de7d3e41c008107c6e9e99dbdd3742507555e70632bf4eb7c6dc6845aa5e2943b506c8647d496b30463c01d1",
+          "sha256": "af0c52fa2d9c887d8b07a6de3ceeb2ba8ab188d514c5c0086c531558f3c7ca13",
+          "sha1": "bb9ae4a782b1f79539e81fe5912609fb73209e74",
+          "md5": "1b3430419d180b7eaa40d3736d8749ff"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "onyx-remote-driver-2.2.0-sources.jar",
+          "url": "onyx-remote-driver-2.2.0-sources.jar",
+          "size": 33743,
+          "sha512": "f1a68b922d8c8e57b4aa1a158d73d67178c9ff9d1d3a295ec91a05c2a2b4316112898290710a9a7ed1b323af90e4f45ee1a80a74e0dfd48fd60f3eaf83a9f75c",
+          "sha256": "6bc7761bbaf2ee3031311cfbd8e877838d10d5b53691044dd8c6db27e0a03d88",
+          "sha1": "a00dba0defd842f3a6a17463b3408f6a05724940",
+          "md5": "4af8854a03372fd06bd00d05fe506572"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "onyx-remote-driver-2.2.0-javadoc.jar",
+          "url": "onyx-remote-driver-2.2.0-javadoc.jar",
+          "size": 261,
+          "sha512": "95b67cb0a294fb31b8795334813114e049b16dcb1078e7c453ec85bd4d29fcf4c83a81c463727f71b816c11b5028570d908842265c60e3b0ad50b399e0da4b53",
+          "sha256": "df86b4b81f954ec77b74920a34c3edf8e709a1f908f411b7c75872a80544c2ae",
+          "sha1": "f96109fa6bea1ceaa85730ffbb18ae2564c4f68b",
+          "md5": "4722cd03572126c456e440e62c1eaee6"
+        }
+      ]
+    }
+  ]
+}

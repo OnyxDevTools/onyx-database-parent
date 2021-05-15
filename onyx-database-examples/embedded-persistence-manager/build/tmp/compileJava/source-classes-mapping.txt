@@ -1,0 +1,4 @@
+com/onyxdevtools/embedded/entities/Person.java
+ com.onyxdevtools.embedded.entities.Person
+com/onyxdevtools/embedded/Main.java
+ com.onyxdevtools.embedded.Main

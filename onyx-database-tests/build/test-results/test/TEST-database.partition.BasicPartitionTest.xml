@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.partition.BasicPartitionTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:29" hostname="Tims-MBP" time="0.124">
+  <properties/>
+  <testcase name="aTestSavePartitionEntityTest[0]" classname="database.partition.BasicPartitionTest" time="0.009"/>
+  <testcase name="bTestFindPartitionEntityTest[0]" classname="database.partition.BasicPartitionTest" time="0.004"/>
+  <testcase name="cTestFindPartitionEntityByIDTest[0]" classname="database.partition.BasicPartitionTest" time="0.002"/>
+  <testcase name="dTestNonUniqueEntityWithDifferentPartition[0]" classname="database.partition.BasicPartitionTest" time="0.002"/>
+  <testcase name="testDeletePartitionEntity[0]" classname="database.partition.BasicPartitionTest" time="0.003"/>
+  <testcase name="aTestSavePartitionEntityTest[1]" classname="database.partition.BasicPartitionTest" time="0.01"/>
+  <testcase name="bTestFindPartitionEntityTest[1]" classname="database.partition.BasicPartitionTest" time="0.022"/>
+  <testcase name="cTestFindPartitionEntityByIDTest[1]" classname="database.partition.BasicPartitionTest" time="0.011"/>
+  <testcase name="dTestNonUniqueEntityWithDifferentPartition[1]" classname="database.partition.BasicPartitionTest" time="0.01"/>
+  <testcase name="testDeletePartitionEntity[1]" classname="database.partition.BasicPartitionTest" time="0.011"/>
+  <testcase name="aTestSavePartitionEntityTest[2]" classname="database.partition.BasicPartitionTest" time="0.01"/>
+  <testcase name="bTestFindPartitionEntityTest[2]" classname="database.partition.BasicPartitionTest" time="0.007"/>
+  <testcase name="cTestFindPartitionEntityByIDTest[2]" classname="database.partition.BasicPartitionTest" time="0.006"/>
+  <testcase name="dTestNonUniqueEntityWithDifferentPartition[2]" classname="database.partition.BasicPartitionTest" time="0.005"/>
+  <testcase name="testDeletePartitionEntity[2]" classname="database.partition.BasicPartitionTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

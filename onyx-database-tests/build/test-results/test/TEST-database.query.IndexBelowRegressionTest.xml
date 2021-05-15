@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.IndexBelowRegressionTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:25:38" hostname="Tims-MBP" time="0.416">
+  <properties/>
+  <testcase name="testDateIndexSelect[0]" classname="database.query.IndexBelowRegressionTest" time="0.136"/>
+  <testcase name="testDateIndexSelect[1]" classname="database.query.IndexBelowRegressionTest" time="0.09"/>
+  <testcase name="testDateIndexSelect[2]" classname="database.query.IndexBelowRegressionTest" time="0.185"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

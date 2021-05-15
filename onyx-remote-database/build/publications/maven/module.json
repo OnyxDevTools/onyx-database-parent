@@ -1,0 +1,141 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.onyxdevtools",
+    "module": "onyx-remote-database",
+    "version": "2.2.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "7.0.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.localToProject": "public",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "onyx-remote-database-2.2.0.jar",
+          "url": "onyx-remote-database-2.2.0.jar",
+          "size": 41436,
+          "sha512": "0bd732779f1de4062c17d5a218f450f945577ea464d70bdb25008d0fd3eb5adadea14363faf48551a38285c5f27f117b729d0067cfcfd8fbdc4538471320130b",
+          "sha256": "0184c98e7835cdd014bf3fb6e10839e4a40732c79a989ed46089aa5659f361ff",
+          "sha1": "451a73b9b633d7adf058696f526374785286b33f",
+          "md5": "db17bf64202142b23ae434a129588be5"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.localToProject": "public",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib",
+          "version": {
+            "requires": "1.4.30"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-reflect",
+          "version": {
+            "requires": "1.4.30"
+          }
+        },
+        {
+          "group": "com.onyxdevtools",
+          "module": "onyx-database",
+          "version": {
+            "requires": "2.2.0"
+          }
+        },
+        {
+          "group": "com.onyxdevtools",
+          "module": "onyx-remote-driver",
+          "version": {
+            "requires": "2.2.0"
+          }
+        },
+        {
+          "group": "commons-cli",
+          "module": "commons-cli",
+          "version": {
+            "requires": "1.3.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "onyx-remote-database-2.2.0.jar",
+          "url": "onyx-remote-database-2.2.0.jar",
+          "size": 41436,
+          "sha512": "0bd732779f1de4062c17d5a218f450f945577ea464d70bdb25008d0fd3eb5adadea14363faf48551a38285c5f27f117b729d0067cfcfd8fbdc4538471320130b",
+          "sha256": "0184c98e7835cdd014bf3fb6e10839e4a40732c79a989ed46089aa5659f361ff",
+          "sha1": "451a73b9b633d7adf058696f526374785286b33f",
+          "md5": "db17bf64202142b23ae434a129588be5"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "onyx-remote-database-2.2.0-sources.jar",
+          "url": "onyx-remote-database-2.2.0-sources.jar",
+          "size": 16037,
+          "sha512": "21dcfc877a7075aae03d8f0a103573bc40f3c917e033e4b27d3d222215a42a87d65a73ce02e2e974e6801a446e75356eb93dcba311de66d48b2359ef54291f11",
+          "sha256": "af2dcb6a0df2fea6043cb8fa4e24d99559837a92ffaeb04f9ffec5a7580acb0d",
+          "sha1": "50d03c8e7e4d3b7b9c1bef72ec364c0b07661fb5",
+          "md5": "6ebec0a38f4f221b24712a3e449a704c"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "onyx-remote-database-2.2.0-javadoc.jar",
+          "url": "onyx-remote-database-2.2.0-javadoc.jar",
+          "size": 261,
+          "sha512": "95b67cb0a294fb31b8795334813114e049b16dcb1078e7c453ec85bd4d29fcf4c83a81c463727f71b816c11b5028570d908842265c60e3b0ad50b399e0da4b53",
+          "sha256": "df86b4b81f954ec77b74920a34c3edf8e709a1f908f411b7c75872a80544c2ae",
+          "sha1": "f96109fa6bea1ceaa85730ffbb18ae2564c4f68b",
+          "md5": "4722cd03572126c456e440e62c1eaee6"
+        }
+      ]
+    }
+  ]
+}

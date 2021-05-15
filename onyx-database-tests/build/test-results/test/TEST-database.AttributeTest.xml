@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.AttributeTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:23:46" hostname="Tims-MBP" time="0.947">
+  <properties/>
+  <testcase name="simpleMultipleTest[0]" classname="database.AttributeTest" time="0.098"/>
+  <testcase name="testEnum[0]" classname="database.AttributeTest" time="0.042"/>
+  <testcase name="testFindById[0]" classname="database.AttributeTest" time="0.023"/>
+  <testcase name="testInheritedPopulatedEntity[0]" classname="database.AttributeTest" time="0.037"/>
+  <testcase name="testNullPopulatedEntity[0]" classname="database.AttributeTest" time="0.032"/>
+  <testcase name="testPopulatedEntity[0]" classname="database.AttributeTest" time="0.073"/>
+  <testcase name="simpleMultipleTest[1]" classname="database.AttributeTest" time="0.054"/>
+  <testcase name="testEnum[1]" classname="database.AttributeTest" time="0.054"/>
+  <testcase name="testFindById[1]" classname="database.AttributeTest" time="0.036"/>
+  <testcase name="testInheritedPopulatedEntity[1]" classname="database.AttributeTest" time="0.047"/>
+  <testcase name="testNullPopulatedEntity[1]" classname="database.AttributeTest" time="0.092"/>
+  <testcase name="testPopulatedEntity[1]" classname="database.AttributeTest" time="0.061"/>
+  <testcase name="simpleMultipleTest[2]" classname="database.AttributeTest" time="0.126"/>
+  <testcase name="testEnum[2]" classname="database.AttributeTest" time="0.051"/>
+  <testcase name="testFindById[2]" classname="database.AttributeTest" time="0.032"/>
+  <testcase name="testInheritedPopulatedEntity[2]" classname="database.AttributeTest" time="0.022"/>
+  <testcase name="testNullPopulatedEntity[2]" classname="database.AttributeTest" time="0.029"/>
+  <testcase name="testPopulatedEntity[2]" classname="database.AttributeTest" time="0.027"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

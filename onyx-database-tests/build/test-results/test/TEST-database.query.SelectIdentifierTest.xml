@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.SelectIdentifierTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:31" hostname="Tims-MBP" time="0.236">
+  <properties/>
+  <testcase name="testIdentifierOrCriteriaWithNot[0]" classname="database.query.SelectIdentifierTest" time="0.004"/>
+  <testcase name="testIdentifierAndCriteriaWithNotGroup[0]" classname="database.query.SelectIdentifierTest" time="0.006"/>
+  <testcase name="testIdentifierCompoundCriteria[0]" classname="database.query.SelectIdentifierTest" time="0.005"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNot[0]" classname="database.query.SelectIdentifierTest" time="0.006"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNotFullScan[0]" classname="database.query.SelectIdentifierTest" time="0.004"/>
+  <testcase name="testIdentifierOrCriteria[0]" classname="database.query.SelectIdentifierTest" time="0.004"/>
+  <testcase name="testIdentifierOrCriteriaWithNotGroup[0]" classname="database.query.SelectIdentifierTest" time="0.002"/>
+  <testcase name="testIdentifierAndCriteriaWithNot[0]" classname="database.query.SelectIdentifierTest" time="0.003"/>
+  <testcase name="testIdentifierAndCriteria[0]" classname="database.query.SelectIdentifierTest" time="0.003"/>
+  <testcase name="testIdentifierOrCriteriaWithNot[1]" classname="database.query.SelectIdentifierTest" time="0.014"/>
+  <testcase name="testIdentifierAndCriteriaWithNotGroup[1]" classname="database.query.SelectIdentifierTest" time="0.021"/>
+  <testcase name="testIdentifierCompoundCriteria[1]" classname="database.query.SelectIdentifierTest" time="0.012"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNot[1]" classname="database.query.SelectIdentifierTest" time="0.022"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNotFullScan[1]" classname="database.query.SelectIdentifierTest" time="0.01"/>
+  <testcase name="testIdentifierOrCriteria[1]" classname="database.query.SelectIdentifierTest" time="0.01"/>
+  <testcase name="testIdentifierOrCriteriaWithNotGroup[1]" classname="database.query.SelectIdentifierTest" time="0.01"/>
+  <testcase name="testIdentifierAndCriteriaWithNot[1]" classname="database.query.SelectIdentifierTest" time="0.009"/>
+  <testcase name="testIdentifierAndCriteria[1]" classname="database.query.SelectIdentifierTest" time="0.009"/>
+  <testcase name="testIdentifierOrCriteriaWithNot[2]" classname="database.query.SelectIdentifierTest" time="0.016"/>
+  <testcase name="testIdentifierAndCriteriaWithNotGroup[2]" classname="database.query.SelectIdentifierTest" time="0.009"/>
+  <testcase name="testIdentifierCompoundCriteria[2]" classname="database.query.SelectIdentifierTest" time="0.008"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNot[2]" classname="database.query.SelectIdentifierTest" time="0.008"/>
+  <testcase name="testIdentifierCompoundCriteriaWithNotFullScan[2]" classname="database.query.SelectIdentifierTest" time="0.007"/>
+  <testcase name="testIdentifierOrCriteria[2]" classname="database.query.SelectIdentifierTest" time="0.007"/>
+  <testcase name="testIdentifierOrCriteriaWithNotGroup[2]" classname="database.query.SelectIdentifierTest" time="0.008"/>
+  <testcase name="testIdentifierAndCriteriaWithNot[2]" classname="database.query.SelectIdentifierTest" time="0.007"/>
+  <testcase name="testIdentifierAndCriteria[2]" classname="database.query.SelectIdentifierTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

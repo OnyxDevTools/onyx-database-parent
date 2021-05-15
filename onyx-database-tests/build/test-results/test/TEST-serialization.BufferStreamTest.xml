@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="serialization.BufferStreamTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:26:06" hostname="Tims-MBP" time="0.434">
+  <properties/>
+  <testcase name="testMap" classname="serialization.BufferStreamTest" time="0.118"/>
+  <testcase name="testNamedObject" classname="serialization.BufferStreamTest" time="0.001"/>
+  <testcase name="testDate" classname="serialization.BufferStreamTest" time="0.0"/>
+  <testcase name="testNonNamedObject" classname="serialization.BufferStreamTest" time="0.0"/>
+  <testcase name="testPrimitiveArrays" classname="serialization.BufferStreamTest" time="0.002"/>
+  <testcase name="testSerializePrimitive" classname="serialization.BufferStreamTest" time="0.0"/>
+  <testcase name="testNestedCollection" classname="serialization.BufferStreamTest" time="0.001"/>
+  <testcase name="testNamedObjectArray" classname="serialization.BufferStreamTest" time="0.238"/>
+  <testcase name="testMapPrimitives" classname="serialization.BufferStreamTest" time="0.001"/>
+  <testcase name="testBufferable" classname="serialization.BufferStreamTest" time="0.002"/>
+  <testcase name="testObjectWithEnum" classname="serialization.BufferStreamTest" time="0.0"/>
+  <testcase name="testString" classname="serialization.BufferStreamTest" time="0.0"/>
+  <testcase name="testCollection" classname="serialization.BufferStreamTest" time="0.06"/>
+  <testcase name="testRandomObjectArray" classname="serialization.BufferStreamTest" time="0.001"/>
+  <testcase name="testRecursiveEntry" classname="serialization.BufferStreamTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

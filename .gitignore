@@ -9,7 +9,7 @@
 onyx-database-tests/C:/
 **/dependency-reduced-pom.xml
 *.oxd
-
+gradle.properties
 /*/target
 /*/*/target
 /*/*/*/target

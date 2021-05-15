@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.index.delete.DeleteSequenceIndexEntityTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:27" hostname="Tims-MBP" time="0.061">
+  <properties/>
+  <testcase name="testAddDeleteSequence[0]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.002"/>
+  <testcase name="testSequenceBatchDelete[0]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.002"/>
+  <testcase name="testSequenceSkip[0]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.001"/>
+  <testcase name="testAddDeleteSequence[1]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.012"/>
+  <testcase name="testSequenceBatchDelete[1]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.008"/>
+  <testcase name="testSequenceSkip[1]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.009"/>
+  <testcase name="testAddDeleteSequence[2]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.008"/>
+  <testcase name="testSequenceBatchDelete[2]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.009"/>
+  <testcase name="testSequenceSkip[2]" classname="database.index.delete.DeleteSequenceIndexEntityTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

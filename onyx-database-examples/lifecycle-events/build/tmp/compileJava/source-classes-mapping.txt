@@ -1,0 +1,8 @@
+com/onyxdevtools/lifecycle/entities/Beverage.java
+ com.onyxdevtools.lifecycle.entities.Beverage
+com/onyxdevtools/lifecycle/Main.java
+ com.onyxdevtools.lifecycle.Main
+com/onyxdevtools/lifecycle/entities/BeverageEffects.java
+ com.onyxdevtools.lifecycle.entities.BeverageEffects
+com/onyxdevtools/lifecycle/AbstractDemo.java
+ com.onyxdevtools.lifecycle.AbstractDemo

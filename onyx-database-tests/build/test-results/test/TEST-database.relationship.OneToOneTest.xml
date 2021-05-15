@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.relationship.OneToOneTest" tests="24" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:15" hostname="Tims-MBP" time="0.418">
+  <properties/>
+  <testcase name="testDeleteCascade[0]" classname="database.relationship.OneToOneTest" time="0.029"/>
+  <testcase name="testRecursiveOneToOne[0]" classname="database.relationship.OneToOneTest" time="0.017"/>
+  <testcase name="testNoInverseCascade[0]" classname="database.relationship.OneToOneTest" time="0.011"/>
+  <testcase name="testNoInverse[0]" classname="database.relationship.OneToOneTest" time="0.03"/>
+  <testcase name="testOneToOneCascade[0]" classname="database.relationship.OneToOneTest" time="0.02"/>
+  <testcase name="testOneToOneNoCascade[0]" classname="database.relationship.OneToOneTest" time="0.011"/>
+  <testcase name="testDeleteRelationshipNoCascade[0]" classname="database.relationship.OneToOneTest" time="0.005"/>
+  <testcase name="testInverseCascadeDelete[0]" classname="database.relationship.OneToOneTest" time="0.01"/>
+  <testcase name="testDeleteCascade[1]" classname="database.relationship.OneToOneTest" time="0.032"/>
+  <testcase name="testRecursiveOneToOne[1]" classname="database.relationship.OneToOneTest" time="0.022"/>
+  <testcase name="testNoInverseCascade[1]" classname="database.relationship.OneToOneTest" time="0.019"/>
+  <testcase name="testNoInverse[1]" classname="database.relationship.OneToOneTest" time="0.014"/>
+  <testcase name="testOneToOneCascade[1]" classname="database.relationship.OneToOneTest" time="0.022"/>
+  <testcase name="testOneToOneNoCascade[1]" classname="database.relationship.OneToOneTest" time="0.008"/>
+  <testcase name="testDeleteRelationshipNoCascade[1]" classname="database.relationship.OneToOneTest" time="0.016"/>
+  <testcase name="testInverseCascadeDelete[1]" classname="database.relationship.OneToOneTest" time="0.015"/>
+  <testcase name="testDeleteCascade[2]" classname="database.relationship.OneToOneTest" time="0.028"/>
+  <testcase name="testRecursiveOneToOne[2]" classname="database.relationship.OneToOneTest" time="0.029"/>
+  <testcase name="testNoInverseCascade[2]" classname="database.relationship.OneToOneTest" time="0.014"/>
+  <testcase name="testNoInverse[2]" classname="database.relationship.OneToOneTest" time="0.013"/>
+  <testcase name="testOneToOneCascade[2]" classname="database.relationship.OneToOneTest" time="0.016"/>
+  <testcase name="testOneToOneNoCascade[2]" classname="database.relationship.OneToOneTest" time="0.008"/>
+  <testcase name="testDeleteRelationshipNoCascade[2]" classname="database.relationship.OneToOneTest" time="0.009"/>
+  <testcase name="testInverseCascadeDelete[2]" classname="database.relationship.OneToOneTest" time="0.009"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

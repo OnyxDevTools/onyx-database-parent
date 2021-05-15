@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.QueryCountTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:31" hostname="Tims-MBP" time="0.185">
+  <properties/>
+  <testcase name="testQueryCountForPartitionEntity[0]" classname="database.query.QueryCountTest" time="0.019"/>
+  <testcase name="testQueryCountForNonPartitionEntity[0]" classname="database.query.QueryCountTest" time="0.003"/>
+  <testcase name="testQueryCountForAllPartitions[0]" classname="database.query.QueryCountTest" time="0.004"/>
+  <testcase name="testQueryCountForCustomQuery[0]" classname="database.query.QueryCountTest" time="0.006"/>
+  <testcase name="testQueryCountForPartitionEntity[1]" classname="database.query.QueryCountTest" time="0.023"/>
+  <testcase name="testQueryCountForNonPartitionEntity[1]" classname="database.query.QueryCountTest" time="0.027"/>
+  <testcase name="testQueryCountForAllPartitions[1]" classname="database.query.QueryCountTest" time="0.026"/>
+  <testcase name="testQueryCountForCustomQuery[1]" classname="database.query.QueryCountTest" time="0.016"/>
+  <testcase name="testQueryCountForPartitionEntity[2]" classname="database.query.QueryCountTest" time="0.013"/>
+  <testcase name="testQueryCountForNonPartitionEntity[2]" classname="database.query.QueryCountTest" time="0.015"/>
+  <testcase name="testQueryCountForAllPartitions[2]" classname="database.query.QueryCountTest" time="0.01"/>
+  <testcase name="testQueryCountForCustomQuery[2]" classname="database.query.QueryCountTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

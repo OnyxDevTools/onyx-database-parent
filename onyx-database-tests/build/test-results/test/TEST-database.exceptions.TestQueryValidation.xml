@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.exceptions.TestQueryValidation" tests="15" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:23:48" hostname="Tims-MBP" time="0.265">
+  <properties/>
+  <testcase name="testMissingEntityTypeException[0]" classname="database.exceptions.TestQueryValidation" time="0.005"/>
+  <testcase name="testUpdateIdentifier[0]" classname="database.exceptions.TestQueryValidation" time="0.02"/>
+  <testcase name="testAttributeMissing[0]" classname="database.exceptions.TestQueryValidation" time="0.01"/>
+  <testcase name="testAttributeSizeException[0]" classname="database.exceptions.TestQueryValidation" time="0.005"/>
+  <testcase name="testNullValue[0]" classname="database.exceptions.TestQueryValidation" time="0.005"/>
+  <testcase name="testMissingEntityTypeException[1]" classname="database.exceptions.TestQueryValidation" time="0.031"/>
+  <testcase name="testUpdateIdentifier[1]" classname="database.exceptions.TestQueryValidation" time="0.023"/>
+  <testcase name="testAttributeMissing[1]" classname="database.exceptions.TestQueryValidation" time="0.014"/>
+  <testcase name="testAttributeSizeException[1]" classname="database.exceptions.TestQueryValidation" time="0.016"/>
+  <testcase name="testNullValue[1]" classname="database.exceptions.TestQueryValidation" time="0.012"/>
+  <testcase name="testMissingEntityTypeException[2]" classname="database.exceptions.TestQueryValidation" time="0.021"/>
+  <testcase name="testUpdateIdentifier[2]" classname="database.exceptions.TestQueryValidation" time="0.035"/>
+  <testcase name="testAttributeMissing[2]" classname="database.exceptions.TestQueryValidation" time="0.022"/>
+  <testcase name="testAttributeSizeException[2]" classname="database.exceptions.TestQueryValidation" time="0.022"/>
+  <testcase name="testNullValue[2]" classname="database.exceptions.TestQueryValidation" time="0.018"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

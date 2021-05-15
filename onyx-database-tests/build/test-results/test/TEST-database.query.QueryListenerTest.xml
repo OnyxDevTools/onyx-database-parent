@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.query.QueryListenerTest" tests="39" skipped="4" failures="0" errors="0" timestamp="2021-05-15T17:24:30" hostname="Tims-MBP" time="0.383">
+  <properties/>
+  <testcase name="testExecuteDelete[0]" classname="database.query.QueryListenerTest" time="0.025"/>
+  <testcase name="testSubscribeListen[0]" classname="database.query.QueryListenerTest" time="0.017"/>
+  <testcase name="testUpdateListenerObjectOnBuilder[0]" classname="database.query.QueryListenerTest" time="0.018"/>
+  <testcase name="testUnSubscribeListen[0]" classname="database.query.QueryListenerTest" time="0.013"/>
+  <testcase name="testUpdateListen[0]" classname="database.query.QueryListenerTest" time="0.011"/>
+  <testcase name="testDeleteListen[0]" classname="database.query.QueryListenerTest" time="0.015"/>
+  <testcase name="testUpdateListenerOnBuilder[0]" classname="database.query.QueryListenerTest" time="0.011"/>
+  <testcase name="testSubscribe[0]" classname="database.query.QueryListenerTest" time="0.011"/>
+  <testcase name="testDelete[0]" classname="database.query.QueryListenerTest" time="0.014"/>
+  <testcase name="testInsert[0]" classname="database.query.QueryListenerTest" time="0.011"/>
+  <testcase name="testInsertListen[0]" classname="database.query.QueryListenerTest" time="0.012"/>
+  <testcase name="testUpdate[0]" classname="database.query.QueryListenerTest" time="0.011"/>
+  <testcase name="testUnSubscribe[0]" classname="database.query.QueryListenerTest" time="0.009"/>
+  <testcase name="testExecuteDelete[1]" classname="database.query.QueryListenerTest" time="0.017"/>
+  <testcase name="testSubscribeListen[1]" classname="database.query.QueryListenerTest" time="0.01"/>
+  <testcase name="testUpdateListenerObjectOnBuilder[1]" classname="database.query.QueryListenerTest" time="0.003"/>
+  <testcase name="testUnSubscribeListen[1]" classname="database.query.QueryListenerTest" time="0.001"/>
+  <testcase name="testUpdateListen[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testDeleteListen[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testUpdateListenerOnBuilder[1]" classname="database.query.QueryListenerTest" time="0.001"/>
+  <testcase name="testSubscribe[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testDelete[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testInsert[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testInsertListen[1]" classname="database.query.QueryListenerTest" time="0.009"/>
+  <testcase name="testUpdate[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testUnSubscribe[1]" classname="database.query.QueryListenerTest" time="0.002"/>
+  <testcase name="testExecuteDelete[2]" classname="database.query.QueryListenerTest" time="0.032"/>
+  <testcase name="testSubscribeListen[2]" classname="database.query.QueryListenerTest" time="0.015">
+    <skipped/>
+  </testcase>
+  <testcase name="testUpdateListenerObjectOnBuilder[2]" classname="database.query.QueryListenerTest" time="0.012"/>
+  <testcase name="testUnSubscribeListen[2]" classname="database.query.QueryListenerTest" time="0.007">
+    <skipped/>
+  </testcase>
+  <testcase name="testUpdateListen[2]" classname="database.query.QueryListenerTest" time="0.006"/>
+  <testcase name="testDeleteListen[2]" classname="database.query.QueryListenerTest" time="0.007"/>
+  <testcase name="testUpdateListenerOnBuilder[2]" classname="database.query.QueryListenerTest" time="0.007"/>
+  <testcase name="testSubscribe[2]" classname="database.query.QueryListenerTest" time="0.007">
+    <skipped/>
+  </testcase>
+  <testcase name="testDelete[2]" classname="database.query.QueryListenerTest" time="0.016"/>
+  <testcase name="testInsert[2]" classname="database.query.QueryListenerTest" time="0.008"/>
+  <testcase name="testInsertListen[2]" classname="database.query.QueryListenerTest" time="0.005"/>
+  <testcase name="testUpdate[2]" classname="database.query.QueryListenerTest" time="0.009"/>
+  <testcase name="testUnSubscribe[2]" classname="database.query.QueryListenerTest" time="0.008">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

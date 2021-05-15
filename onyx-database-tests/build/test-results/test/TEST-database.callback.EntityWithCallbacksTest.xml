@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.callback.EntityWithCallbacksTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:27" hostname="Tims-MBP" time="0.146">
+  <properties/>
+  <testcase name="testPostPersistCallbacksForSequenceIndex[0]" classname="database.callback.EntityWithCallbacksTest" time="0.012"/>
+  <testcase name="testPrePersistCallbacksForSequenceIndex[0]" classname="database.callback.EntityWithCallbacksTest" time="0.027"/>
+  <testcase name="testPrePersistCallbacksForHashIndex[0]" classname="database.callback.EntityWithCallbacksTest" time="0.006"/>
+  <testcase name="testPostPersistCallbacksForStandardIndex[0]" classname="database.callback.EntityWithCallbacksTest" time="0.005"/>
+  <testcase name="testPostPersistCallbacksForSequenceIndex[1]" classname="database.callback.EntityWithCallbacksTest" time="0.011"/>
+  <testcase name="testPrePersistCallbacksForSequenceIndex[1]" classname="database.callback.EntityWithCallbacksTest" time="0.009"/>
+  <testcase name="testPrePersistCallbacksForHashIndex[1]" classname="database.callback.EntityWithCallbacksTest" time="0.021"/>
+  <testcase name="testPostPersistCallbacksForStandardIndex[1]" classname="database.callback.EntityWithCallbacksTest" time="0.01"/>
+  <testcase name="testPostPersistCallbacksForSequenceIndex[2]" classname="database.callback.EntityWithCallbacksTest" time="0.009"/>
+  <testcase name="testPrePersistCallbacksForSequenceIndex[2]" classname="database.callback.EntityWithCallbacksTest" time="0.007"/>
+  <testcase name="testPrePersistCallbacksForHashIndex[2]" classname="database.callback.EntityWithCallbacksTest" time="0.011"/>
+  <testcase name="testPostPersistCallbacksForStandardIndex[2]" classname="database.callback.EntityWithCallbacksTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

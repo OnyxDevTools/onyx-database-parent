@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="database.relationship.ManyToManyTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2021-05-15T17:24:17" hostname="Tims-MBP" time="0.247">
+  <properties/>
+  <testcase name="testManyToManyNoInverse[0]" classname="database.relationship.ManyToManyTest" time="0.011"/>
+  <testcase name="testManyToManyMultiple[0]" classname="database.relationship.ManyToManyTest" time="0.006"/>
+  <testcase name="testManyToManyNoInverseDelete[0]" classname="database.relationship.ManyToManyTest" time="0.005"/>
+  <testcase name="testManyToManyCascadeDelete[0]" classname="database.relationship.ManyToManyTest" time="0.005"/>
+  <testcase name="testManyToManyCascadeRemove[0]" classname="database.relationship.ManyToManyTest" time="0.004"/>
+  <testcase name="testManyToManyBasic[0]" classname="database.relationship.ManyToManyTest" time="0.011"/>
+  <testcase name="testManyToManyNoCascadeRemove[0]" classname="database.relationship.ManyToManyTest" time="0.006"/>
+  <testcase name="testManyToManyNoInverse[1]" classname="database.relationship.ManyToManyTest" time="0.038"/>
+  <testcase name="testManyToManyMultiple[1]" classname="database.relationship.ManyToManyTest" time="0.012"/>
+  <testcase name="testManyToManyNoInverseDelete[1]" classname="database.relationship.ManyToManyTest" time="0.011"/>
+  <testcase name="testManyToManyCascadeDelete[1]" classname="database.relationship.ManyToManyTest" time="0.016"/>
+  <testcase name="testManyToManyCascadeRemove[1]" classname="database.relationship.ManyToManyTest" time="0.009"/>
+  <testcase name="testManyToManyBasic[1]" classname="database.relationship.ManyToManyTest" time="0.007"/>
+  <testcase name="testManyToManyNoCascadeRemove[1]" classname="database.relationship.ManyToManyTest" time="0.009"/>
+  <testcase name="testManyToManyNoInverse[2]" classname="database.relationship.ManyToManyTest" time="0.029"/>
+  <testcase name="testManyToManyMultiple[2]" classname="database.relationship.ManyToManyTest" time="0.01"/>
+  <testcase name="testManyToManyNoInverseDelete[2]" classname="database.relationship.ManyToManyTest" time="0.008"/>
+  <testcase name="testManyToManyCascadeDelete[2]" classname="database.relationship.ManyToManyTest" time="0.008"/>
+  <testcase name="testManyToManyCascadeRemove[2]" classname="database.relationship.ManyToManyTest" time="0.012"/>
+  <testcase name="testManyToManyBasic[2]" classname="database.relationship.ManyToManyTest" time="0.008"/>
+  <testcase name="testManyToManyNoCascadeRemove[2]" classname="database.relationship.ManyToManyTest" time="0.011"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
