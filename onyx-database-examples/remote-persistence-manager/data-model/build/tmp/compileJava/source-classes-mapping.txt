@@ -1,2 +1,0 @@
-com/onyxdevtools/remote/Person.java
- com.onyxdevtools.remote.Person

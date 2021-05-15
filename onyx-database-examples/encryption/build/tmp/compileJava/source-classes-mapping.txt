@@ -1,4 +1,0 @@
-com/onyxdevtools/encryption/Main.java
- com.onyxdevtools.encryption.Main
-com/onyxdevtools/encryption/entities/Person.java
- com.onyxdevtools.encryption.entities.Person

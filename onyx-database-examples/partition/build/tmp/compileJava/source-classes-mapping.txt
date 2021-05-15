@@ -1,8 +1,0 @@
-com/onyxdevtools/partition/entities/CallLog.java
- com.onyxdevtools.partition.entities.CallLog
-com/onyxdevtools/partition/AbstractDemo.java
- com.onyxdevtools.partition.AbstractDemo
-com/onyxdevtools/partition/Main.java
- com.onyxdevtools.partition.Main
-com/onyxdevtools/partition/entities/CellPhone.java
- com.onyxdevtools.partition.entities.CellPhone
