@@ -55,8 +55,8 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
 
         } else {
 
-            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
-            if (partitionId == 0L)
+            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0
+            if (partitionId == 0)
                 return HashSet()
 
             val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
@@ -88,8 +88,8 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
             }
         } else {
 
-            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
-            if (partitionId == 0L)
+            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0
+            if (partitionId == 0)
                 return HashSet()
 
             val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)

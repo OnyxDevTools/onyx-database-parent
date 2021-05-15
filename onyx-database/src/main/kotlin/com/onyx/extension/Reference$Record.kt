@@ -19,7 +19,7 @@ import com.onyx.persistence.context.SchemaContext
  * @since 2.0.0
  */
 fun Reference.recordInteractor(context: SchemaContext, clazz: Class<*>, descriptor:EntityDescriptor = context.getBaseDescriptorForEntity(clazz)!!):RecordInteractor {
-    if(partition == 0L)
+    if(partition == 0)
         return descriptor.recordInteractor()
 
     val systemPartition = context.getPartitionWithId(partition)

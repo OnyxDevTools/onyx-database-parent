@@ -33,7 +33,7 @@ abstract class AbstractCachedSkipList<K, V> constructor(fileStore: Store, header
      * @return The SkipListNode at that position.
      * @since 1.2.0
      */
-    override fun findNodeAtPosition(position: Long): SkipNode? = nodeCache.getOrPut(position) { super.findNodeAtPosition(position) }
+    override fun findNodeAtPosition(position: Int): SkipNode? = nodeCache.getOrPut(position) { super.findNodeAtPosition(position) }
 
     /**
      * Find the record reference based on the key

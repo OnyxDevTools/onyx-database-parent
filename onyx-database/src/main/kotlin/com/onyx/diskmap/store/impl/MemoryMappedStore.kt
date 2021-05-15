@@ -78,7 +78,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             if (!deleteOnClose) {
                 catchAll {
                     ensureOpen()
-                    channel!!.truncate(getFileSize())
+                    channel!!.truncate(getFileSize().toLong())
                 }
             }
             super.close()
@@ -100,7 +100,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position position within store to write to
      * @return how many bytes were written
      */
-    override fun write(buffer: ByteBuffer, position: Long): Int {
+    override fun write(buffer: ByteBuffer, position: Int): Int {
 
         var currentIndex = position
 
@@ -129,7 +129,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param buffer Byte buffer to read
      * @param position within the store
      */
-    override fun read(buffer: ByteBuffer, position: Long) {
+    override fun read(buffer: ByteBuffer, position: Int) {
         var currentIndex = position
 
         while (buffer.hasRemaining()) {
@@ -156,7 +156,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position position within memory mapped store
      * @return The corresponding slice that is at that position
      */
-    protected open fun getBuffer(position: Long): FileSlice {
+    protected open fun getBuffer(position: Int): FileSlice {
 
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
@@ -182,7 +182,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
      * @param position Position within the store
      * @return file slice id
      */
-    private fun getBufferLocation(position: Long): Int {
+    private fun getBufferLocation(position: Int): Int {
         var index = 0
         if (position > 0) {
             index = (position % bufferSliceSize).toInt()

@@ -40,7 +40,7 @@ class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fa
         simpleEntity.simpleId = "ASDF"
         manager.deleteEntity(simpleEntity)
 
-        assertEquals(1L, manager.from(SimpleEntity::class).count(), "Expected 1 result")
+        assertEquals(1, manager.from(SimpleEntity::class).count(), "Expected 1 result")
     }
 
     /**
@@ -63,7 +63,7 @@ class QueryCountTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(fa
         val query = Query()
         query.entityType = BasicPartitionEntity::class.java
         query.partition = 3L
-        assertEquals(1L, manager.countForQuery(query), "Expected 1 result")
+        assertEquals(1, manager.countForQuery(query), "Expected 1 result")
     }
 
 

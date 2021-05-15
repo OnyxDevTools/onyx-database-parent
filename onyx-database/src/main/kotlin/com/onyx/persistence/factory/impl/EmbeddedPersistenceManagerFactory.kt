@@ -230,7 +230,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
         try {
 
-            if(this.persistenceManager.from(SystemUser::class).count() == 0L) {
+            if(this.persistenceManager.from(SystemUser::class).count() == 0) {
                 val defaultUser = SystemUser()
                 defaultUser.firstName = "Admin"
                 defaultUser.lastName = "Admin"

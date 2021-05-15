@@ -66,7 +66,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                 context.transactionInteractor.writeSave(entity)
             }
 
-            entity.saveIndexes(context, if(putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
+            entity.saveIndexes(context, if(putResult.isInsert) 0 else putResult.recordId, putResult.recordId)
             entity.saveRelationships(context)
 
             // Update Cached queries
@@ -431,7 +431,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E {
+    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Int): E {
         context.checkForKillSwitch()
 
         val entity = RelationshipReference(identifier = id, partitionId = partitionId).toManagedEntity(context, clazz)
@@ -462,14 +462,14 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      *
      * Query myQuery = new Query();
      * myQuery.setClass(SystemEntity.class);
-     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     * int numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
      *
      *
      * or:
      *
      *
      * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
-     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     * int numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criteria
@@ -477,7 +477,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      * @since 1.3.0 Implemented with feature request #71
      */
     @Throws(OnyxException::class)
-    override fun countForQuery(query: Query): Long {
+    override fun countForQuery(query: Query): Int {
         context.checkForKillSwitch()
 
         val clazz = query.entityType
@@ -488,7 +488,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         val cachedResults = context.queryCacheInteractor.getCachedQueryResults(query)
         if (cachedResults?.references != null)
-            return cachedResults.references!!.size.toLong()
+            return cachedResults.references!!.size
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
         return queryController.getCountForQuery(query)

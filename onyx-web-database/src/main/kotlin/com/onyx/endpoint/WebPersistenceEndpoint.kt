@@ -197,8 +197,8 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
      * Returns the number of items matching the query criteria
      *
      * @param query Query request body
-     * @return long value of number of items matching criteria
+     * @return int value of number of items matching criteria
      * @since 1.3.0 Added as enhancement for git issue #71
      */
-    fun countForQuery(query: Query): Long = persistenceManager.countForQuery(query)
+    fun countForQuery(query: Query): Int = persistenceManager.countForQuery(query)
 }

@@ -20,9 +20,9 @@ import com.onyx.persistence.context.SchemaContext
  *
  * @since 2.0.0
  */
-fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Long {
+fun IManagedEntity.referenceId(context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)):Int {
     val identifier = identifier(context)
-    return if(identifier == null || (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE && identifier == 0L)) 0L else recordInteractor(context, descriptor).getReferenceId(identifier)
+    return if(identifier == null || (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE && identifier == 0)) 0 else recordInteractor(context, descriptor).getReferenceId(identifier)
 }
 
 /**
@@ -38,7 +38,7 @@ fun IManagedEntity.reference(context: SchemaContext, descriptor: EntityDescripto
  * @param context Schema context entity belongs to
  * @since 2.0.0
  */
-fun IManagedEntity.reference(referenceId:Long, context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): Reference = Reference(partitionId(context, descriptor), referenceId)
+fun IManagedEntity.reference(referenceId:Int, context: SchemaContext, descriptor: EntityDescriptor = descriptor(context)): Reference = Reference(partitionId(context, descriptor), referenceId)
 
 /**
  * Generate a relationship reference based on the entity's record information

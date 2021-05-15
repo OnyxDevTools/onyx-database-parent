@@ -1,7 +1,7 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferPool
-import com.onyx.buffer.BufferPool.withLongBuffer
+import com.onyx.buffer.BufferPool.withIntBuffer
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
@@ -55,7 +55,7 @@ open class FileChannelStore() : Store {
     /**
      * Get the size of the file
      */
-    override fun getFileSize(): Long = fileSizeCounter.get()
+    override fun getFileSize(): Int = fileSizeCounter.get()
 
     /**
      * Open the data file
@@ -75,7 +75,7 @@ open class FileChannelStore() : Store {
             // Open the random access file
             val randomAccessFile = RandomAccessFile(filePath, "rw")
             this.channel = randomAccessFile.channel
-            this.fileSizeCounter.set(this.channel!!.size())
+            this.fileSizeCounter.set(this.channel!!.size().toInt())
 
         } catch (e: FileNotFoundException) {
             return false
@@ -97,7 +97,7 @@ open class FileChannelStore() : Store {
             if (it == null || channel?.size() == 0L) {
                 this.allocate(8)
             } else {
-                val fSize = it.long
+                val fSize = it.int
                 this.fileSizeCounter.set(fSize)
             }
         }
@@ -140,11 +140,11 @@ open class FileChannelStore() : Store {
      * @param position Position within the volume to write to.
      * @return How many bytes were written
      */
-    override fun write(buffer: ByteBuffer, position: Long): Int {
+    override fun write(buffer: ByteBuffer, position: Int): Int {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val before = buffer.position()
-        channel!!.write(buffer, position)
+        channel!!.write(buffer, position.toLong())
         val after = buffer.position()
         return after - before
     }
@@ -155,7 +155,7 @@ open class FileChannelStore() : Store {
      * @param serializable Object
      * @param position Position to write to
      */
-    override fun write(serializable: BufferStreamable, position: Long): Int = BufferStream().perform {
+    override fun write(serializable: BufferStreamable, position: Int): Int = BufferStream().perform {
         serializable.write(it!!)
         it.flip()
         this.write(it.byteBuffer, position)
@@ -169,7 +169,7 @@ open class FileChannelStore() : Store {
      * @param serializable value to read into
      * @return same value instance that was sent in.
      */
-    override fun read(position: Long, size: Int, serializable: BufferStreamable): Any? {
+    override fun read(position: Int, size: Int, serializable: BufferStreamable): Any? {
         if (!validateFileSize(position))
             return null
 
@@ -188,7 +188,7 @@ open class FileChannelStore() : Store {
      * @param size Amount of bytes to read.
      * @return Object Buffer contains bytes read
      */
-    override fun read(position: Long, size: Int): BufferStream? {
+    override fun read(position: Int, size: Int): BufferStream? {
         if (!validateFileSize(position))
             return null
 
@@ -208,10 +208,10 @@ open class FileChannelStore() : Store {
      * @param buffer   Buffer to put into
      * @param position position in store to read
      */
-    override fun read(buffer: ByteBuffer, position: Long) {
+    override fun read(buffer: ByteBuffer, position: Int) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        channel!!.read(buffer, position)
+        channel!!.read(buffer, position.toLong())
         while (buffer.hasRemaining()) // Fill out the rest because the File Channel may not be filled in
             buffer.put(0.toByte())
     }
@@ -221,7 +221,7 @@ open class FileChannelStore() : Store {
      * @param position Position to validate
      * @return whether the value you seek is in a valid position
      */
-    private fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
+    private fun validateFileSize(position: Int): Boolean = position < fileSizeCounter.get()
 
     /**
      * Allocates a spot in the file
@@ -229,14 +229,14 @@ open class FileChannelStore() : Store {
      * @param size Allocate space within the store.
      * @return position of started allocated bytes
      */
-    override fun allocate(size: Int): Long = withLongBuffer {
+    override fun allocate(size: Int): Int = withIntBuffer {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val newFileSize = fileSizeCounter.getAndAdd(size)
-        it.putLong(newFileSize + size)
+        it.putInt(newFileSize + size)
         it.rewind()
         this.write(it, 0)
-        return@withLongBuffer newFileSize
+        return@withIntBuffer newFileSize
     }
 
     /**
@@ -255,7 +255,7 @@ open class FileChannelStore() : Store {
      * @since 2.0.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T> getObject(position: Long):T {
+    override fun <T> getObject(position: Int):T {
         val size = BufferPool.withIntBuffer {
             this.read(it, position)
             it.rewind()

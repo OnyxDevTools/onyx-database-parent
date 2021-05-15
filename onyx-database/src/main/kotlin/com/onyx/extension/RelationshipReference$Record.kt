@@ -25,9 +25,9 @@ fun RelationshipReference.toManagedEntity(context: SchemaContext, clazz:Class<*>
 }
 
 fun RelationshipReference.descriptor(context: SchemaContext, clazz: Class<*>, defaultDescriptor: EntityDescriptor?):EntityDescriptor =
-    if(defaultDescriptor != null && ((partitionId != 0L && defaultDescriptor.partition?.partitionValue != "") || partitionId == 0L))
+    if(defaultDescriptor != null && ((partitionId != 0 && defaultDescriptor.partition?.partitionValue != "") || partitionId == 0))
         defaultDescriptor
-    else if(partitionId == 0L)
+    else if(partitionId == 0)
         context.getDescriptorForEntity(clazz, "")
     else {
         val partition = context.getPartitionWithId(partitionId)

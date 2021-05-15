@@ -40,7 +40,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
         return scan(recordInteractor)
     }
 
-    fun scan(recordInteractor: RecordInteractor, scanExisting:Boolean = false, partitionId:Long = this.partitionId):MutableSet<Reference> {
+    fun scan(recordInteractor: RecordInteractor, scanExisting:Boolean = false, partitionId:Int = this.partitionId):MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
 
@@ -56,7 +56,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
                             matching.add(it)
                     }
         } else {
-            val values: Set<Long> = if(isBetween) {
+            val values: Set<Int> = if(isBetween) {
                 recordInteractor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
             } else {
                 when {

@@ -202,7 +202,7 @@ interface SchemaContext {
      * @throws OnyxException Generic Exception
      */
     @Throws(OnyxException::class)
-    fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): DiskMapFactory
+    fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Int): DiskMapFactory
 
     /**
      * Get Partition Entry for entity
@@ -227,7 +227,7 @@ interface SchemaContext {
      * @throws OnyxException Generic Exception
      */
     @Throws(OnyxException::class)
-    fun getPartitionWithId(partitionId: Long): SystemPartitionEntry?
+    fun getPartitionWithId(partitionId: Int): SystemPartitionEntry?
 
     /**
      * Get Record Controller

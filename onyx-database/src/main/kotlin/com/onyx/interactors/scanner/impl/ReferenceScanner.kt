@@ -40,7 +40,7 @@ open class ReferenceScanner @Throws(OnyxException::class) constructor(criteria: 
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
         val matching = HashSet<Reference>()
-        (records.references.map { Reference(0L, it.position) } - existingValues).forEach {
+        (records.references.map { Reference(0, it.position) } - existingValues).forEach {
             collector?.collect(it, it.toManagedEntity(context, descriptor))
             if(collector == null)
                 matching.add(it)

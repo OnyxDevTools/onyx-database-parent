@@ -72,7 +72,7 @@ interface RecordInteractor {
      * @return reference within store
      */
     @Throws(OnyxException::class)
-    fun getReferenceId(primaryKey: Any): Long
+    fun getReferenceId(primaryKey: Any): Int
 
     /**
      * Returns the object using the reference ID
@@ -81,7 +81,7 @@ interface RecordInteractor {
      * @return hydrated entity
      */
     @Throws(OnyxException::class)
-    fun getWithReferenceId(referenceId: Long): IManagedEntity?
+    fun getWithReferenceId(referenceId: Int): IManagedEntity?
 
     /**
      * Returns a structure of the entity with a reference id
@@ -90,7 +90,7 @@ interface RecordInteractor {
      * @return entity as a map
      */
     @Throws(OnyxException::class)
-    fun getMapWithReferenceId(reference: Long): Map<String, *>?
+    fun getMapWithReferenceId(reference: Int): Map<String, *>?
 
     /**
      * Returns a specific attribute of an entity
@@ -104,7 +104,7 @@ interface RecordInteractor {
      * and not instantiate new reflection fields
      */
     @Throws(OnyxException::class)
-    fun getAttributeWithReferenceId(attribute: Field, referenceId: Long): Any?
+    fun getAttributeWithReferenceId(attribute: Field, referenceId: Int): Any?
 
     /**
      * For sorted indexes, you can find all the entity references above the value.  The index value must implement comparable
@@ -118,7 +118,7 @@ interface RecordInteractor {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long>
+    fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Int>
 
     /**
      * For sorted indexes, you can find all the entity references below the value.  The index value must implement comparable
@@ -132,7 +132,7 @@ interface RecordInteractor {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long>
+    fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Int>
 
     /**
      * Find all references between from and to values.  The includeFrom indicates greater than equal
@@ -140,6 +140,6 @@ interface RecordInteractor {
      *
      * @since 2.1.3 Optimize range queries
      */
-    fun findAllBetween(fromValue:Any?, includeFromValue:Boolean, toValue:Any?, includeToValue:Boolean):Set<Long>
+    fun findAllBetween(fromValue:Any?, includeFromValue:Boolean, toValue:Any?, includeToValue:Boolean):Set<Int>
 
 }

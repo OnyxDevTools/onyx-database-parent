@@ -30,7 +30,7 @@ import java.util.*
 open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractIterableSkipList<K, V>(fileStore, header, keyType, canStoreKeyWithinNode), SortedDiskMap<K,V> {
 
     override val size: Int
-        get() = longSize().toInt()
+        get() = reference.recordCount.get()
 
     private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
@@ -63,7 +63,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @since 2.1.3
      * @return Value for previous record ID and if the value is been updated or inserted
      */
-    override fun putAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult = mapReadWriteLock.writeLock { super.internalPutAndGet(key, value, preUpdate) }
+    override fun putAndGet(key: K, value: V, preUpdate:((Int) -> Unit)?): PutResult = mapReadWriteLock.writeLock { super.internalPutAndGet(key, value, preUpdate) }
 
     /**
      * Iterates through the entire skip list to see if it contains the value you are looking for.
@@ -101,8 +101,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
         head = SkipNode.create(fileStore)
         this.reference.firstNode = head!!.position
         updateHeaderFirstNode(reference, this.reference.firstNode)
-        reference.recordCount.set(0L)
-        updateHeaderRecordCount(0L)
+        reference.recordCount.set(0)
+        updateHeaderRecordCount(0)
     }
 
     /**
@@ -113,7 +113,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.readLock { find(key)?.position ?: -1  }
+    override fun getRecID(key: K): Int = mapReadWriteLock.readLock { find(key)?.position ?: -1  }
 
     /**
      * Hydrate a record with its record ID.  If the record value exists it will be returned
@@ -122,7 +122,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @return The value within the map
      * @since 1.2.0
      */
-    override fun getWithRecID(recordId: Long): V? {
+    override fun getWithRecID(recordId: Int): V? {
         if (recordId <= 0)
             return null
         val node:SkipNode = findNodeAtPosition(recordId) ?: return null
@@ -136,7 +136,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @return Map of key values
      * @since 1.2.0
      */
-    override fun getMapWithRecID(recordId: Long): Map<String, Any?>? = mapReadWriteLock.readLock{
+    override fun getMapWithRecID(recordId: Int): Map<String, Any?>? = mapReadWriteLock.readLock{
         val node:SkipNode = findNodeAtPosition(recordId) ?: return@readLock null
         return@readLock getRecordValueAsDictionary(node.record)
     }
@@ -152,7 +152,7 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @since 1.3.0 Optimized to require the reflection field so it does not have to re-instantiate one.
      */
     @Throws(AttributeTypeMismatchException::class)
-    override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T = mapReadWriteLock.readLock {
+    override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Int): T = mapReadWriteLock.readLock {
         @Suppress("UNCHECKED_CAST")
         val node:SkipNode = findNodeAtPosition(reference) ?: return@readLock  null as T
         return@readLock node.getRecord<Any>(fileStore).getAny(attribute)
@@ -170,8 +170,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @return A Set of references
      * @since 1.2.0
      */
-    override fun above(index: K, includeFirst: Boolean): Set<Long> {
-        val results = HashSet<Long>()
+    override fun above(index: K, includeFirst: Boolean): Set<Int> {
+        val results = HashSet<Int>()
         var node:SkipNode? = nearest(index)
 
         if(node != null && !node.isRecord && node.right> 0)
@@ -198,8 +198,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      * @return A Set of references
      * @since 1.2.0
      */
-    override fun below(index: K, includeFirst: Boolean): Set<Long> {
-        val results = HashSet<Long>()
+    override fun below(index: K, includeFirst: Boolean): Set<Int> {
+        val results = HashSet<Int>()
         var node:SkipNode? = nearest(index)
 
         if(node != null && !node.isRecord && node.right> 0)
@@ -229,8 +229,8 @@ open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<
      *
      * @since 2.1.3
      */
-    override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Long> {
-        val results = HashSet<Long>()
+    override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Int> {
+        val results = HashSet<Int>()
         var node:SkipNode? = nearest(fromValue!!)
 
         if(node != null && !node.isRecord && node.right> 0)

@@ -22,7 +22,7 @@ import kotlin.collections.HashMap
 class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, private val context: SchemaContext) : IndexInteractor {
 
     private var references: DiskMap<Any, Header>// Stores the references for an index key
-    private var indexValues: DiskMap<Long, Any>
+    private var indexValues: DiskMap<Int, Any>
     private var recordInteractor: RecordInteractor? = null
 
     init {
@@ -31,7 +31,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
         val dataFile = context.getDataFile(descriptor)
 
         references = dataFile.getHashMap(indexDescriptor.type, descriptor.entityClass.name + indexDescriptor.name)
-        indexValues = dataFile.getHashMap(Long::class.java, descriptor.entityClass.name + indexDescriptor.name + "indexValues")
+        indexValues = dataFile.getHashMap(Int::class.java, descriptor.entityClass.name + indexDescriptor.name + "indexValues")
     }
 
     /**
@@ -43,7 +43,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      */
     @Throws(OnyxException::class)
     @Synchronized
-    override fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long) {
+    override fun save(indexValue: Any?, oldReferenceId: Int, newReferenceId: Int) {
 
         // Delete the old index key
         if (oldReferenceId > 0) {
@@ -54,7 +54,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
 
         references.compute(indexValue!!) { _, existingHeader ->
             val header = existingHeader ?: dataFile.newMapHeader()
-            val indexes: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
+            val indexes: DiskMap<Int, Any?> = dataFile.getHashMap(Int::class.java, header)
             indexes[newReferenceId] = null
             header.firstNode = indexes.reference.firstNode
             header.position = indexes.reference.position
@@ -71,14 +71,14 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      */
     @Throws(OnyxException::class)
     @Synchronized
-    override fun delete(reference: Long) {
+    override fun delete(reference: Int) {
         if (reference > 0) {
             val indexValue = indexValues.remove(reference)
             if (indexValue != null) {
                 val dataFile = context.getDataFile(descriptor)
 
                 references.computeIfPresent(indexValue) { _, header ->
-                    val indexes: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header!!)
+                    val indexes: DiskMap<Int, Any?> = dataFile.getHashMap(Int::class.java, header!!)
                     indexes.remove(reference)
                     header.firstNode = indexes.reference.firstNode
                     header.position = indexes.reference.position
@@ -96,11 +96,11 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @return References matching that index value
      */
     @Throws(OnyxException::class)
-    override fun findAll(indexValue: Any?): Map<Long, Any?> {
+    override fun findAll(indexValue: Any?): Map<Int, Any?> {
         val header = references[indexValue] ?: return HashMap()
         val dataFile = context.getDataFile(descriptor)
 
-        return dataFile.getHashMap(Long::class.java, header)
+        return dataFile.getHashMap(Int::class.java, header)
     }
 
     /**
@@ -126,15 +126,15 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    override fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long> {
-        val allReferences = HashSet<Long>()
+    override fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Int> {
+        val allReferences = HashSet<Int>()
         val diskReferences = references.above(indexValue!!, includeValue)
 
         val dataFile = context.getDataFile(descriptor)
 
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.getHashMap<Map<Long, Set<Long>>>(Long::class.java, it!!) }
+                .map { dataFile.getHashMap<Map<Int, Set<Int>>>(Int::class.java, it!!) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences
@@ -155,13 +155,13 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    override fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long> {
-        val allReferences = HashSet<Long>()
+    override fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Int> {
+        val allReferences = HashSet<Int>()
         val diskReferences = references.below(indexValue!!, includeValue)
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.getHashMap<DiskMap<Long, Any?>>(Long::class.java, it!!) }
+                .map { dataFile.getHashMap<DiskMap<Int, Any?>>(Int::class.java, it!!) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences
@@ -181,13 +181,13 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
      *
      * @since 1.2.0
      */
-    override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Long> {
-        val allReferences = HashSet<Long>()
+    override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Int> {
+        val allReferences = HashSet<Int>()
         val diskReferences = references.between(fromValue, includeFromValue, toValue, includeToValue)
         val dataFile = context.getDataFile(descriptor)
         diskReferences
                 .map { references.getWithRecID(it) }
-                .map { dataFile.getHashMap<DiskMap<Long, Any?>>(Long::class.java, it!!) }
+                .map { dataFile.getHashMap<DiskMap<Int, Any?>>(Int::class.java, it!!) }
                 .forEach { allReferences.addAll(it.keys) }
 
         return allReferences

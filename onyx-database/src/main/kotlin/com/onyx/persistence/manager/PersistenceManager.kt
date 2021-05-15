@@ -551,7 +551,7 @@ interface PersistenceManager {
      * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @Throws(OnyxException::class)
-    fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E
+    fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Int): E
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -598,14 +598,14 @@ interface PersistenceManager {
      *
      * Query myQuery = new Query();
      * myQuery.setClass(SystemEntity.class);
-     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     * int numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
      *
      *
      * or:
      *
      *
      * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
-     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     * int numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criteria
@@ -613,7 +613,7 @@ interface PersistenceManager {
      * @since 1.3.0 Implemented with feature request #71
      */
     @Throws(OnyxException::class)
-    fun countForQuery(query: Query): Long
+    fun countForQuery(query: Query): Int
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.

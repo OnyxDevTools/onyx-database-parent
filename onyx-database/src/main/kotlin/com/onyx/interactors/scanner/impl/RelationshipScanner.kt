@@ -35,7 +35,7 @@ class RelationshipScanner @Throws(OnyxException::class) constructor(criteria: Qu
         // We do not support querying relationships by all partitions.  That would be horribly inefficient
         if (this.query.partition === QueryPartitionMode.ALL) throw InvalidQueryException()
 
-        var partitionId = 0L
+        var partitionId = 0
 
         if (this.descriptor.hasPartition) {
             val temporaryManagedEntity: IManagedEntity = descriptor.entityClass.instance()

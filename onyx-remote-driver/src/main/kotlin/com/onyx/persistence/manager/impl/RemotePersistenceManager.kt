@@ -50,6 +50,7 @@ import com.onyx.persistence.stream.QueryStream
 open class RemotePersistenceManager : PersistenceManager {
 
     override lateinit var context: SchemaContext
+    @Suppress("JoinDeclarationAndAssignment")
     private lateinit var proxy: PersistenceManager
     private lateinit var pushRegistrar: PushRegistrar
 
@@ -379,7 +380,7 @@ open class RemotePersistenceManager : PersistenceManager {
      * @throws OnyxException error occurred while attempting to retrieve entity.
      */
     @Throws(OnyxException::class)
-    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Long): E = proxy.findByIdWithPartitionId<E>(clazz, id, partitionId)
+    override fun <E : IManagedEntity?> findByIdWithPartitionId(clazz: Class<*>, id: Any, partitionId: Int): E = proxy.findByIdWithPartitionId(clazz, id, partitionId)
 
     /**
      * This method is used for bulk streaming data entities.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
@@ -430,14 +431,14 @@ open class RemotePersistenceManager : PersistenceManager {
      *
      * Query myQuery = new Query();
      * myQuery.setClass(SystemEntity.class);
-     * long numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
+     * int numberOfSystemEntities = persistenceManager.countForQuery(myQuery);
      *
      *
      * or:
      *
      *
      * Query myQuery = new Query(SystemEntity.class, new QueryCriteria("primaryKey", QueryCriteriaOperator.GREATER_THAN, 3));
-     * long numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
+     * int numberOfSystemEntitiesWithIdGt3 = persistenceManager.countForQuery(myQuery);
      *
      * @param query The query to apply to the count operation
      * @return The number of entities that meet the query criterion
@@ -445,7 +446,7 @@ open class RemotePersistenceManager : PersistenceManager {
      * @since 1.3.0 Implemented with feature request #71
      */
     @Throws(OnyxException::class)
-    override fun countForQuery(query: Query): Long = proxy.countForQuery(query)
+    override fun countForQuery(query: Query): Int = proxy.countForQuery(query)
 
     /**
      * Un-register a query listener.  This will remove the listener from observing changes for that query.

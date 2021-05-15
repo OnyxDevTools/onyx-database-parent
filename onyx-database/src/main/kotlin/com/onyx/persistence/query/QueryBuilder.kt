@@ -34,7 +34,7 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return manager.executeUpdate(this.query)
     }
 
-    fun count():Long {
+    fun count():Int {
         assignListener()
         return manager.countForQuery(this.query)
     }

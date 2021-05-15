@@ -18,7 +18,7 @@ import com.onyx.persistence.query.QueryCriteria
  */
 abstract class AbstractTableScanner constructor(protected val criteria: QueryCriteria, classToScan: Class<*>, protected val descriptor: EntityDescriptor, protected val query: Query, context: SchemaContext, protected var persistenceManager: PersistenceManager){
     protected var records: DiskMap<Any, IManagedEntity> = context.getDataFile(descriptor).getHashMap(descriptor.identifier!!.type, descriptor.entityClass.name)
-    protected var partitionId= if(descriptor.hasPartition) context.getPartitionWithValue(classToScan, descriptor.partition!!.partitionValue)!!.primaryKey.toLong() else 0L
+    protected var partitionId= if(descriptor.hasPartition) context.getPartitionWithValue(classToScan, descriptor.partition!!.partitionValue)!!.primaryKey else 0
     protected val contextId = context.contextId
 
     var collector:QueryCollector<Any>? = null

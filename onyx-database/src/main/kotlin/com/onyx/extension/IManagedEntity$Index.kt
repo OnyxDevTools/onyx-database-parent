@@ -25,7 +25,7 @@ fun IManagedEntity.indexInteractor(context: SchemaContext, name:String, descript
  * @since 2.0.0
  *
  */
-fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long, newReferenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
+fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Int, newReferenceId:Int, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
         // Save All Indexes
         descriptor.indexes.values.forEach {
@@ -45,7 +45,7 @@ fun IManagedEntity.saveIndexes(context: SchemaContext, previousReferenceId:Long,
  *
  * @since 2.0.0
  */
-fun IManagedEntity.deleteAllIndexes(context: SchemaContext, referenceId:Long, descriptor: EntityDescriptor = descriptor(context)) {
+fun IManagedEntity.deleteAllIndexes(context: SchemaContext, referenceId:Int, descriptor: EntityDescriptor = descriptor(context)) {
     if (descriptor.hasIndexes) {
         descriptor.indexes.values.forEach {
             indexInteractor(context, it.name, descriptor).delete(referenceId)

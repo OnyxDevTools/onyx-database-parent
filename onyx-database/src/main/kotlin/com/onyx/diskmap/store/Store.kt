@@ -32,7 +32,7 @@ interface Store {
      * @param serializable Object serializable to write to store
      * @param position location to write to
      */
-    fun write(serializable: BufferStreamable, position: Long): Int
+    fun write(serializable: BufferStreamable, position: Int): Int
 
     /**
      * Write an Byte Buffer to the store.  The buffer must be flipped or the position must be set prior to
@@ -42,7 +42,7 @@ interface Store {
      * @param position Position within the volume to write to.
      * @return How many bytes were written
      */
-    fun write(buffer: ByteBuffer, position: Long): Int
+    fun write(buffer: ByteBuffer, position: Int): Int
 
     /**
      * Write a serializable value
@@ -51,7 +51,7 @@ interface Store {
      * @param size Amount of bytes to read.
      * @return Object Buffer contains bytes read
      */
-    fun read(position: Long, size: Int): BufferStream?
+    fun read(position: Int, size: Int): BufferStream?
 
     /**
      * Read the file channel and put it into a buffer at a position
@@ -59,7 +59,7 @@ interface Store {
      * @param buffer   Buffer to put into
      * @param position position in store to read
      */
-    fun read(buffer: ByteBuffer, position: Long)
+    fun read(buffer: ByteBuffer, position: Int)
 
     /**
      * Read a serializable value
@@ -69,7 +69,7 @@ interface Store {
      * @param serializable value to read into
      * @return same value instance that was sent in.
      */
-    fun read(position: Long, size: Int, serializable: BufferStreamable): Any?
+    fun read(position: Int, size: Int, serializable: BufferStreamable): Any?
 
     /**
      * Allocates a spot in the file
@@ -77,14 +77,14 @@ interface Store {
      * @param size Allocate space within the store.
      * @return position of started allocated bytes
      */
-    fun allocate(size: Int): Long
+    fun allocate(size: Int): Int
 
     /**
-     * Getter for file longSize
+     * Getter for file intSize
      *
      * @return The self tracked size of the storage
      */
-    fun getFileSize(): Long
+    fun getFileSize(): Int
 
     /**
      * Close file storage
@@ -119,7 +119,7 @@ interface Store {
      * @param position Position in the store to retrieve object
      * @since 2.0.0
      */
-    fun <T> getObject(position: Long):T
+    fun <T> getObject(position: Int):T
 
     /**
      * Write an object to the store.  First add its size and then the byte value
@@ -128,7 +128,7 @@ interface Store {
      * @param value Value to append to the store
      * @since 2.0.0
      */
-    fun writeObject(value:Any?): Long {
+    fun writeObject(value:Any?): Int {
         val stream = BufferStream()
         stream.putObject(value, context)
         stream.flip()
@@ -148,6 +148,6 @@ interface Store {
         }
     }
 
-    fun readObject(position: Long, size: Int): BufferStream? =
+    fun readObject(position: Int, size: Int): BufferStream? =
             read(position, size)
 }

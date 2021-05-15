@@ -18,7 +18,7 @@ interface IndexInteractor {
      * @param newReferenceId New entity reference for the index
      */
     @Throws(OnyxException::class)
-    fun save(indexValue: Any?, oldReferenceId: Long, newReferenceId: Long)
+    fun save(indexValue: Any?, oldReferenceId: Int, newReferenceId: Int)
 
     /**
      * Delete an index key with a record reference
@@ -26,7 +26,7 @@ interface IndexInteractor {
      * @param reference Entity reference
      */
     @Throws(OnyxException::class)
-    fun delete(reference: Long)
+    fun delete(reference: Int)
 
     /**
      * Find all index references
@@ -35,7 +35,7 @@ interface IndexInteractor {
      * @return References matching that index value
      */
     @Throws(OnyxException::class)
-    fun findAll(indexValue: Any?): Map<Long, *>
+    fun findAll(indexValue: Any?): Map<Int, *>
 
     /**
      * Find all the references above and perhaps equal to the key parameter
@@ -48,7 +48,7 @@ interface IndexInteractor {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Long>
+    fun findAllAbove(indexValue: Any?, includeValue: Boolean): Set<Int>
 
     /**
      * Find all references between from and to values.  The includeFrom indicates greater than equal
@@ -56,7 +56,7 @@ interface IndexInteractor {
      *
      * @since 2.1.3 Optimize range queries
      */
-    fun findAllBetween(fromValue:Any?, includeFromValue:Boolean, toValue:Any?, includeToValue:Boolean):Set<Long>
+    fun findAllBetween(fromValue:Any?, includeFromValue:Boolean, toValue:Any?, includeToValue:Boolean):Set<Int>
 
     /**
      * Find all the references blow and perhaps equal to the key parameter
@@ -69,7 +69,7 @@ interface IndexInteractor {
      * @since 1.2.0
      */
     @Throws(OnyxException::class)
-    fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Long>
+    fun findAllBelow(indexValue: Any?, includeValue: Boolean): Set<Int>
 
     /**
      * Get Index descriptor

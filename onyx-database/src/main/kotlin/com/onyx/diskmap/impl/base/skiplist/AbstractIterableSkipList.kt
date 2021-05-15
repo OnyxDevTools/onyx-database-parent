@@ -100,7 +100,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, keyT
          * It sends the size at the time of method invocation not creating the sub collection.
          */
         override val size: Int
-            get() = this@AbstractIterableSkipList.longSize().toInt()
+            get() = this@AbstractIterableSkipList.size
     }
 
 
@@ -221,7 +221,7 @@ abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, keyT
 
         init {
             current = head
-            while (current?.down ?: 0L > 0)
+            while (current?.down ?: 0 > 0)
                 current = findNodeAtPosition(current!!.down)
 
             current = if(current?.right ?: 0 > 0)

@@ -122,7 +122,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Entity reference id
      */
     @Throws(OnyxException::class)
-    override fun getReferenceId(primaryKey: Any): Long = records.getRecID(primaryKey)
+    override fun getReferenceId(primaryKey: Any): Int = records.getRecID(primaryKey)
 
     /**
      * Returns the object using the reference ID
@@ -131,7 +131,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Hydrated entity
      */
     @Throws(OnyxException::class)
-    override fun getWithReferenceId(referenceId: Long): IManagedEntity = records.getWithRecID(referenceId)!!
+    override fun getWithReferenceId(referenceId: Int): IManagedEntity = records.getWithRecID(referenceId)!!
 
     /**
      * Returns a structure of the entity with a reference id
@@ -140,7 +140,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Entity as a map
      */
     @Throws(OnyxException::class)
-    override fun getMapWithReferenceId(reference: Long): Map<String, Any?> = records.getMapWithRecID(reference)!!
+    override fun getMapWithReferenceId(reference: Int): Map<String, Any?> = records.getMapWithRecID(reference)!!
 
     /**
      * Get a specific attribute with reference Id
@@ -150,7 +150,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @return Attribute key
      */
     @Throws(AttributeTypeMismatchException::class)
-    override fun getAttributeWithReferenceId(attribute: Field, referenceId: Long): Any? = records.getAttributeWithRecID(attribute, referenceId)
+    override fun getAttributeWithReferenceId(attribute: Field, referenceId: Int): Any? = records.getAttributeWithRecID(attribute, referenceId)
 
     /**
      * Find all objects greater than the key parameter.  The underlying data
@@ -163,7 +163,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).above(indexValue, includeValue)
+    override fun findAllAbove(indexValue: Any, includeValue: Boolean): Set<Int> = (records as SortedDiskMap<Any, IManagedEntity>).above(indexValue, includeValue)
 
     /**
      * Find all objects less than the key parameter.  The underlying data
@@ -176,7 +176,7 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).below(indexValue, includeValue)
+    override fun findAllBelow(indexValue: Any, includeValue: Boolean): Set<Int> = (records as SortedDiskMap<Any, IManagedEntity>).below(indexValue, includeValue)
 
     /**
      * Find all the references between from and to values.
@@ -193,5 +193,5 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, prote
      * @since 1.2.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).between(fromValue, includeFromValue, toValue, includeToValue)
+    override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Int> = (records as SortedDiskMap<Any, IManagedEntity>).between(fromValue, includeFromValue, toValue, includeToValue)
 }

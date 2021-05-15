@@ -12,7 +12,7 @@ open class BulkPrePopulatedDatabaseTest(override var factoryClass: KClass<*>) : 
 
     @Before
     fun seedData() {
-        if(manager.from(PerformanceEntity::class).count() == 0L) {
+        if(manager.from(PerformanceEntity::class).count() == 0) {
             val entityList = ArrayList<IManagedEntity>()
             for (i in 0..99999) {
                 val entity = PerformanceEntity()

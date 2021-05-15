@@ -26,7 +26,7 @@ import java.util.*
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractDiskMap<K, V>(fileStore, header, keyType, canStoreKeyWithinNode) {
 
-    protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
+    protected var nodeCache: MutableMap<Int, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     init {
         determineHead()
@@ -51,7 +51,7 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
         }
     }
 
-    protected open fun findNodeAtPosition(position: Long):SkipNode? = if(position == 0L) null else SkipNode.get(fileStore, position)
+    protected open fun findNodeAtPosition(position: Int):SkipNode? = if(position == 0) null else SkipNode.get(fileStore, position)
 
     override fun containsKey(key: K): Boolean = find(key) != null
 
@@ -67,11 +67,11 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
      * @since 2.1.3
      * @return Value for previous record ID and if the value is been updated or inserted
      */
-    fun internalPutAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult {
+    fun internalPutAndGet(key: K, value: V, preUpdate:((Int) -> Unit)?): PutResult {
         var nearest:SkipNode = nearest(key)!!
 
         val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))))
-        result.recordId = if(!result.isInsert) nearest.position else -1L
+        result.recordId = if(!result.isInsert) nearest.position else -1
 
         if(preUpdate != null) {
             // The purpose of getting and setting the head is in the event there is a recursive call within the pre-update
@@ -81,7 +81,7 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
             head = tempHead
         }
 
-        val valueLocation:Long = fileStore.writeObject(value)
+        val valueLocation:Int = fileStore.writeObject(value)
 
         if(!result.isInsert) {
 
@@ -99,7 +99,7 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
         } else {
 
             var head:SkipNode = this.head!!
-            val keyLocation:Long = if(storeKeyWithinNode) key.long() else fileStore.writeObject(key)
+            val keyLocation:Long = if(storeKeyWithinNode) key.long() else fileStore.writeObject(key).toLong()
 
             //Stuff in between nearest and its right partner
             var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0)
@@ -113,7 +113,7 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
 
                 // Add another level
                 if(level >= head.level) {
-                    val newHead = SkipNode.create(fileStore, 0L, 0L, 0L, 0L, head.position, level)
+                    val newHead = SkipNode.create(fileStore, 0L, 0, 0, 0, head.position, level)
                     updateNodeCache(newHead)
                     head.setTop(fileStore, newHead.position)
                     updateNodeCache(head)
@@ -123,7 +123,7 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
                 }
 
                 // Find the first with a top
-                while(nearest.up == 0L && nearest.left > 0L)
+                while(nearest.up == 0 && nearest.left > 0)
                     nearest = findNodeAtPosition(nearest.left)!!
 
                 if(nearest.up > 0)
@@ -157,10 +157,10 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
      * Insert a new node between 2 other nodes
      * @since 2.0.0
      */
-    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short):SkipNode {
-        val right:SkipNode? = if(left?.right ?: 0L > 0L) findNodeAtPosition(left!!.right) else null
+    private fun insertNode(key:Long, value:Int, left:SkipNode?, bottom:SkipNode?, level:Short):SkipNode {
+        val right:SkipNode? = if(left?.right ?: 0 > 0) findNodeAtPosition(left!!.right) else null
 
-        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level)
+        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0, left?.right ?: 0, bottom?.position ?: 0, level)
         updateNodeCache(newNode)
         right?.setLeft(fileStore, newNode.position)
         updateNodeCache(right)
@@ -209,12 +209,12 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
     protected open fun deleteNode(node:SkipNode, head:SkipNode) {
         val leftNode:SkipNode? = if(node.left > 0) findNodeAtPosition(node.left) else null
         val rightNode:SkipNode? = if(node.right > 0) findNodeAtPosition(node.right) else null
-        leftNode?.setRight(fileStore, rightNode?.position ?: 0L)
+        leftNode?.setRight(fileStore, rightNode?.position ?: 0)
         updateNodeCache(leftNode)
 
         if(leftNode?.position == head.position)
             this.head = leftNode
-        rightNode?.setLeft(fileStore, leftNode?.position ?: 0L)
+        rightNode?.setLeft(fileStore, leftNode?.position ?: 0)
         updateNodeCache(rightNode)
     }
 

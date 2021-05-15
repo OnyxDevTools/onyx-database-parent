@@ -119,20 +119,20 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @since 1.3.0 Added as enhancement #71
      */
     @Throws(OnyxException::class)
-    override fun getCountForQuery(query: Query): Long {
+    override fun getCountForQuery(query: Query): Int {
         val context = Contexts.get(contextId)!!
         if (query.isDefaultQuery(descriptor)) {
             val systemEntity = context.getSystemEntityByName(query.entityType!!.name)
 
             when (QueryPartitionMode.ALL) {
                 query.partition -> {
-                    var resultCount = 0L
+                    var resultCount = 0
 
                     systemEntity!!.partition!!.entries.forEach {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
                         val dataFile = context.getDataFile(partitionDescriptor)
                         val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
-                        resultCount += records.longSize()
+                        resultCount += records.size
                     }
 
                     return resultCount
@@ -141,12 +141,12 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                     val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
                     val dataFile = context.getDataFile(partitionDescriptor)
                     val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
-                    return records.longSize()
+                    return records.size
                 }
             }
         } else {
             val results = this.getReferencesForQuery<Nothing>(query)
-            return results.getNumberOfResults().toLong()
+            return results.getNumberOfResults()
         }
     }
 
