@@ -23,28 +23,28 @@ data class SkipNode(
         this.up = top
         it.putInt(top)
         it.rewind()
-        store.write(it, position)
+        store.write(it, position + Integer.BYTES)
     }
 
     fun setLeft(store:Store, left:Int) = withIntBuffer {
         this.left = left
         it.putInt(left)
         it.rewind()
-        store.write(it, position + Integer.BYTES)
+        store.write(it, position + (Integer.BYTES * 2))
     }
 
     fun setRight(store:Store, right:Int) = withIntBuffer {
         this.right = right
         it.putInt(right)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 2))
+        store.write(it, position + (Integer.BYTES * 3))
     }
 
     fun setBottom(store:Store, bottom:Int) = withIntBuffer {
         this.down = bottom
         it.putInt(bottom)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 3))
+        store.write(it, position + (Integer.BYTES * 4))
     }
 
     fun setRecord(store:Store, record:Int) = withIntBuffer {
@@ -52,7 +52,7 @@ data class SkipNode(
         this.recordValue = null
         it.putInt(record)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 4))
+        store.write(it, position + (Integer.BYTES * 5))
     }
 
     private var keyValue:Any? = null
@@ -93,6 +93,7 @@ data class SkipNode(
     fun write(store: Store) {
         val buffer = getBuffer()
         try {
+            buffer.putInt(position)
             buffer.putInt(up)
             buffer.putInt(left)
             buffer.putInt(right)
@@ -112,6 +113,7 @@ data class SkipNode(
         try {
             store.read(buffer, position)
             buffer.rewind()
+            buffer.int
             up = buffer.int
             left = buffer.int
             right = buffer.int
@@ -130,7 +132,7 @@ data class SkipNode(
         get() = record > 0
 
     companion object {
-        const val SKIP_NODE_SIZE = (Integer.BYTES * 5) + java.lang.Long.BYTES + java.lang.Short.BYTES
+        const val SKIP_NODE_SIZE = (Integer.BYTES * 6) + java.lang.Long.BYTES + java.lang.Short.BYTES
 
         fun create(store: Store, key:Long, value: Int, left:Int, right:Int, bottom: Int, level:Short):SkipNode {
             val node = SkipNode()
