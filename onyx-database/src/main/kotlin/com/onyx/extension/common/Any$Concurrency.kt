@@ -146,6 +146,7 @@ class DeferredValue<T> {
 class OnyxThread(pool: ForkJoinPool) : ForkJoinWorkerThread(pool) {
     val intBuffer:ByteBuffer = BufferPool.allocateExact(Integer.BYTES)
     val longBuffer:ByteBuffer = BufferPool.allocateExact(java.lang.Long.BYTES)
+    val bigIntBuffer:ByteBuffer = BufferPool.allocateExact(5)
     val buffer:ByteBuffer = BufferPool.allocateExact(20000)
     val nodeBuffer:ByteBuffer = BufferPool.allocateExact(SkipNode.SKIP_NODE_SIZE)
 }

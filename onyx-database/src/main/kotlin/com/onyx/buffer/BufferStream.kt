@@ -704,7 +704,7 @@ open class BufferStream(buffer: ByteBuffer) {
             val arr = array as DoubleArray
             putInt(arr.size)
             expandableByteBuffer!!.ensureSize(java.lang.Double.BYTES * arr.size)
-            for (anArr in arr) expandableByteBuffer!!.buffer.putDouble(anArr)
+            for (anArr in arr) putDouble(anArr)
         }
         array.javaClass == kotlin.Array<Any?>::class.java -> {
             @Suppress("UNCHECKED_CAST")

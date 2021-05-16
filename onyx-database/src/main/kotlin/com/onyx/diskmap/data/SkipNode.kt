@@ -1,9 +1,10 @@
 package com.onyx.diskmap.data
 
 import com.onyx.buffer.BufferPool
-import com.onyx.buffer.BufferPool.withLongBuffer
+import com.onyx.buffer.BufferPool.withBigIntBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
+import com.onyx.exception.BufferingException
 import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.common.toType
 import java.nio.ByteBuffer
@@ -19,40 +20,40 @@ data class SkipNode(
         var level:Short = 0
 ) : BufferStreamable {
 
-    fun setTop(store:Store, top:Long) = withLongBuffer {
+    fun setTop(store:Store, top:Long) = withBigIntBuffer {
         this.up = top
-        it.putLong(top)
+        it.putBigInt(top)
         it.rewind()
         store.write(it, position)
     }
 
-    fun setLeft(store:Store, left:Long) = withLongBuffer {
+    fun setLeft(store:Store, left:Long) = withBigIntBuffer {
         this.left = left
-        it.putLong(left)
+        it.putBigInt(left)
         it.rewind()
-        store.write(it, position + java.lang.Long.BYTES)
+        store.write(it, position + 5)
     }
 
-    fun setRight(store:Store, right:Long) = withLongBuffer {
+    fun setRight(store:Store, right:Long) = withBigIntBuffer {
         this.right = right
-        it.putLong(right)
+        it.putBigInt(right)
         it.rewind()
-        store.write(it, position + (java.lang.Long.BYTES * 2))
+        store.write(it, position + (5 * 2))
     }
 
-    fun setBottom(store:Store, bottom:Long) = withLongBuffer {
+    fun setBottom(store:Store, bottom:Long) = withBigIntBuffer {
         this.down = bottom
-        it.putLong(bottom)
+        it.putBigInt(bottom)
         it.rewind()
-        store.write(it, position + (java.lang.Long.BYTES * 3))
+        store.write(it, position + (5 * 3))
     }
 
-    fun setRecord(store:Store, record:Long) = withLongBuffer {
+    fun setRecord(store:Store, record:Long) = withBigIntBuffer {
         this.record = record
         this.recordValue = null
-        it.putLong(record)
+        it.putBigInt(record)
         it.rewind()
-        store.write(it, position + (java.lang.Long.BYTES * 4))
+        store.write(it, position + (5 * 4))
     }
 
     private var keyValue:Any? = null
@@ -93,11 +94,11 @@ data class SkipNode(
     fun write(store: Store) {
         val buffer = getBuffer()
         try {
-            buffer.putLong(up)
-            buffer.putLong(left)
-            buffer.putLong(right)
-            buffer.putLong(down)
-            buffer.putLong(record)
+            buffer.putBigInt(up)
+            buffer.putBigInt(left)
+            buffer.putBigInt(right)
+            buffer.putBigInt(down)
+            buffer.putBigInt(record)
             buffer.putLong(key)
             buffer.putShort(level)
             buffer.flip()
@@ -112,11 +113,11 @@ data class SkipNode(
         try {
             store.read(buffer, position)
             buffer.rewind()
-            up = buffer.long
-            left = buffer.long
-            right = buffer.long
-            down = buffer.long
-            record = buffer.long
+            up = buffer.bigInt
+            left = buffer.bigInt
+            right = buffer.bigInt
+            down = buffer.bigInt
+            record = buffer.bigInt
             key = buffer.long
             level = buffer.short
             recordValue = null
@@ -172,3 +173,41 @@ data class SkipNode(
         }
     }
 }
+
+/**
+ * Sometimes you need an int but a long is too big.  Say for instance tracking a file position whereas
+ * files on most operating systems can only grow to 2TB.  A long is a waste of space if a 5 byte int can
+ * be used.
+ *
+ * @since 2.2.0
+ * @param value long to write.
+ */
+fun ByteBuffer.putBigInt(value: Long) {
+    this.put(byteArrayOf(
+        value.toByte(),
+        (value shr 8).toByte(),
+        (value shr 16).toByte(),
+        (value shr 24).toByte(),
+        (value shr 32).toByte()
+    ))
+}
+
+
+/**
+ * Get 5 byte integer from the buffer
+ *
+ * @since  2.2.0
+ * @return big int read from the buffer
+ * @throws BufferingException Generic Buffer Exception
+ */
+val ByteBuffer.bigInt: Long
+    @Throws(BufferingException::class)
+    get() {
+        val array = ByteArray(5)
+        this.get(array)
+        return ((array[4].toLong() and 0xff shl 32)
+                or (array[3].toLong() and 0xff shl 24)
+                or (array[2].toLong() and 0xff shl 16)
+                or (array[1].toLong() and 0xff shl 8)
+                or (array[0].toLong() and 0xff))
+    }
