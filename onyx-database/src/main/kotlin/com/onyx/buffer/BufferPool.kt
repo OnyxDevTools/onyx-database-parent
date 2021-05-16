@@ -114,6 +114,8 @@ object BufferPool {
     }
 
     @Suppress("MemberVisibilityCanPrivate")
+    val longBuffer = ThreadLocal<ByteBuffer>()
+    @Suppress("MemberVisibilityCanPrivate")
     val intBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
 
     inline fun <T> withIntBuffer(block:(ByteBuffer) -> T):T {
@@ -122,6 +124,17 @@ object BufferPool {
             thread.intBuffer
         } else {
             intBuffer.getOrSet { allocateExact(Integer.BYTES) }
+        }
+        buffer.rewind()
+        return block(buffer)
+    }
+
+    inline fun <T> withLongBuffer(block:(ByteBuffer) -> T):T {
+        val thread = Thread.currentThread()
+        val buffer = if(thread is OnyxThread) {
+            thread.longBuffer
+        } else {
+            longBuffer.getOrSet { allocateExact(java.lang.Long.BYTES) }
         }
         buffer.rewind()
         return block(buffer)

@@ -1,13 +1,13 @@
 package com.onyx.diskmap.impl.base
 
 import com.onyx.buffer.BufferPool
-import com.onyx.buffer.BufferPool.withIntBuffer
+import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.canBeCastToPrimitive
 import com.onyx.extension.perform
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Created by Tim Osborn on 1/11/17.
@@ -30,7 +30,7 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
         // This was preventing WeakHashMaps from ejecting the entire map value
         this.reference.firstNode = header.firstNode
         this.reference.position = header.position
-        this.reference.recordCount = AtomicInteger(header.recordCount.get())
+        this.reference.recordCount = AtomicLong(header.recordCount.get())
     }
 
     /**
@@ -41,7 +41,7 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      *
      * @since 1.2.0
      */
-    protected fun getRecordValueAsDictionary(recordId: Int): Map<String, Any?> {
+    protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
         var size = 0
         BufferPool.withIntBuffer {
             fileStore.read(it, recordId)
@@ -54,11 +54,11 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
     /**
      * This method will only update the record count rather than the entire header
      */
-    protected fun updateHeaderRecordCount(count:Int) {
-        withIntBuffer {
-            it.putInt(count)
+    protected fun updateHeaderRecordCount(count:Long) {
+        withLongBuffer {
+            it.putLong(count)
             it.rewind()
-            fileStore.write(it, reference.position + java.lang.Integer.BYTES)
+            fileStore.write(it, reference.position + java.lang.Long.BYTES)
         }
     }
 
@@ -68,10 +68,10 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @param header    Data structure header
      * @param firstNode First Node location
      */
-    protected fun updateHeaderFirstNode(header: Header, firstNode: Int) {
+    protected fun updateHeaderFirstNode(header: Header, firstNode: Long) {
         this.reference.firstNode = firstNode
-        withIntBuffer {
-            it.putInt(firstNode)
+        withLongBuffer {
+            it.putLong(firstNode)
             it.rewind()
             fileStore.write(it, header.position)
         }
@@ -91,7 +91,15 @@ abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, 
      * @return True if the size is 0
      * @since 1.2.0
      */
-    override fun isEmpty(): Boolean = this.size == 0
+    override fun isEmpty(): Boolean = longSize() == 0L
+
+    /**
+     * The size in a long value
+     *
+     * @return The size of the map as a long
+     * @since 1.2.0
+     */
+    override fun longSize(): Long = reference.recordCount.get()
 
     /**
      * Increment the size of the map

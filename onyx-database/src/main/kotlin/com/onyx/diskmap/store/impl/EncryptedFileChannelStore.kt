@@ -22,7 +22,7 @@ class EncryptedFileChannelStore(filePath: String, context: SchemaContext, delete
      * @since 2.2.0
      */
     @Suppress("UNCHECKED_CAST")
-    override fun <T> getObject(position: Int):T {
+    override fun <T> getObject(position: Long):T {
         val size = BufferPool.withIntBuffer {
             this.read(it, position)
             it.rewind()
@@ -44,7 +44,7 @@ class EncryptedFileChannelStore(filePath: String, context: SchemaContext, delete
      * @return Record id of entity
      * @since 2.2.0
      */
-    override fun writeObject(value: Any?): Int {
+    override fun writeObject(value: Any?): Long {
         val stream = EncryptedBufferStream()
         stream.putObject(value, context)
         stream.flip()
@@ -71,7 +71,7 @@ class EncryptedFileChannelStore(filePath: String, context: SchemaContext, delete
      * @since 2.2.0
      * @return Streamable buffer
      */
-    override fun readObject(position: Int, size: Int): BufferStream {
+    override fun readObject(position: Long, size: Int): BufferStream {
         val buffer = read(position, size)
         return EncryptedBufferStream(buffer!!.byteBuffer)
     }

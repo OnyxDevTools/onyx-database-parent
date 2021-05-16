@@ -67,7 +67,7 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                     relationshipObjectIdentifier.identifier = putResult.key
 
                     val reference = it.reference(putResult.recordId, context, relationshipDescriptor)
-                    it.saveIndexes(context, if(putResult.isInsert) 0 else putResult.recordId, putResult.recordId)
+                    it.saveIndexes(context, if(putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
                     it.saveRelationships(context, RelationshipTransaction(entity, context))
                     context.queryCacheInteractor.updateCachedQueryResultsForEntity(it, relationshipDescriptor, reference, if(putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
                     true

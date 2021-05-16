@@ -8,15 +8,15 @@ import com.onyx.buffer.BufferStreamable
  *
  * Reference of a relationship
  */
-class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Int = 0) : BufferStreamable, Comparable<RelationshipReference> {
+class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Long = 0L) : BufferStreamable, Comparable<RelationshipReference> {
 
     override fun read(buffer: BufferStream) {
-        partitionId = buffer.int
+        partitionId = buffer.long
         identifier = buffer.value
     }
 
     override fun write(buffer: BufferStream) {
-        buffer.putInt(partitionId)
+        buffer.putLong(partitionId)
         buffer.putObject(identifier)
     }
 

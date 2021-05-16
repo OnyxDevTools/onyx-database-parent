@@ -93,7 +93,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
      *
      * @since 2.0.0
      */
-    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Int = partitionId):List<Reference> = if(isBetween) {
+    protected fun find(indexValue:Any?, interactor: IndexInteractor = indexInteractor, partition: Long = partitionId):List<Reference> = if(isBetween) {
         interactor.findAllBetween(rangeFrom, fromOperator === QueryCriteriaOperator.GREATER_THAN_EQUAL, rangeTo, toOperator === QueryCriteriaOperator.LESS_THAN_EQUAL)
     } else {
         when {

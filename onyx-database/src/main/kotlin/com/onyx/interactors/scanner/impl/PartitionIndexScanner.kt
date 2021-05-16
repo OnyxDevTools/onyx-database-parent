@@ -90,8 +90,8 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
             return matching
 
         } else {
-            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0
-            if (partitionId == 0)
+            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
+            if (partitionId == 0L)
                 return HashSet()
 
             val descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
@@ -108,7 +108,7 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
      */
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
-    private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Int): MutableSet<Reference> {
+    private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
         if (criteria.value is List<*>)

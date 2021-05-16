@@ -17,7 +17,7 @@ interface AtomicCounter {
      * @param value count
      * @since 1.3.0
      */
-    fun set(value: Int)
+    fun set(value: Long)
 
     /**
      * Get Value of counter
@@ -25,7 +25,7 @@ interface AtomicCounter {
      * @return count
      * @since 1.3.0
      */
-    fun get(): Int
+    fun get(): Long
 
     /**
      * Thread safe, get the current value and then add
@@ -34,5 +34,5 @@ interface AtomicCounter {
      * @return The current value before adding
      * @since 1.3.0
      */
-    fun getAndAdd(more: Int): Int
+    fun getAndAdd(more: Int): Long
 }

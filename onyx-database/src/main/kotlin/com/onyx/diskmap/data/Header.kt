@@ -3,7 +3,8 @@ package com.onyx.diskmap.data
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
-import java.util.concurrent.atomic.AtomicInteger
+
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Created by timothy.osborn on 3/21/15.
@@ -13,9 +14,9 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class Header : BufferStreamable {
 
-    var firstNode: Int = 0
-    var position: Int = 0
-    var recordCount: AtomicInteger = AtomicInteger(0)
+    var firstNode: Long = 0
+    var position: Long = 0
+    var recordCount: AtomicLong = AtomicLong(0)
 
     /**
      * Override equals key to compare all values
@@ -34,19 +35,19 @@ class Header : BufferStreamable {
 
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {
-        firstNode = buffer.int
-        recordCount = AtomicInteger(buffer.int)
-        position = buffer.int
+        firstNode = buffer.long
+        recordCount = AtomicLong(buffer.long)
+        position = buffer.long
     }
 
     @Throws(BufferingException::class)
     override fun write(buffer: BufferStream) {
-        buffer.putInt(firstNode)
-        buffer.putInt(recordCount.get())
-        buffer.putInt(position)
+        buffer.putLong(firstNode)
+        buffer.putLong(recordCount.get())
+        buffer.putLong(position)
     }
 
     companion object {
-        const val HEADER_SIZE = Integer.BYTES * 3
+        const val HEADER_SIZE = java.lang.Long.BYTES * 3
     }
 }

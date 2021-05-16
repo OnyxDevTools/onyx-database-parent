@@ -11,15 +11,15 @@ import com.onyx.persistence.context.SchemaContext
  *
  * @since 2.0.0
  */
-fun IManagedEntity.partitionId(context:SchemaContext, descriptor: EntityDescriptor = context.getDescriptorForEntity(this, "")):Int {
+fun IManagedEntity.partitionId(context:SchemaContext, descriptor: EntityDescriptor = context.getDescriptorForEntity(this, "")):Long {
     if(hasPartition(context, descriptor)) {
         val partitionVal = partitionValue(context, descriptor)
         if(partitionVal != nullPartition) {
             val systemPartitionEntry = context.getPartitionWithValue(this::class.java, partitionVal)
-            return systemPartitionEntry?.primaryKey ?: 0
+            return systemPartitionEntry?.primaryKey?.toLong() ?: 0L
         }
     }
-    return 0
+    return 0L
 }
 
 /**

@@ -37,7 +37,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
 
     // Internal map that runs on storage
-    private var internalMaps: MutableMap<String, Int>
+    private var internalMaps: MutableMap<String, Long>
 
     private var canStoreKeyInNode:Boolean = false
 
@@ -237,14 +237,14 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @return Whether the store supports storing the key within the skip node
      */
     private fun determineKeyStore(isNew:Boolean) {
-        version = internalMaps.getOrPut("_VERSION_") { if(isNew) 1 else 0 }.toInt()
+        version = internalMaps.getOrPut("_VERSION_") { if(isNew) 1L else 0L }.toInt()
         canStoreKeyInNode = (version > 0)
     }
 
     companion object {
 
         private val storeIdCounter = AtomicInteger(0)
-        private const val FIRST_HEADER_LOCATION = 8
+        private const val FIRST_HEADER_LOCATION = 8L
 
         /**
          * Check if large files can be mapped into memory.

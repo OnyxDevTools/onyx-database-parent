@@ -48,7 +48,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @since 2.1.3
      * @return Value for previous record ID and if the value is been updated or inserted
      */
-    fun putAndGet(key:K, value:V, preUpdate:((Int) -> Unit)? = null): PutResult
+    fun putAndGet(key:K, value:V, preUpdate:((Long) -> Unit)? = null): PutResult
 
     /**
      * Get the record id for a key
@@ -56,7 +56,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @param key Record Key
      * @return The position within a store/volume
      */
-    fun getRecID(key: K): Int
+    fun getRecID(key: K): Long
 
     /**
      * Get key with record id
@@ -64,7 +64,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @param recordId Position within store
      * @return Record value
      */
-    fun getWithRecID(recordId: Int): V?
+    fun getWithRecID(recordId: Long): V?
 
     /**
      * Get structure key with record id
@@ -72,7 +72,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @param recordId Position within Store
      * @return Record in format of a Map
      */
-    fun getMapWithRecID(recordId: Int): Map<String, Any?>?
+    fun getMapWithRecID(recordId: Long): Map<String, Any?>?
 
     /**
      * Get Attribute with record id
@@ -83,7 +83,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @return Attribute key of record
      */
     @Throws(AttributeTypeMismatchException::class)
-    fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Int): T
+    fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T
 
     /**
      * Get Attribute with record id
@@ -97,6 +97,14 @@ interface DiskMap<K, V> : MutableMap<K, V> {
     fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipNode): T
 
     /**
+     * Returns the record count as a long rather than an integer.
+     *
+     * @return size in format of a long
+     * @since 1.3.0
+     */
+    fun longSize(): Long
+
+    /**
      * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
      * is sorted so this should be very efficient
      *
@@ -105,7 +113,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @return A Set of references
      * @since 1.2.0
      */
-    fun above(index: K, includeFirst: Boolean): Set<Int>
+    fun above(index: K, includeFirst: Boolean): Set<Long>
 
     /**
      * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
@@ -116,7 +124,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      * @return A Set of references
      * @since 1.2.0
      */
-    fun below(index: K, includeFirst: Boolean): Set<Int>
+    fun below(index: K, includeFirst: Boolean): Set<Long>
 
     /**
      * Find all references between from and to value.  The underlying data structure
@@ -129,7 +137,7 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      *
      * @since 2.1.3
      */
-    fun between(fromValue: K?, includeFrom:Boolean, toValue: K?, includeTo:Boolean): Set<Int>
+    fun between(fromValue: K?, includeFrom:Boolean, toValue: K?, includeTo:Boolean): Set<Long>
 
     /**
      * This was added because if you are scanning an unused partition, there is no way to expunge stale entries since

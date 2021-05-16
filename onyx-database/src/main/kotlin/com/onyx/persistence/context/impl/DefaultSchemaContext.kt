@@ -42,6 +42,7 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.reflect.KClass
@@ -182,7 +183,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Initializer
 
-    private val partitionCounter = AtomicInteger(0)
+    private val partitionCounter = AtomicLong(0)
 
     /**
      * The purpose of this is to auto number the partition ids
@@ -193,10 +194,7 @@ open class DefaultSchemaContext : SchemaContext {
         val indexInteractor = this.getIndexInteractor(descriptors[SystemPartitionEntry::class.java.name]!!.indexes["index"]!!)
         val values = indexInteractor.findAllValues()
 
-        val partition = if (values.isNotEmpty()) values.maxByOrNull {
-            it as Long
-        } as Long else 0L
-        partitionCounter.set(partition.toInt())
+        partitionCounter.set(if (values.isNotEmpty()) values.maxByOrNull { it as Long } as Long else 0L)
     }
 
     /**
@@ -659,7 +657,7 @@ open class DefaultSchemaContext : SchemaContext {
             }
         }
 
-    @JvmField internal val partitionDataFiles = OptimisticLockingMap<Int, DiskMapFactory>(HashMap())
+    @JvmField internal val partitionDataFiles = OptimisticLockingMap<Long, DiskMapFactory>(HashMap())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.
@@ -671,9 +669,9 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Int): DiskMapFactory {
+    override fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): DiskMapFactory {
 
-        if (partitionId == 0) {
+        if (partitionId == 0L) {
             return getDataFile(descriptor)
         }
 
@@ -709,7 +707,7 @@ open class DefaultSchemaContext : SchemaContext {
         partitions.firstOrNull()
     }
 
-    private val partitionsById = OptimisticLockingMap<Int, SystemPartitionEntry?>(HashMap())
+    private val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(HashMap())
 
     /**
      * Get System Partition with Id.
@@ -719,7 +717,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws OnyxException Generic Exception
      * @since 1.0.0
      */
-    override fun getPartitionWithId(partitionId: Int): SystemPartitionEntry? = partitionsById.getOrPut(partitionId) {
+    override fun getPartitionWithId(partitionId: Long): SystemPartitionEntry? = partitionsById.getOrPut(partitionId) {
         val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
         val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
         partitions.firstOrNull()

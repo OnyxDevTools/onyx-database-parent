@@ -43,11 +43,11 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
      * @param position The position within the combined FileSlice buffers
      * @return The file slice located at the position specified.
      */
-    override fun getBuffer(position: Int): FileSlice {
+    override fun getBuffer(position: Long): FileSlice {
 
         var index = 0
         if (position > 0) {
-            index = (position / bufferSliceSize)
+            index = (position / bufferSliceSize).toInt()
         }
 
         return slices.getOrPut(index) {

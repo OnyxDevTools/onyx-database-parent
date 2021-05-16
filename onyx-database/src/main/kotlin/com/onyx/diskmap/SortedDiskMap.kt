@@ -18,7 +18,7 @@ interface SortedDiskMap<K, out V> : Map<K, V> {
      * @since 1.2.0
      * @return A Set of references
      */
-    fun above(index: K, includeFirst: Boolean): Set<Int>
+    fun above(index: K, includeFirst: Boolean): Set<Long>
 
     /**
      * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
@@ -29,7 +29,7 @@ interface SortedDiskMap<K, out V> : Map<K, V> {
      * @return A Set of references
      * @since 1.2.0
      */
-    fun below(index: K, includeFirst: Boolean): Set<Int>
+    fun below(index: K, includeFirst: Boolean): Set<Long>
 
     /**
      * Find all references between from and to value.  The underlying data structure
@@ -42,6 +42,6 @@ interface SortedDiskMap<K, out V> : Map<K, V> {
      *
      * @since 2.1.3
      */
-    fun between(fromValue: K?, includeFrom:Boolean, toValue: K?, includeTo:Boolean): Set<Int>
+    fun between(fromValue: K?, includeFrom:Boolean, toValue: K?, includeTo:Boolean): Set<Long>
 
 }

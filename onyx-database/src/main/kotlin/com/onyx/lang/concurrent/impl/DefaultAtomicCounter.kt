@@ -4,7 +4,8 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.lang.concurrent.AtomicCounter
 import com.onyx.exception.BufferingException
-import java.util.concurrent.atomic.AtomicInteger
+
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Created by Tim Osborn on 3/2/17.
@@ -14,23 +15,23 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * @since 1.3.0
  */
-class DefaultAtomicCounter(initialValue: Int = 0) : AtomicCounter, BufferStreamable {
+class DefaultAtomicCounter(initialValue: Long = 0L) : AtomicCounter, BufferStreamable {
 
-    private var aLong: AtomicInteger = AtomicInteger(initialValue)
+    private var aLong: AtomicLong = AtomicLong(initialValue)
 
     /**
      * Set long value
      *
      * @param value count
      */
-    override fun set(value: Int) = this.aLong.set(value)
+    override fun set(value: Long) = this.aLong.set(value)
 
     /**
      * Get counter value
      *
      * @return current value
      */
-    override fun get(): Int = this.aLong.get()
+    override fun get(): Long = this.aLong.get()
 
     /**
      * Add value and add more
@@ -38,7 +39,7 @@ class DefaultAtomicCounter(initialValue: Int = 0) : AtomicCounter, BufferStreama
      * @param more How many more bytes
      * @return The current value
      */
-    override fun getAndAdd(more: Int): Int = this.aLong.getAndAdd(more)
+    override fun getAndAdd(more: Int): Long = this.aLong.getAndAdd(more.toLong())
 
     /**
      * Read from buffer
@@ -48,7 +49,7 @@ class DefaultAtomicCounter(initialValue: Int = 0) : AtomicCounter, BufferStreama
      */
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {
-        this.aLong = AtomicInteger(buffer.int)
+        this.aLong = AtomicLong(buffer.long)
     }
 
     /**
@@ -58,6 +59,6 @@ class DefaultAtomicCounter(initialValue: Int = 0) : AtomicCounter, BufferStreama
      * @throws BufferingException cannot write
      */
     @Throws(BufferingException::class)
-    override fun write(buffer: BufferStream) = buffer.putInt(aLong.get())
+    override fun write(buffer: BufferStream) = buffer.putLong(aLong.get())
 
 }

@@ -28,14 +28,14 @@ data class SystemPartitionEntry @JvmOverloads constructor(
     var fileName: String = "",
 
     @Index
-    var index: Int = 0,
+    var index: Long = 0,
 
     @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition::class, inverse = "entries")
     var partition: SystemPartition? = null
 
 ) : AbstractSystemEntity(), IManagedEntity {
 
-    constructor(entityDescriptor: EntityDescriptor, descriptor: PartitionDescriptor, partition: SystemPartition, index: Int):this (
+    constructor(entityDescriptor: EntityDescriptor, descriptor: PartitionDescriptor, partition: SystemPartition, index: Long):this (
         partition = partition,
         id = entityDescriptor.entityClass.name + descriptor.partitionValue,
         value = descriptor.partitionValue,

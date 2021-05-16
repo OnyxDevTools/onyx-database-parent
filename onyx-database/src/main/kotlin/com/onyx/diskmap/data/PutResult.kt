@@ -7,4 +7,4 @@ package com.onyx.diskmap.data
  *
  * @since 2.1.3 Performance Improvements
  */
-data class PutResult(val key:Any, var isInsert:Boolean = true, var recordId:Int = -1)
+data class PutResult(val key:Any, var isInsert:Boolean = true, var recordId:Long = -1)

@@ -1,7 +1,7 @@
 package com.onyx.diskmap.data
 
 import com.onyx.buffer.BufferPool
-import com.onyx.buffer.BufferPool.withIntBuffer
+import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.OnyxThread
@@ -9,50 +9,50 @@ import com.onyx.extension.common.toType
 import java.nio.ByteBuffer
 
 data class SkipNode(
-        var position:Int = 0,
-        var up:Int = 0,
-        var left:Int = 0,
-        var right:Int = 0,
-        var down:Int = 0,
-        var record:Int = 0,
+        var position:Long = 0L,
+        var up:Long = 0L,
+        var left:Long = 0L,
+        var right:Long = 0L,
+        var down:Long = 0L,
+        var record:Long = 0L,
         var key:Long = 0L,
         var level:Short = 0
 ) : BufferStreamable {
 
-    fun setTop(store:Store, top:Int) = withIntBuffer {
+    fun setTop(store:Store, top:Long) = withLongBuffer {
         this.up = top
-        it.putInt(top)
+        it.putLong(top)
         it.rewind()
-        store.write(it, position + Integer.BYTES)
+        store.write(it, position)
     }
 
-    fun setLeft(store:Store, left:Int) = withIntBuffer {
+    fun setLeft(store:Store, left:Long) = withLongBuffer {
         this.left = left
-        it.putInt(left)
+        it.putLong(left)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 2))
+        store.write(it, position + java.lang.Long.BYTES)
     }
 
-    fun setRight(store:Store, right:Int) = withIntBuffer {
+    fun setRight(store:Store, right:Long) = withLongBuffer {
         this.right = right
-        it.putInt(right)
+        it.putLong(right)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 3))
+        store.write(it, position + (java.lang.Long.BYTES * 2))
     }
 
-    fun setBottom(store:Store, bottom:Int) = withIntBuffer {
+    fun setBottom(store:Store, bottom:Long) = withLongBuffer {
         this.down = bottom
-        it.putInt(bottom)
+        it.putLong(bottom)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 4))
+        store.write(it, position + (java.lang.Long.BYTES * 3))
     }
 
-    fun setRecord(store:Store, record:Int) = withIntBuffer {
+    fun setRecord(store:Store, record:Long) = withLongBuffer {
         this.record = record
         this.recordValue = null
-        it.putInt(record)
+        it.putLong(record)
         it.rewind()
-        store.write(it, position + (Integer.BYTES * 5))
+        store.write(it, position + (java.lang.Long.BYTES * 4))
     }
 
     private var keyValue:Any? = null
@@ -69,7 +69,7 @@ data class SkipNode(
         if(keyValue == null) {
             synchronized(this) {
                 if(keyValue == null) {
-                    keyValue = store.getObject(key.toInt())
+                    keyValue = store.getObject(key)
                 }
             }
         }
@@ -93,12 +93,11 @@ data class SkipNode(
     fun write(store: Store) {
         val buffer = getBuffer()
         try {
-            buffer.putInt(position)
-            buffer.putInt(up)
-            buffer.putInt(left)
-            buffer.putInt(right)
-            buffer.putInt(down)
-            buffer.putInt(record)
+            buffer.putLong(up)
+            buffer.putLong(left)
+            buffer.putLong(right)
+            buffer.putLong(down)
+            buffer.putLong(record)
             buffer.putLong(key)
             buffer.putShort(level)
             buffer.flip()
@@ -113,12 +112,11 @@ data class SkipNode(
         try {
             store.read(buffer, position)
             buffer.rewind()
-            buffer.int
-            up = buffer.int
-            left = buffer.int
-            right = buffer.int
-            down = buffer.int
-            record = buffer.int
+            up = buffer.long
+            left = buffer.long
+            right = buffer.long
+            down = buffer.long
+            record = buffer.long
             key = buffer.long
             level = buffer.short
             recordValue = null
@@ -132,9 +130,9 @@ data class SkipNode(
         get() = record > 0
 
     companion object {
-        const val SKIP_NODE_SIZE = (Integer.BYTES * 6) + java.lang.Long.BYTES + java.lang.Short.BYTES
+        const val SKIP_NODE_SIZE = (java.lang.Long.BYTES * 6) + java.lang.Short.BYTES
 
-        fun create(store: Store, key:Long, value: Int, left:Int, right:Int, bottom: Int, level:Short):SkipNode {
+        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short):SkipNode {
             val node = SkipNode()
             node.key = key
             node.record = value
@@ -154,7 +152,7 @@ data class SkipNode(
             return node
         }
 
-        fun get(store: Store, position: Int) = SkipNode(position).read(store)
+        fun get(store: Store, position: Long) = SkipNode(position).read(store)
 
         fun getBuffer(): ByteBuffer {
             val thread = Thread.currentThread()

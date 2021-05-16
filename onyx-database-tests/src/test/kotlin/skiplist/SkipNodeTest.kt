@@ -32,9 +32,9 @@ class SkipNodeTest {
         val memoryStore = createStore()
         memoryStore.allocate(99)
         val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
-        skipNode.setTop(memoryStore, 9393)
+        skipNode.setTop(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
-        assertEquals(9393, skipNode.up, "Value was not updated")
+        assertEquals(9393L, skipNode.up, "Value was not updated")
         assertEquals(persistedNode, skipNode, "Skip node was not saved correctly")
     }
 
@@ -43,9 +43,9 @@ class SkipNodeTest {
         val memoryStore = createStore()
         memoryStore.allocate(99)
         val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
-        skipNode.setBottom(memoryStore, 9393)
+        skipNode.setBottom(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
-        assertEquals(9393, skipNode.down, "Value was not updated")
+        assertEquals(9393L, skipNode.down, "Value was not updated")
         assertEquals(persistedNode, skipNode, "Skip node was not saved correctly")
     }
 
@@ -54,9 +54,9 @@ class SkipNodeTest {
         val memoryStore = createStore()
         memoryStore.allocate(99)
         val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
-        skipNode.setLeft(memoryStore, 9393)
+        skipNode.setLeft(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
-        assertEquals(9393, skipNode.left, "Value was not updated")
+        assertEquals(9393L, skipNode.left, "Value was not updated")
         assertEquals(persistedNode, skipNode, "Skip node was not saved correctly")
     }
 
@@ -65,9 +65,9 @@ class SkipNodeTest {
         val memoryStore = createStore()
         memoryStore.allocate(99)
         val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
-        skipNode.setRight(memoryStore, 9393)
+        skipNode.setRight(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
-        assertEquals(9393, skipNode.right, "Value was not updated")
+        assertEquals(9393L, skipNode.right, "Value was not updated")
         assertEquals(persistedNode, skipNode, "Skip node was not saved correctly")
     }
 

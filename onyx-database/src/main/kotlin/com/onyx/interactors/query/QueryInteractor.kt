@@ -46,6 +46,6 @@ interface QueryInteractor {
      * @since 1.3.0 Added as enhancement #71
      */
     @Throws(OnyxException::class)
-    fun getCountForQuery(query: Query): Int
+    fun getCountForQuery(query: Query): Long
 
 }

@@ -36,7 +36,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
      * @throws OnyxException Cannot scan partition
      */
     @Throws(OnyxException::class)
-    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Int): MutableSet<Reference> {
+    private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
 
@@ -88,8 +88,8 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
 
             return matching
         } else {
-            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0
-            if(partitionId == 0) // Partition does not exist, lets do a full scan of default partition
+            val partitionId = context.getPartitionWithValue(query.entityType!!, query.partition)?.index ?: 0L
+            if(partitionId == 0L) // Partition does not exist, lets do a full scan of default partition
                 return super.scan()
 
             val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
