@@ -20,7 +20,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-abstract class AbstractCachedSkipList<K, V> constructor(fileStore: Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractSkipList<K, V>(fileStore, header, keyType, canStoreKeyWithinNode) {
+abstract class AbstractCachedSkipList<K, V> constructor(fileStore: Store, header: Header, keyType:Class<*>) : AbstractSkipList<K, V>(fileStore, header, keyType) {
 
     // Caching maps
     private var keyCache: MutableMap<K, SkipNode?> = OptimisticLockingMap(WeakHashMap())

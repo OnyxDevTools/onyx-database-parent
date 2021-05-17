@@ -27,7 +27,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractIterableSkipList<K, V>(fileStore, header, keyType, canStoreKeyWithinNode), SortedDiskMap<K,V> {
+open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<*>) : AbstractIterableSkipList<K, V>(fileStore, header, keyType), SortedDiskMap<K,V> {
 
     override val size: Int
         get() = longSize().toInt()

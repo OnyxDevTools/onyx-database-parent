@@ -20,7 +20,7 @@ import java.util.*
  * @param <V> Value Object Type
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractCachedSkipList<K, V>(store, header, keyType, canStoreKeyWithinNode) {
+abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, keyType:Class<*>) : AbstractCachedSkipList<K, V>(store, header, keyType) {
 
     // region Iterable Collections
 

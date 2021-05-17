@@ -24,7 +24,7 @@ import java.util.*
  * @since 2.0.0 This was refactored to make simpler.  It now conforms better to an actual skip list
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store, header: Header, keyType:Class<*>, canStoreKeyWithinNode:Boolean) : AbstractDiskMap<K, V>(fileStore, header, keyType, canStoreKeyWithinNode) {
+abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store, header: Header, keyType:Class<*>) : AbstractDiskMap<K, V>(fileStore, header, keyType) {
 
     protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 

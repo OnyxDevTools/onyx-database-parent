@@ -19,11 +19,11 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.2.0
  */
-abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val keyType:Class<*>, canStoreKeyWithinNode:Boolean) : DiskMap<K, V> {
+abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val keyType:Class<*>) : DiskMap<K, V> {
 
     final override val reference: Header = Header()
 
-    val storeKeyWithinNode:Boolean = canStoreKeyWithinNode && keyType.canBeCastToPrimitive()
+    val storeKeyWithinNode:Boolean = keyType.canBeCastToPrimitive()
 
     init {
         // Clone the header so that we do not have a cross reference

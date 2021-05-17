@@ -39,10 +39,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
     // Internal map that runs on storage
     private var internalMaps: MutableMap<String, Long>
 
-    private var canStoreKeyInNode:Boolean = false
-
-    private var version:Int = 0
-
     // region constructors
 
     /**
@@ -83,8 +79,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
     constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean, predefinedStore: Store? = null) {
         val path: String =  if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
 
-        val isNew = !File(path).exists()
-
         if(predefinedStore != null) {
             this.store = predefinedStore
         } else {
@@ -112,8 +106,6 @@ class DefaultDiskMapFactory : DiskMapFactory {
         } else {
             getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!)
         }
-
-        determineKeyStore(isNew)
     }
 
     // endregion
@@ -199,7 +191,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T = mapsByHeader.getOrPut(header) { DiskSkipListMap<Any, Any>(store, header, keyType, canStoreKeyInNode) } as T
+    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T = mapsByHeader.getOrPut(header) { DiskSkipListMap<Any, Any>(store, header, keyType) } as T
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -223,23 +215,10 @@ class DefaultDiskMapFactory : DiskMapFactory {
             internalMaps[name] = header.position
         }
 
-        return@getOrPut DiskSkipListMap<Any, Any>(store, header, keyType, canStoreKeyInNode)
+        return@getOrPut DiskSkipListMap<Any, Any>(store, header, keyType)
     } as T
 
     // endregion
-
-    /**
-     * This method determines whether we can store the key value within the key node rather than somewhere outside the
-     * store.  If the file is new or was created after this functionality was put in place, the app will support storing
-     * the key within the SkipNode.
-     *
-     * @since 2.1.3 Improve performance
-     * @return Whether the store supports storing the key within the skip node
-     */
-    private fun determineKeyStore(isNew:Boolean) {
-        version = internalMaps.getOrPut("_VERSION_") { if(isNew) 1L else 0L }.toInt()
-        canStoreKeyInNode = (version > 0)
-    }
 
     companion object {
 
