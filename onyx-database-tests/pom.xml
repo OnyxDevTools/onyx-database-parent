@@ -18,7 +18,7 @@
     </parent>
 
     <properties>
-        <httpclient.version>4.4</httpclient.version>
+        <httpclient.version>4.5.13</httpclient.version>
         <tyrus.version>1.10</tyrus.version>
         <spring.version>4.3.20.RELEASE</spring.version>
         <spring-security.version>4.2.20.RELEASE</spring-security.version>
