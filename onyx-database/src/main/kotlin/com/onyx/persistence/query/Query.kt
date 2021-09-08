@@ -140,6 +140,13 @@ class Query : BufferStreamable {
     var partition: Any = ""
 
     /**
+     * Specify not to use query cache
+     *
+     * @since 2.2.0
+     */
+    var nocache: Boolean = false
+
+    /**
      * Indicates whether the query was terminated
      */
     var isTerminated: Boolean = false
@@ -488,6 +495,7 @@ class Query : BufferStreamable {
         if (entityType != other.entityType) return false
         if (isDistinct != other.isDistinct) return false
         if (partition != other.partition) return false
+        if (nocache != other.nocache) return false
 
         return true
     }
@@ -499,6 +507,7 @@ class Query : BufferStreamable {
         result = 31 * result + (entityType?.hashCode() ?: 0)
         result = 31 * result + isDistinct.hashCode()
         result = 31 * result + partition.hashCode()
+        result = 31 * result + nocache.hashCode()
         return result
     }
 }

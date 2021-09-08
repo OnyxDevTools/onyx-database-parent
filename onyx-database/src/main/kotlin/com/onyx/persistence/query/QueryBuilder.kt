@@ -140,6 +140,11 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
+    fun nocache(): QueryBuilder {
+        this.query.nocache = true
+        return this
+    }
+
     fun groupBy(vararg properties:String):QueryBuilder {
         this.query.groupBy(*properties)
         return this
