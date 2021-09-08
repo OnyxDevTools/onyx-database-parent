@@ -120,6 +120,11 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
+    fun inPartition(partition: Any): QueryBuilder {
+        this.query.partition = partition
+        return this
+    }
+
     fun limit(limit:Int): QueryBuilder {
         this.query.maxResults = limit
         return this
