@@ -14,6 +14,7 @@ import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.map.OptimisticLockingMap
+import java.util.concurrent.CopyOnWriteArraySet
 
 /**
  * Created by Tim Osborn on 3/27/17.
@@ -47,7 +48,7 @@ open class DefaultQueryCacheInteractor(private val context: SchemaContext) : Que
      */
     override fun setCachedQueryResults(query: Query, results: MutableList<Reference>): CachedResults {
         val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }
-        val cachedResults = CachedResults(results.toHashSet())
+        val cachedResults = CachedResults(CopyOnWriteArraySet(results))
 
         // Set a strong reference if this is a query listener.  In that
         // case we do not want it to get cleaned up.
