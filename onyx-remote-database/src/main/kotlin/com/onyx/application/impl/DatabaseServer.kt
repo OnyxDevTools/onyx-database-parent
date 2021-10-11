@@ -61,6 +61,8 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     @Suppress("MemberVisibilityCanPrivate")
     protected var authenticationManager: AuthenticationManager? = null
 
+    var storeType: StoreType = StoreType.FILE
+
     /**
      * Start the database socket server
      *
@@ -70,6 +72,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
         if (!isRunning) {
             this.persistenceManagerFactory = ServerPersistenceManagerFactory(this.databaseLocation)
             this.persistenceManagerFactory?.setCredentials(this.user, this.password)
+            this.persistenceManagerFactory?.storeType = this.storeType
             this.persistenceManagerFactory?.initialize()
 
             // Create a default user
