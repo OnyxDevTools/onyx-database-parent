@@ -57,7 +57,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     @Suppress("MemberVisibilityCanPrivate")
     protected lateinit var rmiServer: OnyxRMIServer
 
-    protected var persistenceManagerFactory: PersistenceManagerFactory? = null
+    open var persistenceManagerFactory: PersistenceManagerFactory? = null
     @Suppress("MemberVisibilityCanPrivate")
     protected var authenticationManager: AuthenticationManager? = null
 
