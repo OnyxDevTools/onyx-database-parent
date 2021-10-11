@@ -15,6 +15,7 @@ import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import com.onyx.interactors.encryption.EncryptionInteractor
 import com.onyx.network.ssl.SSLPeer
 import com.onyx.persistence.IManagedEntity
+import com.onyx.diskmap.store.StoreType
 
 /**
  * Base Database Server Application.
