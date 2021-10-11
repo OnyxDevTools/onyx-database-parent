@@ -653,7 +653,7 @@ open class DefaultSchemaContext : SchemaContext {
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
         return dataFiles.getOrPut(key) {
-                return@getOrPut DefaultDiskMapFactory("$location/$key", StoreType.MEMORY_MAPPED_FILE, this@DefaultSchemaContext)
+                return@getOrPut DefaultDiskMapFactory("$location/$key", storeType, this@DefaultSchemaContext)
             }
         }
 
