@@ -250,6 +250,9 @@ constructor(
             "data.dat"
         } else entity!!.fileName
 
+    val absolutePath: String
+        get() = entity?.absolutePath ?: ""
+
     val hasIndexes: Boolean
         get() = indexes.isNotEmpty()
 

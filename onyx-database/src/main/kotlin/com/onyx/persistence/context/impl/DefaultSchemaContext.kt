@@ -652,8 +652,9 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
+        val absoluteLocation = if(descriptor.absolutePath.isNullOrBlank()) location else descriptor.absolutePath
         return dataFiles.getOrPut(key) {
-                return@getOrPut DefaultDiskMapFactory("$location/$key", storeType, this@DefaultSchemaContext)
+                return@getOrPut DefaultDiskMapFactory("$absoluteLocation/$key", storeType, this@DefaultSchemaContext)
             }
         }
 
