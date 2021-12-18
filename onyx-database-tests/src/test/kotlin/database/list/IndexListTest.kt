@@ -3,6 +3,7 @@ package database.list
 import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.AllAttributeForFetchSequenceGen
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,6 +13,11 @@ import kotlin.test.assertEquals
 
 @RunWith(Parameterized::class)
 class IndexListTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(factoryClass) {
+
+    @After
+    fun cleanup() {
+        manager.from(AllAttributeForFetchSequenceGen::class).delete()
+    }
 
     @Before
     fun seedData() {
