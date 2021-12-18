@@ -224,7 +224,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             }
         }
 
-        if(!(scanner is FullTableScanner)) {
+        if(scanner !is FullTableScanner) {
             // Go through and ensure all the sub criteria is met
             criteria.subCriteria.forEachIndexed { index, subCriteriaObject ->
                 if(index == 0 && subCriteriaIsRange)
