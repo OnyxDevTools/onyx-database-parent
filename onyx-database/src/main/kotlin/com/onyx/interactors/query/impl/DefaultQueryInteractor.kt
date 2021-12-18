@@ -43,6 +43,8 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             collector.setReferenceSet(pair.first)
         }
         collector.finalizeResults()
+        query.resultsCount = collector.getNumberOfResults()
+
         return collector
     }
 
@@ -175,7 +177,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
         }
 
         if(collect &&
-                (scanner is FullTableScanner || scanner is PartitionFullTableScanner || (
+                (scanner is FullTableScanner || (
                     criteria == query.getAllCriteria().last()
                     && !criteria.isNot
                     && !criteria.flip
@@ -222,7 +224,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
             }
         }
 
-        if(!(scanner is FullTableScanner || scanner is PartitionFullTableScanner)) {
+        if(!(scanner is FullTableScanner)) {
             // Go through and ensure all the sub criteria is met
             criteria.subCriteria.forEachIndexed { index, subCriteriaObject ->
                 if(index == 0 && subCriteriaIsRange)
@@ -247,6 +249,7 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
      * @param criteriaResults Criteria results used to aggregate a contrived list
      */
     private fun aggregateFilteredReferences(criteria: QueryCriteria, totalResults: MutableSet<Reference>, criteriaResults: MutableSet<Reference>) {
+        @Suppress("ConvertArgumentToSet") // Nope, not more performant
         when {
             criteria.flip ->  {totalResults.clear(); totalResults += criteriaResults}
             criteria.isOr ->  totalResults += criteriaResults

@@ -1,7 +1,6 @@
 package database.query
 
 import com.onyx.exception.OnyxException
-import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.*
 import database.base.BulkPrePopulatedDatabaseTest
 import entities.PerformanceEntity
@@ -23,9 +22,9 @@ class SelectPerformanceTest(override var factoryClass: KClass<*>) : BulkPrePopul
      */
     @Test
     fun aTestNoResultsSingleFullTableScanFor100kRecords() {
-        manager.list<IManagedEntity>(PerformanceEntity::class.java, QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAMBURGER"))
+        manager.from<PerformanceEntity>().where("stringValue" eq "HAMBURGER").cache().list<PerformanceEntity>()
         val time = System.currentTimeMillis()
-        manager.list<IManagedEntity>(PerformanceEntity::class.java, QueryCriteria("stringValue", QueryCriteriaOperator.EQUAL, "HAMBURGER"))
+        manager.from<PerformanceEntity>().where("stringValue" eq "HAMBURGER").cache().list<PerformanceEntity>()
         val after = System.currentTimeMillis()
 
         val timeToComplete  = after - time

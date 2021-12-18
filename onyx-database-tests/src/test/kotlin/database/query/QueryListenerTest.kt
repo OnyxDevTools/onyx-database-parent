@@ -215,6 +215,7 @@ class QueryListenerTest(override var factoryClass: KClass<*>) : DatabaseBaseTest
                 .onItemDeleted<PageAnalytic> { pass.countDown() }
                 .onItemUpdated<PageAnalytic> { assertTrue(false, "onItemUpdated should not be fired") }
                 .onItemAdded<PageAnalytic> { assertTrue(false, "onItemAdded should not be fired") }
+                .cache()
                 .list<PageAnalytic>()
 
         manager.from(PageAnalytic::class).where(

@@ -120,6 +120,7 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
+    @Suppress("unused")
     fun inPartition(partition: Any): QueryBuilder {
         this.query.partition = partition
         return this
@@ -140,8 +141,8 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return this
     }
 
-    fun nocache(): QueryBuilder {
-        this.query.nocache = true
+    fun cache(): QueryBuilder {
+        this.query.cache = true
         return this
     }
 
@@ -187,18 +188,21 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
     @Suppress("UNCHECKED_CAST")
     fun <T : IManagedEntity> onItemAdded(listener:((T) -> Unit)): QueryBuilder {
+        this.cache()
         this.onItemAdded = listener as ((Any) -> Unit)?
         return this
     }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : IManagedEntity> onItemDeleted(listener:((T) -> Unit)): QueryBuilder {
+        this.cache()
         this.onItemDeleted = listener as ((Any) -> Unit)?
         return this
     }
 
     @Suppress("UNCHECKED_CAST")
     fun <T : IManagedEntity> onItemUpdated(listener:((T) -> Unit)): QueryBuilder {
+        this.cache()
         this.onItemUpdated = listener as ((Any) -> Unit)?
         return this
     }
@@ -209,6 +213,8 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 // region Query Builder Construction Extensions
 
 fun PersistenceManager.from(type:KClass<*>): QueryBuilder = QueryBuilder(this, Query(type.javaObjectType))
+
+inline fun <reified T> PersistenceManager.from(): QueryBuilder = from(T::class)
 
 fun PersistenceManager.select(vararg properties:String): QueryBuilder {
     val query = Query()
@@ -232,6 +238,7 @@ infix fun <T> String.lt(value:T):QueryCriteria = QueryCriteria(this, QueryCriter
 infix fun <T> String.match(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.MATCHES, value)
 @Suppress("UNUSED")
 infix fun <T> String.notMatch(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_MATCHES, value)
+@Suppress("unused")
 infix fun <T> String.like(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.LIKE, value)
 @Suppress("UNUSED")
 infix fun <T> String.notLike(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_LIKE, value)

@@ -483,6 +483,7 @@ open class RemotePersistenceManager : PersistenceManager {
      */
     @Throws(OnyxException::class)
     override fun listen(query: Query) {
+        query.cache = true
         // Register the query listener as a push subscriber / receiver
         val remoteQueryListener = RemoteQueryListener(query.changeListener)
         this.pushRegistrar.register(remoteQueryListener, remoteQueryListener)

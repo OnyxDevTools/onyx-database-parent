@@ -211,7 +211,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-        val results:QueryCollector<E> = if(query.nocache)
+        val results:QueryCollector<E> = if(!query.cache)
             queryController.getReferencesForQuery(query)
         else
             cache(query) { queryController.getReferencesForQuery(query) }
@@ -237,7 +237,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
-        val results:QueryCollector<E> = if(query.nocache)
+        val results:QueryCollector<E> = if(!query.cache)
             queryController.getReferencesForQuery(query)
         else
             cache(query) { queryController.getReferencesForQuery(query) }
@@ -570,6 +570,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      */
     @Throws(OnyxException::class)
     override fun listen(query: Query) {
+        query.cache = true
         context.checkForKillSwitch()
         query.validate(context)
         context.queryCacheInteractor.subscribe(query)
