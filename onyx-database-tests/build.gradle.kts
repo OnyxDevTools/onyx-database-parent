@@ -31,3 +31,7 @@ description = "com.onyxdevtools:onyx-database-tests"
 tasks.getByName<Test>("test") {
     useJUnit()
 }
+
+project.tasks.publish.configure {
+    this.enabled = false
+}
