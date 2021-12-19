@@ -8,6 +8,7 @@ import com.onyx.persistence.annotations.Relationship
 import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.annotations.values.RelationshipType
+import java.util.*
 
 @Entity(fileName = "query.dat")
 @Suppress("UNUSED")
@@ -37,5 +38,5 @@ class SystemQuery(
 ) : ManagedEntity(), NamedEntity {
 
         val fileExtension:String
-                get() =  ".${type.toLowerCase()}"
+                get() =  ".${type.lowercase(Locale.getDefault())}"
 }

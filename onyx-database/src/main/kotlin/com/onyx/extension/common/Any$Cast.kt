@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
  *
  * @param clazz Class to cast to
  *
- * @return The type casted object
+ * @return The type cast object
  */
 fun Any?.castTo(clazz: Class<*>): Any? {
 
@@ -22,7 +22,7 @@ fun Any?.castTo(clazz: Class<*>): Any? {
         return this
 
     return when {
-    // Cast to numeric value when value is null
+        // Cast to numeric value when value is null
         this == null -> when(kotlinClass) {
             Int::class -> 0
             Long::class -> 0L
@@ -34,7 +34,7 @@ fun Any?.castTo(clazz: Class<*>): Any? {
             Short::class -> 0.toShort()
             else -> null
         }
-    // When value is number
+        // When value is number
         this is Number -> when (kotlinClass) {
             Int::class -> this.toInt()
             Long::class -> this.toLong()
@@ -48,7 +48,7 @@ fun Any?.castTo(clazz: Class<*>): Any? {
             Date::class -> Date(this.toLong())
             else -> null
         }
-        clazz == String::class -> return this.toString()
+        clazz == String::class.java -> return this.toString()
         this is Boolean -> return when (kotlinClass) {
             Date::class -> null
             Int::class -> if (this) 1 else 0
@@ -92,7 +92,7 @@ fun Any.long():Long =
         this::class.java == ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->  java.lang.Double.doubleToLongBits(this as Double)
         this is Number -> this.toLong()
         this is Boolean -> if(this) 1L else 0L
-        this is Char -> this.toLong()
+        this is Char -> this.code.toLong()
         else -> throw Exception("Invalid Cast ${this::class.java}")
     }
 
@@ -111,8 +111,8 @@ fun Long.toType(type:Class<*>):Any = when (type) {
     ClassMetadata.DOUBLE_PRIMITIVE_TYPE ->  java.lang.Double.longBitsToDouble(this)
     ClassMetadata.BYTE_TYPE ->              this.toByte()
     ClassMetadata.BYTE_PRIMITIVE_TYPE ->    this.toByte()
-    ClassMetadata.CHAR_TYPE ->              this.toChar()
-    ClassMetadata.CHAR_PRIMITIVE_TYPE ->    this.toChar()
+    ClassMetadata.CHAR_TYPE ->              this.toInt().toChar()
+    ClassMetadata.CHAR_PRIMITIVE_TYPE ->    this.toInt().toChar()
     ClassMetadata.SHORT_TYPE ->             this.toShort()
     ClassMetadata.SHORT_PRIMITIVE_TYPE ->   this.toShort()
     ClassMetadata.BOOLEAN_TYPE ->           this == 1L

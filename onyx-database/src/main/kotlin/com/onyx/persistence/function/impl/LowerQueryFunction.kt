@@ -2,6 +2,7 @@ package com.onyx.persistence.function.impl
 
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.QueryFunctionType
+import java.util.*
 
 /**
  * Convert to lowercase string
@@ -10,6 +11,6 @@ class LowerQueryFunction(attribute:String) : BaseQueryFunction(attribute, QueryF
 
     override fun newInstance(): QueryFunction = LowerQueryFunction(attribute)
 
-    override fun execute(value: Any?): Any = value.toString().toLowerCase()
+    override fun execute(value: Any?): Any = value.toString().lowercase(Locale.getDefault())
 
 }
