@@ -1,5 +1,7 @@
 package com.onyx.persistence.query
 
+import java.util.*
+
 enum class QueryFunctionType(val isGroupFunction:Boolean) {
     SUM(true),
     MIN(true),
@@ -13,7 +15,7 @@ enum class QueryFunctionType(val isGroupFunction:Boolean) {
     ;
 
     companion object {
-        fun value(stringValue: String):QueryFunctionType = when(stringValue.toLowerCase()) {
+        fun value(stringValue: String):QueryFunctionType = when(stringValue.lowercase(Locale.getDefault())) {
             "sum" -> SUM
             "min" -> MIN
             "max" -> MAX

@@ -35,3 +35,7 @@ tasks.getByName<Test>("test") {
 project.tasks.publish.configure {
     this.enabled = false
 }
+
+java {
+    withJavadocJar()
+}

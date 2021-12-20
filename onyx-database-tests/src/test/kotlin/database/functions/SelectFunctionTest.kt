@@ -99,7 +99,7 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
                 .from(AllAttributeEntityWithRelationship::class)
                 .list<Map<Any?, Any?>>()
 
-        val match = results.firstOrNull { it["upper(stringValue)"] == "Some other Value".toUpperCase() }
+        val match = results.firstOrNull { it["upper(stringValue)"] == "Some other Value".uppercase(Locale.getDefault()) }
         assertNotNull(match, "Failure to uppercase")
     }
 
@@ -119,7 +119,7 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
                 .from(AllAttributeEntityWithRelationship::class)
                 .list<Map<Any?, Any?>>()
 
-        val match = results.firstOrNull { it["lower(stringValue)"] == "Some other Value".toLowerCase() }
+        val match = results.firstOrNull { it["lower(stringValue)"] == "Some other Value".lowercase(Locale.getDefault()) }
         assertNotNull(match, "Failure to lowercase")
     }
 
@@ -130,7 +130,7 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
                 .orderBy(lower("stringValue").desc())
                 .list<Map<Any?, Any?>>()
 
-        assertEquals("Some other Value".toLowerCase(), results.first()["lower(stringValue)"], "Failure to sort with function")
+        assertEquals("Some other Value".lowercase(Locale.getDefault()), results.first()["lower(stringValue)"], "Failure to sort with function")
     }
 
     @Test
@@ -140,7 +140,7 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
                 .orderBy("stringValue".desc())
                 .list<Map<Any?, Any?>>()
 
-        assertEquals("Some other Value".toLowerCase(), results.first()["lower(stringValue)"], "Failure to sort with function")
+        assertEquals("Some other Value".lowercase(Locale.getDefault()), results.first()["lower(stringValue)"], "Failure to sort with function")
     }
 
     @Test
