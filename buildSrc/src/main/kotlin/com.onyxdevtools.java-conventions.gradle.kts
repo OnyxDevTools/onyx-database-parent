@@ -57,9 +57,11 @@ publishing {
     }
 
     publications {
-        create<MavenPublication>("mavenJava") {
+        publications.create<MavenPublication>("maven") {
+            from(components["java"])
+            val pub = this
             pom {
-                name.set("Onyx Database Parent")
+                name.set(pub.artifactId)
                 description.set("Onyx Database is a graph database that is written in Kotlin and supports Java and Android.  It is designed to be lightweight and easy to use.  Features include in memory database, embedded, and remote server.  It leverages its own ORM and storage.")
                 url.set("http://onyx.dev")
                 licenses {
