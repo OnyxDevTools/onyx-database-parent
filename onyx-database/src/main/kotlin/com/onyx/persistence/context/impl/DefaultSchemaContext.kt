@@ -208,7 +208,14 @@ open class DefaultSchemaContext : SchemaContext {
                 .where(("isLatestVersion" eq true) and ("name" notStartsWith "com.onyx.entity.System"))
                 .list<Map<String, String>>()
 
-        results.map { it["name"] }.forEach { getBaseDescriptorForEntity(classForName(it!!, this)) }
+        results.map { it["name"] }.forEach {
+            var clazz: Class<*>? = null
+            catchAll {
+                clazz = classForName(it!!, this)
+            }
+            clazz ?: return@forEach
+            getBaseDescriptorForEntity(clazz!!)
+        }
     }
 
     /**
