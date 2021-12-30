@@ -637,7 +637,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    protected open val dataFiles: MutableMap<String, DiskMapFactory> = OptimisticLockingMap(DiskMapCache())
+    protected open val dataFiles: MutableMap<String, DiskMapFactory> = DiskMapCache()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.

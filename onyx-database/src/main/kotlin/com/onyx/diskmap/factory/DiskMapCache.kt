@@ -29,8 +29,10 @@ open class DiskMapCache : MutableMap<String, DiskMapFactory> {
         }
     }
 
+    @Synchronized
     override fun get(key: String): DiskMapFactory? = internalMap[key]?.diskMapFactory
 
+    @Synchronized
     override fun put(key: String, value: DiskMapFactory): DiskMapFactory {
         internalMap[key] = DiskMapEntry(System.currentTimeMillis(), value)
         return value
