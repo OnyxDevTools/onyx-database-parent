@@ -637,9 +637,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    class DiskMapEntry(var accessed: Long, val diskMapFactory: DiskMapFactory)
-
-    @JvmField internal val dataFiles = OptimisticLockingMap(DiskMapCache())
+    protected open val dataFiles: MutableMap<String, DiskMapFactory> = OptimisticLockingMap(DiskMapCache())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.

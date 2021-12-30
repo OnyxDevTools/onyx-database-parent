@@ -4,9 +4,10 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.store.StoreType
+import com.onyx.lang.map.OptimisticLockingMap
 
 /**
- * The purpose of this class is to resolve all the the metadata, storage mechanism,  and modeling regarding the structure of the database.
+ * The purpose of this class is to resolve all the metadata, storage mechanism,  and modeling regarding the structure of the database.
  *
  * In this case it is an in-memory data storage.  No data will be persisted.
  *
@@ -19,6 +20,8 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
     @Suppress("SuspiciousVarProperty")
     override var encryptDatabase: Boolean = false
         get() = false
+
+    override val dataFiles: MutableMap<String, DiskMapFactory> = OptimisticLockingMap(HashMap())
 
     /**
      * Return the corresponding data file for the descriptor
