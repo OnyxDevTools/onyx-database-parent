@@ -22,6 +22,7 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
         get() = false
 
     override val dataFiles: MutableMap<String, DiskMapFactory> = OptimisticLockingMap(HashMap())
+    override val partitionDataFiles: MutableMap<Long, DiskMapFactory> = OptimisticLockingMap(HashMap())
 
     /**
      * Return the corresponding data file for the descriptor

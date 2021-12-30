@@ -9,9 +9,9 @@ import java.util.concurrent.TimeUnit
  * it is eligible to be evicted from the cache.  In the event the use chooses memory mapped storage, this will prevent
  * a large growing memory footprint and therefore improve performance
  */
-open class DiskMapCache : MutableMap<String, DiskMapFactory> {
-    private val internalMap = object : LinkedHashMap<String, DiskMapEntry>(200, .75f, true) {
-        override fun removeEldestEntry(entry: MutableMap.MutableEntry<String, DiskMapEntry>?): Boolean {
+open class DiskMapCache<K> : MutableMap<K, DiskMapFactory> {
+    private val internalMap = object : LinkedHashMap<K, DiskMapEntry>(200, .75f, true) {
+        override fun removeEldestEntry(entry: MutableMap.MutableEntry<K, DiskMapEntry>?): Boolean {
             val remove = ((entry!!.value.accessed + TimeUnit.MINUTES.toMillis(1)) < System.currentTimeMillis())
             if(remove) {
                 entry.value.diskMapFactory.commit()
@@ -20,7 +20,7 @@ open class DiskMapCache : MutableMap<String, DiskMapFactory> {
             return remove
         }
 
-        override fun get(key: String): DiskMapEntry? {
+        override fun get(key: K): DiskMapEntry? {
             val value = super.get(key)
             value?.let {
                 it.accessed = System.currentTimeMillis()
@@ -30,10 +30,10 @@ open class DiskMapCache : MutableMap<String, DiskMapFactory> {
     }
 
     @Synchronized
-    override fun get(key: String): DiskMapFactory? = internalMap[key]?.diskMapFactory
+    override fun get(key: K): DiskMapFactory? = internalMap[key]?.diskMapFactory
 
     @Synchronized
-    override fun put(key: String, value: DiskMapFactory): DiskMapFactory {
+    override fun put(key: K, value: DiskMapFactory): DiskMapFactory {
         internalMap[key] = DiskMapEntry(System.currentTimeMillis(), value)
         return value
     }
@@ -41,15 +41,15 @@ open class DiskMapCache : MutableMap<String, DiskMapFactory> {
     override val size: Int
         get() = internalMap.size
 
-    override fun containsKey(key: String): Boolean = internalMap.containsKey(key)
+    override fun containsKey(key: K): Boolean = internalMap.containsKey(key)
 
     override fun containsValue(value: DiskMapFactory): Boolean = internalMap.values.any { it.diskMapFactory === value }
 
     override fun isEmpty(): Boolean = internalMap.isEmpty()
 
-    override val entries: MutableSet<MutableMap.MutableEntry<String, DiskMapFactory>>
-        get() = internalMap.entries.map { entry -> object : MutableMap.MutableEntry<String, DiskMapFactory> {
-                override val key: String
+    override val entries: MutableSet<MutableMap.MutableEntry<K, DiskMapFactory>>
+        get() = internalMap.entries.map { entry -> object : MutableMap.MutableEntry<K, DiskMapFactory> {
+                override val key: K
                     get() = entry.key
                 override val value: DiskMapFactory
                     get() = entry.value.diskMapFactory
@@ -57,7 +57,7 @@ open class DiskMapCache : MutableMap<String, DiskMapFactory> {
             }
         }.toMutableSet()
 
-    override val keys: MutableSet<String>
+    override val keys: MutableSet<K>
         get() = internalMap.keys
 
     override val values: MutableCollection<DiskMapFactory>
@@ -65,11 +65,11 @@ open class DiskMapCache : MutableMap<String, DiskMapFactory> {
 
     override fun clear() = internalMap.clear()
 
-    override fun putAll(from: Map<out String, DiskMapFactory>) {
+    override fun putAll(from: Map<out K, DiskMapFactory>) {
         from.forEach { put(it.key, it.value) }
     }
 
-    override fun remove(key: String): DiskMapFactory? = internalMap.remove(key)?.diskMapFactory
+    override fun remove(key: K): DiskMapFactory? = internalMap.remove(key)?.diskMapFactory
 }
 
 class DiskMapEntry(var accessed: Long, val diskMapFactory: DiskMapFactory)

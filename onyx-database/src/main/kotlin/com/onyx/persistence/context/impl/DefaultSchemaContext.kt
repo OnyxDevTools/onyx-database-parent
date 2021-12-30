@@ -637,7 +637,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    protected open val dataFiles: MutableMap<String, DiskMapFactory> = DiskMapCache()
+    protected open val dataFiles: MutableMap<String, DiskMapFactory> = OptimisticLockingMap(HashMap())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -657,7 +657,7 @@ open class DefaultSchemaContext : SchemaContext {
             }
         }
 
-    @JvmField internal val partitionDataFiles = OptimisticLockingMap<Long, DiskMapFactory>(HashMap())
+    protected open val partitionDataFiles: MutableMap<Long, DiskMapFactory> = DiskMapCache()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.
