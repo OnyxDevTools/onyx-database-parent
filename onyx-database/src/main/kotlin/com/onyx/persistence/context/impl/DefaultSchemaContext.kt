@@ -3,6 +3,7 @@ package com.onyx.persistence.context.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
+import com.onyx.diskmap.factory.DiskMapCache
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.store.StoreType
@@ -287,10 +288,8 @@ open class DefaultSchemaContext : SchemaContext {
     @Throws(OnyxException::class)
     private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
         // Check to see if the partition already exists
-        if (systemEntity.partition != null && descriptor.partition != null) {
-            if (systemEntity.partition!!.entries.filter { it.value == descriptor.partition!!.partitionValue }.count() > 0) {
-                return
-            }
+        if (systemEntity.partition != null && descriptor.partition != null && systemEntity.partition!!.entries.any { it.value == descriptor.partition!!.partitionValue }) {
+            return
         }
 
         // Add a new partition entry if it does not exist
@@ -638,7 +637,9 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = OptimisticLockingMap<String, DiskMapFactory>(HashMap())
+    class DiskMapEntry(var accessed: Long, val diskMapFactory: DiskMapFactory)
+
+    @JvmField internal val dataFiles = OptimisticLockingMap(DiskMapCache())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -652,7 +653,7 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        val absoluteLocation = if(descriptor.absolutePath.isNullOrBlank()) location else descriptor.absolutePath
+        val absoluteLocation = descriptor.absolutePath.ifBlank { location }
         return dataFiles.getOrPut(key) {
                 return@getOrPut DefaultDiskMapFactory("$absoluteLocation/$key", storeType, this@DefaultSchemaContext)
             }

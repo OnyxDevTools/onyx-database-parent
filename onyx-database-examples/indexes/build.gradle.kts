@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:2.2.1")
+    implementation("com.onyxdevtools:onyx-database:2.2.2")
 }
 
 group = "com.onyxdevtools"
-version = "2.2.1"
+version = "2.2.2"
 description = "com.onyxdevtools:onyx-database-examples:indexes"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
