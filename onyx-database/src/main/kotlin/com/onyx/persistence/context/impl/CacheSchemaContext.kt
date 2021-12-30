@@ -4,7 +4,12 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.factory.impl.DefaultDiskMapFactory
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.store.StoreType
+import com.onyx.entity.SystemPartitionEntry
+import com.onyx.exception.OnyxException
 import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteria
+import com.onyx.persistence.query.QueryCriteriaOperator
 
 /**
  * The purpose of this class is to resolve all the metadata, storage mechanism,  and modeling regarding the structure of the database.
@@ -37,4 +42,19 @@ class CacheSchemaContext(contextId: String, location: String) : DefaultSchemaCon
         return dataFiles.getOrPut(path) { DefaultDiskMapFactory("$location/$path", StoreType.IN_MEMORY, this@CacheSchemaContext) }
     }
 
+    @Throws(OnyxException::class)
+    override fun getPartitionDataFile(descriptor: EntityDescriptor, partitionId: Long): DiskMapFactory {
+
+        if (partitionId == 0L) {
+            return getDataFile(descriptor)
+        }
+
+        return partitionDataFiles.getOrPut(partitionId) {
+            val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
+            val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
+            val partition = partitions[0]
+
+            return@getOrPut getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
+        }
+    }
 }

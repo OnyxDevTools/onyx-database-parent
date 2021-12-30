@@ -680,7 +680,10 @@ open class DefaultSchemaContext : SchemaContext {
             val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
             val partition = partitions[0]
 
-            return@getOrPut getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
+            val partitionDescriptor = getDescriptorForEntity(descriptor.entityClass, partition.value)
+            val key = partitionDescriptor.fileName + if (partitionDescriptor.partition == null) "" else partitionDescriptor.partition!!.partitionValue
+            val absoluteLocation = partitionDescriptor.absolutePath.ifBlank { location }
+            return DefaultDiskMapFactory("$absoluteLocation/$key", storeType, this@DefaultSchemaContext)
         }
     }
 
