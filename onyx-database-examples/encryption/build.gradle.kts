@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:2.2.0")
+    implementation("com.onyxdevtools:onyx-database:2.2.2")
 }
 
 group = "com.onyxdevtools"

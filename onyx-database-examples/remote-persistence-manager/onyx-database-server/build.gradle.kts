@@ -20,9 +20,9 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:2.2.0")
-    implementation("com.onyxdevtools:onyx-remote-driver:2.2.0")
-    implementation("com.onyxdevtools:onyx-remote-database:2.2.0")
+    implementation("com.onyxdevtools:onyx-database:2.2.2")
+    implementation("com.onyxdevtools:onyx-remote-driver:2.2.2")
+    implementation("com.onyxdevtools:onyx-remote-database:2.2.2")
     implementation(project(":data-model"))
 }
 
