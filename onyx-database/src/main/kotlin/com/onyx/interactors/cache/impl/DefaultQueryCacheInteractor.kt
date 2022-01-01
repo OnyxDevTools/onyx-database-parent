@@ -14,6 +14,7 @@ import com.onyx.interactors.query.QueryCollector
 import com.onyx.interactors.query.QueryCollectorFactory
 import com.onyx.interactors.record.data.Reference
 import com.onyx.lang.map.OptimisticLockingMap
+import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArraySet
 
 /**
@@ -24,7 +25,15 @@ import java.util.concurrent.CopyOnWriteArraySet
  *
  * @since 1.3.0 Introduced
  */
-open class DefaultQueryCacheInteractor(private val context: SchemaContext) : QueryCacheInteractor {
+open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInteractor {
+
+    private val contextReference: WeakReference<SchemaContext>
+    private val context: SchemaContext
+        get() = contextReference.get()!!
+
+    init {
+        contextReference = WeakReference(context)
+    }
 
     // @since 1.3.0 - Changed to CachedQueryMap so we can retain strong references for query subscriptions
     private val cachedQueriesByClass = OptimisticLockingMap<Class<*>, CachedQueryMap<Query, CachedResults>>(HashMap())

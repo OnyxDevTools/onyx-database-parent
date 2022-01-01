@@ -1,5 +1,6 @@
 package com.onyx.diskmap.factory.impl
 
+import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskSkipListMap
@@ -12,7 +13,6 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.File
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.collections.HashMap
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -31,7 +31,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private lateinit var store: Store
 
     // Contains all initialized maps
-    private val maps: MutableMap<String, Map<*,*>> = OptimisticLockingMap(HashMap())
+    private val maps: MutableMap<String, Map<*,*>> = OptimisticLockingMap(WeakHashMap())
 
     // Contains all initialized maps
     private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
@@ -241,5 +241,14 @@ class DefaultDiskMapFactory : DiskMapFactory {
                 false
             }
         }
+    }
+
+    /**
+     * In order to purge memory after long-running intensive tasks, this method has been added.  It will
+     * clear non-volatile cached items in the disk maps
+     */
+    override fun flush() {
+        maps.clear()
+        mapsByHeader.clear()
     }
 }

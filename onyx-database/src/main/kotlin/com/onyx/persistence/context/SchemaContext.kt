@@ -282,4 +282,12 @@ interface SchemaContext {
         if(killSwitch)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
     }
+
+    /**
+     * In order to purge memory after long-running intensive tasks, this method has been added.  It will
+     * clear non-volatile cached items in the disk maps
+     *
+     * @since 2.2.2
+     */
+    fun flush(): Unit = Unit
 }

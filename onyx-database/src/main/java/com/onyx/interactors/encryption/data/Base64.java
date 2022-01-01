@@ -675,4 +675,7 @@ public class Base64 {
 
     private Base64() { }   // don't instantiate
 
+    public static String concat(String first, String second) {
+        return first.concat(second);
+    }
 }
