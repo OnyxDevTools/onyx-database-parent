@@ -3,7 +3,9 @@ package com.onyx.diskmap.store.impl
 import com.onyx.buffer.BufferPool
 import com.onyx.diskmap.store.Store
 import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
+import java.lang.ref.WeakReference
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -14,6 +16,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
 
     init {
         this.contextId = context?.contextId
+        this.contextReference = contextId?.let { WeakReference(Contexts.get(it)) }
         open(storeId)
         this.determineSize()
     }

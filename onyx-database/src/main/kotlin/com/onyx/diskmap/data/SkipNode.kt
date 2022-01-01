@@ -67,6 +67,7 @@ data class SkipNode(
             return keyValue as T
         }
 
+        @Suppress("KotlinConstantConditions") // Key value is mutable and getKey can have multiple access
         if(keyValue == null) {
             synchronized(this) {
                 if(keyValue == null) {

@@ -17,6 +17,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.RandomAccessFile
+import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 
@@ -32,13 +33,17 @@ import java.nio.channels.FileChannel
  */
 open class FileChannelStore() : Store {
 
-    override val context by lazy { if (contextId != null) Contexts.get(contextId!!) else null }
+    protected var contextReference: WeakReference<SchemaContext>? = null
+
+    override val context
+        get() = contextReference?.get()
 
     final override var filePath: String = ""
     var deleteOnClose: Boolean = false // Whether to delete this file upon closing database or JVM
     var bufferSliceSize = if (isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
 
     protected var channel: FileChannel? = null
+    private var randomAccessFile: RandomAccessFile? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
 
@@ -47,6 +52,7 @@ open class FileChannelStore() : Store {
         this.deleteOnClose = deleteOnClose
         this.filePath = filePath
         this.contextId = context?.contextId
+        this.contextReference = contextId?.let { WeakReference(Contexts.get(it)) }
 
         this.open(filePath = filePath)
         this.determineSize()
@@ -73,8 +79,8 @@ open class FileChannelStore() : Store {
             }
 
             // Open the random access file
-            val randomAccessFile = RandomAccessFile(filePath, "rw")
-            this.channel = randomAccessFile.channel
+            randomAccessFile = RandomAccessFile(filePath, "rw")
+            this.channel = randomAccessFile?.channel
             this.fileSizeCounter.set(this.channel!!.size())
 
         } catch (e: FileNotFoundException) {
@@ -144,7 +150,14 @@ open class FileChannelStore() : Store {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
         val before = buffer.position()
-        channel!!.write(buffer, position)
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+
+        synchronized(randomAccessFile!!) {
+            randomAccessFile?.seek(position)
+            randomAccessFile?.write(bytes)
+        }
+
         val after = buffer.position()
         return after - before
     }
@@ -208,10 +221,16 @@ open class FileChannelStore() : Store {
      * @param buffer   Buffer to put into
      * @param position position in store to read
      */
+    @Suppress("BlockingMethodInNonBlockingContext")
     override fun read(buffer: ByteBuffer, position: Long) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        channel!!.read(buffer, position)
+        val bytes = ByteArray(buffer.remaining())
+        synchronized(randomAccessFile!!) {
+            randomAccessFile?.seek(position)
+            randomAccessFile?.read(bytes)
+        }
+        buffer.put(bytes)
         while (buffer.hasRemaining()) // Fill out the rest because the File Channel may not be filled in
             buffer.put(0.toByte())
     }

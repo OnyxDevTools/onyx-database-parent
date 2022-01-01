@@ -19,7 +19,7 @@ dependencies {
 }
 
 group = "com.onyxdevtools"
-version = "2.2.0"
+version = "2.2.2"
 description = "com.onyxdevtools:onyx-database-examples:remote-persistence-manager:data-model"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 

@@ -24,7 +24,7 @@ dependencies {
 }
 
 group = "com.onyxdevtools"
-version = "2.2.0"
+version = "2.2.2"
 description = "com.onyxdevtools:onyx-database-examples:model-updates:model-before-update"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 

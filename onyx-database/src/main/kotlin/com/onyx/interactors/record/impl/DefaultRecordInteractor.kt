@@ -12,6 +12,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.QueryListenerEvent
 import com.onyx.interactors.record.RecordInteractor
+import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 
 /**
@@ -19,11 +20,15 @@ import java.lang.reflect.Field
  *
  * This controls the crud for a record
  */
-open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, protected val context: SchemaContext) : RecordInteractor {
+open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, context: SchemaContext) : RecordInteractor {
 
     protected val records: DiskMap<Any, IManagedEntity>
+    private val contextReference: WeakReference<SchemaContext>
+    protected val context: SchemaContext
+        get() = contextReference.get()!!
 
     init {
+        contextReference = WeakReference(context)
         val dataFile = context.getDataFile(entityDescriptor)
         records = dataFile.getHashMap(entityDescriptor.identifier!!.type, entityDescriptor.entityClass.name)
     }

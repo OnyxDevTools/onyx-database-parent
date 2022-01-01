@@ -158,7 +158,7 @@ abstract class AbstractSkipList<K, V> constructor(override val fileStore: Store,
      * @since 2.0.0
      */
     private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short):SkipNode {
-        val right:SkipNode? = if(left?.right ?: 0L > 0L) findNodeAtPosition(left!!.right) else null
+        val right:SkipNode? = if((left?.right ?: 0L) > 0L) findNodeAtPosition(left!!.right) else null
 
         val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level)
         updateNodeCache(newNode)

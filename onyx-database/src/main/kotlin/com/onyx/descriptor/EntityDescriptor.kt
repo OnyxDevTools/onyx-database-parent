@@ -26,21 +26,22 @@ data class EntityDescriptor
 @JvmOverloads
 constructor(
         val entityClass: Class<*>,
-        var entity: Entity? = null,
-        var identifier: IdentifierDescriptor? = null,
-        var partition: PartitionDescriptor? = null,
-        var preUpdateCallback: Method? = null,
-        var preInsertCallback: Method? = null,
-        var preRemoveCallback: Method? = null,
-        var prePersistCallback: Method? = null,
-        var postUpdateCallback: Method? = null,
-        var postInsertCallback: Method? = null,
-        var postRemoveCallback: Method? = null,
-        var postPersistCallback: Method? = null,
-        var attributes: MutableMap<String, AttributeDescriptor> = TreeMap(),
-        var indexes: MutableMap<String, IndexDescriptor> = TreeMap(),
-        var relationships: MutableMap<String, RelationshipDescriptor> = TreeMap()
+        var partition: PartitionDescriptor? = null
 ) : Serializable {
+
+    var entity: Entity? = null
+    var identifier: IdentifierDescriptor? = null
+    var preUpdateCallback: Method? = null
+    var preInsertCallback: Method? = null
+    var preRemoveCallback: Method? = null
+    var prePersistCallback: Method? = null
+    var postUpdateCallback: Method? = null
+    var postInsertCallback: Method? = null
+    var postRemoveCallback: Method? = null
+    var postPersistCallback: Method? = null
+    var attributes: MutableMap<String, AttributeDescriptor> = TreeMap()
+    var indexes: MutableMap<String, IndexDescriptor> = TreeMap()
+    var relationships: MutableMap<String, RelationshipDescriptor> = TreeMap()
 
     lateinit var context: SchemaContext
 

@@ -23,7 +23,7 @@ dependencies {
 }
 
 group = "com.onyxdevtools"
-version = "2.2.0"
+version = "2.2.2"
 description = "com.onyxdevtools:onyx-database-examples:persisting-data"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 

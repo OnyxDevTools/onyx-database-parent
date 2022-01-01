@@ -69,4 +69,12 @@ interface DiskMapFactory {
      * @since 1.3.0
      */
     fun reset()
+
+    /**
+     * In order to purge memory after long-running intensive tasks, this method has been added.  It will
+     * clear non-volatile cached items in the disk maps
+     *
+     * @since 2.2.2
+     */
+    fun flush()
 }

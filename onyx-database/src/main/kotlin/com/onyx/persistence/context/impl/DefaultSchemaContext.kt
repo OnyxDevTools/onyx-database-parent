@@ -19,6 +19,7 @@ import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
 import com.onyx.interactors.cache.impl.DefaultQueryCacheInteractor
 import com.onyx.interactors.encryption.EncryptionInteractor
+import com.onyx.interactors.encryption.data.Base64
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.interactors.record.RecordInteractor
@@ -41,6 +42,7 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -294,10 +296,8 @@ open class DefaultSchemaContext : SchemaContext {
     @Throws(OnyxException::class)
     private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
         // Check to see if the partition already exists
-        if (systemEntity.partition != null && descriptor.partition != null) {
-            if (systemEntity.partition!!.entries.filter { it.value == descriptor.partition!!.partitionValue }.count() > 0) {
-                return
-            }
+        if (systemEntity.partition != null && descriptor.partition != null && systemEntity.partition!!.entries.any { it.value == descriptor.partition!!.partitionValue }) {
+            return
         }
 
         // Add a new partition entry if it does not exist
@@ -503,7 +503,10 @@ open class DefaultSchemaContext : SchemaContext {
             throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND)
 
         val partitionIdVar = partitionId ?: ""
-        val entityKey = entityClass.name + partitionIdVar.toString()
+        // Using java string concat because it is more efficient for small variables
+        // over StringBuilder which is Kotlin's implementation.  It is deprecated in Kotlin
+        // therefore it was added to Java class to work around.
+        val entityKey = Base64.concat(entityClass.name, partitionIdVar.toString())
 
         var descriptor:EntityDescriptor?
 
@@ -607,7 +610,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Index Controller
 
-    private val indexInteractors = OptimisticLockingMap<IndexDescriptor, IndexInteractor>(HashMap())
+    private val indexInteractors = OptimisticLockingMap<IndexDescriptor, IndexInteractor>(WeakHashMap())
 
     /**
      * Get Index Controller with Index descriptor.
@@ -627,7 +630,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Record Controller
 
-    private val recordInteractors = OptimisticLockingMap<EntityDescriptor, RecordInteractor>(HashMap())
+    private val recordInteractors = OptimisticLockingMap<EntityDescriptor, RecordInteractor>(WeakHashMap())
 
     /**
      * Get Record Controller.
@@ -659,7 +662,7 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        val absoluteLocation = if(descriptor.absolutePath.isNullOrBlank()) location else descriptor.absolutePath
+        val absoluteLocation = descriptor.absolutePath.ifBlank { location }
         return dataFiles.getOrPut(key) {
                 return@getOrPut DefaultDiskMapFactory("$absoluteLocation/$key", storeType, this@DefaultSchemaContext)
             }
@@ -732,4 +735,15 @@ open class DefaultSchemaContext : SchemaContext {
     }
 
     // endregion
+
+    /**
+     * In order to purge memory after long-running intensive tasks, this method has been added.  It will
+     * clear non-volatile cached items in the disk maps
+     */
+    override fun flush() {
+        dataFiles.values.forEach { it.flush() }
+        this.indexInteractors.clear()
+        this.recordInteractors.clear()
+        System.gc()
+    }
 }

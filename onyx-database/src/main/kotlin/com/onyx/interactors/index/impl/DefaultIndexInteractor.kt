@@ -10,6 +10,7 @@ import com.onyx.interactors.record.RecordInteractor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
 import com.onyx.extension.identifier
+import java.lang.ref.WeakReference
 
 import java.util.*
 import kotlin.collections.HashMap
@@ -19,14 +20,18 @@ import kotlin.collections.HashMap
  *
  * Controls actions of an index
  */
-class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, private val context: SchemaContext) : IndexInteractor {
+class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, context: SchemaContext) : IndexInteractor {
 
     private var references: DiskMap<Any, Header>// Stores the references for an index key
     private var indexValues: DiskMap<Long, Any>
     private var recordInteractor: RecordInteractor? = null
+    private val contextReference: WeakReference<SchemaContext>
+    private val context: SchemaContext
+        get() = contextReference.get()!!
 
     init {
 
+        contextReference = WeakReference(context)
         this.recordInteractor = context.getRecordInteractor(descriptor)
         val dataFile = context.getDataFile(descriptor)
 
