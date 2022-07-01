@@ -12,8 +12,10 @@ import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.nullPartition
 import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.extension.common.Job
 import com.onyx.extension.common.async
 import com.onyx.extension.common.catchAll
+import com.onyx.extension.common.runJob
 import com.onyx.extension.createNewEntity
 import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
@@ -42,7 +44,9 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
+import java.io.File
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -89,6 +93,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     // Class loader to dynamically add classes
     override var classLoader:ClassLoader = DefaultSchemaContext::class.java.classLoader
+
+    private var memoryAlertJob: Job? = null
 
     // endregion
 
@@ -153,6 +159,7 @@ open class DefaultSchemaContext : SchemaContext {
         initializeSystemEntities()
         initializePartitionSequence()
         initializeEntityDescriptors()
+        memoryAlertJob = watchMemoryUsage()
     }
 
     /**
@@ -162,6 +169,8 @@ open class DefaultSchemaContext : SchemaContext {
      */
     override fun shutdown() {
         killSwitch = true
+
+        memoryAlertJob?.cancel()
 
         // Shutdown all databases
         dataFiles.forEach {
@@ -178,7 +187,6 @@ open class DefaultSchemaContext : SchemaContext {
         recordInteractors.clear() // Clear all Record Controllers
         relationshipInteractors.clear() // Clear all relationship controllers
         indexInteractors.clear() // Clear all index controllers
-
     }
 
     // endregion
@@ -409,6 +417,7 @@ open class DefaultSchemaContext : SchemaContext {
                     .list<SystemEntity>()
                     .firstOrNull()
 
+            @Suppress("DuplicatedCode")
             if (result != null) {
                 synchronized(systemEntityByIDMap) {
                     systemEntityByIDMap.put(result.primaryKey, result)
@@ -431,6 +440,7 @@ open class DefaultSchemaContext : SchemaContext {
         systemEntityByIDMap.getOrPut(systemEntityId) {
             val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
 
+            @Suppress("DuplicatedCode")
             if (entity != null) {
                 synchronized(defaultSystemEntities) {
                     defaultSystemEntities.put(entity.name, entity)
@@ -662,11 +672,15 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
-        val absoluteLocation = descriptor.absolutePath.ifBlank { location }
-        return dataFiles.getOrPut(key) {
-                return@getOrPut DefaultDiskMapFactory("$absoluteLocation/$key", storeType, this@DefaultSchemaContext)
-            }
+        var finalLocation = descriptor.archiveDirectories.firstOrNull {
+            File("${it}/$key").exists()
         }
+        finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
+
+        return dataFiles.getOrPut(key) {
+            return@getOrPut DefaultDiskMapFactory(finalLocation, storeType, this@DefaultSchemaContext)
+        }
+    }
 
     @JvmField internal val partitionDataFiles = OptimisticLockingMap<Long, DiskMapFactory>(HashMap())
 
@@ -745,5 +759,11 @@ open class DefaultSchemaContext : SchemaContext {
         this.indexInteractors.clear()
         this.recordInteractors.clear()
         System.gc()
+    }
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    protected fun watchMemoryUsage(): Job = runJob(5, TimeUnit.MINUTES) {
+        if(Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() <= .50)
+            this.flush()
     }
 }

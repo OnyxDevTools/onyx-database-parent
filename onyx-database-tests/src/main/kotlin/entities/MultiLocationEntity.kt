@@ -6,7 +6,7 @@ import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
 import java.util.*
 
-@Entity(absolutePath = "C:/Sandbox/Onyx/Tests/multistorage", fileName = "allAttribute.dat")
+@Entity(archiveDirectories = ["C:/Sandbox/Onyx/Tests/multistorage"], fileName = "allAttribute.dat")
 open class MultiLocationEntity : AbstractEntity(), IManagedEntity {
     @Identifier
     @Attribute(size = 64)

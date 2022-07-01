@@ -24,4 +24,4 @@ package com.onyx.persistence.annotations
  */
 
 @Target(AnnotationTarget.CLASS)
-annotation class Entity(val fileName: String = "", val absolutePath: String = "")
+annotation class Entity(val fileName: String = "", val archiveDirectories: Array<String> = [])

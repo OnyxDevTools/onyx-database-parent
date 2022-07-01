@@ -53,7 +53,7 @@ class CachedResults(references: MutableSet<Reference>? = null) {
     fun remove(reference: Any, entity: IManagedEntity, event: QueryListenerEvent, meetsCriteria: Boolean) {
         val removed:Any? = synchronized(this) { references?.remove(reference) }
         when {
-            removed != null && (event === QueryListenerEvent.DELETE || !meetsCriteria && event === QueryListenerEvent.PRE_UPDATE) -> dispatchRemoveEvent(entity)
+            removed == true && (event === QueryListenerEvent.DELETE || !meetsCriteria && event === QueryListenerEvent.PRE_UPDATE) -> dispatchRemoveEvent(entity)
             event === QueryListenerEvent.DELETE && meetsCriteria -> dispatchRemoveEvent(entity)
             else -> {}
         }
