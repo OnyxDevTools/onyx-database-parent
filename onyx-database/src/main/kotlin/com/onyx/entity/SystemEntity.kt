@@ -34,7 +34,11 @@ data class SystemEntity @JvmOverloads constructor(
     var indexes: MutableList<SystemIndex> = ArrayList(),
 
     @Attribute
-    var identifier: SystemIdentifier? = null
+    var identifier: SystemIdentifier? = null,
+
+    @Attribute
+    var partition: String? = null
+
 ) : ManagedEntity() {
 
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
@@ -52,6 +56,7 @@ data class SystemEntity @JvmOverloads constructor(
             indexes = ArrayList(),
             relationships = ArrayList(),
             attributes = ArrayList(),
+            partition = descriptor.partition?.name,
             fileName = descriptor.fileName) {
 
         this.identifier = SystemIdentifier(descriptor.identifier!!)

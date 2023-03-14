@@ -33,7 +33,10 @@ data class SystemAttribute @JvmOverloads constructor(
 
     @Attribute
     @Suppress("MemberVisibilityCanPrivate")
-    var enumValues: String? = null
+    var enumValues: String? = null,
+
+    @Attribute
+    var isPartition: Boolean = false
 
 ): ManagedEntity() {
 
