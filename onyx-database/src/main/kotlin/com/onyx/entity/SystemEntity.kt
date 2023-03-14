@@ -37,7 +37,7 @@ data class SystemEntity @JvmOverloads constructor(
     var identifier: SystemIdentifier? = null,
 
     @Attribute
-    var partition: String? = null
+    var partitionName: String? = null
 
 ) : ManagedEntity() {
 
@@ -56,7 +56,7 @@ data class SystemEntity @JvmOverloads constructor(
             indexes = ArrayList(),
             relationships = ArrayList(),
             attributes = ArrayList(),
-            partition = descriptor.partition?.name,
+            partitionName = descriptor.partition?.name,
             fileName = descriptor.fileName) {
 
         this.identifier = SystemIdentifier(descriptor.identifier!!)
