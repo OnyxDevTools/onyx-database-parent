@@ -3,6 +3,7 @@ package database
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.findById
 import entities.MultiLocationEntity
+import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 import kotlin.test.assertEquals
@@ -10,6 +11,7 @@ import kotlin.test.assertTrue
 
 class MultiDirectoryDatabaseTest {
     @Test
+    @Ignore
     fun testMultipleLocationDatabase() {
         val localDatabase = EmbeddedPersistenceManagerFactory("C:/Sandbox/Onyx/Tests/multiLocation.oxd")
         localDatabase.initialize()

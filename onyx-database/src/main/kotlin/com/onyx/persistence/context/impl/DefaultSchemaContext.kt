@@ -1,5 +1,6 @@
 package com.onyx.persistence.context.impl
 
+import com.onyx.descriptor.DEFAULT_DATA_FILE
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.IndexDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
@@ -34,6 +35,7 @@ import com.onyx.interactors.transaction.TransactionInteractor
 import com.onyx.interactors.transaction.TransactionStore
 import com.onyx.interactors.transaction.impl.DefaultTransactionInteractor
 import com.onyx.interactors.transaction.impl.DefaultTransactionStore
+import com.onyx.lang.map.MaxSizeMap
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
@@ -50,7 +52,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.reflect.KClass
 
 /**
@@ -233,7 +234,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Suppress("MemberVisibilityCanPrivate")
     protected open fun initializeSystemEntities() {
-        val classes:List<KClass<out ManagedEntity>> = arrayListOf(SystemEntity::class,SystemAttribute::class,SystemRelationship::class,SystemIndex::class,SystemIdentifier::class,SystemPartition::class,SystemPartitionEntry::class)
+        val classes:List<KClass<out ManagedEntity>> = arrayListOf(SystemEntity::class,SystemAttribute::class,SystemRelationship::class,SystemIndex::class,SystemIdentifier::class,SystemPartitionEntry::class)
         val systemEntities = ArrayList<SystemEntity>()
         var i = 1
 
@@ -278,11 +279,6 @@ open class DefaultSchemaContext : SchemaContext {
             checkForIndexChanges(systemEntity, newSystemEntity)
             checkForInvalidRelationshipChanges(systemEntity, newSystemEntity)
 
-            if(newSystemEntity.partition != null
-                    && systemEntity.partition != null
-                    && newSystemEntity.partition == systemEntity.partition)
-                newSystemEntity.partition = systemEntity.partition
-
             serializedPersistenceManager.from(SystemEntity::class).where("name" eq systemEntity.name).set("isLatestVersion" to false).update()
             serializedPersistenceManager.saveEntity<IManagedEntity>(newSystemEntity)
             systemEntity = newSystemEntity
@@ -298,25 +294,20 @@ open class DefaultSchemaContext : SchemaContext {
      * Checks to see if a partition already exists for the corresponding entity descriptor.  If it does not, lets create it.
      *
      * @param descriptor   Entity descriptor to base the new partition on or to cross reference the old one
-     * @param systemEntity System entity to get from the database and compare partition on
      * @since 1.1.0
      */
     @Throws(OnyxException::class)
-    private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor, systemEntity: SystemEntity) {
+    private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor) {
         // Check to see if the partition already exists
-        if (systemEntity.partition != null && descriptor.partition != null && systemEntity.partition!!.entries.any { it.value == descriptor.partition!!.partitionValue }) {
+        if (descriptor.partition != null && getPartitionWithValue(descriptor.entityClass, descriptor.partition?.partitionValue ?: "") != null) {
             return
         }
 
         // Add a new partition entry if it does not exist
         if (descriptor.partition != null) {
-            if (systemEntity.partition == null) {
-                systemEntity.partition = SystemPartition(descriptor.partition!!, systemEntity)
-            }
-
-            val entry = SystemPartitionEntry(descriptor, descriptor.partition!!, systemEntity.partition!!, partitionCounter.incrementAndGet())
-            systemEntity.partition!!.entries.add(entry)
+            val entry = SystemPartitionEntry(descriptor, descriptor.partition!!, partitionCounter.incrementAndGet())
             serializedPersistenceManager.saveEntity<IManagedEntity>(entry)
+            partitionsByClass.remove(descriptor.entityClass)
         }
     }
 
@@ -369,8 +360,11 @@ open class DefaultSchemaContext : SchemaContext {
     private fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
         val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
         val indexDescriptor = entityDescriptor.indexes[indexName]
-        if (systemEntity.partition != null) {
-            systemEntity.partition!!.entries.forEach {
+        if (entityDescriptor.partition != null) {
+
+            val entries = getAllPartitions(entityDescriptor.entityClass)
+
+            entries.forEach {
                 val partitionEntityDescriptor = getDescriptorForEntity(entityDescriptor.entityClass, it.value)
 
                 async {
@@ -458,7 +452,12 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Entity Descriptor
 
-    private val descriptors = HashMap<String, EntityDescriptor>()
+    private val descriptors = MaxSizeMap<String, EntityDescriptor>(
+        maxCapacity = 10000,
+        shouldEject = { _, value ->
+            value.hasPartition
+        }
+    )
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -547,8 +546,8 @@ open class DefaultSchemaContext : SchemaContext {
                     serializedPersistenceManager.saveEntity<IManagedEntity>(systemEntity)
                 }
 
-                systemEntity = checkForEntityChanges(descriptor!!, systemEntity)
-                checkForValidDescriptorPartition(descriptor!!, systemEntity)
+                checkForEntityChanges(descriptor!!, systemEntity)
+                checkForValidDescriptorPartition(descriptor!!)
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor!!.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
@@ -591,7 +590,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipInteractors = OptimisticLockingMap<RelationshipDescriptor, RelationshipInteractor>(HashMap())
+    private val relationshipInteractors = OptimisticLockingMap<RelationshipDescriptor, RelationshipInteractor>(WeakHashMap())
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -630,7 +629,6 @@ open class DefaultSchemaContext : SchemaContext {
      * @return Corresponding record controller
      * @since 1.0.0
      */
-    @Suppress("UNCHECKED_CAST")
     override fun getIndexInteractor(indexDescriptor: IndexDescriptor): IndexInteractor =
         indexInteractors.getOrPut(indexDescriptor) {
             return@getOrPut DefaultIndexInteractor(indexDescriptor.entityDescriptor, indexDescriptor, this)
@@ -658,7 +656,21 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = OptimisticLockingMap<String, DiskMapFactory>(HashMap())
+    @JvmField internal val dataFiles = Collections.synchronizedMap(
+        MaxSizeMap<String, DiskMapFactory>(
+            maxCapacity = 10000,
+            shouldEject = { key, _ ->
+                key !== DEFAULT_DATA_FILE
+            },
+            onEject = {
+                catchAll {
+                    it.flush()
+                    it.commit()
+                    it.close()
+                }
+            }
+        )
+    )
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
@@ -669,9 +681,8 @@ open class DefaultSchemaContext : SchemaContext {
      * @return Underlying data storage factory
      * @since 1.0.0
      */
-    @Suppress("UNCHECKED_CAST")
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
-        val key = descriptor.fileName + if (descriptor.partition == null) "" else descriptor.partition!!.partitionValue
+        val key = if (descriptor.partition == null) descriptor.fileName else descriptor.fileName + descriptor.partition!!.partitionValue
         var finalLocation = descriptor.archiveDirectories.firstOrNull {
             File("${it}/$key").exists()
         }
@@ -682,7 +693,7 @@ open class DefaultSchemaContext : SchemaContext {
         }
     }
 
-    @JvmField internal val partitionDataFiles = OptimisticLockingMap<Long, DiskMapFactory>(HashMap())
+    @JvmField internal val partitionDataFiles = Collections.synchronizedMap(WeakHashMap<Long, DiskMapFactory>())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.
@@ -715,7 +726,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     data class PartitionInfo(val classToGet: Class<*>, val partitionValue:Any)
 
-    private val partitionsByValue = OptimisticLockingMap<PartitionInfo, SystemPartitionEntry?>(HashMap())
+    private val partitionsByValue = Collections.synchronizedMap(WeakHashMap<PartitionInfo, SystemPartitionEntry?>())
+    private val partitionsByClass = OptimisticLockingMap<Class<*>, List<SystemPartitionEntry>>(WeakHashMap())
 
     /**
      * Get Partition Entry for entity.
@@ -727,12 +739,14 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.0.0
      */
     override fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry? = partitionsByValue.getOrPut(PartitionInfo(classToGet, partitionValue)) {
-        val query = Query(SystemPartitionEntry::class.java, QueryCriteria("id", QueryCriteriaOperator.EQUAL, classToGet.name + partitionValue.toString()))
-        val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
-        partitions.firstOrNull()
+        return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("id" eq classToGet.name + partitionValue.toString()).firstOrNull()
     }
 
-    private val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(HashMap())
+    override fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry> = partitionsByClass.getOrPut(classToGet) {
+        return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("entityClass" eq classToGet.name).list<SystemPartitionEntry>()
+    }
+
+    private val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(WeakHashMap())
 
     /**
      * Get System Partition with Id.

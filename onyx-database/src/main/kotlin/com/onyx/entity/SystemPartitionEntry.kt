@@ -5,7 +5,6 @@ import com.onyx.descriptor.PartitionDescriptor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.*
 import com.onyx.persistence.annotations.values.IdentifierGenerator
-import com.onyx.persistence.annotations.values.RelationshipType
 
 /**
  * Created by timothy.osborn on 3/5/15.
@@ -30,18 +29,17 @@ data class SystemPartitionEntry @JvmOverloads constructor(
     @Index
     var index: Long = 0,
 
-    @Relationship(type = RelationshipType.MANY_TO_ONE, inverseClass = SystemPartition::class, inverse = "entries")
-    var partition: SystemPartition? = null
-
+    @Index
+    var entityClass: String = ""
 ) : AbstractSystemEntity(), IManagedEntity {
 
-    constructor(entityDescriptor: EntityDescriptor, descriptor: PartitionDescriptor, partition: SystemPartition, index: Long):this (
-        partition = partition,
+    constructor(entityDescriptor: EntityDescriptor, descriptor: PartitionDescriptor, index: Long):this (
         id = entityDescriptor.entityClass.name + descriptor.partitionValue,
         value = descriptor.partitionValue,
         fileName = entityDescriptor.fileName + descriptor.partitionValue,
         index = index,
-        primaryKey = 0
+        primaryKey = 0,
+        entityClass = entityDescriptor.entityClass.name
     )
 
     override fun equals(other: Any?): Boolean {

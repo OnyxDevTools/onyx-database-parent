@@ -62,6 +62,10 @@ open class OptimisticLockingMap<K, V>(@Suppress("MemberVisibilityCanPrivate") va
                 newValue = body.invoke()
                 m[key] = newValue
             }
+            if(newValue == null) {
+                println("WTF")
+            }
+
             return@writeLock newValue
         }!!
     }

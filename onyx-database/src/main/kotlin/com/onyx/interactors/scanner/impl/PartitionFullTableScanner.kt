@@ -70,7 +70,8 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
             val matching = HashSet<Reference>()
             val units = ArrayList<Future<Set<Reference>>>()
 
-            systemEntity.partition!!.entries.forEach {
+            val entries = context.getAllPartitions(query.entityType!!)
+            entries.forEach {
                 units.add(
                     async {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)

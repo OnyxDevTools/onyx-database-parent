@@ -248,7 +248,7 @@ constructor(
      */
     val fileName: String
         get() = if (entity!!.fileName == "") {
-            "data.dat"
+            DEFAULT_DATA_FILE
         } else entity!!.fileName
 
     val archiveDirectories: Array<String>
@@ -263,3 +263,5 @@ constructor(
     val hasPartition:Boolean
         get() = partition != null
 }
+
+const val DEFAULT_DATA_FILE = "data.dat"

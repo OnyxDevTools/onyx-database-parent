@@ -130,7 +130,9 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
                 query.partition -> {
                     var resultCount = 0L
 
-                    systemEntity!!.partition!!.entries.forEach {
+                    val entries = context.getAllPartitions(query.entityType!!)
+
+                    entries.forEach {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
                         val dataFile = context.getDataFile(partitionDescriptor)
                         val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)

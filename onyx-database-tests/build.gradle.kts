@@ -30,6 +30,8 @@ description = "com.onyxdevtools:onyx-database-tests"
 
 tasks.getByName<Test>("test") {
     useJUnit()
+    minHeapSize = "2048m"
+    maxHeapSize = "4096m"
 }
 
 project.tasks.publish.configure {

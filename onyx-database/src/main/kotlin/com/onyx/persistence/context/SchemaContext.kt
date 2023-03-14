@@ -218,6 +218,18 @@ interface SchemaContext {
     fun getPartitionWithValue(classToGet: Class<*>, partitionValue: Any): SystemPartitionEntry?
 
     /**
+     * This method will get all system partition entries for a class type.  Note: if there are lots of
+     * entries, this will have performance impacts and is not advisable.  This is typical used
+     * for doing things like full scans which is not optimal for data types with loads of partitions.
+     *
+     * @param classToGet Data type of entity
+     * @return List of system partition entries
+     * @since 2.3.4
+     */
+    @Throws
+    fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry>
+
+    /**
      * Get System Partition with Id
      *
      * @since 1.0.0

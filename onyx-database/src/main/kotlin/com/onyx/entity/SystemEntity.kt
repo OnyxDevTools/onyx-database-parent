@@ -4,9 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.*
-import com.onyx.persistence.annotations.values.CascadePolicy
 import com.onyx.persistence.annotations.values.IdentifierGenerator
-import com.onyx.persistence.annotations.values.RelationshipType
 import java.util.*
 
 /**
@@ -25,9 +23,6 @@ data class SystemEntity @JvmOverloads constructor(
 
     @Attribute
     var fileName: String? = null,
-
-    @Relationship(type = RelationshipType.ONE_TO_ONE, cascadePolicy = CascadePolicy.ALL, inverseClass = SystemPartition::class)
-    var partition: SystemPartition? = null,
 
     @Attribute
     var attributes: MutableList<SystemAttribute> = ArrayList(),
@@ -63,9 +58,5 @@ data class SystemEntity @JvmOverloads constructor(
         this.attributes = descriptor.attributes.values.map { SystemAttribute(it) }.sortedBy { it.name }.toMutableList()
         this.relationships = descriptor.relationships.values.map { SystemRelationship(it) }.sortedBy { it.name }.toMutableList()
         this.indexes = descriptor.indexes.values.map { SystemIndex(it) }.sortedBy { it.name }.toMutableList()
-
-        if (descriptor.partition != null) {
-            this.partition = SystemPartition(descriptor.partition!!, this)
-        }
     }
 }

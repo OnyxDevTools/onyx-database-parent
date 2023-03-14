@@ -51,8 +51,8 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
         if (query.partition === QueryPartitionMode.ALL) {
             val allMatching = HashSet<Reference>()
             val units = ArrayList<Future<MutableSet<Reference>>>()
-
-            systemEntity.partition!!.entries.forEach {
+            val entries = context.getAllPartitions(query.entityType!!)
+            entries.forEach {
                 units.add(
                         async {
                             val matching = HashSet<Reference>()

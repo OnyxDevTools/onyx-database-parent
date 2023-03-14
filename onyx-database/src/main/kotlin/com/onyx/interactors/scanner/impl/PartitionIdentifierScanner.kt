@@ -38,7 +38,9 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
 
         if (query.partition === QueryPartitionMode.ALL) {
             val units = ArrayList<Future<MutableSet<Reference>>>()
-            systemEntity.partition!!.entries.forEach {
+            val entries = context.getAllPartitions(query.entityType!!)
+
+            entries.forEach {
                 units.add(
                     async {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
@@ -72,7 +74,9 @@ class PartitionIdentifierScanner @Throws(OnyxException::class) constructor(crite
 
         if (query.partition === QueryPartitionMode.ALL) {
             val units = ArrayList<Future<MutableSet<Reference>>>()
-            systemEntity.partition!!.entries.forEach {
+            val entries = context.getAllPartitions(query.entityType!!)
+
+            entries.forEach {
                 units.add(
                     async {
                         val partitionDescriptor = context.getDescriptorForEntity(query.entityType, it.value)
