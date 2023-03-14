@@ -453,7 +453,7 @@ open class DefaultSchemaContext : SchemaContext {
     // region Entity Descriptor
 
     private val descriptors = MaxSizeMap<String, EntityDescriptor>(
-        maxCapacity = 10000,
+        maxCapacity = 5000,
         shouldEject = { _, value ->
             value.hasPartition
         }
@@ -658,7 +658,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     @JvmField internal val dataFiles = Collections.synchronizedMap(
         MaxSizeMap<String, DiskMapFactory>(
-            maxCapacity = 10000,
+            maxCapacity = 5000,
             shouldEject = { key, _ ->
                 key !== DEFAULT_DATA_FILE
             },
