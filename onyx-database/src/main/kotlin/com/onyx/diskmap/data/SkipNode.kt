@@ -7,6 +7,7 @@ import com.onyx.diskmap.store.Store
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.common.toType
+import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 
 data class SkipNode(
@@ -78,18 +79,18 @@ data class SkipNode(
         return keyValue as T
     }
 
-    private var recordValue:Any? = null
+    private var recordValue:WeakReference<Any?>? = null
 
     @Suppress("UNCHECKED_CAST")
     fun <T> getRecord(store: Store):T {
-        if(recordValue == null) {
+        if(recordValue?.get() == null) {
             synchronized(this) {
-                if(recordValue == null) {
-                    recordValue = store.getObject(record)
+                if(recordValue?.get() == null) {
+                    recordValue = WeakReference(store.getObject(record))
                 }
             }
         }
-        return recordValue as T
+        return recordValue!!.get() as T
     }
 
     fun write(store: Store) {

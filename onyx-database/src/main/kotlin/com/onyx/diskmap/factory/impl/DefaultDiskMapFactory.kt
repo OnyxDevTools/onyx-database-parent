@@ -1,6 +1,5 @@
 package com.onyx.diskmap.factory.impl
 
-import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskSkipListMap
@@ -11,6 +10,7 @@ import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
 
 import java.io.File
+import java.lang.ref.WeakReference
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -191,7 +191,8 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T = mapsByHeader.getOrPut(header) { DiskSkipListMap<Any, Any>(store, header, keyType) } as T
+    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T = mapsByHeader.getOrPut(header) { DiskSkipListMap<Any, Any>(
+        WeakReference(store), header, keyType) } as T
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -215,7 +216,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
             internalMaps[name] = header.position
         }
 
-        return@getOrPut DiskSkipListMap<Any, Any>(store, header, keyType)
+        return@getOrPut DiskSkipListMap<Any, Any>(WeakReference(store), header, keyType)
     } as T
 
     // endregion

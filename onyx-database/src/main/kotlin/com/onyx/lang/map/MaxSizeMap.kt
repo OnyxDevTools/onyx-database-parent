@@ -16,18 +16,23 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
 
     private val order: LinkedHashSet<K> = LinkedHashSet(maxCapacity)
 
+    @Synchronized
     override fun put(key: K, value: V): V? {
         @Suppress("UNCHECKED_CAST")
         super.put(key, value) as V
         var attempts = 0
-        while (size > maxCapacity && attempts < 100) {
+        while (size > maxCapacity && attempts < size) {
             val ejected = order.first()
-            if(shouldEject?.invoke(ejected, value) == true) {
-                onEject?.invoke(super.get(ejected)!!)
+            val ejectValue = super.get(ejected)
+            order.remove(ejected)
+            if(ejectValue == null) {
+                attempts++
+            }
+            else if(shouldEject?.invoke(ejected, ejectValue) == true) {
+                onEject?.invoke(ejectValue)
                 remove(ejected)
             } else {
                 attempts++
-                order.remove(ejected)
                 order.add(ejected)
             }
         }
@@ -41,6 +46,7 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
      * @param key Map entry key
      * @return Value null if it doesn't exist
      */
+    @Synchronized
     override operator fun get(key: K): V? {
         val value = super.get(key)
         if(value != null) {
@@ -51,11 +57,13 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
         return value
     }
 
+    @Synchronized
     override fun remove(key: K): V? {
         order.remove(key)
         return super.remove(key)
     }
 
+    @Synchronized
     override fun clear() {
         order.clear()
         super.clear()

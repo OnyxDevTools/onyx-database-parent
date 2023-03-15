@@ -1,3 +1,5 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package com.onyx.persistence.context.impl
 
 import com.onyx.descriptor.DEFAULT_DATA_FILE
@@ -52,6 +54,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.reflect.KClass
 
 /**
@@ -453,9 +456,9 @@ open class DefaultSchemaContext : SchemaContext {
     // region Entity Descriptor
 
     private val descriptors = MaxSizeMap<String, EntityDescriptor>(
-        maxCapacity = 5000,
+        maxCapacity = 5000, // This should represent the max number of descriptors you can have in a single query
         shouldEject = { _, value ->
-            value.hasPartition
+            value.hasPartition && value.partition?.partitionValue?.isNotEmpty() == true
         }
     )
 
@@ -658,9 +661,9 @@ open class DefaultSchemaContext : SchemaContext {
 
     @JvmField internal val dataFiles = Collections.synchronizedMap(
         MaxSizeMap<String, DiskMapFactory>(
-            maxCapacity = 5000,
+            maxCapacity = 2000,
             shouldEject = { key, _ ->
-                key !== DEFAULT_DATA_FILE
+                key != DEFAULT_DATA_FILE
             },
             onEject = {
                 catchAll {

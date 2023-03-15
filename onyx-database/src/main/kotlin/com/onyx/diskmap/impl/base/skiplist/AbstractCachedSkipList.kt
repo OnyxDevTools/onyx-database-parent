@@ -4,6 +4,7 @@ import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.lang.map.OptimisticLockingMap
+import java.lang.ref.WeakReference
 import java.util.*
 
 /**
@@ -20,7 +21,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-abstract class AbstractCachedSkipList<K, V> constructor(fileStore: Store, header: Header, keyType:Class<*>) : AbstractSkipList<K, V>(fileStore, header, keyType) {
+abstract class AbstractCachedSkipList<K, V> constructor(fileStore: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractSkipList<K, V>(fileStore, header, keyType) {
 
     // Caching maps
     private var keyCache: MutableMap<K, SkipNode?> = OptimisticLockingMap(WeakHashMap())

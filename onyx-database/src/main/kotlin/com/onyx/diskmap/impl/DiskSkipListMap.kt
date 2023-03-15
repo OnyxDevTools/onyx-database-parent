@@ -12,6 +12,7 @@ import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.getAny
 import com.onyx.lang.concurrent.ClosureReadWriteLock
 import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
+import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 import java.util.*
 
@@ -27,7 +28,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-open class DiskSkipListMap<K, V>(fileStore:Store, header: Header, keyType:Class<*>) : AbstractIterableSkipList<K, V>(fileStore, header, keyType), SortedDiskMap<K,V> {
+open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractIterableSkipList<K, V>(fileStore, header, keyType), SortedDiskMap<K,V> {
 
     override val size: Int
         get() = longSize().toInt()

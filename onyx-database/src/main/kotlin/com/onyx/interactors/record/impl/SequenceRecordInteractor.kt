@@ -2,6 +2,7 @@ package com.onyx.interactors.record.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.data.PutResult
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.extension.common.ClassMetadata
@@ -19,13 +20,15 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class SequenceRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context), RecordInteractor {
     private val sequenceValue = AtomicLong(0)
-    private var metadata: MutableMap<Byte, Number>
     private val sequenceLock = DefaultClosureLock()
 
-    init {
-        val dataFile = context.getDataFile(entityDescriptor)
-        metadata = dataFile.getHashMap(ClassMetadata.BYTE_TYPE, METADATA_MAP_NAME + entityDescriptor.entityClass.name)
+    private val dataFile: DiskMapFactory
+        get() = context.getDataFile(entityDescriptor)
 
+    private val metadata: MutableMap<Byte, Number>
+        get() = dataFile.getHashMap(ClassMetadata.BYTE_TYPE, METADATA_MAP_NAME + entityDescriptor.entityClass.name)
+
+    init {
         // Initialize the sequence value
         sequenceValue.set((metadata[LAST_SEQUENCE_VALUE]?:0L).toLong())
     }

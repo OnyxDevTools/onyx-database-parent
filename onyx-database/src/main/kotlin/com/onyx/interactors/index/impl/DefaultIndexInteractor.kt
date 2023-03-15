@@ -6,9 +6,9 @@ import com.onyx.exception.OnyxException
 import com.onyx.interactors.index.IndexInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.interactors.record.RecordInteractor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.extension.identifier
 import java.lang.ref.WeakReference
 
@@ -18,25 +18,26 @@ import kotlin.collections.HashMap
 /**
  * Created by timothy.osborn on 1/29/15.
  *
- * Controls actions of an index
+ * Controls behavior of an index
  */
 class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private val descriptor: EntityDescriptor, override val indexDescriptor: IndexDescriptor, context: SchemaContext) : IndexInteractor {
 
-    private var references: DiskMap<Any, Header>// Stores the references for an index key
-    private var indexValues: DiskMap<Long, Any>
-    private var recordInteractor: RecordInteractor? = null
     private val contextReference: WeakReference<SchemaContext>
+
     private val context: SchemaContext
         get() = contextReference.get()!!
 
+    private val dataFile: DiskMapFactory
+        get() = context.getDataFile(descriptor)
+
+    private val references: DiskMap<Any, Header>// Stores the references for an index key
+        get() = dataFile.getHashMap(indexDescriptor.type, descriptor.entityClass.name + indexDescriptor.name)
+
+    private val indexValues: DiskMap<Long, Any>
+        get() = dataFile.getHashMap(Long::class.java, descriptor.entityClass.name + indexDescriptor.name + "indexValues")
+
     init {
-
         contextReference = WeakReference(context)
-        this.recordInteractor = context.getRecordInteractor(descriptor)
-        val dataFile = context.getDataFile(descriptor)
-
-        references = dataFile.getHashMap(indexDescriptor.type, descriptor.entityClass.name + indexDescriptor.name)
-        indexValues = dataFile.getHashMap(Long::class.java, descriptor.entityClass.name + indexDescriptor.name + "indexValues")
     }
 
     /**
@@ -54,8 +55,6 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
         if (oldReferenceId > 0) {
             delete(oldReferenceId)
         }
-
-        val dataFile = context.getDataFile(descriptor)
 
         references.compute(indexValue!!) { _, existingHeader ->
             val header = existingHeader ?: dataFile.newMapHeader()

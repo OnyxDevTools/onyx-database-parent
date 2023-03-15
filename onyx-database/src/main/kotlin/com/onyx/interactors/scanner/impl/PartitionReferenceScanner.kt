@@ -2,7 +2,6 @@ package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
-import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.extension.toManagedEntity
@@ -23,8 +22,6 @@ import java.util.concurrent.Future
  * It can either scan the entire table or a subset of index values
  */
 open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : ReferenceScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
-
-    private var systemEntity: SystemEntity = context.getSystemEntityByName(query.entityType!!.name)!!
 
     /**
      * Not supported for all references
@@ -80,9 +77,7 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
             if(partitionId == 0L) // Partition does not exist, lets do a full scan of default partition
                 return super.scan()
 
-            val partitionDescriptor = context.getDescriptorForEntity(query.entityType, query.partition)
-            val dataFile = context.getDataFile(partitionDescriptor)
-            records = dataFile.getHashMap(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
+            descriptor = context.getDescriptorForEntity(query.entityType, query.partition)
             return super.scan(existingValues)
         }
     }

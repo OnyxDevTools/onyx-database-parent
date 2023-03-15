@@ -7,6 +7,7 @@ import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.canBeCastToPrimitive
 import com.onyx.extension.perform
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -19,9 +20,12 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.2.0
  */
-abstract class AbstractDiskMap<K, V> constructor(override val fileStore: Store, header: Header, val keyType:Class<*>) : DiskMap<K, V> {
+abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakReference<Store>, header: Header, val keyType:Class<*>) : DiskMap<K, V> {
 
     final override val reference: Header = Header()
+
+    override val fileStore: Store
+        get() = store.get()!!
 
     val storeKeyWithinNode:Boolean = keyType.canBeCastToPrimitive()
 

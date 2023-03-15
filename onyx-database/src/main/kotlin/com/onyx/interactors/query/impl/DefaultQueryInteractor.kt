@@ -124,7 +124,6 @@ class DefaultQueryInteractor(private var descriptor: EntityDescriptor, private v
     override fun getCountForQuery(query: Query): Long {
         val context = Contexts.get(contextId)!!
         if (query.isDefaultQuery(descriptor)) {
-            val systemEntity = context.getSystemEntityByName(query.entityType!!.name)
 
             when (QueryPartitionMode.ALL) {
                 query.partition -> {

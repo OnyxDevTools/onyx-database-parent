@@ -8,6 +8,7 @@ import com.onyx.extension.common.catchAll
 import com.onyx.extension.get
 import com.onyx.extension.set
 import com.onyx.persistence.context.Contexts
+import java.lang.ref.WeakReference
 
 /**
  * All managed entities should extend this class
@@ -20,7 +21,7 @@ import com.onyx.persistence.context.Contexts
  */
 abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
-    @Transient private var descriptor: EntityDescriptor? = null
+    @Transient private var descriptor: WeakReference<EntityDescriptor>? = null
     @Transient internal var ignoreListeners = false
 
     /**
@@ -31,10 +32,10 @@ abstract class ManagedEntity : IManagedEntity, BufferStreamable {
      */
     @Suppress("MemberVisibilityCanPrivate")
     protected fun getDescriptor(context: SchemaContext):EntityDescriptor {
-        if (descriptor == null) {
-            descriptor = context.getDescriptorForEntity(this, "")
+        if (descriptor?.get() == null) {
+            descriptor = WeakReference(context.getDescriptorForEntity(this, ""))
         }
-        return descriptor!!
+        return descriptor?.get() ?: context.getDescriptorForEntity(this, "")
     }
 
     override fun write(buffer: BufferStream) {

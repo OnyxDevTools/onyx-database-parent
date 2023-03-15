@@ -3,6 +3,7 @@ package com.onyx.diskmap.impl.base.skiplist
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
+import java.lang.ref.WeakReference
 
 import java.util.*
 
@@ -20,7 +21,7 @@ import java.util.*
  * @param <V> Value Object Type
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableSkipList<K, V>(store: Store, header: Header, keyType:Class<*>) : AbstractCachedSkipList<K, V>(store, header, keyType) {
+abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractCachedSkipList<K, V>(store, header, keyType) {
 
     // region Iterable Collections
 

@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.SortedDiskMap
 import com.onyx.diskmap.data.PutResult
+import com.onyx.diskmap.factory.DiskMapFactory
 import com.onyx.exception.AttributeTypeMismatchException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
@@ -22,15 +23,18 @@ import java.lang.reflect.Field
  */
 open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, context: SchemaContext) : RecordInteractor {
 
-    protected val records: DiskMap<Any, IManagedEntity>
     private val contextReference: WeakReference<SchemaContext>
     protected val context: SchemaContext
         get() = contextReference.get()!!
 
+    private val dataFile: DiskMapFactory
+        get() = context.getDataFile(entityDescriptor)
+
+    protected val records: DiskMap<Any, IManagedEntity>
+        get() = dataFile.getHashMap(entityDescriptor.identifier!!.type, entityDescriptor.entityClass.name)
+
     init {
         contextReference = WeakReference(context)
-        val dataFile = context.getDataFile(entityDescriptor)
-        records = dataFile.getHashMap(entityDescriptor.identifier!!.type, entityDescriptor.entityClass.name)
     }
 
     /**
