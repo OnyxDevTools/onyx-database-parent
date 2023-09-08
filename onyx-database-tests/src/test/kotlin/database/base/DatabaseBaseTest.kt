@@ -72,7 +72,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         const val EMBEDDED_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/embeddedOnyx.oxd"
         const val REMOTE_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/remoteOnyx.oxd"
         const val WEB_DATABASE_LOCATION = "C:/Sandbox/Onyx/Tests/webOnyx.oxd"
-        const val REMOTE_DATABASE_ENDPOINT = "onx://localhost:8096"
+        const val REMOTE_DATABASE_ENDPOINT = "onx://localhost:8097"
 
         /**
          * Delete all databases prior to running unit test
@@ -95,7 +95,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
         private fun startRemoteDatabase() {
             if(remoteServer == null) {
                 remoteServer = DatabaseServer(REMOTE_DATABASE_LOCATION)
-                remoteServer!!.port = 8096
+                remoteServer!!.port = 8097
 /*                remoteServer!!.sslKeystoreFilePath = "securesocket.jks"
                 remoteServer!!.sslTrustStoreFilePath = "securesocket.jks"
                 remoteServer!!.sslKeystorePassword = "inc0rrect"
@@ -126,7 +126,7 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
             f.delete()
         }
 
-        protected var random = SecureRandom()
+        var random = SecureRandom()
 
         var databasesStarted = false
 

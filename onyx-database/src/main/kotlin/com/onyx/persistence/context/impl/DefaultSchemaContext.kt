@@ -48,7 +48,6 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
-import java.io.File
 import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -659,20 +658,18 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = Collections.synchronizedMap(
-        MaxSizeMap<String, DiskMapFactory>(
-            maxCapacity = 2000,
-            shouldEject = { key, _ ->
-                key != DEFAULT_DATA_FILE
-            },
-            onEject = {
-                catchAll {
-                    it.flush()
-                    it.commit()
-                    it.close()
-                }
+    @JvmField internal val dataFiles = MaxSizeMap<String, DiskMapFactory>(
+        maxCapacity = 5000,
+        shouldEject = { key, _ ->
+            key != DEFAULT_DATA_FILE
+        },
+        onEject = {
+            catchAll {
+                it.flush()
+                it.commit()
+                it.close()
             }
-        )
+        }
     )
 
     /**
@@ -684,11 +681,10 @@ open class DefaultSchemaContext : SchemaContext {
      * @return Underlying data storage factory
      * @since 1.0.0
      */
+    @Synchronized
     override fun getDataFile(descriptor: EntityDescriptor): DiskMapFactory {
         val key = if (descriptor.partition == null) descriptor.fileName else descriptor.fileName + descriptor.partition!!.partitionValue
-        var finalLocation = descriptor.archiveDirectories.firstOrNull {
-            File("${it}/$key").exists()
-        }
+        var finalLocation = descriptor.primaryLocation
         finalLocation = if(finalLocation != null) "$finalLocation/$key" else "$location/$key"
 
         return dataFiles.getOrPut(key) {
@@ -696,7 +692,7 @@ open class DefaultSchemaContext : SchemaContext {
         }
     }
 
-    @JvmField internal val partitionDataFiles = Collections.synchronizedMap(WeakHashMap<Long, DiskMapFactory>())
+    private val partitionCache: MutableMap<Long, SystemPartitionEntry> = Collections.synchronizedMap(WeakHashMap())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.
@@ -714,13 +710,13 @@ open class DefaultSchemaContext : SchemaContext {
             return getDataFile(descriptor)
         }
 
-        return partitionDataFiles.getOrPut(partitionId) {
+        val partition = partitionCache.getOrPut(partitionId) {
             val query = Query(SystemPartitionEntry::class.java, QueryCriteria("index", QueryCriteriaOperator.EQUAL, partitionId))
             val partitions = serializedPersistenceManager.executeQuery<SystemPartitionEntry>(query)
-            val partition = partitions[0]
-
-            return@getOrPut getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
+            partitions[0]
         }
+
+        return getDataFile(getDescriptorForEntity(descriptor.entityClass, partition.value))
     }
 
     // endregion
@@ -780,7 +776,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     @Suppress("MemberVisibilityCanBePrivate")
     protected fun watchMemoryUsage(): Job = runJob(5, TimeUnit.MINUTES) {
-        if(Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() <= .50)
+        if(Runtime.getRuntime().freeMemory().toDouble() / Runtime.getRuntime().totalMemory().toDouble() <= .50)
             this.flush()
     }
 }

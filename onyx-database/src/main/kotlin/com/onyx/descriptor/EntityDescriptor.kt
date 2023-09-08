@@ -7,6 +7,7 @@ import com.onyx.persistence.annotations.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.extension.validate
 import com.onyx.extension.validateIsManagedEntity
+import java.io.File
 import java.io.Serializable
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -253,6 +254,21 @@ constructor(
 
     val archiveDirectories: Array<String>
         get() = entity?.archiveDirectories ?: arrayOf()
+
+    private var _primaryLocation: String? = null
+    var primaryLocationSearched: Boolean = false
+
+    val primaryLocation: String?
+        get() {
+            if(!primaryLocationSearched) {
+                val key = if (this.partition == null) this.fileName else this.fileName + this.partition!!.partitionValue
+                _primaryLocation = archiveDirectories.firstOrNull {
+                    File("${it}/$key").exists()
+                }
+                primaryLocationSearched = true
+            }
+            return _primaryLocation
+        }
 
     val hasIndexes: Boolean
         get() = indexes.isNotEmpty()

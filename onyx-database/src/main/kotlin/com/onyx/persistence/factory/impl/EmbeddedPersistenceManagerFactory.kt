@@ -229,7 +229,6 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
     private fun checkCredentials(): Boolean {
 
         try {
-
             if(this.persistenceManager.from(SystemUser::class).count() == 0L) {
                 val defaultUser = SystemUser()
                 defaultUser.firstName = "Admin"

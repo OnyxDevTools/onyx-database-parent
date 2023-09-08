@@ -7,7 +7,7 @@ import java.util.concurrent.*
 
 typealias Block = Any
 
-val defaultPool: ExecutorService = ForkJoinPool(Runtime.getRuntime().availableProcessors(), OnyxForkJoinThreadFactory, null, true)
+val defaultPool: ExecutorService = ForkJoinPool(Runtime.getRuntime().availableProcessors()*200, OnyxForkJoinThreadFactory, null, false)
 
 /**
  * Run a job using a single thread executor.  This will run a daemon thread and pause between iterations to save CPU

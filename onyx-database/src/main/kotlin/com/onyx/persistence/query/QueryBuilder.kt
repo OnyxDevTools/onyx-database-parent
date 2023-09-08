@@ -236,6 +236,8 @@ infix fun <T> String.gt(value:T):QueryCriteria = QueryCriteria(this, QueryCriter
 infix fun <T> String.lte(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.LESS_THAN_EQUAL, value)
 infix fun <T> String.lt(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.LESS_THAN, value)
 infix fun <T> String.match(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.MATCHES, value)
+infix fun <T> String.between(range: Pair<T,T>):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.BETWEEN, range)
+
 @Suppress("UNUSED")
 infix fun <T> String.notMatch(value:T):QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.NOT_MATCHES, value)
 @Suppress("unused")

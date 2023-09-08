@@ -14,7 +14,7 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
         if(maxCapacity <= 0) throw Exception("Invalid map capacity")
     }
 
-    private val order: LinkedHashSet<K> = LinkedHashSet(maxCapacity)
+    private val order: LinkedHashMap<K, K> = LinkedHashMap(maxCapacity)
 
     @Synchronized
     override fun put(key: K, value: V): V? {
@@ -22,7 +22,7 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
         super.put(key, value) as V
         var attempts = 0
         while (size > maxCapacity && attempts < size) {
-            val ejected = order.first()
+            val ejected = order.keys.first()
             val ejectValue = super.get(ejected)
             order.remove(ejected)
             if(ejectValue == null) {
@@ -33,10 +33,10 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
                 remove(ejected)
             } else {
                 attempts++
-                order.add(ejected)
+                order[ejected] = ejected
             }
         }
-        order.add(key)
+        order[key] = key
         return value
     }
 
@@ -51,7 +51,7 @@ open class MaxSizeMap<K, V> @JvmOverloads constructor(private val maxCapacity: I
         val value = super.get(key)
         if(value != null) {
             order.remove(key)
-            order.add(key)
+            order[key] = key
         }
 
         return value

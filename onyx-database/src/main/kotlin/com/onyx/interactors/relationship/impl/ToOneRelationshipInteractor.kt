@@ -84,20 +84,27 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
      */
     @Throws(OnyxException::class)
     override fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean) {
-        transaction.add(entity, context)
+        if(entityDescriptor.hasRelationships) {
+            transaction.add(entity, context)
 
-        val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(context)] ?: HashSet()
+            val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> =
+                entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(
+                    context
+                )] ?: HashSet()
 
-        if(existingRelationshipReferenceObjects.isNotEmpty()) {
-            val relationshipEntity:IManagedEntity? = existingRelationshipReferenceObjects.first().toManagedEntity(context, relationshipDescriptor.inverseClass)
-            relationshipEntity?.hydrateRelationships(context, transaction)
-            val existingRelationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]
-            if(existingRelationshipObject != null && relationshipEntity != null)
-                existingRelationshipObject.copy(relationshipEntity, context)
-            else
-                entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipEntity
-        } else {
-            entity[context, entityDescriptor, relationshipDescriptor.name] = null
+            if (existingRelationshipReferenceObjects.isNotEmpty()) {
+                val relationshipEntity: IManagedEntity? = existingRelationshipReferenceObjects.first()
+                    .toManagedEntity(context, relationshipDescriptor.inverseClass)
+                relationshipEntity?.hydrateRelationships(context, transaction)
+                val existingRelationshipObject: IManagedEntity? =
+                    entity[context, entityDescriptor, relationshipDescriptor.name]
+                if (existingRelationshipObject != null && relationshipEntity != null)
+                    existingRelationshipObject.copy(relationshipEntity, context)
+                else
+                    entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipEntity
+            } else {
+                entity[context, entityDescriptor, relationshipDescriptor.name] = null
+            }
         }
     }
 

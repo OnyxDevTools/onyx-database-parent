@@ -88,10 +88,18 @@ fun IManagedEntity.relationshipReferenceMap(context: SchemaContext, relationship
  * @since 2.0.0
  */
 fun IManagedEntity.hydrateRelationships(context: SchemaContext, transaction: RelationshipTransaction = RelationshipTransaction(), descriptor: EntityDescriptor = context.getDescriptorForEntity(this)) {
-    if(transaction.contains(this, context))
-        return
-    transaction.add(this, context)
-    descriptor.relationships.values.forEach { relationshipInteractor(context, it.name, descriptor).hydrateRelationshipForEntity(this, transaction, false) }
+    if(descriptor.hasRelationships) {
+        if (transaction.contains(this, context))
+            return
+        transaction.add(this, context)
+        descriptor.relationships.values.forEach {
+            relationshipInteractor(
+                context,
+                it.name,
+                descriptor
+            ).hydrateRelationshipForEntity(this, transaction, false)
+        }
+    }
 }
 
 /**

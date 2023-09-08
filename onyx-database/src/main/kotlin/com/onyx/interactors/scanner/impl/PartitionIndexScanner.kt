@@ -1,7 +1,6 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
-import com.onyx.entity.SystemEntity
 import com.onyx.exception.OnyxException
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
@@ -25,8 +24,6 @@ import kotlin.collections.HashSet
  * Scan a partition for matching index values
  */
 class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: QueryCriteria, classToScan: Class<*>, descriptor: EntityDescriptor, query: Query, context: SchemaContext, persistenceManager: PersistenceManager) : IndexScanner(criteria, classToScan, descriptor, query, context, persistenceManager), TableScanner {
-
-    private var systemEntity: SystemEntity = context.getSystemEntityByName(query.entityType!!.name)!!
 
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         if(query.partition === QueryPartitionMode.ALL) {

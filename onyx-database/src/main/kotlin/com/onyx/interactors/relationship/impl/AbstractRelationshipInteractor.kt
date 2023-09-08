@@ -33,20 +33,24 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
     @Throws(OnyxException::class)
     @Synchronized
     fun deleteRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
-        transaction.add(entity, context)
+        if(entityDescriptor.hasRelationships) {
+            transaction.add(entity, context)
 
-        val relationshipReferenceMap = entity.relationshipReferenceMap(context, relationship = relationshipDescriptor.name)
-        val entityRelationshipReference = entity.toRelationshipReference(context)
-        val relationshipsToRemove:MutableSet<RelationshipReference> = HashSet(relationshipReferenceMap[entityRelationshipReference] ?: HashSet())
-        relationshipReferenceMap[entityRelationshipReference] = HashSet()
+            val relationshipReferenceMap =
+                entity.relationshipReferenceMap(context, relationship = relationshipDescriptor.name)
+            val entityRelationshipReference = entity.toRelationshipReference(context)
+            val relationshipsToRemove: MutableSet<RelationshipReference> =
+                HashSet(relationshipReferenceMap[entityRelationshipReference] ?: HashSet())
+            relationshipReferenceMap[entityRelationshipReference] = HashSet()
 
-        relationshipsToRemove.forEach {
-            val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
-            deleteInverseRelationshipReference(entity, entityRelationshipReference, it)
-            if (relationshipDescriptor.shouldDeleteEntity && !transaction.contains(entityToDelete!!, context)) {
-                entityToDelete.deleteAllIndexes(context, entityToDelete.referenceId(context))
-                entityToDelete.recordInteractor(context).delete(entityToDelete)
-                entityToDelete.deleteRelationships(context, transaction)
+            relationshipsToRemove.forEach {
+                val entityToDelete = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
+                deleteInverseRelationshipReference(entity, entityRelationshipReference, it)
+                if (relationshipDescriptor.shouldDeleteEntity && !transaction.contains(entityToDelete!!, context)) {
+                    entityToDelete.deleteAllIndexes(context, entityToDelete.referenceId(context))
+                    entityToDelete.recordInteractor(context).delete(entityToDelete)
+                    entityToDelete.deleteRelationships(context, transaction)
+                }
             }
         }
     }

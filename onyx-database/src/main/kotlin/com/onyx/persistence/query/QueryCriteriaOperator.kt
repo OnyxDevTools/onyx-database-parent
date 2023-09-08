@@ -23,6 +23,8 @@ enum class QueryCriteriaOperator {
     NOT_MATCHES,
     LESS_THAN,
     GREATER_THAN,
+    BETWEEN,
+    NOT_BETWEEN,
     LESS_THAN_EQUAL,
     GREATER_THAN_EQUAL,
     IN,
@@ -39,6 +41,7 @@ enum class QueryCriteriaOperator {
                 || this === GREATER_THAN_EQUAL
                 || this === LESS_THAN
                 || this === LESS_THAN_EQUAL
+                || this === BETWEEN
 
     /**
      * Get the inverse in order to support the .not() feature within query criteria
@@ -65,5 +68,7 @@ enum class QueryCriteriaOperator {
             GREATER_THAN_EQUAL -> LESS_THAN
             IN -> NOT_IN
             NOT_IN -> IN
+            BETWEEN -> NOT_BETWEEN
+            NOT_BETWEEN -> BETWEEN
         }
 }

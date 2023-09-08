@@ -64,6 +64,7 @@ open class IdentifierScanner @Throws(OnyxException::class) constructor(criteria:
                     criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL ->   recordInteractor.findAllAbove(criteria.value!!, true)
                     criteria.operator === QueryCriteriaOperator.LESS_THAN ->            recordInteractor.findAllBelow(criteria.value!!, false)
                     criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL ->      recordInteractor.findAllBelow(criteria.value!!, true)
+                    criteria.operator === QueryCriteriaOperator.BETWEEN ->              recordInteractor.findAllBetween((criteria.value as? Pair<*,*>)?.first, true, (criteria.value as? Pair<*,*>)?.second, true)
                     else ->                                                             hashSetOf(recordInteractor.getReferenceId(criteria.value!!))
                 }
             }

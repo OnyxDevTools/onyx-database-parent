@@ -118,19 +118,32 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
      */
     @Throws(OnyxException::class)
     override fun hydrateRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction, force: Boolean) {
-        transaction.add(entity, context)
+        if(entityDescriptor.hasRelationships) {
+            transaction.add(entity, context)
 
-        val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(context)] ?: HashSet()
-        var relationshipObjects: MutableList<IManagedEntity>? = entity[context, entityDescriptor, relationshipDescriptor.name]
+            val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> =
+                entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(
+                    context
+                )] ?: HashSet()
+            var relationshipObjects: MutableList<IManagedEntity>? =
+                entity[context, entityDescriptor, relationshipDescriptor.name]
 
-        when {
-            relationshipDescriptor.fetchPolicy === FetchPolicy.LAZY && !force                    -> relationshipObjects = LazyRelationshipCollection(context.getDescriptorForEntity(relationshipDescriptor.inverseClass, ""), ArrayList(existingRelationshipReferenceObjects), context)
-            relationshipObjects == null && relationshipObjects !is LazyRelationshipCollection<*> -> relationshipObjects = ArrayList()
-            force && relationshipObjects is LazyRelationshipCollection<*>                        -> relationshipObjects = ArrayList()
-            else -> relationshipObjects.clear()
-        }
+            when {
+                relationshipDescriptor.fetchPolicy === FetchPolicy.LAZY && !force -> relationshipObjects =
+                    LazyRelationshipCollection(
+                        context.getDescriptorForEntity(relationshipDescriptor.inverseClass, ""),
+                        ArrayList(existingRelationshipReferenceObjects),
+                        context
+                    )
 
-        if (relationshipDescriptor.fetchPolicy !== FetchPolicy.LAZY || force) {
+                relationshipObjects == null && relationshipObjects !is LazyRelationshipCollection<*> -> relationshipObjects =
+                    ArrayList()
+
+                force && relationshipObjects is LazyRelationshipCollection<*> -> relationshipObjects = ArrayList()
+                else -> relationshipObjects.clear()
+            }
+
+            if (relationshipDescriptor.fetchPolicy !== FetchPolicy.LAZY || force) {
                 existingRelationshipReferenceObjects.forEach {
                     val relationshipObject = it.toManagedEntity(context, relationshipDescriptor.inverseClass)
                     relationshipObject?.hydrateRelationships(context, transaction)
@@ -139,15 +152,19 @@ class ToManyRelationshipInteractor @Throws(OnyxException::class) constructor(ent
                 }
             }
 
-        //sort related children if the child entity implements Comparable
-        catchAll {
-            if (relationshipObjects.size > 0 && relationshipObjects !is LazyRelationshipCollection && relationshipDescriptor.inverseClass.isAssignableFrom(Comparable::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                (relationshipObjects as MutableList<Comparable<Any>>).sortBy { it }
+            //sort related children if the child entity implements Comparable
+            catchAll {
+                if (relationshipObjects.size > 0 && relationshipObjects !is LazyRelationshipCollection && relationshipDescriptor.inverseClass.isAssignableFrom(
+                        Comparable::class.java
+                    )
+                ) {
+                    @Suppress("UNCHECKED_CAST")
+                    (relationshipObjects as MutableList<Comparable<Any>>).sortBy { it }
+                }
             }
-        }
 
-        entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipObjects
+            entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipObjects
+        }
     }
 
     /**

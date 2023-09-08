@@ -83,6 +83,17 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     else -> (first as Comparable<Any?>) >= (second as Comparable<Any?>)
                 }
             }
+            QueryCriteriaOperator.BETWEEN -> {
+                if(first !is Pair<Any?, Any?>) false
+                else
+                    first.first.compare(second, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
+                    first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL)
+            }
+            QueryCriteriaOperator.NOT_BETWEEN -> {
+                if(first !is Pair<Any?, Any?>) false
+                else !(first.first.compare(second, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
+                       first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL))
+            }
             QueryCriteriaOperator.NOT_EQUAL -> first != second
             QueryCriteriaOperator.NOT_STARTS_WITH -> !(first.toString()).startsWith(second.toString())
             QueryCriteriaOperator.NOT_NULL -> first != null

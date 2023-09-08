@@ -101,6 +101,7 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
             criteria.operator === QueryCriteriaOperator.GREATER_THAN_EQUAL -> interactor.findAllAbove(indexValue, true)
             criteria.operator === QueryCriteriaOperator.LESS_THAN -> interactor.findAllBelow(indexValue, false)
             criteria.operator === QueryCriteriaOperator.LESS_THAN_EQUAL -> interactor.findAllBelow(indexValue, true)
+            criteria.operator === QueryCriteriaOperator.BETWEEN -> interactor.findAllBetween((indexValue as? Pair<*,*>)?.first, true, (indexValue as? Pair<*,*>)?.second, true)
             else -> interactor.findAll(indexValue).keys
         }
     }.map {

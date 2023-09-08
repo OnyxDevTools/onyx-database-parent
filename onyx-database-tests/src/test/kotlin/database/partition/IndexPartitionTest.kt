@@ -2,11 +2,9 @@ package database.partition
 
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.factory.impl.CacheManagerFactory
-import com.onyx.persistence.query.AttributeUpdate
-import com.onyx.persistence.query.Query
-import com.onyx.persistence.query.QueryCriteria
-import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
+import entities.Execution
 import entities.partition.IndexPartitionEntity
 import org.junit.Assume
 import org.junit.FixMethodOrder
@@ -267,5 +265,52 @@ class IndexPartitionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         val result = manager.executeQuery<Any>(query2)
 
         assertEquals(2, result.size, "Expected 2 result(s)")
+    }
+
+    @Test
+    fun testExecutionPartition() {
+
+        for(p in 0..10) {
+            for (i in 0..100) {
+                manager.saveEntity(
+                    Execution().apply {
+                        this.executionId = "1$randomString"
+                        this.tradeSimulationId = p
+                        this.isTop50 = random.nextBoolean()
+                        this.isGain = random.nextBoolean()
+                        this.bullScore = randomInteger.toDouble()
+                        this.purchaseTime = Date(random.nextLong())
+                        this.profitLoss = random.nextFloat()
+                        this.marketMean = random.nextDouble()
+                        this.volume = random.nextDouble()
+                        this.netChange = random.nextDouble()
+                    }
+                )
+            }
+        }
+
+        val results = manager.select(
+                                count("executionId"),
+                                "tradeSimulationId",
+                                avg("netChange"),
+                                sum("profitLoss"),
+                                avg("bullScore"),
+                                avg("marketMean"),
+                                avg("volume"),
+                                avg("rsi"),
+                                avg("marketGapPercent"),
+                                "weekYear",
+                                "strategy",
+                                "dayYear",
+                                max("purchaseTime")
+                            ).from(Execution::class)
+                            .where("netChange" gt 0.0)
+                            .and("netChange" lt Double.MAX_VALUE / 2)
+                            .and("tradeSimulationId" gt 5)
+                            .orderBy("tradeSimulationId".desc(), "purchaseTime".desc())
+                            .groupBy("tradeSimulationId")
+                            .list<Any>()
+
+        assertEquals(results.size, 5)
     }
 }
