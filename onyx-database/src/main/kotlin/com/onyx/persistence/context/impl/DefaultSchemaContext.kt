@@ -659,7 +659,7 @@ open class DefaultSchemaContext : SchemaContext {
     // region Data Files
 
     @JvmField internal val dataFiles = MaxSizeMap<String, DiskMapFactory>(
-        maxCapacity = 5000,
+        maxCapacity = 1000,
         shouldEject = { key, _ ->
             key != DEFAULT_DATA_FILE
         },
