@@ -55,7 +55,7 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager
  */
 open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
 
-    override var storeType: StoreType = StoreType.FILE
+    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
 
     override var protocol = "TLSv1.2"
     override var sslStorePassword: String? = null
@@ -144,6 +144,7 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
         // Verify Connection by getting System Entities
         persistenceManager.findById<SystemEntity>(SystemEntity::class.java, 1)
         schemaContext.storeType = storeType
+        schemaContext.maxCardinality = maxCardinality
         schemaContext.start()
     } catch (e: OnyxException) {
         if(e is InitializationException && e.message != InitializationException.INVALID_CREDENTIALS) {

@@ -33,7 +33,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
     override val size: Int
         get() = longSize().toInt()
 
-    private var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
+    open protected var mapReadWriteLock: ClosureReadWriteLock = DefaultClosureReadWriteLock()
 
     /**
      * Remove an item within the map
@@ -98,7 +98,6 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
      */
     override fun clear() = mapReadWriteLock.writeLock {
         super.clear()
-
         head = SkipNode.create(fileStore)
         this.reference.firstNode = head!!.position
         updateHeaderFirstNode(reference, this.reference.firstNode)
@@ -200,7 +199,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
      * @since 1.2.0
      */
     override fun below(index: K, includeFirst: Boolean): Set<Long> {
-        val results = HashSet<Long>()
+    val results = HashSet<Long>()
         var node:SkipNode? = nearest(index)
 
         if(node != null && !node.isRecord && node.right> 0)

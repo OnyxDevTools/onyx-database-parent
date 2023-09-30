@@ -24,7 +24,7 @@ import java.util.*
 abstract class AbstractCachedSkipList<K, V> constructor(fileStore: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractSkipList<K, V>(fileStore, header, keyType) {
 
     // Caching maps
-    private var keyCache: MutableMap<K, SkipNode?> = OptimisticLockingMap(WeakHashMap())
+    open protected var keyCache: MutableMap<K, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     /**
      * Find a data at a position.  First check the cache.  If it is in there great return it otherwise go the the

@@ -13,12 +13,9 @@ import com.onyx.entity.*
 import com.onyx.exception.EntityClassNotFoundException
 import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.*
 import com.onyx.extension.nullPartition
 import com.onyx.extension.common.ClassMetadata.classForName
-import com.onyx.extension.common.Job
-import com.onyx.extension.common.async
-import com.onyx.extension.common.catchAll
-import com.onyx.extension.common.runJob
 import com.onyx.extension.createNewEntity
 import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
@@ -77,6 +74,7 @@ open class DefaultSchemaContext : SchemaContext {
     override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
     override var encryption: EncryptionInteractor? = null
     override var encryptDatabase: Boolean = false
+    override var maxCardinality: Int = 1000000
 
     // Location where the database folder is
     final override lateinit var location: String
@@ -92,12 +90,12 @@ open class DefaultSchemaContext : SchemaContext {
     // Indicates whether the database has been stopped
     @Volatile override var killSwitch = false
 
-    private var transactionStore: TransactionStore? = null
+    open protected var transactionStore: TransactionStore? = null
 
     // Class loader to dynamically add classes
     override var classLoader:ClassLoader = DefaultSchemaContext::class.java.classLoader
 
-    private var memoryAlertJob: Job? = null
+    open protected var memoryAlertJob: Job? = null
 
     // endregion
 
@@ -299,7 +297,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @since 1.1.0
      */
     @Throws(OnyxException::class)
-    private fun checkForValidDescriptorPartition(descriptor: EntityDescriptor) {
+    open protected fun checkForValidDescriptorPartition(descriptor: EntityDescriptor) {
         // Check to see if the partition already exists
         if (descriptor.partition != null && getPartitionWithValue(descriptor.entityClass, descriptor.partition?.partitionValue ?: "") != null) {
             return
@@ -319,7 +317,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntity System Entity from previous
      * @param newRevision Entity Descriptor with new potential index changes
      */
-    private fun checkForIndexChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
+    open protected fun checkForIndexChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
         val oldIndexes = systemEntity.indexes.associateBy { it.name }
         val newIndexes = newRevision.indexes.associateBy { it.name }
 
@@ -335,7 +333,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @throws InvalidRelationshipTypeException when relationship is invalid
      */
     @Throws(InvalidRelationshipTypeException::class)
-    private fun checkForInvalidRelationshipChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
+    open protected fun checkForInvalidRelationshipChanges(systemEntity: SystemEntity, newRevision: SystemEntity) {
 
         val oldRelationships = systemEntity.relationships.associateBy { it.name }
         val newRelationships = newRevision.relationships.associateBy { it.name }
@@ -359,7 +357,7 @@ open class DefaultSchemaContext : SchemaContext {
      * @param systemEntity Parent System Entity
      * @param indexName Index to rebuild
      */
-    private fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
+    open protected fun rebuildIndex(systemEntity: SystemEntity, indexName: String) = catchAll {
         val entityDescriptor = getBaseDescriptorForEntity(systemEntity.className!!)
         val indexDescriptor = entityDescriptor.indexes[indexName]
         if (entityDescriptor.partition != null) {
@@ -454,7 +452,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Entity Descriptor
 
-    private val descriptors = MaxSizeMap<String, EntityDescriptor>(
+    open protected val descriptors = MaxSizeMap<String, EntityDescriptor>(
         maxCapacity = 5000, // This should represent the max number of descriptors you can have in a single query
         shouldEject = { _, value ->
             value.hasPartition && value.partition?.partitionValue?.isNotEmpty() == true
@@ -496,7 +494,7 @@ open class DefaultSchemaContext : SchemaContext {
     @Throws(OnyxException::class)
     fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor = getDescriptorForEntity(classForName(entityClass, this))
 
-    private val descriptorLockCount = AtomicInteger(0)
+    open protected val descriptorLockCount = AtomicInteger(0)
 
     /**
      * Get Descriptor For Entity. Initializes EntityDescriptor or returns one if it already exists
@@ -592,7 +590,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Relationship Controllers
 
-    private val relationshipInteractors = OptimisticLockingMap<RelationshipDescriptor, RelationshipInteractor>(WeakHashMap())
+    open protected val relationshipInteractors = OptimisticLockingMap<RelationshipDescriptor, RelationshipInteractor>(WeakHashMap())
 
     /**
      * Get Relationship Controller that corresponds to the relationship descriptor.
@@ -621,7 +619,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Index Controller
 
-    private val indexInteractors = OptimisticLockingMap<IndexDescriptor, IndexInteractor>(WeakHashMap())
+    open protected val indexInteractors = OptimisticLockingMap<IndexDescriptor, IndexInteractor>(WeakHashMap())
 
     /**
      * Get Index Controller with Index descriptor.
@@ -640,7 +638,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Record Controller
 
-    private val recordInteractors = OptimisticLockingMap<EntityDescriptor, RecordInteractor>(WeakHashMap())
+    open protected val recordInteractors = OptimisticLockingMap<EntityDescriptor, RecordInteractor>(WeakHashMap())
 
     /**
      * Get Record Controller.
@@ -692,7 +690,7 @@ open class DefaultSchemaContext : SchemaContext {
         }
     }
 
-    private val partitionCache: MutableMap<Long, SystemPartitionEntry> = Collections.synchronizedMap(WeakHashMap())
+    open protected val partitionCache: MutableMap<Long, SystemPartitionEntry> = Collections.synchronizedMap(WeakHashMap())
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor that pertains to a partitionID.
@@ -725,8 +723,8 @@ open class DefaultSchemaContext : SchemaContext {
 
     data class PartitionInfo(val classToGet: Class<*>, val partitionValue:Any)
 
-    private val partitionsByValue = Collections.synchronizedMap(WeakHashMap<PartitionInfo, SystemPartitionEntry?>())
-    private val partitionsByClass = OptimisticLockingMap<Class<*>, List<SystemPartitionEntry>>(WeakHashMap())
+    open protected val partitionsByValue = Collections.synchronizedMap(WeakHashMap<PartitionInfo, SystemPartitionEntry?>())
+    open protected val partitionsByClass = OptimisticLockingMap<Class<*>, List<SystemPartitionEntry>>(WeakHashMap())
 
     /**
      * Get Partition Entry for entity.
@@ -745,7 +743,7 @@ open class DefaultSchemaContext : SchemaContext {
         return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("entityClass" eq classToGet.name).list<SystemPartitionEntry>()
     }
 
-    private val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(WeakHashMap())
+    open protected val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(WeakHashMap())
 
     /**
      * Get System Partition with Id.

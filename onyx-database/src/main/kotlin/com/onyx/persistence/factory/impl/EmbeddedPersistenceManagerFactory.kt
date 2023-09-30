@@ -99,6 +99,8 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
 
     override val credentials: String by lazy { this.user + ":" + encryption.encrypt(this.password) }
 
+    override var maxCardinality: Int = 1000000
+
     // Setup Persistence Manager
 
     override val persistenceManager: PersistenceManager by lazy<PersistenceManager> {
@@ -153,6 +155,7 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
             schemaContext.storeType = this.storeType
             schemaContext.encryption = this.encryption
             schemaContext.encryptDatabase = this.encryptDatabase
+            schemaContext.maxCardinality = this.maxCardinality
             schemaContext.start()
 
             if (!checkCredentials()) {

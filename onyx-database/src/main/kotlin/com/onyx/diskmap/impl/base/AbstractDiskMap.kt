@@ -45,7 +45,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      *
      * @since 1.2.0
      */
-    protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
+    open protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
         var size = 0
         BufferPool.withIntBuffer {
             fileStore.read(it, recordId)
@@ -58,7 +58,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
     /**
      * This method will only update the record count rather than the entire header
      */
-    protected fun updateHeaderRecordCount(count:Long) {
+    open protected fun updateHeaderRecordCount(count:Long) {
         withLongBuffer {
             it.putLong(count)
             it.rewind()
@@ -72,7 +72,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      * @param header    Data structure header
      * @param firstNode First Node location
      */
-    protected fun updateHeaderFirstNode(header: Header, firstNode: Long) {
+    open protected fun updateHeaderFirstNode(header: Header, firstNode: Long) {
         this.reference.firstNode = firstNode
         withLongBuffer {
             it.putLong(firstNode)
@@ -87,7 +87,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      * @param key Key to get the hash of
      * @return The hash value of that key.
      */
-    protected fun hash(key: Any?): Int = key?.hashCode() ?: 0
+    open protected fun hash(key: Any?): Int = key?.hashCode() ?: 0
 
     /**
      * Whether or not the map is empty.
@@ -110,7 +110,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      *
      * @since 1.2.0
      */
-    protected fun incrementSize() {
+    open protected fun incrementSize() {
         updateHeaderRecordCount(reference.recordCount.incrementAndGet())
     }
 
@@ -119,7 +119,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      *
      * @since 1.2.0
      */
-    protected fun decrementSize() {
+    open protected fun decrementSize() {
         updateHeaderRecordCount(reference.recordCount.decrementAndGet())
     }
 }

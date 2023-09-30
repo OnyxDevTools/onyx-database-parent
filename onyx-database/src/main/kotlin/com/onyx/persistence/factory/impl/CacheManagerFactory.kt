@@ -50,6 +50,7 @@ open class CacheManagerFactory @JvmOverloads constructor(instance: String = DEFA
     override fun initialize() {
         this.persistenceManager
         schemaContext.storeType = storeType
+        schemaContext.maxCardinality = maxCardinality
         schemaContext.start()
     }
 

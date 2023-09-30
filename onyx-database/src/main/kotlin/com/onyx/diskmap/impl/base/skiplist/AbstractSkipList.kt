@@ -27,7 +27,7 @@ import java.util.*
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractDiskMap<K, V>(store, header, keyType) {
 
-    protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
+    open protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     init {
         determineHead()
@@ -41,7 +41,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
      * a thread local head
      *
      */
-    private fun determineHead() {
+    open protected fun determineHead() {
         if (reference.firstNode > 0L) {
             head = findNodeAtPosition(reference.firstNode)
         } else {

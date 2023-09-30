@@ -97,7 +97,7 @@ open class FileChannelStore() : Store {
      * outside of relying of the fileChannel is because it may not be accurate.  In order to force it's accuracy
      * we have to configure the file channel to do so.  That causes the store to be severely slowed down.
      */
-    protected fun determineSize() {
+    open protected fun determineSize() {
         this.read(0, 8).perform {
             it?.byteBuffer?.rewind()
             if (it == null || channel?.size() == 0L) {
@@ -240,7 +240,7 @@ open class FileChannelStore() : Store {
      * @param position Position to validate
      * @return whether the value you seek is in a valid position
      */
-    private fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
+    open protected fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
 
     /**
      * Allocates a spot in the file

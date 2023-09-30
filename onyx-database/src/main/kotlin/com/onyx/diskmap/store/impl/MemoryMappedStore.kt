@@ -10,6 +10,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import java.util.*
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -41,7 +42,7 @@ open class MemoryMappedStore : FileChannelStore, Store {
             // Open the file Channel
             super.open(filePath)
 
-            slices = OptimisticLockingMap(HashMap())
+            slices = OptimisticLockingMap(WeakHashMap())
             // Load the first chunk into memory
             val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, 0, bufferSliceSize.toLong())
             slices[0] = FileSlice(buffer)
@@ -63,16 +64,6 @@ open class MemoryMappedStore : FileChannelStore, Store {
      */
     override fun close(): Boolean {
         try {
-            this.slices.values
-                .filter { it.buffer is MappedByteBuffer }
-                .forEach {
-                    catchAll {
-                        synchronized(it) {
-                            it.buffer = ByteBuffer.allocate(0)
-                        }
-                    }
-                }
-
             this.slices.clear()
 
             if (!deleteOnClose) {
@@ -196,23 +187,13 @@ open class MemoryMappedStore : FileChannelStore, Store {
      *
      * This contains the memory mapped segment as well as a lock for it
      */
-    class FileSlice constructor(var buffer: ByteBuffer)
+    class FileSlice(var buffer: ByteBuffer)
 
     /**
      * Commit storage
      */
     override fun commit() {
         if (!deleteOnClose) {
-            this.slices.values
-                    .filter { it.buffer is MappedByteBuffer }
-                    .forEach {
-                        catchAll {
-                            synchronized(it) {
-                                ensureOpen()
-                                (it.buffer as MappedByteBuffer).force()
-                            }
-                        }
-                    }
             super.commit()
         }
     }
@@ -221,5 +202,4 @@ open class MemoryMappedStore : FileChannelStore, Store {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
     }
-
 }

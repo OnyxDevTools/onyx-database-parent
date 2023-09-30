@@ -1,6 +1,7 @@
 package com.onyx.interactors.query.impl.collectors
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.extension.common.parallelForEach
 import com.onyx.extension.hydrateRelationships
 import com.onyx.extension.toManagedEntity
@@ -104,6 +105,9 @@ abstract class BaseQueryCollector<T>(
                     references.clear()
                     (references as? ArrayList)?.trimToSize()
                 } else {
+                    if(references.size >= context.maxCardinality) {
+                        throw MaxCardinalityExceededException(context.maxCardinality)
+                    }
                     references.add(reference)
                 }
             }

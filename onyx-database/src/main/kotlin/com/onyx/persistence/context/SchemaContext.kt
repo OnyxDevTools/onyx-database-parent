@@ -60,6 +60,20 @@ interface SchemaContext {
     var encryptDatabase: Boolean
 
     /**
+     * Max cardinality the database may use when performing queries
+     *
+     * This value denotes the maximum number of records the database may scan per query
+     * If this is exceeded during  a scan, it will throw a MaxCardinalityException.
+     *
+     * An example would be when performing a full table scan that has more than the defined
+     * max cardinality.  The purpose is to prevent overwhelming memory usage as record references
+     * are kept in memory during scans.  This may also apply to index values.
+     *
+     * @since 2.5.6
+     */
+    var maxCardinality: Int
+
+    /**
      * Get Context ID
      *
      * @return context id that maps back to the Persistence Manager Factory instance name

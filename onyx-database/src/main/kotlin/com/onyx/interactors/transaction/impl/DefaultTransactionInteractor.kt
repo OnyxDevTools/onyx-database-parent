@@ -22,7 +22,7 @@ import java.nio.ByteBuffer
  *
  * Handles logging of a transaction
  */
-class DefaultTransactionInteractor(private val transactionStore: TransactionStore, private val persistenceManager: PersistenceManager) : TransactionInteractor {
+open class DefaultTransactionInteractor(private val transactionStore: TransactionStore, private val persistenceManager: PersistenceManager) : TransactionInteractor {
 
     private fun writeTransaction(transactionType:Byte, buffer: ByteBuffer) {
         withBuffer(buffer) { transBuffer ->

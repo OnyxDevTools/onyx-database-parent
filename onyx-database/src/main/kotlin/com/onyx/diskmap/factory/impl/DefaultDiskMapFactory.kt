@@ -31,7 +31,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
     private lateinit var store: Store
 
     // Contains all initialized maps
-    private val maps: MutableMap<String, Map<*,*>> = OptimisticLockingMap(WeakHashMap())
+    private val maps: MutableMap<String, Map<*, *>> = OptimisticLockingMap(WeakHashMap())
 
     // Contains all initialized maps
     private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
@@ -76,19 +76,37 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * @param filePath File path to hold the disk structure data
      * @since 1.0.0
      */
-    constructor(fileSystemPath: String?, filePath: String, type: StoreType, context: SchemaContext?, deleteOnClose: Boolean, predefinedStore: Store? = null) {
-        val path: String =  if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
+    constructor(
+        fileSystemPath: String?,
+        filePath: String,
+        type: StoreType,
+        context: SchemaContext?,
+        deleteOnClose: Boolean,
+        predefinedStore: Store? = null
+    ) {
+        val path: String =
+            if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
 
-        if(predefinedStore != null) {
+        if (predefinedStore != null) {
             this.store = predefinedStore
         } else {
             when {
                 type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported -> {
-                    this.store = if(context?.encryptDatabase == true) EncryptedMemoryMappedStore(path, context, deleteOnClose) else MemoryMappedStore(path, context, deleteOnClose)
+                    this.store = if (context?.encryptDatabase == true) EncryptedMemoryMappedStore(
+                        path,
+                        context,
+                        deleteOnClose
+                    ) else MemoryMappedStore(path, context, deleteOnClose)
                 }
+
                 type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported -> {
-                    this.store = if(context?.encryptDatabase == true) EncryptedFileChannelStore(path, context, deleteOnClose) else FileChannelStore(path, context, deleteOnClose)
+                    this.store = if (context?.encryptDatabase == true) EncryptedFileChannelStore(
+                        path,
+                        context,
+                        deleteOnClose
+                    ) else FileChannelStore(path, context, deleteOnClose)
                 }
+
                 type === StoreType.IN_MEMORY -> {
                     val storeId = storeIdCounter.incrementAndGet().toString()
                     this.store = InMemoryStore(context, storeId)
@@ -104,7 +122,10 @@ class DefaultDiskMapFactory : DiskMapFactory {
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
             getHashMap(String::class.java, newMapHeader())
         } else {
-            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!)
+            getHashMap(
+                String::class.java,
+                (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!
+            )
         }
     }
 
@@ -162,7 +183,10 @@ class DefaultDiskMapFactory : DiskMapFactory {
         internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
             getHashMap(String::class.java, newMapHeader())
         } else {
-            getHashMap(String::class.java, (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!)
+            getHashMap(
+                String::class.java,
+                (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!
+            )
         }
     }
 
@@ -181,7 +205,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      * Note, this was changed to use what was being referred to as a DefaultDiskMap which was a parent of AbstractBitmap.
      * It is now an implementation of an inter-changeable index followed by a skip list.
      */
-    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, name: String): T = getMapWithType(keyType, name)
+    override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, name: String): T = getMapWithType(keyType, name)
 
     /**
      * Get Disk Map with the ability to dynamically change the load factor.  Meaning change how it scales dynamically
@@ -191,8 +215,11 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.0.0
      */
-    override fun <T : Map<*,*>> getHashMap(keyType:Class<*>, header: Header): T = mapsByHeader.getOrPut(header) { DiskSkipListMap<Any, Any>(
-        WeakReference(store), header, keyType) } as T
+    override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T = mapsByHeader.getOrPut(header) {
+        DiskSkipListMap<Any, Any>(
+            WeakReference(store), header, keyType
+        )
+    } as T
 
     /**
      * Default Map factory.  This creates or gets a map based on the name and puts it into a map
@@ -202,7 +229,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    private fun <T : Map<*,*>> getMapWithType(keyType:Class<*>, name: String): T = maps.getOrPut(name) {
+    private fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T = maps.getOrPut(name) {
         var header: Header? = null
         val headerReference = internalMaps[name]
         if (headerReference != null)
