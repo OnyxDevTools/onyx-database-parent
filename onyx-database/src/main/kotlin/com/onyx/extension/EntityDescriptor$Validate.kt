@@ -6,6 +6,7 @@ import com.onyx.extension.common.ClassMetadata
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.Entity
+import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.annotations.values.RelationshipType
 
@@ -48,7 +49,9 @@ private fun EntityDescriptor.validateRelationships() {
         }
 
         if (type != inverseClass && (relationshipType == RelationshipType.MANY_TO_ONE || relationshipType == RelationshipType.ONE_TO_ONE)) {
-            throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)
+            if(type != inverseClass.declaredFields.firstOrNull { it.isAnnotationPresent(Identifier::class.java) }?.type) {
+                throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)
+            }
         }
 
         if (inverseClass.getAnnotation(Entity::class.java) == null && (relationshipType == RelationshipType.MANY_TO_ONE || relationshipType == RelationshipType.ONE_TO_ONE)) {
@@ -64,7 +67,9 @@ private fun EntityDescriptor.validateRelationships() {
                 if (relationshipType == RelationshipType.MANY_TO_ONE && !List::class.java.isAssignableFrom(inverseField.type)) {
                     throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)
                 } else if (relationshipType == RelationshipType.ONE_TO_ONE && inverseField.type != parentClass) {
-                    throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)
+                    if(inverseField.type != parentClass.declaredFields.firstOrNull { it.isAnnotationPresent(Identifier::class.java) }?.type) {
+                        throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_MISMATCH)
+                    }
                 }
             } catch (e: NoSuchFieldException) {
                 throw InvalidRelationshipTypeException(InvalidRelationshipTypeException.INVERSE_RELATIONSHIP_INVALID + " on " + inverseClass, e)

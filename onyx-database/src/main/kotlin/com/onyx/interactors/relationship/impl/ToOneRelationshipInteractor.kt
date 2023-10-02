@@ -3,6 +3,7 @@ package com.onyx.interactors.relationship.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
+import com.onyx.exception.RelationshipEntityNotFoundException
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.relationship.data.RelationshipTransaction
@@ -27,7 +28,18 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
     @Synchronized
     @Throws(OnyxException::class)
     override fun saveRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
-        val relationshipObject:IManagedEntity? = entity[context, entityDescriptor, relationshipDescriptor.name]
+
+        val relationshipProperty: Any? = entity[context, entityDescriptor, relationshipDescriptor.name]
+        val relationshipObject:IManagedEntity? = when (relationshipProperty) {
+            is IManagedEntity -> relationshipProperty
+            null -> null
+            else -> context.systemPersistenceManager!!.findByIdInPartition(this.relationshipDescriptor.inverseClass, relationshipProperty, entity.partitionValue(context))
+        }
+
+        if(relationshipObject == null && relationshipProperty != null) {
+            throw RelationshipEntityNotFoundException(relationship = relationshipDescriptor.name, className = entity::class.simpleName)
+        }
+
         val relationshipReferenceMap:MutableMap<RelationshipReference, MutableSet<RelationshipReference>> = entity.relationshipReferenceMap(context, relationshipDescriptor.name)
         val currentRelationshipReference: RelationshipReference? = relationshipObject?.toRelationshipReference(context)
         val parentRelationshipReference = entity.toRelationshipReference(context)
@@ -88,20 +100,27 @@ class ToOneRelationshipInteractor @Throws(OnyxException::class) constructor(enti
             transaction.add(entity, context)
 
             val existingRelationshipReferenceObjects: MutableSet<RelationshipReference> =
-                entity.relationshipReferenceMap(context, relationshipDescriptor.name)[entity.toRelationshipReference(
+                entity.relationshipReferenceMap(
+                    context,
+                    relationshipDescriptor.name
+                )[entity.toRelationshipReference(
                     context
                 )] ?: HashSet()
 
             if (existingRelationshipReferenceObjects.isNotEmpty()) {
                 val relationshipEntity: IManagedEntity? = existingRelationshipReferenceObjects.first()
                     .toManagedEntity(context, relationshipDescriptor.inverseClass)
-                relationshipEntity?.hydrateRelationships(context, transaction)
-                val existingRelationshipObject: IManagedEntity? =
-                    entity[context, entityDescriptor, relationshipDescriptor.name]
-                if (existingRelationshipObject != null && relationshipEntity != null)
-                    existingRelationshipObject.copy(relationshipEntity, context)
-                else
-                    entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipEntity
+                if(IManagedEntity::class.java.isAssignableFrom(entity.getType(context, entityDescriptor, relationshipDescriptor.name))) {
+                    relationshipEntity?.hydrateRelationships(context, transaction)
+                    val existingRelationshipObject: IManagedEntity? =
+                        entity[context, entityDescriptor, relationshipDescriptor.name]
+                    if (existingRelationshipObject != null && relationshipEntity != null)
+                        existingRelationshipObject.copy(relationshipEntity, context)
+                    else
+                        entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipEntity
+                } else {
+                    entity[context, entityDescriptor, relationshipDescriptor.name] = relationshipEntity?.identifier(context)
+                }
             } else {
                 entity[context, entityDescriptor, relationshipDescriptor.name] = null
             }

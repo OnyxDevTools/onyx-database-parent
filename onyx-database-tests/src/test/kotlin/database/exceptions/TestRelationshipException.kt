@@ -5,10 +5,7 @@ import com.onyx.exception.*
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.AllAttributeEntity
-import entities.exception.EntityToOneDoesNotMatch
-import entities.exception.NoInverseEntity
-import entities.exception.OTMNoListEntity
-import entities.exception.RelationshipNoEntityType
+import entities.exception.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -35,6 +32,11 @@ class TestRelationshipExceptions(override var factoryClass: KClass<*>) : Databas
     @Test(expected = InvalidRelationshipTypeException::class)
     fun testInvalidTypeInverseNoMatch() {
         EntityDescriptor(EntityToOneDoesNotMatch::class.java)
+    }
+
+    @Test(expected = InvalidRelationshipTypeException::class)
+    fun testInvalidTypeIdInverseNoMatch() {
+        EntityDescriptor(EntityToOneIdDoesNotMatch::class.java)
     }
 
     @Test(expected = RelationshipNotFoundException::class)

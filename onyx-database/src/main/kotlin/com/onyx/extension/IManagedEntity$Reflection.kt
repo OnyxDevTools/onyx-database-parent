@@ -66,6 +66,13 @@ fun IManagedEntity.setPartitionValue(context: SchemaContext? = null, descriptor:
 operator fun <T> IManagedEntity.get(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name:String): T? = this.getAny(descriptor!!.reflectionFields[name]!!)
 
 /**
+ * Get Field type
+ *
+ * @since 2.5.6 Added for basic reflection to identity a relationship type
+ */
+fun IManagedEntity.getType(context: SchemaContext? = null, descriptor: EntityDescriptor? = context?.getDescriptorForEntity(this, ""), name:String): Class<*> = descriptor!!.reflectionFields[name]!!.type
+
+/**
  * Overload operator to use entity[context, property] = value syntax
  * @since 2.0.0
  */
