@@ -21,23 +21,23 @@ import java.util.concurrent.atomic.AtomicInteger
  * This class is responsible for building all maps.  There is one map factory per file and or storage
  */
 @Suppress("UNCHECKED_CAST")
-class DefaultDiskMapFactory : DiskMapFactory {
+open class DefaultDiskMapFactory : DiskMapFactory {
 
     /**
      * Get the file store in order to re-attach a data structure
      *
      * @return The store the map factory uses
      */
-    private lateinit var store: Store
+    open protected lateinit var store: Store
 
     // Contains all initialized maps
-    private val maps: MutableMap<String, Map<*, *>> = OptimisticLockingMap(WeakHashMap())
+    open protected val maps: MutableMap<String, Map<*, *>> = OptimisticLockingMap(WeakHashMap())
 
     // Contains all initialized maps
-    private val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
+    open protected val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
 
     // Internal map that runs on storage
-    private var internalMaps: MutableMap<String, Long>
+    open protected var internalMaps: MutableMap<String, Long>
 
     // region constructors
 
@@ -229,7 +229,7 @@ class DefaultDiskMapFactory : DiskMapFactory {
      *
      * @since 1.2.0
      */
-    private fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T = maps.getOrPut(name) {
+    open protected fun <T : Map<*, *>> getMapWithType(keyType: Class<*>, name: String): T = maps.getOrPut(name) {
         var header: Header? = null
         val headerReference = internalMaps[name]
         if (headerReference != null)

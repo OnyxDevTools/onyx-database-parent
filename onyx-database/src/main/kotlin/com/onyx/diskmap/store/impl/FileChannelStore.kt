@@ -43,7 +43,7 @@ open class FileChannelStore() : Store {
     var bufferSliceSize = if (isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
 
     protected var channel: FileChannel? = null
-    private var randomAccessFile: RandomAccessFile? = null
+    protected var randomAccessFile: RandomAccessFile? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
 
@@ -314,7 +314,7 @@ open class FileChannelStore() : Store {
 
     companion object {
         const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-        var LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 6 // 6MB
+        var LARGE_FILE_SLICE_SIZE = 1024 * 128 // 6MB
 
         val isSmallDevice:Boolean by lazy {
             try {

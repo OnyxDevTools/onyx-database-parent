@@ -189,6 +189,24 @@ object ClassMetadata {
         return@getOrPut constructor
     }
 
+
+    /**
+     * Purge all class metadata that starts with a package name
+     *
+     * @since 2.1.6
+     */
+    fun purge(packageName: String) {
+        constructors.entries.removeIf {
+            it.key.name.startsWith(packageName)
+        }
+        classFields.entries.removeIf {
+            it.key.name.startsWith(packageName)
+        }
+        classes.entries.removeIf {
+            it.key.startsWith(packageName)
+        }
+    }
+
     /**
      * Get a class by its simple name
      *

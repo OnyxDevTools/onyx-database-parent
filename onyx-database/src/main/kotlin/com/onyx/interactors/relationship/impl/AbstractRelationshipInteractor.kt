@@ -7,9 +7,9 @@ import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.relationship.data.RelationshipTransaction
 import com.onyx.interactors.relationship.data.RelationshipReference
+import java.lang.ref.WeakReference
 
 import java.util.HashSet
 
@@ -19,9 +19,13 @@ import java.util.HashSet
  *
  * Base class for handling relationships
  */
-abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) constructor(protected var entityDescriptor: EntityDescriptor, protected var relationshipDescriptor: RelationshipDescriptor, var context: SchemaContext) {
+abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) constructor(protected var entityDescriptor: EntityDescriptor, protected var relationshipDescriptor: RelationshipDescriptor, schemaContext: SchemaContext) {
 
-    protected var recordInteractor: RecordInteractor = context.getRecordInteractor(entityDescriptor)
+
+    private val contextReference = WeakReference(schemaContext)
+
+    protected val context: SchemaContext
+        get() = contextReference.get()!!
 
     /**
      * Delete a relationship for an entity.  Go through and remove all the inverse relationships and handle the
