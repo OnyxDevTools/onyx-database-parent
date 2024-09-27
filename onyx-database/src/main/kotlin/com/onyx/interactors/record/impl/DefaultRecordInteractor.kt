@@ -203,4 +203,14 @@ open class DefaultRecordInteractor(val entityDescriptor: EntityDescriptor, conte
      */
     @Suppress("UNCHECKED_CAST")
     override fun findAllBetween(fromValue: Any?, includeFromValue: Boolean, toValue: Any?, includeToValue: Boolean): Set<Long> = (records as SortedDiskMap<Any, IManagedEntity>).between(fromValue, includeFromValue, toValue, includeToValue)
+
+
+    /**
+     * Clear all record references
+     *
+     * @since 9/26/2024
+     */
+    override fun clear() {
+        records.clear()
+    }
 }

@@ -18,5 +18,5 @@ package com.onyx.persistence.annotations.values
  * @see com.onyx.persistence.annotations.Identifier
  */
 enum class IdentifierGenerator {
-    SEQUENCE,NONE
+    SEQUENCE,UUID,NONE
 }

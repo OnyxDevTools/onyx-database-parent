@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:2.2.7")
+    implementation("com.onyxdevtools:onyx-database:2.3.0")
 }
 
 group = "com.onyxdevtools"
-version = "2.2.7"
+version = "2.3.0"
 description = "com.onyxdevtools:onyx-database-examples:query-change-listener"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 

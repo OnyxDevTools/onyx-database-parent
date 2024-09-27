@@ -5,6 +5,7 @@ import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
 import com.onyx.interactors.record.data.Reference
+import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.interactors.relationship.data.RelationshipTransaction
@@ -19,7 +20,7 @@ import java.util.HashSet
  *
  * Base class for handling relationships
  */
-abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) constructor(protected var entityDescriptor: EntityDescriptor, protected var relationshipDescriptor: RelationshipDescriptor, schemaContext: SchemaContext) {
+abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) constructor(protected var entityDescriptor: EntityDescriptor, protected var relationshipDescriptor: RelationshipDescriptor, schemaContext: SchemaContext) : RelationshipInteractor {
 
 
     private val contextReference = WeakReference(schemaContext)
@@ -36,7 +37,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      */
     @Throws(OnyxException::class)
     @Synchronized
-    fun deleteRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
+    override fun deleteRelationshipForEntity(entity: IManagedEntity, transaction: RelationshipTransaction) {
         if(entityDescriptor.hasRelationships) {
             transaction.add(entity, context)
 
@@ -107,9 +108,21 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      * @return List of relationship references
      */
     @Throws(OnyxException::class)
-    fun getRelationshipIdentifiersWithReferenceId(referenceId: Reference): List<RelationshipReference> {
+    override fun getRelationshipIdentifiersWithReferenceId(referenceId: Reference): List<RelationshipReference> {
         val entity = referenceId.toManagedEntity(context, relationshipDescriptor.entityDescriptor)
         val existingReferences = entity?.relationshipReferenceMap(context, relationshipDescriptor.name)?.get(entity.toRelationshipReference(context))
         return existingReferences?.toList() ?: ArrayList()
+    }
+
+    /**
+     * Clear the relationship map in order to delete the entire relationship
+     * for a partition or entire entity
+     *
+     * @since 9/26/2024
+     */
+    override fun clear() {
+        this.entityDescriptor.entityClass.createNewEntity<IManagedEntity>()
+            .relationshipReferenceMap(context, relationshipDescriptor.name)
+            .clear()
     }
 }

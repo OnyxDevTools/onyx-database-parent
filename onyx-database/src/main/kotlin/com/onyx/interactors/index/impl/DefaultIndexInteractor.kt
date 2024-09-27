@@ -214,4 +214,13 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
             }
         }
     }
+
+    /**
+     * Clear all index references
+     *
+     * @since 9/26/2024
+     */
+    override fun clear() {
+        references.clear()
+    }
 }

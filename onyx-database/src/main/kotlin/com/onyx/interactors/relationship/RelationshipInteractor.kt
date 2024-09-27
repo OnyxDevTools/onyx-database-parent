@@ -61,4 +61,11 @@ interface RelationshipInteractor {
      */
     @Throws(OnyxException::class)
     fun updateAll(entity: IManagedEntity, relationshipIdentifiers: MutableSet<RelationshipReference>)
+
+    /**
+     * Clear all relationship references
+     *
+     * @since 9/26/2024
+     */
+    fun clear()
 }

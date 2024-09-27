@@ -93,4 +93,11 @@ interface IndexInteractor {
     @Throws(OnyxException::class)
     fun rebuild()
 
+    /**
+     * Clear all index references
+     *
+     * @since 9/26/2024
+     */
+    fun clear()
+
 }

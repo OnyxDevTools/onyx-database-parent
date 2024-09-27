@@ -27,6 +27,7 @@ import com.onyx.interactors.index.impl.DefaultIndexInteractor
 import com.onyx.interactors.record.RecordInteractor
 import com.onyx.interactors.record.impl.DefaultRecordInteractor
 import com.onyx.interactors.record.impl.SequenceRecordInteractor
+import com.onyx.interactors.record.impl.UUIDRecordInteractor
 import com.onyx.interactors.relationship.RelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToManyRelationshipInteractor
 import com.onyx.interactors.relationship.impl.ToOneRelationshipInteractor
@@ -646,10 +647,15 @@ open class DefaultSchemaContext : SchemaContext {
      * @param descriptor Record's Entity Descriptor
      * @return get Record Controller.
      * @since 1.0.0
+     * @since 9/26/2024 I've added a UUID generator
      */
     override fun getRecordInteractor(descriptor: EntityDescriptor): RecordInteractor =
         recordInteractors.getOrPut(descriptor) {
-            if (descriptor.identifier!!.generator == IdentifierGenerator.SEQUENCE) SequenceRecordInteractor(descriptor, this@DefaultSchemaContext) else DefaultRecordInteractor(descriptor, this@DefaultSchemaContext)
+            when (descriptor.identifier!!.generator) {
+                IdentifierGenerator.SEQUENCE -> SequenceRecordInteractor(descriptor, this)
+                IdentifierGenerator.UUID -> UUIDRecordInteractor(descriptor, this)
+                else -> DefaultRecordInteractor(descriptor, this)
+            }
         }
 
     // endregion
