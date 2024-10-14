@@ -86,8 +86,8 @@ operator fun <T> IManagedEntity.set(context: SchemaContext? = null, descriptor: 
  * @since 2.0.0 Moved from Entity Descriptor class since it should not be creating new objects
  */
 @Throws(InvalidConstructorException::class)
-fun <T : IManagedEntity> Class<*>.createNewEntity(): T = try {
-    this.instance()
+fun <T : IManagedEntity> Class<*>.createNewEntity(contextId: String): T = try {
+    this.instance(contextId)
 } catch (e1: Exception) {
     throw InvalidConstructorException(InvalidConstructorException.CONSTRUCTOR_NOT_FOUND, e1)
 }

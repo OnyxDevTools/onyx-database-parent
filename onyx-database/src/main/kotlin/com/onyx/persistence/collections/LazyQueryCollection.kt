@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.BufferingException
 import com.onyx.exception.OnyxException
-import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.extension.common.metadata
 import com.onyx.extension.identifier
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.IManagedEntity
@@ -197,7 +197,7 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
 
         val context = Contexts.get(contextId) ?: Contexts.firstRemote()
 
-        this.entityDescriptor = context.getBaseDescriptorForEntity(classForName(className, context))!!
+        this.entityDescriptor = context.getBaseDescriptorForEntity(metadata(this.contextId).classForName(className, context))!!
         this.persistenceManager = context.systemPersistenceManager
     }
 
@@ -207,6 +207,16 @@ class LazyQueryCollection<E : IManagedEntity> () : AbstractList<E>(), List<E>, B
         buffer.putString(this.entityDescriptor.entityClass.name)
         buffer.putString(contextId)
         buffer.putBoolean(hasSelections)
+    }
+
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.read(buffer)
+    }
+
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        this.write(buffer)
     }
 
     /**

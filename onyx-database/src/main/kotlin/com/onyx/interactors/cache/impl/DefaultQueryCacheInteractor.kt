@@ -27,13 +27,9 @@ import java.util.concurrent.CopyOnWriteArraySet
  */
 open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInteractor {
 
-    private val contextReference: WeakReference<SchemaContext>
+    private val contextReference: WeakReference<SchemaContext> = WeakReference(context)
     private val context: SchemaContext
         get() = contextReference.get()!!
-
-    init {
-        contextReference = WeakReference(context)
-    }
 
     // @since 1.3.0 - Changed to CachedQueryMap so we can retain strong references for query subscriptions
     private val cachedQueriesByClass = OptimisticLockingMap<Class<*>, CachedQueryMap<Query, CachedResults>>(HashMap())
@@ -46,7 +42,7 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
      * @return The cached results or null
      * @since 1.3.0
      */
-    override fun getCachedQueryResults(query: Query): CachedResults? = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }[query]
+    override fun getCachedQueryResults(query: Query): CachedResults? = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100) }[query]
 
     /**
      * Set cached query results.  This is typically done on executeQuery and executeLazyQuery.
@@ -56,7 +52,7 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
      * @param results Result as references
      */
     override fun setCachedQueryResults(query: Query, results: MutableList<Reference>): CachedResults {
-        val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }
+        val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100) }
         val cachedResults = CachedResults(CopyOnWriteArraySet(results))
 
         // Set a strong reference if this is a query listener.  In that
@@ -105,7 +101,7 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
      * @since 1.3.1
      */
     override fun subscribe(query: Query) {
-        val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100, 5 * 60) }
+        val queryCachedResultsMap = cachedQueriesByClass.getOrPut(query.entityType!!) { CachedQueryMap(100) }
         queryCachedResultsMap.getOrPut(query) { CachedResults(null) }.subscribe(query.changeListener!!)
     }
 

@@ -1,5 +1,6 @@
 package com.onyx.persistence.manager.impl
 
+import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
 import com.onyx.exception.*
 import com.onyx.extension.*
 import com.onyx.extension.common.instance
@@ -59,18 +60,23 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun <E : IManagedEntity> saveEntity(entity: E): E {
         context.checkForKillSwitch()
 
-        if(entity.isValid(context)) {
+        if (entity.isValid(context)) {
             val putResult = entity.save(context)
 
             journal {
                 context.transactionInteractor.writeSave(entity)
             }
 
-            entity.saveIndexes(context, if(putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
+            entity.saveIndexes(context, if (putResult.isInsert) 0L else putResult.recordId, putResult.recordId)
             entity.saveRelationships(context)
 
             // Update Cached queries
-            context.queryCacheInteractor.updateCachedQueryResultsForEntity(entity, entity.descriptor(context), entity.reference(putResult.recordId, context), if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE)
+            context.queryCacheInteractor.updateCachedQueryResultsForEntity(
+                entity,
+                entity.descriptor(context),
+                entity.reference(putResult.recordId, context),
+                if (putResult.isInsert) QueryListenerEvent.INSERT else QueryListenerEvent.UPDATE
+            )
 
         }
         return entity
@@ -99,7 +105,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     saveEntity(it)
                 }
             }
-        } catch (e:ClassCastException) {
+        } catch (e: ClassCastException) {
             throw EntityClassNotFoundException(EntityClassNotFoundException.ENTITY_NOT_FOUND)
         }
     }
@@ -122,7 +128,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         val previousReferenceId = entity.referenceId(context, descriptor)
 
-        if(previousReferenceId > 0) {
+        if (previousReferenceId > 0) {
             journal {
                 context.transactionInteractor.writeDelete(entity)
             }
@@ -153,7 +159,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
-        val results:QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+        val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
         query.resultsCount = results.getNumberOfResults()
 
         journal {
@@ -184,7 +190,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
-        val results:QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
+        val results: QueryCollector<IManagedEntity> = queryController.getReferencesForQuery(query)
         query.resultsCount = results.getNumberOfResults()
 
         journal {
@@ -211,7 +217,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         query.validate(context, descriptor)
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
-        val results:QueryCollector<E> = if(!query.cache)
+        val results: QueryCollector<E> = if (!query.cache)
             queryController.getReferencesForQuery(query)
         else
             cache(query) { queryController.getReferencesForQuery(query) }
@@ -237,7 +243,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         val queryController = DefaultQueryInteractor(descriptor, this, context)
 
-        val results:QueryCollector<E> = if(!query.cache)
+        val results: QueryCollector<E> = if (!query.cache)
             queryController.getReferencesForQuery(query)
         else
             cache(query) { queryController.getReferencesForQuery(query) }
@@ -283,7 +289,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     override fun <E : IManagedEntity> findById(clazz: Class<*>, id: Any): E? {
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity? = clazz.createNewEntity()
+        var entity: IManagedEntity? = clazz.createNewEntity(context.contextId)
 
         // Find the object
         entity = entity!!.recordInteractor(context).getWithId(id)
@@ -310,7 +316,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
 
         context.checkForKillSwitch()
 
-        var entity: IManagedEntity? = clazz.createNewEntity()
+        var entity: IManagedEntity? = clazz.createNewEntity(context.contextId)
         entity?.setPartitionValue(context = context, value = partitionId)
 
         // Find the object
@@ -372,7 +378,11 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         context.checkForKillSwitch()
 
         val descriptor = context.getDescriptorForEntity(entity)
-        val relationshipDescriptor = descriptor.relationships[attribute] ?: throw RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, attribute, entity.javaClass.name)
+        val relationshipDescriptor = descriptor.relationships[attribute] ?: throw RelationshipNotFoundException(
+            RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND,
+            attribute,
+            entity.javaClass.name
+        )
         val relationshipInteractor = context.getRelationshipInteractor(relationshipDescriptor)
         relationshipInteractor.hydrateRelationshipForEntity(entity, RelationshipTransaction(), true)
     }
@@ -388,11 +398,19 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      * @since 1.0.0
      */
     @Throws(OnyxException::class)
-    override fun saveRelationshipsForEntity(entity: IManagedEntity, relationship: String, relationshipIdentifiers: Set<Any>) {
+    override fun saveRelationshipsForEntity(
+        entity: IManagedEntity,
+        relationship: String,
+        relationshipIdentifiers: Set<Any>
+    ) {
         context.checkForKillSwitch()
 
         val relationships = context.getDescriptorForEntity(entity).relationships
-        val relationshipDescriptor = relationships[relationship] ?: throw RelationshipNotFoundException(RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND, relationship, entity.javaClass.name)
+        val relationshipDescriptor = relationships[relationship] ?: throw RelationshipNotFoundException(
+            RelationshipNotFoundException.RELATIONSHIP_NOT_FOUND,
+            relationship,
+            entity.javaClass.name
+        )
         val references = HashSet<RelationshipReference>()
 
         relationshipIdentifiers.forEach {
@@ -512,14 +530,53 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     @Throws(OnyxException::class)
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> stream(query: Query, streamer: QueryStream<T>) {
-        context.checkForKillSwitch()
-        val entityList = this.executeLazyQuery<IManagedEntity>(query) as LazyQueryCollection<IManagedEntity>
 
-        entityList.forEachIndexed { index, iManagedEntity ->
-            if (streamer is QueryMapStream) {
-                (streamer as QueryStream<Map<String, Any?>>).accept(entityList.getDict(index) as Map<String, Any?>, this)
+        context.checkForKillSwitch()
+
+        if (streamer is QueryMapStream) {
+            val entityList = this.executeLazyQuery<IManagedEntity>(query) as LazyQueryCollection<IManagedEntity>
+
+            entityList.forEachIndexed { index, iManagedEntity ->
+                if (!(streamer as QueryStream<Map<String, Any?>>).accept(
+                        entityList.getDict(index) as Map<String, Any?>,
+                        this
+                    )
+                )
+                    return@forEachIndexed
+            }
+        } else {
+            val descriptors = if (query.partition.toString().isNotEmpty()) {
+                listOf(context.getDescriptorForEntity(query.entityType!!, query.partition))
             } else {
-                streamer.accept(iManagedEntity as T, this)
+                val partitions = query.entityType!!.let { context.getAllPartitions(it) }
+                partitions.map {
+                    context.getDescriptorForEntity(query.entityType!!, it)
+                } + listOf(context.getDescriptorForEntity(query.entityType!!, ""))
+            }
+
+            var done = false
+
+            descriptors.forEach descriptors@{ descriptor ->
+                if (done) return@descriptors
+
+                val partitionId = if(descriptor.hasPartition) context.getPartitionWithValue(query.entityType!!, descriptor.partition!!.partitionValue)!!.primaryKey.toLong() else 0L
+                context.getRecordInteractor(descriptor).forEach<T> record@{ it ->
+                    val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
+
+                    if (entry != null) {
+                        try {
+                            val reference = Reference(partitionId, entry.node?.position ?: 0)
+                            if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
+                                if (!streamer.accept(entry.value as T, this)) {
+                                    done = true
+                                    return@record false
+                                }
+                            }
+                        } catch (ignore: Exception) {
+                        } // The reference could have been destroyed
+                    }
+                    return@record true
+                }
             }
         }
     }
@@ -534,8 +591,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
     @Throws(OnyxException::class)
     override fun stream(query: Query, queryStreamClass: Class<*>) {
         context.checkForKillSwitch()
-        val streamer:QueryStream<*> = try {
-            queryStreamClass.instance()
+        val streamer: QueryStream<*> = try {
+            queryStreamClass.instance(context.contextId)
         } catch (e: InstantiationException) {
             throw StreamException(StreamException.CANNOT_INSTANTIATE_STREAM)
         } catch (e: IllegalAccessException) {
@@ -581,8 +638,8 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
      *
      * @since 2.0.0 Added as a fancy unit
      */
-    private fun journal(body:() -> Unit) {
-        if(isJournalingEnabled)
+    private fun journal(body: () -> Unit) {
+        if (isJournalingEnabled)
             body.invoke()
     }
 

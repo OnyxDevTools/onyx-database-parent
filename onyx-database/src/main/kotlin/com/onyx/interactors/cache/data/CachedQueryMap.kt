@@ -7,7 +7,7 @@ import com.onyx.lang.map.LastRecentlyUsedMap
  *
  * This query build on top of the last recently used.  It also stores hard references that do not get removed
  */
-class CachedQueryMap<K, V>(maxCapacity: Int, timeToLive: Int) : LastRecentlyUsedMap<K, V>(maxCapacity, timeToLive) {
+class CachedQueryMap<K, V>(maxCapacity: Int) : LastRecentlyUsedMap<K, V>(maxCapacity) {
 
     private val lock = DefaultClosureReadWriteLock()
 

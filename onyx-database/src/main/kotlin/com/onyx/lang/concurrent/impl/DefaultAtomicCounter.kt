@@ -4,6 +4,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.lang.concurrent.AtomicCounter
 import com.onyx.exception.BufferingException
+import com.onyx.persistence.context.SchemaContext
 
 import java.util.concurrent.atomic.AtomicLong
 
@@ -60,5 +61,27 @@ class DefaultAtomicCounter(initialValue: Long = 0L) : AtomicCounter, BufferStrea
      */
     @Throws(BufferingException::class)
     override fun write(buffer: BufferStream) = buffer.putLong(aLong.get())
+
+    /**
+     * Read from buffer
+     *
+     * @param buffer Buffer Stream to read from
+     * @param context Schema Context
+     * @throws BufferingException General exception
+     */
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.aLong = AtomicLong(buffer.long)
+    }
+
+    /**
+     * Write to a buffer
+     *
+     * @param buffer Buffer IO Stream to write to
+     * @param context Schema Context
+     * @throws BufferingException cannot write
+     */
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) = buffer.putLong(aLong.get())
 
 }

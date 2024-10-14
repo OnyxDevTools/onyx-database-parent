@@ -565,6 +565,14 @@ interface PersistenceManager {
     @Throws(OnyxException::class)
     fun <T : Any> stream(query: Query, streamer: QueryStream<T>)
 
+    @Throws(OnyxException::class)
+    fun <T : IManagedEntity> stream(query: Query, action: (T) -> Boolean) {
+        this.stream(query, object : QueryStream<T> {
+            override fun accept(entity: T, persistenceManager: PersistenceManager): Boolean =
+                action(entity)
+        })
+    }
+
     /**
      * This method is used for bulk streaming.  An example of bulk streaming is for analytics or bulk updates included but not limited to model changes.
      *
@@ -675,6 +683,14 @@ interface PersistenceManager {
     @Suppress("UNUSED")
     @Throws(OnyxException::class)
     fun findRelationship(entity: IManagedEntity, attribute: String): Any? = getRelationship(entity, attribute)
+}
+
+@Throws(OnyxException::class)
+inline fun <reified T : IManagedEntity> PersistenceManager.stream(crossinline action: (T) -> Boolean) {
+    this.stream(this.from<T>().query, object : QueryStream<T> {
+        override fun accept(entity: T, persistenceManager: PersistenceManager): Boolean =
+            action(entity)
+    })
 }
 
 @Suppress("unused")

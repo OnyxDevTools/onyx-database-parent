@@ -7,6 +7,7 @@ import com.onyx.network.push.PushSubscriber
 import com.onyx.network.push.PushPublisher
 import com.onyx.network.push.PushConsumer
 import com.onyx.exception.BufferingException
+import com.onyx.persistence.context.SchemaContext
 import java.nio.channels.ByteChannel
 
 import java.util.Objects
@@ -54,6 +55,16 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
         buffer.putLong(pushObjectId)
         buffer.putObject(packet)
         buffer.putByte(subscribeEvent)
+    }
+
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.read(buffer)
+    }
+
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        this.write(buffer)
     }
 
     /**

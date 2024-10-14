@@ -126,10 +126,10 @@ public class Base64 {
      * @throws IllegalArgumentException if the input contains
      * incorrect padding
      */
-    private static byte[] decode(byte[] input, @SuppressWarnings("SameParameterValue") int offset, int len, int flags) {
+    private static byte[] decode(byte[] input, int offset, int len, int flags) {
         // Allocate space for the most data the input could represent.
         // (It could contain less if it contains whitespace, etc.)
-        Decoder decoder = new Decoder(flags, new byte[len*3/4]);
+        Decoder decoder = new Decoder(flags, new byte[len * 3 / 4]);
 
         if (!decoder.process(input, offset, len, true)) {
             throw new IllegalArgumentException("bad base-64");
@@ -140,10 +140,11 @@ public class Base64 {
             return decoder.output;
         }
 
-        // Need to shorten the array, so allocate a new one of the
-        // right size and copy.
+        // Need to shorten the array, so allocate a new one of the right size and copy.
         byte[] temp = new byte[decoder.op];
-        System.arraycopy(decoder.output, 0, temp, 0, decoder.op);
+        for (int i = 0; i < decoder.op; i++) {
+            temp[i] = decoder.output[i];
+        }
         return temp;
     }
 

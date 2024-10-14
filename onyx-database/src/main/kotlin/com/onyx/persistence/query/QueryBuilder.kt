@@ -16,6 +16,22 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
         return manager.executeQuery(this.query)
     }
 
+    fun <T : IManagedEntity> stream(): List<T> {
+        val results = ArrayList<T>()
+        manager.stream<T>(this.query) {
+            results.add(it)
+            results.size < query.maxResults
+        }
+        return results
+    }
+
+    fun <T : IManagedEntity> stream(action: (T) -> Boolean) {
+        var i = 0
+        manager.stream<T>(this.query) {
+            action(it) && ++i < query.maxResults
+        }
+    }
+
     fun <T : IManagedEntity> lazy():List<T> {
         assignListener()
         return manager.executeLazyQuery(this.query)
@@ -102,6 +118,12 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
 
     fun from(type:KClass<*>): QueryBuilder {
         this.query.entityType = type.javaObjectType
+        return this
+    }
+
+    inline fun <reified T> from(): QueryBuilder {
+        val type = T::class
+        this.query.entityType = type.java
         return this
     }
 

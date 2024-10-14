@@ -4,7 +4,6 @@ import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
 import com.onyx.extension.common.*
-import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.lang.SortedList
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.ManagedEntity
@@ -30,6 +29,10 @@ open class BufferStream(buffer: ByteBuffer) {
     // region Properties
 
     protected var context: SchemaContext? = null
+
+    val metadata by lazy {
+        metadata(contextId = context?.contextId ?: "")
+    }
 
     // Number of references to retain the index number of the said reference
     private var referenceCount = 0
@@ -327,10 +330,10 @@ open class BufferStream(buffer: ByteBuffer) {
             val objectType = value as Class<*>
             val instance: Any
             try {
-                instance = objectType.instance()
+                instance = objectType.instance(this.context?.contextId ?: "")
                 addReference(instance)
 
-                instance.getFields().forEach {
+                instance.getFields(this.context?.contextId ?: "").forEach {
                     when (it.type) {
                         ClassMetadata.LONG_PRIMITIVE_TYPE -> instance.setLong(it, long)
                         ClassMetadata.INT_PRIMITIVE_TYPE -> instance.setInt(it, int)
@@ -371,7 +374,7 @@ open class BufferStream(buffer: ByteBuffer) {
             expandableByteBuffer!!.buffer.get(stringBytes)
             val className = String(stringBytes)
             return try {
-                val returnValue = classForName(className, context)
+                val returnValue = metadata.classForName(className, context)
                 addReference(returnValue)
                 returnValue
             } catch (e: ClassNotFoundException) {
@@ -389,7 +392,7 @@ open class BufferStream(buffer: ByteBuffer) {
             val serializerId = expandableByteBuffer!!.buffer.int
             expandableByteBuffer!!.buffer.position(expandableByteBuffer!!.buffer.position() - Integer.BYTES)
             val systemEntity = context!!.getSystemEntityById(serializerId)
-            val entity:ManagedEntity = systemEntity!!.type.instance()
+            val entity:ManagedEntity = systemEntity!!.type(context?.contextId ?: "").instance(contextId = context?.contextId ?: "") as ManagedEntity
             entity.read(this, context)
             return entity
         }
@@ -444,7 +447,7 @@ open class BufferStream(buffer: ByteBuffer) {
                 if(collectionClass == ArrayList::class.java || collectionClass == SortedList::class.java || Modifier.isPrivate(collectionClass!!.modifiers))
                     ArrayList()
                 else
-                    collectionClass.instance<MutableCollection<Any?>>()
+                    collectionClass.instance<MutableCollection<Any?>>(context?.contextId ?: "")
             } catch (e: Exception) {
                 ArrayList()
             }
@@ -469,7 +472,7 @@ open class BufferStream(buffer: ByteBuffer) {
         get() {
             val mapClass = value as Class<*>
             val map:MutableMap<Any,Any?> = try {
-                mapClass.instance()
+                mapClass.instance(context?.contextId ?: "")
             } catch (e: InstantiationException) {
                 throw BufferingException(BufferingException.CANNOT_INSTANTIATE, mapClass)
             } catch (e: IllegalAccessException) {
@@ -513,7 +516,7 @@ open class BufferStream(buffer: ByteBuffer) {
         @Throws(BufferingException::class)
         get() {
             val classToInstantiate = value as Class<*>?
-            val streamable = classToInstantiate!!.instance<BufferStreamable>()
+            val streamable = classToInstantiate!!.instance<BufferStreamable>(context?.contextId ?: "")
             if (context == null)
                 streamable.read(this)
             else
@@ -784,7 +787,7 @@ open class BufferStream(buffer: ByteBuffer) {
     fun putCollection(collection: Collection<*>) {
 
         try {
-            val clazz = classForName(collection.javaClass.name, context)
+            val clazz = metadata.classForName(collection.javaClass.name, context)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
             putObject(ArrayList::class.java)
@@ -808,7 +811,7 @@ open class BufferStream(buffer: ByteBuffer) {
     fun putMap(map: Map<*, *>) {
 
         try {
-            val clazz = classForName(map.javaClass.name, context)
+            val clazz = metadata.classForName(map.javaClass.name, context)
             putObject(clazz)
         } catch (e: ClassNotFoundException) {
             putObject(HashMap::class.java)
@@ -869,7 +872,7 @@ open class BufferStream(buffer: ByteBuffer) {
             addReference(value)
 
         // Iterate through the fields and put them on the expandableByteBuffer
-        value?.getFields()?.forEach {
+        value?.getFields(context?.contextId ?: "")?.forEach {
             try {
                 when (it.type) {
                     ClassMetadata.INT_PRIMITIVE_TYPE -> putInt(value.getInt(it))

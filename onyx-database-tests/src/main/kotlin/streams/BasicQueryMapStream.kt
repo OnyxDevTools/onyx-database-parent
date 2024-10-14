@@ -11,7 +11,7 @@ import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete
  */
 class BasicQueryMapStream : QueryMapStream<Map<String, Any?>> {
 
-    override fun accept(entity: Map<String, Any?>, persistenceManager: PersistenceManager) {
+    override fun accept(entity: Map<String, Any?>, persistenceManager: PersistenceManager): Boolean {
 
         // Modify the entity structure
         val mutableMap = entity.toMutableMap()
@@ -29,6 +29,7 @@ class BasicQueryMapStream : QueryMapStream<Map<String, Any?>> {
             e.printStackTrace()
         }
 
+        return true
     }
 
 }

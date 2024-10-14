@@ -14,5 +14,5 @@ interface QueryStream<in T> {
      * @param entity Managed entity
      * @param persistenceManager the second input argument is a PersistenceManager
      */
-    fun accept(entity: T, persistenceManager: PersistenceManager)
+    fun accept(entity: T, persistenceManager: PersistenceManager): Boolean
 }

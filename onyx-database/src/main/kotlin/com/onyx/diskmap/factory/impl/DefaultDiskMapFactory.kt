@@ -5,7 +5,7 @@ import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.impl.DiskSkipListMap
 import com.onyx.diskmap.store.*
 import com.onyx.diskmap.store.impl.*
-import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.extension.common.metadata
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.SchemaContext
 
@@ -37,7 +37,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     open protected val mapsByHeader = OptimisticLockingMap(WeakHashMap<Header, Map<*, *>>())
 
     // Internal map that runs on storage
-    open protected var internalMaps: MutableMap<String, Long>
+    protected open var internalMaps: MutableMap<String, Long> = hashMapOf()
 
     // region constructors
 
@@ -261,10 +261,9 @@ open class DefaultDiskMapFactory : DiskMapFactory {
          * @since 1.2.2 Add additional check to ensure DirectBuffers exist
          */
         private val isMemMapSupported: Boolean by lazy {
-            val prop = System.getProperty("os.arch")
             return@lazy try {
                 @Suppress("SENSELESS_COMPARISON")
-                prop != null && prop.contains("64") && classForName("sun.nio.ch.DirectBuffer") != null
+                metadata("").classForName("sun.nio.ch.DirectBuffer") != null
             } catch (e: ClassNotFoundException) {
                 false
             }

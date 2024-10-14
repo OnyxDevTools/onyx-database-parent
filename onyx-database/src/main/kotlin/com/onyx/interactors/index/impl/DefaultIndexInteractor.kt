@@ -56,7 +56,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
             delete(oldReferenceId)
         }
 
-        references.compute(indexValue!!) { _, existingHeader ->
+        references.compute(indexValue ?: "") { _, existingHeader ->
             val header = existingHeader ?: dataFile.newMapHeader()
             val indexes: DiskMap<Long, Any?> = dataFile.getHashMap(Long::class.java, header)
             indexes[newReferenceId] = null
@@ -65,7 +65,7 @@ class DefaultIndexInteractor @Throws(OnyxException::class) constructor(private v
             header.recordCount.set(indexes.reference.recordCount.get())
             header
         }
-        indexValues[newReferenceId] = indexValue
+        indexValues[newReferenceId] = indexValue ?: ""
     }
 
     /**

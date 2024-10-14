@@ -46,7 +46,7 @@ class WebPersistenceEndpoint(private val persistenceManager: PersistenceManager,
         var entity: IManagedEntity
 
         entity = if (request.entity == null)
-            clazz.instance()
+            clazz.instance(context.contextId)
         else
             objectMapper.convertValue(request.entity, clazz) as IManagedEntity
 

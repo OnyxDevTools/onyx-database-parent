@@ -4,10 +4,6 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
-import com.onyx.persistence.annotations.Relationship
-import com.onyx.persistence.annotations.values.CascadePolicy
-import com.onyx.persistence.annotations.values.FetchPolicy
-import com.onyx.persistence.annotations.values.RelationshipType
 import java.security.Principal
 import javax.security.auth.Subject
 
@@ -43,14 +39,6 @@ data class SystemUser @JvmOverloads constructor(
     @Suppress("UNUSED")
     @Attribute
     var emailAddress: String?  = null
-
-    @Suppress("UNUSED")
-    @Relationship(type = RelationshipType.ONE_TO_MANY,
-            inverse = "user",
-            inverseClass = SystemDirectory::class,
-            cascadePolicy = CascadePolicy.NONE,
-            fetchPolicy = FetchPolicy.LAZY)
-    var directories: MutableList<SystemDirectory> = ArrayList()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

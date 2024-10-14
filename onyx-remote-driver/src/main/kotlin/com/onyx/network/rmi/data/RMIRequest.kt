@@ -3,6 +3,7 @@ package com.onyx.network.rmi.data
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
+import com.onyx.persistence.context.SchemaContext
 
 /**
  * Created by Tim Osborn on 7/1/16.
@@ -25,5 +26,15 @@ class RMIRequest @JvmOverloads constructor(var instance:String? = null, var meth
         buffer.putString(instance!!)
         buffer.putByte(method)
         buffer.putObject(params)
+    }
+
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.read(buffer)
+    }
+
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        this.write(buffer)
     }
 }

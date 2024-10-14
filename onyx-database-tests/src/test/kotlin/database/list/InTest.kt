@@ -1,14 +1,18 @@
 package database.list
 
 import com.onyx.persistence.query.IN
+import com.onyx.persistence.query.from
+import com.onyx.persistence.query.isNull
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
+import entities.NullIndexEntity
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 @RunWith(Parameterized::class)
 class InTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(factoryClass) {
@@ -42,5 +46,12 @@ class InTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(fa
     fun testDoubleIn() {
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("doubleValue" IN arrayListOf(1.126,1.11)))
         assertEquals(3, results.size, "Expected 3 results")
+    }
+
+    @Test
+    fun testNullIndex() {
+        manager.saveEntity(NullIndexEntity())
+        val results = manager.from<NullIndexEntity>().where("shortIndex".isNull()).list<NullIndexEntity>()
+        assertEquals(1, results.size)
     }
 }

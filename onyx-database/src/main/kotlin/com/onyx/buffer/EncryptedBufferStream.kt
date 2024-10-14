@@ -48,7 +48,7 @@ class EncryptedBufferStream(buffer: ByteBuffer) : BufferStream(buffer) {
             val serializerId = encryptedBufferStream.expandableByteBuffer!!.buffer.int
             encryptedBufferStream.expandableByteBuffer!!.buffer.position(encryptedBufferStream.expandableByteBuffer!!.buffer.position() - Integer.BYTES)
             val systemEntity = context!!.getSystemEntityById(serializerId)
-            val entity: ManagedEntity = systemEntity!!.type.instance()
+            val entity: ManagedEntity = systemEntity!!.type(context?.contextId ?: "").instance(context?.contextId ?: "")
             entity.read(encryptedBufferStream, context)
             return entity
         }

@@ -58,7 +58,7 @@ private fun EntityDescriptor.validateRelationships() {
             throw EntityClassNotFoundException(EntityClassNotFoundException.RELATIONSHIP_ENTITY_NOT_FOUND + ": " + inverseClass.name, entityClass)
         }
 
-        if (inverse != null && inverse.isNotEmpty() &&
+        if (!inverse.isNullOrEmpty() &&
                 (relationshipType == RelationshipType.MANY_TO_ONE || relationshipType == RelationshipType.ONE_TO_ONE)) {
 
             try {

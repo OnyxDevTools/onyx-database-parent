@@ -148,4 +148,9 @@ interface RecordInteractor {
      * @since 9/26/2024
      */
     fun clear()
+
+    /**
+     * Iterate through all the records
+     */
+    fun <T> forEach(action: (T) -> Boolean)
 }

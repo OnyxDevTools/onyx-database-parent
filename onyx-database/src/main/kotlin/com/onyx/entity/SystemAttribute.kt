@@ -47,4 +47,28 @@ data class SystemAttribute @JvmOverloads constructor(
         isNullable = descriptor.isNullable,
         isEnum = descriptor.isEnum,
         enumValues = descriptor.enumValues)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as SystemAttribute
+
+        if (name != other.name) return false
+        if (dataType != other.dataType) return false
+        if (isEnum != other.isEnum) return false
+        if (enumValues != other.enumValues) return false
+        if (isPartition != other.isPartition) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + (dataType?.hashCode() ?: 0)
+        result = 31 * result + isEnum.hashCode()
+        result = 31 * result + (enumValues?.hashCode() ?: 0)
+        result = 31 * result + isPartition.hashCode()
+        return result
+    }
 }

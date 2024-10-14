@@ -26,7 +26,7 @@ dependencies {
 }
 
 group = "com.onyxdevtools"
-version = "2.3.0"
+version = "2.3.6"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 java.targetCompatibility = JavaVersion.VERSION_1_8
 
@@ -49,7 +49,7 @@ publishing {
 
     repositories {
         maven {
-            url = URI("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+            url = URI("https://maven.pkg.github.com/OnyxDevTools/onyx-database-parent")
             credentials {
                 username = project.property("ossrhUsername") as String
                 password = project.property("ossrhPassword") as String

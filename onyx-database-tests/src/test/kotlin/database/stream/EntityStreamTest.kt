@@ -43,9 +43,10 @@ class EntityStreamTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(
 
         val hadDataToStream = AtomicBoolean(false)
         manager.stream(query, object : QueryStream<ImmutableSequenceIdentifierEntityForDelete> {
-            override fun accept(entity: ImmutableSequenceIdentifierEntityForDelete, persistenceManager: PersistenceManager) {
+            override fun accept(entity: ImmutableSequenceIdentifierEntityForDelete, persistenceManager: PersistenceManager): Boolean {
                 entity.correlation = 2
                 hadDataToStream.set(true)
+                return true
             }
         })
 
@@ -111,7 +112,7 @@ class EntityStreamTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(
         // Create a QueryMapStream as opposed to a QueryStream
         // Create a QueryMapStream as opposed to a QueryStream
         val modifyStream = object : QueryMapStream<MutableMap<String, Any>> {
-            override fun accept(entity: MutableMap<String, Any>, persistenceManager: PersistenceManager) {
+            override fun accept(entity: MutableMap<String, Any>, persistenceManager: PersistenceManager): Boolean {
 
                 // Modify the entity structure
                 entity.put("correlation", 5)
@@ -125,6 +126,7 @@ class EntityStreamTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(
                 assertEquals(5, freshEntity.correlation, "Stream updated dictionary value")
 
                 hadDataToStream.set(true)
+                return true
             }
 
         }

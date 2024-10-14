@@ -2,6 +2,7 @@ package com.onyx.exception
 
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
+import com.onyx.persistence.context.SchemaContext
 
 /**
  * Created by Tim Osborn on 7/1/16.
@@ -39,6 +40,16 @@ class MethodInvocationException : OnyxServerException, BufferStreamable {
         buffer.putObject(cause)
         buffer.putString(message!!)
         buffer.putString(this.stack)
+    }
+
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.read(buffer)
+    }
+
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        this.write(buffer)
     }
 
     companion object {

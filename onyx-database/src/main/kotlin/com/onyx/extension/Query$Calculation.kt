@@ -46,6 +46,7 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
         it.meetsCriteria = subCriteria
     }
 
+    this.criteria ?: return@synchronized true
     return calculateCriteriaMet(this.criteria!!)
 }
 

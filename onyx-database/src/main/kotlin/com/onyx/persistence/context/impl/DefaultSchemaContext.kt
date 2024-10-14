@@ -15,7 +15,6 @@ import com.onyx.exception.InvalidRelationshipTypeException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.*
 import com.onyx.extension.nullPartition
-import com.onyx.extension.common.ClassMetadata.classForName
 import com.onyx.extension.createNewEntity
 import com.onyx.extension.get
 import com.onyx.interactors.cache.QueryCacheInteractor
@@ -223,7 +222,7 @@ open class DefaultSchemaContext : SchemaContext {
         results.map { it["name"] }.forEach {
             var clazz: Class<*>? = null
             catchAll {
-                clazz = classForName(it!!, this)
+                clazz = metadata(this.contextId).classForName(it!!, this)
             }
             clazz ?: return@forEach
             getBaseDescriptorForEntity(clazz!!)
@@ -249,6 +248,11 @@ open class DefaultSchemaContext : SchemaContext {
             this.defaultSystemEntities[it.java.name] = systemEntity
             this.systemEntityByIDMap[i] = systemEntity
             systemEntities.add(systemEntity)
+
+            systemEntity.attributes.sortBy { it.name }
+            systemEntity.relationships.sortBy { it.name }
+            systemEntity.indexes.sortBy { it.name }
+
             i++
         }
 
@@ -273,6 +277,9 @@ open class DefaultSchemaContext : SchemaContext {
     @Suppress("MemberVisibilityCanPrivate")
     protected open fun checkForEntityChanges(descriptor: EntityDescriptor, systemEntityToCheck: SystemEntity): SystemEntity {
         var systemEntity = systemEntityToCheck
+        systemEntity.attributes.sortBy { it.name }
+        systemEntity.relationships.sortBy { it.name }
+        systemEntity.indexes.sortBy { it.name }
 
         val newSystemEntity = SystemEntity(descriptor)
         if (newSystemEntity != systemEntity) {
@@ -493,7 +500,7 @@ open class DefaultSchemaContext : SchemaContext {
      */
     @Suppress("MemberVisibilityCanPrivate")
     @Throws(OnyxException::class)
-    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor = getDescriptorForEntity(classForName(entityClass, this))
+    fun getBaseDescriptorForEntity(entityClass: String): EntityDescriptor = getDescriptorForEntity(metadata(this.contextId).classForName(entityClass, this))
 
     open protected val descriptorLockCount = AtomicInteger(0)
 
@@ -552,10 +559,10 @@ open class DefaultSchemaContext : SchemaContext {
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor!!.attributes.values.filter { IManagedEntity::class.java.isAssignableFrom(it.type) }
-                        .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(), "") }
+                        .forEach { getDescriptorForEntity(it.field.type.createNewEntity<IManagedEntity>(this.contextId), "") }
 
                 // Make sure entity attributes have loaded descriptors
-                descriptor!!.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(), "") }
+                descriptor!!.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(contextId), "") }
 
                 return@synchronized descriptor!!
             }
@@ -775,7 +782,6 @@ open class DefaultSchemaContext : SchemaContext {
         dataFiles.values.forEach { it.flush() }
         this.indexInteractors.clear()
         this.recordInteractors.clear()
-        System.gc()
     }
 
     @Suppress("MemberVisibilityCanBePrivate")

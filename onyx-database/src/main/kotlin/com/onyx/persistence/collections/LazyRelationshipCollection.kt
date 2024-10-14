@@ -5,7 +5,7 @@ import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.BufferingException
 import com.onyx.exception.OnyxException
-import com.onyx.extension.common.ClassMetadata.classForName
+import com.onyx.extension.common.metadata
 import com.onyx.extension.toManagedEntity
 import com.onyx.extension.toRelationshipReference
 import com.onyx.persistence.IManagedEntity
@@ -194,7 +194,7 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
         this.contextId = buffer.string
 
         val context = Contexts.get(contextId!!) ?: Contexts.firstRemote()
-        this.entityDescriptor = context.getBaseDescriptorForEntity(classForName(className, context))!!
+        this.entityDescriptor = context.getBaseDescriptorForEntity(metadata(this.contextId ?: "").classForName(className, context))!!
         this.persistenceManager = context.systemPersistenceManager
     }
 
@@ -203,6 +203,16 @@ class LazyRelationshipCollection<E : IManagedEntity?>()  : AbstractList<E>(), Mu
         buffer.putCollection(identifiers)
         buffer.putString(this.entityDescriptor.entityClass.name)
         buffer.putString(this.contextId!!)
+    }
+
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.read(buffer)
+    }
+
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        this.write(buffer)
     }
 
     /**

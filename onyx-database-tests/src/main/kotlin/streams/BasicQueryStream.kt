@@ -9,8 +9,9 @@ import entities.identifiers.ImmutableSequenceIdentifierEntityForDelete
  */
 class BasicQueryStream : QueryStream<ImmutableSequenceIdentifierEntityForDelete> {
 
-    override fun accept(entity: ImmutableSequenceIdentifierEntityForDelete, persistenceManager: PersistenceManager) {
+    override fun accept(entity: ImmutableSequenceIdentifierEntityForDelete, persistenceManager: PersistenceManager): Boolean {
         entity.correlation = 99
         persistenceManager.saveEntity(entity)
+        return true
     }
 }

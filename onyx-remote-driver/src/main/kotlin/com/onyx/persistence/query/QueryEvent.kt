@@ -3,6 +3,7 @@ package com.onyx.persistence.query
 import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.exception.BufferingException
+import com.onyx.persistence.context.SchemaContext
 
 /**
  * Created by Tim Osborn on 3/27/17.
@@ -34,4 +35,13 @@ class QueryEvent<T>(var type: QueryListenerEvent? = null, var entity: T? = null)
         buffer.putObject(this.entity)
     }
 
+    @Throws(BufferingException::class)
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        this.read(buffer)
+    }
+
+    @Throws(BufferingException::class)
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        this.write(buffer)
+    }
 }

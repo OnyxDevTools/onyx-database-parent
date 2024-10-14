@@ -121,7 +121,7 @@ abstract class AbstractRelationshipInteractor @Throws(OnyxException::class) cons
      * @since 9/26/2024
      */
     override fun clear() {
-        this.entityDescriptor.entityClass.createNewEntity<IManagedEntity>()
+        this.entityDescriptor.entityClass.createNewEntity<IManagedEntity>(this.context.contextId)
             .relationshipReferenceMap(context, relationshipDescriptor.name)
             .clear()
     }

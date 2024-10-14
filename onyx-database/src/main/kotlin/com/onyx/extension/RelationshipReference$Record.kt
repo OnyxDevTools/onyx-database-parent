@@ -18,7 +18,7 @@ import com.onyx.interactors.relationship.data.RelationshipReference
  * @since 2.0.0
  */
 fun RelationshipReference.toManagedEntity(context: SchemaContext, clazz:Class<*>, descriptor: EntityDescriptor = context.getDescriptorForEntity(clazz, "")):IManagedEntity? {
-    val entity:IManagedEntity = clazz.instance()
+    val entity:IManagedEntity = clazz.instance(context.contextId)
     entity[context, descriptor, descriptor.identifier!!.name] = identifier
     val records = entity.records(context, descriptor = descriptor, partitionId = partitionId)
     return records[identifier]

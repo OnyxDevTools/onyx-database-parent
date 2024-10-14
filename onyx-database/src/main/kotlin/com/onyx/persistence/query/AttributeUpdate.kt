@@ -4,6 +4,7 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.descriptor.AttributeDescriptor
 import com.onyx.interactors.index.IndexInteractor
+import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
 
 /**
@@ -42,4 +43,15 @@ class AttributeUpdate @JvmOverloads constructor(var fieldName: String? = null, v
         fieldName = buffer.value as String
         value = buffer.value
     }
+
+    override fun write(buffer: BufferStream, context: SchemaContext?) {
+        buffer.putObject(fieldName)
+        buffer.putObject(value)
+    }
+
+    override fun read(buffer: BufferStream, context: SchemaContext?) {
+        fieldName = buffer.value as String
+        value = buffer.value
+    }
+
 }

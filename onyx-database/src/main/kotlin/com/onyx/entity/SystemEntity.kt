@@ -2,6 +2,7 @@ package com.onyx.entity
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.extension.common.ClassMetadata
+import com.onyx.extension.common.metadata
 import com.onyx.persistence.ManagedEntity
 import com.onyx.persistence.annotations.*
 import com.onyx.persistence.annotations.values.IdentifierGenerator
@@ -48,7 +49,7 @@ data class SystemEntity @JvmOverloads constructor(
     @Attribute
     var isLatestVersion:Boolean = true
 
-    val type:Class<*> by lazy { ClassMetadata.classForName(name) }
+    fun type(contextId : String): Class<*> = metadata(contextId).classForName(name)
 
     constructor(descriptor: EntityDescriptor?) : this(
             name = descriptor!!.entityClass.canonicalName,

@@ -11,7 +11,7 @@ import java.util.UUID
 class UUIDRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context) {
 
     override fun save(entity: IManagedEntity): PutResult {
-        val identifierValue = entity.identifier(context)!!
+        val identifierValue = entity.identifier(context)
 
         if ((identifierValue as? String).isNullOrEmpty()) {
             entity[context, entityDescriptor, entityDescriptor.identifier!!.name] = UUID.randomUUID().toString()

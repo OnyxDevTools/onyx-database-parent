@@ -41,7 +41,7 @@ fun Any?.castTo(clazz: Class<*>): Any? {
             Double::class -> this.toDouble()
             Float::class -> this.toFloat()
             Boolean::class -> this.toInt() != 0
-            Char::class -> this.toChar()
+            Char::class -> this.toInt().toChar()
             Byte::class -> this.toByte()
             Short::class -> this.toShort()
             String::class -> this.toString()
@@ -62,15 +62,15 @@ fun Any?.castTo(clazz: Class<*>): Any? {
             else -> null
         }
         this is String -> return when (kotlinClass) {
-            Int::class -> this.toInt()
-            Long::class -> this.toLong()
-            Double::class -> this.toDouble()
-            Float::class -> this.toFloat()
-            Boolean::class -> this.toInt() != 0
+            Int::class -> this.toIntOrNull() ?: 0
+            Long::class -> this.toLongOrNull() ?: 0L
+            Double::class -> this.toDoubleOrNull() ?: 0.0
+            Float::class -> this.toFloatOrNull() ?: 0.0f
+            Boolean::class -> (this.toIntOrNull() ?: 0) != 0
             Char::class -> this.chars().findFirst()
-            Byte::class -> this.toByte()
-            Short::class -> this.toShort()
-            Date::class -> Date(this.toLong())
+            Byte::class -> this.toByteOrNull() ?: 0
+            Short::class -> this.toShortOrNull() ?: 0
+            Date::class -> Date(this.toLongOrNull() ?: 0L)
             else -> null
         }
         this is Date -> return when (kotlinClass) {
@@ -93,6 +93,7 @@ fun Any.long():Long =
         this is Number -> this.toLong()
         this is Boolean -> if(this) 1L else 0L
         this is Char -> this.code.toLong()
+        this === "" -> 0L
         else -> throw Exception("Invalid Cast ${this::class.java}")
     }
 

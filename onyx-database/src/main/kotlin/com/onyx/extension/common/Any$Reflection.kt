@@ -9,6 +9,13 @@ import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Modifier
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+
+private val classMetadatas: MutableMap<String, ClassMetadata> = Collections.synchronizedMap(hashMapOf())
+
+fun metadata(contextId: String) = classMetadatas.getOrPut(contextId) { ClassMetadata() }
 
 /**
  * Get fields for a class that apply to its reflection and serialization.  All transient fields and or fields
@@ -16,7 +23,7 @@ import java.lang.reflect.Modifier
  *
  * @since 2.0.0
  */
-fun Any.getFields() : List<Field> = ClassMetadata.fields(this.javaClass)
+fun Any.getFields(contextId: String) : List<Field> = metadata(contextId).fields(this.javaClass)
 
 /**
  * Instantiate an instance of the class.  As a pre-requisite to invoking this method, there must
@@ -30,16 +37,17 @@ fun Any.getFields() : List<Field> = ClassMetadata.fields(this.javaClass)
  */
 @Throws(InstantiationException::class, IllegalAccessException::class)
 @Suppress("UNCHECKED_CAST")
-fun <T : Any> Class<*>.instance(): T {
+fun <T : Any> Class<*>.instance(contextId: String): T {
+    val metadata = metadata(contextId)
     try {
-        return ClassMetadata.constructor(this).newInstance() as T
+        return metadata.constructor(this).newInstance() as T
     } catch (e: InstantiationException) {
         val constructor = this.constructors[0]
         constructor.isAccessible = true
         val parameters = constructor.parameters
         val parameterValues = arrayOfNulls<Any>(parameters.size)
         parameters.forEachIndexed { index, parameter ->
-            parameterValues[index] = if(parameter.type.isPrimitive) ClassMetadata.constructor(parameter.type).newInstance() else null
+            parameterValues[index] = if(parameter.type.isPrimitive) metadata.constructor(parameter.type).newInstance() else null
         }
         return try {
             constructor.newInstance(*parameterValues) as T
@@ -55,7 +63,7 @@ fun <T : Any> Class<*>.instance(): T {
  * @param from Entity to copy properties from
  * @since 2.0.0
  */
-fun Any.copy(from: Any) = from.getFields().forEach {
+fun Any.copy(contextId: String, from: Any) = from.getFields(contextId).forEach {
     catchAll {
         this.setAny(it, from.getAny(it))
     }
@@ -136,45 +144,58 @@ fun Class<*>.primitiveType() = when {
  * This object is a container of cached class information.  Since some of these lookups are slow, this
  * will use optimistic locking caching to speed the lookup up.
  */
-object ClassMetadata {
+class ClassMetadata {
 
-    val STRING_TYPE = String::class.java
-    val BOOLEAN_TYPE = Boolean::class.javaObjectType
-    val CHAR_TYPE = Char::class.javaObjectType
-    val BYTE_TYPE = Byte::class.javaObjectType
-    val SHORT_TYPE = Short::class.javaObjectType
-    val INT_TYPE = Int::class.javaObjectType
-    val FLOAT_TYPE = Float::class.javaObjectType
-    val LONG_TYPE = Long::class.javaObjectType
-    val DOUBLE_TYPE = Double::class.javaObjectType
-    val LONG_PRIMITIVE_TYPE = Long::class.javaPrimitiveType!!
-    val INT_PRIMITIVE_TYPE = Int::class.javaPrimitiveType!!
-    val DOUBLE_PRIMITIVE_TYPE = Double::class.javaPrimitiveType!!
-    val FLOAT_PRIMITIVE_TYPE = Float::class.javaPrimitiveType!!
-    val BYTE_PRIMITIVE_TYPE = Byte::class.javaPrimitiveType!!
-    val CHAR_PRIMITIVE_TYPE = Char::class.javaPrimitiveType!!
-    val SHORT_PRIMITIVE_TYPE = Short::class.javaPrimitiveType!!
-    val BOOLEAN_PRIMITIVE_TYPE = Boolean::class.javaPrimitiveType!!
-    val BYTE_ARRAY = ByteArray::class.java
-    val INT_ARRAY = IntArray::class.java
-    val LONG_ARRAY = LongArray::class.java
-    val FLOAT_ARRAY = FloatArray::class.java
-    val DOUBLE_ARRAY = DoubleArray::class.java
-    val BOOLEAN_ARRAY = BooleanArray::class.java
-    val CHAR_ARRAY = CharArray::class.java
-    val SHORT_ARRAY = ShortArray::class.java
-    val ATTRIBUTE_ANNOTATION = Attribute::class.java
-    val PARTITION_ANNOTATION = Partition::class.java
-    val INDEX_ANNOTATION = Index::class.java
-    val IDENTIFIER_ANNOTATION = Identifier::class.java
-    val RELATIONSHIP_ANNOTATION = Relationship::class.java
-    val ENTITY_ANNOTATION = Entity::class.java
-    val ANY_CLASS = Any::class.java
-    val MANAGED_ENTITY = IManagedEntity::class.java
+    companion object {
+        val STRING_TYPE = String::class.java
+        val BOOLEAN_TYPE = Boolean::class.javaObjectType
+        val CHAR_TYPE = Char::class.javaObjectType
+        val BYTE_TYPE = Byte::class.javaObjectType
+        val SHORT_TYPE = Short::class.javaObjectType
+        val INT_TYPE = Int::class.javaObjectType
+        val FLOAT_TYPE = Float::class.javaObjectType
+        val LONG_TYPE = Long::class.javaObjectType
+        val DOUBLE_TYPE = Double::class.javaObjectType
+        val LONG_PRIMITIVE_TYPE = Long::class.javaPrimitiveType!!
+        val INT_PRIMITIVE_TYPE = Int::class.javaPrimitiveType!!
+        val DOUBLE_PRIMITIVE_TYPE = Double::class.javaPrimitiveType!!
+        val FLOAT_PRIMITIVE_TYPE = Float::class.javaPrimitiveType!!
+        val BYTE_PRIMITIVE_TYPE = Byte::class.javaPrimitiveType!!
+        val CHAR_PRIMITIVE_TYPE = Char::class.javaPrimitiveType!!
+        val SHORT_PRIMITIVE_TYPE = Short::class.javaPrimitiveType!!
+        val BOOLEAN_PRIMITIVE_TYPE = Boolean::class.javaPrimitiveType!!
+        val BYTE_ARRAY = ByteArray::class.java
+        val INT_ARRAY = IntArray::class.java
+        val LONG_ARRAY = LongArray::class.java
+        val FLOAT_ARRAY = FloatArray::class.java
+        val DOUBLE_ARRAY = DoubleArray::class.java
+        val BOOLEAN_ARRAY = BooleanArray::class.java
+        val CHAR_ARRAY = CharArray::class.java
+        val SHORT_ARRAY = ShortArray::class.java
+        val ATTRIBUTE_ANNOTATION = Attribute::class.java
+        val PARTITION_ANNOTATION = Partition::class.java
+        val INDEX_ANNOTATION = Index::class.java
+        val IDENTIFIER_ANNOTATION = Identifier::class.java
+        val RELATIONSHIP_ANNOTATION = Relationship::class.java
+        val ENTITY_ANNOTATION = Entity::class.java
+        val ANY_CLASS = Any::class.java
+        val MANAGED_ENTITY = IManagedEntity::class.java
+
+        fun purge(contextId: String) {
+            classMetadatas.remove(contextId)
+        }
+    }
 
     private val constructors = OptimisticLockingMap<Class<*>, Constructor<*>>(HashMap())
     private val classes = OptimisticLockingMap<String, Class<*>>(HashMap())
     private val classFields = OptimisticLockingMap<Class<*>, List<Field>>(HashMap())
+
+    fun removeClass(name: String) {
+        classes.remove(name).apply {
+            constructors.remove(this)
+            classFields.remove(this)
+        }
+    }
 
     // region Get Reflection Information
 
@@ -189,30 +210,12 @@ object ClassMetadata {
         return@getOrPut constructor
     }
 
-
-    /**
-     * Purge all class metadata that starts with a package name
-     *
-     * @since 2.1.6
-     */
-    fun purge(packageName: String) {
-        constructors.entries.removeIf {
-            it.key.name.startsWith(packageName)
-        }
-        classFields.entries.removeIf {
-            it.key.name.startsWith(packageName)
-        }
-        classes.entries.removeIf {
-            it.key.startsWith(packageName)
-        }
-    }
-
     /**
      * Get a class by its simple name
      *
      * @since 2.0.0
      */
-    fun classForName(name:String, schemaContext: SchemaContext? = null) = classes.getOrPut(name) { ApplicationClassFinder.forName(name, schemaContext) }
+    fun classForName(name:String, schemaContext: SchemaContext? = null): Class<*> = classes.getOrPut(name) { ApplicationClassFinder.forName(name, schemaContext) }
 
     /**
      * Get fields for a java class

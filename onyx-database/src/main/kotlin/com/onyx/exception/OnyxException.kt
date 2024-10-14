@@ -11,7 +11,7 @@ open class OnyxException : Exception {
 
     @Transient internal var rootCause: Throwable? = null
 
-    override var message:String?
+    override var message:String? = null
 
     /**
      * Constructor with cause

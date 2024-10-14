@@ -23,7 +23,7 @@ interface BufferStreamable : Serializable {
      */
     @Throws(BufferingException::class)
     fun read(buffer: BufferStream) {
-        val fields = getFields()
+        val fields = getFields("")
         fields.forEach { it.set(this, buffer.value) }
     }
 
@@ -38,7 +38,7 @@ interface BufferStreamable : Serializable {
      */
     @Throws(BufferingException::class)
     fun write(buffer: BufferStream) {
-        val fields = getFields()
+        val fields = getFields("")
         fields.forEach { buffer.putObject(it.get(this)) }
     }
 
@@ -52,7 +52,10 @@ interface BufferStreamable : Serializable {
      * @since 2.0.0
      */
     @Throws(BufferingException::class)
-    fun write(buffer: BufferStream, context: SchemaContext?) = write(buffer)
+    fun write(buffer: BufferStream, context: SchemaContext?) {
+        val fields = getFields(context?.contextId ?: "")
+        fields.forEach { buffer.putObject(it.get(this)) }
+    }
 
     /**
      * Read from a buffer stream with a schema context.
@@ -63,6 +66,9 @@ interface BufferStreamable : Serializable {
      * @since 2.0.0
      */
     @Throws(BufferingException::class)
-    fun read(buffer: BufferStream, context: SchemaContext?) = read(buffer)
+    fun read(buffer: BufferStream, context: SchemaContext?) {
+        val fields = getFields(context?.contextId ?: "")
+        fields.forEach { it.set(this, buffer.value) }
+    }
 
 }
