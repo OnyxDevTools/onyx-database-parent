@@ -282,6 +282,13 @@ open class DefaultSchemaContext : SchemaContext {
         systemEntity.indexes.sortBy { it.name }
 
         val newSystemEntity = SystemEntity(descriptor)
+        newSystemEntity.attributes.forEach { attribute ->
+            val existingAttribute = systemEntity.attributes.firstOrNull { it.name == attribute.name }
+            attribute.size = existingAttribute?.size ?: attribute.size
+            attribute.isNullable = existingAttribute?.isNullable ?: attribute.isNullable
+            attribute.isPartition = newSystemEntity.partitionName == attribute.name
+        }
+
         if (newSystemEntity != systemEntity) {
 
             checkForIndexChanges(systemEntity, newSystemEntity)

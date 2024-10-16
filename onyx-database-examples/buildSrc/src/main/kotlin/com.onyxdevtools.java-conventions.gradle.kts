@@ -14,7 +14,7 @@ repositories {
 }
 
 group = "com.onyxdevtools"
-version = "2.3.6"
+version = "2.3.8"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 publishing {

@@ -25,7 +25,7 @@ data class SystemAttribute @JvmOverloads constructor(
     var size: Int = 0,
 
     @Attribute
-    private var isNullable: Boolean = false,
+    var isNullable: Boolean = false,
 
     @Attribute
     @Suppress("MemberVisibilityCanPrivate")
@@ -59,6 +59,8 @@ data class SystemAttribute @JvmOverloads constructor(
         if (isEnum != other.isEnum) return false
         if (enumValues != other.enumValues) return false
         if (isPartition != other.isPartition) return false
+        if (size != other.size) return false
+        if (isNullable != other.isNullable) return false
 
         return true
     }
@@ -69,6 +71,8 @@ data class SystemAttribute @JvmOverloads constructor(
         result = 31 * result + isEnum.hashCode()
         result = 31 * result + (enumValues?.hashCode() ?: 0)
         result = 31 * result + isPartition.hashCode()
+        result = 31 * result + size.hashCode()
+        result = 31 * result + isNullable.hashCode()
         return result
     }
 }
