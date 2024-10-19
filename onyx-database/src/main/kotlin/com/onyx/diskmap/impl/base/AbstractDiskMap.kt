@@ -6,8 +6,10 @@ import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.canBeCastToPrimitive
+import com.onyx.extension.common.uuidHash
 import com.onyx.extension.perform
 import java.lang.ref.WeakReference
+import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -87,7 +89,7 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      * @param key Key to get the hash of
      * @return The hash value of that key.
      */
-    open protected fun hash(key: Any?): Int = key?.hashCode() ?: 0
+    open protected fun hash(key: Any?): Int = key?.uuidHash() ?: key?.hashCode() ?: 0
 
     /**
      * Whether or not the map is empty.
