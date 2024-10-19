@@ -36,34 +36,34 @@ class Header : BufferStreamable {
 
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream) {
-        firstNode = buffer.long
-        recordCount = AtomicLong(buffer.long)
-        position = buffer.long
+        firstNode = buffer.bigInt
+        recordCount = AtomicLong(buffer.bigInt)
+        position = buffer.bigInt
     }
 
     @Throws(BufferingException::class)
     override fun read(buffer: BufferStream, context: SchemaContext?) {
-        firstNode = buffer.long
-        recordCount = AtomicLong(buffer.long)
-        position = buffer.long
+        firstNode = buffer.bigInt
+        recordCount = AtomicLong(buffer.bigInt)
+        position = buffer.bigInt
     }
 
     @Throws(BufferingException::class)
     override fun write(buffer: BufferStream) {
-        buffer.putLong(firstNode)
-        buffer.putLong(recordCount.get())
-        buffer.putLong(position)
+        buffer.putBigInt(firstNode)
+        buffer.putBigInt(recordCount.get())
+        buffer.putBigInt(position)
     }
 
     @Throws(BufferingException::class)
     override fun write(buffer: BufferStream, context: SchemaContext?) {
-        buffer.putLong(firstNode)
-        buffer.putLong(recordCount.get())
-        buffer.putLong(position)
+        buffer.putBigInt(firstNode)
+        buffer.putBigInt(recordCount.get())
+        buffer.putBigInt(position)
     }
 
 
     companion object {
-        const val HEADER_SIZE = java.lang.Long.BYTES * 3
+        const val HEADER_SIZE = 15
     }
 }

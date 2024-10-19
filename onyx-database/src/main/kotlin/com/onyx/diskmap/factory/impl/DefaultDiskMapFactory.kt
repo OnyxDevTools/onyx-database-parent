@@ -29,6 +29,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      * @return The store the map factory uses
      */
     open protected lateinit var store: Store
+    open protected lateinit var nodeStore: Store
 
     // Contains all initialized maps
     open protected val maps: MutableMap<String, Map<*, *>> = OptimisticLockingMap(WeakHashMap())
@@ -81,36 +82,37 @@ open class DefaultDiskMapFactory : DiskMapFactory {
         filePath: String,
         type: StoreType,
         context: SchemaContext?,
-        deleteOnClose: Boolean,
-        predefinedStore: Store? = null
+        deleteOnClose: Boolean
     ) {
         val path: String =
             if (fileSystemPath == null || fileSystemPath == "") filePath else fileSystemPath + File.separator + filePath
+        val nodePath: String =
+            if (fileSystemPath == null || fileSystemPath == "") filePath + ".idx" else fileSystemPath + File.separator + filePath + ".idx"
 
-        if (predefinedStore != null) {
-            this.store = predefinedStore
-        } else {
-            when {
-                type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported -> {
-                    this.store = if (context?.encryptDatabase == true) EncryptedMemoryMappedStore(
-                        path,
-                        context,
-                        deleteOnClose
-                    ) else MemoryMappedStore(path, context, deleteOnClose)
-                }
+        when {
+            type === StoreType.MEMORY_MAPPED_FILE && isMemMapSupported -> {
+                this.store = if (context?.encryptDatabase == true) EncryptedMemoryMappedStore(
+                    path,
+                    context,
+                    deleteOnClose
+                ) else MemoryMappedStore(path, context, deleteOnClose)
+                nodeStore = MemoryMappedStore(nodePath, context, deleteOnClose)
+            }
 
-                type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported -> {
-                    this.store = if (context?.encryptDatabase == true) EncryptedFileChannelStore(
-                        path,
-                        context,
-                        deleteOnClose
-                    ) else FileChannelStore(path, context, deleteOnClose)
-                }
+            type === StoreType.FILE || type === StoreType.MEMORY_MAPPED_FILE && !isMemMapSupported -> {
+                this.store = if (context?.encryptDatabase == true) EncryptedFileChannelStore(
+                    path,
+                    context,
+                    deleteOnClose
+                ) else FileChannelStore(path, context, deleteOnClose)
+                nodeStore = FileChannelStore(nodePath, context, deleteOnClose)
+            }
 
-                type === StoreType.IN_MEMORY -> {
-                    val storeId = storeIdCounter.incrementAndGet().toString()
-                    this.store = InMemoryStore(context, storeId)
-                }
+            type === StoreType.IN_MEMORY -> {
+                val storeId = storeIdCounter.incrementAndGet().toString()
+                this.store = InMemoryStore(context, storeId)
+                val nodeStoreId = storeIdCounter.incrementAndGet().toString()
+                this.nodeStore = InMemoryStore(context, nodeStoreId)
             }
         }
 
@@ -119,12 +121,12 @@ open class DefaultDiskMapFactory : DiskMapFactory {
         // or the default allocation within the maps' constructors and/or the serializer map types, this will need
         // to be changed.
 
-        internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
+        internalMaps = if (nodeStore.getFileSize() == FIRST_HEADER_LOCATION) {
             getHashMap(String::class.java, newMapHeader())
         } else {
             getHashMap(
                 String::class.java,
-                (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!
+                (nodeStore.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!
             )
         }
     }
@@ -141,8 +143,8 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun newMapHeader(): Header {
         val header = Header()
-        header.position = store.allocate(Header.HEADER_SIZE)
-        store.write(header, header.position)
+        header.position = nodeStore.allocate(Header.HEADER_SIZE)
+        nodeStore.write(header, header.position)
         return header
     }
 
@@ -153,19 +155,26 @@ open class DefaultDiskMapFactory : DiskMapFactory {
     /**
      * Close the file stores
      */
-    override fun close() = store.close()
+    override fun close(): Boolean {
+        store.close()
+        return nodeStore.close()
+    }
 
     /**
      * Force the storage to persist
      */
-    override fun commit() = store.commit()
+    override fun commit() {
+        store.commit()
+        nodeStore.commit()
+    }
 
     /**
      * Delete file
      */
     override fun delete() {
         this.close()
-        this.store.delete()
+//        this.store.delete()
+        this.nodeStore.delete()
     }
 
     /**
@@ -178,14 +187,14 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun reset() {
         // Reset the file size
-        store.reset()
+        nodeStore.reset()
 
-        internalMaps = if (store.getFileSize() == FIRST_HEADER_LOCATION) {
+        internalMaps = if (nodeStore.getFileSize() == FIRST_HEADER_LOCATION) {
             getHashMap(String::class.java, newMapHeader())
         } else {
             getHashMap(
                 String::class.java,
-                (store.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!
+                (nodeStore.read(FIRST_HEADER_LOCATION, Header.HEADER_SIZE, Header()) as Header?)!!
             )
         }
     }
@@ -217,7 +226,7 @@ open class DefaultDiskMapFactory : DiskMapFactory {
      */
     override fun <T : Map<*, *>> getHashMap(keyType: Class<*>, header: Header): T = mapsByHeader.getOrPut(header) {
         DiskSkipListMap<Any, Any>(
-            WeakReference(store), header, keyType
+            WeakReference(nodeStore), WeakReference(store), header, keyType
         )
     } as T
 
@@ -233,17 +242,17 @@ open class DefaultDiskMapFactory : DiskMapFactory {
         var header: Header? = null
         val headerReference = internalMaps[name]
         if (headerReference != null)
-            header = store.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
+            header = nodeStore.read(headerReference, Header.HEADER_SIZE, Header()) as Header?
 
         // Create a new header for the new structure we are creating
         if (header == null) {
             header = Header()
-            header.position = store.allocate(Header.HEADER_SIZE)
-            store.write(header, header.position)
+            header.position = nodeStore.allocate(Header.HEADER_SIZE)
+            nodeStore.write(header, header.position)
             internalMaps[name] = header.position
         }
 
-        return@getOrPut DiskSkipListMap<Any, Any>(WeakReference(store), header, keyType)
+        return@getOrPut DiskSkipListMap<Any, Any>(WeakReference(nodeStore), WeakReference(store), header, keyType)
     } as T
 
     // endregion

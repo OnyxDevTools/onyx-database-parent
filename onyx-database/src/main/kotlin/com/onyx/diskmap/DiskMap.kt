@@ -23,6 +23,8 @@ interface DiskMap<K, V> : MutableMap<K, V> {
      */
     val fileStore: Store
 
+    val records: Store
+
     /**
      * Gets the reference of where the disk structure is located within the storage
      * @since 1.0.2

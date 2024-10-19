@@ -1,5 +1,7 @@
 package com.onyx.buffer
 
+import com.onyx.diskmap.data.bigInt
+import com.onyx.diskmap.data.putBigInt
 import com.onyx.exception.OnyxException
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.exception.BufferingException
@@ -180,6 +182,20 @@ open class BufferStream(buffer: ByteBuffer) {
         get() {
             expandableByteBuffer!!.ensureRequiredSize(java.lang.Long.BYTES)
             return expandableByteBuffer!!.buffer.long
+        }
+
+    /**
+     * Get Long from the buffer
+     *
+     * @since  1.1.0
+     * @return long read from the buffer
+     * @throws BufferingException Generic Buffer Exception
+     */
+    val bigInt: Long
+        @Throws(BufferingException::class)
+        get() {
+            expandableByteBuffer!!.ensureRequiredSize(5)
+            return expandableByteBuffer!!.buffer.bigInt
         }
 
     /**
@@ -932,6 +948,20 @@ open class BufferStream(buffer: ByteBuffer) {
     fun putLong(value: Long) {
         expandableByteBuffer!!.ensureSize(java.lang.Long.BYTES)
         expandableByteBuffer!!.buffer.putLong(value)
+    }
+
+    /**
+     * Put big int to the buffer
+     *
+     * @since 1.1.0
+     * @param value long to write
+     *
+     * @throws BufferingException Generic Buffer Exception
+     */
+    @Throws(BufferingException::class)
+    fun putBigInt(value: Long) {
+        expandableByteBuffer!!.ensureSize(5)
+        expandableByteBuffer!!.buffer.putBigInt(value)
     }
 
     /**

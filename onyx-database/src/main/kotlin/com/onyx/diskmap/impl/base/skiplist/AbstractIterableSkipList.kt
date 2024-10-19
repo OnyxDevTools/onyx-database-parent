@@ -21,7 +21,7 @@ import java.util.*
  * @param <V> Value Object Type
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractCachedSkipList<K, V>(store, header, keyType) {
+abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recordStore: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractCachedSkipList<K, V>(store, recordStore, header, keyType) {
 
     // region Iterable Collections
 
@@ -126,7 +126,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, heade
          *
          * @return The next dictionary object
          */
-        override fun next(): V? = nodeIterator.next()?.getRecord<V>(fileStore)
+        override fun next(): V? = nodeIterator.next()?.getRecord<V>(records)
 
         override fun remove() = Unit
 
@@ -272,14 +272,14 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, heade
          * @return Key from the data
          */
         override val key: A?
-            get() = node?.getKey(fileStore, storeKeyWithinNode, keyType)
+            get() = node?.getKey(fileStore, records, storeKeyWithinNode, keyType)
 
         /**
          * Get Value
          *
          * @return Value from the data position
          */
-        override val value: B? = node?.getRecord<B>(fileStore)
+        override val value: B? = node?.getRecord<B>(records)
 
         override fun setValue(newValue: B?): B? = value
     }

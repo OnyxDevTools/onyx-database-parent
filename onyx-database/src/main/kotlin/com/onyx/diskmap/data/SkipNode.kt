@@ -22,6 +22,7 @@ data class SkipNode(
 ) : BufferStreamable {
 
     fun setTop(store:Store, top:Long) = withBigIntBuffer {
+        if (this.up == top) return 0
         this.up = top
         it.putBigInt(top)
         it.rewind()
@@ -29,6 +30,7 @@ data class SkipNode(
     }
 
     fun setLeft(store:Store, left:Long) = withBigIntBuffer {
+        if (this.left == left) return 0
         this.left = left
         it.putBigInt(left)
         it.rewind()
@@ -36,6 +38,7 @@ data class SkipNode(
     }
 
     fun setRight(store:Store, right:Long) = withBigIntBuffer {
+        if (this.right == right) return 0
         this.right = right
         it.putBigInt(right)
         it.rewind()
@@ -43,6 +46,7 @@ data class SkipNode(
     }
 
     fun setBottom(store:Store, bottom:Long) = withBigIntBuffer {
+        if (this.down == bottom) return 0
         this.down = bottom
         it.putBigInt(bottom)
         it.rewind()
@@ -50,6 +54,7 @@ data class SkipNode(
     }
 
     fun setRecord(store:Store, record:Long) = withBigIntBuffer {
+        if (this.record == record) return 0
         this.record = record
         this.recordValue = null
         it.putBigInt(record)
@@ -60,7 +65,7 @@ data class SkipNode(
     private var keyValue:Any? = null
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getKey(store: Store, storedInNode:Boolean, type:Class<*>):T {
+    fun <T> getKey(store: Store, records: Store, storedInNode:Boolean, type:Class<*>):T {
         if(keyValue != null) return keyValue as T
 
         if(storedInNode) {
@@ -72,7 +77,7 @@ data class SkipNode(
         if(keyValue == null) {
             synchronized(this) {
                 if(keyValue == null) {
-                    keyValue = store.getObject(key)
+                    keyValue = records.getObject(key)
                 }
             }
         }
@@ -133,7 +138,7 @@ data class SkipNode(
         get() = record > 0
 
     companion object {
-        const val SKIP_NODE_SIZE = (java.lang.Long.BYTES * 6) + java.lang.Short.BYTES
+        const val SKIP_NODE_SIZE = (5 * 5) + java.lang.Long.BYTES + java.lang.Short.BYTES
 
         fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short):SkipNode {
             val node = SkipNode()

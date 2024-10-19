@@ -1,15 +1,16 @@
 package com.onyx.diskmap.impl.base
 
 import com.onyx.buffer.BufferPool
+import com.onyx.buffer.BufferPool.withBigIntBuffer
 import com.onyx.buffer.BufferPool.withLongBuffer
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.data.Header
+import com.onyx.diskmap.data.putBigInt
 import com.onyx.diskmap.store.Store
 import com.onyx.extension.common.canBeCastToPrimitive
 import com.onyx.extension.common.uuidHash
 import com.onyx.extension.perform
 import java.lang.ref.WeakReference
-import java.util.*
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -22,12 +23,15 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * @since 1.2.0
  */
-abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakReference<Store>, header: Header, val keyType:Class<*>) : DiskMap<K, V> {
+abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakReference<Store>, protected val recordStore: WeakReference<Store>, header: Header, val keyType:Class<*>) : DiskMap<K, V> {
 
     final override val reference: Header = Header()
 
     override val fileStore: Store
         get() = store.get()!!
+
+    override val records: Store
+        get() = recordStore.get()!!
 
     val storeKeyWithinNode:Boolean = keyType.canBeCastToPrimitive()
 
@@ -50,21 +54,21 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
     open protected fun getRecordValueAsDictionary(recordId: Long): Map<String, Any?> {
         var size = 0
         BufferPool.withIntBuffer {
-            fileStore.read(it, recordId)
+            records.read(it, recordId)
             it.rewind()
             size = it.int
         }
-        return fileStore.readObject(recordId + Integer.BYTES, size).perform { it!!.toMap(fileStore.context!!) }
+        return records.readObject(recordId + Integer.BYTES, size).perform { it!!.toMap(records.context!!) }
     }
 
     /**
      * This method will only update the record count rather than the entire header
      */
     open protected fun updateHeaderRecordCount(count:Long) {
-        withLongBuffer {
-            it.putLong(count)
+        withBigIntBuffer {
+            it.putBigInt(count)
             it.rewind()
-            fileStore.write(it, reference.position + java.lang.Long.BYTES)
+            fileStore.write(it, reference.position + 5)
         }
     }
 
@@ -75,9 +79,10 @@ abstract class AbstractDiskMap<K, V> constructor(protected val store: WeakRefere
      * @param firstNode First Node location
      */
     open protected fun updateHeaderFirstNode(header: Header, firstNode: Long) {
+        if (this.reference.firstNode == firstNode) return
         this.reference.firstNode = firstNode
-        withLongBuffer {
-            it.putLong(firstNode)
+        withBigIntBuffer {
+            it.putBigInt(firstNode)
             it.rewind()
             fileStore.write(it, header.position)
         }

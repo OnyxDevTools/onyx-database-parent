@@ -28,7 +28,7 @@ import java.util.*
  * @param <V> Value Object Type
  * @since 1.2.0
  */
-open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractIterableSkipList<K, V>(fileStore, header, keyType), SortedDiskMap<K,V> {
+open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractIterableSkipList<K, V>(fileStore, recordStore, header, keyType), SortedDiskMap<K,V> {
 
     override val size: Int
         get() = longSize().toInt()
@@ -99,8 +99,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
     override fun clear() = mapReadWriteLock.writeLock {
         super.clear()
         head = SkipNode.create(fileStore)
-        this.reference.firstNode = head!!.position
-        updateHeaderFirstNode(reference, this.reference.firstNode)
+        updateHeaderFirstNode(reference, head!!.position)
         reference.recordCount.set(0L)
         updateHeaderRecordCount(0L)
     }
@@ -126,7 +125,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
         if (recordId <= 0)
             return null
         val node:SkipNode = findNodeAtPosition(recordId) ?: return null
-        return node.getRecord<V>(fileStore)
+        return node.getRecord<V>(records)
     }
 
     /**
@@ -155,11 +154,11 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
     override fun <T : Any?> getAttributeWithRecID(attribute: Field, reference: Long): T = mapReadWriteLock.readLock {
         @Suppress("UNCHECKED_CAST")
         val node:SkipNode = findNodeAtPosition(reference) ?: return@readLock  null as T
-        return@readLock node.getRecord<Any>(fileStore).getAny(attribute)
+        return@readLock node.getRecord<Any>(records).getAny(attribute)
     }
 
     @Throws(AttributeTypeMismatchException::class)
-    override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipNode): T = reference.getRecord<Any>(fileStore).getAny(field)
+    override fun <T : Any?> getAttributeWithRecID(field: Field, reference: SkipNode): T = reference.getRecord<Any>(records).getAny(field)
 
     /**
      * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
@@ -178,7 +177,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
             node = findNodeAtPosition(node.right)
 
         while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore, storeKeyWithinNode, keyType)
+            val nodeKey:K = node.getKey(fileStore, records, storeKeyWithinNode, keyType)
             when {
                 index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
                 index.forceCompare(nodeKey, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.position)
@@ -206,7 +205,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
             node = findNodeAtPosition(node.right)
 
         while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore, storeKeyWithinNode, keyType)
+            val nodeKey:K = node.getKey(fileStore, records, storeKeyWithinNode, keyType)
 
             when {
                 index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
@@ -237,7 +236,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, header: Header,
             node = findNodeAtPosition(node.right)
 
         node@while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore, storeKeyWithinNode, keyType)
+            val nodeKey:K = node.getKey(fileStore, records, storeKeyWithinNode, keyType)
             when {
                 toValue.forceCompare(nodeKey) && includeTo -> results.add(node.position)
                 !toValue.forceCompare(nodeKey, QueryCriteriaOperator.LESS_THAN) -> break@node

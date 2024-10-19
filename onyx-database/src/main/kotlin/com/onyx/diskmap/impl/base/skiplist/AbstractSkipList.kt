@@ -25,7 +25,7 @@ import java.util.*
  * @since 2.0.0 This was refactored to make simpler.  It now conforms better to an actual skip list
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractDiskMap<K, V>(store, header, keyType) {
+abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, recordStore: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractDiskMap<K, V>(store, recordStore, header, keyType) {
 
     open protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
@@ -47,8 +47,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
         } else {
             val newHead = SkipNode.create(fileStore)
             head = newHead
-            this.reference.firstNode = newHead.position
-            updateHeaderFirstNode(this.reference, this.reference.firstNode)
+            updateHeaderFirstNode(this.reference, newHead.position)
         }
     }
 
@@ -71,7 +70,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
     fun internalPutAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult {
         var nearest:SkipNode = nearest(key)!!
 
-        val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))))
+        val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, records, storeKeyWithinNode, keyType))))
         result.recordId = if(!result.isInsert) nearest.position else -1L
 
         if(preUpdate != null) {
@@ -82,7 +81,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
             head = tempHead
         }
 
-        val valueLocation:Long = fileStore.writeObject(value)
+        val valueLocation:Long = records.writeObject(value)
 
         if(!result.isInsert) {
 
@@ -100,7 +99,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
         } else {
 
             var head:SkipNode = this.head!!
-            val keyLocation:Long = if(storeKeyWithinNode) key.long() else fileStore.writeObject(key)
+            val keyLocation:Long = if(storeKeyWithinNode) key.long() else records.writeObject(key)
 
             //Stuff in between nearest and its right partner
             var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0)
@@ -184,9 +183,9 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
         var returnValue:V? = null
         val head = head!!
 
-        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType))) {
+        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, records, storeKeyWithinNode, keyType))) {
 
-            returnValue = nearest.getRecord(fileStore)
+            returnValue = nearest.getRecord(records)
             deleteNode(nearest, head)
             var foundNode:SkipNode = nearest
 
@@ -222,7 +221,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
     /**
      * Get value from map
      */
-    override fun get(key: K): V? = find(key)?.getRecord(fileStore)
+    override fun get(key: K): V? = find(key)?.getRecord(records)
 
     /**
      * Find matching value.  This is different than nearest because it will return null
@@ -231,7 +230,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
      */
     protected open fun find(key: K): SkipNode? {
         val nearest:SkipNode = nearest(key) ?: return null
-        return if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, storeKeyWithinNode, keyType)))
+        return if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, records, storeKeyWithinNode, keyType)))
             nearest
         else
             null
@@ -246,7 +245,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, h
         moveDownLoop@while(true) {
             moveRightLoop@ while (current.right > 0L && !found) {
                 val next: SkipNode? = findNodeAtPosition(current.right)
-                val nextKey: K = next?.getKey(fileStore, storeKeyWithinNode, keyType)!!
+                val nextKey: K = next?.getKey(fileStore, records, storeKeyWithinNode, keyType)!!
 
                 current = when {
                     isEqual(key, nextKey) -> {
