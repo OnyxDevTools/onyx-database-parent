@@ -70,7 +70,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     fun internalPutAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult {
         var nearest:SkipNode = nearest(key)!!
 
-        val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, records, storeKeyWithinNode, keyType))))
+        val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(records, storeKeyWithinNode, keyType))))
         result.recordId = if(!result.isInsert) nearest.position else -1L
 
         if(preUpdate != null) {
@@ -88,13 +88,6 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
             nearest.setRecord(fileStore, valueLocation)
             updateNodeCache(nearest)
             updateKeyCache(key)
-
-            // Update Entire column
-            while(nearest.up > 0) {
-                nearest = findNodeAtPosition(nearest.up)!!
-                nearest.setRecord(fileStore, valueLocation)
-                updateNodeCache(nearest)
-            }
 
         } else {
 
@@ -129,7 +122,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
                 if(nearest.up > 0)
                     nearest = findNodeAtPosition(nearest.up)!!
 
-                insertedNode = insertNode(keyLocation, valueLocation, nearest, insertedNode, level)
+                insertedNode = insertNode(keyLocation, 0, nearest, insertedNode, level)
                 updateNodeCache(insertedNode)
                 level++
             }
@@ -183,7 +176,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
         var returnValue:V? = null
         val head = head!!
 
-        if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, records, storeKeyWithinNode, keyType))) {
+        if(nearest.isRecord && isEqual(key, nearest.getKey(records, storeKeyWithinNode, keyType))) {
 
             returnValue = nearest.getRecord(records)
             deleteNode(nearest, head)
@@ -229,11 +222,16 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
      *
      */
     protected open fun find(key: K): SkipNode? {
-        val nearest:SkipNode = nearest(key) ?: return null
-        return if(nearest.isRecord && isEqual(key, nearest.getKey(fileStore, records, storeKeyWithinNode, keyType)))
-            nearest
-        else
+        val nearest = nearest(key) ?: return null
+        return if (nearest.isRecord && isEqual(key, nearest.getKey(records, storeKeyWithinNode, keyType))) {
+            var bottomNode = nearest
+            while (bottomNode.down > 0) {
+                bottomNode = findNodeAtPosition(bottomNode.down)!!
+            }
+            bottomNode
+        } else {
             null
+        }
     }
 
     /**
@@ -245,7 +243,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
         moveDownLoop@while(true) {
             moveRightLoop@ while (current.right > 0L && !found) {
                 val next: SkipNode? = findNodeAtPosition(current.right)
-                val nextKey: K = next?.getKey(fileStore, records, storeKeyWithinNode, keyType)!!
+                val nextKey: K = next?.getKey(records, storeKeyWithinNode, keyType)!!
 
                 current = when {
                     isEqual(key, nextKey) -> {
@@ -283,6 +281,6 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     companion object {
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
         private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
-        private fun coinToss() = Math.random() < 0.5
+        private fun coinToss() = Math.random() < 0.25
     }
 }

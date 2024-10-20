@@ -25,7 +25,10 @@ class BasicMapTest {
 
         @BeforeClass
         @JvmStatic
-        fun beforeTest() = DatabaseBaseTest.deleteDatabase(TEST_DATABASE)
+        fun beforeTest() {
+            DatabaseBaseTest.deleteDatabase(TEST_DATABASE)
+            DatabaseBaseTest.deleteDatabase("$TEST_DATABASE.idx")
+        }
     }
 
 

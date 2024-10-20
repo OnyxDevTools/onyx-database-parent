@@ -272,7 +272,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
          * @return Key from the data
          */
         override val key: A?
-            get() = node?.getKey(fileStore, records, storeKeyWithinNode, keyType)
+            get() = node?.getKey(records, storeKeyWithinNode, keyType)
 
         /**
          * Get Value

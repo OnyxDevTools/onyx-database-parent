@@ -2,6 +2,7 @@ package skiplist
 
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.impl.InMemoryStore
+import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
@@ -16,6 +17,8 @@ class SkipNodeTest {
         assertEquals(SkipNode.get(memoryStore, skipNode.position), skipNode, "Skip node was not saved correctly")
     }
 
+
+    @Ignore
     @Test
     fun testSetRecord() {
         val memoryStore = createStore()

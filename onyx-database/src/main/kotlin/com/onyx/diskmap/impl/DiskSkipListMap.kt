@@ -177,7 +177,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
             node = findNodeAtPosition(node.right)
 
         while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore, records, storeKeyWithinNode, keyType)
+            val nodeKey:K = node.getKey(records, storeKeyWithinNode, keyType)
             when {
                 index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
                 index.forceCompare(nodeKey, QueryCriteriaOperator.GREATER_THAN) -> results.add(node.position)
@@ -205,7 +205,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
             node = findNodeAtPosition(node.right)
 
         while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore, records, storeKeyWithinNode, keyType)
+            val nodeKey:K = node.getKey(records, storeKeyWithinNode, keyType)
 
             when {
                 index.forceCompare(nodeKey) && includeFirst -> results.add(node.position)
@@ -236,7 +236,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
             node = findNodeAtPosition(node.right)
 
         node@while(node != null && node.isRecord) {
-            val nodeKey:K = node.getKey(fileStore, records, storeKeyWithinNode, keyType)
+            val nodeKey:K = node.getKey(records, storeKeyWithinNode, keyType)
             when {
                 toValue.forceCompare(nodeKey) && includeTo -> results.add(node.position)
                 !toValue.forceCompare(nodeKey, QueryCriteriaOperator.LESS_THAN) -> break@node

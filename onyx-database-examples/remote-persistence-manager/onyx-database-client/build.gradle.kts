@@ -20,13 +20,13 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:2.3.8")
-    implementation("com.onyxdevtools:onyx-remote-driver:2.3.8")
+    implementation("com.onyxdevtools:onyx-database:3.3.0")
+    implementation("com.onyxdevtools:onyx-remote-driver:3.3.0")
     implementation(project(":data-model"))
 }
 
 group = "com.onyxdevtools"
-version = "2.3.8"
+version = "3.3.0"
 description = "com.onyxdevtools:onyx-database-examples:remote-persistence-manager:onyx-database-client"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 

@@ -54,9 +54,10 @@ data class SkipNode(
     }
 
     fun setRecord(store:Store, record:Long) = withBigIntBuffer {
-        if (this.record == record) return 0
-        this.record = record
         this.recordValue = null
+        if (this.record == record) return 0
+        if (this.level.toInt() != 0) return 0
+        this.record = record
         it.putBigInt(record)
         it.rewind()
         store.write(it, position + (5 * 4))
@@ -65,7 +66,7 @@ data class SkipNode(
     private var keyValue:Any? = null
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getKey(store: Store, records: Store, storedInNode:Boolean, type:Class<*>):T {
+    fun <T> getKey(records: Store, storedInNode:Boolean, type:Class<*>):T {
         if(keyValue != null) return keyValue as T
 
         if(storedInNode) {

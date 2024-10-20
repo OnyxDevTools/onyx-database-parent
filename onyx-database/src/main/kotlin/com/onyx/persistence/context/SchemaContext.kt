@@ -238,7 +238,7 @@ interface SchemaContext {
      *
      * @param classToGet Data type of entity
      * @return List of system partition entries
-     * @since 2.3.8
+     * @since 3.3.0
      */
     @Throws
     fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry>
