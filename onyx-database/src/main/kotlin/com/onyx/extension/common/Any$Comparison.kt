@@ -2,6 +2,8 @@ package com.onyx.extension.common
 
 import com.onyx.exception.InvalidDataTypeForOperator
 import com.onyx.persistence.query.QueryCriteriaOperator
+import java.math.BigDecimal
+import java.math.BigInteger
 
 /**
  * Compare without throwing exception
@@ -34,13 +36,46 @@ fun Any?.forceCompare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCr
 @Suppress("UNCHECKED_CAST")
 fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteriaOperator.EQUAL): Boolean {
 
-    var first:Any? = compareTo
-    val second:Any? = this
+    var first: Any? = compareTo
+    val second: Any? = this
 
-    if(second != null && first != null && first.javaClass !== second.javaClass
-            && operator != QueryCriteriaOperator.IN // Expected as List when IN
-            && operator != QueryCriteriaOperator.NOT_IN) {
-        first = first.castTo(second.javaClass)
+    if (second != null && first != null && first::class != second::class
+        && operator != QueryCriteriaOperator.IN // Expected as List when IN
+        && operator != QueryCriteriaOperator.NOT_IN
+    ) {
+        when (second) {
+            // Handle numeric types
+            is Int -> first = (first as? Number)?.toInt()
+            is Long -> first = (first as? Number)?.toLong()
+            is Float -> first = (first as? Number)?.toFloat()
+            is Double -> first = (first as? Number)?.toDouble()
+            is Short -> first = (first as? Number)?.toShort()
+            is Byte -> first = (first as? Number)?.toByte()
+
+            // Handle string types
+            is String -> first = first.toString()
+
+            // Handle boolean types
+            is Boolean -> first = (first as? Boolean)
+
+            // Handle character types
+            is Char -> first = (first as? Char)?.toString()?.singleOrNull()
+
+            // Handle list types (for IN and NOT_IN operators)
+            is List<*> -> first = (first as? List<Any?>)
+
+            // Handle pairs for BETWEEN and NOT_BETWEEN
+            is Pair<*, *> -> first = first as? Pair<Any?, Any?>
+            is BigInteger -> first = (first as? Number)?.toLong()?.let { BigInteger.valueOf(it) }
+            is BigDecimal -> first = (first as? Number)?.toDouble()?.let { BigDecimal.valueOf(it) }
+
+            // Handle comparable cases
+            is Comparable<*> -> first = first as? Comparable<Any?>
+
+            // Handle other cases or throw an error if the type is unsupported
+            else -> throw InvalidDataTypeForOperator("Cannot cast to ${second::class}")
+        }
+
     }
 
     try {
@@ -56,6 +91,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     else -> (first as Comparable<Any?>) > (second as Comparable<Any?>)
                 }
             }
+
             QueryCriteriaOperator.LESS_THAN -> {
                 when {
                     first == null && second == null -> false
@@ -65,6 +101,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     else -> (first as Comparable<Any?>) < (second as Comparable<Any?>)
                 }
             }
+
             QueryCriteriaOperator.LESS_THAN_EQUAL -> {
                 when {
                     first == null && second == null -> true
@@ -74,6 +111,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     else -> (first as Comparable<Any?>) <= (second as Comparable<Any?>)
                 }
             }
+
             QueryCriteriaOperator.GREATER_THAN_EQUAL -> {
                 when {
                     first == null && second == null -> true
@@ -83,17 +121,20 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                     else -> (first as Comparable<Any?>) >= (second as Comparable<Any?>)
                 }
             }
+
             QueryCriteriaOperator.BETWEEN -> {
-                if(first !is Pair<Any?, Any?>) false
+                if (first !is Pair<Any?, Any?>) false
                 else
                     first.first.compare(second, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
-                    first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL)
+                            first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL)
             }
+
             QueryCriteriaOperator.NOT_BETWEEN -> {
-                if(first !is Pair<Any?, Any?>) false
+                if (first !is Pair<Any?, Any?>) false
                 else !(first.first.compare(second, QueryCriteriaOperator.GREATER_THAN_EQUAL) &&
-                       first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL))
+                        first.second.compare(second, QueryCriteriaOperator.LESS_THAN_EQUAL))
             }
+
             QueryCriteriaOperator.NOT_EQUAL -> first != second
             QueryCriteriaOperator.NOT_STARTS_WITH -> !(first.toString()).startsWith(second.toString())
             QueryCriteriaOperator.NOT_NULL -> first != null
@@ -108,12 +149,13 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
                 val list = second as List<Any>
                 return list.find { first.compare(it, QueryCriteriaOperator.EQUAL) } != null
             }
+
             QueryCriteriaOperator.NOT_IN -> {
                 val list = second as List<Any>
                 return list.find { first.compare(it, QueryCriteriaOperator.EQUAL) } == null
             }
         }
-    } catch (e:Exception) {
+    } catch (e: Exception) {
         // Comparison operator was not found, we should throw an exception because the data types are not supported
         throw InvalidDataTypeForOperator(InvalidDataTypeForOperator.INVALID_DATA_TYPE_FOR_OPERATOR)
     }

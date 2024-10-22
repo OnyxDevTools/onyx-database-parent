@@ -129,22 +129,26 @@ interface Store {
      * @since 2.0.0
      */
     fun writeObject(value:Any?): Long {
-        val stream = BufferStream()
-        stream.putObject(value, context)
-        stream.flip()
-        return withBuffer(stream.byteBuffer) { valueBuffer ->
-            val size = valueBuffer.limit()
-            val position = this.allocate(size + Integer.BYTES)
+        if (value == null) {
+            return this.allocate(Integer.BYTES)
+        } else {
+            val stream = BufferStream()
+            stream.putObject(value, context)
+            stream.flip()
+            return withBuffer(stream.byteBuffer) { valueBuffer ->
+                val size = valueBuffer.limit()
+                val position = this.allocate(size + Integer.BYTES)
 
-            BufferPool.withIntBuffer {
-                it.putInt(size)
-                it.rewind()
-                this.write(it, position)
+                BufferPool.withIntBuffer {
+                    it.putInt(size)
+                    it.rewind()
+                    this.write(it, position)
+                }
+
+                this.write(valueBuffer, position + Integer.BYTES)
+
+                return@withBuffer position
             }
-
-            this.write(valueBuffer, position + Integer.BYTES)
-
-            return@withBuffer position
         }
     }
 

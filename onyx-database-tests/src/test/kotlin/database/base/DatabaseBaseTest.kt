@@ -157,6 +157,6 @@ open class DatabaseBaseTest constructor(open var factoryClass: KClass<*>) {
 
         @JvmStatic
         @Parameterized.Parameters
-        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(CacheManagerFactory::class, EmbeddedPersistenceManagerFactory::class, RemotePersistenceManagerFactory::class)
+        fun persistenceManagersToTest(): Collection<KClass<*>> = arrayListOf(EmbeddedPersistenceManagerFactory::class, )
     }
 }

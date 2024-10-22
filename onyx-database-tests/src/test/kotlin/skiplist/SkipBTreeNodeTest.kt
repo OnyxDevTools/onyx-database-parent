@@ -6,7 +6,7 @@ import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class SkipNodeTest {
+class SkipBTreeNodeTest {
 
     @Test
     fun testCreate() {
@@ -23,7 +23,7 @@ class SkipNodeTest {
     fun testSetRecord() {
         val memoryStore = createStore()
         memoryStore.allocate(99)
-        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
+        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6u)
         skipNode.setRecord(memoryStore, 1)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
         assertEquals(1, skipNode.record, "Value was not updated")
@@ -34,7 +34,7 @@ class SkipNodeTest {
     fun testSeTop() {
         val memoryStore = createStore()
         memoryStore.allocate(99)
-        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
+        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6u)
         skipNode.setTop(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
         assertEquals(9393L, skipNode.up, "Value was not updated")
@@ -45,7 +45,7 @@ class SkipNodeTest {
     fun testSetBottom() {
         val memoryStore = createStore()
         memoryStore.allocate(99)
-        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
+        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6u)
         skipNode.setBottom(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
         assertEquals(9393L, skipNode.down, "Value was not updated")
@@ -56,7 +56,7 @@ class SkipNodeTest {
     fun testSetLeft() {
         val memoryStore = createStore()
         memoryStore.allocate(99)
-        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
+        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6u)
         skipNode.setLeft(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
         assertEquals(9393L, skipNode.left, "Value was not updated")
@@ -67,7 +67,7 @@ class SkipNodeTest {
     fun testSetRight() {
         val memoryStore = createStore()
         memoryStore.allocate(99)
-        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6)
+        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6u)
         skipNode.setRight(memoryStore, 9393L)
         val persistedNode = SkipNode.get(memoryStore, skipNode.position)
         assertEquals(9393L, skipNode.right, "Value was not updated")

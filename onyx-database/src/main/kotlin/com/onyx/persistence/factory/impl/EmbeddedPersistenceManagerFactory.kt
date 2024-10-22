@@ -64,7 +64,7 @@ import javax.crypto.IllegalBlockSizeException
  *
  * @see com.onyx.persistence.factory.PersistenceManagerFactory
  */
-open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation, override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation)) : PersistenceManagerFactory {
+open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override val databaseLocation: String, val instance: String = databaseLocation, override var schemaContext: SchemaContext = DefaultSchemaContext(instance, databaseLocation), val addShutdownHook: Boolean = true) : PersistenceManagerFactory {
 
     override var encryption: EncryptionInteractor = DefaultEncryptionInteractorInstance
 
@@ -77,9 +77,11 @@ open class EmbeddedPersistenceManagerFactory @JvmOverloads constructor(override 
      * @since 1.0.0
      */
     init {
-        Runtime.getRuntime().addShutdownHook(object : Thread() {
-            override fun run() = close()
-        })
+        if (addShutdownHook) {
+            Runtime.getRuntime().addShutdownHook(object : Thread() {
+                override fun run() = close()
+            })
+        }
     }
 
     // region Properties

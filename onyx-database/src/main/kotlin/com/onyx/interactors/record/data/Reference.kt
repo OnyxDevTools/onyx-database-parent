@@ -21,13 +21,13 @@ data class Reference @JvmOverloads constructor(var partition: Long = 0L, var ref
     }
 
     override fun read(buffer: BufferStream) {
-        partition = buffer.long
-        reference = buffer.long
+        partition = buffer.bigInt
+        reference = buffer.bigInt
     }
 
     override fun write(buffer: BufferStream) {
-        buffer.putLong(partition)
-        buffer.putLong(reference)
+        buffer.putBigInt(partition)
+        buffer.putBigInt(reference)
     }
 
     @Throws(BufferingException::class)

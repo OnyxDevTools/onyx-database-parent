@@ -11,6 +11,7 @@ import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
 import java.util.*
+import kotlin.math.ln
 
 /**
  * Created by Tim Osborn on 1/7/17.
@@ -95,17 +96,17 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
             val keyLocation:Long = if(storeKeyWithinNode) key.long() else records.writeObject(key)
 
             //Stuff in between nearest and its right partner
-            var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0)
+            var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0.toUByte())
             updateNodeCache(insertedNode)
-            var level:Short = 0.toShort()
+            var level:UByte = 0.toUByte()
 
             result.recordId = insertedNode.position
 
             // Create Layers
-            while(coinToss()) {
+            while(coinToss(this.longSize())) {
 
                 // Add another level
-                if(level >= head.level) {
+                if(level >= head.level && head.level < 255.toUByte()) {
                     val newHead = SkipNode.create(fileStore, 0L, 0L, 0L, 0L, head.position, level)
                     updateNodeCache(newHead)
                     head.setTop(fileStore, newHead.position)
@@ -150,7 +151,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
      * Insert a new node between 2 other nodes
      * @since 2.0.0
      */
-    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:Short):SkipNode {
+    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:UByte):SkipNode {
         val right:SkipNode? = if((left?.right ?: 0L) > 0L) findNodeAtPosition(left!!.right) else null
 
         val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level)
@@ -281,6 +282,12 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     companion object {
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
         private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
-        private fun coinToss() = Math.random() < 0.25
+
+        private fun coinToss(size: Long): Boolean {
+            val logSize = ln(size.toDouble())
+            val minProbability = 0.05
+            val maxProbability = 0.5
+            return Math.random() < minProbability.coerceAtLeast(maxProbability.coerceAtMost(1 / logSize))
+        }
     }
 }

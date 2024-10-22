@@ -18,7 +18,7 @@ data class SkipNode(
         var down:Long = 0L,
         var record:Long = 0L,
         var key:Long = 0L,
-        var level:Short = 0
+        var level:UByte = 0.toUByte()
 ) : BufferStreamable {
 
     fun setTop(store:Store, top:Long) = withBigIntBuffer {
@@ -92,7 +92,11 @@ data class SkipNode(
         if(recordValue?.get() == null) {
             synchronized(this) {
                 if(recordValue?.get() == null) {
-                    recordValue = WeakReference(store.getObject(record))
+                    recordValue = if (record == -1L) {
+                        WeakReference(null)
+                    } else {
+                        WeakReference(store.getObject(record))
+                    }
                 }
             }
         }
@@ -108,7 +112,7 @@ data class SkipNode(
             buffer.putBigInt(down)
             buffer.putBigInt(record)
             buffer.putLong(key)
-            buffer.putShort(level)
+            buffer.put(level.toByte())
             buffer.flip()
             store.write(buffer, position)
         } finally {
@@ -127,7 +131,7 @@ data class SkipNode(
             down = buffer.bigInt
             record = buffer.bigInt
             key = buffer.long
-            level = buffer.short
+            level = buffer.get().toUByte()
             recordValue = null
         } finally {
             recycleBuffer(buffer)
@@ -139,9 +143,9 @@ data class SkipNode(
         get() = record > 0
 
     companion object {
-        const val SKIP_NODE_SIZE = (5 * 5) + java.lang.Long.BYTES + java.lang.Short.BYTES
+        const val SKIP_NODE_SIZE = (5 * 5) + java.lang.Long.BYTES + java.lang.Byte.BYTES
 
-        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:Short):SkipNode {
+        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:UByte):SkipNode {
             val node = SkipNode()
             node.key = key
             node.record = value
@@ -157,7 +161,6 @@ data class SkipNode(
         fun create(store: Store):SkipNode {
             val node = SkipNode()
             node.position = store.allocate(SKIP_NODE_SIZE)
-            node.write(store)
             return node
         }
 

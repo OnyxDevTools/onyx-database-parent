@@ -99,11 +99,13 @@ fun Any.setChar(field: Field, value: Char) = field.setChar(this, value)
 fun Any.setObject(field: Field, value: Any?) = field.set(this, value)
 fun Any.setAny(field: Field, child: Any?) = catchAll {
     when {
-        child != null && (field.type === child.javaClass || field.type === child.javaClass.primitiveType()) -> field.set(this, child)
-        child != null && !field.type.isAssignableFrom(child.javaClass) -> field.set(this, child.castTo(field.type))
-        else -> field.set(this, child)
-    }
-}
+        child != null -> when {
+            field.type == child.javaClass || field.type == child.javaClass.primitiveType() -> field.set(this, child)
+            !field.type.isAssignableFrom(child.javaClass) -> field.set(this, child.castTo(field.type))
+            else -> field.set(this, child)
+        }
+        else -> field.set(this, null)
+    } }
 
 fun Class<*>.canBeCastToPrimitive():Boolean = when (this) {
     ClassMetadata.LONG_TYPE ->              true
@@ -125,17 +127,20 @@ fun Class<*>.canBeCastToPrimitive():Boolean = when (this) {
     else -> false
 }
 
-fun Class<*>.primitiveType() = when {
+private val primitiveTypeMap = mapOf(
+    "java.lang.Boolean" to ClassMetadata.BOOLEAN_TYPE,
+    "java.lang.Character" to ClassMetadata.CHAR_TYPE,
+    "java.lang.Byte" to ClassMetadata.BYTE_TYPE,
+    "java.lang.Short" to ClassMetadata.SHORT_TYPE,
+    "java.lang.Integer" to ClassMetadata.INT_TYPE,
+    "java.lang.Float" to ClassMetadata.FLOAT_TYPE,
+    "java.lang.Long" to ClassMetadata.LONG_TYPE,
+    "java.lang.Double" to ClassMetadata.DOUBLE_TYPE
+)
+
+fun Class<*>.primitiveType(): Class<*>? = when {
     this.isPrimitive -> this
-    this.name == "java.lang.Boolean" -> ClassMetadata.BOOLEAN_TYPE
-    this.name == "java.lang.Character" -> ClassMetadata.CHAR_TYPE
-    this.name == "java.lang.Byte" -> ClassMetadata.BYTE_TYPE
-    this.name == "java.lang.Short" -> ClassMetadata.SHORT_TYPE
-    this.name == "java.lang.Integer" -> ClassMetadata.INT_TYPE
-    this.name == "java.lang.Float" -> ClassMetadata.FLOAT_TYPE
-    this.name == "java.lang.Long" -> ClassMetadata.LONG_TYPE
-    this.name == "java.lang.Double" -> ClassMetadata.DOUBLE_TYPE
-    else -> null
+    else -> primitiveTypeMap[this.name]
 }
 
 // endregion

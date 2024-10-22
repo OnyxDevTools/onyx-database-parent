@@ -28,6 +28,7 @@ class EncryptedFileChannelStore(filePath: String, context: SchemaContext, delete
             it.rewind()
             it.int
         }
+        if (size == 0) return null as T
 
         BufferPool.allocateAndLimit(size) {
             this.read(it, position + Integer.BYTES)

@@ -1,3 +1,4 @@
+
 package entities.relationship
 
 import com.onyx.persistence.IManagedEntity

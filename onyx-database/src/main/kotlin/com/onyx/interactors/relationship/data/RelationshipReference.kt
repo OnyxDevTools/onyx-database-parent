@@ -13,12 +13,12 @@ import com.onyx.persistence.context.SchemaContext
 class RelationshipReference @JvmOverloads constructor(var identifier: Any? = "", var partitionId: Long = 0L) : BufferStreamable, Comparable<RelationshipReference> {
 
     override fun read(buffer: BufferStream) {
-        partitionId = buffer.long
+        partitionId = buffer.bigInt
         identifier = buffer.value
     }
 
     override fun write(buffer: BufferStream) {
-        buffer.putLong(partitionId)
+        buffer.putBigInt(partitionId)
         buffer.putObject(identifier)
     }
 

@@ -281,6 +281,8 @@ open class FileChannelStore() : Store {
             it.int
         }
 
+        if (size == 0) return null as T
+
         val thread = Thread.currentThread()
         if(thread is OnyxThread && size <= thread.buffer.capacity()) {
             val buffer = thread.buffer

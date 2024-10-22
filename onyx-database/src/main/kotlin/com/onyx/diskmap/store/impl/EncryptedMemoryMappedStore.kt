@@ -20,11 +20,13 @@ class EncryptedMemoryMappedStore (filePath: String, context: SchemaContext, dele
      */
     @Suppress("UNCHECKED_CAST")
     override fun <T> getObject(position: Long):T {
+        if (position <= 0) return null as T
         val size = BufferPool.withIntBuffer {
             this.read(it, position)
             it.rewind()
             it.int
         }
+        if (size == 0) return null as T
 
         BufferPool.allocateAndLimit(size) {
             this.read(it, position + Integer.BYTES)
