@@ -103,7 +103,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
             result.recordId = insertedNode.position
 
             // Create Layers
-            while(coinToss(this.longSize())) {
+            while(coinToss()) {
 
                 // Add another level
                 if(level >= head.level && head.level < 255.toUByte()) {
@@ -282,12 +282,6 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     companion object {
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
         private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
-
-        private fun coinToss(size: Long): Boolean {
-            val logSize = ln(size.toDouble())
-            val minProbability = 0.05
-            val maxProbability = 0.5
-            return Math.random() < minProbability.coerceAtLeast(maxProbability.coerceAtMost(1 / logSize))
-        }
+        private fun coinToss() = Math.random() < 0.3
     }
 }

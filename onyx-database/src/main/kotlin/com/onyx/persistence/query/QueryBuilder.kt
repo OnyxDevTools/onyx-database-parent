@@ -2,6 +2,8 @@ package com.onyx.persistence.query
 
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import kotlin.reflect.KClass
 
 class QueryBuilder(var manager:PersistenceManager, var query: Query) {
@@ -28,9 +30,29 @@ class QueryBuilder(var manager:PersistenceManager, var query: Query) {
     fun <T : IManagedEntity> stream(action: (T) -> Boolean) {
         var i = 0
         manager.stream<T>(this.query) {
-            action(it) && ++i < query.maxResults
+            action(it) && (++i < query.maxResults || query.maxResults <= 0)
         }
     }
+
+    fun <T : IManagedEntity> parallelStream(threads: Int = 10, action: (T) -> Unit) {
+        val executor = Executors.newFixedThreadPool(threads)
+        val latch = CountDownLatch(threads)
+
+        manager.stream<T>(this.query) {
+            executor.submit {
+                try {
+                    action(it)
+                } finally {
+                    latch.countDown()
+                }
+            }
+            true
+        }
+
+        latch.await()  // Wait until all tasks are finished
+        executor.shutdown()  // Close the executor after all tasks are complete
+    }
+
 
     fun <T : IManagedEntity> lazy():List<T> {
         assignListener()

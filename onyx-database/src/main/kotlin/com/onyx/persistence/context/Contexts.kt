@@ -31,6 +31,17 @@ object Contexts {
     }
 
     /**
+     * Add Context to catalog.  This will uniquely store via contextId
+     *
+     * @param context Context to add or replace
+     * @since 2.0.0
+     */
+    @JvmStatic
+    fun remove(context:SchemaContext) = lock.writeLock {
+        contexts.remove(context.contextId)
+    }
+
+    /**
      * Get Schema Context by contextId
      *
      * @since 2.0.0

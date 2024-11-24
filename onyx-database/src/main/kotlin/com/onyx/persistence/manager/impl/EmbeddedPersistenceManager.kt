@@ -536,7 +536,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
         if (streamer is QueryMapStream) {
             val entityList = this.executeLazyQuery<IManagedEntity>(query) as LazyQueryCollection<IManagedEntity>
 
-            entityList.forEachIndexed { index, iManagedEntity ->
+            entityList.forEachIndexed { index, _ ->
                 if (!(streamer as QueryStream<Map<String, Any?>>).accept(
                         entityList.getDict(index) as Map<String, Any?>,
                         this

@@ -188,6 +188,8 @@ open class DefaultSchemaContext : SchemaContext {
         recordInteractors.clear() // Clear all Record Controllers
         relationshipInteractors.clear() // Clear all relationship controllers
         indexInteractors.clear() // Clear all index controllers
+
+        Contexts.remove(this)
     }
 
     // endregion
@@ -449,16 +451,9 @@ open class DefaultSchemaContext : SchemaContext {
         systemEntityByIDMap.getOrPut(systemEntityId) {
             val entity = serializedPersistenceManager.findById<SystemEntity>(SystemEntity::class.java, systemEntityId)
 
-            @Suppress("DuplicatedCode")
-            if (entity != null) {
-                synchronized(defaultSystemEntities) {
-                    defaultSystemEntities.put(entity.name, entity)
-                }
-
-                entity.attributes.sortBy { it.name }
-                entity.relationships.sortBy { it.name }
-                entity.indexes.sortBy { it.name }
-            }
+            entity?.attributes?.sortBy { it.name }
+            entity?.relationships?.sortBy { it.name }
+            entity?.indexes?.sortBy { it.name }
             return@getOrPut entity
         }
     }
