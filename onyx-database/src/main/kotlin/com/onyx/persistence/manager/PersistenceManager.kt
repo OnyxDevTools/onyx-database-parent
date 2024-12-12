@@ -59,6 +59,20 @@ interface PersistenceManager {
     fun <E : IManagedEntity> saveEntity(entity: E): E
 
     /**
+     * Save entity.  Persists a single entity for update or insert.  This method will cascade relationships and persist indexes.
+     *
+     * @since 1.0.0
+     *
+     * @param entity Managed Entity to Save
+     *
+     * @return Saved Managed Entity
+     *
+     * @throws OnyxException Exception occurred while persisting an entity
+     */
+    @Throws(OnyxException::class)
+    fun <E : IManagedEntity> save(entity: E): E = saveEntity(entity)
+
+    /**
      * Batch saves a list of entities.
      *
      * The entities must all be of the same type
@@ -69,6 +83,18 @@ interface PersistenceManager {
      */
     @Throws(OnyxException::class)
     fun saveEntities(entities: List<IManagedEntity>)
+
+    /**
+     * Batch saves a list of entities.
+     *
+     * The entities must all be of the same type
+     *
+     * @since 1.0.0
+     * @param entities List of entities
+     * @throws OnyxException Exception occurred while saving an entity within the list.  This will not roll back preceding saves if error occurs.
+     */
+    @Throws(OnyxException::class)
+    fun save(entities: List<IManagedEntity>) = saveEntities(entities)
 
     /**
      * Deletes a single entity
@@ -84,6 +110,19 @@ interface PersistenceManager {
     fun deleteEntity(entity: IManagedEntity): Boolean
 
     /**
+     * Deletes a single entity
+     *
+     * The entity must exist otherwise it will throw an exception.  This will cascade delete relationships and remove index references.
+     *
+     * @since 1.0.0
+     * @param entity Managed Entity to delete
+     * @return Flag indicating it was deleted
+     * @throws OnyxException Error occurred while deleting
+     */
+    @Throws(OnyxException::class)
+    fun delete(entity: IManagedEntity): Boolean = deleteEntity(entity)
+
+    /**
      * Deletes list of entities.
      *
      * The entities must exist otherwise it will throw an exception.  This will cascade delete relationships and remove index references.
@@ -96,6 +135,20 @@ interface PersistenceManager {
      */
     @Throws(OnyxException::class)
     fun deleteEntities(entities: List<IManagedEntity>) = entities.forEach { deleteEntity(it) }
+
+    /**
+     * Deletes list of entities.
+     *
+     * The entities must exist otherwise it will throw an exception.  This will cascade delete relationships and remove index references.
+     *
+     * Requires all of the entities to be of the same type
+     *
+     * @since 1.0.0
+     * @param entities List of entities
+     * @throws OnyxException Error occurred while deleting.  If exception is thrown, preceding entities will not be rolled back
+     */
+    @Throws(OnyxException::class)
+    fun delete(entities: List<IManagedEntity>) = entities.forEach { deleteEntity(it) }
 
     /**
      * Execute query and delete entities returned in the results

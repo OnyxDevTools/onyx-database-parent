@@ -8,6 +8,7 @@ import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.from
 import com.onyx.persistence.stream.QueryMapStream
 import com.onyx.persistence.stream.QueryStream
 import database.base.DatabaseBaseTest
@@ -49,6 +50,12 @@ class EntityStreamTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(
                 return true
             }
         })
+
+        manager.from<ImmutableSequenceIdentifierEntity>()
+            .stream<ImmutableSequenceIdentifierEntity> { item ->
+
+                true
+            }
 
         assertTrue(hadDataToStream.get(), "Stream had data to iterate")
     }

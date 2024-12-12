@@ -18,10 +18,10 @@ import java.util.Map;
 
 /**
  * Created by Tim Osborn on 6/28/16.
- *
+ * <p>
  * Manual Migrations utilizes an API within the Persistence Manager that has many uses.  It can be used to Migrate data,
  * perform analytics, or run complex scripts.
- *
+ * <p>
  * This example will use it to convert data from an old format to a new format.  Also, there is an example where it is used to
  * update data based on very specific criteria.
  */
@@ -29,11 +29,11 @@ class ManualMigrationDemo {
 
     /**
      * Main Method to demo the functionality
+     *
      * @param persistenceManager Open and valid persistence manager
      */
     @SuppressWarnings("unchecked")
-    static void demo(PersistenceManager persistenceManager) throws OnyxException
-    {
+    static void demo(PersistenceManager persistenceManager) throws OnyxException {
 
         // This is a simple example of how to use the stream() api to iterate through payment records and dynamically update the payment record
         // with very specific data driven format.
@@ -66,10 +66,9 @@ class ManualMigrationDemo {
             try {
 
                 @SuppressWarnings("RedundantCast")
-                Map mapValue = (Map)o;
+                Map mapValue = (Map) o;
                 // Ensure the property still exists within the data.
-                if(mapValue.containsKey("balanceDue"))
-                {
+                if (mapValue.containsKey("balanceDue")) {
                     double balanceDue = (double) mapValue.get("balanceDue");
 
                     // This field has been updated to long in the new data model but, the old data model persisted it as an int.  So, that is the reason why we cast it as an integer.
@@ -97,14 +96,11 @@ class ManualMigrationDemo {
                     }
                 }
 
-            }catch (OnyxException e)
-            {
+            } catch (OnyxException e) {
                 e.printStackTrace();
             }
 
         });
-
-
 
 
     }
