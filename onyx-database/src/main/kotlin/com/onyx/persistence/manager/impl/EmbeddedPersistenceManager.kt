@@ -550,7 +550,7 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
             } else {
                 val partitions = query.entityType!!.let { context.getAllPartitions(it) }
                 partitions.map {
-                    context.getDescriptorForEntity(query.entityType!!, it)
+                    context.getDescriptorForEntity(query.entityType!!, it.value)
                 } + listOf(context.getDescriptorForEntity(query.entityType!!, ""))
             }
 

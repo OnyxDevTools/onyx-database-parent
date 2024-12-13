@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.3.5")
+    implementation("com.onyxdevtools:onyx-database:3.3.6")
 }
 
 group = "com.onyxdevtools"
-version = "3.3.5"
+version = "3.3.6"
 description = "com.onyxdevtools:onyx-database-examples:encryption"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
