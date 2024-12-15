@@ -5,6 +5,7 @@ import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.impl.base.AbstractDiskMap
 import com.onyx.diskmap.store.Store
+import com.onyx.extension.common.castTo
 import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.long
 import com.onyx.lang.map.OptimisticLockingMap
@@ -12,6 +13,7 @@ import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.math.ln
+import kotlin.reflect.KClass
 
 /**
  * Created by Tim Osborn on 1/7/17.
@@ -143,7 +145,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
      * @return What we just put in
      */
     override fun put(key: K, value: V): V {
-        this@AbstractSkipList.internalPutAndGet(key, value, null)
+        this@AbstractSkipList.internalPutAndGet(key.castTo(keyType) as K, value, null)
         return value
     }
 
@@ -215,7 +217,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     /**
      * Get value from map
      */
-    override fun get(key: K): V? = find(key)?.getRecord(records)
+    override fun get(key: K): V? = find(key.castTo(keyType) as K)?.getRecord(records)
 
     /**
      * Find matching value.  This is different than nearest because it will return null
@@ -283,5 +285,25 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
         private fun <K> isEqual(key: K, key2: K): Boolean = key.forceCompare(key2, QueryCriteriaOperator.EQUAL)
         private fun coinToss() = Math.random() < 0.3
+
+        fun Any?.cast(type: Class<*>): Any? {
+            val kotlinClass: KClass<*> = type.kotlin
+            return when {
+                this is String && kotlinClass != String::class -> return when (kotlinClass) {
+                    Int::class -> this.toIntOrNull() ?: 0
+                    Long::class -> this.toLongOrNull() ?: 0L
+                    Double::class -> this.toDoubleOrNull() ?: 0.0
+                    Float::class -> this.toFloatOrNull() ?: 0.0f
+                    Boolean::class -> (this.toIntOrNull() ?: 0) != 0
+                    Char::class -> this.chars().findFirst()
+                    Byte::class -> this.toByteOrNull() ?: 0
+                    Short::class -> this.toShortOrNull() ?: 0
+                    Date::class -> Date(this.toLongOrNull() ?: 0L)
+                    else -> this
+                }
+                else -> this
+            }
+        }
+
     }
 }

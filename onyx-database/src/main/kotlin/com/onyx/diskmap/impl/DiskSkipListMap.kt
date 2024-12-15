@@ -7,6 +7,7 @@ import com.onyx.diskmap.data.PutResult
 import com.onyx.diskmap.data.SkipNode
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.AttributeTypeMismatchException
+import com.onyx.extension.common.castTo
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.extension.common.forceCompare
 import com.onyx.extension.common.getAny
@@ -15,6 +16,7 @@ import com.onyx.lang.concurrent.impl.DefaultClosureReadWriteLock
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 import java.util.*
+import kotlin.reflect.KClass
 
 /**
  * Created by Tim Osborn on 1/7/17.
@@ -41,7 +43,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * @param key Key Identifier
      * @return The value that was removed
      */
-    override fun remove(key: K): V? = mapReadWriteLock.writeLock { super.remove(key) }
+    override fun remove(key: K): V? = mapReadWriteLock.writeLock { super.remove(key.cast(keyType) as K) }
 
     /**
      * Put a value into a map based on its key.
@@ -50,7 +52,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * @param value Underlying value
      * @return The value of the object that was just put into the map
      */
-    override fun put(key: K, value: V): V = mapReadWriteLock.writeLock { super.put(key, value) }
+    override fun put(key: K, value: V): V = mapReadWriteLock.writeLock { super.put(key.cast(keyType) as K, value) }
 
     /**
      * Put key value.  This is the same as map.put(K,V) except
@@ -64,7 +66,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * @since 2.1.3
      * @return Value for previous record ID and if the value is been updated or inserted
      */
-    override fun putAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult = mapReadWriteLock.writeLock { super.internalPutAndGet(key, value, preUpdate) }
+    override fun putAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult = mapReadWriteLock.writeLock { super.internalPutAndGet(key.cast(keyType) as K, value, preUpdate) }
 
     /**
      * Iterates through the entire skip list to see if it contains the value you are looking for.
@@ -112,7 +114,7 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * @return The position of the record reference if it exists.  Otherwise -1
      * @since 1.2.0
      */
-    override fun getRecID(key: K): Long = mapReadWriteLock.readLock { find(key)?.position ?: -1  }
+    override fun getRecID(key: K): Long = mapReadWriteLock.readLock { find(key.cast(keyType) as K)?.position ?: -1  }
 
     /**
      * Hydrate a record with its record ID.  If the record value exists it will be returned
@@ -164,12 +166,13 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * Find all references above and perhaps equal to the key you are sending in.  The underlying data structure
      * is sorted so this should be very efficient
      *
-     * @param index        The index value to compare.  This must be comparable.  It does not work with hash codes.
+     * @param key        The key value to compare.  This must be comparable.  It does not work with hash codes.
      * @param includeFirst Whether above and equals to
      * @return A Set of references
      * @since 1.2.0
      */
-    override fun above(index: K, includeFirst: Boolean): Set<Long> {
+    override fun above(key: K, includeFirst: Boolean): Set<Long> {
+        val index = key.cast(keyType) as K
         val results = HashSet<Long>()
         var node:SkipNode? = nearest(index)
 
@@ -192,13 +195,14 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * Find all references below and perhaps equal to the key you are sending in.  The underlying data structure
      * is sorted so this should be very efficient
      *
-     * @param index        The index value to compare.  This must be comparable.  It does not work with hash codes.
+     * @param key The index value to compare.  This must be comparable.  It does not work with hash codes.
      * @param includeFirst Whether above and equals to
      * @return A Set of references
      * @since 1.2.0
      */
-    override fun below(index: K, includeFirst: Boolean): Set<Long> {
-    val results = HashSet<Long>()
+    override fun below(key: K, includeFirst: Boolean): Set<Long> {
+        val results = HashSet<Long>()
+        val index = key.cast(keyType) as K
         var node:SkipNode? = nearest(index)
 
         if(node != null && !node.isRecord && node.right> 0)
@@ -221,14 +225,16 @@ open class DiskSkipListMap<K, V>(fileStore:WeakReference<Store>, recordStore:Wea
      * Find all references between from and to value.  The underlying data structure
      * is sorted so this should be very efficient
      *
-     * @param fromValue The key to compare.  This must be comparable.  It is only sorted by comparable values
+     * @param from The key to compare.  This must be comparable.  It is only sorted by comparable values
      * @param includeFrom Whether to compare above and equal or not.
-     * @param toValue Key to end range to
+     * @param to Key to end range to
      * @param includeTo Whether to compare equal or not.
      *
      * @since 2.1.3
      */
-    override fun between(fromValue: K?, includeFrom: Boolean, toValue: K?, includeTo: Boolean): Set<Long> {
+    override fun between(from: K?, includeFrom: Boolean, to: K?, includeTo: Boolean): Set<Long> {
+        val fromValue = from?.cast(keyType) as K?
+        val toValue = to?.cast(keyType) as K?
         val results = HashSet<Long>()
         var node:SkipNode? = nearest(fromValue!!)
 

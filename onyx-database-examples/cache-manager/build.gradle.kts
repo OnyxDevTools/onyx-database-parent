@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.3.6")
+    implementation("com.onyxdevtools:onyx-database:3.3.7")
 }
 
 group = "com.onyxdevtools"
-version = "3.3.6"
+version = "3.3.7"
 description = "com.onyxdevtools:onyx-database-examples:cache-manager"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
