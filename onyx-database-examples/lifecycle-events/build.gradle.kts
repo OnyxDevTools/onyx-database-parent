@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.3.7")
+    implementation("com.onyxdevtools:onyx-database:3.3.8")
 }
 
 group = "com.onyxdevtools"
-version = "3.3.7"
+version = "3.3.8"
 description = "com.onyxdevtools:onyx-database-examples:lifecycle-events"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
