@@ -7,7 +7,6 @@ import com.onyx.extension.identifier
 import com.onyx.extension.set
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.SchemaContext
-import java.util.UUID
 
 class UUIDRecordInteractor(entityDescriptor: EntityDescriptor, context: SchemaContext) : DefaultRecordInteractor(entityDescriptor, context) {
 

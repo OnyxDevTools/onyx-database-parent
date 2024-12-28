@@ -1,5 +1,4 @@
-package com.onyx.file.extensions
-
+package com.onyx.extension.common
 import java.util.*
 
 private const val UUID_EPOCH_OFFSET: Long = 122192928000000000L // in 100-nanosecond units
@@ -26,7 +25,7 @@ fun uuid(): String {
                 // 2. Use a random clock sequence (risking collisions)
                 // 3. Throw an exception (indicating rate limiting)
                 // For this example, let's just reset it:
-                clockSequence = 0;
+                clockSequence = 0
             }
         }
     }
