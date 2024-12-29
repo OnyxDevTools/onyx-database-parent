@@ -65,7 +65,7 @@ class OnyxRMIClient : NetworkClient() {
         }
 
         @Throws(Throwable::class)
-        override fun invoke(proxy: Any, method: Method, args: Array<Any?>): Any? {
+        override fun invoke(proxy: Any, method: Method, args: Array<Any?>?): Any? {
             val request = RMIRequest(remoteId, methods.indexOf(method).toByte(), args)
             val result = send(request)
             if (result is Exception)

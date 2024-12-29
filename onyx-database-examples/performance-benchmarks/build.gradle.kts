@@ -23,10 +23,10 @@ dependencies {
     implementation("org.hibernate:hibernate-core:5.2.2.Final")
     implementation("org.hibernate:hibernate-entitymanager:5.2.2.Final")
     implementation("com.h2database:h2:1.4.192")
-    implementation("org.hsqldb:hsqldb:3.3.9")
+    implementation("org.hsqldb:hsqldb:3.4.2")
     implementation("org.apache.derby:derby:10.12.1.1")
     implementation("org.xerial:sqlite-jdbc:3.8.7")
-    implementation("com.onyxdevtools:onyx-database:3.3.9")
+    implementation("com.onyxdevtools:onyx-database:3.4.2")
 }
 
 group = "com.onyxdevtools"

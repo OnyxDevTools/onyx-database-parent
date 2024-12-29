@@ -170,6 +170,11 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
 
     // endregion
 
+    fun <T> service(name: String, type: Class<*>): T {
+        @Suppress("UNCHECKED_CAST")
+        return onyxRMIClient.getRemoteObject(name, type) as? T ?: throw Exception("Service not found")
+    }
+
     companion object {
 
         enum class Services(val serviceId:String) {
@@ -184,4 +189,6 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
         // so we can have it as non nullable
         val UNINITIALIZED_SCHEMA_CONTEXT: RemoteSchemaContext = RemoteSchemaContext()
     }
+
+
 }

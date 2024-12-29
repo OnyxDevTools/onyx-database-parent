@@ -71,10 +71,12 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
      */
     override fun start() {
         if (!isRunning) {
-            this.persistenceManagerFactory = ServerPersistenceManagerFactory(this.databaseLocation)
-            this.persistenceManagerFactory?.setCredentials(this.user, this.password)
-            this.persistenceManagerFactory?.storeType = this.storeType
-            this.persistenceManagerFactory?.initialize()
+            if (this.persistenceManagerFactory == null) {
+                this.persistenceManagerFactory = ServerPersistenceManagerFactory(this.databaseLocation)
+                this.persistenceManagerFactory?.setCredentials(this.user, this.password)
+                this.persistenceManagerFactory?.storeType = this.storeType
+                this.persistenceManagerFactory?.initialize()
+            }
 
             // Create a default user
             val user = SystemUser()
@@ -142,10 +144,32 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     val persistenceManager: PersistenceManager
         get() = this.persistenceManagerFactory!!.persistenceManager
 
+    /**
+     * Register services.  This method registers all of the proxy objects and makes them public
+     */
+    @Suppress("MemberVisibilityCanPrivate")
+    fun <T> register(
+        name: String,
+        implementation: T,
+        type: Class<T>,
+    ) {
+        rmiServer.register(name, implementation as Any, type)
+    }
+
+    /**
+     * Register services.  This method registers all of the proxy objects and makes them public
+     */
+    @Suppress("MemberVisibilityCanPrivate")
+    fun <T> unregister(
+        name: String,
+    ) {
+        rmiServer.deregister(name)
+    }
+
     companion object {
 
-        val PERSISTENCE_MANAGER_SERVICE = "1"
-        val AUTHENTICATION_MANAGER_SERVICE = "2"
+        const val PERSISTENCE_MANAGER_SERVICE = "1"
+        const val AUTHENTICATION_MANAGER_SERVICE = "2"
 
         /**
          * Run Database Server Main Method
@@ -169,6 +193,7 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
             instance.start()
             instance.join()
         }
+
     }
 }
 
