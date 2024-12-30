@@ -28,8 +28,11 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
      * @since 1.3.1
      */
     override fun subscribe(query: Query) {
-        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber) as RemoteQueryListener<*>
-        query.changeListener = remoteQueryListener
+        if (query.changeListener is PushSubscriber) {
+            val remoteQueryListener =
+                this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber) as RemoteQueryListener<*>
+            query.changeListener = remoteQueryListener
+        }
         super.subscribe(query)
     }
 
@@ -42,9 +45,14 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
      * @since 1.3.0
      */
     override fun subscribe(results: CachedResults, queryListener: QueryListener<*>) {
-        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(queryListener as PushSubscriber) as RemoteQueryListener<*>?
-        if (remoteQueryListener != null) {
-            results.subscribe(remoteQueryListener)
+        if (queryListener is PushSubscriber) {
+            val remoteQueryListener =
+                this.pushPublisher!!.getRegisteredSubscriberIdentity(queryListener as PushSubscriber) as RemoteQueryListener<*>?
+            if (remoteQueryListener != null) {
+                results.subscribe(remoteQueryListener)
+            }
+        } else {
+            super.subscribe(results, queryListener)
         }
     }
 
@@ -56,12 +64,16 @@ class RemoteQueryCacheInteractor(context: SchemaContext) : DefaultQueryCacheInte
      * @since 1.3.0
      */
     override fun unSubscribe(query: Query): Boolean {
-        val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber) as RemoteQueryListener<*>?
-        if (remoteQueryListener != null) {
-            this.pushPublisher!!.deRegisterSubscriberIdentity(remoteQueryListener)
-            val cachedResults = getCachedQueryResults(query)
-            cachedResults?.unSubscribe(remoteQueryListener)
+        if (query.changeListener is PushSubscriber) {
+            val remoteQueryListener = this.pushPublisher!!.getRegisteredSubscriberIdentity(query.changeListener as PushSubscriber) as RemoteQueryListener<*>?
+            if (remoteQueryListener != null) {
+                this.pushPublisher!!.deRegisterSubscriberIdentity(remoteQueryListener)
+                val cachedResults = getCachedQueryResults(query)
+                cachedResults?.unSubscribe(remoteQueryListener)
+            }
+            return false
+        } else {
+            return super.unSubscribe(query)
         }
-        return false
     }
 }

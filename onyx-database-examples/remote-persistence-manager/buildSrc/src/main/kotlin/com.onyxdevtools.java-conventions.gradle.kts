@@ -15,11 +15,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-remote-database:3.4.2")
+    implementation("com.onyxdevtools:onyx-remote-database:3.4.3")
 }
 
 group = "com.onyxdevtools"
-version = "3.4.2"
+version = "3.4.3"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 publishing {
