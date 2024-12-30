@@ -23,8 +23,7 @@ class DefaultAuthenticationManager(private val persistenceManager: PersistenceMa
      */
     @Throws(InitializationException::class)
     override fun verify(username: String, password: String) {
-        val user: SystemUser?
-        user = try {
+        val user: SystemUser? = try {
             persistenceManager.findById(SystemUser::class.java, username)
         } catch (e: OnyxException) {
             throw InitializationException(InitializationException.UNKNOWN_EXCEPTION, e)

@@ -3,12 +3,13 @@ package zstartup
 import com.onyx.exception.InitializationException
 import com.onyx.persistence.factory.impl.RemotePersistenceManagerFactory
 import com.onyx.application.impl.DatabaseServer
+import com.onyx.exception.ConnectionFailedException
+import com.onyx.extension.common.async
 import com.onyx.persistence.IManagedEntity
 import database.base.DatabaseBaseTest
 import entities.SimpleEntity
 import org.junit.Before
 import org.junit.FixMethodOrder
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runners.MethodSorters
 import kotlin.test.assertEquals
@@ -95,6 +96,8 @@ class TestRemoteDatabaseInitialization {
         server.port = 8082
         server.start()
 
+        Thread.sleep(1000)
+
         val foundAfterClose = manager.findById<SimpleEntity>(SimpleEntity::class.java, simpleEntity.simpleId)
 
         assertEquals(simpleEntity.simpleId, foundAfterClose!!.simpleId, "Failed to retrieve simpleEntity")
@@ -110,10 +113,11 @@ class TestRemoteDatabaseInitialization {
 
         val factory = RemotePersistenceManagerFactory(CONN_BEFORE_START_LOCATION)
         factory.setCredentials("admin", "admin")
+        factory.keepAlive = true
 
-        try {
+        async {
             factory.initialize()
-        } catch (e: InitializationException) { }
+        }
 
         val manager = factory.persistenceManager
 
@@ -122,9 +126,11 @@ class TestRemoteDatabaseInitialization {
 
         try {
             manager.saveEntity<IManagedEntity>(simpleEntity)
-        } catch (queryException: InitializationException) { }
+        } catch (queryException: ConnectionFailedException) { }
 
         server.start()
+
+        Thread.sleep(1000)
 
         manager.saveEntity<IManagedEntity>(simpleEntity)
         val foundAfterClose = manager.findById<IManagedEntity>(SimpleEntity::class.java, simpleEntity.simpleId) as SimpleEntity?
@@ -135,7 +141,7 @@ class TestRemoteDatabaseInitialization {
         server.stop()
     }
 
-    @Test(expected = InitializationException::class)
+    @Test(expected = ConnectionFailedException::class)
     fun testPersistentConnectionNotReOpened() {
         var factory: RemotePersistenceManagerFactory? = null
         try {
@@ -171,6 +177,7 @@ class TestRemoteDatabaseInitialization {
     @Test(expected = InitializationException::class)
     fun testDataFileIsNotAccessible() {
         val fac = RemotePersistenceManagerFactory(INVALID_DATABASE_LOCATION)
+        fac.keepAlive = false
         fac.initialize()
     }
 

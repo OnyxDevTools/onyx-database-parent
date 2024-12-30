@@ -9,7 +9,6 @@ import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
 import com.onyx.extension.common.catchAll
 import com.onyx.lang.property.mutableLazy
-import com.onyx.network.ssl.SSLPeer
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.context.impl.RemoteSchemaContext
 import com.onyx.persistence.factory.PersistenceManagerFactory
@@ -53,20 +52,15 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager
  *
  * Tim Osborn, 02/13/2017 - This was augmented to use the new RMI Socket Server.  It has since been optimized
  */
-open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory, SSLPeer {
+open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory {
 
     override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
 
-    override var protocol = "TLSv1.2"
-    override var sslStorePassword: String? = null
-    override var sslKeystoreFilePath: String? = null
-    override var sslKeystorePassword: String? = null
-    override var sslTrustStoreFilePath: String? = null
-    override var sslTrustStorePassword: String? = null
+    var keepAlive = true
 
     // region Private Values
 
-    private val onyxRMIClient: OnyxRMIClient by lazy { OnyxRMIClient() }
+    private val onyxRMIClient: OnyxRMIClient by lazy { OnyxRMIClient().apply { this.keepAlive = keepAlive } }
 
     // endregion
 
@@ -115,7 +109,7 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
         val host = databaseLocation.replace(":$port", "")
 
         onyxRMIClient.setCredentials(this.user, this.password)
-        copySSLPeerTo(onyxRMIClient)
+//        copySSLPeerTo(onyxRMIClient)
 
         val authenticationManager = onyxRMIClient.getRemoteObject(Services.AUTHENTICATION_MANAGER_SERVICE.serviceId, AuthenticationManager::class.java) as AuthenticationManager
         onyxRMIClient.authenticationManager = authenticationManager
@@ -170,6 +164,7 @@ open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLoc
 
     // endregion
 
+    @Suppress("unused")
     fun <T> service(name: String, type: Class<*>): T {
         @Suppress("UNCHECKED_CAST")
         return onyxRMIClient.getRemoteObject(name, type) as? T ?: throw Exception("Service not found")

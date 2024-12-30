@@ -8,7 +8,6 @@ import com.onyx.network.push.PushPublisher
 import com.onyx.network.push.PushConsumer
 import com.onyx.exception.BufferingException
 import com.onyx.persistence.context.SchemaContext
-import java.nio.channels.ByteChannel
 
 import java.util.Objects
 
@@ -30,10 +29,7 @@ class RemoteQueryListener<in T>(private val baseListener: QueryListener<T>? = nu
     @Transient
     override var connection: Connection? = null
     @Transient
-    override var channel: ByteChannel? = null
-    @Transient
     private var pushPublisher: PushPublisher? = null
-
 
     /**
      * Read from buffer stream

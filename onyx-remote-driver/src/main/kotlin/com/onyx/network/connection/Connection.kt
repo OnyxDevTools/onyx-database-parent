@@ -1,7 +1,7 @@
 package com.onyx.network.connection
 
-import java.nio.ByteBuffer
-import java.nio.channels.ByteChannel
+import io.ktor.websocket.*
+
 
 /**
  * Created by Tim Osborn on 2/12/17.
@@ -10,7 +10,8 @@ import java.nio.channels.ByteChannel
  * that each connection is assigned to.
  * @since 1.2.0
  */
-class Connection(val socketChannel: ByteChannel) {
+data class Connection(
+    val connection: DefaultWebSocketSession
+) {
     var isAuthenticated = false
-    var lastReadPacket:ByteBuffer? = null
 }

@@ -1,6 +1,5 @@
 package com.onyx.network.ssl
 
-import com.onyx.network.auth.impl.NetworkPeer
 import java.io.File
 import java.security.KeyStore
 import javax.net.ssl.KeyManager
@@ -79,7 +78,7 @@ interface SSLPeer {
     @Throws(Exception::class)
     fun createKeyManagers(filepath: String, keystorePassword: String, keyPassword: String): Array<KeyManager> {
         val keyStore = KeyStore.getInstance("JKS")
-        val keyStoreIS = NetworkPeer::class.java.classLoader.getResourceAsStream(filepath) ?: File(filepath).inputStream()
+        val keyStoreIS = SSLPeer::class.java.classLoader.getResourceAsStream(filepath) ?: File(filepath).inputStream()
         keyStoreIS.use {
             keyStore.load(it, keystorePassword.toCharArray())
         }
@@ -100,7 +99,7 @@ interface SSLPeer {
     @Throws(Exception::class)
     fun createTrustManagers(filepath: String, trustStorePassword: String): Array<TrustManager> {
         val trustStore = KeyStore.getInstance("JKS")
-        val trustStoreIS = NetworkPeer::class.java.classLoader.getResourceAsStream(filepath) ?: File(filepath).inputStream()
+        val trustStoreIS = SSLPeer::class.java.classLoader.getResourceAsStream(filepath) ?: File(filepath).inputStream()
         trustStoreIS.use {
             trustStore.load(it, trustStorePassword.toCharArray())
         }

@@ -8,10 +8,25 @@ import com.onyx.network.rmi.data.RMIRequest
 import com.onyx.exception.OnyxException
 import com.onyx.exception.InitializationException
 import com.onyx.lang.map.OptimisticLockingMap
-import com.onyx.network.NetworkServer
-
+import com.onyx.network.push.PushPublisher
+import com.onyx.network.push.PushSubscriber
+import com.onyx.network.rmi.OnyxRMIClient.Companion.PUSH_NOTIFICATION
+import com.onyx.network.serialization.ServerSerializer
+import com.onyx.network.serialization.impl.DefaultServerSerializer
+import com.onyx.network.transport.data.RequestToken
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
+import io.ktor.util.collections.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.*
 import java.lang.reflect.Method
+import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.HashMap
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Created by Tim Osborn on 6/27/16.
@@ -27,12 +42,18 @@ import kotlin.collections.HashMap
  *
  * @since 1.2.0
  */
-class OnyxRMIServer : NetworkServer() {
+class OnyxRMIServer : PushPublisher {
 
     // Local Cache of the registered objects
     private val registeredObjects = OptimisticLockingMap<String, Any>(HashMap())
     private val registeredInterfaces = OptimisticLockingMap<String, Class<*>>(HashMap())
     private val methodCache = OptimisticLockingMap<Class<*>, MutableList<Method>>(HashMap())
+
+    private var requestHandler: RequestHandler
+    private val connections = ConcurrentSet<Connection>()
+    private val serializer: ServerSerializer = DefaultServerSerializer()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    var port: Int = 8082
 
     /**
      * Constructor
@@ -56,7 +77,9 @@ class OnyxRMIServer : NetworkServer() {
              */
             private fun verifySession(connection: Connection, registeredObject: Any?): Boolean {
                 if (!AuthenticationManager::class.java.isAssignableFrom(registeredObject!!.javaClass) && !connection.isAuthenticated) {
-                    connection.socketChannel.close()
+                    runBlocking {
+                        connection.connection.close()
+                    }
                     return false
                 }
                 return true
@@ -96,8 +119,7 @@ class OnyxRMIServer : NetworkServer() {
                     if (registeredObject == null) return MethodInvocationException()
 
                     // Find the correct method.  If it doesn't exist, return an exception
-                    val method: Method
-                    method = try {
+                    val method: Method = try {
                         getCorrectMethod(registeredInterface!!, `object`.method)
                     } catch (e: Exception) {
                         return MethodInvocationException(MethodInvocationException.NO_SUCH_METHOD, e)
@@ -151,8 +173,8 @@ class OnyxRMIServer : NetworkServer() {
      * @since 1.2.0
      */
     fun register(remoteId: String, `object`: Any, interfaceToRegister: Class<*>) {
-        registeredObjects.put(remoteId, `object`)
-        registeredInterfaces.put(remoteId, interfaceToRegister)
+        registeredObjects[remoteId] = `object`
+        registeredInterfaces[remoteId] = interfaceToRegister
     }
 
     /**
@@ -176,4 +198,209 @@ class OnyxRMIServer : NetworkServer() {
     @Suppress("UNUSED")
     fun getRegisteredInstance(name: String): Any = registeredObjects[name]!!
 
+    // region Push and Subscribers
+
+    // Registered Push subscribers
+    private val pushSubscribers = OptimisticLockingMap<PushSubscriber, PushSubscriber>(java.util.HashMap())
+
+    // Counter for correlating push subscribers
+    private val pushSubscriberId = AtomicLong(0)
+
+    /**
+     * Handle a push registration event.
+     *
+     * 1.  The registration process starts with a request with a subscriber object.
+     * It is indicated as a push subscriber only because of the type of packet.
+     * The packet will contain an subscriberEvent of 1 indicating it is a
+     * request to register for push notifications
+     * 2.  The subscriber object is assigned an identity
+     * 3.  It exists and only gets cleared out if the connection is dropped
+     * 4.  Client sends same request only containing a code of 2 indicating
+     * it is a de-register event
+     *
+     * @param message Request information
+     * @param connection Connection information
+     *
+     * @since 1.3.0 Push notifications were introduced
+     */
+    private suspend fun handlePushSubscription(message: RequestToken, connection: Connection) {
+        val subscriber = message.packet as PushSubscriber
+        // Register subscriber
+        if (subscriber.subscribeEvent == REMOVE_SUBSCRIBER_EVENT) {
+            subscriber.connection = connection
+            subscriber.setPushPublisher(this)
+            subscriber.pushObjectId = pushSubscriberId.incrementAndGet()
+            message.packet = subscriber.pushObjectId
+            pushSubscribers[subscriber] = subscriber
+        } else if (subscriber.subscribeEvent == REGISTER_SUBSCRIBER_EVENT) {
+            // Remove subscriber
+            pushSubscribers.remove(subscriber)
+        }
+
+        write(connection, message)
+    }
+
+    /**
+     * Push an object to the client.  This does not wait for receipt nor a response
+     *
+     * @param pushSubscriber Push notification subscriber
+     * @param message Message to send to client
+     *
+     * @since 1.3.0
+     */
+    override fun push(pushSubscriber: PushSubscriber, message: Any) {
+        serviceScope.launch {
+            if (pushSubscriber.connection?.connection?.isActive == true) {
+                pushSubscriber.packet = message
+                write(pushSubscriber.connection!!, RequestToken(PUSH_NOTIFICATION, pushSubscriber))
+            } else {
+                deRegisterSubscriberIdentity(pushSubscriber) // Clean up non connected subscribers if not connected
+            }
+        }
+    }
+
+    /**`
+     * Get the actual registered identity of the push subscriber.  This correlates references
+     *
+     * @param pushSubscriber Subscriber sent from push registration request
+     * @return The actual reference of the subscriber
+     *
+     * @since 1.3.0
+     */
+    override fun getRegisteredSubscriberIdentity(pushSubscriber: PushSubscriber): PushSubscriber? = pushSubscribers[pushSubscriber]
+
+    /**
+     * Remove the subscriber
+     *
+     * @param pushSubscriber push subscriber to de-register
+     *
+     * @since 1.3.0
+     */
+    override fun deRegisterSubscriberIdentity(pushSubscriber: PushSubscriber) {
+        pushSubscribers.remove(pushSubscriber)
+    }
+
+    // endregion
+
+    /**
+     * Write a message to the socket channel
+     *
+     * @param connection Connection Buffer Pool
+     * @param request              Network request.
+     * @since 1.2.0
+     */
+    private suspend fun write(connection: Connection, request: RequestToken) {
+        connection.connection.send(Frame.Binary(true, serializer.serialize(request)))
+    }
+
+    // region Server Communication
+
+    private var server: EmbeddedServer<*, *>? = null
+
+    /**
+     * Start KTOR Server.
+     *
+     * @since 3.4.4 This was refactored to use KTOR and has a keepAlive feature which is enabled by default
+     */
+    fun start() {
+        server = embeddedServer(Netty, port = this.port, host = "0.0.0.0") {
+            install(WebSockets) {
+                pingPeriod = 15.seconds
+                timeout = 15.seconds
+                maxFrameSize = Long.MAX_VALUE
+                masking = false
+            }
+            routing {
+                webSocket("/") {
+                    val connection = Connection(this)
+                    connections.add(connection)
+
+                    try {
+
+                        for (frame in incoming) {
+                            when (frame) {
+                                is Frame.Binary -> {
+                                    launch {
+                                        val requestToken = serializer.deserialize<RequestToken>(ByteBuffer.wrap(frame.data))
+                                        handleMessage(connection, requestToken)
+                                    }
+                                }
+                                else -> Unit
+                            }
+                        }
+                    } catch (ignore: CancellationException){} finally {
+                        connections.remove(connection)
+                    }
+                }
+            }
+        }.start(wait = false)
+    }
+
+    private var running = true
+
+    /**
+     * Stop server
+     */
+    fun stop() {
+        running = false
+        server?.stop()
+    }
+
+    /**
+     * Join the server and wait until it is done running
+     */
+    fun join() {
+        server?.addShutdownHook {
+            running = false
+        }
+        while (running) {
+            Thread.sleep(100)
+        }
+    }
+
+    /**
+     * Handle an inbound message
+     *
+     * @param connection Connection information containing buffer and thread info
+     * @param message              Network message containing packet segments
+     * @since 1.2.0
+     */
+    private suspend fun handleMessage(connection: Connection, message: RequestToken) {
+        try {
+            message.apply {
+                when (packet) {
+                    is PushSubscriber -> handlePushSubscription(this, connection)
+                    else -> {
+                        packet = try {
+                            requestHandler.accept(connection, packet)
+                        } catch (e: Exception) {
+                            MethodInvocationException(MethodInvocationException.UNHANDLED_EXCEPTION, e)
+                        }
+
+                        write(connection, this)
+                    }
+                }
+            }
+        } catch (e:Exception) {
+            failure(e)
+        }
+    }
+
+    /**
+     * Failure within the server.  This should be logged
+     *
+     * @param cause     The underlying exception
+     * @since 1.2.0
+     */
+    private fun failure(cause: Exception) {
+        if (cause !is InitializationException)
+            cause.printStackTrace()
+    }
+
+    // endregion Ktor
+
+    companion object {
+        const val REMOVE_SUBSCRIBER_EVENT = 1.toByte()
+        const val REGISTER_SUBSCRIBER_EVENT = 2.toByte()
+    }
 }
