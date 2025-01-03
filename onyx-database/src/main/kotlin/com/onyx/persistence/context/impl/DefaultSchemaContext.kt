@@ -524,7 +524,7 @@ open class DefaultSchemaContext : SchemaContext {
         val entityKey = Base64.concat(entityClass.name, partitionIdVar.toString())
 
         return synchronized(descriptors) {
-            descriptors.computeIfAbsent(entityKey) {
+            descriptors.getOrPut(entityKey) {
                 val descriptor = EntityDescriptor(entityClass)
                 descriptor.context = this
                 descriptor.partition?.partitionValue = partitionIdVar.toString()
@@ -548,7 +548,7 @@ open class DefaultSchemaContext : SchemaContext {
 
                 // Make sure entity attributes have loaded descriptors
                 descriptor.relationships.values.forEach { getDescriptorForEntity(it.inverseClass.createNewEntity<IManagedEntity>(contextId), "") }
-                return@computeIfAbsent descriptor
+                return@getOrPut descriptor
             }
         }
     }
@@ -718,7 +718,7 @@ open class DefaultSchemaContext : SchemaContext {
     data class PartitionInfo(val classToGet: Class<*>, val partitionValue:Any)
 
     protected open val partitionsByValue: MutableMap<PartitionInfo, SystemPartitionEntry?> = Collections.synchronizedMap(WeakHashMap<PartitionInfo, SystemPartitionEntry?>())
-    protected open val partitionsByClass = OptimisticLockingMap<Class<*>, List<SystemPartitionEntry>>(WeakHashMap())
+    protected open val partitionsByClass = WeakHashMap<Class<*>, List<SystemPartitionEntry>>()
 
     /**
      * Get Partition Entry for entity.
@@ -733,8 +733,10 @@ open class DefaultSchemaContext : SchemaContext {
         return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("id" eq classToGet.name + partitionValue.toString()).firstOrNull()
     }
 
-    override fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry> = partitionsByClass.getOrPut(classToGet) {
-        return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("entityClass" eq classToGet.name).list<SystemPartitionEntry>()
+    override fun getAllPartitions(classToGet: Class<*>): List<SystemPartitionEntry> = synchronized(descriptors) {
+        partitionsByClass.getOrPut(classToGet) {
+            return@getOrPut serializedPersistenceManager.from<SystemPartitionEntry>().where("entityClass" eq classToGet.name).list<SystemPartitionEntry>()
+        }
     }
 
     protected open val partitionsById = OptimisticLockingMap<Long, SystemPartitionEntry?>(WeakHashMap())
