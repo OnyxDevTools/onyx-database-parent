@@ -300,7 +300,7 @@ class OnyxRMIServer : PushPublisher {
     /**
      * Start KTOR Server.
      *
-     * @since 3.4.4 This was refactored to use KTOR and has a keepAlive feature which is enabled by default
+     * @since 3.4.5 This was refactored to use KTOR and has a keepAlive feature which is enabled by default
      */
     fun start() {
         server = embeddedServer(Netty, port = this.port, host = "0.0.0.0") {

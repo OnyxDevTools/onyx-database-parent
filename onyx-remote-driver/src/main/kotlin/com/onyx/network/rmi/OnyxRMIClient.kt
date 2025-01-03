@@ -207,7 +207,7 @@ class OnyxRMIClient : PushRegistrar {
      * @param packet Any non null request
      * @return The server response to that packet
      *
-     * @since 3.4.4 Refactored to use Ktor
+     * @since 3.4.5 Refactored to use Ktor
      */
     fun send(packet: Any): Any? {
         return runBlocking {
