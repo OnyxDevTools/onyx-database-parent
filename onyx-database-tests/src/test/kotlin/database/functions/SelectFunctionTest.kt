@@ -180,6 +180,19 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
     }
 
+
+    @Test
+    fun testMinMaxStrings() {
+        val result = manager.select(min("otherString"), max("otherString"))
+            .from(AllAttributeEntityWithRelationship::class)
+            .distinct()
+            .list<Map<String, Any>>()
+            .first()
+
+        assertEquals("This is a string", result["min(otherString)"], "Invalid Average")
+        assertEquals("This is a string 6", result["max(otherString)"], "Invalid Sum")
+    }
+
     @Test
     fun testFlatFunctionsNonDistinct() {
         val result = manager.select("id", count("otherString"), avg("longPrimitive"), max("longPrimitive"), min("longPrimitive"),sum("longPrimitive"))
