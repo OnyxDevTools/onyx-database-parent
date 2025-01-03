@@ -15,6 +15,38 @@ This project is licensed under the [GNU License](LICENSE).
 
 Copyright © 2025 Onyx Cloud Services, LLC. All rights reserved.
 
+# Importing Onyx Database Gradle Dependencies
+
+This guide explains how to import the necessary Gradle dependencies for using Onyx Database in your Kotlin project.
+
+## Prerequisites
+
+*   **GitHub Account:** You need a GitHub account with access to the [OnyxDevTools/onyx-database-parent](https://github.com/OnyxDevTools/onyx-database-parent) repository.
+*   **GitHub Personal Access Token (PAT):**  You'll need a PAT with the `read:packages` scope to authenticate with GitHub Packages.
+    1.  Go to your GitHub **Settings** -> **Developer settings** -> **Personal access tokens** -> **Tokens (classic)**.
+    2.  Click **"Generate new token"** -> **"Generate new token (classic)"**
+    3.  Give your token a descriptive name (e.g., "Onyx Database Access").
+    4.  Select the `read:packages` scope.
+    5.  Click **"Generate token"**.
+    6.  **Important:** Copy your newly generated token immediately. You won't be able to see it again.
+
+## Adding the GitHub Packages Repository
+
+You need to configure Gradle to use the GitHub Packages repository where the Onyx Database artifacts are hosted.  Add the following to your `build.gradle.kts` (or `build.gradle` if you're using Groovy) file within the `repositories` block:
+
+```kotlin
+repositories {
+    mavenCentral() // Or any other repositories you need
+    maven {
+        url = uri("[https://maven.pkg.github.com/OnyxDevTools/onyx-database-parent](https://maven.pkg.github.com/OnyxDevTools/onyx-database-parent)")
+        credentials {
+            username = "YOUR_GITHUB_USERNAME" // Replace with your GitHub username
+            password = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN" // Replace with your PAT
+        }
+    }
+}
+```
+
 # Table of Contents
 
 1.  [Key Features](#key-features)
