@@ -1,10 +1,12 @@
 package com.onyx.persistence.function.impl
 
+import com.onyx.extension.common.forceCompare
 import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
+import com.onyx.persistence.function.impl.MinQueryFunction.Companion.UNDEFINED
 import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryFunctionType
-import java.util.*
 
 /**
  * Get Max value
@@ -14,7 +16,7 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
     override fun newInstance(): QueryFunction = MaxQueryFunction(attribute)
 
     private var itemType:Class<*>? = null
-    private var max: Any? = null
+    private var max: Any? = UNDEFINED
     private val valueLock = DefaultClosureLock()
 
     override fun getFunctionValue():Any? = max
@@ -23,16 +25,14 @@ class MaxQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         if(value != null && itemType == null)
             itemType = value.javaClass
 
-        val valueDouble:Float =  if(value is Date) value.time.toFloat() else (value as? Number)?.toFloat() ?: 0.0f
-        val maxDouble:Float =  if(max is Date) (max as Date).time.toFloat() else (max as? Number)?.toFloat() ?: 0.0f
-
         return valueLock.perform {
-            if (valueDouble > maxDouble || max == null) {
+            if (max === UNDEFINED)
+                max = value
+            if(max.forceCompare(value, QueryCriteriaOperator.GREATER_THAN_EQUAL)) {
                 max = value
                 return@perform true
             }
             return@perform false
         }
     }
-
 }

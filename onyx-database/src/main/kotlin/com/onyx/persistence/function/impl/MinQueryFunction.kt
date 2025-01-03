@@ -1,8 +1,10 @@
 package com.onyx.persistence.function.impl
 
+import com.onyx.extension.common.forceCompare
 import com.onyx.lang.concurrent.impl.DefaultClosureLock
 import com.onyx.persistence.function.QueryFunction
 import com.onyx.persistence.query.Query
+import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryFunctionType
 import java.util.*
 
@@ -14,7 +16,7 @@ class MinQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
     override fun newInstance(): QueryFunction = MinQueryFunction(attribute)
 
     private var itemType:Class<*>? = null
-    private var min: Any? = null
+    private var min: Any? = UNDEFINED
     private val valueLock = DefaultClosureLock()
     override fun getFunctionValue():Any? = min
 
@@ -22,11 +24,10 @@ class MinQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         if(value != null && itemType == null)
             itemType = value.javaClass
 
-        val valueDouble:Float =  if(value is Date) value.time.toFloat() else (value as? Number)?.toFloat() ?: 0.0f
-        val minDouble:Float =  if(min is Date) (min as Date).time.toFloat() else (min as? Number)?.toFloat() ?: 0.0f
-
         return valueLock.perform {
-            if (valueDouble < minDouble || min == null) {
+            if (min === UNDEFINED)
+                min = value
+            if(min.forceCompare(value, QueryCriteriaOperator.LESS_THAN_EQUAL)) {
                 min = value
                 return@perform true
             }
@@ -34,4 +35,7 @@ class MinQueryFunction(attribute:String = "") : BaseQueryFunction(attribute, Que
         }
     }
 
+    companion object {
+        val UNDEFINED = Any()
+    }
 }
