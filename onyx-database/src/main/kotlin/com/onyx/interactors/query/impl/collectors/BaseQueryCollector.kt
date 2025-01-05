@@ -100,16 +100,10 @@ abstract class BaseQueryCollector<T>(
 
         if(shouldCacheResults) {
             referenceLock.perform {
-                if (references.size >= DefaultQueryCacheInteractor.MAX_CACHED_REFERENCES) {
-                    shouldCacheResults = false
-                    references.clear()
-                    (references as? ArrayList)?.trimToSize()
-                } else {
-                    if(references.size >= context.maxCardinality) {
-                        throw MaxCardinalityExceededException(context.maxCardinality)
-                    }
-                    references.add(reference)
+                if(references.size >= context.maxCardinality) {
+                    throw MaxCardinalityExceededException(context.maxCardinality)
                 }
+                references.add(reference)
             }
         }
     }

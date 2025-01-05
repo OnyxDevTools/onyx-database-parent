@@ -3,6 +3,7 @@ package com.onyx.interactors.scanner.impl
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
 import com.onyx.diskmap.impl.base.skiplist.AbstractIterableSkipList
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.interactors.record.data.Reference
@@ -36,6 +37,7 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
     private fun scanPartition(records: DiskMap<Any, IManagedEntity>, partitionId: Long): MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
+        val maxCardinality = context.maxCardinality
 
         @Suppress("UNCHECKED_CAST")
         records.entries.forEach {
@@ -43,6 +45,8 @@ class PartitionFullTableScanner @Throws(OnyxException::class) constructor(criter
             val reference = Reference(partitionId, entry.node?.position ?: 0)
             if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
                 collector?.collect(reference, entry.value)
+                if (matching.size > maxCardinality)
+                    throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
                     matching.add(reference)
             }

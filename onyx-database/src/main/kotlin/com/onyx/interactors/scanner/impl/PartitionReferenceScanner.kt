@@ -2,6 +2,7 @@ package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.diskmap.DiskMap
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.exception.OnyxException
 import com.onyx.extension.common.async
 import com.onyx.extension.toManagedEntity
@@ -44,6 +45,7 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
     @Throws(OnyxException::class)
     override fun scan(existingValues: Set<Reference>): MutableSet<Reference> {
         val context = Contexts.get(contextId)!!
+        val maxCardinality = context.maxCardinality
 
         if (query.partition === QueryPartitionMode.ALL) {
             val allMatching = HashSet<Reference>()
@@ -58,6 +60,8 @@ open class PartitionReferenceScanner @Throws(OnyxException::class) constructor(c
                             val records = dataFile.getHashMap<DiskMap<Any, IManagedEntity>>(descriptor.identifier!!.type, partitionDescriptor.entityClass.name)
                             (records.references.map { Reference(partitionId, it.position) } - existingValues).forEach {
                                 collector?.collect(it, it.toManagedEntity(context, descriptor))
+                                if (matching.size > maxCardinality)
+                                    throw MaxCardinalityExceededException(context.maxCardinality)
                                 if(collector == null)
                                     matching.add(it)
                             }

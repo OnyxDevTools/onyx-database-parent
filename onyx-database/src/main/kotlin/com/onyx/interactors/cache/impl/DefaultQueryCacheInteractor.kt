@@ -177,9 +177,5 @@ open class DefaultQueryCacheInteractor(context: SchemaContext) : QueryCacheInter
             }
         }
     }
-
-    companion object {
-        const val MAX_CACHED_REFERENCES = 1000000 // Cannot cache more than this amount
-    }
 }
 

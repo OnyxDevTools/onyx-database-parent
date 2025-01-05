@@ -1,6 +1,7 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.exception.OnyxException
 import com.onyx.interactors.record.data.Reference
 import com.onyx.interactors.scanner.TableScanner
@@ -112,16 +113,22 @@ class PartitionIndexScanner @Throws(OnyxException::class) constructor(criteria: 
     private fun scanPartition(indexInteractor: IndexInteractor, partitionId: Long): MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
+        val maxCardinality = context.maxCardinality
+
         if (criteria.value is List<*>)
             (criteria.value as List<Any>).forEach { value ->
                 find(value, indexInteractor, partitionId).forEach {
                 collector?.collect(it, it.toManagedEntity(context, descriptor))
+                if (matching.size > maxCardinality)
+                    throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
                     matching.add(it)
             } }
         else
             find(criteria.value, indexInteractor, partitionId).forEach {
                 collector?.collect(it, it.toManagedEntity(context, descriptor))
+                if (matching.size > maxCardinality)
+                    throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
                     matching.add(it)
             }

@@ -1,6 +1,7 @@
 package com.onyx.interactors.scanner.impl
 
 import com.onyx.descriptor.EntityDescriptor
+import com.onyx.exception.MaxCardinalityExceededException
 import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
 import com.onyx.extension.toManagedEntity
@@ -45,12 +46,16 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
     fun scan(includesExisting:Boolean = false): MutableSet<Reference> {
         val matching = HashSet<Reference>()
         val context = Contexts.get(contextId)!!
+        val maxCardinality = context.maxCardinality
+
         // If it is an in clause
         if (criteria.value is List<*>) {
             (criteria.value as List<*>).forEach { it ->
                 find(it).forEach {
                     if(!includesExisting)
                         collector?.collect(it, it.toManagedEntity(context, descriptor))
+                    if (matching.size > maxCardinality)
+                        throw MaxCardinalityExceededException(context.maxCardinality)
                     if(collector == null)
                         matching.add(it)
                 }
@@ -59,6 +64,8 @@ open class IndexScanner @Throws(OnyxException::class) constructor(criteria: Quer
             find(criteria.value).forEach {
                 if(!includesExisting)
                     collector?.collect(it, it.toManagedEntity(context, descriptor))
+                if (matching.size > maxCardinality)
+                    throw MaxCardinalityExceededException(context.maxCardinality)
                 if(collector == null)
                     matching.add(it)
             }
