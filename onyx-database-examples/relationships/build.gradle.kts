@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.4.6")
+    implementation("com.onyxdevtools:onyx-database:3.4.7")
 }
 
 group = "com.onyxdevtools"
-version = "3.4.6"
+version = "3.4.7"
 description = "com.onyxdevtools:onyx-database-examples:relationships"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
