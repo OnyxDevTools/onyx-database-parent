@@ -167,6 +167,7 @@ private fun EntityDescriptor.validateAttributes() =
                 IManagedEntity::class.java.isAssignableFrom(type) ||
                 List::class.java.isAssignableFrom(type) ||
                 Set::class.java.isAssignableFrom(type) ||
+                Map::class.java.isAssignableFrom(type) ||
              type.isEnum)) {
 
             throw EntityTypeMatchException(EntityTypeMatchException.ATTRIBUTE_TYPE_IS_NOT_SUPPORTED + ": " + type)
