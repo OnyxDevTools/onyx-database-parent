@@ -29,7 +29,9 @@ fun IManagedEntity.isValid(context:SchemaContext):Boolean {
         if(!it.isNullable && attributeValue == null) throw AttributeNonNullException(AttributeNonNullException.ATTRIBUTE_NULL_EXCEPTION, it.name)
 
         // Size
-        if(it.type.isAssignableFrom(ClassMetadata.STRING_TYPE) && attributeValue != null && (attributeValue as String).length > it.size && it.size > -1)
+        if(it.type.isAssignableFrom(ClassMetadata.STRING_TYPE) && attributeValue != null && ((attributeValue as? String)?.length
+                ?: 0) > it.size && it.size > -1
+        )
             throw AttributeSizeException(AttributeSizeException.ATTRIBUTE_SIZE_EXCEPTION, it.name)
     }
 
