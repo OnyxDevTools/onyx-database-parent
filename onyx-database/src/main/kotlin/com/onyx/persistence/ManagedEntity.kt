@@ -22,7 +22,7 @@ import java.lang.ref.WeakReference
 abstract class ManagedEntity : IManagedEntity, BufferStreamable {
 
     @Transient private var descriptor: WeakReference<EntityDescriptor>? = null
-    @Transient internal var ignoreListeners = false
+    @Transient var ignoreListeners = false
 
     /**
      * Get the corresponding descriptor for this entity given its context
