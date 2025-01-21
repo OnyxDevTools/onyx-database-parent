@@ -1,6 +1,7 @@
 package database.list
 
 import com.onyx.persistence.query.cont
+import com.onyx.persistence.query.containsIgnoreCase
 import com.onyx.persistence.query.startsWith
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeEntity
@@ -20,6 +21,12 @@ class ContainsTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseT
     @Test
     fun testStringContains() {
         val results = manager.list<AllAttributeEntity>(AllAttributeForFetch::class.java, "stringValue" cont "Some test string")
+        assertEquals(4, results.size, "Expected 4 results for 'stringValue' containing 'Some test string'")
+    }
+
+    @Test
+    fun testStringContainsIgnoreCase() {
+        val results = manager.list<AllAttributeEntity>(AllAttributeForFetch::class.java, "stringValue" containsIgnoreCase  "some test String")
         assertEquals(4, results.size, "Expected 4 results for 'stringValue' containing 'Some test string'")
     }
 

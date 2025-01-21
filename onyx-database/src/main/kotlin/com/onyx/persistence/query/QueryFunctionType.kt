@@ -5,8 +5,11 @@ import java.util.*
 enum class QueryFunctionType(val isGroupFunction:Boolean) {
     SUM(true),
     MIN(true),
+    STD(true),
+    MEDIAN(true),
     MAX(true),
     AVG(true),
+    VARIANCE(true),
     COUNT(true),
     UPPER(false),
     LOWER(false),
@@ -20,6 +23,9 @@ enum class QueryFunctionType(val isGroupFunction:Boolean) {
             "min" -> MIN
             "max" -> MAX
             "avg" -> AVG
+            "std" -> STD
+            "variance" -> VARIANCE
+            "median" -> MEDIAN
             "count" -> COUNT
             "upper" -> UPPER
             "lower" -> LOWER

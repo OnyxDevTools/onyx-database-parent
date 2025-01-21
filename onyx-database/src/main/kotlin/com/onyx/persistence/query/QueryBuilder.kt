@@ -313,8 +313,11 @@ infix fun <T> String.notLike(value: T): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.NOT_LIKE, value)
 
 infix fun <T> String.cont(value: T): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.CONTAINS, value)
+infix fun <T> String.containsIgnoreCase(value: T): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.CONTAINS_IGNORE_CASE, value)
 infix fun <T> String.notCont(value: T): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.NOT_CONTAINS, value)
+infix fun <T> String.notContainsIgnoreCase(value: T): QueryCriteria =
+    QueryCriteria(this, QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE, value)
 
 infix fun <T> String.startsWith(value: T): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.STARTS_WITH, value)
@@ -346,6 +349,10 @@ fun String.desc(): QueryOrder = QueryOrder(this, false)
 
 fun avg(attribute: String) = "avg($attribute)"
 fun sum(attribute: String) = "sum($attribute)"
+fun std(attribute: String) = "std($attribute)"
+fun median(attribute: String) = "median($attribute)"
+fun variance(attribute: String) = "variance($attribute)"
+
 fun count(attribute: String) = "count($attribute)"
 fun min(attribute: String) = "min($attribute)"
 fun max(attribute: String) = "max($attribute)"

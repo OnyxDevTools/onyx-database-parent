@@ -82,6 +82,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
         return when (operator) {
             QueryCriteriaOperator.EQUAL -> first == second
             QueryCriteriaOperator.CONTAINS -> (first.toString()).contains(second.toString())
+            QueryCriteriaOperator.CONTAINS_IGNORE_CASE -> (first.toString()).contains(second.toString(), true)
             QueryCriteriaOperator.GREATER_THAN -> {
                 when {
                     first == null && second == null -> false
@@ -141,6 +142,7 @@ fun Any?.compare(compareTo: Any?, operator: QueryCriteriaOperator = QueryCriteri
             QueryCriteriaOperator.IS_NULL -> first == null
             QueryCriteriaOperator.STARTS_WITH -> (first.toString()).startsWith(second.toString())
             QueryCriteriaOperator.NOT_CONTAINS -> !(first.toString()).contains(second.toString())
+            QueryCriteriaOperator.NOT_CONTAINS_IGNORE_CASE -> !(first.toString()).contains(second.toString(), true)
             QueryCriteriaOperator.LIKE -> (first.toString()).equals(second.toString(), true)
             QueryCriteriaOperator.NOT_LIKE -> !(first.toString()).equals(second.toString(), true)
             QueryCriteriaOperator.MATCHES -> (first.toString()).matches(Regex(second.toString()))
