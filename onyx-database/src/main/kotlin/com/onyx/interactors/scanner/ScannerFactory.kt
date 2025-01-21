@@ -3,6 +3,7 @@ package com.onyx.interactors.scanner
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.hasKey
 import com.onyx.interactors.scanner.impl.*
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.manager.PersistenceManager
@@ -68,7 +69,7 @@ object ScannerFactory {
         val segments = attributeToScan!!.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
         // This has a dot in it, it must be a relationship or a typo
-        if (segments.size > 1) {
+        if (segments.size > 1 && descriptor.relationships.get(segments.first()) != null) {
             return RelationshipScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
         }
 
@@ -100,6 +101,15 @@ object ScannerFactory {
 
         val attributeDescriptor = descriptor.attributes[attributeToScan]
         if (attributeDescriptor != null) {
+            return if (descriptor.hasPartition) {
+                PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            } else {
+                FullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
+            }
+        }
+
+        val hasKey = descriptor.entityClass.kotlin.hasKey(attributeToScan)
+        if (hasKey) {
             return if (descriptor.hasPartition) {
                 PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {

@@ -213,3 +213,11 @@ class QueryCriteria : BufferStreamable {
         return result
     }
 }
+
+val QueryCriteria.relationship: String?
+    get() {
+        return if (this.isRelationship == true) {
+            this.attribute?.split(".")?.first()
+        }
+        else null
+    }

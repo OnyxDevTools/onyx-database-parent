@@ -7,8 +7,10 @@ import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteria
 import com.onyx.extension.common.compare
+import com.onyx.extension.common.get
 import com.onyx.interactors.record.data.Reference
 import com.onyx.persistence.query.QueryCriteriaOperator
+import com.onyx.persistence.query.relationship
 
 /**
  * Entity meets the query criteria.  This method is used to determine whether the entity meets all the
@@ -34,14 +36,24 @@ fun Query.meetsCriteria(entity: IManagedEntity?, entityReference: Reference, con
         if(it.flip)
             continue
         else if (it.isRelationship!!) {
-            // Compare operator for relationship value
-            subCriteria = relationshipMeetsCriteria(entity, entityReference, it, context)
+            subCriteria = if(descriptor.relationships.contains(it.relationship)) {
+                relationshipMeetsCriteria(entity, entityReference, it, context)
+            } else {
+                graphMeetsCriteria(entity, it)
+            }
         }
         else {
             // Compare operator for attribute value
             if (it.attributeDescriptor == null)
                 it.attributeDescriptor = descriptor.attributes[it.attribute!!]
-            subCriteria = it.value.compare(entity?.get(context = context, descriptor = descriptor, name = it.attribute!!), it.operator!!)
+
+            if (it.attributeDescriptor != null) {
+                val attribute = entity?.get<Any?>(context = context, descriptor = descriptor, name = it.attribute!!)
+                subCriteria = it.value.compare(attribute, it.operator!!)
+            } else {
+                val attribute = entity?.get<Any?>(it.attribute!!) // Use Kotlin property accessors
+                subCriteria = it.value.compare(attribute, it.operator!!)
+            }
         }
         it.meetsCriteria = subCriteria
     }
@@ -124,4 +136,30 @@ private fun relationshipMeetsCriteria(entity: IManagedEntity?, entityReference: 
         meetsCriteria = (operator == QueryCriteriaOperator.IS_NULL)
     }
     return meetsCriteria
+}
+
+/**
+ * Graph meets criteria.  This method will iterate through a graph to
+ * check its criteria to ensure the criteria is met
+ *
+ * @param entity Original entity containing the graph.  This entity may or may not have
+ * criteria property.  For that reason we have to go back to the store to
+ * retrieve the relationship entities.
+ *
+ * @param criteria Criteria to check for to see if we meet the requirements
+ *
+ * @return Whether the graph value has met the criteria
+ *
+ * @throws OnyxException Something bad happened.
+ *
+ */
+@Throws(OnyxException::class)
+private fun graphMeetsCriteria(entity: IManagedEntity?, criteria: QueryCriteria): Boolean {
+    val value = entity.get<Any?>(criteria.attribute!!)
+    if (value is List<*>) {
+        return value.any {
+            criteria.value.compare(it, criteria.operator!!)
+        }
+    }
+    return criteria.value.compare(value, criteria.operator!!)
 }
