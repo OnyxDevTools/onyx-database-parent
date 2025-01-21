@@ -15,11 +15,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.4.9")
+    implementation("com.onyxdevtools:onyx-database:3.5.0")
 }
 
 group = "com.onyxdevtools"
-version = "3.4.9"
+version = "3.5.0"
 description = "com.onyxdevtools:onyx-database-examples:remote-persistence-manager:data-model"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 

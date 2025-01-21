@@ -4,6 +4,7 @@ import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.query.*
 import database.base.DatabaseBaseTest
 import entities.AddressNoPartition
+import entities.AllAttributeV2Entity
 import entities.PersonNoPartition
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -337,6 +338,86 @@ class RelationshipSelectTest(override var factoryClass: KClass<*>) : DatabaseBas
         assertTrue(addresses.isNotEmpty(), "Missing query data")
         assertTrue(addresses[0]["occupants"] is List<*>)
         assertTrue((addresses[0]["occupants"] as List<*>)[0] is PersonNoPartition)
+    }
+
+    @Test
+    fun testEmbeddedObject() {
+        val entity = AllAttributeV2Entity()
+
+        entity.id = "A"
+        entity.longValue = 4L
+        entity.longPrimitive = 3L
+        entity.stringValue = "String key"
+        entity.dateValue = Date(1483736263743L)
+        entity.doublePrimitive = 342.23
+        entity.doubleValue = 232.2
+        entity.booleanPrimitive = true
+        entity.booleanValue = false
+        entity.mutableFloat = 23.234f
+        entity.floatValue = 666.3453f
+        entity.mutableByte = 5.toByte()
+        entity.byteValue = 7.toByte()
+        entity.mutableShort = 65
+        entity.shortValue = 44
+        entity.mutableChar = 'C'
+        entity.charValue = 'D'
+        entity.entity = AllAttributeV2Entity()
+        entity.entity?.shortValue = 49
+        entity.aMutableBytes = arrayOf(2.toByte(), 8.toByte(), 7.toByte())
+        entity.bytes = byteArrayOf(4.toByte(), 4.toByte(), 2.toByte())
+        entity.shorts = shortArrayOf(4, 4, 2)
+        entity.mutableShorts = arrayOf(4, 4, 2)
+        entity.strings = arrayOf("A", "V")
+        entity.operator = QueryCriteriaOperator.CONTAINS
+        entity.entitySet = HashSet()
+        entity.entitySet?.add(entity.entity!!)
+        entity.entityList = ArrayList()
+        entity.entityList?.add(entity.entity!!)
+
+        manager.saveEntity<IManagedEntity>(entity)
+
+        val results = manager.from<AllAttributeV2Entity>().where("entity.shortValue" eq 49).list<AllAttributeV2Entity>()
+        assertEquals(1, results.size)
+    }
+
+    @Test
+    fun testEmbeddedListObject() {
+        val entity = AllAttributeV2Entity()
+
+        entity.id = "A"
+        entity.longValue = 4L
+        entity.longPrimitive = 3L
+        entity.stringValue = "String key"
+        entity.dateValue = Date(1483736263743L)
+        entity.doublePrimitive = 342.23
+        entity.doubleValue = 232.2
+        entity.booleanPrimitive = true
+        entity.booleanValue = false
+        entity.mutableFloat = 23.234f
+        entity.floatValue = 666.3453f
+        entity.mutableByte = 5.toByte()
+        entity.byteValue = 7.toByte()
+        entity.mutableShort = 65
+        entity.shortValue = 44
+        entity.mutableChar = 'C'
+        entity.charValue = 'D'
+        entity.entity = AllAttributeV2Entity()
+        entity.entity?.shortValue = 49
+        entity.aMutableBytes = arrayOf(2.toByte(), 8.toByte(), 7.toByte())
+        entity.bytes = byteArrayOf(4.toByte(), 4.toByte(), 2.toByte())
+        entity.shorts = shortArrayOf(4, 4, 2)
+        entity.mutableShorts = arrayOf(4, 4, 2)
+        entity.strings = arrayOf("A", "V")
+        entity.operator = QueryCriteriaOperator.CONTAINS
+        entity.entitySet = HashSet()
+        entity.entitySet?.add(entity.entity!!)
+        entity.entityList = ArrayList()
+        entity.entityList?.add(entity.entity!!)
+
+        manager.saveEntity<IManagedEntity>(entity)
+
+        val results = manager.from<AllAttributeV2Entity>().where("entityList.any.shortValue" eq 49).list<AllAttributeV2Entity>()
+        assertEquals(1, results.size)
     }
 
     @Test
