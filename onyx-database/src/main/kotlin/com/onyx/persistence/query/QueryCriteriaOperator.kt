@@ -16,6 +16,8 @@ enum class QueryCriteriaOperator {
     IS_NULL,
     STARTS_WITH,
     CONTAINS,
+    CONTAINS_IGNORE_CASE,
+    NOT_CONTAINS_IGNORE_CASE,
     NOT_CONTAINS,
     LIKE,
     NOT_LIKE,
@@ -57,6 +59,8 @@ enum class QueryCriteriaOperator {
             IS_NULL -> NOT_NULL
             STARTS_WITH -> NOT_STARTS_WITH
             CONTAINS -> NOT_CONTAINS
+            CONTAINS_IGNORE_CASE -> NOT_CONTAINS_IGNORE_CASE
+            NOT_CONTAINS_IGNORE_CASE -> CONTAINS_IGNORE_CASE
             NOT_CONTAINS -> CONTAINS
             LIKE -> NOT_LIKE
             NOT_LIKE -> LIKE

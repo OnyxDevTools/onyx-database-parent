@@ -11,6 +11,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -254,5 +255,61 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
 
         @Suppress("DEPRECATION")
         assertEquals(value.date , Date().date, "Date does not match expected max value")
+    }
+
+    /**
+     * Test for standard deviation (Population STD)
+     * Using the values of longPrimitive = 2,3,4,5,6,7,8,9,9,10,99
+     * The population standard deviation should be ~26.766
+     */
+    @Test
+    fun testStandardDeviation() {
+        val result = manager.select(std("longPrimitive"))
+            .from(AllAttributeEntityWithRelationship::class)
+            .list<Map<String, Any?>>()
+            .first()
+
+        // The aggregator should return a Double (if your code casts to Double).
+        // Population Std Dev ≈ 26.766
+        val stdVal = (result["std(longPrimitive)"] as Number).toDouble()
+        assertTrue(
+            abs(stdVal - 26.766) < 0.01,
+            "Invalid Standard Deviation. Expected ~26.766 but got $stdVal"
+        )
+    }
+
+    /**
+     * Test for population variance
+     * Using the same values: population variance ≈ 716.37376
+     */
+    @Test
+    fun testVariance() {
+        val result = manager.select(variance("longPrimitive"))
+            .from(AllAttributeEntityWithRelationship::class)
+            .list<Map<String, Any?>>()
+            .first()
+
+        // Population Variance ≈ 716.37376
+        val varVal = (result["variance(longPrimitive)"] as Number).toDouble()
+        assertTrue(
+            abs(varVal - 716.37376) < 0.1,
+            "Invalid Variance. Expected ~716.37 but got $varVal"
+        )
+    }
+
+    /**
+     * Test for median
+     * Values sorted: 2,3,4,5,6,7,8,9,9,10,99 (11 items) => median is the 6th => 7
+     */
+    @Test
+    fun testMedian() {
+        val result = manager.select(median("longPrimitive"))
+            .from(AllAttributeEntityWithRelationship::class)
+            .list<Map<String, Any?>>()
+            .first()
+
+        // Median should be 7
+        val medianVal = result["median(longPrimitive)"]!!
+        assertEquals(7L, medianVal, "Invalid Median. Expected 7, got $medianVal")
     }
 }
