@@ -19,13 +19,13 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.5.0")
+    implementation("com.onyxdevtools:onyx-database:3.5.11")
 }
 
 group = "com.onyxdevtools"
-version = "3.5.0"
+version = "3.5.11"
 description = "com.onyxdevtools:onyx-database-examples:persisting-data"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 publishing {
     publications.create<MavenPublication>("maven") {

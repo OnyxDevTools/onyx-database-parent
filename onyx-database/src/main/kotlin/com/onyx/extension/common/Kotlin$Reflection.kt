@@ -15,6 +15,8 @@ object ReflectionCache {
             properties + getters
         }
     }
+
+    fun hasMember(kClass: KClass<*>, name: String): Boolean = getCachedMembers(kClass).containsKey(name)
 }
 
 /**

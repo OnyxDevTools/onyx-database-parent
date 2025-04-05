@@ -5,7 +5,6 @@ import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.Index
 import com.onyx.persistence.annotations.values.IdentifierGenerator
-import com.sun.org.apache.xpath.internal.operations.Bool
 
 @Entity
 class NullIndexEntity : ManagedEntity() {
