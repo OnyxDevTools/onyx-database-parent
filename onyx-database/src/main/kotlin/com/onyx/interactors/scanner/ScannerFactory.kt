@@ -3,6 +3,7 @@ package com.onyx.interactors.scanner
 import com.onyx.descriptor.EntityDescriptor
 import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.ReflectionCache.hasMember
 import com.onyx.extension.common.hasKey
 import com.onyx.interactors.scanner.impl.*
 import com.onyx.persistence.context.SchemaContext
@@ -109,7 +110,7 @@ object ScannerFactory {
         }
 
         val hasKey = descriptor.entityClass.kotlin.hasKey(attributeToScan)
-        if (hasKey) {
+        if (hasKey || hasMember(descriptor.entityClass.kotlin, attributeToScan)) {
             return if (descriptor.hasPartition) {
                 PartitionFullTableScanner(criteria, classToScan, descriptor, query, context, persistenceManager)
             } else {

@@ -105,6 +105,16 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
     }
 
     @Test
+    fun testUpperMember() {
+        val results = manager.select(upper("stringValueGetter"), "stringValueGetter")
+            .from(AllAttributeEntityWithRelationship::class)
+            .list<Map<Any?, Any?>>()
+
+        val match = results.firstOrNull { it["upper(stringValueGetter)"] == "Some other Value".uppercase(Locale.getDefault()) }
+        assertNotNull(match, "Failure to uppercase")
+    }
+
+    @Test
     fun testUpperGroupBy() {
         val results = manager.select(upper("stringValue"), "stringValue")
                 .from(AllAttributeEntityWithRelationship::class)

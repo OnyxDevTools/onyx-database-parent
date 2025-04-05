@@ -15,12 +15,12 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-remote-database:3.5.0")
+    implementation("com.onyxdevtools:onyx-remote-database:c")
 }
 
 group = "com.onyxdevtools"
-version = "3.5.0"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+version = "3.5.11"
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 publishing {
     publications.create<MavenPublication>("maven") {

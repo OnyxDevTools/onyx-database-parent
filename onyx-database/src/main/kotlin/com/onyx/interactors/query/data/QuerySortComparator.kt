@@ -4,12 +4,14 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.interactors.record.data.Reference
 import com.onyx.exception.OnyxException
 import com.onyx.extension.*
+import com.onyx.extension.common.ReflectionCache.hasMember
 import com.onyx.persistence.context.SchemaContext
 import com.onyx.persistence.query.Query
 import com.onyx.persistence.query.QueryCriteriaOperator
 import com.onyx.persistence.query.QueryOrder
 import com.onyx.extension.common.catchAll
 import com.onyx.extension.common.compare
+import com.onyx.extension.common.get
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.context.Contexts
 
@@ -126,6 +128,7 @@ class QuerySortComparator(query: Query, private val orderBy: Array<QueryOrder>, 
             parts.size == 1 && queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute)
             queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToOne -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute).firstOrNull()?.get(context, queryAttributeResource.descriptor, parts.last())
             queryAttributeResource.relationshipDescriptor != null && queryAttributeResource.relationshipDescriptor.isToMany -> entity.getRelationshipFromStore(context, queryAttributeResource.attribute).map { it?.get<Any?>(context, queryAttributeResource.descriptor, parts.last()) }
+            hasMember(entity::class, queryAttributeResource.attribute) -> entity.get(queryAttributeResource.attribute)
             else -> entity[context, queryAttributeResource.descriptor, queryAttributeResource.attribute]
         }
     }

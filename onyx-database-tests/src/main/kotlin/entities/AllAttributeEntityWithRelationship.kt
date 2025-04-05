@@ -42,6 +42,9 @@ open class AllAttributeEntityWithRelationship : AbstractEntity(), IManagedEntity
     @Attribute
     var booleanPrimitive: Boolean = false
 
+    val stringValueGetter: String?
+        get() = this.stringValue
+
     @Relationship(type = RelationshipType.ONE_TO_ONE, inverseClass = AllAttributeEntity::class, cascadePolicy = CascadePolicy.SAVE)
     var relationship:AllAttributeEntity? = null
 }

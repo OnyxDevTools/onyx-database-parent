@@ -564,16 +564,13 @@ open class EmbeddedPersistenceManager(context: SchemaContext) : PersistenceManag
                     val entry = it as? AbstractIterableSkipList<Any, IManagedEntity>.SkipListEntry<Any?, IManagedEntity>
 
                     if (entry != null) {
-                        try {
-                            val reference = Reference(partitionId, entry.node?.position ?: 0)
-                            if(entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
-                                if (!streamer.accept(entry.value as T, this)) {
-                                    done = true
-                                    return@record false
-                                }
+                        val reference = Reference(partitionId, entry.node?.position ?: 0)
+                        if(query.criteria == null || entry.node != null && query.meetsCriteria(entry.value!!, reference, context, descriptor)) {
+                            if (!streamer.accept(entry.value as T, this)) {
+                                done = true
+                                return@record false
                             }
-                        } catch (ignore: Exception) {
-                        } // The reference could have been destroyed
+                        }
                     }
                     return@record true
                 }

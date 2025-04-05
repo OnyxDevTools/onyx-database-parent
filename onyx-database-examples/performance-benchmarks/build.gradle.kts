@@ -26,13 +26,13 @@ dependencies {
     implementation("org.hsqldb:hsqldb:3.4.4")
     implementation("org.apache.derby:derby:10.12.1.1")
     implementation("org.xerial:sqlite-jdbc:3.8.7")
-    implementation("com.onyxdevtools:onyx-database:3.5.0")
+    implementation("com.onyxdevtools:onyx-database:3.5.11")
 }
 
 group = "com.onyxdevtools"
 version = "1.0"
 description = "com.onyxdevtools:onyx-database-examples:performance-benchmarks"
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 publishing {
     publications.create<MavenPublication>("maven") {

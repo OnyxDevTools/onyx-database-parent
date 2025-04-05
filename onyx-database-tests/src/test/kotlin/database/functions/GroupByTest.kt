@@ -106,6 +106,16 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
     }
 
     @Test
+    fun testGroupByMember() {
+        val results = manager.select("stringValue", min("longPrimitive"))
+            .from(AllAttributeEntityWithRelationship::class)
+            .groupBy("stringValueGetter")
+            .list<Map<String, Any?>>()
+
+        assertEquals(9L, results.first { it["stringValue"] == "9" }["min(longPrimitive)"] , "9 should be the min result")
+    }
+
+    @Test
     fun testMax() {
         val results = manager.select("stringValue", max("longPrimitive"))
                 .from(AllAttributeEntityWithRelationship::class)
@@ -113,7 +123,6 @@ class GroupByTest(override var factoryClass: KClass<*>) : DatabaseBaseTest(facto
                 .list<Map<String, Any?>>()
 
         assertEquals(99L, results.first { it["stringValue"] == "9" }["max(longPrimitive)"] , "99 should be the max result")
-
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.onyx.descriptor.EntityDescriptor
 import com.onyx.descriptor.RelationshipDescriptor
 import com.onyx.exception.AttributeMissingException
 import com.onyx.exception.OnyxException
+import com.onyx.extension.common.ReflectionCache.hasMember
 import com.onyx.extension.createNewEntity
 import com.onyx.extension.getAttributeWithinSelection
 import com.onyx.extension.getFunctionWithinSelection
@@ -78,9 +79,21 @@ class QueryAttributeResource(
                     ))
                 } else {
                     val attributeDescriptor = descriptor.attributes[attribute]
+
+
                     if (attributeDescriptor == null) {
                         relationshipDescriptor = descriptor.relationships[attribute]
-                        if (relationshipDescriptor == null) {
+
+                        if (hasMember(descriptor.entityClass.kotlin, attribute) && relationshipDescriptor == null) {
+                            scanObjects.add(QueryAttributeResource(
+                                descriptor = descriptor,
+                                attribute = attribute,
+                                selection = it,
+                                context = context,
+                                function = function
+                            ))
+                        }
+                        else if (relationshipDescriptor == null) {
                             throw AttributeMissingException(AttributeMissingException.ENTITY_MISSING_ATTRIBUTE + ": " + attribute + " not found on entity " + descriptor.entityClass.name)
                         } else {
                             tmpObject = relationshipDescriptor.inverseClass.createNewEntity(context.contextId) // Keep on getting the descriptors until we get what we need
