@@ -36,4 +36,9 @@ class BatchNormalizationLayer(val size: Int) : Serializable {
 
     @Transient
     var gradBeta: DoubleArray? = null
+
+    companion object {
+        @JvmStatic
+        private val serialVersionUID: Long = 1L
+    }
 }

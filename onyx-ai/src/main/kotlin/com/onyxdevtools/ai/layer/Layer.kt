@@ -48,4 +48,9 @@ class Layer(
 
     @Transient
     var gradBiases: DoubleArray? = null
+
+    companion object {
+        @JvmStatic
+        private val serialVersionUID: Long = 1L
+    }
 }
