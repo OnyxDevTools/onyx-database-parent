@@ -162,21 +162,20 @@ class NeuralNetwork(
         yTrue: Array<DoubleArray>,
         sampleWeights: DoubleArray? = null,
         epochs: Int = 1_000,
-        maxLoss: Double = 0.08
-    ) {
+        maxLoss: Double = 0.0
+    ) : Double {
         var loss = Double.MAX_VALUE
         var epoch = 0
-        while (epoch < epochs || maxLoss < loss) {
+        while (epoch < epochs || if (maxLoss > 0.0) maxLoss < loss else false) {
             epoch++
             val yPred = predict(input, isTraining = true)
             backward(yPred, yTrue, sampleWeights)
             updateParameters()
             if (epoch % 100 == 0) {
                 loss = computeLoss(yPred, yTrue, sampleWeights)
-                println("Epoch $epoch, loss = $loss")
             }
         }
-        println("Epoch $epoch, loss = $loss")
+        return loss
     }
 
     private fun computeLoss(yPred: Array<DoubleArray>, yTrue: Array<DoubleArray>, w: DoubleArray?): Double {
