@@ -14,4 +14,9 @@ enum class Activation : Serializable {
 
     abstract fun f(x: Double): Double
     abstract fun d(x: Double): Double
+
+    companion object {
+        @JvmStatic
+        private val serialVersionUID: Long = 1L
+    }
 }

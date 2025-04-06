@@ -26,7 +26,7 @@ dependencies {
     implementation("org.hsqldb:hsqldb:3.4.4")
     implementation("org.apache.derby:derby:10.12.1.1")
     implementation("org.xerial:sqlite-jdbc:3.8.7")
-    implementation("com.onyxdevtools:onyx-database:3.5.12")
+    implementation("com.onyxdevtools:onyx-database:3.5.13")
 }
 
 group = "com.onyxdevtools"

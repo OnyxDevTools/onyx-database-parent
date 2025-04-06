@@ -185,4 +185,9 @@ class NeuralNetwork(
             p.zip(t).sumOf { (pp, tt) -> (pp - tt).pow(2) } * weights[i]
         }.sum() / yTrue.size
     }
+
+    companion object {
+        @JvmStatic
+        private val serialVersionUID: Long = 1L
+    }
 }
