@@ -49,7 +49,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
      *
      * @see AbstractNodeCollection
      */
-    inner class ValueCollection<out V> : AbstractNodeCollection<V>() {
+    inner class ValueCollection<V> : AbstractNodeCollection<V>() {
         override fun iterator(): MutableIterator<V?> = ValueIterator()
     }
 
@@ -58,7 +58,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
      *
      * @see AbstractNodeCollection
      */
-    inner class DictionaryCollection<out D> : AbstractNodeCollection<D>() {
+    inner class DictionaryCollection<D> : AbstractNodeCollection<D>() {
         override fun iterator(): MutableIterator<D> = DictionaryIterator()
     }
 
@@ -67,7 +67,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
      *
      * @see AbstractNodeCollection
      */
-    inner class KeyCollection<out K> : AbstractNodeCollection<K>() {
+    inner class KeyCollection<K> : AbstractNodeCollection<K>() {
         override fun iterator(): MutableIterator<K?> = KeyIterator()
     }
 
@@ -76,7 +76,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
      *
      * @see AbstractNodeCollection
      */
-    inner class ReferenceCollection<out R> : AbstractNodeCollection<R>() {
+    inner class ReferenceCollection<R> : AbstractNodeCollection<R>() {
         override fun iterator(): MutableIterator<R> = NodeIterator() as MutableIterator<R>
     }
 
@@ -84,7 +84,7 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
      * Entry Collection.  Much like KeyCollection except iterates through entries
      *
      */
-    inner class EntryCollection<out V> : AbstractNodeCollection<V>() {
+    inner class EntryCollection<V> : AbstractNodeCollection<V>() {
         override fun iterator(): MutableIterator<V> = EntryIterator() as MutableIterator<V>
     }
 

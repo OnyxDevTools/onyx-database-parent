@@ -19,11 +19,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.5.11")
+    implementation("com.onyxdevtools:onyx-database:3.5.12")
 }
 
 group = "com.onyxdevtools"
-version = "3.5.11"
+version = "3.5.12"
 description = "com.onyxdevtools:onyx-database-examples:persisting-data"
 java.sourceCompatibility = JavaVersion.VERSION_17
 
