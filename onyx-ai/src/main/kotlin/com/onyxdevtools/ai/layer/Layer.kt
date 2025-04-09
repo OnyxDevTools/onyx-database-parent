@@ -11,7 +11,7 @@ class Layer(
     val dropoutRate: Double = 0.0
 ) : Serializable {
 
-    val weights: Array<DoubleArray> =
+    var weights: Array<DoubleArray> =
         Array(inputSize) {
             DoubleArray(outputSize) {
                 Random.nextDouble(
@@ -20,7 +20,7 @@ class Layer(
                 ) * sqrt(2.0 / (inputSize + outputSize))
             }
         }
-    val biases: DoubleArray = DoubleArray(outputSize)
+    var biases: DoubleArray = DoubleArray(outputSize)
 
     @Transient
     var z: Array<DoubleArray>? = null

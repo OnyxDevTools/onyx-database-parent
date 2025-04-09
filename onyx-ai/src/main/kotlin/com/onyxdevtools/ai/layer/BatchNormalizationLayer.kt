@@ -3,8 +3,8 @@ package com.onyxdevtools.ai.layer
 import java.io.Serializable
 
 class BatchNormalizationLayer(val size: Int) : Serializable {
-    val gamma = DoubleArray(size) { 1.0 }
-    val beta = DoubleArray(size)
+    var gamma = DoubleArray(size) { 1.0 }
+    var beta = DoubleArray(size)
 
     /* training‑only state */
     @Transient
