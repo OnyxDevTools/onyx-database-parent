@@ -26,7 +26,7 @@ dependencies {
 }
 
 group = "com.onyxdevtools"
-version = "3.5.14"
+version = "3.5.16"
 java.sourceCompatibility = JavaVersion.VERSION_17
 java.targetCompatibility = JavaVersion.VERSION_17
 

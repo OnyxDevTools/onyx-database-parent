@@ -1,4 +1,4 @@
-@file:Suppress("unused", "MemberVisibilityCanBePrivate")
+@file:Suppress("unused")
 package com.onyxdevtools.ai
 
 import com.onyxdevtools.ai.extensions.*
@@ -9,7 +9,8 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-class NeuralNetwork(
+@Suppress("MemberVisibilityCanBePrivate")
+data class NeuralNetwork(
     private val layers: List<Any>,
     private val learningRate: Double = 0.001,
     private val lambda: Double = 0.0001,
@@ -161,29 +162,65 @@ class NeuralNetwork(
         input: Array<DoubleArray>,
         yTrue: Array<DoubleArray>,
         sampleWeights: DoubleArray? = null,
-        epochs: Int = 1_000,
-        maxLoss: Double = 0.0
-    ) : Double {
-        var loss = Double.MAX_VALUE
+        epochs: Int,
+        test: ((NeuralNetwork, Int) -> Double),
+    ): NeuralNetwork {
         var epoch = 0
-        while (epoch < epochs || if (maxLoss > 0.0) maxLoss < loss else false) {
+        var bestScore = Double.MAX_VALUE
+        var bestModel = this
+        while (true) {
             epoch++
             val yPred = predict(input, isTraining = true)
             backward(yPred, yTrue, sampleWeights)
             updateParameters()
-            if (epoch % 100 == 0) {
-                loss = computeLoss(yPred, yTrue, sampleWeights)
+            val score = test.invoke(this, epoch)
+            if (score < bestScore) {
+                bestScore = score
+                bestModel = this.clone()
+                epoch = 0
+            }
+            if (epoch > epochs) {
+                return bestModel
             }
         }
-        return loss
     }
 
-    private fun computeLoss(yPred: Array<DoubleArray>, yTrue: Array<DoubleArray>, w: DoubleArray?): Double {
-        val weights = w ?: DoubleArray(yTrue.size) { 1.0 }
-        return yPred.zip(yTrue).mapIndexed { i, (p, t) ->
-            p.zip(t).sumOf { (pp, tt) -> (pp - tt).pow(2) } * weights[i]
-        }.sum() / yTrue.size
-    }
+    fun clone(): NeuralNetwork =
+        NeuralNetwork(
+            layers = this.layers.map {
+                when (it) {
+                    is Layer -> {
+                        Layer(
+                            inputSize = it.inputSize,
+                            outputSize = it.outputSize,
+                            activation = it.activation,
+                            dropoutRate = it.dropoutRate
+                        ).apply {
+                            this.biases = it.biases.copyOf()
+                            this.weights = it.weights.copyOf()
+                        }
+                    }
+
+                    is BatchNormalizationLayer -> {
+                        BatchNormalizationLayer(
+                            size = it.size
+                        ).apply {
+                            this.gamma = it.gamma.copyOf()
+                            this.beta = it.beta.copyOf()
+                        }
+                    }
+
+                    else -> {
+                        throw IllegalArgumentException("Unsupported layer type")
+                    }
+                }
+            },
+            learningRate = learningRate,
+            lambda = lambda,
+            beta1 = beta1,
+            beta2 = beta2,
+            epsilon = epsilon
+        )
 
     companion object {
         @JvmStatic
