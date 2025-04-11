@@ -1,6 +1,7 @@
 package com.onyxdevtools.ai.extensions
 
 import java.util.stream.IntStream
+import kotlin.math.min
 
 /**
  * Multiplies two matrices in parallel using Java's parallel streams.
@@ -10,25 +11,45 @@ import java.util.stream.IntStream
  * @return The product of the two matrices (dimensions: aRows x bCols).
  * @throws IllegalArgumentException If the number of columns in [a] does not match the number of rows in [b].
  */
+const val BLOCK_SIZE_TRANSPOSED = 32 // Example value, experiment with 16, 64, 128 etc.
+
 fun matrixMultiply(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<DoubleArray> {
     val aRows = a.size
     val aCols = a[0].size
-    val bRows = b.size
     val bCols = b[0].size
-    require(aCols == bRows) { "Matrix dimensions mismatch" }
+
+    val bT = transpose(b)
+
     val result = Array(aRows) { DoubleArray(bCols) }
 
-    // Parallel row multiplication
-    IntStream.range(0, aRows).parallel().forEach { i ->
-        val rowA = a[i]
-        for (k in 0 until aCols) {
-            val valA = rowA[k]
-            val rowB = b[k]
-            for (j in 0 until bCols) {
-                result[i][j] += valA * rowB[j]
+    val numRowBlocks = (aRows + BLOCK_SIZE_TRANSPOSED - 1) / BLOCK_SIZE_TRANSPOSED
+
+    IntStream.range(0, numRowBlocks).parallel().forEach { blockIndex ->
+        val ii = blockIndex * BLOCK_SIZE_TRANSPOSED
+        val iEnd = min(ii + BLOCK_SIZE_TRANSPOSED, aRows)
+
+        for (jj in 0 until bCols step BLOCK_SIZE_TRANSPOSED) {
+            val jEnd = min(jj + BLOCK_SIZE_TRANSPOSED, bCols)
+
+            for (kk in 0 until aCols step BLOCK_SIZE_TRANSPOSED) {
+                val kEnd = min(kk + BLOCK_SIZE_TRANSPOSED, aCols)
+
+                for (i in ii until iEnd) {
+                    val rowA = a[i]
+                    val resRow = result[i]
+                    for (j in jj until jEnd) {
+                        var sum = 0.0
+                        val rowBT = bT[j]
+                        for (k in kk until kEnd) {
+                            sum += rowA[k] * rowBT[k]
+                        }
+                        resRow[j] += sum
+                    }
+                }
             }
         }
     }
+
     return result
 }
 
@@ -43,7 +64,6 @@ fun matrixMultiply(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<DoubleAr
 fun addVectorToRows(matrix: Array<DoubleArray>, vector: DoubleArray): Array<DoubleArray> {
     val numRows = matrix.size
     val numCols = matrix[0].size
-    require(vector.size == numCols) { "Vector length must match matrix columns" }
     val result = Array(numRows) { DoubleArray(numCols) }
 
     for (i in 0 until numRows) {
@@ -88,7 +108,6 @@ inline fun applyElementWise(
  */
 fun elementWiseMultiply(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<DoubleArray> {
     val rows = a.size
-    require(rows == b.size && a[0].size == b[0].size) { "Matrix dimensions must match" }
     val cols = a[0].size
     val result = Array(rows) { DoubleArray(cols) }
 
@@ -106,12 +125,20 @@ fun elementWiseMultiply(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<Dou
  * @param m The input matrix (dimensions: rows x cols).
  * @return A new matrix which is the transpose of [m] (dimensions: cols x rows).
  */
-fun transpose(m: Array<DoubleArray>): Array<DoubleArray> {
-    val r = m.size
-    val c = m[0].size
-    return Array(c) { j ->
-        DoubleArray(r) { i -> m[i][j] }
+fun transpose(matrix: Array<DoubleArray>): Array<DoubleArray> {
+    val rows = matrix.size
+    if (rows == 0) return Array(0) { DoubleArray(0) }
+    val cols = matrix[0].size
+    if (cols == 0) return Array(rows) { DoubleArray(0) }
+
+    val result = Array(cols) { DoubleArray(rows) }
+
+    for (i in 0 until rows) {
+        for (j in 0 until cols) {
+            result[j][i] = matrix[i][j]
+        }
     }
+    return result
 }
 
 /**
@@ -145,7 +172,6 @@ fun sumColumns(m: Array<DoubleArray>): DoubleArray {
 fun subtract(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<DoubleArray> {
     @Suppress("DuplicatedCode")
     val rows = a.size
-    require(rows == b.size && a[0].size == b[0].size) { "Matrix dimensions must match" }
     val cols = a[0].size
     val result = Array(rows) { DoubleArray(cols) }
 
@@ -188,7 +214,6 @@ fun scalarMultiply(m: Array<DoubleArray>, s: Double): Array<DoubleArray> {
 fun add(a: Array<DoubleArray>, b: Array<DoubleArray>): Array<DoubleArray> {
     @Suppress("DuplicatedCode")
     val rows = a.size
-    require(rows == b.size && a[0].size == b[0].size) { "Matrix dimensions must match" }
     val cols = a[0].size
     val result = Array(rows) { DoubleArray(cols) }
 

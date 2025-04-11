@@ -9,6 +9,7 @@ import java.io.Serializable
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
+import kotlin.system.measureTimeMillis
 
 @Suppress("MemberVisibilityCanBePrivate")
 data class NeuralNetwork(
