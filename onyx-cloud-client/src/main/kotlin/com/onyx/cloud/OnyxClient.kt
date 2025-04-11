@@ -394,7 +394,7 @@ class OnyxClient(
      * Deletes an entity by its primary key from the specified table.
      *
      * @param table The name of the table from which to delete the entity.
-     * @param primaryKey The primary key value of the entity to delete.
+     * @param primaryKey The primary key value of the entity fto delete.
      * @param options Optional parameters, such as 'partition' to specify a partition key.
      * @return `true` if the deletion was successful, `false` otherwise.
      * @throws NotFoundException if the entity with the specified ID does not exist.
@@ -816,7 +816,7 @@ infix fun String.neq(value: Any?): ConditionBuilder =
 
 /** Creates an "in" condition (field value must be one of the specified values). */
 infix fun String.inOp(values: List<Any?>): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.IN, values)) // Send list directly
+    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.IN, values.joinToString(",") { it.toString() })) // Send list directly
 
 /** Creates a "not in" condition (field value must not be one of the specified values). */
 infix fun String.notIn(values: List<Any?>): ConditionBuilder =
