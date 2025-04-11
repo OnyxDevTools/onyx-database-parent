@@ -177,27 +177,29 @@ data class NeuralNetwork(
     /* ---------- training loop ---------- */
 
     fun train(
-        input: Array<DoubleArray>,
-        yTrue: Array<DoubleArray>,
-        sampleWeights: DoubleArray? = null,
-        epochs: Int,
-        test: ((NeuralNetwork, Int) -> Double),
+        trainingFeatures: Array<DoubleArray>,
+        trainingValues: Array<DoubleArray>,
+        trainingWeights: DoubleArray? = null,
+        maxEpochsWithoutChange: Int,
+        lossFunction: ((NeuralNetwork, Int) -> Double),
     ): NeuralNetwork {
         var epoch = 0
+        var totalEpochs = 0
         var bestScore = Double.MAX_VALUE
         var bestModel = this
         while (true) {
             epoch++
-            val yPred = predict(input, isTraining = true)
-            backward(yPred, yTrue, sampleWeights)
+            totalEpochs++
+            val predictionResult = predict(trainingFeatures, isTraining = true)
+            backward(predictionResult, trainingValues, trainingWeights)
             updateParameters()
-            val score = test.invoke(this, epoch)
+            val score = lossFunction.invoke(this, totalEpochs)
             if (score < bestScore) {
                 bestScore = score
                 bestModel = this.clone()
                 epoch = 0
             }
-            if (epoch > epochs) {
+            if (epoch > maxEpochsWithoutChange) {
                 return bestModel
             }
         }
