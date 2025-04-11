@@ -1,4 +1,5 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "MemberVisibilityCanBePrivate")
+
 package com.onyxdevtools.ai
 
 import com.onyxdevtools.ai.extensions.*
@@ -28,38 +29,55 @@ data class NeuralNetwork(
     fun predict(input: Array<DoubleArray>, isTraining: Boolean = false): Array<DoubleArray> {
         currentInput = input
         var a = input
-        for (layer in layers) when (layer) {
-            is Layer -> {
-                val z = addVectorToRows(matrixMultiply(a, layer.weights), layer.biases)
-                layer.z = z
-                layer.a = applyElementWise(z, layer.activation::f)
 
-                if (isTraining && layer.dropoutRate > 0.0) {
-                    layer.dropoutMask = layer.a!!.map { row ->
-                        row.map { if (Random.nextDouble() < layer.dropoutRate) 0.0 else 1.0 / (1 - layer.dropoutRate) }
-                            .toDoubleArray()
-                    }.toTypedArray()
-                    layer.a = elementWiseMultiply(layer.a!!, layer.dropoutMask!!)
+        for (i in layers.indices) {
+            val layer = layers[i]
+            when (layer) {
+                is Layer -> {
+                    // Linear transformation
+                    var z = addVectorToRows(matrixMultiply(a, layer.weights), layer.biases)
+
+                    // Check if the next layer is BatchNormalizationLayer
+                    val nextLayer = layers.getOrNull(i + 1)
+                    if (nextLayer is BatchNormalizationLayer) {
+                        // Batch normalization BEFORE activation
+                        val mean = DoubleArray(nextLayer.size) { j -> z.sumOf { it[j] } / z.size }
+                        val varc = DoubleArray(nextLayer.size) { j -> z.sumOf { (it[j] - mean[j]).pow(2) } / z.size }
+
+                        nextLayer.mean = mean
+                        nextLayer.variance = varc
+
+                        nextLayer.normalized = z.map { row ->
+                            row.mapIndexed { j, x -> (x - mean[j]) / sqrt(varc[j] + 1e-8) }.toDoubleArray()
+                        }.toTypedArray()
+
+                        // Apply gamma and beta parameters
+                        z = nextLayer.normalized!!.map { row ->
+                            row.mapIndexed { j, x -> nextLayer.gamma[j] * x + nextLayer.beta[j] }.toDoubleArray()
+                        }.toTypedArray()
+
+                        nextLayer.a = z  // Store output of BatchNorm
+                    }
+
+                    layer.z = z
+                    layer.a = applyElementWise(z, layer.activation::f)
+
+                    // Dropout (optional)
+                    if (isTraining && layer.dropoutRate > 0.0) {
+                        layer.dropoutMask = layer.a!!.map { row ->
+                            row.map { if (Random.nextDouble() < layer.dropoutRate) 0.0 else 1.0 / (1 - layer.dropoutRate) }
+                                .toDoubleArray()
+                        }.toTypedArray()
+                        layer.a = elementWiseMultiply(layer.a!!, layer.dropoutMask!!)
+                    }
+
+                    a = layer.a!!
                 }
-                a = layer.a!!
-            }
-
-            is BatchNormalizationLayer -> {
-                val mean = DoubleArray(layer.size) { j -> a.sumOf { it[j] } / a.size }
-                val varc = DoubleArray(layer.size) { j -> a.sumOf { (it[j] - mean[j]).pow(2) } / a.size }
-                layer.mean = mean
-                layer.variance = varc
-                layer.normalized = a.map { row ->
-                    row.mapIndexed { j, x -> (x - mean[j]) / sqrt(varc[j] + 1e-8) }.toDoubleArray()
-                }.toTypedArray()
-                layer.a = layer.normalized!!.map { row ->
-                    row.mapIndexed { j, x -> layer.gamma[j] * x + layer.beta[j] }.toDoubleArray()
-                }.toTypedArray()
-                a = layer.a!!
             }
         }
         return a
     }
+
 
     /* ---------- backward ---------- */
 
