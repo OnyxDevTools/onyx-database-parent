@@ -12,11 +12,11 @@ import kotlin.math.sqrt
 @Suppress("MemberVisibilityCanBePrivate")
 data class NeuralNetwork(
     private val layers: List<Any>,
-    private val learningRate: Double = 0.001,
+    private var learningRate: Double = 0.001,
     private val lambda: Double = 0.0001,
     private val beta1: Double = 0.9,
     private val beta2: Double = 0.999,
-    private val epsilon: Double = 1e-8
+    private val epsilon: Double = 1e-8,
 ) : Serializable {
 
     @Transient
@@ -33,13 +33,9 @@ data class NeuralNetwork(
             val layer = layers[i]
             when (layer) {
                 is Layer -> {
-                    // Linear transformation
                     var z = addVectorToRows(matrixMultiply(a, layer.weights), layer.biases)
-
-                    // Check if the next layer is BatchNormalizationLayer
                     val nextLayer = layers.getOrNull(i + 1)
                     if (nextLayer is BatchNormalizationLayer) {
-                        // Batch normalization BEFORE activation
                         val mean = DoubleArray(nextLayer.size) { j -> z.sumOf { it[j] } / z.size }
                         val varc = DoubleArray(nextLayer.size) { j -> z.sumOf { (it[j] - mean[j]).pow(2) } / z.size }
 
@@ -49,19 +45,14 @@ data class NeuralNetwork(
                         nextLayer.normalized = z.map { row ->
                             row.mapIndexed { j, x -> (x - mean[j]) / sqrt(varc[j] + 1e-8) }.toDoubleArray()
                         }.toTypedArray()
-
-                        // Apply gamma and beta parameters
                         z = nextLayer.normalized!!.map { row ->
                             row.mapIndexed { j, x -> nextLayer.gamma[j] * x + nextLayer.beta[j] }.toDoubleArray()
                         }.toTypedArray()
-
-                        nextLayer.a = z  // Store output of BatchNorm
+                        nextLayer.a = z
                     }
 
                     layer.z = z
                     layer.a = applyElementWise(z, layer.activation::f)
-
-                    // Dropout (optional)
                     if (isTraining && layer.dropoutRate > 0.0) {
                         layer.applyDropout()
                     }
@@ -73,58 +64,58 @@ data class NeuralNetwork(
         return a
     }
 
-
-    /* ---------- backward ---------- */
-
     private fun backward(yPred: Array<DoubleArray>, yTrue: Array<DoubleArray>, sampleWeights: DoubleArray? = null) {
-        requireNotNull(currentInput) { "Call forward() before backward()" }
+        requireNotNull(currentInput) { "Call predict() before backward()" }
         val w = sampleWeights ?: DoubleArray(yTrue.size) { 1.0 }
 
         var delta = subtract(yPred, yTrue).mapIndexed { i, row ->
             row.map { it * w[i] }.toDoubleArray()
         }.toTypedArray()
 
-        for (i in layers.indices.reversed()) when (val layer = layers[i]) {
+        for (i in layers.indices.reversed()) {
+            val layer = layers[i]
+            when (layer) {
             is Layer -> {
-                val aPrev = if (layer === layers.first { it is Layer }) currentInput!!
+                    val nextLayer = layers.getOrNull(i + 1)
+                    if (nextLayer !is BatchNormalizationLayer) {
+                        // Compute delta_z if no batch norm follows
+                        delta = elementWiseMultiply(delta, applyElementWise(layer.z!!, layer.activation::d))
+                    }
+                    // delta is now delta_z
+                    val aPrev = if (i == 0) currentInput!!
                 else (layers[i - 1] as? Layer)?.a ?: (layers[i - 1] as BatchNormalizationLayer).a!!
 
                 layer.gradWeights = add(matrixMultiply(transpose(aPrev), delta), scalarMultiply(layer.weights, lambda))
                 layer.gradBiases = sumColumns(delta)
-
-                if (layer !== layers.first { it is Layer }) {
-                    val zPrev = when (val prev = layers[i - 1]) {
-                        is Layer -> prev.z!!
-                        is BatchNormalizationLayer -> (layers[i - 2] as Layer).z!!
-                        else -> error("Unexpected layer type")
-                    }
                     delta = matrixMultiply(delta, transpose(layer.weights))
-                    delta = elementWiseMultiply(delta, applyElementWise(zPrev, layer.activation::d))
                 }
-            }
-
             is BatchNormalizationLayer -> {
-                layer.gradGamma = sumColumns(delta)
-                layer.gradBeta = sumColumns(delta)
-
-                val dNorm = delta.map { row ->
-                    row.mapIndexed { j, d -> d * layer.gamma[j] }.toDoubleArray()
-                }.toTypedArray()
-                delta = dNorm.map { row ->
-                    row.mapIndexed { j, d -> d / sqrt(layer.variance!![j] + 1e-8) }.toDoubleArray()
-                }.toTypedArray()
-
-                if (i > 0 && layers[i - 1] is Layer) {
-                    val prev = layers[i - 1] as Layer
-                    delta = Array(yTrue.size) { k ->
-                        DoubleArray(prev.outputSize) { j -> delta[k].getOrElse(j) { 0.0 } }
+                    val prevLayer = layers[i - 1] as Layer
+                    // Compute delta_bn_z since activation follows batch norm
+                    delta = elementWiseMultiply(delta, applyElementWise(prevLayer.z!!, prevLayer.activation::d))
+                    // Compute gradients for gamma and beta
+                    layer.gradGamma = DoubleArray(layer.size) { j ->
+                        (0 until delta.size).sumOf { k -> delta[k][j] * layer.normalized!![k][j] }
                     }
+                layer.gradBeta = sumColumns(delta)
+                    // Compute delta_z for previous layer
+                    val m = delta.size.toDouble()
+                    val mean_delta_bn_z = DoubleArray(layer.size) { j ->
+                        (0 until delta.size).sumOf { k -> delta[k][j] } / m
+                    }
+                    val mean_delta_bn_z_x_hat = DoubleArray(layer.size) { j ->
+                        (0 until delta.size).sumOf { k -> delta[k][j] * layer.normalized!![k][j] } / m
+                    }
+                    delta = Array(delta.size) { k ->
+                        DoubleArray(layer.size) { j ->
+                            (delta[k][j] - mean_delta_bn_z[j] - layer.normalized!![k][j] * mean_delta_bn_z_x_hat[j]) /
+                                    sqrt(layer.variance!![j] + 1e-8)
+                        }
                 }
             }
         }
     }
-
-    /* ---------- Adam update ---------- */
+    }
 
     @Suppress("DuplicatedCode")
     private fun updateParameters() {
@@ -169,14 +160,12 @@ data class NeuralNetwork(
         }
     }
 
-    /* ---------- training loop ---------- */
-
     fun train(
         trainingFeatures: Array<DoubleArray>,
         trainingValues: Array<DoubleArray>,
         trainingWeights: DoubleArray? = null,
         maxEpochsWithoutChange: Int,
-        lossFunction: ((NeuralNetwork, Int) -> Double),
+        lossFunction: ((NeuralNetwork, Int) -> Double)
     ): NeuralNetwork {
         var epoch = 0
         var totalEpochs = 0
@@ -224,10 +213,7 @@ data class NeuralNetwork(
                             this.beta = it.beta.copyOf()
                         }
                     }
-
-                    else -> {
-                        throw IllegalArgumentException("Unsupported layer type")
-                    }
+                    else -> throw IllegalArgumentException("Unsupported layer type")
                 }
             },
             learningRate = learningRate,
