@@ -8,8 +8,6 @@ import com.onyxdevtools.ai.layer.Layer
 import java.io.Serializable
 import kotlin.math.pow
 import kotlin.math.sqrt
-import kotlin.random.Random
-import kotlin.system.measureTimeMillis
 
 @Suppress("MemberVisibilityCanBePrivate")
 data class NeuralNetwork(
@@ -65,11 +63,7 @@ data class NeuralNetwork(
 
                     // Dropout (optional)
                     if (isTraining && layer.dropoutRate > 0.0) {
-                        layer.dropoutMask = layer.a!!.map { row ->
-                            row.map { if (Random.nextDouble() < layer.dropoutRate) 0.0 else 1.0 / (1 - layer.dropoutRate) }
-                                .toDoubleArray()
-                        }.toTypedArray()
-                        layer.a = elementWiseMultiply(layer.a!!, layer.dropoutMask!!)
+                        layer.applyDropout()
                     }
 
                     a = layer.a!!
