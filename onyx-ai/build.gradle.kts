@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 description = "com.onyxdevtools:onyx-ai"
 
 plugins {

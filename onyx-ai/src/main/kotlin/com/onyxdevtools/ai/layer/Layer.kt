@@ -1,81 +1,93 @@
 package com.onyxdevtools.ai.layer
 
-import com.onyxdevtools.ai.extensions.elementWiseMultiply
-import java.io.Serializable
-import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.IntStream
-import kotlin.math.sqrt
-import kotlin.random.Random
+import Activation
+import com.onyxdevtools.ai.Matrix
 
-class Layer(
-    val inputSize: Int,
-    val outputSize: Int,
-    val activation: Activation,
-    val dropoutRate: Double = 0.0
-) : Serializable {
+/**
+ * Represents a neural network layer.
+ * A layer supports forward and backward passes, parameter updates, and cloning for training.
+ */
+interface Layer : java.io.Serializable {
 
-    var weights: Array<DoubleArray> =
-        Array(inputSize) {
-            DoubleArray(outputSize) {
-                Random.nextDouble(
-                    -1.0,
-                    1.0
-                ) * sqrt(2.0 / (inputSize + outputSize))
-            }
-        }
-    var biases: DoubleArray = DoubleArray(outputSize)
+    /**
+     * The output matrix after the activation function has been applied.
+     */
+    var output: Matrix?
 
-    @Transient
-    var z: Array<DoubleArray>? = null
+    /**
+     * The pre-activation output (i.e., the raw result before the activation function is applied).
+     */
+    var preActivation: Matrix?
 
-    @Transient
-    var a: Array<DoubleArray>? = null
+    /**
+     * The activation function used by this layer.
+     */
+    val activation: Activation
 
-    @Transient
-    var dropoutMask: Array<DoubleArray>? = null
+    /**
+     * Creates a deep copy of this layer, including its parameters.
+     *
+     * @return A new instance of this layer with the same state.
+     */
+    fun clone(): Layer
 
-    @Transient
-    var mWeights = Array(inputSize) { DoubleArray(outputSize) }
+    /**
+     * Performs a forward pass through the layer.
+     *
+     * @param input The input matrix for this layer.
+     * @param isTraining Whether the model is in training mode.
+     * @param nextLayer Optional reference to the next layer in the network.
+     * @return The output matrix after applying layer operations.
+     */
+    fun forward(
+        input: Matrix,
+        isTraining: Boolean,
+        nextLayer: Layer?
+    ): Matrix = input
 
-    @Transient
-    var vWeights = Array(inputSize) { DoubleArray(outputSize) }
+    /**
+     * Updates this layer's learnable parameters using the Adam optimizer.
+     *
+     * @param adamBeta1Power Exponential decay power of beta1 for bias correction.
+     * @param adamBeta2Power Exponential decay power of beta2 for bias correction.
+     * @param adamBeta1 Exponential decay rate for the first moment estimates.
+     * @param adamBeta2 Exponential decay rate for the second moment estimates.
+     * @param learningRate The learning rate for weight updates.
+     */
+    fun updateParameters(
+        adamBeta1Power: Double,
+        adamBeta2Power: Double,
+        adamBeta1: Double,
+        adamBeta2: Double,
+        learningRate: Double
+    )
 
-    @Transient
-    var mBiases = DoubleArray(outputSize)
+    /**
+     * Performs the backward pass (backpropagation) for this layer.
+     *
+     * @param currentInput The input matrix from the previous forward pass.
+     * @param delta The gradient of the loss with respect to this layer's output.
+     * @param featureSize The number of training samples in the current batch.
+     * @param nextLayer Optional reference to the next layer (used for chaining gradients).
+     * @param previousLayer Optional reference to the previous layer.
+     * @param lambda The L2 regularization strength.
+     * @return The gradient with respect to the input of this layer (to pass backward).
+     */
+    fun backward(
+        currentInput: Matrix?,
+        delta: Matrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): Matrix
 
-    @Transient
-    var vBiases = DoubleArray(outputSize)
-
-    @Transient
-    var gradWeights: Array<DoubleArray>? = null
-
-    @Transient
-    var gradBiases: DoubleArray? = null
-
-    fun applyDropout() {
-        val activations = a ?: error("Layer 'a' array must not be null.")
-        val rows = activations.size
-        val cols = activations[0].size
-        val dr = dropoutRate
-        val scale = 1.0 / (1 - dr)
-
-        // 1) Allocate the dropoutMask array
-        dropoutMask = Array(rows) { DoubleArray(cols) }
-
-        // 2) Fill the dropoutMask in parallel
-        IntStream.range(0, rows).parallel().forEach { i ->
-            val rng = ThreadLocalRandom.current()
-            val rowMask = dropoutMask!![i]
-            for (j in rowMask.indices) {
-                rowMask[j] = if (rng.nextDouble() < dr) 0.0 else scale
-            }
-        }
-
-        a = elementWiseMultiply(a!!, dropoutMask!!)
-    }
-
-    companion object {
-        @JvmStatic
-        private val serialVersionUID: Long = 1L
-    }
+    /**
+     * Prepares the input for forward propagation.
+     * Can be overridden by subclasses to normalize or preprocess inputs.
+     *
+     * @param input The raw input matrix.
+     * @return The processed input matrix.
+     */
+    fun preForward(input: Matrix): Matrix = input
 }

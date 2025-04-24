@@ -1,0 +1,195 @@
+package com.onyxdevtools.ai.layer.impl
+
+import Activation
+import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.extensions.*
+import com.onyxdevtools.ai.layer.Layer
+import java.util.*
+import java.util.concurrent.ThreadLocalRandom
+import java.util.stream.IntStream
+import kotlin.math.sqrt
+import kotlin.random.Random
+
+/**
+ * A fully connected neural network layer (Dense layer) with optional dropout and support for the Adam optimizer.
+ *
+ * @param inputSize The number of input features.
+ * @param outputSize The number of output neurons.
+ * @param activation The activation function to use after linear transformation.
+ * @param dropoutRate The dropout rate (0.0 = no dropout, 0.5 = 50% dropout).
+ */
+class DenseLayer(
+    private val inputSize: Int,
+    private val outputSize: Int,
+    override val activation: Activation,
+    val dropoutRate: Double = 0.0
+) : Layer {
+
+    override var preActivation: Matrix? = null
+    override var output: Matrix? = null
+
+    var weights: Matrix
+    private var biases = DoubleArray(outputSize) { 0.0 }
+
+    private var momentWeights: Matrix
+    private var velocityWeights: Matrix
+    private var momentBiases = DoubleArray(outputSize)
+    private var velocityBiases = DoubleArray(outputSize)
+
+    private var dropoutMask: Matrix? = null
+    private var gradientWeights: Matrix? = null
+    private var gradientBiases: DoubleArray? = null
+
+    init {
+        val weightInitLimit = when (activation) {
+            Activation.RELU, Activation.LEAKY_RELU -> sqrt(2.0 / inputSize)
+            else -> sqrt(6.0 / (inputSize + outputSize))
+        }
+        weights = Array(inputSize) { DoubleArray(outputSize) { Random.nextDouble(-weightInitLimit, weightInitLimit) } }
+        momentWeights = Array(inputSize) { DoubleArray(outputSize) }
+        velocityWeights = Array(inputSize) { DoubleArray(outputSize) }
+    }
+
+    /**
+     * Applies dropout to the layer's output using a shared dropout mask and parallelized random number generation.
+     */
+    private fun applyDropout() {
+        val activations = output ?: error("Layer output must not be null before applying dropout.")
+        if (dropoutRate == 0.0) return
+
+        val rows = activations.size
+        val cols = activations[0].size
+        val keepProbability = 1.0 - dropoutRate
+        val scaleFactor = 1.0 / keepProbability
+
+        if (dropoutMask == null || dropoutMask!!.size != rows || dropoutMask!![0].size != cols) {
+            dropoutMask = Array(rows) { DoubleArray(cols) }
+        }
+
+        val mask = dropoutMask!!
+
+        IntStream.range(0, rows).parallel().forEach { rowIndex ->
+            val rng = random.get()
+            val rowMask = mask[rowIndex]
+            var colIndex = 0
+            while (colIndex <= cols - 4) {
+                val r1 = rng.nextDouble()
+                val r2 = rng.nextDouble()
+                val r3 = rng.nextDouble()
+                val r4 = rng.nextDouble()
+                rowMask[colIndex] = if (r1 < keepProbability) scaleFactor else 0.0
+                rowMask[colIndex + 1] = if (r2 < keepProbability) scaleFactor else 0.0
+                rowMask[colIndex + 2] = if (r3 < keepProbability) scaleFactor else 0.0
+                rowMask[colIndex + 3] = if (r4 < keepProbability) scaleFactor else 0.0
+                colIndex += 4
+            }
+            while (colIndex < cols) {
+                rowMask[colIndex] = if (rng.nextDouble() < keepProbability) scaleFactor else 0.0
+                colIndex++
+            }
+        }
+
+        output = elementWiseMultiply(activations, mask)
+    }
+
+    /**
+     * Performs the forward pass of the layer.
+     */
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+        val linearOutput = addVectorToRows(matrixMultiply(input, this.weights), this.biases)
+        this.preActivation = linearOutput // <- store it BEFORE calling nextLayer.preForward()
+        val nextInput = nextLayer?.preForward(linearOutput) ?: linearOutput
+        this.output = applyElementWise(nextInput, this.activation::activate)
+        if (isTraining) this.applyDropout()
+        return this.output!!
+    }
+
+    /**
+     * Updates weights and biases using the Adam optimizer.
+     */
+    @Suppress("DuplicatedCode")
+    override fun updateParameters(
+        adamBeta1Power: Double,
+        adamBeta2Power: Double,
+        adamBeta1: Double,
+        adamBeta2: Double,
+        learningRate: Double
+    ) {
+        fun correctMoment(m: Double) = m / (1.0 - adamBeta1Power)
+        fun correctVelocity(v: Double) = v / (1.0 - adamBeta2Power)
+
+        for (i in 0 until inputSize) {
+            for (j in 0 until outputSize) {
+                val gradient = gradientWeights!![i][j]
+                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1 - adamBeta1) * gradient
+                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1 - adamBeta2) * gradient * gradient
+                weights[i][j] -= learningRate *
+                        correctMoment(momentWeights[i][j]) / (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
+            }
+        }
+
+        for (j in 0 until outputSize) {
+            val gradient = gradientBiases!![j]
+            momentBiases[j] = adamBeta1 * momentBiases[j] + (1 - adamBeta1) * gradient
+            velocityBiases[j] = adamBeta2 * velocityBiases[j] + (1 - adamBeta2) * gradient * gradient
+            biases[j] -= learningRate *
+                    correctMoment(momentBiases[j]) / (sqrt(correctVelocity(velocityBiases[j])) + EPSILON)
+        }
+    }
+
+    /**
+     * Performs the backward pass of the layer.
+     */
+    override fun backward(
+        currentInput: Matrix?,
+        delta: Matrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): Matrix {
+        var currentDelta = delta
+        if (nextLayer !is BatchNormalizationLayer) {
+            currentDelta = elementWiseMultiply(
+                delta,
+                applyElementWise(this.preActivation!!, this.activation::derivative)
+            )
+        }
+
+        val previousOutput = previousLayer?.output ?: currentInput!!
+
+        this.gradientWeights = add(
+            scalarMultiply(matrixMultiply(transpose(previousOutput), currentDelta), 1.0 / featureSize),
+            scalarMultiply(this.weights, lambda)
+        )
+        this.gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toDoubleArray()
+        return matrixMultiply(currentDelta, transpose(this.weights))
+    }
+
+    /**
+     * Creates a deep copy of the dense layer, including weights, biases, and optimizer states.
+     */
+    override fun clone(): DenseLayer {
+        return DenseLayer(inputSize, outputSize, activation, dropoutRate).also { copy ->
+            copy.weights = weights.deepCopy()
+            copy.biases = biases.copyOf()
+            copy.momentWeights = momentWeights.deepCopy()
+            copy.velocityWeights = velocityWeights.deepCopy()
+            copy.momentBiases = momentBiases.copyOf()
+            copy.velocityBiases = velocityBiases.copyOf()
+            copy.preActivation = preActivation?.deepCopy()
+            copy.output = output?.deepCopy()
+            copy.dropoutMask = dropoutMask?.deepCopy()
+            copy.gradientWeights = gradientWeights?.deepCopy()
+            copy.gradientBiases = gradientBiases?.copyOf()
+        }
+    }
+
+    companion object {
+        private val random = ThreadLocal.withInitial {
+            SplittableRandom(ThreadLocalRandom.current().nextLong())
+        }
+
+        private const val serialVersionUID = 1L
+    }
+}
