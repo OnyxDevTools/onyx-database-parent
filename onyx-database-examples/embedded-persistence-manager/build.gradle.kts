@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.5.17")
+    implementation("com.onyxdevtools:onyx-database:3.5.19")
 }
 
 group = "com.onyxdevtools"
-version = "3.5.17"
+version = "3.5.19"
 description = "com.onyxdevtools:onyx-database-examples:embedded-persistence-manager"
 java.sourceCompatibility = JavaVersion.VERSION_17
 

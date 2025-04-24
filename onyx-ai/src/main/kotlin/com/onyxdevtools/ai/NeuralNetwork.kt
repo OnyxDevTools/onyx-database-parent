@@ -3,228 +3,400 @@
 package com.onyxdevtools.ai
 
 import com.onyxdevtools.ai.extensions.*
-import com.onyxdevtools.ai.layer.BatchNormalizationLayer
 import com.onyxdevtools.ai.layer.Layer
+import com.onyxdevtools.ai.transformation.*
 import java.io.Serializable
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.apply
+import kotlin.math.min
 
+typealias Matrix = Array<DoubleArray>
+
+/**
+ * Represents a multi-layer neural network using backpropagation and the Adam optimizer.
+ *
+ * @property layers List of layers composing the network.
+ * @param featureTransforms Feature transforms used to normalize and transform feature data before training
+ * @param valueTransforms Value transformations used to normalize and transform the outputs
+ * @property learningRate Learning rate for parameter updates.
+ * @property lambda Regularization parameter.
+ * @property beta1 Exponential decay rate for the first moment estimates (Adam).
+ * @property beta2 Exponential decay rate for the second moment estimates (Adam).
+ */
 @Suppress("MemberVisibilityCanBePrivate")
 data class NeuralNetwork(
-    private val layers: List<Any>,
-    private var learningRate: Double = 0.001,
-    private val lambda: Double = 0.0001,
+    val layers: List<Layer>,
+    val featureTransforms: ColumnTransforms? = null,
+    val valueTransforms: ColumnTransforms? = null,
+    private var learningRate: Double = 1e-3,
+    private val lambda: Double = 1e-4,
     private val beta1: Double = 0.9,
     private val beta2: Double = 0.999,
-    private val epsilon: Double = 1e-8,
 ) : Serializable {
 
-    @Transient
-    private var adamStepTime = 0
+    private var beta1Power = 1.0
+    private var beta2Power = 1.0
+    private var lastInput: Matrix? = null
 
-    @Transient
-    private var currentInput: Array<DoubleArray>? = null
+    fun withTransforms(
+        feature: ColumnTransforms = featureTransforms ?: emptyList(),
+        label: ColumnTransforms = valueTransforms ?: emptyList(),
+    ): NeuralNetwork = copy(featureTransforms = feature, valueTransforms = label)
 
-    fun predict(input: Array<DoubleArray>, isTraining: Boolean = false): Array<DoubleArray> {
-        currentInput = input
-        var a = input
+    /**
+     * Feeds an input matrix forward through the network.
+     *
+     * @param input Input matrix.
+     * @param isTraining Whether the network is in training mode (affects layers like dropout).
+     * @param returnOriginalScale Whether to run the transforms before returning
+     * @param skipFeatureTransform Skip while training since the data has already been transformed
+     * @return Output matrix after processing through all layers.
+     */
+    fun predict(
+        input: Matrix,
+        isTraining: Boolean = false,
+        returnOriginalScale: Boolean = false,
+        skipFeatureTransform: Boolean = false
+    ): Matrix {
+        val x = if (skipFeatureTransform)
+            input
+        else
+            featureTransforms?.apply(input) ?: input
+        lastInput = x
 
-        for (i in layers.indices) {
-            val layer = layers[i]
-            when (layer) {
-                is Layer -> {
-                    var z = addVectorToRows(matrixMultiply(a, layer.weights), layer.biases)
-                    val nextLayer = layers.getOrNull(i + 1)
-                    if (nextLayer is BatchNormalizationLayer) {
-                        val mean = DoubleArray(nextLayer.size) { j -> z.sumOf { it[j] } / z.size }
-                        val varc = DoubleArray(nextLayer.size) { j -> z.sumOf { (it[j] - mean[j]).pow(2) } / z.size }
-
-                        nextLayer.mean = mean
-                        nextLayer.variance = varc
-
-                        nextLayer.normalized = z.map { row ->
-                            row.mapIndexed { j, x -> (x - mean[j]) / sqrt(varc[j] + 1e-8) }.toDoubleArray()
-                        }.toTypedArray()
-                        z = nextLayer.normalized!!.map { row ->
-                            row.mapIndexed { j, x -> nextLayer.gamma[j] * x + nextLayer.beta[j] }.toDoubleArray()
-                        }.toTypedArray()
-                        nextLayer.a = z
-                    }
-
-                    layer.z = z
-                    layer.a = applyElementWise(z, layer.activation::f)
-                    if (isTraining && layer.dropoutRate > 0.0) {
-                        layer.applyDropout()
-                    }
-
-                    a = layer.a!!
-                }
-            }
+        var out = x
+        layers.forEachIndexed { idx, layer ->
+            out = layer.forward(out, isTraining, layers.getOrNull(idx + 1))
         }
-        return a
+
+        return if (returnOriginalScale && valueTransforms?.any { it != null } == true)
+            valueTransforms.inverse(out)
+        else
+            out
     }
 
-    private fun backward(yPred: Array<DoubleArray>, yTrue: Array<DoubleArray>, sampleWeights: DoubleArray? = null) {
-        requireNotNull(currentInput) { "Call predict() before backward()" }
-        val w = sampleWeights ?: DoubleArray(yTrue.size) { 1.0 }
+    /**
+     * Feeds an input matrix forward through the network.
+     *
+     * @param input Input matrix.
+     * @return Output matrix after processing through all layers.
+     */
+    fun predict(
+        input: Matrix
+    ): Matrix = predict(input = input, isTraining = false, returnOriginalScale = true)
 
-        var delta = subtract(yPred, yTrue).mapIndexed { i, row ->
-            row.map { it * w[i] }.toDoubleArray()
+    /**
+     * Performs the backward pass to compute gradients.
+     *
+     * @param predicted The predicted output.
+     * @param actual The true labels.
+     * @param sampleWeights Optional sample weights.
+     */
+    private fun backward(
+        predicted: Matrix,
+        actual: Matrix,
+        sampleWeights: DoubleArray? = null
+    ) {
+        val sampleCount = actual.size.toDouble()
+        val weights = sampleWeights ?: DoubleArray(actual.size) { 1.0 }
+
+        var delta: Matrix = subtract(predicted, actual).mapIndexed { r, row ->
+            DoubleArray(row.size) { c -> row[c] * weights[r] }
         }.toTypedArray()
 
-        for (i in layers.indices.reversed()) {
+        for (i in layers.lastIndex downTo 0) {
             val layer = layers[i]
-            when (layer) {
-            is Layer -> {
-                    val nextLayer = layers.getOrNull(i + 1)
-                    if (nextLayer !is BatchNormalizationLayer) {
-                        // Compute delta_z if no batch norm follows
-                        delta = elementWiseMultiply(delta, applyElementWise(layer.z!!, layer.activation::d))
-                    }
-                    // delta is now delta_z
-                    val aPrev = if (i == 0) currentInput!!
-                else (layers[i - 1] as? Layer)?.a ?: (layers[i - 1] as BatchNormalizationLayer).a!!
+            val nextLayer = layers.getOrNull(i + 1)      // forward-order “next”
+            val previousLayer = layers.getOrNull(i - 1)      // forward-order “prev”
 
-                layer.gradWeights = add(matrixMultiply(transpose(aPrev), delta), scalarMultiply(layer.weights, lambda))
-                layer.gradBiases = sumColumns(delta)
-                    delta = matrixMultiply(delta, transpose(layer.weights))
-                }
-            is BatchNormalizationLayer -> {
-                    val prevLayer = layers[i - 1] as Layer
-                    // Compute delta_bn_z since activation follows batch norm
-                    delta = elementWiseMultiply(delta, applyElementWise(prevLayer.z!!, prevLayer.activation::d))
-                    // Compute gradients for gamma and beta
-                    layer.gradGamma = DoubleArray(layer.size) { j ->
-                        (0 until delta.size).sumOf { k -> delta[k][j] * layer.normalized!![k][j] }
-                    }
-                layer.gradBeta = sumColumns(delta)
-                    // Compute delta_z for previous layer
-                    val m = delta.size.toDouble()
-                    val mean_delta_bn_z = DoubleArray(layer.size) { j ->
-                        (0 until delta.size).sumOf { k -> delta[k][j] } / m
-                    }
-                    val mean_delta_bn_z_x_hat = DoubleArray(layer.size) { j ->
-                        (0 until delta.size).sumOf { k -> delta[k][j] * layer.normalized!![k][j] } / m
-                    }
-                    delta = Array(delta.size) { k ->
-                        DoubleArray(layer.size) { j ->
-                            (delta[k][j] - mean_delta_bn_z[j] - layer.normalized!![k][j] * mean_delta_bn_z_x_hat[j]) /
-                                    sqrt(layer.variance!![j] + 1e-8)
-                        }
-                }
-            }
+            val inputToLayer = previousLayer?.output ?: lastInput
+            ?: error("No input recorded for layer $i")
+
+            delta = layer.backward(
+                currentInput = inputToLayer,                 // <-- change
+                delta = delta,
+                featureSize = sampleCount,
+                nextLayer = nextLayer,
+                previousLayer = previousLayer,
+                lambda = lambda
+            )
         }
-    }
+
     }
 
-    @Suppress("DuplicatedCode")
+    /**
+     * Updates the network parameters using the Adam optimization algorithm.
+     */
     private fun updateParameters() {
-        adamStepTime++
-        for (layer in layers) when (layer) {
-            is Layer -> {
-                for (i in 0 until layer.inputSize) for (j in 0 until layer.outputSize) {
-                    val g = layer.gradWeights!![i][j]
-                    layer.mWeights[i][j] = beta1 * layer.mWeights[i][j] + (1 - beta1) * g
-                    layer.vWeights[i][j] = beta2 * layer.vWeights[i][j] + (1 - beta2) * g * g
-                    val mHat = layer.mWeights[i][j] / (1 - beta1.pow(adamStepTime.toDouble()))
-                    val vHat = layer.vWeights[i][j] / (1 - beta2.pow(adamStepTime.toDouble()))
-                    layer.weights[i][j] -= learningRate * mHat / (sqrt(vHat) + epsilon)
-                }
-                for (j in 0 until layer.outputSize) {
-                    val g = layer.gradBiases!![j]
-                    layer.mBiases[j] = beta1 * layer.mBiases[j] + (1 - beta1) * g
-                    layer.vBiases[j] = beta2 * layer.vBiases[j] + (1 - beta2) * g * g
-                    val mHat = layer.mBiases[j] / (1 - beta1.pow(adamStepTime.toDouble()))
-                    val vHat = layer.vBiases[j] / (1 - beta2.pow(adamStepTime.toDouble()))
-                    layer.biases[j] -= learningRate * mHat / (sqrt(vHat) + epsilon)
-                }
-            }
+        beta1Power *= beta1
+        beta2Power *= beta2
 
-            is BatchNormalizationLayer -> {
-                for (j in 0 until layer.size) {
-                    val gG = layer.gradGamma!![j]
-                    layer.mGamma[j] = beta1 * layer.mGamma[j] + (1 - beta1) * gG
-                    layer.vGamma[j] = beta2 * layer.vGamma[j] + (1 - beta2) * gG * gG
-                    val mHatG = layer.mGamma[j] / (1 - beta1.pow(adamStepTime.toDouble()))
-                    val vHatG = layer.vGamma[j] / (1 - beta2.pow(adamStepTime.toDouble()))
-                    layer.gamma[j] -= learningRate * mHatG / (sqrt(vHatG) + epsilon)
-
-                    val gB = layer.gradBeta!![j]
-                    layer.mBeta[j] = beta1 * layer.mBeta[j] + (1 - beta1) * gB
-                    layer.vBeta[j] = beta2 * layer.vBeta[j] + (1 - beta2) * gB * gB
-                    val mHatB = layer.mBeta[j] / (1 - beta1.pow(adamStepTime.toDouble()))
-                    val vHatB = layer.vBeta[j] / (1 - beta2.pow(adamStepTime.toDouble()))
-                    layer.beta[j] -= learningRate * mHatB / (sqrt(vHatB) + epsilon)
-                }
-            }
+        layers.forEach { layer ->
+            layer.updateParameters(beta1Power, beta2Power, beta1, beta2, learningRate)
         }
     }
 
+    /**
+     * Trains the neural network using mini-batch gradient descent with early stopping.
+     *
+     * @param trainingFeatures The input feature matrix.
+     * @param trainingValues The expected output matrix.
+     * @param trainingWeights Optional sample weights.
+     * @param batchSize Size of each mini-batch.
+     * @param maxEpochs Maximum number of training epochs.
+     * @param patience Number of epochs without improvement before early stopping.
+     * @param shuffle Whether to shuffle data each epoch.
+     * @param lossFn Custom loss evaluation function.
+     * @return The best model observed during training.
+     */
     fun train(
-        trainingFeatures: Array<DoubleArray>,
-        trainingValues: Array<DoubleArray>,
+        trainingFeatures: Matrix,
+        trainingValues: Matrix,
         trainingWeights: DoubleArray? = null,
-        maxEpochsWithoutChange: Int,
-        lossFunction: ((NeuralNetwork, Int) -> Double)
+        batchSize: Int = 32,
+        maxEpochs: Int = 100,
+        patience: Int = 10,
+        shuffle: Boolean = true,
+        lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) }
     ): NeuralNetwork {
-        var epoch = 0
-        var totalEpochs = 0
-        var bestScore = Double.MAX_VALUE
-        var bestModel = this
-        while (true) {
-            epoch++
-            totalEpochs++
-            val predictionResult = predict(trainingFeatures, isTraining = true)
-            backward(predictionResult, trainingValues, trainingWeights)
-            updateParameters()
-            val score = lossFunction.invoke(this, totalEpochs)
-            if (score < bestScore) {
-                bestScore = score
-                bestModel = this.clone()
-                epoch = 0
+
+        require(trainingWeights == null || trainingWeights.size == trainingFeatures.size) {
+            "Sample weights size must match number of training samples"
+        }
+
+        val x = featureTransforms?.fitAndTransform(trainingFeatures) ?: trainingFeatures
+        val y = valueTransforms?.fitAndTransform(trainingValues) ?: trainingValues
+
+        var bestLoss = Double.POSITIVE_INFINITY
+        var bestModel: NeuralNetwork = this.clone()
+        var epochsWithoutImprovement = 0
+
+        val indices = x.indices.toMutableList()
+
+        for (epoch in 1..maxEpochs) {
+            if (shuffle) indices.shuffle()
+
+            for (batchStart in indices.indices step batchSize) {
+                val batchEnd = min(batchStart + batchSize, indices.size)
+                val batchIndices = indices.subList(batchStart, batchEnd)
+
+                val batchFeatures = batchIndices.map { x[it] }.toTypedArray()
+                val batchLabels = batchIndices.map { y[it] }.toTypedArray()
+                val batchWeights = trainingWeights?.let { weights ->
+                    batchIndices.map { weights[it] }.toDoubleArray()
+                }
+
+                val batchPredictions = predict(batchFeatures, isTraining = true, skipFeatureTransform = true)
+                backward(batchPredictions, batchLabels, batchWeights)
+                updateParameters()
             }
-            if (epoch > maxEpochsWithoutChange) {
-                return bestModel
+
+            val loss = lossFn(this)
+            if (loss < bestLoss) {
+                bestLoss = loss
+                bestModel = this.clone()
+                epochsWithoutImprovement = 0
+            } else if (++epochsWithoutImprovement > patience) {
+                break
             }
         }
+        return bestModel
     }
 
+    /**
+     * Trains the neural network on streaming data using mini-batch gradient descent with early stopping.
+     *
+     * @receiver The neural network instance to train.
+     * @param source A lambda that provides a lazy [Sequence] of input-output pairs, where each pair is a feature vector ([DoubleArray])
+     *               and its corresponding label vector ([DoubleArray]).
+     * @param batchSize Number of samples per training batch. Default is 1024.
+     * @param maxEpochs Maximum number of full passes over the data. Default is 20.
+     * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
+     * @param testFrac Fraction of each batch reserved for testing/validation. Range: 0.0–1.0. Default is 0.1.
+     * @param shuffle Whether to shuffle each batch before splitting into train/test subsets. Default is true.
+     * @param lossFn Function to compute loss given predicted and actual matrices; defaults to mean standard error.
+     * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
+     */
+    fun trainStreaming(
+        source: () -> Sequence<Pair<DoubleArray, DoubleArray>>,
+        batchSize: Int = 1024,
+        maxEpochs: Int = 20,
+        patience: Int = 5,
+        testFrac: Double = 0.1,
+        shuffle: Boolean = true,
+        lossFn: (pred: Matrix, actual: Matrix) -> Double =
+            { p, a -> p.meanStandardError(a) }
+    ): NeuralNetwork {
+
+        var bestLoss = Double.POSITIVE_INFINITY
+        var best = this.clone()
+        var epochsWithoutImprovement = 0
+
+        repeat(maxEpochs) { epoch ->
+            val bx = mutableListOf<DoubleArray>()
+            val by = mutableListOf<DoubleArray>()
+            var runningTrainLoss = 0.0
+            var runningTestLoss = 0.0
+            var testSamples = 0
+
+            for ((xRaw, yRaw) in source()) {
+                bx += xRaw; by += yRaw
+                if (bx.size == batchSize) {
+                    // --- split batch --------------------------------------------------
+                    val (xTrainRaw, yTrainRaw, xTestRaw, yTestRaw) =
+                        splitBatch(
+                            bx.toTypedArray(), by.toTypedArray(),
+                            testFraction = testFrac, shuffle = shuffle
+                        )
+
+                    // --- fit+transform *only* on training slice ----------------------
+                    val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
+                    val yTrain = valueTransforms?.fitAndTransform(yTrainRaw) ?: yTrainRaw
+
+                    // --- train step ---------------------------------------------------
+                    val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
+                    backward(predTrain, yTrain)
+                    updateParameters()
+
+                    // --- evaluate on test slice (do NOT refit transforms) ------------
+                    val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
+                    val yTest = valueTransforms?.apply(yTestRaw) ?: yTestRaw
+                    val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
+
+                    runningTrainLoss += lossFn(predTrain, yTrain) * xTrain.size
+                    runningTestLoss += lossFn(predTest, yTest) * xTest.size
+                    testSamples += xTest.size
+
+                    bx.clear(); by.clear()
+                }
+            }
+
+            // left-overs
+            if (bx.isNotEmpty()) {
+                val (xT, yT, xv, yv) = splitBatch(
+                    bx.toTypedArray(), by.toTypedArray(),
+                    testFraction = testFrac, shuffle = shuffle
+                )
+                val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
+                val yTf = valueTransforms?.fitAndTransform(yT) ?: yT
+                val predT = predict(xTf, true, skipFeatureTransform = true)
+                backward(predT, yTf); updateParameters()
+
+                val xv2 = featureTransforms?.apply(xv) ?: xv
+                val yv2 = valueTransforms?.apply(yv) ?: yv
+                val predV = predict(xv2, false, skipFeatureTransform = true)
+
+                runningTrainLoss += lossFn(predT, yTf) * xTf.size
+                runningTestLoss += lossFn(predV, yv2) * xv2.size
+                testSamples += xv2.size
+            }
+
+            val epochTestLoss = runningTestLoss / testSamples
+            println("epoch $epoch  test-loss $epochTestLoss")
+
+            if (epochTestLoss < bestLoss) {
+                bestLoss = epochTestLoss
+                best = this.clone()
+                epochsWithoutImprovement = 0
+            } else if (++epochsWithoutImprovement >= patience) {
+                println("early stop at epoch $epoch")
+                return best
+            }
+        }
+        return best
+    }
+
+    /**
+     * Splits a batch of feature and label matrices into training and test subsets.
+     *
+     * @param x The full feature matrix (rows of samples × features).
+     * @param y The full label matrix (rows of samples × outputs).
+     * @param testFraction Fraction of samples to reserve for testing (0.0–1.0). Default is 0.1.
+     * @param shuffle Whether to shuffle samples before splitting. Default is true.
+     * @return A [Quad] containing:
+     *   - a: training feature matrix
+     *   - b: training label matrix
+     *   - c: test feature matrix
+     *   - d: test label matrix
+     */
+    private fun splitBatch(
+        x: Matrix,
+        y: Matrix,
+        testFraction: Double = 0.1,
+        shuffle: Boolean = true
+    ): Quad<Matrix, Matrix, Matrix, Matrix> {
+        val idx = x.indices.toMutableList()
+        if (shuffle) idx.shuffle()
+        val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
+        val testIdx = idx.take(testSize)
+        val trainIdx = idx.drop(testSize)
+
+        fun subset(src: Matrix, ids: List<Int>) =
+            Array(ids.size) { i -> src[ids[i]] }
+
+        return Quad(
+            subset(x, trainIdx), subset(y, trainIdx),       // train
+            subset(x, testIdx), subset(y, testIdx)         // test
+        )
+    }
+
+    /**
+     * A tuple of four values.
+     *
+     * @param A Type of the first element.
+     * @param B Type of the second element.
+     * @param C Type of the third element.
+     * @param D Type of the fourth element.
+     * @property a First value.
+     * @property b Second value.
+     * @property c Third value.
+     * @property d Fourth value.
+     */
+    private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+
+    /**
+     * Performs a single training step on a batch of raw input and label matrices.
+     *
+     * This method:
+     * 1. Fits and transforms the raw feature and label matrices using configured transforms.
+     * 2. Executes a forward pass in training mode (skipping feature transforms).
+     * 3. Performs backpropagation and updates model parameters using Adam optimizer.
+     *
+     * @param xRaw Raw feature matrix (samples × features) to train on.
+     * @param yRaw Raw label matrix (samples × outputs) corresponding to [xRaw].
+     */
+    private fun trainOnBatch(xRaw: Matrix, yRaw: Matrix) {
+        // 1. fit + transform in ONE call; each column transform updates itself
+        val x = featureTransforms?.fitAndTransform(xRaw) ?: xRaw
+        val y = valueTransforms?.fitAndTransform(yRaw) ?: yRaw
+
+        // 2. forward / backward / Adam
+        val pred = predict(x, isTraining = true, skipFeatureTransform = true)
+        backward(pred, y)
+        updateParameters()
+    }
+
+    /**
+     * Creates a deep copy of the current neural network including internal state.
+     *
+     * @return A cloned instance of this neural network.
+     */
     fun clone(): NeuralNetwork =
         NeuralNetwork(
-            layers = this.layers.map {
-                when (it) {
-                    is Layer -> {
-                        Layer(
-                            inputSize = it.inputSize,
-                            outputSize = it.outputSize,
-                            activation = it.activation,
-                            dropoutRate = it.dropoutRate
-                        ).apply {
-                            this.biases = it.biases.copyOf()
-                            this.weights = it.weights.copyOf()
-                        }
-                    }
-
-                    is BatchNormalizationLayer -> {
-                        BatchNormalizationLayer(
-                            size = it.size
-                        ).apply {
-                            this.gamma = it.gamma.copyOf()
-                            this.beta = it.beta.copyOf()
-                        }
-                    }
-                    else -> throw IllegalArgumentException("Unsupported layer type")
-                }
-            },
+            layers = layers.map { it.clone() },
             learningRate = learningRate,
             lambda = lambda,
             beta1 = beta1,
             beta2 = beta2,
-            epsilon = epsilon
-        )
+            featureTransforms = featureTransforms?.map { it?.clone() },
+            valueTransforms = valueTransforms?.map { it?.clone() },
+        ).apply {
+            this.beta1Power = this@NeuralNetwork.beta1Power
+            this.beta2Power = this@NeuralNetwork.beta2Power
+            this.lastInput = this@NeuralNetwork.lastInput?.deepCopy()
+        }
 
     companion object {
-        @JvmStatic
-        private val serialVersionUID: Long = 1L
+        private const val serialVersionUID = 1L
     }
 }
+
