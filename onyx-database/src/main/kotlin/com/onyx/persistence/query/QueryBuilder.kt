@@ -1,10 +1,11 @@
 package com.onyx.persistence.query
 
+import com.onyx.extension.common.async
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.stream.QueryMapStream
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
+import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.reflect.KClass
 
 class QueryBuilder(var manager: PersistenceManager, var query: Query) {
@@ -32,6 +33,60 @@ class QueryBuilder(var manager: PersistenceManager, var query: Query) {
         var i = 0
         manager.stream<T>(this.query) {
             action(it) && (++i < query.maxResults || query.maxResults <= 0)
+        }
+    }
+
+    @Suppress("unused")
+    fun <T : IManagedEntity> asSequence(
+        bufferSize: Int = 5_000,
+    ): Sequence<T> = Sequence {
+
+        /* ── 1. queue & sentinel ─────────────────────────────────────────── */
+        require(bufferSize > 0)
+        val SENTINEL = Any()                           // unique end-marker
+        val queue = ArrayBlockingQueue<Any>(bufferSize + 1)
+        //  ^ one extra slot, so the sentinel always fits even when full
+
+        val cancelled = AtomicBoolean(false)
+
+        /* ── 2. background producer ─────────────────────────────────────── */
+        val producer = async {
+            try {
+                manager.stream<T>(query) { entity ->
+                    // stop fast if consumer bailed
+                    if (cancelled.get()) return@stream false
+
+                    // bounded put with timeout so we can re-check the flag
+                    while (!queue.offer(entity, 400, TimeUnit.MILLISECONDS)) {
+                        if (cancelled.get()) return@stream false
+                    }
+                    true                                // keep streaming
+                }
+            } finally {
+                // guaranteed to succeed because of the +1 capacity
+                queue.put(SENTINEL)
+            }
+        }
+
+        /* ── 3. lazy iterator ───────────────────────────────────────────── */
+        object : Iterator<T> {
+            private var nextObj: Any = queue.take()    // prime
+
+            override fun hasNext(): Boolean = nextObj !== SENTINEL
+
+            @Suppress("UNCHECKED_CAST")
+            override fun next(): T {
+                if (nextObj === SENTINEL) throw NoSuchElementException()
+
+                val out = nextObj as T
+                nextObj = queue.take()
+
+                if (nextObj === SENTINEL) {            // reached end
+                    cancelled.set(true)                // tell producer to stop
+                    producer.cancel(true)              // best-effort shutdown
+                }
+                return out
+            }
         }
     }
 
