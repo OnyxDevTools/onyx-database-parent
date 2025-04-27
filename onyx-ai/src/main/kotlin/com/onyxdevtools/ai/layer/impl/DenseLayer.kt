@@ -96,12 +96,12 @@ class DenseLayer(
      * Performs the forward pass of the layer.
      */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val linearOutput = addVectorToRows(matrixMultiply(input, this.weights), this.biases)
-        this.preActivation = linearOutput // <- store it BEFORE calling nextLayer.preForward()
+        val linearOutput = addVectorToRows(matrixMultiply(input, weights), biases)
         val nextInput = nextLayer?.preForward(linearOutput) ?: linearOutput
-        this.output = applyElementWise(nextInput, this.activation::activate)
-        if (isTraining) this.applyDropout()
-        return this.output!!
+        this.preActivation = nextInput
+        output = applyElementWise(nextInput, activation::activate)
+        if (isTraining) applyDropout()
+        return output!!
     }
 
     /**
@@ -148,22 +148,21 @@ class DenseLayer(
         previousLayer: Layer?,
         lambda: Double
     ): Matrix {
-        var currentDelta = delta
-        if (nextLayer !is BatchNormalizationLayer) {
-            currentDelta = elementWiseMultiply(
-                delta,
-                applyElementWise(this.preActivation!!, this.activation::derivative)
-            )
-        }
+        // CHANGED: always apply activation derivative; no BN special-case
+        val currentDelta = elementWiseMultiply(
+            delta,
+            applyElementWise(preActivation!!, activation::derivative)
+        )
 
         val previousOutput = previousLayer?.output ?: currentInput!!
 
-        this.gradientWeights = add(
+        gradientWeights = add(
             scalarMultiply(matrixMultiply(transpose(previousOutput), currentDelta), 1.0 / featureSize),
-            scalarMultiply(this.weights, lambda)
+            scalarMultiply(weights, lambda)
         )
-        this.gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toDoubleArray()
-        return matrixMultiply(currentDelta, transpose(this.weights))
+        gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toDoubleArray()
+
+        return matrixMultiply(currentDelta, transpose(weights))
     }
 
     /**
@@ -184,6 +183,7 @@ class DenseLayer(
             copy.gradientBiases = gradientBiases?.copyOf()
         }
     }
+
 
     companion object {
         private val random = ThreadLocal.withInitial {

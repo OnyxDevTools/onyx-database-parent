@@ -1,6 +1,7 @@
 @file:Suppress("unused")
 
 import java.io.Serializable
+import kotlin.math.exp
 import kotlin.math.tanh
 
 /**
@@ -32,6 +33,18 @@ enum class Activation : Serializable {
     RELU {
         override fun activate(x: Double): Double = if (x > 0) x else 0.0
         override fun derivative(x: Double): Double = if (x > 0) 1.0 else 0.0
+    },
+
+    /**
+     * ELU (Exponential Linear Unit).
+     * Smooth alternative to ReLU. Returns x if x > 0, else α*(exp(x)-1).
+     *
+     * f(x) = x if x > 0, else α * (exp(x) - 1)
+     * d(x) = 1 if x > 0, else f(x) + α
+     */
+    ELU {
+        override fun activate(x: Double): Double = if (x > 0) x else ALPHA * (exp(x) - 1)
+        override fun derivative(x: Double): Double = if (x > 0) 1.0 else activate(x) + ALPHA
     },
 
     /**
@@ -78,6 +91,8 @@ enum class Activation : Serializable {
     abstract fun derivative(x: Double): Double
 
     companion object {
+        private const val ALPHA = 1.0
+
         private const val serialVersionUID: Long = 1L
     }
 }

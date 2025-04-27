@@ -202,10 +202,18 @@ fun Matrix.flatten(): DoubleArray =
  * @param actual Actual results
  */
 fun Matrix.meanStandardError(actual: Matrix): Double {
-    val predicted = this
-    var s = 0.0
-    for (i in actual.indices) s += (predicted[i][0] - actual[i][0]).pow(2)
-    return s / actual.size
+    var sum = 0.0
+    var total = 0
+
+    val rows = minOf(this.size, actual.size)
+    for (i in 0 until rows) {
+        val cols = minOf(this[i].size, actual[i].size)
+        for (j in 0 until cols) {
+            sum += (this[i][j] - actual[i][j]).pow(2)
+            total++
+        }
+    }
+    return if (total > 0) sum / total else 0.0
 }
 
 

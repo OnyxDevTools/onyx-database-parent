@@ -27,10 +27,10 @@ data class NeuralNetwork(
     val layers: List<Layer>,
     val featureTransforms: ColumnTransforms? = null,
     val valueTransforms: ColumnTransforms? = null,
-    private var learningRate: Double = 1e-3,
-    private val lambda: Double = 1e-4,
-    private val beta1: Double = 0.9,
-    private val beta2: Double = 0.999,
+    var learningRate: Double = 1e-3,
+    var lambda: Double = 1e-4,
+    var beta1: Double = 0.9,
+    var beta2: Double = 0.999,
 ) : Serializable {
 
     private var beta1Power = 1.0
@@ -223,8 +223,10 @@ data class NeuralNetwork(
         patience: Int = 5,
         testFrac: Double = 0.1,
         shuffle: Boolean = true,
+        trace: Boolean = true,
         lossFn: (pred: Matrix, actual: Matrix) -> Double =
-            { p, a -> p.meanStandardError(a) }
+            { p, a -> p.meanStandardError(a) },
+        comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
     ): NeuralNetwork {
 
         var bestLoss = Double.POSITIVE_INFINITY
@@ -290,15 +292,18 @@ data class NeuralNetwork(
                 testSamples += xv2.size
             }
 
-            val epochTestLoss = runningTestLoss / testSamples
-            println("epoch $epoch  test-loss $epochTestLoss")
+            val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
+
+            if (trace)
+                println("epoch $epoch  test-loss $epochTestLoss")
 
             if (epochTestLoss < bestLoss) {
                 bestLoss = epochTestLoss
                 best = this.clone()
                 epochsWithoutImprovement = 0
             } else if (++epochsWithoutImprovement >= patience) {
-                println("early stop at epoch $epoch")
+                if (trace)
+                    println("early stop at epoch $epoch")
                 return best
             }
         }
