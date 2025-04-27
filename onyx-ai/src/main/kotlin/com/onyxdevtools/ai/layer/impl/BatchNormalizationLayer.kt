@@ -96,33 +96,40 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     ): Matrix {
         checkNotNull(previousLayer) { "BatchNormalization Layer must not be the output layer." }
 
-        // CHANGED:  use delta directly; BN shouldn’t apply activation derivative
-        val adjustedDelta = delta
+        // Adjust delta using derivative of the previous layer's activation
+        val adjustedDelta = elementWiseMultiply(
+            delta,
+            applyElementWise(previousLayer.preActivation!!, previousLayer.activation::derivative)
+        )
 
         require(adjustedDelta[0].size == size) {
             "Batch Normalization layer expects width=$size but got ${adjustedDelta[0].size}"
         }
 
-        val inverseStdDev = variance!!.map { 1.0 / sqrt(it + EPSILON) }.toDoubleArray()
+        val inverseStdDev = this.variance!!.map { 1.0 / sqrt(it + EPSILON) }.toDoubleArray()
 
-        gradGamma = DoubleArray(size)
-        gradBeta = DoubleArray(size)
+        this.gradGamma = DoubleArray(size)
+        this.gradBeta = DoubleArray(size)
 
         for (j in 0 until size) {
-            for (i in adjustedDelta.indices) {
-                gradGamma!![j] += adjustedDelta[i][j] * normalized!![i][j]
-                gradBeta!![j] += adjustedDelta[i][j]
+            for (sampleIndex in adjustedDelta.indices) {
+                gradGamma!![j] += adjustedDelta[sampleIndex][j] * this.normalized!![sampleIndex][j]
+                gradBeta!![j] += adjustedDelta[sampleIndex][j]
             }
-            // CHANGED:  no “/ featureSize” here – keep sums
+            gradGamma!![j] /= featureSize
+            gradBeta!![j] /= featureSize
         }
 
-        return Array(adjustedDelta.size) { i ->
+        // Backprop through normalization formula
+        val outputDelta = Array(adjustedDelta.size) { sampleIndex ->
             DoubleArray(size) { j ->
-                val xHat = normalized!![i][j]
-                val dY = adjustedDelta[i][j]
+                val xHat = normalized!![sampleIndex][j]
+                val dY = adjustedDelta[sampleIndex][j]
                 gamma[j] * inverseStdDev[j] * (featureSize * dY - gradBeta!![j] - xHat * gradGamma!![j]) / featureSize
             }
         }
+
+        return outputDelta
     }
 
     /**
