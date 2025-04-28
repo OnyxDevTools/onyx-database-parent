@@ -18,7 +18,10 @@ import kotlin.reflect.KClass
 fun <T : Any, R> QueryBuilder.QueryResults<T>.asSequence(
     executor: ExecutorService = Executors.newSingleThreadExecutor(),
     filter: (T) -> Boolean = { true },
-    transform: (T) -> R,
+    transform: (T) -> R = {
+        @Suppress("UNCHECKED_CAST")
+        it as R
+    },
 ): Sequence<R> = sequence {
     var current: QueryBuilder.QueryResults<T>? = this@asSequence
 
