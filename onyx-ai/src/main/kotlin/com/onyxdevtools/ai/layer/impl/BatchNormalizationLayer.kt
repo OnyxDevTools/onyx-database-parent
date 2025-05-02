@@ -26,6 +26,11 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     private var variance: DoubleArray? = null
     private var normalized: Matrix? = null
 
+    // Added running statistics
+    private var runningMean = DoubleArray(size) { 0.0 }
+    private var runningVariance = DoubleArray(size) { 1.0 }
+    private val momentum = 0.9 // Common momentum value; adjust as needed
+
     private var gradGamma: DoubleArray? = null
     private var gradBeta: DoubleArray? = null
 
@@ -62,25 +67,43 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
         }
     }
 
-    /**
-     * Normalizes the input using batch statistics and applies learned affine transformation.
-     */
-    override fun preForward(input: Matrix): Matrix {
-        val meanVector = DoubleArray(size) { j -> input.sumOf { it[j] } / input.size }
-        val varianceVector = DoubleArray(size) { j -> input.sumOf { (it[j] - meanVector[j]).pow(2) } / input.size }
+    override fun preForward(input: Matrix, isTraining: Boolean): Matrix {
+        if (isTraining) {
+            // Compute batch statistics
+            val meanVector = DoubleArray(size) { j -> input.sumOf { it[j] } / input.size }
+            val varianceVector = DoubleArray(size) { j -> input.sumOf { (it[j] - meanVector[j]).pow(2) } / input.size }
 
-        this.mean = meanVector
-        this.variance = varianceVector
+            this.mean = meanVector
+            this.variance = varianceVector
 
-        this.normalized = input.map { row ->
-            DoubleArray(row.size) { j -> (row[j] - meanVector[j]) / sqrt(varianceVector[j] + EPSILON) }
-        }.toTypedArray()
+            // Normalize using batch statistics
+            this.normalized = input.map { row ->
+                DoubleArray(row.size) { j -> (row[j] - meanVector[j]) / sqrt(varianceVector[j] + EPSILON) }
+            }.toTypedArray()
 
+            // Update running statistics (not used for current normalization)
+            for (j in 0 until size) {
+                runningMean[j] = momentum * runningMean[j] + (1 - momentum) * meanVector[j]
+                runningVariance[j] = momentum * runningVariance[j] + (1 - momentum) * varianceVector[j]
+            }
+        } else {
+            // Use running statistics for inference
+            this.normalized = input.map { row ->
+                DoubleArray(row.size) { j -> (row[j] - runningMean[j]) / sqrt(runningVariance[j] + EPSILON) }
+            }.toTypedArray()
+        }
+
+        // Apply affine transformation
         this.output = this.normalized!!.map { row ->
             DoubleArray(row.size) { j -> gamma[j] * row[j] + beta[j] }
         }.toTypedArray()
 
         return output!!
+    }
+
+    // Implement forward to use isTraining from the network
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+        return preForward(input, isTraining)
     }
 
     /**
@@ -125,9 +148,6 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
         }
     }
 
-    /**
-     * Creates a deep copy of the batch normalization layer.
-     */
     override fun clone(): Layer {
         return BatchNormalizationLayer(size).also { copy ->
             copy.gamma = gamma.copyOf()
@@ -136,7 +156,8 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
             copy.variance = variance?.copyOf()
             copy.normalized = normalized?.deepCopy()
             copy.output = output?.deepCopy()
-
+            copy.runningMean = runningMean.copyOf()
+            copy.runningVariance = runningVariance.copyOf()
             copy.gradGamma = gradGamma?.copyOf()
             copy.gradBeta = gradBeta?.copyOf()
             copy.momentGamma = momentGamma.copyOf()

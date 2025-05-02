@@ -9,7 +9,7 @@ import com.onyx.cloud.extensions.fromJson
 import com.onyx.cloud.extensions.fromJsonList
 import com.onyx.cloud.extensions.toJson
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -45,19 +45,14 @@ class OnyxClient(
      * Ktor HttpClient configured for standard API requests.
      * Includes long timeouts and connection pooling settings.
      */
-    private val httpClient = HttpClient(CIO) {
+    private val httpClient = HttpClient(OkHttp) {
         install(HttpTimeout) {
             requestTimeoutMillis = 12_000_000 // 20 minutes
             connectTimeoutMillis = 12_000_000 // 20 minutes
             socketTimeoutMillis = 12_000_000 // 20 minutes
         }
         engine {
-            pipelining = false // Keep pipelining disabled unless explicitly required
-            endpoint {
-                pipelineMaxSize = 10    // Limit concurrent requests per connection
-                maxConnectionsPerRoute = 50 // Limit connections per target host
-            }
-            maxConnectionsCount = 50 // Limit total connections
+            pipelining = false
         }
     }
 
@@ -65,13 +60,16 @@ class OnyxClient(
      * Ktor HttpClient configured specifically for streaming API requests.
      * Uses shorter connect timeouts and enables pipelining, includes authentication headers by default.
      */
-    private val streamClient = HttpClient(CIO) {
-        install(HttpTimeout) {
+    private val streamClient = HttpClient(OkHttp) {
+        engine {
+            config {
+                followRedirects(true)
+            }
+        }
+        install (HttpTimeout) {
             connectTimeoutMillis = 30_000 // 30 seconds
             socketTimeoutMillis = 30_000_000_000
             requestTimeoutMillis = 30_000_000_000
-            // Streaming responses might take longer, so request/socket timeouts are less critical here
-            // unless specific keep-alive behavior is needed.
         }
         // Default headers for streaming requests, including authentication
         headers {
@@ -155,36 +153,32 @@ class OnyxClient(
     ): String {
         val url = "$baseUrl$path$queryString"
 
-        // Execute the request blocking the current thread (consider using suspend functions for non-blocking calls)
-        val response: HttpResponse = runBlocking {
-            httpClient.request(url) {
+        return runBlocking {
+            val statement: HttpStatement = httpClient.prepareRequest {
+                url(url)
                 this.method = method
-                headers {
-                    appendAll(buildHeaders(extraHeaders))
-                }
+                headers { appendAll(buildHeaders(extraHeaders)) }
                 if (body != null) {
-                    // Serialize body to JSON unless it's already a String
-                    val bodyString = if (body is String) body else body.toJson()
-                    setBody(bodyString)
+                    val payload = if (body is String) body else body.toJson()
+                    setBody(payload)
                 }
             }
-        }
 
-        // Retrieve the response body blocking the current thread
-        val responseBody = runBlocking { response.bodyAsText() }
+            val response: HttpResponse = statement.execute()
+            val responseBody = response.bodyAsText()
 
-        // Check if the request was successful
-        if (!response.status.isSuccess()) {
-            when (response.status) {
-                HttpStatusCode.NotFound -> throw NotFoundException(
-                    "HTTP Error: ${response.status.value}. Path: $url. Body: $responseBody",
-                    RuntimeException("Original cause: HTTP ${response.status.value}") // Optional: wrap original cause
-                )
-
-                else -> throw RuntimeException("HTTP Error: ${response.status.value}. Path: $url. Body: $responseBody")
+            if (!response.status.isSuccess()) {
+                val msg = "HTTP ${response.status.value} @ $url → $responseBody"
+                throw when (response.status) {
+                    HttpStatusCode.NotFound ->
+                        NotFoundException(msg, RuntimeException("HTTP ${response.status.value}"))
+                    else ->
+                        RuntimeException(msg)
+                }
             }
+
+            responseBody
         }
-        return responseBody
     }
 
     // --------------------------------------------------------------------------------------------
@@ -816,7 +810,12 @@ infix fun String.neq(value: Any?): ConditionBuilder =
 
 /** Creates an "in" condition (field value must be one of the specified values). */
 infix fun String.inOp(values: List<Any?>): ConditionBuilder =
-    ConditionBuilder(QueryCriteria(this, QueryCriteriaOperator.IN, values.joinToString(",") { it.toString() })) // Send list directly
+    ConditionBuilder(
+        QueryCriteria(
+            this,
+            QueryCriteriaOperator.IN,
+            values.joinToString(",") { it.toString() })
+    ) // Send list directly
 
 /** Creates a "not in" condition (field value must not be one of the specified values). */
 infix fun String.notIn(values: List<Any?>): ConditionBuilder =
@@ -1667,11 +1666,13 @@ class QueryBuilder internal constructor(
          *
          * @param action The action to perform on each record for all pages
          */
-        fun forEach(action: (action: T) -> Unit) {
+        fun forEach(action: (action: T) -> Boolean) {
             this.forEachPage { page ->
                 page.forEach {
-                    action(it)
+                    if (!action(it))
+                        return@forEachPage false
                 }
+                true
             }
         }
 
@@ -1684,7 +1685,7 @@ class QueryBuilder internal constructor(
          *
          * @param action The action to perform on each list of records (one list per page).
          */
-        fun forEachPage(action: (pageRecords: List<T>) -> Unit) {
+        fun forEachPage(action: (pageRecords: List<T>) -> Boolean) {
             var currentPage: QueryResults<T>? = this
             val currentQuery = query ?: error("Query context is missing for pagination.")
             val currentClassType = classType ?: error("Class type is missing for pagination.")
@@ -1692,7 +1693,9 @@ class QueryBuilder internal constructor(
             while (currentPage != null) {
                 val recordsOnPage = currentPage.records
                 if (recordsOnPage.isNotEmpty()) {
-                    action(recordsOnPage)
+                    if (!action(recordsOnPage)) {
+                        return
+                    }
                 }
 
                 // Check if there's a next page and fetch it

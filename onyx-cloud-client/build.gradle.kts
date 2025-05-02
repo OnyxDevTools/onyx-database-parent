@@ -13,7 +13,10 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:$okHttpVersion")
     implementation("com.google.code.gson:gson:$gsonVersion")
     implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+
+    api("com.squareup.okhttp3:okhttp:$okHttpVersion")
+    api("io.ktor:ktor-client-okhttp-jvm:3.0.3")
 }
 
 java {
