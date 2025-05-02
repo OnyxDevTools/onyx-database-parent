@@ -71,21 +71,24 @@ class QueryBuilder(var manager: PersistenceManager, var query: Query) {
         /* ── 3. lazy iterator ───────────────────────────────────────────── */
         object : Iterator<T> {
             private var nextObj: Any = queue.take()    // prime
+            private val lock = Any()
 
-            override fun hasNext(): Boolean = nextObj !== SENTINEL
+            override fun hasNext(): Boolean = synchronized(lock) {
+                nextObj !== SENTINEL
+            }
 
             @Suppress("UNCHECKED_CAST")
-            override fun next(): T {
+            override fun next(): T = synchronized(lock) {
                 if (nextObj === SENTINEL) throw NoSuchElementException()
 
                 val out = nextObj as T
                 nextObj = queue.take()
 
-                if (nextObj === SENTINEL) {            // reached end
-                    cancelled.set(true)                // tell producer to stop
-                    producer.cancel(true)              // best-effort shutdown
+                if (nextObj === SENTINEL) {
+                    cancelled.set(true)
+                    producer.cancel(true)
                 }
-                return out
+                out
             }
         }
     }

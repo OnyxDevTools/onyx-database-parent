@@ -87,7 +87,8 @@ interface Layer : java.io.Serializable {
      * Can be overridden by subclasses to normalize or preprocess inputs.
      *
      * @param input The raw input matrix.
+     * @param isTraining Identify if the predict is training or not
      * @return The processed input matrix.
      */
-    fun preForward(input: Matrix): Matrix = input
+    fun preForward(input: Matrix, isTraining: Boolean): Matrix = input
 }

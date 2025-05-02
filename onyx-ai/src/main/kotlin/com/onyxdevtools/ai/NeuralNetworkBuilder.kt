@@ -2,9 +2,8 @@ package com.onyxdevtools.ai
 
 import Activation
 import com.onyxdevtools.ai.layer.Layer
+import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.ColumnTransform
-import com.onyxdevtools.ai.layer.impl.BatchNormalizationLayer
-import com.onyxdevtools.ai.layer.impl.DenseLayer
 import com.onyxdevtools.ai.transformation.impl.*
 
 /**
@@ -140,6 +139,50 @@ class LayerBuilder {
      */
     fun batchNorm(size: Int) {
         layers += BatchNormalizationLayer(size)
+    }
+
+    /**
+     * Adds an embedding layer to the network architecture.
+     * Maps discrete input tokens to dense vectors of fixed size.
+     *
+     * @param vocabSize The size of the vocabulary (number of unique input tokens).
+     * @param embeddingSize The dimensionality of the embedding vectors.
+     */
+    fun embedding(vocabSize: Int, embeddingSize: Int) {
+        layers += EmbeddingLayer(vocabSize, embeddingSize)
+    }
+
+    /**
+     * Adds a layer normalization layer to the network architecture.
+     * Normalizes inputs across the feature dimension independently for each sample.
+     *
+     * @param size The number of features to normalize.
+     */
+    fun layerNorm(size: Int) {
+        layers += LayerNormalizationLayer(size)
+    }
+
+    /**
+     * Adds a multi-head attention layer to the network architecture.
+     * Allows the model to jointly attend to information from different representation subspaces.
+     *
+     * @param tokensPerSample The fixed number of tokens per input sample.
+     * @param modelSize The dimensionality of each token's embedding.
+     * @param headCount The number of attention heads to use.
+     */
+    fun multiHeadAttention(tokensPerSample: Int, modelSize: Int, headCount: Int) {
+        layers += MultiHeadAttentionLayer(tokensPerSample, modelSize, headCount)
+    }
+
+    /**
+     * Adds a positional encoding layer to the network architecture.
+     * Injects information about the position of tokens into their embeddings using sine and cosine functions.
+     *
+     * @param tokensPerSample The fixed length of input sequences.
+     * @param embeddingSize The dimensionality of the embeddings.
+     */
+    fun positionalEncoding(tokensPerSample: Int, embeddingSize: Int) {
+        layers += PositionalEncodingLayer(tokensPerSample, embeddingSize)
     }
 
     /**

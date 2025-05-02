@@ -97,7 +97,7 @@ class DenseLayer(
      */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
         val linearOutput = addVectorToRows(matrixMultiply(input, weights), biases)
-        val nextInput = nextLayer?.preForward(linearOutput) ?: linearOutput
+        val nextInput = nextLayer?.preForward(linearOutput, isTraining) ?: linearOutput
         this.preActivation = nextInput
         output = applyElementWise(nextInput, activation::activate)
         if (isTraining) applyDropout()
