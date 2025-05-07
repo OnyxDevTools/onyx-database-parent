@@ -12,7 +12,6 @@ import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.query.QueryCriteriaOperator
 import java.lang.ref.WeakReference
 import java.util.*
-import kotlin.math.ln
 import kotlin.reflect.KClass
 
 /**
@@ -28,11 +27,17 @@ import kotlin.reflect.KClass
  * @since 2.0.0 This was refactored to make simpler.  It now conforms better to an actual skip list
  */
 @Suppress("UNCHECKED_CAST")
-abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, recordStore: WeakReference<Store>, header: Header, keyType:Class<*>) : AbstractDiskMap<K, V>(store, recordStore, header, keyType) {
+abstract class AbstractSkipList<K, V>(
+    store: WeakReference<Store>,
+    recordStore: WeakReference<Store>,
+    header: Header,
+    keyType: Class<*>
+) : AbstractDiskMap<K, V>(store, recordStore, header, keyType) {
 
-    open protected var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
+    protected open var nodeCache: MutableMap<Long, SkipNode?> = OptimisticLockingMap(WeakHashMap())
 
     init {
+        @Suppress("LeakingThis")
         determineHead()
     }
 
@@ -44,7 +49,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
      * a thread local head
      *
      */
-    open protected fun determineHead() {
+    protected open fun determineHead() {
         if (reference.firstNode > 0L) {
             head = findNodeAtPosition(reference.firstNode)
         } else {
@@ -54,9 +59,12 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
         }
     }
 
-    protected open fun findNodeAtPosition(position: Long):SkipNode? = if(position == 0L) null else SkipNode.get(fileStore, position)
+    protected open fun findNodeAtPosition(position: Long): SkipNode? =
+        if (position == 0L) null else SkipNode.get(fileStore, position)
 
     override fun containsKey(key: K): Boolean = find(key) != null
+
+    private val update = arrayOfNulls<SkipNode?>(34)
 
     /**
      * Put key value.  This is the same as map.put(K,V) except
@@ -70,11 +78,12 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
      * @since 2.1.3
      * @return Value for previous record ID and if the value is been updated or inserted
      */
-    fun internalPutAndGet(key: K, value: V, preUpdate:((Long) -> Unit)?): PutResult {
-        var nearest:SkipNode = nearest(key)!!
+    fun internalPutAndGet(key: K, value: V, preUpdate: ((Long) -> Unit)?): PutResult {
 
-        val result = PutResult(key as Any, !(nearest.isRecord && isEqual(key, nearest.getKey(records, storeKeyWithinNode, keyType))))
-        result.recordId = if(!result.isInsert) nearest.position else -1L
+        val foundNodeBottomMost = searchAndCollectPredecessors(key)
+
+        val result = PutResult(key as Any, foundNodeBottomMost == null)
+        result.recordId = foundNodeBottomMost?.position ?: -1L
 
         if(preUpdate != null) {
             // The purpose of getting and setting the head is in the event there is a recursive call within the pre-update
@@ -84,57 +93,143 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
             head = tempHead
         }
 
-        val valueLocation:Long = records.writeObject(value)
+        val valueLocation: Long = records.writeObject(value)
 
-        if(!result.isInsert) {
-
-            nearest.setRecord(fileStore, valueLocation)
-            updateNodeCache(nearest)
+        if (!result.isInsert && foundNodeBottomMost != null) {
+            foundNodeBottomMost.setRecord(fileStore, valueLocation)
+            updateNodeCache(foundNodeBottomMost)
             updateKeyCache(key)
-
         } else {
+            val keyLocation: Long = if (storeKeyWithinNode) key.long() else records.writeObject(key)
 
-            var head:SkipNode = this.head!!
-            val keyLocation:Long = if(storeKeyWithinNode) key.long() else records.writeObject(key)
-
-            //Stuff in between nearest and its right partner
-            var insertedNode:SkipNode = insertNode(keyLocation, valueLocation, nearest, null, 0.toUByte())
-            updateNodeCache(insertedNode)
-            var level:UByte = 0.toUByte()
-
-            result.recordId = insertedNode.position
-
-            // Create Layers
-            while(coinToss()) {
-
-                // Add another level
-                if(level >= head.level && head.level < 255.toUByte()) {
-                    val newHead = SkipNode.create(fileStore, 0L, 0L, 0L, 0L, head.position, level)
-                    updateNodeCache(newHead)
-                    head.setTop(fileStore, newHead.position)
-                    updateNodeCache(head)
-                    this.head = newHead
-                    head = newHead
-                    updateHeaderFirstNode(reference, newHead.position)
-                }
-
-                // Find the first with a top
-                while(nearest.up == 0L && nearest.left > 0L)
-                    nearest = findNodeAtPosition(nearest.left)!!
-
-                if(nearest.up > 0)
-                    nearest = findNodeAtPosition(nearest.up)!!
-
-                insertedNode = insertNode(keyLocation, 0, nearest, insertedNode, level)
-                updateNodeCache(insertedNode)
-                level++
+            var newNodeLevel = 0
+            while (coinToss() && newNodeLevel < (34 - 1)) {
+                newNodeLevel++
             }
 
-            incrementSize()
+            var currentOverallHead = this.head!!
 
+            if (newNodeLevel > currentOverallHead.level.toInt()) {
+                for (lvl in (currentOverallHead.level.toInt() + 1)..newNodeLevel) {
+                    val oldHead = this.head!!
+                    val newHeadNode = SkipNode.create(
+                        fileStore,
+                        key = 0L,
+                        value = 0L,
+                        left = 0L,
+                        right = 0L,
+                        bottom = oldHead.position,
+                        level = lvl.toUByte()
+                    )
+                    updateNodeCache(newHeadNode)
+
+                    this.head = newHeadNode
+                    updateHeaderFirstNode(reference, newHeadNode.position)
+                    update[lvl] = newHeadNode
+                }
+                currentOverallHead = this.head!!
+            }
+
+            var insertedNodeTowerBottom: SkipNode? = null
+
+            for (currentLevel in 0..newNodeLevel) {
+                val predecessorAtLevel = update[currentLevel]
+                val pred = predecessorAtLevel ?: currentOverallHead
+
+                val rightOfPredecessorPos = pred.right
+
+                val newNodeAtCurrentLevel = SkipNode.create(
+                    fileStore,
+                    keyLocation,
+                    if (currentLevel == 0) valueLocation else 0L,
+                    pred.position,
+                    rightOfPredecessorPos,
+                    insertedNodeTowerBottom?.position ?: 0L,
+                    currentLevel.toUByte()
+                )
+                updateNodeCache(newNodeAtCurrentLevel)
+
+                pred.setRight(fileStore, newNodeAtCurrentLevel.position)
+                updateNodeCache(pred)
+
+                if (rightOfPredecessorPos > 0L) {
+                    val oldRightNode = findNodeAtPosition(rightOfPredecessorPos)!!
+                    oldRightNode.setLeft(fileStore, newNodeAtCurrentLevel.position)
+                    updateNodeCache(oldRightNode)
+                }
+
+                insertedNodeTowerBottom = newNodeAtCurrentLevel
+
+                if (currentLevel == 0) {
+                    result.recordId =
+                        newNodeAtCurrentLevel.position
+                }
+            }
+            incrementSize()
         }
 
         return result
+    }
+
+    /**
+     * Placeholder for the crucial search method that populates predecessors.
+     * This method needs to be implemented in your AbstractSkipList class.
+     *
+     * @param key The key to search for.
+     * @return The bottom-most SkipNode if the key is found, otherwise null.
+     */
+    protected open fun searchAndCollectPredecessors(key: K): SkipNode? {
+        for (i in update.indices) update[i] = null
+
+        var currentNodeAtCurrentLevel: SkipNode = this.head ?: return null
+
+        val headLevel = currentNodeAtCurrentLevel.level.toInt()
+
+        for (level in headLevel downTo 0) {
+            while (true) {
+                val rightNodePosition = currentNodeAtCurrentLevel.right
+                if (rightNodePosition == 0L) break
+
+                val rightNode = findNodeAtPosition(rightNodePosition) ?: break
+
+                val keyOfRightNode: K = rightNode.getKey(records, storeKeyWithinNode, keyType)
+                if (isGreater(key, keyOfRightNode)) {
+                    currentNodeAtCurrentLevel = rightNode
+                } else break
+            }
+            update[level] = currentNodeAtCurrentLevel
+
+            if (level > 0) {
+                val downNodePosition = currentNodeAtCurrentLevel.down
+                if (downNodePosition > 0L) {
+                    val downNode = findNodeAtPosition(downNodePosition) ?: return null
+                    currentNodeAtCurrentLevel = downNode
+                } else {
+                    return null
+                }
+            }
+        }
+
+        val predecessorAtLevel0 = update[0]
+
+        if (predecessorAtLevel0 != null && predecessorAtLevel0.right > 0L) {
+            val candidateNodePosition = predecessorAtLevel0.right
+            val candidateNode = findNodeAtPosition(candidateNodePosition)
+
+            if (candidateNode != null) {
+                val candidateKey = candidateNode.getKey<K>(records, storeKeyWithinNode, keyType)
+                if (isEqual(key, candidateKey)) {
+                    var bottomMostNodeOfTower = candidateNode
+                    while (bottomMostNodeOfTower!!.down > 0L) {
+                        val nextNodeDownInTower = findNodeAtPosition(bottomMostNodeOfTower.down) ?: break
+                        bottomMostNodeOfTower = nextNodeDownInTower
+                    }
+                    return bottomMostNodeOfTower
+                }
+            }
+        }
+
+        return null
     }
 
     /**
@@ -150,24 +245,6 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     }
 
     /**
-     * Insert a new node between 2 other nodes
-     * @since 2.0.0
-     */
-    private fun insertNode(key:Long, value:Long, left:SkipNode?, bottom:SkipNode?, level:UByte):SkipNode {
-        val right:SkipNode? = if((left?.right ?: 0L) > 0L) findNodeAtPosition(left!!.right) else null
-
-        val newNode = SkipNode.create(fileStore, key, value, left?.position ?: 0L, left?.right ?: 0L, bottom?.position ?: 0L, level)
-        updateNodeCache(newNode)
-        right?.setLeft(fileStore, newNode.position)
-        updateNodeCache(right)
-        left?.setRight(fileStore, newNode.position)
-        updateNodeCache(left)
-        bottom?.setTop(fileStore, newNode.position)
-        updateNodeCache(bottom)
-        return newNode
-    }
-
-    /**
      * Remove The Key and value from the Map.
      *
      * @param key Key Identifier
@@ -175,40 +252,66 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
      * @since 1.2.0
      */
     override fun remove(key: K): V? {
-        val nearest:SkipNode = nearest(key)!!
-        var returnValue:V? = null
-        val head = head!!
+        val nodeToDeleteBottomMost = searchAndCollectPredecessors(key)
 
-        if(nearest.isRecord && isEqual(key, nearest.getKey(records, storeKeyWithinNode, keyType))) {
+        if (nodeToDeleteBottomMost != null &&
+            nodeToDeleteBottomMost.isRecord &&
+            isEqual(key, nodeToDeleteBottomMost.getKey(records, storeKeyWithinNode, keyType))
+        ) {
+            val returnValue: V? = nodeToDeleteBottomMost.getRecord(records)
 
-            returnValue = nearest.getRecord(records)
-            deleteNode(nearest, head)
-            var foundNode:SkipNode = nearest
+            for (i in 0..this.head!!.level.toInt()) {
+                val predecessorAtLevelI = update[i]
+                    ?: continue
 
-            // Delete All Above
-            while(foundNode.up > 0) {
-                foundNode = findNodeAtPosition(foundNode.up)!!
-                deleteNode(foundNode, head)
+                val nodeAfterPredecessorPos = predecessorAtLevelI.right
+                if (nodeAfterPredecessorPos > 0L) {
+                    val nodeToDeleteAtLevelI = findNodeAtPosition(nodeAfterPredecessorPos)
+                    if (nodeToDeleteAtLevelI != null) {
+                        if (isEqual(key, nodeToDeleteAtLevelI.getKey(records, storeKeyWithinNode, keyType))) {
+                            predecessorAtLevelI.setRight(fileStore, nodeToDeleteAtLevelI.right)
+                            updateNodeCache(predecessorAtLevelI)
+
+                            if (nodeToDeleteAtLevelI.right > 0L) {
+                                val successorNode = findNodeAtPosition(nodeToDeleteAtLevelI.right)
+                                if (successorNode != null) {
+                                    successorNode.setLeft(fileStore, predecessorAtLevelI.position)
+                                    updateNodeCache(successorNode)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            var currentHead = this.head!!
+            while (currentHead.level > 0.toUByte() && currentHead.right == 0L) {
+                val newHeadCandidate = findNodeAtPosition(currentHead.down) ?: continue
+                this.head = newHeadCandidate
+                updateHeaderFirstNode(reference, newHeadCandidate.position)
+                updateNodeCache(this.head)
+                currentHead = this.head!!
             }
 
             decrementSize()
             updateKeyCache(key)
+            return returnValue
         }
 
-        return returnValue
+        return null
     }
 
-    /**
+    /*
      * Delete a node and set values for neighboring nodes
      *
      */
-    protected open fun deleteNode(node:SkipNode, head:SkipNode) {
-        val leftNode:SkipNode? = if(node.left > 0) findNodeAtPosition(node.left) else null
-        val rightNode:SkipNode? = if(node.right > 0) findNodeAtPosition(node.right) else null
+    protected open fun deleteNode(node: SkipNode, head: SkipNode) {
+        val leftNode: SkipNode? = if (node.left > 0) findNodeAtPosition(node.left) else null
+        val rightNode: SkipNode? = if (node.right > 0) findNodeAtPosition(node.right) else null
         leftNode?.setRight(fileStore, rightNode?.position ?: 0L)
         updateNodeCache(leftNode)
 
-        if(leftNode?.position == head.position)
+        if (leftNode?.position == head.position)
             this.head = leftNode
         rightNode?.setLeft(fileStore, leftNode?.position ?: 0L)
         updateNodeCache(rightNode)
@@ -243,7 +346,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     protected open fun nearest(key: K): SkipNode? {
         var current: SkipNode = head!!
         var found = false
-        moveDownLoop@while(true) {
+        moveDownLoop@ while (true) {
             moveRightLoop@ while (current.right > 0L && !found) {
                 val next: SkipNode? = findNodeAtPosition(current.right)
                 val nextKey: K = next?.getKey(records, storeKeyWithinNode, keyType)!!
@@ -253,6 +356,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
                         found = true
                         next
                     }
+
                     isGreater(key, nextKey) -> next
                     else -> break@moveRightLoop
                 }
@@ -274,12 +378,12 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
     /**
      * Abstract method for updating cache for a node
      */
-    abstract fun updateNodeCache(node:SkipNode?)
+    abstract fun updateNodeCache(node: SkipNode?)
 
     /**
      * Abstract method for updating cache for a value
      */
-    abstract fun updateKeyCache(node:K)
+    abstract fun updateKeyCache(node: K)
 
     companion object {
         private fun <K> isGreater(key: K, key2: K): Boolean = key2.forceCompare(key, QueryCriteriaOperator.GREATER_THAN)
@@ -301,6 +405,7 @@ abstract class AbstractSkipList<K, V> constructor(store: WeakReference<Store>, r
                     Date::class -> Date(this.toLongOrNull() ?: 0L)
                     else -> this
                 }
+
                 else -> this
             }
         }

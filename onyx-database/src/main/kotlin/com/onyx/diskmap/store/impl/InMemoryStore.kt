@@ -6,6 +6,7 @@ import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.Contexts
 import com.onyx.persistence.context.SchemaContext
 import java.lang.ref.WeakReference
+import java.nio.ByteBuffer
 
 /**
  * Created by Tim Osborn on 3/27/15.
@@ -13,6 +14,8 @@ import java.lang.ref.WeakReference
  * Rather than writing to a file, this writes to memory.
  */
 class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedStore(), Store {
+
+    private var slices: MutableMap<Int, ByteBuffer> = OptimisticLockingMap(HashMap())
 
     init {
         this.contextId = context?.contextId
@@ -34,8 +37,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
 
         // Lets open the memory mapped files in 2Gig increments since on 32 bit machines the max is I think 2G.  Also buffers are limited by
         // using an int for position.  We are gonna bust that.
-        val buffer = BufferPool.allocateAndLimit(bufferSliceSize)
-        slices[0] = FileSlice(buffer)
+        slices[0] = BufferPool.allocateAndLimit(bufferSliceSize)
         return true
     }
 
@@ -46,7 +48,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
      * @param position The position within the combined FileSlice buffers
      * @return The file slice located at the position specified.
      */
-    override fun getBuffer(position: Long): FileSlice {
+    override fun getBuffer(position: Long): ByteBuffer {
 
         var index = 0
         if (position > 0) {
@@ -54,7 +56,7 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
         }
 
         return slices.getOrPut(index) {
-            FileSlice(BufferPool.allocateAndLimit(bufferSliceSize))
+            BufferPool.allocateAndLimit(bufferSliceSize)
         }
     }
 
@@ -67,9 +69,10 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
      * @return Whether the in memory buffers were cleared
      */
     override fun close(): Boolean {
-        slices.values.forEach { it.buffer.clear() }
+        slices.values.forEach { it.clear() }
         slices.clear()
         return true
     }
-}
 
+    override fun ensureOpen() = Unit
+}
