@@ -1,11 +1,10 @@
 package com.onyx.buffer
 
-import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.withBuffer
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.concurrent.getOrSet
+import kotlin.math.min
 
 /**
  * Responsible for allocating and de-allocating byte buffers
@@ -45,7 +44,7 @@ object BufferPool {
      */
     fun recycle(buffer: ByteBuffer) {
         val capacity = buffer.capacity()
-        if(buffer.isDirect) {
+        if (buffer.isDirect) {
             buffer.clear()
             when (capacity) {
                 LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.add(buffer)
@@ -69,7 +68,7 @@ object BufferPool {
             count <= LARGE_BUFFER_SIZE -> LARGE_BUFFER_POOL.poll()
             else -> allocateExactHeap(count)
         }
-    } catch (e:Exception) {
+    } catch (e: Exception) {
         allocateExactHeap(count)
     } ?: allocateExactHeap(count)
 
@@ -107,49 +106,50 @@ object BufferPool {
      * @param count Size to allocate
      * @return An Allocated ByteBuffer and limit to the amount of bytes
      */
-    inline fun <T> allocateAndLimit(count: Int, body:(ByteBuffer)->T ): T {
+    inline fun <T> allocateAndLimit(count: Int, body: (ByteBuffer) -> T): T {
         val buffer = allocate(count)
         buffer.limit(count)
         return withBuffer(buffer, body)
     }
 
-    @Suppress("MemberVisibilityCanPrivate")
-    val longBuffer = ThreadLocal<ByteBuffer>()
-    @Suppress("MemberVisibilityCanPrivate")
-    val intBuffer:ThreadLocal<ByteBuffer> = ThreadLocal()
-    @Suppress("MemberVisibilityCanPrivate")
-    val bigIntBuffer = ThreadLocal<ByteBuffer>()
-
-    inline fun <T> withIntBuffer(block:(ByteBuffer) -> T):T {
-        val thread = Thread.currentThread()
-        val buffer = if(thread is OnyxThread) {
-            thread.intBuffer
-        } else {
-            intBuffer.getOrSet { allocateExact(Integer.BYTES) }
-        }
-        buffer.rewind()
-        return block(buffer)
+    private val longBuffer: ThreadLocal<ByteBuffer> = ThreadLocal.withInitial {
+        ByteBuffer.allocate(Long.SIZE_BYTES)
     }
 
-    inline fun <T> withLongBuffer(block:(ByteBuffer) -> T):T {
-        val thread = Thread.currentThread()
-        val buffer = if(thread is OnyxThread) {
-            thread.longBuffer
-        } else {
-            longBuffer.getOrSet { allocateExact(java.lang.Long.BYTES) }
-        }
-        buffer.rewind()
-        return block(buffer)
+    private val intBuffer: ThreadLocal<ByteBuffer> = ThreadLocal.withInitial {
+        ByteBuffer.allocate(Int.SIZE_BYTES)
     }
 
-    inline fun <T> withBigIntBuffer(block:(ByteBuffer) -> T):T {
-        val thread = Thread.currentThread()
-        val buffer = if(thread is OnyxThread) {
-            thread.bigIntBuffer
-        } else {
-            bigIntBuffer.getOrSet { allocateExact(5) }
-        }
-        buffer.rewind()
-        return block(buffer)
+    private val bigIntBuffer: ThreadLocal<ByteBuffer> = ThreadLocal.withInitial {
+        ByteBuffer.allocate(5)
     }
+
+    fun <T> withIntBuffer(block: (ByteBuffer) -> T): T {
+        val byteBuffer = intBuffer.get()
+        byteBuffer.rewind()
+        return block(byteBuffer)
+    }
+
+    fun <T> withLongBuffer(block: (ByteBuffer) -> T): T {
+        val byteBuffer = longBuffer.get()
+        byteBuffer.rewind()
+        return block(byteBuffer)
+    }
+
+    fun <T> withBigIntBuffer(block: (ByteBuffer) -> T): T {
+        val byteBuffer = bigIntBuffer.get()
+        byteBuffer.rewind()
+        return block(byteBuffer)
+    }
+}
+
+fun copy(src: ByteBuffer, dst: ByteBuffer): Int {
+    val bytes = min(src.remaining(), dst.remaining())
+    if (bytes > 0) {
+        val originalLimit = src.limit()
+        src.limit(src.position() + bytes)
+        dst.put(src)
+        src.limit(originalLimit)
+    }
+    return bytes
 }

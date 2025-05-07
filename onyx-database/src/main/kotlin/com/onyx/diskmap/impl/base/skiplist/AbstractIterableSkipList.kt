@@ -222,10 +222,10 @@ abstract class AbstractIterableSkipList<K, V>(store: WeakReference<Store>, recor
 
         init {
             current = head
-            while (current?.down ?: 0L > 0)
+            while ((current?.down ?: 0L) > 0)
                 current = findNodeAtPosition(current!!.down)
 
-            current = if(current?.right ?: 0 > 0)
+            current = if((current?.right ?: 0) > 0)
                 findNodeAtPosition(current!!.right)
             else
                 null

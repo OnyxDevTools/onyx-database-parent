@@ -6,7 +6,6 @@ import com.onyx.buffer.BufferStream
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
-import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.common.async
 import com.onyx.extension.perform
 import com.onyx.lang.concurrent.AtomicCounter
@@ -97,7 +96,7 @@ open class FileChannelStore() : Store {
      * outside of relying of the fileChannel is because it may not be accurate.  In order to force it's accuracy
      * we have to configure the file channel to do so.  That causes the store to be severely slowed down.
      */
-    open protected fun determineSize() {
+    protected open fun determineSize() {
         this.read(0, 8).perform {
             it?.byteBuffer?.rewind()
             if (it == null || channel?.size() == 0L) {
@@ -221,7 +220,6 @@ open class FileChannelStore() : Store {
      * @param buffer   Buffer to put into
      * @param position position in store to read
      */
-    @Suppress("BlockingMethodInNonBlockingContext")
     override fun read(buffer: ByteBuffer, position: Long) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
@@ -240,7 +238,7 @@ open class FileChannelStore() : Store {
      * @param position Position to validate
      * @return whether the value you seek is in a valid position
      */
-    open protected fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
+    protected open fun validateFileSize(position: Long): Boolean = position < fileSizeCounter.get()
 
     /**
      * Allocates a spot in the file
@@ -283,15 +281,15 @@ open class FileChannelStore() : Store {
 
         if (size == 0) return null as T
 
-        val thread = Thread.currentThread()
-        if(thread is OnyxThread && size <= thread.buffer.capacity()) {
-            val buffer = thread.buffer
-            buffer.clear()
-            buffer.limit(size)
-            this.read(buffer, position + Integer.BYTES)
-            buffer.rewind()
+        val storeBuffer = localBuffer
+
+        if(size <= storeBuffer.capacity()) {
+            storeBuffer.clear()
+            storeBuffer.limit(size)
+            this.read(storeBuffer, position + Integer.BYTES)
+            storeBuffer.rewind()
             @Suppress("UNCHECKED_CAST")
-            return BufferStream(buffer).getObject(context) as T
+            return BufferStream(storeBuffer).getObject(context) as T
         } else {
             BufferPool.allocateAndLimit(size) {
                 this.read(it, position + Integer.BYTES)
@@ -314,9 +312,12 @@ open class FileChannelStore() : Store {
         this.allocate(8)
     }
 
+    private val localBuffer: ByteBuffer
+        get() = threadLocalBuffer.get()
+
     companion object {
         const val SMALL_FILE_SLICE_SIZE = 1024 * 128 // 128K
-        var LARGE_FILE_SLICE_SIZE = 1024 * 128 // 6MB
+        var LARGE_FILE_SLICE_SIZE = 1024 * 1024 * 4 // 4MB
 
         val isSmallDevice:Boolean by lazy {
             try {
@@ -327,5 +328,8 @@ open class FileChannelStore() : Store {
             return@lazy true
         }
 
+        private val threadLocalBuffer: ThreadLocal<ByteBuffer> = ThreadLocal.withInitial {
+            ByteBuffer.allocate(20000)
+        }
     }
 }

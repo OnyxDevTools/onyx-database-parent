@@ -1,205 +1,204 @@
 package com.onyx.diskmap.store.impl
 
+import com.onyx.buffer.copy
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.InitializationException
-import com.onyx.extension.common.catchAll
-import com.onyx.lang.map.OptimisticLockingMap
+import com.onyx.extension.common.safeMemoryMap
+import com.onyx.lang.map.ConcurrentLinkedHashMap
 import com.onyx.persistence.context.SchemaContext
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.lang.ref.SoftReference
 import java.nio.ByteBuffer
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Created by Tim Osborn on 3/27/15.
- *
- * This class uses buffers that are mapped to memory rather than a direct file channel
+ * A [Store] implementation that uses memory-mapped files for I/O operations.
+ * This class extends [FileChannelStore] and provides methods to read, write,
+ * and manage memory-mapped buffers.
  */
 open class MemoryMappedStore : FileChannelStore, Store {
 
-    internal lateinit var slices: OptimisticLockingMap<Int, FileSlice>
+    /**
+     * Unique identifier for this file instance.
+     */
+    private var fileId: Int = 0
 
+    /**
+     * Default constructor.
+     */
     constructor()
 
     /**
-     * Constructor open file
-     *
-     * @param filePath File location for the store
+     * Constructs a [MemoryMappedStore] with the given file path, schema context, and deleteOnClose flag.
+     * @param filePath The path to the file.
+     * @param context The schema context.
+     * @param deleteOnClose True if the file should be deleted on close, false otherwise.
      */
-    constructor(filePath: String, context: SchemaContext?, deleteOnClose: Boolean) : super(filePath, context, deleteOnClose)
+    constructor(filePath: String, context: SchemaContext?, deleteOnClose: Boolean) : super(
+        filePath,
+        context,
+        deleteOnClose
+    )
 
     /**
-     * Open the data file
-     *
-     * @param filePath File location for the store
-     * @return Whether the file was opened and the first file slice was allocated
+     * Opens the file at the specified path and memory-maps the initial buffer slice.
+     * @param filePath The path to the file to open.
+     * @return True if the file was opened successfully, false otherwise.
      */
     override fun open(filePath: String): Boolean {
         try {
-
-            // Open the file Channel
+            fileId = fileIdCounter.incrementAndGet()
             super.open(filePath)
-
-            slices = OptimisticLockingMap(WeakHashMap())
-            // Load the first chunk into memory
-            val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, 0, bufferSliceSize.toLong())
-            slices[0] = FileSlice(buffer)
-
-        } catch (e: FileNotFoundException) {
+            val buf = channel!!.map(FileChannel.MapMode.READ_WRITE, 0, bufferSliceSize.toLong())
+            cache[Key(fileId, 0)] = SoftReference(buf)
+            return true
+        } catch (_: FileNotFoundException) {
             return false
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             return false
         }
-
-        return channel!!.isOpen
     }
 
     /**
-     * Close the data file
-     *
-     * @return  Close the memory mapped file and truncate to get rid of the remainder of allocated space for the last
-     * file slice
-     */
-    override fun close(): Boolean {
-        try {
-            this.slices.clear()
-
-            if (!deleteOnClose) {
-                catchAll {
-                    ensureOpen()
-                    channel!!.truncate(getFileSize())
-                }
-            }
-            super.close()
-
-            if (deleteOnClose) {
-                delete()
-            }
-            return !this.channel!!.isOpen
-        } catch (e: Exception) {
-            return false
-        }
-
-    }
-
-    /**
-     * Write a buffer.  This is a helper function to work with a buffer rather than a FileChannel
-     *
-     * @param buffer Byte buffer to write
-     * @param position position within store to write to
-     * @return how many bytes were written
+     * Writes data from the source buffer to the store at the specified position.
+     * @param buffer The buffer containing the data to write.
+     * @param position The position in the store to write to.
+     * @return The number of bytes written.
      */
     override fun write(buffer: ByteBuffer, position: Long): Int {
-
-        var currentIndex = position
-
+        var current = position
         while (buffer.hasRemaining()) {
-
-            val bufLocation = getBufferLocation(currentIndex)
-            val slice = getBuffer(currentIndex)
-            val bufferToWriteTo = slice.buffer
-
-            synchronized(slice) {
-                bufferToWriteTo.position(bufLocation)
-                while(buffer.hasRemaining() && bufferToWriteTo.hasRemaining()) {
-                    bufferToWriteTo.put(buffer.get())
-                    currentIndex++
-                }
+            val destination = getBuffer(current)
+            synchronized(destination) {
+                destination.position(getBufferLocation(current))
+                current += copy(buffer, destination)
             }
         }
-
-        return (currentIndex - position).toInt()
-
+        return (current - position).toInt()
     }
 
     /**
-     * Read a mem mapped file
-     *
-     * @param buffer Byte buffer to read
-     * @param position within the store
+     * Reads data from the store at the specified position into the destination buffer.
+     * @param buffer The buffer to read data into.
+     * @param position The position in the store to read from.
      */
     override fun read(buffer: ByteBuffer, position: Long) {
-        var currentIndex = position
-
+        var current = position
         while (buffer.hasRemaining()) {
+            val source = getBuffer(current)
+            synchronized(source) {
+                source.position(getBufferLocation(current))
+                current += copy(source, buffer)
+            }
+        }
+    }
 
-            val bufLocation = getBufferLocation(currentIndex)
-            val slice = getBuffer(currentIndex)
-            val bufferToReadFrom = slice.buffer
+    /**
+     * Retrieves or maps a [ByteBuffer] for the given file position.
+     * This method manages a cache of memory-mapped buffers.
+     * @param position The file position for which to get the buffer.
+     * @return The [ByteBuffer] for the specified position.
+     * @throws InitializationException if the store is not open.
+     */
+    open fun getBuffer(position: Long): ByteBuffer {
+        ensureOpen()
+        val idx = (position / bufferSliceSize).toInt()
+        val key = Key(fileId, idx)
+        var slice: ByteBuffer? = null
 
-            synchronized(slice) {
-                bufferToReadFrom.position(bufLocation)
-                while(buffer.hasRemaining() && bufferToReadFrom.hasRemaining()) {
-                    buffer.put(bufferToReadFrom.get())
-                    currentIndex++
+        cache.compute(key) { k, existingSoftRef ->
+            slice = existingSoftRef?.get()
+            if (slice != null) {
+                existingSoftRef
+            } else {
+                slice = channel!!.safeMemoryMap(k.idx.toLong() * bufferSliceSize, bufferSliceSize) {
+                    cache.removeEldestEntry(5)
                 }
+                SoftReference(slice)
             }
         }
 
+        return slice!!
     }
 
     /**
-     * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
-     * er "slice" of the file
-     *
-     * @param position position within memory mapped store
-     * @return The corresponding slice that is at that position
+     * Calculates the location within a buffer slice for a given absolute file position.
+     * @param position The absolute file position.
+     * @return The relative position within a buffer slice.
      */
-    protected open fun getBuffer(position: Long): FileSlice {
+    private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
 
-        if (this !is InMemoryStore && !channel!!.isOpen)
-            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+    /**
+     * Closes the store, removing its associated buffers from the cache.
+     * @return True if the store was closed successfully, false otherwise.
+     */
+    override fun close(): Boolean {
+        val keysForThisInstance = cache.keys
+            .filter { it.fileId == fileId }
 
-        var index = 0
-        if (position > 0) {
-            index = (position / bufferSliceSize).toInt()
+        keysForThisInstance.forEach { keyToRemove ->
+            cache.remove(keyToRemove)
         }
 
-        val finalIndex = index
-
-        return slices.getOrPut(index) {
-            val offset = bufferSliceSize.toLong() * finalIndex.toLong()
-            ensureOpen()
-            val buffer = channel!!.map(FileChannel.MapMode.READ_WRITE, offset, bufferSliceSize.toLong())
-            FileSlice(buffer!!)
-        }
+        return super.close()
     }
 
     /**
-     * Get the location within the buffer slice
-     *
-     * @param position Position within the store
-     * @return file slice id
-     */
-    private fun getBufferLocation(position: Long): Int {
-        var index = 0
-        if (position > 0) {
-            index = (position % bufferSliceSize).toInt()
-        }
-        return index
-    }
-
-    /**
-     * File Slice
-     *
-     *
-     * This contains the memory mapped segment as well as a lock for it
-     */
-    class FileSlice(var buffer: ByteBuffer)
-
-    /**
-     * Commit storage
+     * Commits any changes to the store.
+     * This is a no-op if deleteOnClose is true.
      */
     override fun commit() {
-        if (!deleteOnClose) {
-            super.commit()
-        }
+        if (!deleteOnClose) super.commit()
     }
 
-    private fun ensureOpen() {
-        if (this !is InMemoryStore && !channel!!.isOpen)
-            throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+    /**
+     * Ensures that the file channel is open.
+     * @throws InitializationException if the channel is not open.
+     */
+    protected open fun ensureOpen() {
+        if (!channel!!.isOpen) throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
+    }
+
+    /**
+     * Companion object for [MemoryMappedStore].
+     * Contains constants and shared resources.
+     */
+    companion object {
+        /**
+         * Maximum number of global buffer slices allowed in the cache.
+         * Calculated based on available runtime memory.
+         */
+        private val MAX_GLOBAL_SLICES = ((Runtime.getRuntime()
+            .maxMemory() * .7) / if (isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE).toInt()
+
+        /**
+         * A counter to generate unique file IDs for different instances of [MemoryMappedStore].
+         */
+        private val fileIdCounter: AtomicInteger = AtomicInteger()
+
+        /**
+         * Data class representing a key for the buffer cache.
+         * It consists of a fileId and a slice index.
+         * @property fileId The unique ID of the file.
+         * @property idx The index of the buffer slice within the file.
+         */
+        private data class Key(val fileId: Int, val idx: Int)
+
+        /**
+         * A concurrent linked hash map used to cache [SoftReference]s to [ByteBuffer] slices.
+         * This cache is shared among all [MemoryMappedStore] instances.
+         * When an entry is evicted, if it's a [MappedByteBuffer], its contents are forced to disk.
+         */
+        private val cache = ConcurrentLinkedHashMap<Key, SoftReference<ByteBuffer>>(
+            maxCapacity = MAX_GLOBAL_SLICES,
+            initialCapacity = 16,
+            loadFactor = 0.75f,
+            accessOrder = true
+        ) {
+            (it.get() as? MappedByteBuffer)?.force()
+        }
     }
 }

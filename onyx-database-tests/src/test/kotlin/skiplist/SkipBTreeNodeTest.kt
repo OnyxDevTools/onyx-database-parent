@@ -31,17 +31,6 @@ class SkipBTreeNodeTest {
     }
 
     @Test
-    fun testSeTop() {
-        val memoryStore = createStore()
-        memoryStore.allocate(99)
-        val skipNode = SkipNode.create(memoryStore, 1, 2, 3, 4, 5, 6u)
-        skipNode.setTop(memoryStore, 9393L)
-        val persistedNode = SkipNode.get(memoryStore, skipNode.position)
-        assertEquals(9393L, skipNode.up, "Value was not updated")
-        assertEquals(persistedNode, skipNode, "Skip node was not saved correctly")
-    }
-
-    @Test
     fun testSetBottom() {
         val memoryStore = createStore()
         memoryStore.allocate(99)

@@ -1,83 +1,72 @@
 package com.onyx.diskmap.data
 
-import com.onyx.buffer.BufferPool
 import com.onyx.buffer.BufferPool.withBigIntBuffer
 import com.onyx.buffer.BufferStreamable
 import com.onyx.diskmap.store.Store
 import com.onyx.exception.BufferingException
-import com.onyx.extension.common.OnyxThread
 import com.onyx.extension.common.toType
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 
 data class SkipNode(
-        var position:Long = 0L,
-        var up:Long = 0L,
-        var left:Long = 0L,
-        var right:Long = 0L,
-        var down:Long = 0L,
-        var record:Long = 0L,
-        var key:Long = 0L,
-        var level:UByte = 0.toUByte()
+    var position: Long = 0L,
+    var left: Long = 0L,
+    var right: Long = 0L,
+    var down: Long = 0L,
+    var record: Long = 0L,
+    var key: Long = 0L,
+    var level: UByte = 0.toUByte()
 ) : BufferStreamable {
 
-    fun setTop(store:Store, top:Long) = withBigIntBuffer {
-        if (this.up == top) return 0
-        this.up = top
-        it.putBigInt(top)
+    fun setLeft(store: Store, left: Long) = withBigIntBuffer {
+        if (this.left == left) return@withBigIntBuffer 0
+        this.left = left
+        it.putBigInt(left)
         it.rewind()
         store.write(it, position)
     }
 
-    fun setLeft(store:Store, left:Long) = withBigIntBuffer {
-        if (this.left == left) return 0
-        this.left = left
-        it.putBigInt(left)
+    fun setRight(store: Store, right: Long) = withBigIntBuffer {
+        if (this.right == right) return@withBigIntBuffer 0
+        this.right = right
+        it.putBigInt(right)
         it.rewind()
         store.write(it, position + 5)
     }
 
-    fun setRight(store:Store, right:Long) = withBigIntBuffer {
-        if (this.right == right) return 0
-        this.right = right
-        it.putBigInt(right)
+    fun setBottom(store: Store, bottom: Long) = withBigIntBuffer {
+        if (this.down == bottom) return@withBigIntBuffer 0
+        this.down = bottom
+        it.putBigInt(bottom)
         it.rewind()
         store.write(it, position + (5 * 2))
     }
 
-    fun setBottom(store:Store, bottom:Long) = withBigIntBuffer {
-        if (this.down == bottom) return 0
-        this.down = bottom
-        it.putBigInt(bottom)
+    fun setRecord(store: Store, record: Long) = withBigIntBuffer {
+        this.recordValue = null
+        if (this.record == record) return@withBigIntBuffer 0
+        if (this.level.toInt() != 0) return@withBigIntBuffer 0
+        this.record = record
+        it.putBigInt(record)
         it.rewind()
         store.write(it, position + (5 * 3))
     }
 
-    fun setRecord(store:Store, record:Long) = withBigIntBuffer {
-        this.recordValue = null
-        if (this.record == record) return 0
-        if (this.level.toInt() != 0) return 0
-        this.record = record
-        it.putBigInt(record)
-        it.rewind()
-        store.write(it, position + (5 * 4))
-    }
-
-    private var keyValue:Any? = null
+    private var keyValue: Any? = null
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getKey(records: Store, storedInNode:Boolean, type:Class<*>):T {
-        if(keyValue != null) return keyValue as T
+    fun <T> getKey(records: Store, storedInNode: Boolean, type: Class<*>): T {
+        if (keyValue != null) return keyValue as T
 
-        if(storedInNode) {
+        if (storedInNode) {
             keyValue = key.toType(type)
             return keyValue as T
         }
 
         @Suppress("KotlinConstantConditions") // Key value is mutable and getKey can have multiple access
-        if(keyValue == null) {
+        if (keyValue == null) {
             synchronized(this) {
-                if(keyValue == null) {
+                if (keyValue == null) {
                     keyValue = records.getObject(key)
                 }
             }
@@ -85,13 +74,13 @@ data class SkipNode(
         return keyValue as T
     }
 
-    private var recordValue:WeakReference<Any?>? = null
+    private var recordValue: WeakReference<Any?>? = null
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getRecord(store: Store):T {
-        if(recordValue?.get() == null) {
+    fun <T> getRecord(store: Store): T {
+        if (recordValue?.get() == null) {
             synchronized(this) {
-                if(recordValue?.get() == null) {
+                if (recordValue?.get() == null) {
                     recordValue = if (record == -1L) {
                         WeakReference(null)
                     } else {
@@ -105,47 +94,46 @@ data class SkipNode(
 
     fun write(store: Store) {
         val buffer = getBuffer()
-        try {
-            buffer.putBigInt(up)
-            buffer.putBigInt(left)
-            buffer.putBigInt(right)
-            buffer.putBigInt(down)
-            buffer.putBigInt(record)
-            buffer.putLong(key)
-            buffer.put(level.toByte())
-            buffer.flip()
-            store.write(buffer, position)
-        } finally {
-            recycleBuffer(buffer)
-        }
+        buffer.putBigInt(left)
+        buffer.putBigInt(right)
+        buffer.putBigInt(down)
+        buffer.putBigInt(record)
+        buffer.putLong(key)
+        buffer.put(level.toByte())
+        buffer.rewind()
+        store.write(buffer, position)
     }
 
-    fun read(store: Store):SkipNode {
+    fun read(store: Store): SkipNode {
         val buffer = getBuffer()
-        try {
-            store.read(buffer, position)
-            buffer.rewind()
-            up = buffer.bigInt
-            left = buffer.bigInt
-            right = buffer.bigInt
-            down = buffer.bigInt
-            record = buffer.bigInt
-            key = buffer.long
-            level = buffer.get().toUByte()
-            recordValue = null
-        } finally {
-            recycleBuffer(buffer)
-        }
+        store.read(buffer, position)
+        buffer.rewind()
+        left = buffer.bigInt
+        right = buffer.bigInt
+        down = buffer.bigInt
+        record = buffer.bigInt
+        key = buffer.long
+        level = buffer.get().toUByte()
+        recordValue = null
         return this
     }
 
-    val isRecord:Boolean
+    val isRecord: Boolean
         get() = record > 0
 
     companion object {
-        const val SKIP_NODE_SIZE = (5 * 5) + java.lang.Long.BYTES + java.lang.Byte.BYTES
 
-        fun create(store: Store, key:Long, value: Long, left:Long, right:Long, bottom: Long, level:UByte):SkipNode {
+        const val SKIP_NODE_SIZE = (5 * 4) + java.lang.Long.BYTES + java.lang.Byte.BYTES
+
+        fun create(
+            store: Store,
+            key: Long,
+            value: Long,
+            left: Long,
+            right: Long,
+            bottom: Long,
+            level: UByte
+        ): SkipNode {
             val node = SkipNode()
             node.key = key
             node.record = value
@@ -158,7 +146,7 @@ data class SkipNode(
             return node
         }
 
-        fun create(store: Store):SkipNode {
+        fun create(store: Store): SkipNode {
             val node = SkipNode()
             node.position = store.allocate(SKIP_NODE_SIZE)
             return node
@@ -166,21 +154,13 @@ data class SkipNode(
 
         fun get(store: Store, position: Long) = SkipNode(position).read(store)
 
-        fun getBuffer(): ByteBuffer {
-            val thread = Thread.currentThread()
-            return if(thread is OnyxThread) {
-                thread.nodeBuffer.clear()
-                thread.nodeBuffer
-            } else {
-                BufferPool.allocateAndLimit(SKIP_NODE_SIZE)
-            }
+        private val buffer: ThreadLocal<ByteBuffer> = ThreadLocal.withInitial {
+            ByteBuffer.allocate(SKIP_NODE_SIZE)
         }
 
-        fun recycleBuffer(buffer: ByteBuffer) {
-            val thread = Thread.currentThread()
-            if (thread !is OnyxThread) {
-                BufferPool.recycle(buffer)
-            }
+        fun getBuffer(): ByteBuffer = buffer.get().let {
+            it.rewind()
+            it
         }
     }
 }
@@ -194,13 +174,15 @@ data class SkipNode(
  * @param value long to write.
  */
 fun ByteBuffer.putBigInt(value: Long) {
-    this.put(byteArrayOf(
-        value.toByte(),
-        (value shr 8).toByte(),
-        (value shr 16).toByte(),
-        (value shr 24).toByte(),
-        (value shr 32).toByte()
-    ))
+    this.put(
+        byteArrayOf(
+            value.toByte(),
+            (value shr 8).toByte(),
+            (value shr 16).toByte(),
+            (value shr 24).toByte(),
+            (value shr 32).toByte()
+        )
+    )
 }
 
 
