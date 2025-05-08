@@ -44,6 +44,7 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.query.*
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.collections.ArrayList
@@ -650,19 +651,7 @@ open class DefaultSchemaContext : SchemaContext {
 
     // region Data Files
 
-    @JvmField internal val dataFiles = object : LinkedHashMap<String, DiskMapFactory>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, DiskMapFactory>?): Boolean {
-            if (size > maxCapacity) {
-                catchAll {
-                    eldest?.value?.flush()
-                    eldest?.value?.commit()
-                    eldest?.value?.close()
-                }
-                return true
-            }
-            return false
-        }
-    }
+    @JvmField internal val dataFiles: MutableMap<String, DiskMapFactory> = hashMapOf()
 
     /**
      * Return the corresponding data storage mechanism for the entity matching the descriptor.
