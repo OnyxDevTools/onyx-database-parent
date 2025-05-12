@@ -1,6 +1,7 @@
 package com.onyx.diskmap.store.impl
 
 import com.onyx.buffer.BufferPool
+import com.onyx.buffer.copy
 import com.onyx.diskmap.store.Store
 import com.onyx.lang.map.OptimisticLockingMap
 import com.onyx.persistence.context.Contexts
@@ -13,7 +14,7 @@ import java.nio.ByteBuffer
  *
  * Rather than writing to a file, this writes to memory.
  */
-class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedStore(), Store {
+class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStore(), Store {
 
     private var slices: MutableMap<Int, ByteBuffer> = OptimisticLockingMap(HashMap())
 
@@ -42,13 +43,54 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
     }
 
     /**
+     * Calculates the location within a buffer slice for a given absolute file position.
+     * @param position The absolute file position.
+     * @return The relative position within a buffer slice.
+     */
+    private fun getBufferLocation(position: Long) = (position % bufferSliceSize).toInt()
+
+    /**
+     * Writes data from the source buffer to the store at the specified position.
+     * @param buffer The buffer containing the data to write.
+     * @param position The position in the store to write to.
+     * @return The number of bytes written.
+     */
+    override fun write(buffer: ByteBuffer, position: Long): Int {
+        var current = position
+        while (buffer.hasRemaining()) {
+            val destination = getBuffer(current)
+            synchronized(destination) {
+                destination.position(getBufferLocation(current))
+                current += copy(buffer, destination)
+            }
+        }
+        return (current - position).toInt()
+    }
+
+    /**
+     * Reads data from the store at the specified position into the destination buffer.
+     * @param buffer The buffer to read data into.
+     * @param position The position in the store to read from.
+     */
+    override fun read(buffer: ByteBuffer, position: Long) {
+        var current = position
+        while (buffer.hasRemaining()) {
+            val source = getBuffer(current)
+            synchronized(source) {
+                source.position(getBufferLocation(current))
+                current += copy(source, buffer)
+            }
+        }
+    }
+
+    /**
      * Get the associated buffer to the position of the file.  So if the position is 2G + it will get the prop
      * er "slice" of the file
      *
      * @param position The position within the combined FileSlice buffers
      * @return The file slice located at the position specified.
      */
-    override fun getBuffer(position: Long): ByteBuffer {
+    private fun getBuffer(position: Long): ByteBuffer {
 
         var index = 0
         if (position > 0) {
@@ -61,7 +103,8 @@ class InMemoryStore (context: SchemaContext?, storeId: String) : MemoryMappedSto
     }
 
     @Suppress("UseExpressionBody")
-    override fun delete() {  }
+    override fun delete() {
+    }
 
     /**
      * Close the data file
