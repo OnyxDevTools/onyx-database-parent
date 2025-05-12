@@ -78,7 +78,7 @@ object BufferPool {
      * @param count Size to allocate
      * @return An Allocated ByteBuffer and limit to the amount of bytes
      */
-    fun allocateExact(count: Int): ByteBuffer = ByteBuffer.allocateDirect(count).order(ByteOrder.BIG_ENDIAN)
+    fun allocateExact(count: Int): ByteBuffer = ByteBuffer.allocate(count).order(ByteOrder.BIG_ENDIAN)
 
     /**
      * Allocation that will encapsulate the endian as well as the allocation method
