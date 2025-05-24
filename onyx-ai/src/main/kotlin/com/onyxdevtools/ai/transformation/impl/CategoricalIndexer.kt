@@ -17,7 +17,7 @@ import java.io.Serializable
  *        * `"new"`            – create a new index on the fly
  */
 class CategoricalIndexer(
-    private val handleUnknown: String = "error"   // "error" | "nan" | "new"
+    private val handleUnknown: String = "new"   // "error" | "nan" | "new"
 ) : ColumnTransform, Serializable {
 
     private val categories = mutableListOf<Double>()      // keeps insertion order
