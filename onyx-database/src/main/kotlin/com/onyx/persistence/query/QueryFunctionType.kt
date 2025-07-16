@@ -14,7 +14,8 @@ enum class QueryFunctionType(val isGroupFunction:Boolean) {
     UPPER(false),
     LOWER(false),
     REPLACE(false),
-    SUBSTRING(false)
+    SUBSTRING(false),
+    PERCENTILE(true),
     ;
 
     companion object {
@@ -31,6 +32,7 @@ enum class QueryFunctionType(val isGroupFunction:Boolean) {
             "lower" -> LOWER
             "replace" -> REPLACE
             "substring" -> SUBSTRING
+            "percentile" -> PERCENTILE
             else -> { throw Exception("Query function not found") }
         }
     }

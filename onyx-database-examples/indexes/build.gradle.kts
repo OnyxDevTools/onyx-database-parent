@@ -20,11 +20,11 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.5.19")
+    implementation("com.onyxdevtools:onyx-database:3.5.20")
 }
 
 group = "com.onyxdevtools"
-version = "3.5.19"
+version = "3.5.20"
 description = "com.onyxdevtools:onyx-database-examples:indexes"
 java.sourceCompatibility = JavaVersion.VERSION_17
 

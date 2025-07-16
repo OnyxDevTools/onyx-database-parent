@@ -90,7 +90,7 @@ class InMemoryStore(context: SchemaContext?, storeId: String) : MemoryMappedStor
      * @param position The position within the combined FileSlice buffers
      * @return The file slice located at the position specified.
      */
-    private fun getBuffer(position: Long): ByteBuffer {
+    override fun getBuffer(position: Long): ByteBuffer {
 
         var index = 0
         if (position > 0) {

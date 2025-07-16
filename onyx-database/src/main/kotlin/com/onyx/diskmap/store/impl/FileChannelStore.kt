@@ -15,10 +15,10 @@ import com.onyx.persistence.context.SchemaContext
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.io.RandomAccessFile
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 
 /**
  * Created by timothy.osborn on 3/25/15.
@@ -41,8 +41,7 @@ open class FileChannelStore() : Store {
     var deleteOnClose: Boolean = false // Whether to delete this file upon closing database or JVM
     var bufferSliceSize = if (isSmallDevice) SMALL_FILE_SLICE_SIZE else LARGE_FILE_SLICE_SIZE // Size of each slice
 
-    protected var channel: FileChannel? = null
-    protected var randomAccessFile: RandomAccessFile? = null
+    internal var channel: FileChannel? = null
     protected var contextId: String? = null
     private var fileSizeCounter: AtomicCounter = DefaultAtomicCounter(0)
 
@@ -77,9 +76,13 @@ open class FileChannelStore() : Store {
                 file.createNewFile()
             }
 
-            // Open the random access file
-            randomAccessFile = RandomAccessFile(filePath, "rw")
-            this.channel = randomAccessFile?.channel
+            // Open the file channel
+            this.channel = FileChannel.open(
+                file.toPath(),
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE
+            )
             this.fileSizeCounter.set(this.channel!!.size())
 
         } catch (e: FileNotFoundException) {
@@ -148,17 +151,9 @@ open class FileChannelStore() : Store {
     override fun write(buffer: ByteBuffer, position: Long): Int {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        val before = buffer.position()
-        val bytes = ByteArray(buffer.remaining())
-        buffer.get(bytes)
-
-        synchronized(randomAccessFile!!) {
-            randomAccessFile?.seek(position)
-            randomAccessFile?.write(bytes)
-        }
-
-        val after = buffer.position()
-        return after - before
+        val written = buffer.remaining()
+        channel!!.write(buffer, position)
+        return written
     }
 
     /**
@@ -223,14 +218,7 @@ open class FileChannelStore() : Store {
     override fun read(buffer: ByteBuffer, position: Long) {
         if (this !is InMemoryStore && !channel!!.isOpen)
             throw InitializationException(InitializationException.DATABASE_SHUTDOWN)
-        val bytes = ByteArray(buffer.remaining())
-        synchronized(randomAccessFile!!) {
-            randomAccessFile?.seek(position)
-            randomAccessFile?.read(bytes)
-        }
-        buffer.put(bytes)
-        while (buffer.hasRemaining()) // Fill out the rest because the File Channel may not be filled in
-            buffer.put(0.toByte())
+        channel!!.read(buffer, position)
     }
 
     /**

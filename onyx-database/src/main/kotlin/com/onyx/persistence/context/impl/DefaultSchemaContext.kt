@@ -68,7 +68,7 @@ open class DefaultSchemaContext : SchemaContext {
     // when having multiple running instances on a single machine.  By default it will be the database location
     final override val contextId: String
 
-    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+    override var storeType: StoreType = StoreType.FILE
     override var encryption: EncryptionInteractor? = null
     override var encryptDatabase: Boolean = false
     override var maxCardinality: Int = 1000000

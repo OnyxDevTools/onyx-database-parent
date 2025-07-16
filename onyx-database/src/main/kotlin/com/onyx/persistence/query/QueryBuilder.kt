@@ -418,5 +418,6 @@ fun upper(attribute: String) = "upper($attribute)"
 fun lower(attribute: String) = "lower($attribute)"
 fun substring(attribute: String, from: Int, length: Int) = "substring($attribute, $from, $length)"
 fun replace(attribute: String, pattern: String, replace: String) = "replace($attribute, '$pattern', '$replace')"
+fun percentile(attribute: String, percent: Double) = "percentile($attribute, $percent)"
 
 // endregion
