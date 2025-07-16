@@ -54,7 +54,7 @@ import com.onyx.persistence.manager.impl.RemotePersistenceManager
  */
 open class RemotePersistenceManagerFactory @JvmOverloads constructor(databaseLocation: String, instance: String = databaseLocation, override var schemaContext: SchemaContext = RemoteSchemaContext(instance)) : EmbeddedPersistenceManagerFactory(databaseLocation, instance, schemaContext), PersistenceManagerFactory {
 
-    override var storeType: StoreType = StoreType.MEMORY_MAPPED_FILE
+    override var storeType: StoreType = StoreType.FILE
 
     var keepAlive = true
 

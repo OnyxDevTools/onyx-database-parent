@@ -18,5 +18,6 @@ object QueryFunctionFactory {
         QueryFunctionType.LOWER -> LowerQueryFunction(attribute)
         QueryFunctionType.REPLACE -> ReplaceQueryFunction(attribute, param1, param2)
         QueryFunctionType.SUBSTRING -> SubstringQueryFunction(attribute, param1, param2)
+        QueryFunctionType.PERCENTILE -> PercentileQueryFunction(attribute, param1?.toDoubleOrNull() ?: throw Exception("Invalid percentile for query function.  Please specify a number from 0 to 100"))
     }
 }

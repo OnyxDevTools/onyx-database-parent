@@ -322,4 +322,45 @@ class SelectFunctionTest(override var factoryClass: KClass<*>) : DatabaseBaseTes
         val medianVal = result["median(longPrimitive)"]!!
         assertEquals(7L, medianVal, "Invalid Median. Expected 7, got $medianVal")
     }
+
+    /**
+     * Test for percentile (Flat Query)
+     * Calculates the 20th percentile of longPrimitive across all records.
+     * Values sorted: [2, 3, 4, 5, 6, 7, 8, 9, 9, 10, 99]
+     * Index = 0.2 * (11 - 1) = 2.0, so the value at index 2 (0-based) = 4
+     */
+    @Test
+    fun testPercentileFlat() {
+        val result = manager.select(percentile("longPrimitive", 20.0))
+            .from(AllAttributeEntityWithRelationship::class)
+            .list<Map<String, Any?>>()
+            .first()
+
+        val percentileValue = result["percentile(longPrimitive, 20.0)"]
+        assertEquals(4L, percentileValue, "Invalid 20th percentile for flat query")
+    }
+
+    /**
+     * Test for percentile (Group Query)
+     * Groups by stringValue and calculates the 50th percentile of longPrimitive.
+     * For group "9": [9, 99], 50th percentile = (9 + 99) / 2 = 54
+     * For group "2": [2], 50th percentile = 2
+     */
+    @Test
+    fun testPercentileGroupBy() {
+        val results = manager.select("stringValue", percentile("longPrimitive", 50.0))
+            .from(AllAttributeEntityWithRelationship::class)
+            .groupBy("stringValue")
+            .list<Map<String, Any?>>()
+
+        val group9 = results.firstOrNull { it["stringValue"] == "9" }
+        assertNotNull(group9, "Group for stringValue='9' not found")
+        val percentileValue9 = group9["percentile(longPrimitive, 50.0)"]
+        assertEquals(54L, percentileValue9, "Invalid 50th percentile for group '9'")
+
+        val group2 = results.firstOrNull { it["stringValue"] == "2" }
+        assertNotNull(group2, "Group for stringValue='2' not found")
+        val percentileValue2 = group2["percentile(longPrimitive, 50.0)"]
+        assertEquals(2L, percentileValue2, "Invalid 50th percentile for group '2'")
+    }
 }

@@ -24,6 +24,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.8.5")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:${Config.KOTLIN_VERSION}")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.1.0")
+    testImplementation(kotlin("test"))
 }
 
 description = "com.onyxdevtools:onyx-database-tests"

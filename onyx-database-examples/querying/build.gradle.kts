@@ -20,14 +20,14 @@ repositories {
 }
 
 dependencies {
-    implementation("com.onyxdevtools:onyx-database:3.5.19")
+    implementation("com.onyxdevtools:onyx-database:3.5.20")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.4.30")
     implementation("org.jetbrains.kotlin:kotlin-reflect:1.4.30")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.4.30")
 }
 
 group = "com.onyxdevtools"
-version = "3.5.19"
+version = "3.5.20"
 description = "com.onyxdevtools:onyx-database-examples:querying"
 java.sourceCompatibility = JavaVersion.VERSION_17
 
