@@ -6,31 +6,33 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 class ClosureReadWriteCompatLock : ClosureReadWriteLock {
 
     private val reentrantReadWriteLock = ReentrantReadWriteLock()
+    private val readLock = reentrantReadWriteLock.readLock()
+    private val writeLock = reentrantReadWriteLock.writeLock()
 
     override fun <T> readLock(consumer: () -> T): T {
-        reentrantReadWriteLock.readLock().lock()
+        readLock.lock()
         return try {
             consumer.invoke()
         } finally {
-            reentrantReadWriteLock.readLock().unlock()
+            readLock.unlock()
         }
     }
 
     override fun <T> optimisticReadLock(consumer: () -> T): T {
-        reentrantReadWriteLock.readLock().lock()
+        readLock.lock()
         return try {
             consumer.invoke()
         } finally {
-            reentrantReadWriteLock.readLock().unlock()
+            readLock.unlock()
         }
     }
 
     override fun <T> writeLock(consumer: () -> T): T {
-        reentrantReadWriteLock.writeLock().lock()
+        writeLock.lock()
         return try {
             consumer.invoke()
         } finally {
-            reentrantReadWriteLock.writeLock().unlock()
+            writeLock.unlock()
         }
     }
 }
