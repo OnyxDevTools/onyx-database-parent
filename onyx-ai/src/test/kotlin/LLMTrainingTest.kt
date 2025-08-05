@@ -1,13 +1,17 @@
 package com.onyxdevtools.ai
 
+import com.onyxdevtools.ai.data.DefaultSequenceGenerator
+import com.onyxdevtools.ai.data.SequenceGenerator
+import com.onyxdevtools.ai.generation.DefaultTextGenerator
+import com.onyxdevtools.ai.generation.TextGenerator
+import com.onyxdevtools.ai.layer.impl.*
+import com.onyxdevtools.ai.loss.CrossEntropyLoss
+import com.onyxdevtools.ai.loss.LossFunction
 import com.onyxdevtools.ai.transformation.BPETokenizer
+import com.onyxdevtools.ai.transformation.MutableVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
 import kotlin.test.Test
-import com.onyxdevtools.ai.layer.impl.*
 import java.io.File
-import kotlin.math.exp
-import kotlin.math.ln
-import kotlin.math.min
 import kotlin.test.assertTrue
 
 class LLMTrainingTest {
@@ -18,7 +22,7 @@ class LLMTrainingTest {
         val fullText = File("src/test/resources/alice_full.txt").readText()
 
         // Define or build vocabulary
-        val vocabulary = buildVocabularyFromText(fullText)
+        val vocabulary: Vocabulary = buildVocabularyFromText(fullText)
         val tokenizer = BPETokenizer(vocabulary)
 
         // Tokenize the entire text
@@ -48,16 +52,10 @@ class LLMTrainingTest {
         var model = NeuralNetwork(layers, learningRate = 0.001)
 
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch
-        val source = {
-            val indices = (0 until tokens.size - seqLength step stride).shuffled()
-            indices.asSequence().map { i ->
-                val inputSeq = tokens.subList(i, i + seqLength).map { it.toDouble() }.toDoubleArray()
-                val targetSeq = tokens.subList(i + 1, i + 1 + seqLength).map { targetToken ->
-                    DoubleArray(vocabulary.size) { if (it == targetToken) 1.0 else 0.0 }
-                }.toTypedArray()
-                inputSeq to targetSeq
-            }
-        }
+        val sequenceGenerator: SequenceGenerator = DefaultSequenceGenerator(vocabulary)
+        val source = { sequenceGenerator.generateSequences(tokens, seqLength, stride) }
+
+        val lossFunction: LossFunction = CrossEntropyLoss()
 
         // Train the model using streaming
         try {
@@ -66,7 +64,7 @@ class LLMTrainingTest {
                 batchSize = 32,
                 maxEpochs = 100,
                 patience = 10,
-                lossFn = { pred, actual -> calculateCrossEntropyLoss(pred, actual) },
+                lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
                 comprehensiveLossFn = { net ->
                     // For comprehensive loss, compute on a validation set or subset
                     val valIndices = (0 until tokens.size - seqLength step stride).take(100) // small val set
@@ -79,7 +77,7 @@ class LLMTrainingTest {
                         }
                     }.toTypedArray()
                     val valPred = net.predict(valInputs)
-                    calculateCrossEntropyLoss(valPred, valTargets)
+                    lossFunction.calculate(valPred, valTargets)
                 }
             )
             println("Streaming training completed successfully")
@@ -89,27 +87,9 @@ class LLMTrainingTest {
         }
 
         // Example generation
-        val padId = vocabulary.getId("[PAD]")
+        val textGenerator: TextGenerator = DefaultTextGenerator()
         val prompt = "Alice was beginning to get very tired"
-        val promptTokens = tokenizer.tokenize(prompt).map { vocabulary.getId(it) }.toMutableList()
-        val maxGenerate = 20
-        for (i in 0 until maxGenerate) {
-            val currentLength = promptTokens.size
-            val inputList = if (currentLength >= seqLength) {
-                promptTokens.takeLast(seqLength)
-            } else {
-                List(seqLength - currentLength) { padId } + promptTokens
-            }
-            val input = inputList.map { it.toDouble() }.toDoubleArray()
-            val predictions = model.predict(arrayOf(input))
-            val nextPosition = min(currentLength, seqLength) - 1
-            val logits = predictions[nextPosition]
-            val predictedId = logits.indices.maxByOrNull { logits[it] }!!
-            promptTokens.add(predictedId)
-            val predictedToken = vocabulary.getToken(predictedId) ?: "[UNK]"
-            println("Generated token: $predictedToken")
-        }
-        val generatedText = promptTokens.map { vocabulary.getToken(it) ?: "[UNK]" }.joinToString(" ")
+        val generatedText = textGenerator.generate(model, tokenizer, vocabulary, prompt, 20, seqLength)
         println("Generated text: $generatedText")
 
         // Assertions can be added if needed, but since it's streaming, loss computation is inside
@@ -118,17 +98,12 @@ class LLMTrainingTest {
     @Test
     fun testSimpleLLMTraining() {
         // Define a small vocabulary
-        val vocab = mutableMapOf<String, Int>()
-        vocab["hello"] = 0
-        vocab["world"] = 1
-        vocab["test"] = 2
-        vocab["data"] = 3
-        vocab["iduno"] = 4
-        val vocabulary = object : Vocabulary {
-            override fun getId(token: String): Int = vocab.getOrPut(token) { vocab.size }
-            override fun getToken(index: Int): String? = vocab.entries.find { it.value == index }?.key
-            override fun findId(token: String): Int? = vocab[token]
-            override val size: Int get() = vocab.size
+        val vocabulary: Vocabulary = MutableVocabulary().apply {
+            addToken("hello")
+            addToken("world")
+            addToken("test")
+            addToken("data")
+            addToken("iduno")
         }
         val tokenizer = BPETokenizer(vocabulary)
 
@@ -169,9 +144,11 @@ class LLMTrainingTest {
 
         var model = NeuralNetwork(layers, learningRate = 0.001)
 
+        val lossFunction: LossFunction = CrossEntropyLoss()
+
         // Compute initial loss
         val initialPredictions = model.predict(inputSequences)
-        val initialLoss = calculateCrossEntropyLoss(initialPredictions, targetSequences)
+        val initialLoss = lossFunction.calculate(initialPredictions, targetSequences)
 
         // Train the model
         try {
@@ -183,7 +160,7 @@ class LLMTrainingTest {
                 batchSize = inputSequences.size, // Use full batch
                 lossFn = { net ->
                     val predictions = net.predict(inputSequences)
-                    calculateCrossEntropyLoss(predictions, targetSequences)
+                    lossFunction.calculate(predictions, targetSequences)
                 }
             )
             println("Training completed successfully")
@@ -194,7 +171,7 @@ class LLMTrainingTest {
 
         // Compute final loss
         val finalPredictions = model.predict(inputSequences)
-        val finalLoss = calculateCrossEntropyLoss(finalPredictions, targetSequences)
+        val finalLoss = lossFunction.calculate(finalPredictions, targetSequences)
 
         // Test that the model can at least make some predictions and loss is finite
         assertTrue(initialLoss.isFinite(), "Initial loss should be finite")
@@ -214,34 +191,13 @@ class LLMTrainingTest {
         // Test passes if loss improved
         assertTrue(finalLoss < initialLoss, "Model training completed successfully with loss improvement")
     }
-
-    private fun calculateCrossEntropyLoss(predictions: Array<DoubleArray>, targets: Array<DoubleArray>): Double {
-        var loss = 0.0
-        val batchSize = targets.size
-
-        for (batchIndex in 0 until batchSize) {
-            val logits = predictions[batchIndex]
-            val expSum = logits.sumOf { exp(it) }
-            val probs = logits.map { exp(it) / expSum }.toDoubleArray()
-
-            val targetIndex = targets[batchIndex].indexOfFirst { it == 1.0 }
-            if (targetIndex >= 0 && targetIndex < probs.size) {
-                loss -= ln(probs[targetIndex] + 1e-10)
-            }
-        }
-        return loss / batchSize
-    }
 }
 
 // Simple vocabulary builder - in real BPE, use proper merges and train on corpus
 fun buildVocabularyFromText(text: String): Vocabulary {
     val words = text.split(Regex("\\s+")).toSet()
-    val vocabMap = words.mapIndexed { index, word -> word to index }.toMap().toMutableMap()
-    vocabMap["[PAD]"] = vocabMap.size
-    return object : Vocabulary {
-        override fun getId(token: String): Int = vocabMap.getOrPut(token) { vocabMap.size }
-        override fun getToken(index: Int): String? = vocabMap.entries.find { it.value == index }?.key
-        override fun findId(token: String): Int? = vocabMap[token]
-        override val size: Int get() = vocabMap.size
+    return MutableVocabulary().apply {
+        words.forEach { addToken(it) }
+        addToken("[PAD]")
     }
 }
