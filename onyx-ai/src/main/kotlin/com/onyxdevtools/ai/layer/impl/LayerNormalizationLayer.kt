@@ -35,13 +35,11 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
     /**
      * Normalizes the input using layer statistics and applies learned affine transformation.
      */
-    override fun preForward(input: Matrix, isTraining: Boolean): Matrix {
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
         val batchSize = input.size
-        if (isTraining) {
-            mean = DoubleArray(batchSize) { i -> input[i].average() }
-            variance = DoubleArray(batchSize) { i ->
-                input[i].sumOf { (it - mean!![i]).pow(2) } / size
-            }
+        mean = DoubleArray(batchSize) { i -> input[i].average() }
+        variance = DoubleArray(batchSize) { i ->
+            input[i].sumOf { (it - mean!![i]).pow(2) } / size
         }
 
         normalized = Array(batchSize) { i ->
@@ -91,8 +89,7 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
         // Gradient w.r.t. mean
         val gradMean = DoubleArray(batchSize) { i ->
             val sum1 = (0 until size).sumOf { j -> gradNormalized[i][j] }
-            val sum2 = (0 until size).sumOf { j -> gradNormalized[i][j] * (input[i][j] - mean!![i]) }
-            -sum1 / sqrt(variance!![i] + EPSILON) - (2.0 / size) * gradVariance[i] * sum2
+            -sum1 / sqrt(variance!![i] + EPSILON)
         }
 
         // Gradient w.r.t. input

@@ -37,4 +37,6 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
     override fun getToken(id: Int): String? = manager.findById<VocabularyEntry>(id)?.token
 
     override fun findId(token: String): Int? = manager.from<VocabularyEntry>().where("token" eq token).firstOrNull<VocabularyEntry>()?.id
+    override val size: Int
+        get() = manager.from<VocabularyEntry>().count().toInt()
 }

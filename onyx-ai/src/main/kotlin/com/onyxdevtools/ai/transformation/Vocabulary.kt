@@ -27,4 +27,6 @@ interface Vocabulary {
      * @return The ID of the token, or null if it does not exist.
      */
     fun findId(token: String): Int?
+
+    val size: Int
 }

@@ -132,13 +132,13 @@ class MultiHeadAttentionLayer(
                 val gradAttentionWeightsBh = matrixMultiply(gradAttentionOutputH, transpose(Vh))
                 val gradVh = matrixMultiply(transpose(attentionWeightsBh), gradAttentionOutputH)
                 val gradScoresBh = softmaxGradient(gradAttentionWeightsBh, attentionWeightsBh)
-                val gradQKT = scalarMultiply(gradScoresBh, 1.0 / sqrt(dK.toDouble()))
+                val gradQKT = scalarMultiply(gradScoresBh, sqrt(dK.toDouble()))
 
                 val Qh = Array(seqLen) { i -> DoubleArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
                 val Kh = Array(seqLen) { i -> DoubleArray(dK) { K!![b * seqLen + i][h * dK + it] } }
 
-                val gradQh = matrixMultiply(gradQKT, transpose(Kh))
-                val gradKh = matrixMultiply(transpose(Qh), gradQKT)
+                val gradQh = matrixMultiply(gradQKT, Kh)
+                val gradKh = matrixMultiply(transpose(gradQKT), Qh)
 
                 // Accumulate gradients
                 for (i in 0 until seqLen) {

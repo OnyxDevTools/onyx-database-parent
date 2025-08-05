@@ -360,6 +360,8 @@ class MockVocabulary : Vocabulary {
     override fun getToken(id: Int): String? = idToToken[id]
 
     override fun findId(substr: String): Int? = tokenToId[substr]
+    override val size: Int
+        get() = tokenToId.entries.size
 
     private fun addToken(token: String): Int {
         if (token !in tokenToId) {
