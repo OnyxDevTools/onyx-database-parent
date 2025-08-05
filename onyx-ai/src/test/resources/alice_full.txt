@@ -847,7 +847,6 @@ The Dormouse slowly opened his eyes. “I wasn’t asleep,” he said in a hoars
 “What did they live on?” said Alice, who always took a great interest in questions of eating and drinking.
 
 “They lived on treacle,” said the Dormouse, after thinking a minute or two.
-
 “They couldn’t have done that, you know,” Alice gently remarked; “they’d have been ill.”
 
 “So they were,” said the Dormouse; “very ill.”

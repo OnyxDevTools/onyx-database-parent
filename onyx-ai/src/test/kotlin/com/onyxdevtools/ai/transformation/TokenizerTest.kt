@@ -355,7 +355,7 @@ class MockVocabulary : Vocabulary {
         addToken("unknownToken")
     }
 
-    override fun getId(token: String): Int = tokenToId[token] ?: addToken(token)
+    override fun getId(token: String): Int = tokenToId[token] ?: addTokenInternal(token)
 
     override fun getToken(id: Int): String? = idToToken[id]
 
@@ -363,7 +363,15 @@ class MockVocabulary : Vocabulary {
     override val size: Int
         get() = tokenToId.entries.size
 
-    private fun addToken(token: String): Int {
+    override fun addToken(token: String) {
+        if (token !in tokenToId) {
+            val id = nextId++
+            tokenToId[token] = id
+            idToToken[id] = token
+        }
+    }
+
+    private fun addTokenInternal(token: String): Int {
         if (token !in tokenToId) {
             val id = nextId++
             tokenToId[token] = id

@@ -28,5 +28,7 @@ interface Vocabulary {
      */
     fun findId(token: String): Int?
 
+    fun addToken(token: String)
+
     val size: Int
 }

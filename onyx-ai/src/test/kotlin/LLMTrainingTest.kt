@@ -10,6 +10,7 @@ import com.onyxdevtools.ai.loss.LossFunction
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.MutableVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
+import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.test.Test
 import java.io.File
 import kotlin.test.assertTrue
@@ -20,13 +21,18 @@ class LLMTrainingTest {
     fun testLargerDataSet() {
         // Load full text
         val fullText = File("src/test/resources/alice_full.txt").readText()
+        val qaText = File("src/test/resources/qa_alice.txt").readText()
 
-        // Define or build vocabulary
-        val vocabulary: Vocabulary = buildVocabularyFromText(fullText)
+        // Define or build vocabulary using the new function
+        val vocabulary: Vocabulary = MutableVocabulary()
+        vocabulary.appendToVocabulary(fullText)
+        vocabulary.appendToVocabulary(qaText)
+
         val tokenizer = BPETokenizer(vocabulary)
 
         // Tokenize the entire text
         val tokens = tokenizer.tokenize(fullText).map { vocabulary.getId(it) }
+        val qaTokens = tokenizer.tokenize(qaText).map { vocabulary.getId(it) }
 
         // Parameters
         val seqLength = 16
@@ -54,6 +60,7 @@ class LLMTrainingTest {
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch
         val sequenceGenerator: SequenceGenerator = DefaultSequenceGenerator(vocabulary)
         val source = { sequenceGenerator.generateSequences(tokens, seqLength, stride) }
+        val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride) }
 
         val lossFunction: LossFunction = CrossEntropyLoss()
 
@@ -62,8 +69,8 @@ class LLMTrainingTest {
             model = model.trainStreaming(
                 source = source,
                 batchSize = 32,
-                maxEpochs = 100,
-                patience = 10,
+                maxEpochs = 5000,
+                patience = 50,
                 lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
                 comprehensiveLossFn = { net ->
                     // For comprehensive loss, compute on a validation set or subset
@@ -86,20 +93,13 @@ class LLMTrainingTest {
             e.printStackTrace()
         }
 
-        // Fine-tuning on QA dataset for question-answering
-        val qaText = File("src/test/resources/qa_alice.txt").readText()
-        val qaTokens = tokenizer.tokenize(qaText).map { vocabulary.getId(it) }
-
-        // Generate sequences for QA fine-tuning
-        val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride) }
-
         // Fine-tune the model
         try {
             model = model.trainStreaming(
                 source = qaSource,
                 batchSize = 8,
-                maxEpochs = 50,
-                patience = 5,
+                maxEpochs = 5000,
+                patience = 50,
                 lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
                 comprehensiveLossFn = { net ->
                     // Similar validation logic as above, adapted for QA
@@ -132,8 +132,6 @@ class LLMTrainingTest {
         val qaPrompt = "Question: Who is the main character in the story? Answer:"
         val generatedAnswer = textGenerator.generate(model, tokenizer, vocabulary, qaPrompt, 10, seqLength)
         println("Generated answer: $generatedAnswer")
-
-        // Assertions can be added if needed, but since it's streaming, loss computation is inside
     }
 
     @Test
@@ -202,7 +200,7 @@ class LLMTrainingTest {
                 lossFn = { net ->
                     val predictions = net.predict(inputSequences)
                     lossFunction.calculate(predictions, targetSequences)
-                }
+                },
             )
             println("Training completed successfully")
         } catch (e: Exception) {
@@ -231,14 +229,5 @@ class LLMTrainingTest {
 
         // Test passes if loss improved
         assertTrue(finalLoss < initialLoss, "Model training completed successfully with loss improvement")
-    }
-}
-
-// Simple vocabulary builder - in real BPE, use proper merges and train on corpus
-fun buildVocabularyFromText(text: String): Vocabulary {
-    val words = text.split(Regex("\\s+")).toSet()
-    return MutableVocabulary().apply {
-        words.forEach { addToken(it) }
-        addToken("[PAD]")
     }
 }

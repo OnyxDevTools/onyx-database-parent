@@ -18,7 +18,7 @@ class MutableVocabulary : Vocabulary {
 
     override val size: Int get() = tokenToId.size
 
-    fun addToken(token: String) {
+    override fun addToken(token: String) {
         getId(token) // Adds if not present
     }
 }

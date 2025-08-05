@@ -185,10 +185,10 @@ data class NeuralNetwork(
                 val batchIndices = indices.subList(batchStart, batchEnd)
 
                 val batchFeatures = batchIndices.map { x[it] }.toTypedArray()
-            val batchTargetIndices = batchIndices.flatMap { seqIdx ->
-                (seqIdx * tokensPerSample until (seqIdx + 1) * tokensPerSample)
-            }
-            val batchLabels = batchTargetIndices.map { y[it] }.toTypedArray()
+                val batchTargetIndices = batchIndices.flatMap { seqIdx ->
+                    (seqIdx * tokensPerSample until (seqIdx + 1) * tokensPerSample)
+                }
+                val batchLabels = batchTargetIndices.map { y[it] }.toTypedArray()
                 val batchWeights = trainingWeights?.let { weights ->
                     batchIndices.map { weights[it] }.toDoubleArray()
                 }
@@ -242,8 +242,8 @@ data class NeuralNetwork(
         var epochsWithoutImprovement = 0
 
         repeat(maxEpochs) { epoch ->
-val bx = mutableListOf<DoubleArray>()
-val by = mutableListOf<Array<DoubleArray>>()
+            val bx = mutableListOf<DoubleArray>()
+            val by = mutableListOf<Array<DoubleArray>>()
             var runningTrainLoss = 0.0
             var runningTestLoss = 0.0
             var testSamples = 0
