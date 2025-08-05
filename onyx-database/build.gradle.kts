@@ -12,3 +12,7 @@ description = "com.onyxdevtools:onyx-database"
 java {
     withJavadocJar()
 }
+
+kotlin {
+    jvmToolchain(17)
+}

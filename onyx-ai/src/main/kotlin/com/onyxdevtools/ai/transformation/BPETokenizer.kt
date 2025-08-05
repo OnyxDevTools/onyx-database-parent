@@ -1,0 +1,209 @@
+package com.onyxdevtools.ai.transformation
+
+import java.text.Normalizer
+
+class BPETokenizer(
+    private val vocabulary: Vocabulary,
+    private val unkToken: String = "[UNK]",
+    private val maxInputCharsPerWord: Int = 100,
+    private val caseSensitive: Boolean = true,
+    private val normalize: Boolean = false,
+    private val removeDiacritics: Boolean = false,
+    private val customKeywords: Set<String> = emptySet()
+) : Tokenizer {
+
+    private val specialTokens = setOf(
+        "[PAD]", "[CLS]", "[SEP]", "[UNK]", "[MASK]",
+        "<|startoftext|>", "<|endoftext|>", "<|sep|>"
+    )
+
+    private val languageKeywords = mapOf(
+        "kotlin" to setOf(
+            "if", "else", "fun", "class", "val", "var", "when", "try", "catch", "for", "while",
+            "return", "break", "continue", "import", "package", "object", "interface", "typealias",
+            "true", "false", "null", "this", "super", "is", "as", "in", "throw", "open", "internal",
+            "private", "protected", "public", "override", "abstract", "final", "enum", "companion",
+            "data", "sealed", "inline", "noinline", "crossinline", "reified", "const", "lateinit",
+            "operator", "infix", "suspend", "actual", "expect", "annotation", "by", "get", "set"
+        ),
+        "java" to setOf(
+            "if", "else", "public", "private", "class", "int", "String", "try", "catch", "for", "while",
+            "return", "break", "continue", "import", "package", "new", "this", "super", "void", "boolean",
+            "byte", "short", "long", "float", "double", "char", "true", "false", "null", "instanceof",
+            "extends", "implements", "interface", "abstract", "final", "static", "synchronized", "volatile",
+            "throw", "throws", "transient", "enum", "assert", "switch", "case", "default", "goto", "const",
+            "do", "native", "strictfp"
+        ),
+        "typescript" to setOf(
+            "if", "else", "function", "class", "let", "const", "try", "catch", "for", "while",
+            "return", "break", "continue", "import", "export", "from", "as", "type", "interface",
+            "true", "false", "null", "undefined", "this", "super", "new", "instanceof", "in",
+            "typeof", "void", "with", "yield", "async", "await", "extends", "implements",
+            "private", "protected", "public", "static", "abstract", "enum", "switch", "case", "default",
+            "declare", "module", "namespace", "readonly", "never", "any", "unknown", "keyof"
+        ),
+        "swift" to setOf(
+            "if", "else", "func", "class", "let", "var", "try", "catch", "for", "while",
+            "return", "break", "continue", "import", "struct", "enum", "protocol", "extension",
+            "true", "false", "nil", "self", "super", "init", "deinit", "subscript", "typealias",
+            "associatedtype", "inout", "private", "fileprivate", "internal", "public", "static",
+            "final", "open", "dynamic", "lazy", "optional", "required", "convenience", "weak",
+            "unowned", "guard", "defer", "repeat", "where", "as", "is", "throw", "throws", "rethrows",
+            "precedencegroup", "associativity", "higherThan", "lowerThan", "assignment", "switch",
+            "case", "default", "fallthrough"
+        ),
+        "javascript" to setOf(
+            "if", "else", "function", "class", "let", "const", "try", "catch", "for", "while",
+            "return", "break", "continue", "import", "export", "from", "as", "true", "false",
+            "null", "undefined", "this", "super", "new", "instanceof", "in", "typeof", "void",
+            "with", "yield", "async", "await", "switch", "case", "default", "var", "delete",
+            "do", "debugger"
+        )
+    )
+
+    private val keywords = if (customKeywords.isNotEmpty()) customKeywords else languageKeywords.values.flatten().toSet()
+
+    private val operators = listOf(
+        "===", "!==", "==", "!=", "<=", ">=", "&&", "||", "++", "--",
+        "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=", ">>>=",
+        "<<", ">>", ">>>", "&", "|", "^", "~", "!", "=", "+", "-", "*", "/", "%", "<", ">",
+        ".", "?.", "??", ":", "=>", "->", "?:", "::", "@", "#", "$", "!!", "..", "...", "..<",
+        "**", "**=", "==>", "<==", "->>", "<<-", "&&=", "||=", "^^", "??=", "?.[", "?->"
+    ).sortedByDescending { it.length }
+
+    private val mathSymbols = setOf(
+        "∫", "∑", "∏", "√", "∞", "≈", "≠", "≤", "≥", "±", "×", "÷", "∝", "∠", "∩", "∪", "⊂", "⊃", "∈", "∉", "∀", "∃", "∅", "∇", "∂",
+        "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π", "ρ", "σ", "τ", "υ", "φ", "χ", "ψ", "ω",
+        "ℕ", "ℤ", "ℚ", "ℝ", "ℂ"
+    )
+
+    private val tokenPattern = Regex(
+        """(\s+)|""" +  // Group 1: whitespace
+                """(\b(${keywords.joinToString("|")})\b)|""" +  // Group 2: keywords
+                """(${operators.joinToString("|") { Regex.escape(it) }})|""" +  // Group 3: operators
+                """(\b[a-zA-Z_][a-zA-Z0-9_]*\b)|""" +  // Group 4: identifiers
+                """(\b\d+\b)|""" +  // Group 5: numbers
+                """([\[\](){}.,;:!?])|""" +  // Group 6: punctuation
+                """(${mathSymbols.joinToString("|") { Regex.escape(it) }})|""" +  // Group 7: math symbols
+                """(\d+/\d+)"""  // Group 8: fractions
+    )
+
+    override fun tokenize(text: String): List<String> {
+        try {
+            val normalizedText = if (normalize) {
+                var temp = Normalizer.normalize(text, Normalizer.Form.NFC)
+                if (removeDiacritics) temp = temp.replace(Regex("\\p{M}"), "")
+                if (!caseSensitive) temp = temp.lowercase()
+                temp
+            } else {
+                text
+            }
+
+            val tokens = mutableListOf<String>()
+            var lastEnd = 0
+
+            for (match in tokenPattern.findAll(normalizedText)) {
+                val start = match.range.first
+                if (start > lastEnd) {
+                    val unknownText = normalizedText.substring(lastEnd until start)
+                    tokens.addAll(bpe(unknownText))
+                }
+
+                val groupValues = match.groupValues
+                when {
+                    groupValues[1].isNotEmpty() -> {} // Whitespace: ignore
+                    groupValues[2].isNotEmpty() -> tokens.add(groupValues[2]) // Keyword
+                    groupValues[3].isNotEmpty() -> tokens.add(groupValues[3]) // Operator
+                    groupValues[4].isNotEmpty() -> tokens.addAll(bpe(groupValues[4])) // Identifier
+                    groupValues[5].isNotEmpty() -> tokens.add(groupValues[5]) // Number
+                    groupValues[6].isNotEmpty() -> tokens.add(groupValues[6]) // Punctuation
+                    groupValues[7].isNotEmpty() -> tokens.add("<|math_${groupValues[7]}|>") // Math symbol
+                    groupValues[8].isNotEmpty() -> {
+                        val fractionMatch = Regex("(\\d+)/(\\d+)").matchEntire(groupValues[8])
+                        if (fractionMatch != null) {
+                            val (num, den) = fractionMatch.destructured
+                            tokens.add("<|math_frac_${num}_${den}|>")
+                        } else {
+                            tokens.add(unkToken)
+                        }
+                    }
+                }
+                lastEnd = match.range.last + 1
+            }
+
+            if (lastEnd < normalizedText.length) {
+                val unknownText = normalizedText.substring(lastEnd)
+                tokens.addAll(bpe(unknownText))
+            }
+
+            return tokens
+        } catch (e: Exception) {
+            println("Error during tokenization: ${e.message}")
+            return listOf(unkToken)
+        }
+    }
+
+    fun bpe(word: String): List<String> {
+        if (word.length > maxInputCharsPerWord) return listOf(unkToken)
+        if (specialTokens.contains(word)) return listOf(word)
+
+        var chars = word.map { it.toString() }.toMutableList()
+        val tokens = mutableListOf<String>()
+
+        while (chars.isNotEmpty()) {
+            var token = chars.joinToString("")
+            var bestId: Int? = vocabulary.findId(token)
+
+            if (bestId != null) {
+                tokens.add(token)
+                break
+            } else {
+                var bestSubstr: String? = null
+                for (i in chars.size - 1 downTo 1) {
+                    val substr = chars.subList(0, i).joinToString("")
+                    if (vocabulary.findId(substr) != null) {
+                        bestSubstr = substr
+                        break
+                    }
+                }
+                if (bestSubstr != null) {
+                    tokens.add(bestSubstr)
+                    chars = chars.subList(bestSubstr.length, chars.size)
+                } else {
+                    tokens.add(unkToken)
+                    break
+                }
+            }
+        }
+        return tokens
+    }
+
+    override fun encode(text: String): List<Int> {
+        val tokens = tokenize(text)
+        val tokenIds = mutableListOf<Int>()
+        tokenIds.add(vocabulary.getId("[CLS]") ?: vocabulary.getId(unkToken)!!)
+        tokenIds.addAll(tokens.map { vocabulary.getId(it) ?: vocabulary.getId(unkToken)!! })
+        tokenIds.add(vocabulary.getId("[SEP]") ?: vocabulary.getId(unkToken)!!)
+        return tokenIds
+    }
+
+    override fun encode(text: String, textPair: String): List<Int> {
+        val tokens1 = tokenize(text)
+        val tokens2 = tokenize(textPair)
+        val allTokens = listOf("[CLS]") + tokens1 + listOf("[SEP]") + tokens2 + listOf("[SEP]")
+        return allTokens.map { vocabulary.getId(it) ?: vocabulary.getId(unkToken)!! }
+    }
+
+    override fun decode(ids: List<Int>): String {
+        val tokens = ids.mapNotNull { vocabulary.getToken(it) }
+        val text = StringBuilder()
+        for (token in tokens) {
+            if (token.startsWith("##")) {
+                text.append(token.substring(2))
+            } else if (!specialTokens.contains(token)) {
+                text.append(" ").append(token)
+            }
+        }
+        return text.toString().trim()
+    }
+}

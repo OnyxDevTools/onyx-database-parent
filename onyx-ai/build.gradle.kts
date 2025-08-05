@@ -7,6 +7,10 @@ plugins {
     id("com.onyxdevtools.java-conventions")
 }
 
+dependencies {
+    implementation(project(":onyx-database"))
+}
+
 kotlin {
     jvmToolchain(17)
 }
