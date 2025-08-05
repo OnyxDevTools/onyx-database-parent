@@ -8,6 +8,17 @@ import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.sqrt
 
+/**
+ * Multi-Head Attention Layer implementation for transformer architectures.
+ * 
+ * This layer implements the multi-head attention mechanism as described in "Attention Is All You Need".
+ * It allows the model to jointly attend to information from different representation subspaces
+ * at different positions.
+ *
+ * @param tokensPerSample Number of tokens in each input sequence
+ * @param modelSize The dimensionality of the model (must be divisible by headCount)
+ * @param headCount Number of attention heads
+ */
 @Suppress("LocalVariableName")
 class MultiHeadAttentionLayer(
     private val tokensPerSample: Int,
@@ -15,20 +26,22 @@ class MultiHeadAttentionLayer(
     private val headCount: Int
 ) : Layer {
 
-    private val random =  java.util.Random()
+    private val random = java.util.Random()
+    
     init {
-        require(modelSize % headCount == 0) { "dModel must be divisible by numHeads" }
+        require(modelSize % headCount == 0) { "modelSize must be divisible by headCount" }
     }
 
+    /** Dimension of each attention head */
     private val dK = modelSize / headCount
 
-    // Learnable weight matrices
+    /** Learnable weight matrices for Query, Key, Value, and Output projections */
     private var wQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
     private var wK: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
     private var wV: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
     private var wO: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
 
-    // Optimizer states for Adam
+    /** Adam optimizer momentum states for weight matrices */
     private var momentWQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
     private var velocityWQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
     private var momentWK: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
@@ -38,13 +51,13 @@ class MultiHeadAttentionLayer(
     private var momentWO: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
     private var velocityWO: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
 
-    // Gradients
+    /** Gradients for weight matrices */
     private var gradWQ: Matrix? = null
     private var gradWK: Matrix? = null
     private var gradWV: Matrix? = null
     private var gradWO: Matrix? = null
 
-    // Intermediate results for backward pass
+    /** Intermediate results cached for backward pass */
     private var Q: Matrix? = null
     private var K: Matrix? = null
     private var V: Matrix? = null
@@ -55,6 +68,26 @@ class MultiHeadAttentionLayer(
     override var output: Matrix? = null
     override val activation: Activation = Activation.LINEAR
 
+    /**
+     * Performs forward pass through the multi-head attention layer.
+     *
+     * Implements the complete multi-head attention computation:
+     * 1. Computes Query (Q), Key (K), and Value (V) matrices from input
+     * 2. Splits Q, K, V into multiple attention heads
+     * 3. Computes scaled dot-product attention for each head
+     * 4. Applies causal masking for autoregressive generation
+     * 5. Concatenates all attention head outputs
+     * 6. Applies final linear projection
+     *
+     * The attention mechanism follows: Attention(Q,K,V) = softmax(QK^T/√d_k)V
+     *
+     * @param input Input matrix of shape [batchSize * seqLen, modelSize] containing
+     *              the token embeddings or previous layer outputs
+     * @param isTraining Whether the layer is in training mode (affects caching behavior)
+     * @param nextLayer The next layer in the network (unused in this implementation)
+     * @return Output matrix of shape [batchSize * seqLen, modelSize] after applying
+     *         multi-head attention and output projection
+     */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
         val batchSize = input.size / tokensPerSample
         val seqLen = tokensPerSample
@@ -77,19 +110,19 @@ class MultiHeadAttentionLayer(
 
                 // Attention scores: Q_h @ K_h^T / sqrt(dK)
                 val scores = matrixMultiply(Q_h, transpose(K_h))
-val scaledScores = scalarMultiply(scores, 1.0 / sqrt(dK.toDouble()))
+                val scaledScores = scalarMultiply(scores, 1.0 / sqrt(dK.toDouble()))
 
-// Apply causal mask
-val causalMask = Array(seqLen) { row ->
-    DoubleArray(seqLen) { col ->
-        if (col > row) Double.NEGATIVE_INFINITY else 0.0
-    }
-}
+                // Apply causal mask
+                val causalMask = Array(seqLen) { row ->
+                    DoubleArray(seqLen) { col ->
+                        if (col > row) Double.NEGATIVE_INFINITY else 0.0
+                    }
+                }
 
-val maskedScores = add(scaledScores, causalMask)
+                val maskedScores = add(scaledScores, causalMask)
 
-// Apply softmax to get attention weights
-val attentionWeightsBh = applySoftmax(maskedScores)
+                // Apply softmax to get attention weights
+                val attentionWeightsBh = applySoftmax(maskedScores)
                 attentionWeights!![b][h] = attentionWeightsBh
 
                 // Attention output: weights @ V_h

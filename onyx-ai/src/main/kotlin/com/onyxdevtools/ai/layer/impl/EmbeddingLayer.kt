@@ -7,6 +7,54 @@ import com.onyxdevtools.ai.layer.Layer
 import java.util.*
 import kotlin.math.sqrt
 
+/**
+ * Embedding layer that converts discrete token IDs into dense vector representations.
+ *
+ * Embedding layers are fundamental components in natural language processing models,
+ * transforming sparse one-hot encoded tokens into dense, learnable vector representations.
+ * This transformation allows neural networks to learn semantic relationships between
+ * tokens in a continuous vector space.
+ *
+ * **Mathematical Operation:**
+ * Given input token IDs, the layer performs a lookup operation:
+ * output[i] = weights[tokenId[i]]
+ *
+ * Where weights is a learnable embedding matrix of shape [vocabSize, embeddingSize].
+ *
+ * **Key Features:**
+ * - **Learnable Representations**: Embedding vectors are learned during training
+ * - **Semantic Similarity**: Similar tokens develop similar embedding vectors
+ * - **Dimensionality Control**: Configurable embedding dimension for memory/performance trade-offs
+ * - **Adam Optimization**: Built-in Adam optimizer support for efficient training
+ * - **Gradient Accumulation**: Properly accumulates gradients for repeated tokens
+ *
+ * **Architecture Usage:**
+ * Embedding layers are typically used as:
+ * - Input layers in language models (GPT, BERT, etc.)
+ * - Word embedding layers in NLP tasks
+ * - Token representation in sequence-to-sequence models
+ * - First layer in transformer architectures
+ *
+ * **Training Behavior:**
+ * During backpropagation, gradients flow only to the embedding vectors corresponding
+ * to the tokens present in the input batch. This sparse gradient update makes
+ * training efficient even with large vocabularies.
+ *
+ * **Memory Considerations:**
+ * Memory usage scales with vocabSize × embeddingSize. For large vocabularies,
+ * consider techniques like:
+ * - Subword tokenization (BPE, WordPiece)
+ * - Embedding dimension reduction
+ * - Gradient checkpointing
+ *
+ * @param vocabSize The size of the vocabulary (number of unique tokens).
+ *                  Must be greater than the maximum token ID that will be input.
+ * @param embeddingSize The dimensionality of the embedding vectors.
+ *                     Common values are 128, 256, 512, 768, or 1024.
+ * @see Layer
+ * @see BPETokenizer
+ * @see Vocabulary
+ */
 class EmbeddingLayer(
     private val vocabSize: Int,
     private val embeddingSize: Int

@@ -2,6 +2,53 @@ package com.onyxdevtools.ai.data
 
 import com.onyxdevtools.ai.transformation.Vocabulary
 
+/**
+ * Interface for generating training sequences from tokenized text data.
+ *
+ * Sequence generators are responsible for creating input-target pairs from a stream
+ * of tokens, which are essential for training language models and other sequence-based
+ * neural networks. The generator creates sliding windows over the token sequence,
+ * where each window becomes a training example.
+ *
+ * The typical workflow involves:
+ * 1. Taking a list of tokenized integers representing text
+ * 2. Creating overlapping sequences of specified length
+ * 3. Converting tokens to appropriate numerical representations
+ * 4. Pairing input sequences with their corresponding targets
+ *
+ * This is commonly used in:
+ * - Language model training (GPT-style models)
+ * - Text generation tasks
+ * - Sequence-to-sequence learning
+ * - Time series prediction with text data
+ *
+ * @see DefaultSequenceGenerator
+ */
 interface SequenceGenerator {
+    /**
+     * Generates training sequences from a list of tokens using sliding windows.
+     *
+     * Creates overlapping sequences from the input tokens where each sequence
+     * serves as a training example. The method returns pairs where the first
+     * element is the input sequence and the second element contains the target
+     * sequences (typically the next tokens in the sequence).
+     *
+     * The sliding window approach allows for efficient use of training data by
+     * creating multiple overlapping examples from a single text sequence.
+     *
+     * @param tokens List of integer tokens representing the tokenized text.
+     *               Each integer should correspond to a valid token in the vocabulary.
+     * @param seqLength The length of each generated sequence. This determines
+     *                  how many tokens are included in each training example.
+     * @param stride The step size between consecutive sequences. A stride of 1
+     *               creates maximally overlapping sequences, while larger strides
+     *               create less overlap and fewer training examples.
+     * @return A Sequence of training pairs where:
+     *         - First element (DoubleArray): Input sequence representation
+     *         - Second element (Array<DoubleArray>): Target sequence representations
+     *         The Sequence is lazy-evaluated for memory efficiency with large datasets.
+     * @throws IllegalArgumentException if seqLength <= 0, stride <= 0, or
+     *                                 tokens list is too short for the specified sequence length
+     */
     fun generateSequences(tokens: List<Int>, seqLength: Int, stride: Int): Sequence<Pair<DoubleArray, Array<DoubleArray>>>
 }

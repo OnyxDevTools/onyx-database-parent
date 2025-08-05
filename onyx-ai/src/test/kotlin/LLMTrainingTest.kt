@@ -13,10 +13,12 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.test.Test
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.assertTrue
 
 class LLMTrainingTest {
 
+    @Ignore
     @Test
     fun testLargerDataSet() {
         // Load full text

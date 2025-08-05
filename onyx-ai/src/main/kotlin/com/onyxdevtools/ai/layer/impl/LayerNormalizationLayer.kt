@@ -7,10 +7,39 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
- * A layer that performs layer normalization on its input.
- * Normalizes the input across the feature dimension for each sample independently.
+ * Layer Normalization implementation for neural networks, particularly effective in transformer architectures.
  *
- * @param size The number of features to normalize.
+ * Layer normalization normalizes inputs across the feature dimension for each sample independently,
+ * unlike batch normalization which normalizes across the batch dimension. This makes it particularly
+ * suitable for sequence models where batch sizes may vary or be small.
+ *
+ * **Mathematical Formulation:**
+ * Given input x, layer normalization computes:
+ * - μ = mean(x) across feature dimension
+ * - σ² = variance(x) across feature dimension
+ * - x̂ = (x - μ) / √(σ² + ε)
+ * - output = γ ⊙ x̂ + β
+ *
+ * Where γ (gamma) and β (beta) are learnable affine transformation parameters.
+ *
+ * **Key Benefits:**
+ * - **Training stability**: Reduces internal covariate shift
+ * - **Batch size independence**: Works with any batch size, including batch size of 1
+ * - **Gradient flow**: Improves gradient propagation in deep networks
+ * - **Convergence speed**: Often leads to faster training convergence
+ *
+ * **Usage in Transformers:**
+ * Layer normalization is typically applied:
+ * - Before or after multi-head attention layers
+ * - Before or after feed-forward layers
+ * - Often used in residual connections (Add & Norm)
+ *
+ * This implementation uses the Adam optimizer for updating the learnable parameters γ and β.
+ *
+ * @param size The number of features/dimensions to normalize. Must match the last dimension
+ *             of input tensors passed to this layer.
+ * @see Layer
+ * @see MultiHeadAttentionLayer
  */
 class LayerNormalizationLayer(private val size: Int) : Layer {
 

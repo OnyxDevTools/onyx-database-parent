@@ -9,11 +9,45 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 /**
- * A layer that adds fixed positional encodings to input embeddings, enabling the model to capture sequence order.
- * This implementation uses sine and cosine functions as in the original Transformer paper.
+ * Positional encoding layer that adds position information to token embeddings in transformer architectures.
  *
- * @param tokensPerSample The fixed length of input sequences.
- * @param embeddingSize The dimensionality of the embeddings.
+ * Transformer models lack inherent understanding of sequence order since attention mechanisms
+ * are permutation-invariant. This layer addresses this by adding deterministic positional
+ * encodings to input embeddings, allowing the model to understand token positions within sequences.
+ *
+ * **Mathematical Formulation:**
+ * Uses sine and cosine functions with different frequencies as described in "Attention Is All You Need":
+ * - PE(pos, 2i) = sin(pos / 10000^(2i / d_model))
+ * - PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
+ *
+ * Where:
+ * - pos = position in the sequence
+ * - i = dimension index
+ * - d_model = embedding dimension
+ *
+ * **Key Properties:**
+ * - **Deterministic**: Same position always gets the same encoding
+ * - **Unique**: Each position has a unique encoding pattern
+ * - **Relative Distance**: Model can learn to attend to relative positions
+ * - **Extrapolation**: Can handle sequences longer than seen during training
+ * - **No Parameters**: Fixed encodings require no training
+ *
+ * **Advantages over Learned Positional Embeddings:**
+ * - Works with variable sequence lengths
+ * - Can extrapolate to longer sequences
+ * - No additional parameters to learn
+ * - Captures smooth positional relationships
+ *
+ * **Usage in Architecture:**
+ * Typically applied immediately after the embedding layer and before
+ * the first transformer block in models like GPT, BERT, and T5.
+ *
+ * @param tokensPerSample The maximum sequence length that will be processed.
+ *                       Determines the size of the precomputed encoding matrix.
+ * @param embeddingSize The dimensionality of the input embeddings.
+ *                     Must match the embedding dimension of input tokens.
+ * @see EmbeddingLayer
+ * @see MultiHeadAttentionLayer
  */
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,

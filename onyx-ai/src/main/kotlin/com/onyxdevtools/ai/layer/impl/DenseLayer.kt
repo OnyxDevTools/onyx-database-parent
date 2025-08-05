@@ -11,12 +11,43 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * A fully connected neural network layer (Dense layer) with optional dropout and support for the Adam optimizer.
+ * A fully connected (dense) neural network layer with dropout regularization and Adam optimization.
  *
- * @param inputSize The number of input features.
- * @param outputSize The number of output neurons.
- * @param activation The activation function to use after linear transformation.
- * @param dropoutRate The dropout rate (0.0 = no dropout, 0.5 = 50% dropout).
+ * Dense layers implement the fundamental building block of feedforward neural networks, performing
+ * an affine transformation followed by a non-linear activation function:
+ * 
+ * **Mathematical Operation:**
+ * output = activation(input × weights + biases)
+ *
+ * **Key Features:**
+ * - **Adaptive Weight Initialization**: Uses Xavier/Glorot or He initialization based on activation function
+ * - **Dropout Regularization**: Optional dropout during training to prevent overfitting
+ * - **Adam Optimization**: Built-in support for adaptive moment estimation optimizer
+ * - **Parallel Processing**: Optimized dropout implementation using parallel streams
+ * - **Memory Efficient**: Reuses dropout masks to minimize allocations
+ *
+ * **Weight Initialization Strategy:**
+ * - ReLU/LeakyReLU: He initialization (√(2/inputSize))
+ * - Other activations: Xavier initialization (√(6/(inputSize + outputSize)))
+ *
+ * **Dropout Implementation:**
+ * During training, randomly sets a fraction of input units to 0 at each update,
+ * which helps prevent overfitting. The remaining units are scaled by 1/(1-dropoutRate)
+ * to maintain the expected sum of activations.
+ *
+ * This layer is commonly used in:
+ * - Feedforward neural networks
+ * - Final classification/regression layers
+ * - Hidden layers in transformer feedforward blocks
+ * - Multi-layer perceptrons (MLPs)
+ *
+ * @param inputSize The number of input features/neurons from the previous layer
+ * @param outputSize The number of output neurons/features this layer produces
+ * @param activation The activation function applied after the linear transformation
+ * @param dropoutRate The probability of setting each input to zero during training.
+ *                    Range: [0.0, 1.0] where 0.0 = no dropout, 0.5 = 50% dropout
+ * @see Layer
+ * @see Activation
  */
 class DenseLayer(
     private val inputSize: Int,
