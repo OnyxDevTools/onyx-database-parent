@@ -99,7 +99,11 @@ data class NeuralNetwork(
         val sampleCount = actual.size.toDouble()
         val weights = sampleWeights ?: DoubleArray(actual.size) { 1.0 }
 
-        var delta: Matrix = subtract(predicted, actual).mapIndexed { r, row ->
+        // Compute softmax probabilities
+        val probs = softmax(predicted)
+
+        // Delta for CE loss: probs - actual
+        var delta: Matrix = subtract(probs, actual).mapIndexed { r, row ->
             DoubleArray(row.size) { c -> row[c] * weights[r] }
         }.toTypedArray()
 
@@ -156,7 +160,8 @@ data class NeuralNetwork(
         maxEpochs: Int = 100,
         patience: Int = 10,
         shuffle: Boolean = true,
-        lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) }
+        tokensPerSample: Int = 1,
+        lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
     ): NeuralNetwork {
 
         require(trainingWeights == null || trainingWeights.size == trainingFeatures.size) {
@@ -180,7 +185,10 @@ data class NeuralNetwork(
                 val batchIndices = indices.subList(batchStart, batchEnd)
 
                 val batchFeatures = batchIndices.map { x[it] }.toTypedArray()
-                val batchLabels = batchIndices.map { y[it] }.toTypedArray()
+            val batchTargetIndices = batchIndices.flatMap { seqIdx ->
+                (seqIdx * tokensPerSample until (seqIdx + 1) * tokensPerSample)
+            }
+            val batchLabels = batchTargetIndices.map { y[it] }.toTypedArray()
                 val batchWeights = trainingWeights?.let { weights ->
                     batchIndices.map { weights[it] }.toDoubleArray()
                 }

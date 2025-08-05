@@ -77,10 +77,19 @@ class MultiHeadAttentionLayer(
 
                 // Attention scores: Q_h @ K_h^T / sqrt(dK)
                 val scores = matrixMultiply(Q_h, transpose(K_h))
-                val scaledScores = scalarMultiply(scores, 1.0 / sqrt(dK.toDouble()))
+val scaledScores = scalarMultiply(scores, 1.0 / sqrt(dK.toDouble()))
 
-                // Apply softmax to get attention weights
-                val attentionWeightsBh = applySoftmax(scaledScores)
+// Apply causal mask
+val causalMask = Array(seqLen) { row ->
+    DoubleArray(seqLen) { col ->
+        if (col > row) Double.NEGATIVE_INFINITY else 0.0
+    }
+}
+
+val maskedScores = add(scaledScores, causalMask)
+
+// Apply softmax to get attention weights
+val attentionWeightsBh = applySoftmax(maskedScores)
                 attentionWeights!![b][h] = attentionWeightsBh
 
                 // Attention output: weights @ V_h

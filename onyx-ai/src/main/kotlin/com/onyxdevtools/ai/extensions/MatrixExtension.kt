@@ -482,3 +482,12 @@ fun Matrix.calculateRowNorms(): List<Double> {
     }
     return norms
 }
+
+fun softmax(matrix: Matrix): Matrix {
+    return matrix.map { logits ->
+        val max = logits.maxOrNull() ?: 0.0  // For numerical stability
+        val expLogits = logits.map { exp(it - max) }
+        val sumExp = expLogits.sum()
+        expLogits.map { it / sumExp }.toDoubleArray()
+    }.toTypedArray()
+}
