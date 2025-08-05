@@ -13,14 +13,12 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.test.Test
 import java.io.File
-import kotlin.test.Ignore
 import kotlin.test.assertTrue
 
 class LLMTrainingTest {
 
-    @Ignore
     @Test
-    fun testLargerDataSet() {
+    fun testLargerDataSetA() {
         // Load full text
         val fullText = File("src/test/resources/alice_full.txt").readText()
         val qaText = File("src/test/resources/qa_alice.txt").readText()
@@ -61,8 +59,8 @@ class LLMTrainingTest {
 
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch
         val sequenceGenerator: SequenceGenerator = DefaultSequenceGenerator(vocabulary)
-        val source = { sequenceGenerator.generateSequences(tokens, seqLength, stride) }
-        val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride) }
+        val source = { sequenceGenerator.generateSequences(tokens, seqLength, stride, true) }
+        val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride, true) }
 
         val lossFunction: LossFunction = CrossEntropyLoss()
 
@@ -70,9 +68,9 @@ class LLMTrainingTest {
         try {
             model = model.trainStreaming(
                 source = source,
-                batchSize = 32,
-                maxEpochs = 5000,
-                patience = 50,
+                batchSize = 64,
+                maxEpochs = 500,
+                patience = 10,
                 lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
                 comprehensiveLossFn = { net ->
                     // For comprehensive loss, compute on a validation set or subset
@@ -100,8 +98,8 @@ class LLMTrainingTest {
             model = model.trainStreaming(
                 source = qaSource,
                 batchSize = 8,
-                maxEpochs = 5000,
-                patience = 50,
+                maxEpochs = 100,
+                patience = 5,
                 lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
                 comprehensiveLossFn = { net ->
                     // Similar validation logic as above, adapted for QA

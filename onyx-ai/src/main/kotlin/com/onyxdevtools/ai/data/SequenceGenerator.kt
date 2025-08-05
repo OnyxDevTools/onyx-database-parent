@@ -50,5 +50,10 @@ interface SequenceGenerator {
      * @throws IllegalArgumentException if seqLength <= 0, stride <= 0, or
      *                                 tokens list is too short for the specified sequence length
      */
-    fun generateSequences(tokens: List<Int>, seqLength: Int, stride: Int): Sequence<Pair<DoubleArray, Array<DoubleArray>>>
+    fun generateSequences(
+        tokens: List<Int>,
+        seqLength: Int,
+        stride: Int,
+        shuffle: Boolean
+    ): Sequence<Pair<DoubleArray, Array<DoubleArray>>>
 }
