@@ -225,7 +225,7 @@ data class NeuralNetwork(
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreaming(
-        source: () -> Sequence<Pair<DoubleArray, DoubleArray>>,
+        source: () -> Sequence<Pair<DoubleArray, Array<DoubleArray>>>,
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
@@ -242,25 +242,26 @@ data class NeuralNetwork(
         var epochsWithoutImprovement = 0
 
         repeat(maxEpochs) { epoch ->
-            val bx = mutableListOf<DoubleArray>()
-            val by = mutableListOf<DoubleArray>()
+val bx = mutableListOf<DoubleArray>()
+val by = mutableListOf<Array<DoubleArray>>()
             var runningTrainLoss = 0.0
             var runningTestLoss = 0.0
             var testSamples = 0
 
-            for ((xRaw, yRaw) in source()) {
-                bx += xRaw; by += yRaw
+            for ((inputSeq, targetSeqs) in source()) {
+                bx += inputSeq; by += targetSeqs
                 if (bx.size == batchSize) {
                     // --- split batch --------------------------------------------------
-                    val (xTrainRaw, yTrainRaw, xTestRaw, yTestRaw) =
-                        splitBatch(
+                    val (xTrainRaw, yTrainRawList, xTestRaw, yTestRawList) =
+                        splitBatchSeq(
                             bx.toTypedArray(), by.toTypedArray(),
                             testFraction = testFrac, shuffle = shuffle
                         )
 
                     // --- fit+transform *only* on training slice ----------------------
                     val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
-                    val yTrain = valueTransforms?.fitAndTransform(yTrainRaw) ?: yTrainRaw
+                    val yTrainFlat = yTrainRawList.flatMap { it.toList() }.toTypedArray()
+                    val yTrain = valueTransforms?.fitAndTransform(yTrainFlat) ?: yTrainFlat
 
                     // --- train step ---------------------------------------------------
                     val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
@@ -269,7 +270,8 @@ data class NeuralNetwork(
 
                     // --- evaluate on test slice (do NOT refit transforms) ------------
                     val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
-                    val yTest = valueTransforms?.apply(yTestRaw) ?: yTestRaw
+                    val yTestFlat = yTestRawList.flatMap { it.toList() }.toTypedArray()
+                    val yTest = valueTransforms?.apply(yTestFlat) ?: yTestFlat
                     val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
 
                     runningTrainLoss += lossFn(predTrain, yTrain) * xTrain.size
@@ -282,17 +284,19 @@ data class NeuralNetwork(
 
             // left-overs
             if (bx.isNotEmpty()) {
-                val (xT, yT, xv, yv) = splitBatch(
+                val (xT, yTList, xv, yvList) = splitBatchSeq(
                     bx.toTypedArray(), by.toTypedArray(),
                     testFraction = testFrac, shuffle = shuffle
                 )
                 val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
-                val yTf = valueTransforms?.fitAndTransform(yT) ?: yT
+                val yTfFlat = yTList.flatMap { it.toList() }.toTypedArray()
+                val yTf = valueTransforms?.fitAndTransform(yTfFlat) ?: yTfFlat
                 val predT = predict(xTf, true, skipFeatureTransform = true)
                 backward(predT, yTf); updateParameters()
 
                 val xv2 = featureTransforms?.apply(xv) ?: xv
-                val yv2 = valueTransforms?.apply(yv) ?: yv
+                val yvFlat = yvList.flatMap { it.toList() }.toTypedArray()
+                val yv2 = valueTransforms?.apply(yvFlat) ?: yvFlat
                 val predV = predict(xv2, false, skipFeatureTransform = true)
 
                 runningTrainLoss += lossFn(predT, yTf) * xTf.size
@@ -331,6 +335,30 @@ data class NeuralNetwork(
      *   - c: test feature matrix
      *   - d: test label matrix
      */
+    private fun splitBatchSeq(
+        x: Array<DoubleArray>,
+        y: Array<Array<DoubleArray>>,
+        testFraction: Double = 0.1,
+        shuffle: Boolean = true
+    ): Quad<Array<DoubleArray>, List<Array<DoubleArray>>, Array<DoubleArray>, List<Array<DoubleArray>>> {
+        val idx = x.indices.toMutableList()
+        if (shuffle) idx.shuffle()
+        val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
+        val testIdx = idx.take(testSize)
+        val trainIdx = idx.drop(testSize)
+
+        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
+            Array(ids.size) { i -> src[ids[i]] }
+
+        fun subsetTargets(src: Array<Array<DoubleArray>>, ids: List<Int>) =
+            ids.map { src[it] }
+
+        return Quad(
+            subsetInputs(x, trainIdx), subsetTargets(y, trainIdx),       // train
+            subsetInputs(x, testIdx), subsetTargets(y, testIdx)         // test
+        )
+    }
+
     private fun splitBatch(
         x: Matrix,
         y: Matrix,
@@ -412,4 +440,3 @@ data class NeuralNetwork(
         private const val serialVersionUID = 1L
     }
 }
-
