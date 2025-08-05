@@ -78,22 +78,20 @@ class BPETokenizer(
     )
 
     private val tokenPattern = Regex(
-        """(${specialTokens.joinToString("|") { Regex.escape(it) }})|""" +  // Group 1: special tokens
-                """(\d+/\d+)|""" +  // Group 2: fractions
-                """(\b\d+\.\d+\b)|""" +  // Group 3: floats
-                """(\b(${keywords.joinToString("|") { Regex.escape(it) }})\b)|""" +  // Group 4: keywords
-                """(${operators.joinToString("|") { Regex.escape(it) }})|""" +  // Group 5: operators
-                """(\b[a-zA-Z_][a-zA-Z0-9_]*\b)|""" +  // Group 6: identifiers
-                """(\b\d+\b)|""" +  // Group 7: integers
-                """([\[\](){}.,;:!?])|""" +  // Group 8: punctuation
-                """(${mathSymbols.joinToString("|") { Regex.escape(it) }})|""" +  // Group 9: math symbols
-                """(\s+)"""  // Group 10: whitespace
+        "(\\s+)|" +  // Group 1: whitespace
+            "(\\b(?:${keywords.joinToString("|")})\\b)|" +  // Group 2: keywords
+            "(${operators.joinToString("|") { Regex.escape(it) }})|" +  // Group 3: operators
+            "(\\b[a-zA-Z_][a-zA-Z0-9_]*\\b)|" +  // Group 4: identifiers
+            "(\\b\\d+\\b)|" +  // Group 5: numbers
+            "([\\[\\](){}.,;:!?])|" +  // Group 6: punctuation
+            "(${mathSymbols.joinToString("|") { Regex.escape(it) }})|" +  // Group 7: math symbols
+            "(\\d+/\\d+)"  // Group 8: fractions
     )
 
     override fun tokenize(text: String): List<String> {
         try {
             val normalizedText = if (normalize) {
-                var temp = Normalizer.normalize(text, Normalizer.Form.NFC)
+                var temp = Normalizer.normalize(text, Normalizer.Form.NFD)
                 if (removeDiacritics) temp = temp.replace(Regex("\\p{M}"), "")
                 if (!caseSensitive) temp = temp.lowercase()
                 temp
@@ -113,24 +111,22 @@ class BPETokenizer(
 
                 val groupValues = match.groupValues
                 when {
-                    groupValues[1].isNotEmpty() -> tokens.add(groupValues[1]) // Special token
-                    groupValues[2].isNotEmpty() -> {
-                        val fractionMatch = Regex("(\\d+)/(\\d+)").matchEntire(groupValues[2])
+                    groupValues[1].isNotEmpty() -> {} // Whitespace: ignore
+                    groupValues[2].isNotEmpty() -> tokens.add(groupValues[2]) // Keyword
+                    groupValues[3].isNotEmpty() -> tokens.add(groupValues[3]) // Operator
+                    groupValues[4].isNotEmpty() -> tokens.addAll(bpe(groupValues[4])) // Identifier
+                    groupValues[5].isNotEmpty() -> tokens.add(groupValues[5]) // Number
+                    groupValues[6].isNotEmpty() -> tokens.add(groupValues[6]) // Punctuation
+                    groupValues[7].isNotEmpty() -> tokens.add("<|math_${groupValues[7]}|>") // Math symbol
+                    groupValues[8].isNotEmpty() -> {
+                        val fractionMatch = Regex("(\\d+)/(\\d+)").matchEntire(groupValues[8])
                         if (fractionMatch != null) {
                             val (num, den) = fractionMatch.destructured
                             tokens.add("<|math_frac_${num}_${den}|>")
                         } else {
-                            tokens.add(vocabulary.getId(groupValues[2]).toString()) // Add to vocab
+                            tokens.add(groupValues[8])
                         }
-                    } // Fraction
-                    groupValues[3].isNotEmpty() -> tokens.add(groupValues[3]) // Float
-                    groupValues[4].isNotEmpty() -> tokens.add(groupValues[4]) // Keyword
-                    groupValues[5].isNotEmpty() -> tokens.add(groupValues[5]) // Operator
-                    groupValues[6].isNotEmpty() -> tokens.addAll(bpe(groupValues[6])) // Identifier
-                    groupValues[7].isNotEmpty() -> tokens.add(groupValues[7]) // Integer
-                    groupValues[8].isNotEmpty() -> tokens.add(groupValues[8]) // Punctuation
-                    groupValues[9].isNotEmpty() -> tokens.add("<|math_${groupValues[9]}|>") // Math symbol
-                    groupValues[10].isNotEmpty() -> {} // Whitespace: ignore
+                    }
                 }
                 lastEnd = match.range.last + 1
             }
@@ -143,24 +139,23 @@ class BPETokenizer(
             return tokens
         } catch (e: Exception) {
             println("Error during tokenization: ${e.message}")
-            return listOf(vocabulary.getId(unkToken).toString())
+            return listOf(unkToken)
         }
     }
 
     fun bpe(word: String): List<String> {
+        if (word.length > maxInputCharsPerWord) return listOf(unkToken)
         if (specialTokens.contains(word)) return listOf(word)
 
         var chars = word.map { it.toString() }.toMutableList()
         val tokens = mutableListOf<String>()
-
-        var isFirstSub = true
 
         while (chars.isNotEmpty()) {
             var token = chars.joinToString("")
             var bestId: Int? = vocabulary.findId(token)
 
             if (bestId != null) {
-                tokens.add(if (isFirstSub) token else "##" + token)
+                tokens.add(token)
                 break
             } else {
                 var bestSubstr: String? = null
@@ -172,12 +167,10 @@ class BPETokenizer(
                     }
                 }
                 if (bestSubstr != null) {
-                    tokens.add(if (isFirstSub) bestSubstr else "##" + bestSubstr)
-                    isFirstSub = false
+                    tokens.add(bestSubstr)
                     chars = chars.subList(bestSubstr.length, chars.size)
                 } else {
-                    vocabulary.getId(token) // Add to vocab
-                    tokens.add(if (isFirstSub) token else "##" + token)
+                    tokens.add(unkToken)
                     break
                 }
             }
@@ -188,9 +181,9 @@ class BPETokenizer(
     override fun encode(text: String): List<Int> {
         val tokens = tokenize(text)
         val tokenIds = mutableListOf<Int>()
-        tokenIds.add(vocabulary.getId("[CLS]"))
-        tokenIds.addAll(tokens.map { vocabulary.getId(it) })
-        tokenIds.add(vocabulary.getId("[SEP]"))
+        tokenIds.add(vocabulary.getId("[CLS]") ?: vocabulary.getId(unkToken)!!)
+        tokenIds.addAll(tokens.map { vocabulary.getId(it) ?: vocabulary.getId(unkToken)!! })
+        tokenIds.add(vocabulary.getId("[SEP]") ?: vocabulary.getId(unkToken)!!)
         return tokenIds
     }
 
@@ -198,27 +191,18 @@ class BPETokenizer(
         val tokens1 = tokenize(text)
         val tokens2 = tokenize(textPair)
         val allTokens = listOf("[CLS]") + tokens1 + listOf("[SEP]") + tokens2 + listOf("[SEP]")
-        return allTokens.map { vocabulary.getId(it) }
+        return allTokens.map { vocabulary.getId(it) ?: vocabulary.getId(unkToken)!! }
     }
 
     override fun decode(ids: List<Int>): String {
         val tokens = ids.mapNotNull { vocabulary.getToken(it) }
         val text = StringBuilder()
-        var isFirst = true
         for (token in tokens) {
-            if (specialTokens.contains(token)) continue
-
-            val part = if (token.startsWith("##")) token.substring(2) else token
-            if (isFirst) {
-                text.append(part)
-            } else {
-                if (token.startsWith("##")) {
-                    text.append(part)
-                } else {
-                    text.append(" ").append(part)
-                }
+            if (token.startsWith("##")) {
+                text.append(token.substring(2))
+            } else if (!specialTokens.contains(token)) {
+                text.append(" ").append(token)
             }
-            isFirst = false
         }
         return text.toString().trim()
     }
