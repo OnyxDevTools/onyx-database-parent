@@ -1,0 +1,44 @@
+Question: Who is the main character in the story?
+Answer: Alice.
+
+Question: What animal does Alice follow into Wonderland?
+Answer: A white rabbit.
+
+Question: What does the White Rabbit drop that Alice picks up?
+Answer: A fan and a pair of gloves.
+
+Question: Who does Alice meet first in Wonderland?
+Answer: The Mouse and other animals in the pool of tears.
+
+Question: What game does the Queen of Hearts play?
+Answer: Croquet.
+
+Question: What is the name of the cat that grins?
+Answer: The Cheshire Cat.
+
+Question: What trial does Alice attend at the end?
+Answer: The trial of the Knave of Hearts.
+
+Question: How does Alice grow taller?
+Answer: By eating a piece of cake or mushroom.
+
+Question: What does the Mad Hatter celebrate?
+Answer: Unbirthdays.
+
+Question: Who says "We're all mad here"?
+Answer: The Cheshire Cat.
+
+Question: What is the Caterpillar sitting on?
+Answer: A mushroom.
+
+Question: What does the Dormouse keep doing during the tea party?
+Answer: Falling asleep.
+
+Question: What is the Queen's favorite phrase?
+Answer: Off with their heads!
+
+Question: How does Alice enter Wonderland?
+Answer: By falling down a rabbit hole.
+
+Question: What does Alice drink to become smaller?
+Answer: A bottle labeled "DRINK ME".

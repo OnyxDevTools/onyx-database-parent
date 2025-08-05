@@ -86,11 +86,52 @@ class LLMTrainingTest {
             e.printStackTrace()
         }
 
+        // Fine-tuning on QA dataset for question-answering
+        val qaText = File("src/test/resources/qa_alice.txt").readText()
+        val qaTokens = tokenizer.tokenize(qaText).map { vocabulary.getId(it) }
+
+        // Generate sequences for QA fine-tuning
+        val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride) }
+
+        // Fine-tune the model
+        try {
+            model = model.trainStreaming(
+                source = qaSource,
+                batchSize = 8,
+                maxEpochs = 50,
+                patience = 5,
+                lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
+                comprehensiveLossFn = { net ->
+                    // Similar validation logic as above, adapted for QA
+                    val valIndices = (0 until qaTokens.size - seqLength step stride).take(20)
+                    val valInputs = valIndices.map { i ->
+                        qaTokens.subList(i, i + seqLength).map { it.toDouble() }.toDoubleArray()
+                    }.toTypedArray()
+                    val valTargets = valIndices.flatMap { i ->
+                        qaTokens.subList(i + 1, i + 1 + seqLength).map { targetToken ->
+                            DoubleArray(vocabulary.size) { if (it == targetToken) 1.0 else 0.0 }
+                        }
+                    }.toTypedArray()
+                    val valPred = net.predict(valInputs)
+                    lossFunction.calculate(valPred, valTargets)
+                }
+            )
+            println("QA fine-tuning completed successfully")
+        } catch (e: Exception) {
+            println("Fine-tuning failed with exception: ${e.message}")
+            e.printStackTrace()
+        }
+
         // Example generation
         val textGenerator: TextGenerator = DefaultTextGenerator()
         val prompt = "Alice was beginning to get very tired"
         val generatedText = textGenerator.generate(model, tokenizer, vocabulary, prompt, 20, seqLength)
         println("Generated text: $generatedText")
+
+        // Test QA generation
+        val qaPrompt = "Question: Who is the main character in the story? Answer:"
+        val generatedAnswer = textGenerator.generate(model, tokenizer, vocabulary, qaPrompt, 10, seqLength)
+        println("Generated answer: $generatedAnswer")
 
         // Assertions can be added if needed, but since it's streaming, loss computation is inside
     }
