@@ -1,95 +1,100 @@
 package com.onyxdevtools.ai.transformation
 
-/**
- * A mutable implementation of the Vocabulary interface using in-memory hash maps.
- *
- * This implementation provides efficient bidirectional token-to-ID mapping using two
- * synchronized hash maps for O(1) average-case lookup and insertion performance.
- * The vocabulary dynamically grows as new tokens are encountered, making it ideal
- * for building vocabularies during text processing.
- *
- * **Key Features:**
- * - **Dynamic growth**: Automatically assigns sequential IDs to new tokens
- * - **Fast lookups**: O(1) average-case performance for both directions
- * - **Memory efficient**: Uses compact hash map storage
- * - **Thread-unsafe**: Not synchronized for concurrent access
- *
- * **ID Assignment:**
- * IDs are assigned sequentially starting from 0. The first token gets ID 0,
- * the second gets ID 1, and so on. This ensures dense ID space utilization
- * and predictable behavior.
- *
- * **Usage Patterns:**
- * - Building vocabularies during preprocessing
- * - Dynamic vocabulary expansion during training
- * - Converting between text and numerical representations
- * - BPE tokenization vocabulary management
- *
- * **Thread Safety:**
- * This implementation is not thread-safe. For concurrent access, external
- * synchronization or thread-safe alternatives should be used.
- *
- * @see Vocabulary
- * @see OnyxVocabulary
- */
 class MutableVocabulary : Vocabulary {
     /** Map from token strings to their assigned integer IDs */
     private val tokenToId = mutableMapOf<String, Int>()
-    
     /** Map from integer IDs back to their corresponding token strings */
     private val idToToken = mutableMapOf<Int, String>()
+    /** Frequency counter used by commit() */
+    private val freq = mutableMapOf<String, Long>()
 
-    /**
-     * Gets or assigns an ID for the given token.
-     *
-     * If the token already exists, returns its existing ID. If the token is new,
-     * assigns it the next sequential ID (equal to current vocabulary size) and
-     * adds it to both internal maps.
-     *
-     * @param token The token to get or assign an ID for
-     * @return The unique ID associated with this token
-     */
     override fun getId(token: String): Int {
-        return tokenToId.getOrPut(token) {
-            val id = tokenToId.size
-            idToToken[id] = token
-            id
+        val id = tokenToId.getOrPut(token) {
+            val newId = tokenToId.size
+            idToToken[newId] = token
+            newId
         }
+        // keep freq map in sync
+        freq.putIfAbsent(token, 0L)
+        return id
     }
 
-    /**
-     * Retrieves the token string for a given ID.
-     *
-     * @param id The ID to look up
-     * @return The token associated with the ID, or null if the ID doesn't exist
-     */
     override fun getToken(id: Int): String? = idToToken[id]
 
-    /**
-     * Finds the ID for a token without adding it to the vocabulary.
-     *
-     * @param token The token to search for
-     * @return The ID if the token exists, null otherwise
-     */
     override fun findId(token: String): Int? = tokenToId[token]
 
-    /**
-     * The current number of unique tokens in the vocabulary.
-     *
-     * Since IDs are assigned sequentially starting from 0, the size equals
-     * the next ID that would be assigned to a new token.
-     */
     override val size: Int get() = tokenToId.size
 
-    /**
-     * Explicitly adds a token to the vocabulary.
-     *
-     * This method ensures the token is present by calling getId(), which
-     * will add the token if it doesn't already exist.
-     *
-     * @param token The token to add to the vocabulary
-     */
     override fun addToken(token: String) {
-        getId(token) // Adds if not present
+        // Adds if not present and ensures freq initialized
+        if (token !in tokenToId) {
+            val id = tokenToId.size
+            tokenToId[token] = id
+            idToToken[id] = token
+        }
+        freq.putIfAbsent(token, 0L)
+    }
+
+    /** Increment token frequency; creates token if missing. */
+    fun incrementFrequency(token: String, amount: Long = 1) {
+        addToken(token)
+        freq[token] = (freq[token] ?: 0L) + amount
+    }
+
+    /** Helper to fetch tokenizer defaults if available, otherwise empty. */
+    private fun mustKeepTokens(): Set<String> =
+        runCatching { BPETokenizer(this).defaultTokens.toSet() }.getOrDefault(emptySet())
+
+    /**
+     * Commit the vocabulary in-memory:
+     *  - Keep only the top [maxTokens] by frequency (desc), tie-break by token (asc).
+     *  - Always include tokenizer default tokens (if defined) even if not in top-N.
+     *  - Reassign dense IDs starting at 0 in the final rank order.
+     */
+    override fun commit(maxTokens: Int) {
+        require(maxTokens > 0) { "maxTokens must be > 0" }
+
+        val mustKeep = mustKeepTokens()
+
+        // Seed them so they exist (freq defaults to 0)
+        mustKeep.forEach { addToken(it) }
+
+        // Snapshot all tokens with freq (default 0)
+        val all = tokenToId.keys.map { t -> t to (freq[t] ?: 0L) }
+
+        // Rank by (freq desc, token asc)
+        val ranked = all.sortedWith(
+            compareByDescending<Pair<String, Long>> { it.second }.thenBy { it.first }
+        )
+
+        // Take top-N
+        val top = ranked.take(maxTokens).map { it.first }.toMutableList()
+
+        // Ensure must-keep tokens are included
+        for (t in mustKeep) if (t !in top) top += t
+
+        // If we exceeded maxTokens, trim NON-mustkeep, keeping all must-keep
+        if (top.size > maxTokens) {
+            val mustKeepSet = mustKeep.toSet()
+            val keepMust = top.filter { it in mustKeepSet }
+            val keepNon  = top.filter { it !in mustKeepSet }
+            val room = (maxTokens - keepMust.size).coerceAtLeast(0)
+            val trimmed = keepMust + keepNon.take(room)
+            top.clear()
+            top += trimmed
+        }
+
+        // Reassign dense IDs starting at 0
+        tokenToId.clear()
+        idToToken.clear()
+
+        val newFreq = mutableMapOf<String, Long>()
+        top.forEachIndexed { newId, token ->
+            tokenToId[token] = newId
+            idToToken[newId] = token
+            newFreq[token] = freq[token] ?: 0L
+        }
+        freq.clear()
+        freq.putAll(newFreq)
     }
 }

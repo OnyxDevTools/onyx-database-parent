@@ -5,6 +5,8 @@ package com.onyxdevtools.ai
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
+import com.onyxdevtools.ai.batch.SequentialBatchSplitter
+import com.onyxdevtools.ai.batch.TokenBatchSplitter
 import java.io.*
 import kotlin.apply
 import kotlin.math.min
@@ -140,52 +142,9 @@ data class NeuralNetwork(
     ) {
         val sampleCount = predicted.size.toDouble()
         
-        // Check if the last layer supports optimized sparse backward pass
-        val lastLayer = layers.lastOrNull()
-        
-        var delta: Matrix = when (lastLayer) {
-            is com.onyxdevtools.ai.layer.impl.SparseDenseLayer -> {
-                // Use optimized sparse backward pass for SparseDenseLayer
-                val previousLayer = layers.getOrNull(layers.lastIndex - 1)
-                val inputToLastLayer = previousLayer?.output ?: lastInput
-                ?: error("No input recorded for last layer")
-                
-                lastLayer.backwardSparse(
-                    currentInput = inputToLastLayer,
-                    predictions = predicted,
-                    sparseTargets = sparseTargets,
-                    featureSize = sampleCount,
-                    previousLayer = previousLayer,
-                    lambda = lambda
-                )
-            }
-            is com.onyxdevtools.ai.layer.impl.FastDenseLayer -> {
-                // Use optimized sparse backward pass for FastDenseLayer
-                val previousLayer = layers.getOrNull(layers.lastIndex - 1)
-                val inputToLastLayer = previousLayer?.output ?: lastInput
-                ?: error("No input recorded for last layer")
-                
-                lastLayer.backwardSparse(
-                    currentInput = inputToLastLayer,
-                    predictions = predicted,
-                    sparseTargets = sparseTargets,
-                    featureSize = sampleCount,
-                    previousLayer = previousLayer,
-                    lambda = lambda
-                )
-            }
-            else -> {
-                // Fall back to standard sparse categorical cross-entropy gradients
-                sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
-            }
-        }
-        
-        // Continue backward pass through remaining layers (skip last layer if it handled its own backward pass)
-        val startIndex = when (lastLayer) {
-            is com.onyxdevtools.ai.layer.impl.SparseDenseLayer,
-            is com.onyxdevtools.ai.layer.impl.FastDenseLayer -> layers.lastIndex - 1
-            else -> layers.lastIndex
-        }
+        var delta: Matrix = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
+
+        val startIndex = layers.lastIndex
 
         for (i in startIndex downTo 0) {
             val layer = layers[i]
@@ -333,8 +292,9 @@ data class NeuralNetwork(
                 bx += inputSeq; by += targetSeqs
                 if (bx.size == batchSize) {
                     // --- split batch --------------------------------------------------
+                    val seqSplitter = SequentialBatchSplitter()
                     val (xTrainRaw, yTrainRawList, xTestRaw, yTestRawList) =
-                        splitBatchSeq(
+                        seqSplitter.splitBatch(
                             bx.toTypedArray(), by.toTypedArray(),
                             testFraction = testFrac, shuffle = shuffle
                         )
@@ -365,7 +325,8 @@ data class NeuralNetwork(
 
             // left-overs
             if (bx.isNotEmpty()) {
-                val (xT, yTList, xv, yvList) = splitBatchSeq(
+                val seqSplitter = SequentialBatchSplitter()
+                val (xT, yTList, xv, yvList) = seqSplitter.splitBatch(
                     bx.toTypedArray(), by.toTypedArray(),
                     testFraction = testFrac, shuffle = shuffle
                 )
@@ -392,7 +353,7 @@ data class NeuralNetwork(
 
             if (epochTestLoss < bestLoss) {
                 bestLoss = epochTestLoss
-                best = if (saveModelPath == null) this.clone() else this
+                best = this.clone()
                 epochsWithoutImprovement = 0
                 
                 // Save model to disk if saveModelPath is provided
@@ -469,8 +430,9 @@ data class NeuralNetwork(
                 bx += inputSeq; by += targetSeq
                 if (bx.size == batchSize) {
                     // --- split batch --------------------------------------------------
+                    val tokenSplitter = TokenBatchSplitter()
                     val (xTrainRaw, yTrainRaw, xTestRaw, yTestRaw) =
-                        splitBatchSparse(
+                        tokenSplitter.splitBatch(
                             bx.toTypedArray(), by.toTypedArray(),
                             testFraction = testFrac, shuffle = shuffle
                         )
@@ -499,7 +461,8 @@ data class NeuralNetwork(
 
             // left-overs
             if (bx.isNotEmpty()) {
-                val (xT, yT, xv, yv) = splitBatchSparse(
+                val tokenSplitter = TokenBatchSplitter()
+                val (xT, yT, xv, yv) = tokenSplitter.splitBatch(
                     bx.toTypedArray(), by.toTypedArray(),
                     testFraction = testFrac, shuffle = shuffle
                 )
@@ -548,126 +511,6 @@ data class NeuralNetwork(
         }
         return best
     }
-
-    /**
-     * Splits a batch of feature and label matrices into training and test subsets.
-     *
-     * @param x The full feature matrix (rows of samples × features).
-     * @param y The full label matrix (rows of samples × outputs).
-     * @param testFraction Fraction of samples to reserve for testing (0.0–1.0). Default is 0.1.
-     * @param shuffle Whether to shuffle samples before splitting. Default is true.
-     * @return A [Quad] containing:
-     *   - a: training feature matrix
-     *   - b: training label matrix
-     *   - c: test feature matrix
-     *   - d: test label matrix
-     */
-    private fun splitBatchSeq(
-        x: Array<DoubleArray>,
-        y: Array<Array<DoubleArray>>,
-        testFraction: Double = 0.1,
-        shuffle: Boolean = true
-    ): Quad<Array<DoubleArray>, List<Array<DoubleArray>>, Array<DoubleArray>, List<Array<DoubleArray>>> {
-        val idx = x.indices.toMutableList()
-        if (shuffle) idx.shuffle()
-        val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
-        val testIdx = idx.take(testSize)
-        val trainIdx = idx.drop(testSize)
-
-        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
-            Array(ids.size) { i -> src[ids[i]] }
-
-        fun subsetTargets(src: Array<Array<DoubleArray>>, ids: List<Int>) =
-            ids.map { src[it] }
-
-        return Quad(
-            subsetInputs(x, trainIdx), subsetTargets(y, trainIdx),       // train
-            subsetInputs(x, testIdx), subsetTargets(y, testIdx)         // test
-        )
-    }
-
-    private fun splitBatch(
-        x: Matrix,
-        y: Matrix,
-        testFraction: Double = 0.1,
-        shuffle: Boolean = true
-    ): Quad<Matrix, Matrix, Matrix, Matrix> {
-        val idx = x.indices.toMutableList()
-        if (shuffle) idx.shuffle()
-        val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
-        val testIdx = idx.take(testSize)
-        val trainIdx = idx.drop(testSize)
-
-        fun subset(src: Matrix, ids: List<Int>) =
-            Array(ids.size) { i -> src[ids[i]] }
-
-        return Quad(
-            subset(x, trainIdx), subset(y, trainIdx),       // train
-            subset(x, testIdx), subset(y, testIdx)         // test
-        )
-    }
-
-    /**
-     * Splits a batch of feature arrays and sparse target arrays into training and test subsets.
-     *
-     * @param x The full feature matrix (rows of samples × features).
-     * @param y The full sparse target matrix (rows of IntArrays with target token IDs).
-     * @param testFraction Fraction of samples to reserve for testing (0.0–1.0). Default is 0.1.
-     * @param shuffle Whether to shuffle samples before splitting. Default is true.
-     * @return A [Quad] containing:
-     *   - a: training feature matrix
-     *   - b: training sparse target arrays
-     *   - c: test feature matrix
-     *   - d: test sparse target arrays
-     */
-    private fun splitBatchSparse(
-        x: Array<DoubleArray>,
-        y: Array<IntArray>,
-        testFraction: Double = 0.1,
-        shuffle: Boolean = true
-    ): Quad<Array<DoubleArray>, List<IntArray>, Array<DoubleArray>, List<IntArray>> {
-        // For very small batches, don't split - use all data for training
-        if (x.size <= 2) {
-            return Quad(
-                x, y.toList(),                    // All data goes to training
-                emptyArray(), emptyList()         // Empty test set
-            )
-        }
-        
-        val idx = x.indices.toMutableList()
-        if (shuffle) idx.shuffle()
-        val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
-        
-        // Ensure we have at least 1 training sample
-        val actualTestSize = minOf(testSize, idx.size - 1)
-        val testIdx = idx.take(actualTestSize)
-        val trainIdx = idx.drop(actualTestSize)
-
-        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
-            Array(ids.size) { i -> src[ids[i]] }
-
-        fun subsetSparseTargets(src: Array<IntArray>, ids: List<Int>) =
-            ids.map { src[it] }
-
-        return Quad(
-            subsetInputs(x, trainIdx), subsetSparseTargets(y, trainIdx),       // train
-            subsetInputs(x, testIdx), subsetSparseTargets(y, testIdx)         // test
-        )
-    }
-
-    /**
-     * A tuple of four values.
-     *
-     * @param A Type of the first element.
-     * @param B Type of the second element.
-     * @param C Type of the third element.
-     * @param D Type of the fourth element.
-     * @property a First value.
-     * @property b Second value.
-     * @property c Third value.
-     * @property d Fourth value.
-     */
-    private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 
     /**
      * Performs a single training step on a batch of raw input and label matrices.

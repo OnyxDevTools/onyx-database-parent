@@ -1,10 +1,8 @@
-package com.onyxdevtools.ai
-
+import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.data.SparseSequenceGenerator
 import com.onyxdevtools.ai.data.SequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
-import com.onyxdevtools.ai.generation.DefaultTextGenerator
-import com.onyxdevtools.ai.generation.TextGenerator
+import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.loss.CrossEntropyLoss
 import com.onyxdevtools.ai.loss.LossFunction
@@ -21,13 +19,14 @@ class LLMTrainingTest {
     @Test
     fun testLargerDataSetA() {
         // Load full text
-        val fullText = File("src/test/resources/alice_full.txt").readText()
+        val fullText = File("src/test/resources/alice_full_packed.txt").readText()
         val qaText = File("src/test/resources/qa_alice.txt").readText()
 
         // Define or build vocabulary using the new function
         val vocabulary: Vocabulary = MutableVocabulary()
         vocabulary.appendToVocabulary(fullText)
         vocabulary.appendToVocabulary(qaText)
+        vocabulary.commit(5000)
 
         val tokenizer = BPETokenizer(vocabulary)
 
@@ -46,32 +45,59 @@ class LLMTrainingTest {
         val tokensPerSample = seqLength
 
         val layers = listOf(
-            SparseEmbeddingLayer(vocabulary.size, embeddingDim), // ← Memory-efficient embedding!
+            EmbeddingLayer(vocabulary.size, embeddingDim),
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
             MultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
             LayerNormalizationLayer(embeddingDim),
-            FastDenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            FastDenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
+            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
+            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
             LayerNormalizationLayer(embeddingDim),
-            SparseDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
+            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.001)
 
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch (using sparse generator)
         val sequenceGenerator: SequenceGenerator = SparseSequenceGenerator(vocabulary)
-        val source = { sequenceGenerator.generateSequences(tokens, seqLength, stride, true) }
-        val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride, true) }
 
+        val mixedSource = {
+            val a = sequenceGenerator.generateSequences(tokens, seqLength, stride, true)
+            val b = sequenceGenerator.generateSequences(qaTokens, seqLength, stride, true)
+            sequence {
+                yieldAll(a)
+                yieldAll(b)
+            }
+        }
         // Train the model using sparse streaming (memory efficient!)
         try {
             model = model.trainStreamingSparse(
-                source = source,
-                batchSize = 64,
+                source = mixedSource,
+                batchSize = 16,
                 maxEpochs = 500,
                 patience = 10,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 comprehensiveLossFn = { net ->
+                    var generatedText = model.chat(
+                        prompt = "[SOT]Alice was beginning to get very tired[SEP]",
+                        vocabulary = vocabulary,
+                        seqLength = seqLength
+                    )
+                    println("Generated text: $generatedText")
+
+                    generatedText = model.chat(
+                        prompt = "[SOT]Who are you?[SEP] ",
+                        vocabulary = vocabulary,
+                        seqLength = seqLength
+                    )
+                    println("Generated text: $generatedText")
+
+                    val generatedAnswer = model.chat(
+                        prompt = "[SOT]Who is the main character in the story?[SEP] ",
+                        vocabulary = vocabulary,
+                        seqLength = seqLength
+                    )
+                    println("Generated answer: $generatedAnswer")
+
                     // For comprehensive loss, compute on sparse validation set
                     val valIndices = (0 until tokens.size - seqLength step stride).take(100) // small val set
                     val valInputs = valIndices.map { i ->
@@ -90,42 +116,18 @@ class LLMTrainingTest {
             e.printStackTrace()
         }
 
-        // Fine-tune the model using sparse approach
-        try {
-            model = model.trainStreamingSparse(
-                source = qaSource,
-                batchSize = 8,
-                maxEpochs = 100,
-                patience = 5,
-                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
-                comprehensiveLossFn = { net ->
-                    // Similar validation logic as above, adapted for QA with sparse targets
-                    val valIndices = (0 until qaTokens.size - seqLength step stride).take(20)
-                    val valInputs = valIndices.map { i ->
-                        qaTokens.subList(i, i + seqLength).map { it.toDouble() }.toDoubleArray()
-                    }.toTypedArray()
-                    val valSparseTargets = valIndices.flatMap { i ->
-                        qaTokens.subList(i + 1, i + 1 + seqLength)
-                    }.toIntArray()
-                    val valPred = net.predict(valInputs)
-                    sparseCategoricalCrossEntropy(valPred, valSparseTargets)
-                }
-            )
-            println("QA sparse fine-tuning completed successfully")
-        } catch (e: Exception) {
-            println("Fine-tuning failed with exception: ${e.message}")
-            e.printStackTrace()
-        }
-
-        // Example generation
-        val textGenerator: TextGenerator = DefaultTextGenerator()
-        val prompt = "Alice was beginning to get very tired"
-        val generatedText = textGenerator.generate(model, tokenizer, vocabulary, prompt, 20, seqLength)
+        val generatedText = model.chat(
+            prompt = "[SOT]Alice was beginning to get very tired",
+            vocabulary = vocabulary,
+            seqLength = seqLength
+        )
         println("Generated text: $generatedText")
 
-        // Test QA generation
-        val qaPrompt = "Question: Who is the main character in the story? Answer:"
-        val generatedAnswer = textGenerator.generate(model, tokenizer, vocabulary, qaPrompt, 10, seqLength)
+        val generatedAnswer = model.chat(
+            prompt = "Question: Who is the main character in the story? Answer:",
+            vocabulary = vocabulary,
+            seqLength = seqLength
+        )
         println("Generated answer: $generatedAnswer")
     }
 

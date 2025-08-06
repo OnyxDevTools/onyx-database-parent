@@ -81,3 +81,4 @@ interface TextGenerator {
         seqLength: Int
     ): String
 }
+
