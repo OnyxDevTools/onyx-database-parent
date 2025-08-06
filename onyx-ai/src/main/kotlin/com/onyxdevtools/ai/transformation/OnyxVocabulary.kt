@@ -9,7 +9,6 @@ import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
 import com.onyx.persistence.manager.findById
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
-import com.onyxdevtools.ai.data.SequenceEntry
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.math.abs
@@ -103,6 +102,4 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
 
     override val size: Int
         get() = manager.from<VocabularyEntry>().count().toInt()
-
-    fun addSequence(sequence: SequenceEntry) = manager.saveEntity(sequence)
 }

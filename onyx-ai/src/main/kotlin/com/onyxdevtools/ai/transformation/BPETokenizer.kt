@@ -33,7 +33,7 @@ class BPETokenizer(
             ascii.forEach { add(it.toString()) }
             addAll(listOf("«","»","‹","›","‘","’","‚","‛","“","”","„","‟"))
             addAll(listOf("–","—","-","−"))
-            add("…")
+            addAll(listOf("…", "\n", "\r", "\n\r", "\r\n"))
         }
     }
 
