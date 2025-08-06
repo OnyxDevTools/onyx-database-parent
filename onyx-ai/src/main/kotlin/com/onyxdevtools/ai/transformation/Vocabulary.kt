@@ -95,13 +95,13 @@ interface Vocabulary {
     val size: Int
 
     /**
-     * Prunes the vocabulary by removing tokens with frequency below the specified threshold.
+     * Commit the vocabulary:
+     *  - Keep only the top [maxTokens] by frequency (desc), tie-break by token (asc).
+     *  - Delete all rows, reinsert the top set in order so SEQUENCE assigns fresh IDs.
+     *  - Clear and rebuild L1 caches.
      *
-     * This method removes low-frequency tokens to reduce vocabulary size, which can help
-     * with memory efficiency and model performance. Note that pruning may leave gaps in
-     * ID assignments, but this is typically harmless as long as lookups handle missing IDs.
-     *
-     * @param minFrequency The minimum frequency threshold. Tokens with frequency < minFrequency will be removed.
+     * NOTE: If you must reset the underlying sequence to start at 1, call the appropriate
+     * store-specific reset here after delete (not shown).
      */
-    fun prune(minFrequency: Long) = Unit
+    fun commit(maxTokens: Int = 40_000) = Unit
 }

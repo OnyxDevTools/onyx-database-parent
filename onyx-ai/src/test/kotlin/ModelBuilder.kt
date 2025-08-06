@@ -78,7 +78,7 @@ fun main() {
         books.listFiles()?.forEach {
             vocabulary.appendToVocabulary(it.readText())
         }
-        vocabulary.prune(5)
+        vocabulary.commit()
     }
 
     // Parameters
@@ -91,14 +91,14 @@ fun main() {
     val ffHiddenDim = 64
 
     val layers = listOf(
-        SparseEmbeddingLayer(vocabulary.size, embeddingDim), // ← Memory-efficient embedding!
+        EmbeddingLayer(vocabulary.size, embeddingDim),
         PositionalEncodingLayer(maxSequenceLength, embeddingDim),
         MultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads),
         LayerNormalizationLayer(embeddingDim),
         DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
         DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
         LayerNormalizationLayer(embeddingDim),
-        SparseDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
+        DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
     )
 
     var model = NeuralNetwork(layers, learningRate = 0.001)

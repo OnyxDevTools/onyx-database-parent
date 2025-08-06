@@ -35,68 +35,66 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
     private val tokenToIdCache = ConcurrentHashMap<String, Int>(16_384)
     private val idToTokenCache = ConcurrentHashMap<Int, String>(16_384)
 
-    // Striped locks to prevent duplicate inserts for the same token under contention
+    // Per-token striped locks
     private val lockStripes = Array(64) { ReentrantLock() }
     private fun lockFor(token: String) = lockStripes[abs(token.hashCode()) % lockStripes.size]
 
+    // Global commit lock to serialize commits vs. writers
+    private val commitLock = ReentrantLock()
+
     override fun getId(token: String): Int {
-        // L1 hit
         tokenToIdCache[token]?.let { return it }
 
-        // Stripe lock per token to avoid duplicate DB inserts
-        val lock = lockFor(token)
-        lock.lock()
+        // Avoid racing with commit
+        val commitHeld = commitLock.tryLock()
         try {
-            // Check cache again after acquiring the lock
-            tokenToIdCache[token]?.let { return it }
+            // Stripe lock per token to avoid duplicate inserts
+            val lock = lockFor(token)
+            lock.lock()
+            try {
+                tokenToIdCache[token]?.let { return it }
 
-            // Check DB
-            val existing = manager.from<VocabularyEntry>()
-                .where("token" eq token)
-                .firstOrNull<VocabularyEntry>()
+                val existing = manager.from<VocabularyEntry>()
+                    .where("token" eq token)
+                    .firstOrNull<VocabularyEntry>()
 
-            val id = existing?.id ?: manager.saveEntity(VocabularyEntry(token = token)).id
+                val id = existing?.id ?: manager.saveEntity(VocabularyEntry(token = token)).id
 
-            // Update caches
-            tokenToIdCache[token] = id
-            idToTokenCache[id] = token
-            return id
+                tokenToIdCache[token] = id
+                idToTokenCache[id] = token
+                return id
+            } finally {
+                lock.unlock()
+            }
         } finally {
-            lock.unlock()
+            if (commitHeld) commitLock.unlock()
         }
     }
 
     override fun getToken(id: Int): String? {
-        // L1 hit
         idToTokenCache[id]?.let { return it }
 
-        // DB lookup
         val token = manager.findById<VocabularyEntry>(id)?.token ?: return null
 
-        // Update caches
         idToTokenCache[id] = token
         tokenToIdCache[token] = id
         return token
     }
 
     override fun findId(token: String): Int? {
-        // L1 hit
         tokenToIdCache[token]?.let { return it }
 
-        // DB lookup (no create)
         val found = manager.from<VocabularyEntry>()
             .where("token" eq token)
             .firstOrNull<VocabularyEntry>()
             ?: return null
 
-        // Update caches
         tokenToIdCache[token] = found.id
         idToTokenCache[found.id] = token
         return found.id
     }
 
     override fun addToken(token: String) {
-        // Read-through + write-through populate
         getId(token)
     }
 
@@ -104,36 +102,53 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
         get() = manager.from<VocabularyEntry>().count().toInt()
 
     /**
-     * Increments the frequency of a token by the specified amount.
-     * If the token doesn't exist, it is added with the given frequency.
-     *
-     * @param token The token whose frequency to increment
-     * @param amount The amount to add to the frequency (default: 1)
+     * Increment token frequency; creates token if missing.
      */
     fun incrementFrequency(token: String, amount: Long = 1) {
-        val id = getId(token) // Ensures token is added
+        val id = getId(token)
         val entry = manager.findById<VocabularyEntry>(id)!!
         entry.frequency += amount
         manager.saveEntity(entry)
     }
 
-    override fun prune(minFrequency: Long) {
-        val toRemove = manager.from<VocabularyEntry>()
-            .where("frequency" eq 0)
-            .list<VocabularyEntry>()
-            .toMutableList()
+    /**
+     * Commit the vocabulary:
+     *  - Keep only the top [maxTokens] by frequency (desc), tie-break by token (asc).
+     *  - Delete all rows, reinsert the top set in order so SEQUENCE assigns fresh IDs.
+     *  - Clear and rebuild L1 caches.
+     *
+     * NOTE: If you must reset the underlying sequence to start at 1, call the appropriate
+     * store-specific reset here after delete (not shown).
+     */
+    override fun commit(maxTokens: Int) {
+        commitLock.lock()
+        try {
+            // Snapshot all
+            val all = manager.from<VocabularyEntry>().list<VocabularyEntry>()
 
-        // Additional filter for long numbers
-        manager.from<VocabularyEntry>()
-            .list<VocabularyEntry>()
-            .filter { it.frequency < 2 && it.token.matches(Regex("^\\d+$")) && it.token.length > 10 }
-            .forEach { toRemove.add(it) }
+            // Select top N deterministically
+            val top = all
+                .sortedWith(compareByDescending<VocabularyEntry> { it.frequency }.thenBy { it.token })
+                .take(maxTokens)
 
-        toRemove.forEach {
-            manager.delete(it)
+            // Wipe table
+            all.forEach { manager.delete(it) }
+
+            // Optional: reset sequence here if your store supports it
+            // manager.resetIdSequence(VocabularyEntry::class) // (pseudo)
+
             // Clear caches
-            tokenToIdCache.remove(it.token)
-            idToTokenCache.remove(it.id)
+            tokenToIdCache.clear()
+            idToTokenCache.clear()
+
+            // Reinsert in rank order to get sequential IDs
+            top.forEach { e ->
+                val saved = manager.saveEntity(VocabularyEntry(token = e.token, frequency = e.frequency))
+                tokenToIdCache[e.token] = saved.id
+                idToTokenCache[saved.id] = e.token
+            }
+        } finally {
+            commitLock.unlock()
         }
     }
 }
