@@ -1,11 +1,13 @@
 package com.onyxdevtools.ai.transformation
 
 import com.onyx.persistence.ManagedEntity
+import com.onyx.persistence.annotations.Attribute
 import com.onyx.persistence.annotations.Entity
 import com.onyx.persistence.annotations.Identifier
 import com.onyx.persistence.annotations.Index
 import com.onyx.persistence.annotations.values.IdentifierGenerator
 import com.onyx.persistence.factory.impl.EmbeddedPersistenceManagerFactory
+import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.manager.findById
 import com.onyx.persistence.query.eq
 import com.onyx.persistence.query.from
@@ -18,13 +20,15 @@ data class VocabularyEntry(
     @Identifier(generator = IdentifierGenerator.SEQUENCE)
     var id: Int = 0,
     @Index
-    var token: String = ""
+    var token: String = "",
+    @Attribute
+    var frequency: Long = 0
 ) : ManagedEntity()
 
 class OnyxVocabulary(databasePath: String) : Vocabulary {
 
-    private val manager by lazy {
-        return@lazy EmbeddedPersistenceManagerFactory(databasePath).apply { initialize() }.persistenceManager
+    private val manager: PersistenceManager by lazy {
+        EmbeddedPersistenceManagerFactory(databasePath).apply { initialize() }.persistenceManager
     }
 
     // ---- L1 in-memory cache ----
@@ -51,11 +55,7 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
                 .where("token" eq token)
                 .firstOrNull<VocabularyEntry>()
 
-            val id = if (existing != null) {
-                existing.id
-            } else {
-                manager.saveEntity(VocabularyEntry(token = token)).id
-            }
+            val id = existing?.id ?: manager.saveEntity(VocabularyEntry(token = token)).id
 
             // Update caches
             tokenToIdCache[token] = id
@@ -102,4 +102,38 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
 
     override val size: Int
         get() = manager.from<VocabularyEntry>().count().toInt()
+
+    /**
+     * Increments the frequency of a token by the specified amount.
+     * If the token doesn't exist, it is added with the given frequency.
+     *
+     * @param token The token whose frequency to increment
+     * @param amount The amount to add to the frequency (default: 1)
+     */
+    fun incrementFrequency(token: String, amount: Long = 1) {
+        val id = getId(token) // Ensures token is added
+        val entry = manager.findById<VocabularyEntry>(id)!!
+        entry.frequency += amount
+        manager.saveEntity(entry)
+    }
+
+    override fun prune(minFrequency: Long) {
+        val toRemove = manager.from<VocabularyEntry>()
+            .where("frequency" eq 0)
+            .list<VocabularyEntry>()
+            .toMutableList()
+
+        // Additional filter for long numbers
+        manager.from<VocabularyEntry>()
+            .list<VocabularyEntry>()
+            .filter { it.frequency < 2 && it.token.matches(Regex("^\\d+$")) && it.token.length > 10 }
+            .forEach { toRemove.add(it) }
+
+        toRemove.forEach {
+            manager.delete(it)
+            // Clear caches
+            tokenToIdCache.remove(it.token)
+            idToTokenCache.remove(it.id)
+        }
+    }
 }

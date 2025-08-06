@@ -93,4 +93,15 @@ interface Vocabulary {
      * @return The size of the vocabulary as a non-negative integer.
      */
     val size: Int
+
+    /**
+     * Prunes the vocabulary by removing tokens with frequency below the specified threshold.
+     *
+     * This method removes low-frequency tokens to reduce vocabulary size, which can help
+     * with memory efficiency and model performance. Note that pruning may leave gaps in
+     * ID assignments, but this is typically harmless as long as lookups handle missing IDs.
+     *
+     * @param minFrequency The minimum frequency threshold. Tokens with frequency < minFrequency will be removed.
+     */
+    fun prune(minFrequency: Long) = Unit
 }

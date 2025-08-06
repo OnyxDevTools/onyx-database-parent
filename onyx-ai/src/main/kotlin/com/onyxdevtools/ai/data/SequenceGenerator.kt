@@ -3,6 +3,45 @@ package com.onyxdevtools.ai.data
 import com.onyxdevtools.ai.transformation.Vocabulary
 
 /**
+ * Sealed class representing different target representations for sequence generation.
+ * Allows generators to return either dense one-hot vectors or sparse token IDs.
+ */
+sealed class SequenceTarget {
+    /**
+     * Dense target representation using one-hot encoded vectors.
+     * Memory usage: O(vocab_size × seq_length) per training example.
+     * Compatible with standard categorical cross-entropy loss.
+     */
+    data class Dense(val vectors: Array<DoubleArray>) : SequenceTarget() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as Dense
+            return vectors.contentDeepEquals(other.vectors)
+        }
+
+        override fun hashCode(): Int = vectors.contentDeepHashCode()
+    }
+
+    /**
+     * Sparse target representation using token IDs.
+     * Memory usage: O(seq_length) per training example.
+     * Compatible with sparse categorical cross-entropy loss.
+     * Uses -1 to indicate positions that should be ignored in loss computation.
+     */
+    data class Sparse(val tokenIds: IntArray) : SequenceTarget() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as Sparse
+            return tokenIds.contentEquals(other.tokenIds)
+        }
+
+        override fun hashCode(): Int = tokenIds.contentHashCode()
+    }
+}
+
+/**
  * Interface for generating training sequences from tokenized text data.
  *
  * Sequence generators are responsible for creating input-target pairs from a stream
@@ -55,5 +94,5 @@ interface SequenceGenerator {
         seqLength: Int,
         stride: Int,
         shuffle: Boolean
-    ): Sequence<Pair<DoubleArray, Array<DoubleArray>>>
+    ): Sequence<Pair<DoubleArray, IntArray>>
 }

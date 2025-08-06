@@ -3,54 +3,57 @@ package com.onyxdevtools.ai.data
 import com.onyxdevtools.ai.transformation.Vocabulary
 
 /**
- * Default implementation of SequenceGenerator for creating training sequences from tokenized text.
+ * Memory-efficient implementation of SequenceGenerator using sparse target representations.
  *
- * This implementation creates sliding window sequences from input tokens and converts them
- * into a format suitable for neural network training. Key features include:
+ * Unlike DefaultSequenceGenerator which creates full one-hot encoded vectors for targets,
+ * this implementation stores only the target token IDs. This dramatically reduces memory usage
+ * from O(vocab_size × seq_length) to O(seq_length) per training example.
  *
- * - **Shuffled Training Order**: Randomizes the order of generated sequences to improve training
- * - **One-Hot Encoded Targets**: Converts target tokens to one-hot vectors based on vocabulary size;
- *   uses all-zero vectors for padded/ignored positions to indicate end of actual sequence
- * - **Sliding Window Approach**: Creates overlapping sequences with configurable stride
- * - **Lazy Evaluation**: Uses Kotlin's sequence builder for memory-efficient processing
- * - **Padding for Fixed Length**: Always produces fixed-length sequences by padding short windows
- *   with [PAD] token in inputs; indicates end of actual sequence via all-zero targets
- * - **Next-Token Prediction**: Input sequence predicts shifted targets; ignored positions (all-zero)
- *   should be masked in loss (e.g., where target sum == 0)
+ * Memory comparison for vocab_size=50K, seq_length=512:
+ * - DefaultSequenceGenerator: ~200MB per training example
+ * - SparseSequenceGenerator: ~4KB per training example
+ * 
+ * This sparse approach is essential for training with large vocabularies and is compatible
+ * with sparse categorical cross-entropy loss functions that expect target token IDs rather
+ * than one-hot encoded vectors.
  *
- * The generated sequences follow a standard language modeling pattern where:
+ * Key features:
+ * - **Sparse Targets**: Stores target token IDs instead of one-hot vectors
+ * - **Ignore Tokens**: Uses -1 to indicate positions that should be ignored in loss computation
+ * - **Lazy Evaluation**: Memory-efficient sequence generation
+ * - **Shuffled Training**: Randomized sequence order for better training
+ * - **Padding Support**: Handles sequences shorter than target length
+ *
+ * The generated sequences follow the standard language modeling pattern:
  * - Input sequence: tokens[i..i+seqLength-1] as raw token IDs (padded with [PAD] if short)
- * - Target sequence: tokens[i+1..i+seqLength] as one-hot encoded vectors (all-zero for ignored/padded)
+ * - Target sequence: tokens[i+1..i+seqLength] as sparse token IDs (-1 for ignore/padded positions)
  *
- * This creates a "next token prediction" training setup commonly used in
- * autoregressive language models like GPT, with handling for end-of-sequence via padding and ignore indicators.
- *
- * @param vocabulary The vocabulary used to determine the size of one-hot encoded target vectors
- *                   and retrieve special token IDs like [PAD]. Must contain all tokens that appear
- *                   in the input token sequences, plus [PAD].
+ * @param vocabulary The vocabulary used to retrieve the [PAD] token ID and validate token ranges.
+ *                   Must contain a [PAD] token for handling variable-length sequences.
  * @see SequenceGenerator
  * @see Vocabulary
  */
-class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGenerator {
+class SparseSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGenerator {
 
-    private val padId: Int = vocabulary.getId("[PAD]") ?: throw IllegalArgumentException("[PAD] token not found in vocabulary")
+    private val padId: Int = vocabulary.getId("[PAD]") 
+        ?: throw IllegalArgumentException("[PAD] token not found in vocabulary")
+    
+    // Use -1 to indicate positions that should be ignored in loss computation
+    private val ignoreId: Int = -1
 
     /**
-     * Generates training sequences from tokens with optional shuffled order and one-hot encoded targets.
+     * Generates memory-efficient training sequences with sparse target representations.
      *
-     * Creates sliding window sequences where each input is paired with its corresponding
-     * target sequence (shifted by one position). The sequences are generated in random
-     * order (if shuffle is true) to improve training convergence and prevent overfitting to data ordering.
-     *
-     * All sequences are fixed length (seqLength) via right-padding with [PAD] for short windows.
-     * Targets use all-zero vectors for positions beyond the actual next token to indicate ignore in loss computation.
+     * Creates sliding window sequences where inputs are raw token IDs and targets are
+     * sparse token IDs (not one-hot vectors). This reduces memory usage by orders of 
+     * magnitude compared to dense representations.
      *
      * Implementation details:
      * - Input sequences contain raw token IDs converted to doubles, padded with [PAD] if needed
-     * - Target sequences are one-hot encoded (or all-zero for ignore); use categorical cross-entropy with masking in training
+     * - Target sequences contain sparse token IDs (-1 for ignore/padded positions)
      * - Sequences are optionally shuffled for better training dynamics
      * - Uses lazy sequence generation for memory efficiency
-     * - Includes all possible starting positions (even short ones) by padding as needed
+     * - All possible starting positions are included (even short ones) by padding as needed
      *
      * @param tokens List of integer tokens representing the tokenized text.
      *               Each token ID must be valid within the vocabulary range [0, vocabulary.size).
@@ -62,8 +65,7 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
      *                If false, sequences are generated in sequential order.
      * @return A lazy Sequence of training pairs where:
      *         - First element: Input sequence as DoubleArray of token IDs (padded if needed)
-     *         - Second element: Target sequences as Array<DoubleArray> of one-hot vectors (all-zero for ignore/padded)
-     *         Each target vector has size equal to vocabulary.size.
+     *         - Second element: Target sequence as IntArray of sparse token IDs (-1 for ignore/padded)
      * @throws IllegalArgumentException if parameters are invalid, tokens are empty,
      *                                  or contain IDs outside vocabulary range
      */
@@ -100,16 +102,18 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
                     val inputIndex = i + pos
                     val targetIndex = i + pos + 1
 
+                    // Set input token (padded if beyond sequence)
                     input[pos] = if (inputIndex < tokens.size) {
                         tokens[inputIndex].toDouble()
                     } else {
                         padId.toDouble()
                     }
 
+                    // Set target token (ignore if beyond sequence)
                     target[pos] = if (targetIndex < tokens.size) {
                         tokens[targetIndex]
                     } else {
-                        -1  // Use -1 to indicate ignore in loss computation
+                        ignoreId  // -1 indicates ignore in loss computation
                     }
                 }
 

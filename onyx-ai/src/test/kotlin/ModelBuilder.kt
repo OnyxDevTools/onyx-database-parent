@@ -1,17 +1,13 @@
 import com.onyxdevtools.ai.NeuralNetwork
-import com.onyxdevtools.ai.data.DefaultSequenceGenerator
+import com.onyxdevtools.ai.data.SparseSequenceGenerator
+import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.layer.impl.*
-import com.onyxdevtools.ai.loss.CrossEntropyLoss
-import com.onyxdevtools.ai.loss.LossFunction
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.OnyxVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
-import java.io.ObjectOutputStream
 import kotlin.random.Random
-import java.io.BufferedReader
 import java.io.File
-import java.util.ArrayDeque
 
 fun generateCorpusSequence(
     booksDir: File,
@@ -20,87 +16,58 @@ fun generateCorpusSequence(
     stride: Int,
     shuffleFiles: Boolean = true,
     rng: Random? = null,
-    buildExample: (IntArray) -> Pair<DoubleArray, Array<DoubleArray>>
-): Sequence<Pair<DoubleArray, Array<DoubleArray>>> {
+    shuffleWithinFile: Boolean = false
+): Sequence<Pair<DoubleArray, IntArray>> {
     require(seqLength > 0) { "seqLength must be > 0" }
     require(stride > 0) { "stride must be > 0" }
 
     val tokenizer = BPETokenizer(vocabulary)
+    val generator = SparseSequenceGenerator(vocabulary)
     val all = booksDir.listFiles()?.filter { it.isFile && it.extension.contains("txt") } ?: emptyList()
     val files = if (shuffleFiles) (rng?.let { all.shuffled(it) } ?: all.shuffled()) else all
 
-    return Sequence {
-        object : Iterator<Pair<DoubleArray, Array<DoubleArray>>> {
-            private var fileIdx = 0
-            private var reader: BufferedReader? = null
-            private val buf = ArrayDeque<Int>(seqLength * 2)
-            private var nextItem: Pair<DoubleArray, Array<DoubleArray>>? = null
-            private var exhausted = false
-
-            private fun openNextFile() {
-                reader?.close()
-                if (fileIdx >= files.size) { exhausted = true; return }
-                val f = files[fileIdx++]
-                reader = f.bufferedReader()
-                // println("Streaming ${f.name}")
-            }
-
-            private fun tryEmit() {
-                if (nextItem != null || buf.size < seqLength) return
-                // materialize current window
-                val window = IntArray(seqLength)
-                var i = 0
-                for (it in buf) {
-                    window[i++] = it
-                    if (i == seqLength) break
-                }
-                nextItem = buildExample(window)
-
-                // advance by stride
-                repeat(minOf(stride, buf.size)) { buf.removeFirst() }
-            }
-
-            private fun fillNext() {
-                while (nextItem == null && !exhausted) {
-                    val r = reader ?: run { openNextFile(); reader ?: return }
-                    val line = r.readLine()
-                    if (line == null) {
-                        r.close(); reader = null
-                        continue
-                    }
-                    // tokenize this line and push ids
+    return sequence {
+        for (f in files) {
+            val tokens = mutableListOf<Int>()
+            f.forEachLine { line ->
                     for (tok in tokenizer.tokenize(line)) {
-                        buf.addLast(vocabulary.getId(tok))
-                        tryEmit()
-                        if (nextItem != null) return
-                    }
-                    // keep simple boundary token (optional)
-                    buf.addLast(vocabulary.getId("\n"))
-                    tryEmit()
+                    tokens.add(vocabulary.getId(tok))
                 }
+                tokens.add(vocabulary.getId("\n"))
             }
-
-            override fun hasNext(): Boolean {
-                if (nextItem == null) fillNext()
-                return nextItem != null
-            }
-
-            override fun next(): Pair<DoubleArray, Array<DoubleArray>> {
-                if (!hasNext()) throw NoSuchElementException()
-                val out = nextItem!!
-                nextItem = null
-                return out
+            val seqs = generator.generateSequences(tokens, seqLength, stride, shuffle = shuffleWithinFile)
+            for (pair in seqs) {
+                yield(pair)
             }
         }
     }
 }
 
-fun generate(file: File, vocabulary: Vocabulary, seqLength: Int, stride: Int): Sequence<Pair<DoubleArray, Array<DoubleArray>>> {
-    val text = file.readText()
-    val tokenizer = BPETokenizer(vocabulary)
-    val tokens = tokenizer.tokenize(text).map { vocabulary.getId(it) }
-    val sequenceGenerator = DefaultSequenceGenerator(vocabulary)
-    return sequenceGenerator.generateSequences(tokens, seqLength, stride, true)
+class ComprehensiveLossFunction(
+    private val booksDir: File,
+    private val vocabulary: Vocabulary,
+    private val seqLength: Int,
+    private val stride: Int,
+    private val numValExamples: Int = 10,
+    private val shuffleForVal: Boolean = false
+) : (NeuralNetwork) -> Double {
+    override fun invoke(net: NeuralNetwork): Double {
+        val valSeq = generateCorpusSequence(
+            booksDir,
+            vocabulary,
+            seqLength,
+            stride,
+            shuffleFiles = shuffleForVal,
+            rng = if (shuffleForVal) Random(42) else null
+        )
+        val valPairs = valSeq.take(numValExamples).toList()
+        if (valPairs.isEmpty()) return 0.0
+
+        val valInputs = valPairs.map { it.first }.toTypedArray()
+        val valSparseTargets = valPairs.flatMap { it.second.toList() }.toIntArray()
+        val valPred = net.predict(valInputs)
+        return sparseCategoricalCrossEntropy(valPred, valSparseTargets)
+    }
 }
 
 fun main() {
@@ -111,91 +78,59 @@ fun main() {
         books.listFiles()?.forEach {
             vocabulary.appendToVocabulary(it.readText())
         }
+        vocabulary.prune(5)
     }
 
     // Parameters
-    val maxSequenceLength = 1024
+    val maxSequenceLength = 256
     val stride = maxSequenceLength
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
     val numHeads = 4
     val ffHiddenDim = 64
-    val tokensPerSample = maxSequenceLength
 
     val layers = listOf(
-        EmbeddingLayer(vocabulary.size, embeddingDim),
-        PositionalEncodingLayer(tokensPerSample, embeddingDim),
-        MultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
+        SparseEmbeddingLayer(vocabulary.size, embeddingDim), // ← Memory-efficient embedding!
+        PositionalEncodingLayer(maxSequenceLength, embeddingDim),
+        MultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads),
         LayerNormalizationLayer(embeddingDim),
         DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
         DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
         LayerNormalizationLayer(embeddingDim),
-        DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
+        SparseDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
     )
 
     var model = NeuralNetwork(layers, learningRate = 0.001)
 
-    books.listFiles()?.forEach { file ->
-
-        val sequenceGenerator = DefaultSequenceGenerator(vocabulary)
-        val text = file.readText()
-        val tokenizer = BPETokenizer(vocabulary)
-        val tokens = tokenizer.tokenize(text).map { vocabulary.getId(it) }
-        val source = { sequenceGenerator.generateSequences(tokens, maxSequenceLength, stride, true) }
-
-        println(file.name)
-
-        val lossFunction: LossFunction = CrossEntropyLoss()
-
-        // Train the model using streaming with checkpointing on improved comprehensive score
-        var bestComprehensiveLoss = Double.POSITIVE_INFINITY
-        try {
-            model = model.trainStreaming(
-                source = source,//{
-//                    generate(file, vocabulary, maxSequenceLength, stride)
-//                    generateCorpusSequence(
-//                        booksDir = books,
-//                        vocabulary = vocabulary,
-//                        seqLength = maxSequenceLength,
-//                        stride = stride,
-//                        shuffleFiles = true,
-//                        rng = Random(42),
-//                        buildExample = { ids -> buildExampleFromIds(ids, vocabulary.size) }
-//                    )
-//                },
-                batchSize = 16,
-                maxEpochs = 500,
-                patience = 10,
-                lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
-                comprehensiveLossFn = { net ->
-                    val valIndices = (0 until tokens.size - maxSequenceLength step stride).take(100) // small val set
-                    val valInputs = valIndices.map { i ->
-                        tokens.subList(i, i + maxSequenceLength).map { it.toDouble() }.toDoubleArray()
-                    }.toTypedArray()
-                    val valTargets = valIndices.flatMap { i ->
-                        tokens.subList(i + 1, i + 1 + maxSequenceLength).map { targetToken ->
-                            DoubleArray(vocabulary.size) { if (it == targetToken) 1.0 else 0.0 }
-                        }
-                    }.toTypedArray()
-                    val valPred = net.predict(valInputs)
-                    lossFunction.calculate(valPred, valTargets)
-                }
-            )
-            println("Streaming training completed successfully")
-        } catch (e: Exception) {
-            println("Training failed with exception: ${e.message}")
-            e.printStackTrace()
-        }
+    // Create corpus sequence generator (streams all books)
+    val source = {
+        generateCorpusSequence(
+            books,
+            vocabulary,
+            maxSequenceLength,
+            stride,
+            shuffleFiles = true,
+            rng = Random(42)
+        )
     }
-}
 
-private fun buildExampleFromIds(ids: IntArray, vocabSize: Int): Pair<DoubleArray, Array<DoubleArray>> {
-    val seqLength = ids.size - 1
-    val x = DoubleArray(seqLength) { ids[it].toDouble() }
-    val y = Array(seqLength) { i ->
-        val target = ids[i + 1]
-        DoubleArray(vocabSize) { if (it == target) 1.0 else 0.0 }
+    // Create comprehensive loss function instance
+    val comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, stride)
+
+    // Train the model using sparse streaming training (memory efficient!)
+    try {
+        model = model.trainStreamingSparse(
+            source = source,
+            batchSize = 5,
+            maxEpochs = 1,
+            patience = 10,
+            lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
+            comprehensiveLossFn = comprehensiveLossFn
+        )
+        println("Sparse streaming training completed successfully")
+    } catch (e: Exception) {
+        println("Training failed with exception: ${e.message}")
+        e.printStackTrace()
     }
-    return x to y
 }

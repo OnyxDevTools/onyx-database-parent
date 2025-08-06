@@ -85,10 +85,10 @@ data class NeuralNetwork(
     ): Matrix = predict(input = input, isTraining = false, returnOriginalScale = true)
 
     /**
-     * Performs the backward pass to compute gradients.
+     * Performs the backward pass to compute gradients using dense targets.
      *
      * @param predicted The predicted output.
-     * @param actual The true labels.
+     * @param actual The true labels (dense one-hot encoded).
      * @param sampleWeights Optional sample weights.
      */
     private fun backward(
@@ -109,8 +109,8 @@ data class NeuralNetwork(
 
         for (i in layers.lastIndex downTo 0) {
             val layer = layers[i]
-            val nextLayer = layers.getOrNull(i + 1)      // forward-order “next”
-            val previousLayer = layers.getOrNull(i - 1)      // forward-order “prev”
+            val nextLayer = layers.getOrNull(i + 1)      // forward-order "next"
+            val previousLayer = layers.getOrNull(i - 1)      // forward-order "prev"
 
             val inputToLayer = previousLayer?.output ?: lastInput
             ?: error("No input recorded for layer $i")
@@ -124,7 +124,86 @@ data class NeuralNetwork(
                 lambda = lambda
             )
         }
+    }
 
+    /**
+     * Performs the backward pass to compute gradients using sparse targets.
+     *
+     * @param predicted The predicted output logits.
+     * @param sparseTargets The true labels as token IDs (sparse representation).
+     * @param sampleWeights Optional sample weights.
+     */
+    private fun backwardSparse(
+        predicted: Matrix,
+        sparseTargets: IntArray,
+        sampleWeights: DoubleArray? = null
+    ) {
+        val sampleCount = predicted.size.toDouble()
+        
+        // Check if the last layer supports optimized sparse backward pass
+        val lastLayer = layers.lastOrNull()
+        
+        var delta: Matrix = when (lastLayer) {
+            is com.onyxdevtools.ai.layer.impl.SparseDenseLayer -> {
+                // Use optimized sparse backward pass for SparseDenseLayer
+                val previousLayer = layers.getOrNull(layers.lastIndex - 1)
+                val inputToLastLayer = previousLayer?.output ?: lastInput
+                ?: error("No input recorded for last layer")
+                
+                lastLayer.backwardSparse(
+                    currentInput = inputToLastLayer,
+                    predictions = predicted,
+                    sparseTargets = sparseTargets,
+                    featureSize = sampleCount,
+                    previousLayer = previousLayer,
+                    lambda = lambda
+                )
+            }
+            is com.onyxdevtools.ai.layer.impl.FastDenseLayer -> {
+                // Use optimized sparse backward pass for FastDenseLayer
+                val previousLayer = layers.getOrNull(layers.lastIndex - 1)
+                val inputToLastLayer = previousLayer?.output ?: lastInput
+                ?: error("No input recorded for last layer")
+                
+                lastLayer.backwardSparse(
+                    currentInput = inputToLastLayer,
+                    predictions = predicted,
+                    sparseTargets = sparseTargets,
+                    featureSize = sampleCount,
+                    previousLayer = previousLayer,
+                    lambda = lambda
+                )
+            }
+            else -> {
+                // Fall back to standard sparse categorical cross-entropy gradients
+                sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
+            }
+        }
+        
+        // Continue backward pass through remaining layers (skip last layer if it handled its own backward pass)
+        val startIndex = when (lastLayer) {
+            is com.onyxdevtools.ai.layer.impl.SparseDenseLayer,
+            is com.onyxdevtools.ai.layer.impl.FastDenseLayer -> layers.lastIndex - 1
+            else -> layers.lastIndex
+        }
+
+        for (i in startIndex downTo 0) {
+            val layer = layers[i]
+            val nextLayer = layers.getOrNull(i + 1)      // forward-order "next"
+            val previousLayer = layers.getOrNull(i - 1)      // forward-order "prev"
+
+            val inputToLayer = previousLayer?.output ?: lastInput
+            ?: error("No input recorded for layer $i")
+
+            delta = layer.backward(
+                currentInput = inputToLayer,
+                delta = delta,
+                featureSize = sampleCount,
+                nextLayer = nextLayer,
+                previousLayer = previousLayer,
+                lambda = lambda
+            )
+        }
     }
 
     /**
@@ -323,6 +402,122 @@ data class NeuralNetwork(
     }
 
     /**
+     * Memory-efficient training on streaming data using sparse targets and categorical cross-entropy.
+     * 
+     * This method dramatically reduces memory usage compared to trainStreaming() by working directly
+     * with sparse target representations (token IDs) instead of dense one-hot vectors.
+     * 
+     * Memory comparison for vocab_size=50K, batch_size=1024, seq_length=512:
+     * - trainStreaming (dense): ~200GB RAM for targets alone
+     * - trainStreamingSparse: ~4MB RAM for targets
+     *
+     * @param source A lambda that provides a lazy [Sequence] of input-output pairs with sparse targets,
+     *               where each pair is a feature vector ([DoubleArray]) and sparse target array ([IntArray]).
+     * @param batchSize Number of samples per training batch. Default is 1024.
+     * @param maxEpochs Maximum number of full passes over the data. Default is 20.
+     * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
+     * @param testFrac Fraction of each batch reserved for testing/validation. Range: 0.0–1.0. Default is 0.1.
+     * @param shuffle Whether to shuffle each batch before splitting into train/test subsets. Default is true.
+     * @param lossFn Function to compute sparse categorical cross-entropy loss given predictions and sparse targets.
+     * @param comprehensiveLossFn Optional comprehensive loss function for final evaluation.
+     * @param trace Whether to print training progress. Default is true.
+     * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
+     */
+    fun trainStreamingSparse(
+        source: () -> Sequence<Pair<DoubleArray, IntArray>>,
+        batchSize: Int = 1024,
+        maxEpochs: Int = 20,
+        patience: Int = 5,
+        testFrac: Double = 0.2,
+        shuffle: Boolean = true,
+        trace: Boolean = true,
+        lossFn: (pred: Matrix, sparseTargets: IntArray) -> Double =
+            { p, s -> sparseCategoricalCrossEntropy(p, s) },
+        comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
+    ): NeuralNetwork {
+
+        var bestLoss = Double.POSITIVE_INFINITY
+        var best = this.clone()
+        var epochsWithoutImprovement = 0
+
+        repeat(maxEpochs) { epoch ->
+            val bx = mutableListOf<DoubleArray>()
+            val by = mutableListOf<IntArray>()
+            var runningTrainLoss = 0.0
+            var runningTestLoss = 0.0
+            var testSamples = 0
+
+            for ((inputSeq, targetSeq) in source()) {
+                bx += inputSeq; by += targetSeq
+                if (bx.size == batchSize) {
+                    // --- split batch --------------------------------------------------
+                    val (xTrainRaw, yTrainRaw, xTestRaw, yTestRaw) =
+                        splitBatchSparse(
+                            bx.toTypedArray(), by.toTypedArray(),
+                            testFraction = testFrac, shuffle = shuffle
+                        )
+
+                    // --- fit+transform *only* on training slice ----------------------
+                    val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
+                    val yTrainFlat = yTrainRaw.flatMap { it.toList() }.toIntArray()
+
+                    // --- train step ---------------------------------------------------
+                    val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
+                    backwardSparse(predTrain, yTrainFlat)
+                    updateParameters()
+
+                    // --- evaluate on test slice (do NOT refit transforms) ------------
+                    val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
+                    val yTestFlat = yTestRaw.flatMap { it.toList() }.toIntArray()
+                    val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
+
+                    runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.size
+                    runningTestLoss += lossFn(predTest, yTestFlat) * xTest.size
+                    testSamples += xTest.size
+
+                    bx.clear(); by.clear()
+                }
+            }
+
+            // left-overs
+            if (bx.isNotEmpty()) {
+                val (xT, yT, xv, yv) = splitBatchSparse(
+                    bx.toTypedArray(), by.toTypedArray(),
+                    testFraction = testFrac, shuffle = shuffle
+                )
+                val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
+                val yTfFlat = yT.flatMap { it.toList() }.toIntArray()
+                val predT = predict(xTf, true, skipFeatureTransform = true)
+                backwardSparse(predT, yTfFlat); updateParameters()
+
+                val xv2 = featureTransforms?.apply(xv) ?: xv
+                val yvFlat = yv.flatMap { it.toList() }.toIntArray()
+                val predV = predict(xv2, false, skipFeatureTransform = true)
+
+                runningTrainLoss += lossFn(predT, yTfFlat) * xTf.size
+                runningTestLoss += lossFn(predV, yvFlat) * xv2.size
+                testSamples += xv2.size
+            }
+
+            val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
+
+            if (trace)
+                println("epoch $epoch  test-loss $epochTestLoss")
+
+            if (epochTestLoss < bestLoss) {
+                bestLoss = epochTestLoss
+                best = this.clone()
+                epochsWithoutImprovement = 0
+            } else if (++epochsWithoutImprovement >= patience) {
+                if (trace)
+                    println("early stop at epoch $epoch")
+                return best
+            }
+        }
+        return best
+    }
+
+    /**
      * Splits a batch of feature and label matrices into training and test subsets.
      *
      * @param x The full feature matrix (rows of samples × features).
@@ -377,6 +572,54 @@ data class NeuralNetwork(
         return Quad(
             subset(x, trainIdx), subset(y, trainIdx),       // train
             subset(x, testIdx), subset(y, testIdx)         // test
+        )
+    }
+
+    /**
+     * Splits a batch of feature arrays and sparse target arrays into training and test subsets.
+     *
+     * @param x The full feature matrix (rows of samples × features).
+     * @param y The full sparse target matrix (rows of IntArrays with target token IDs).
+     * @param testFraction Fraction of samples to reserve for testing (0.0–1.0). Default is 0.1.
+     * @param shuffle Whether to shuffle samples before splitting. Default is true.
+     * @return A [Quad] containing:
+     *   - a: training feature matrix
+     *   - b: training sparse target arrays
+     *   - c: test feature matrix
+     *   - d: test sparse target arrays
+     */
+    private fun splitBatchSparse(
+        x: Array<DoubleArray>,
+        y: Array<IntArray>,
+        testFraction: Double = 0.1,
+        shuffle: Boolean = true
+    ): Quad<Array<DoubleArray>, List<IntArray>, Array<DoubleArray>, List<IntArray>> {
+        // For very small batches, don't split - use all data for training
+        if (x.size <= 2) {
+            return Quad(
+                x, y.toList(),                    // All data goes to training
+                emptyArray(), emptyList()         // Empty test set
+            )
+        }
+        
+        val idx = x.indices.toMutableList()
+        if (shuffle) idx.shuffle()
+        val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
+        
+        // Ensure we have at least 1 training sample
+        val actualTestSize = minOf(testSize, idx.size - 1)
+        val testIdx = idx.take(actualTestSize)
+        val trainIdx = idx.drop(actualTestSize)
+
+        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
+            Array(ids.size) { i -> src[ids[i]] }
+
+        fun subsetSparseTargets(src: Array<IntArray>, ids: List<Int>) =
+            ids.map { src[it] }
+
+        return Quad(
+            subsetInputs(x, trainIdx), subsetSparseTargets(y, trainIdx),       // train
+            subsetInputs(x, testIdx), subsetSparseTargets(y, testIdx)         // test
         )
     }
 

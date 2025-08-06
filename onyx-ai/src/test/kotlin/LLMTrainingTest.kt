@@ -1,7 +1,8 @@
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.data.DefaultSequenceGenerator
+import com.onyxdevtools.ai.data.SparseSequenceGenerator
 import com.onyxdevtools.ai.data.SequenceGenerator
+import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.generation.DefaultTextGenerator
 import com.onyxdevtools.ai.generation.TextGenerator
 import com.onyxdevtools.ai.layer.impl.*
@@ -45,78 +46,72 @@ class LLMTrainingTest {
         val tokensPerSample = seqLength
 
         val layers = listOf(
-            EmbeddingLayer(vocabulary.size, embeddingDim),
+            SparseEmbeddingLayer(vocabulary.size, embeddingDim), // ← Memory-efficient embedding!
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
             MultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
             LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
+            FastDenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
+            FastDenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
             LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
+            SparseDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.001)
 
-        // Source for streaming: generate sequences on-the-fly, shuffled per epoch
-        val sequenceGenerator: SequenceGenerator = DefaultSequenceGenerator(vocabulary)
+        // Source for streaming: generate sequences on-the-fly, shuffled per epoch (using sparse generator)
+        val sequenceGenerator: SequenceGenerator = SparseSequenceGenerator(vocabulary)
         val source = { sequenceGenerator.generateSequences(tokens, seqLength, stride, true) }
         val qaSource = { sequenceGenerator.generateSequences(qaTokens, seqLength, stride, true) }
 
-        val lossFunction: LossFunction = CrossEntropyLoss()
-
-        // Train the model using streaming
+        // Train the model using sparse streaming (memory efficient!)
         try {
-            model = model.trainStreaming(
+            model = model.trainStreamingSparse(
                 source = source,
                 batchSize = 64,
                 maxEpochs = 500,
                 patience = 10,
-                lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
+                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 comprehensiveLossFn = { net ->
-                    // For comprehensive loss, compute on a validation set or subset
+                    // For comprehensive loss, compute on sparse validation set
                     val valIndices = (0 until tokens.size - seqLength step stride).take(100) // small val set
                     val valInputs = valIndices.map { i ->
                         tokens.subList(i, i + seqLength).map { it.toDouble() }.toDoubleArray()
                     }.toTypedArray()
-                    val valTargets = valIndices.flatMap { i ->
-                        tokens.subList(i + 1, i + 1 + seqLength).map { targetToken ->
-                            DoubleArray(vocabulary.size) { if (it == targetToken) 1.0 else 0.0 }
-                        }
-                    }.toTypedArray()
+                    val valSparseTargets = valIndices.flatMap { i ->
+                        tokens.subList(i + 1, i + 1 + seqLength)
+                    }.toIntArray()
                     val valPred = net.predict(valInputs)
-                    lossFunction.calculate(valPred, valTargets)
+                    sparseCategoricalCrossEntropy(valPred, valSparseTargets)
                 }
             )
-            println("Streaming training completed successfully")
+            println("Sparse streaming training completed successfully")
         } catch (e: Exception) {
             println("Training failed with exception: ${e.message}")
             e.printStackTrace()
         }
 
-        // Fine-tune the model
+        // Fine-tune the model using sparse approach
         try {
-            model = model.trainStreaming(
+            model = model.trainStreamingSparse(
                 source = qaSource,
                 batchSize = 8,
                 maxEpochs = 100,
                 patience = 5,
-                lossFn = { pred, actual -> lossFunction.calculate(pred, actual) },
+                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 comprehensiveLossFn = { net ->
-                    // Similar validation logic as above, adapted for QA
+                    // Similar validation logic as above, adapted for QA with sparse targets
                     val valIndices = (0 until qaTokens.size - seqLength step stride).take(20)
                     val valInputs = valIndices.map { i ->
                         qaTokens.subList(i, i + seqLength).map { it.toDouble() }.toDoubleArray()
                     }.toTypedArray()
-                    val valTargets = valIndices.flatMap { i ->
-                        qaTokens.subList(i + 1, i + 1 + seqLength).map { targetToken ->
-                            DoubleArray(vocabulary.size) { if (it == targetToken) 1.0 else 0.0 }
-                        }
-                    }.toTypedArray()
+                    val valSparseTargets = valIndices.flatMap { i ->
+                        qaTokens.subList(i + 1, i + 1 + seqLength)
+                    }.toIntArray()
                     val valPred = net.predict(valInputs)
-                    lossFunction.calculate(valPred, valTargets)
+                    sparseCategoricalCrossEntropy(valPred, valSparseTargets)
                 }
             )
-            println("QA fine-tuning completed successfully")
+            println("QA sparse fine-tuning completed successfully")
         } catch (e: Exception) {
             println("Fine-tuning failed with exception: ${e.message}")
             e.printStackTrace()

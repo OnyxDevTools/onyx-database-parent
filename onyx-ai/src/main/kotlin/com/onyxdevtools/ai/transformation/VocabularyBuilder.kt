@@ -16,12 +16,13 @@ fun Vocabulary.appendToVocabulary(text: String) {
         addToken(" ")
     }
 
-    // Extract unique tokens from the text
-    val uniqueTokens = tokenizer.extractUniqueTokens(text)
-    
-    // Add all discovered tokens to the vocabulary
-    uniqueTokens.forEach { token ->
+    // Extract token frequencies from the text
+    val tokenFreqs = tokenizer.extractTokenFrequencies(text)
+
+    // Add all discovered tokens to the vocabulary and update frequencies
+    tokenFreqs.forEach { (token, count) ->
         // Only add if not already present (getId will add if not present)
         this.addToken(token)
+        (this as? OnyxVocabulary)?.incrementFrequency(token, count.toLong())
     }
 }
