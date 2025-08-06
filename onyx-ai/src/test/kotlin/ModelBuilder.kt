@@ -126,7 +126,8 @@ fun main() {
             maxEpochs = 1,
             patience = 10,
             lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
-            comprehensiveLossFn = comprehensiveLossFn
+            comprehensiveLossFn = comprehensiveLossFn,
+            saveModelPath = "/mnt/onyx/books/model.ser"
         )
         println("Sparse streaming training completed successfully")
     } catch (e: Exception) {

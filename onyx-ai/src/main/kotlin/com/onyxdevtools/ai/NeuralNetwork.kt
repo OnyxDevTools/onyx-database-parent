@@ -5,7 +5,7 @@ package com.onyxdevtools.ai
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
-import java.io.Serializable
+import java.io.*
 import kotlin.apply
 import kotlin.math.min
 
@@ -301,6 +301,7 @@ data class NeuralNetwork(
      * @param testFrac Fraction of each batch reserved for testing/validation. Range: 0.0–1.0. Default is 0.1.
      * @param shuffle Whether to shuffle each batch before splitting into train/test subsets. Default is true.
      * @param lossFn Function to compute loss given predicted and actual matrices; defaults to mean standard error.
+     * @param saveModelPath Optional path to save the model on every improvement. If null, no saving occurs.
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreaming(
@@ -314,6 +315,7 @@ data class NeuralNetwork(
         lossFn: (pred: Matrix, actual: Matrix) -> Double =
             { p, a -> p.meanStandardError(a) },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
+        saveModelPath: String? = null,
     ): NeuralNetwork {
 
         var bestLoss = Double.POSITIVE_INFINITY
@@ -390,8 +392,22 @@ data class NeuralNetwork(
 
             if (epochTestLoss < bestLoss) {
                 bestLoss = epochTestLoss
-                best = this.clone()
+                best = if (saveModelPath == null) this.clone() else this
                 epochsWithoutImprovement = 0
+                
+                // Save model to disk if saveModelPath is provided
+                saveModelPath?.let { path ->
+                    try {
+                        best.saveToFile(path)
+                        if (trace) {
+                            println("Model saved to $path (loss: $epochTestLoss)")
+                        }
+                    } catch (e: Exception) {
+                        if (trace) {
+                            println("Warning: Failed to save model to $path: ${e.message}")
+                        }
+                    }
+                }
             } else if (++epochsWithoutImprovement >= patience) {
                 if (trace)
                     println("early stop at epoch $epoch")
@@ -421,6 +437,7 @@ data class NeuralNetwork(
      * @param lossFn Function to compute sparse categorical cross-entropy loss given predictions and sparse targets.
      * @param comprehensiveLossFn Optional comprehensive loss function for final evaluation.
      * @param trace Whether to print training progress. Default is true.
+     * @param saveModelPath Optional path to save the model on every improvement. If null, no saving occurs.
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreamingSparse(
@@ -434,6 +451,7 @@ data class NeuralNetwork(
         lossFn: (pred: Matrix, sparseTargets: IntArray) -> Double =
             { p, s -> sparseCategoricalCrossEntropy(p, s) },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
+        saveModelPath: String? = null,
     ): NeuralNetwork {
 
         var bestLoss = Double.POSITIVE_INFINITY
@@ -508,6 +526,20 @@ data class NeuralNetwork(
                 bestLoss = epochTestLoss
                 best = this.clone()
                 epochsWithoutImprovement = 0
+                
+                // Save model to disk if saveModelPath is provided
+                saveModelPath?.let { path ->
+                    try {
+                        best.saveToFile(path)
+                        if (trace) {
+                            println("Model saved to $path (loss: $epochTestLoss)")
+                        }
+                    } catch (e: Exception) {
+                        if (trace) {
+                            println("Warning: Failed to save model to $path: ${e.message}")
+                        }
+                    }
+                }
             } else if (++epochsWithoutImprovement >= patience) {
                 if (trace)
                     println("early stop at epoch $epoch")
@@ -679,7 +711,40 @@ data class NeuralNetwork(
             this.lastInput = this@NeuralNetwork.lastInput?.deepCopy()
         }
 
+    /**
+     * Saves this neural network to a file using Java serialization.
+     *
+     * @param filePath Path where to save the model.
+     */
+    fun saveToFile(filePath: String) {
+        try {
+            ObjectOutputStream(FileOutputStream(filePath)).use { oos ->
+                oos.writeObject(this)
+            }
+        } catch (e: IOException) {
+            throw RuntimeException("Failed to save model to file: $filePath", e)
+        }
+    }
+
     companion object {
         private const val serialVersionUID = 1L
+        
+        /**
+         * Loads a neural network from a file using Java deserialization.
+         *
+         * @param filePath Path to the saved model file.
+         * @return The loaded neural network.
+         */
+        fun loadFromFile(filePath: String): NeuralNetwork {
+            return try {
+                ObjectInputStream(FileInputStream(filePath)).use { ois ->
+                    ois.readObject() as NeuralNetwork
+                }
+            } catch (e: IOException) {
+                throw RuntimeException("Failed to load model from file: $filePath", e)
+            } catch (e: ClassNotFoundException) {
+                throw RuntimeException("Failed to deserialize model from file: $filePath", e)
+            }
+        }
     }
 }
