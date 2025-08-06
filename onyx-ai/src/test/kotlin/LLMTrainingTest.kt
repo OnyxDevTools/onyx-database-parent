@@ -55,7 +55,7 @@ class LLMTrainingTest {
             DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
         )
 
-        var model = NeuralNetwork(layers, learningRate = 0.001)
+        var model = NeuralNetwork(layers, learningRate = 0.0001)
 
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch (using sparse generator)
         val sequenceGenerator: SequenceGenerator = SparseSequenceGenerator(vocabulary)

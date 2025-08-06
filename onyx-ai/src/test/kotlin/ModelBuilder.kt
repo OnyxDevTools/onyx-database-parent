@@ -1,6 +1,7 @@
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.data.DefaultSequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
+import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.OnyxVocabulary
@@ -8,6 +9,26 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.random.Random
 import java.io.File
+
+// Add somewhere above train call
+fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
+    val qs = listOf(
+        "[SOT]What are you?[SEP]",
+        "[SOT]Who is Alice?[SEP]",
+        "[SOT]Who is the White Rabbit?[SEP]",
+        "[SOT]Where is Wonderland?[SEP]",
+        "[SOT]What game does the Queen of Hearts play?[SEP]",
+        "[SOT]Alice was beginning to get very tired "
+    )
+    qs.forEach { q ->
+        val out = model.chat(
+            prompt = q,
+            vocabulary = vocab,
+            seqLength = seqLen
+        )
+        println("$q $out")
+    }
+}
 
 fun generateCorpusSequence(
     booksDir: File,
@@ -71,7 +92,7 @@ class ComprehensiveLossFunction(
 }
 
 fun main() {
-    val books = File("/mnt/onyx/books/gutenberg_books")
+    val books = File("/mnt/onyx/books/formatted_books")
     val vocabulary = OnyxVocabulary("/mnt/onyx/books/vocabulary.dat")
 
     if (vocabulary.size == 0) {
@@ -82,13 +103,13 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 512
+    val maxSequenceLength = 1024
     val stride = maxSequenceLength
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
-    val numHeads = 4
-    val ffHiddenDim = 64
+    val numHeads = 8
+    val ffHiddenDim = 128
 
     val layers = listOf(
         EmbeddingLayer(vocabulary.size, embeddingDim),
@@ -122,10 +143,13 @@ fun main() {
     try {
         model = model.trainStreamingSparse(
             source = source,
-            batchSize = 32,
-            maxEpochs = 100,
-            patience = 10,
+            batchSize = 16,
+            maxEpochs = 200,
+            patience = 100,
             lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
+            probeFn = {
+                askProbes(model, vocabulary, maxSequenceLength)
+            },
             comprehensiveLossFn = comprehensiveLossFn,
             saveModelPath = "/mnt/onyx/books/model.ser"
         )

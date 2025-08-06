@@ -411,6 +411,7 @@ data class NeuralNetwork(
         trace: Boolean = true,
         lossFn: (pred: Matrix, sparseTargets: IntArray) -> Double =
             { p, s -> sparseCategoricalCrossEntropy(p, s) },
+        probeFn: () -> Unit = {  },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
         saveModelPath: String? = null,
     ): NeuralNetwork {
@@ -418,6 +419,8 @@ data class NeuralNetwork(
         var bestLoss = Double.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
+        var iter: Long = 0
+
 
         repeat(maxEpochs) { epoch ->
             val bx = mutableListOf<DoubleArray>()
@@ -457,6 +460,8 @@ data class NeuralNetwork(
 
                     bx.clear(); by.clear()
                 }
+                iter++
+                if (iter % 1000L == 0L) probeFn.invoke()
             }
 
             // left-overs

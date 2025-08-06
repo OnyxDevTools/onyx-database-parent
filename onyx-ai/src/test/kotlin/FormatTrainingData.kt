@@ -6,18 +6,27 @@ import kotlin.streams.asSequence
 
 fun main(args: Array<String>) {
     val directory = "onyx-ai"
-    val inFile = File("$directory/src/test/resources/alice_full_source.txt")
-    val outFile = File("$directory/src/test/resources/alice_full_packed.txt")
-
-    try {
-        val value = formatTextByParagraph(inFile.readText())
-        outFile.writeText(value)
-        println("Processing complete. Output written to ${outFile.absolutePath}")
-    } catch (e: FileNotFoundException) {
-        println("Error: Input file not found at ${inFile.absolutePath}")
-    } catch (e: Exception) {
-        println("An error occurred: ${e.message}")
+    val location = File("/Volumes/onyx/books/gutenberg_books")
+    File("/Volumes/onyx/books/formatted_books").mkdirs()
+    location.listFiles()?.forEach {
+        if (it.isFile && it.extension.contains("txt")) {
+            val formatted = formatTextByParagraph(it.readText(), it.absolutePath)
+            val outFile = File("/Volumes/onyx/books/formatted_books/${it.name}")
+            outFile.writeText(formatted)
+        }
     }
+//    val file = File("$directory/src/test/resources/alice_full_source.txt")
+//    val outFile = File("$directory/src/test/resources/alice_full_packed.txt")
+//
+//    try {
+//        val value = formatTextByParagraph(inFile.readText())
+//        outFile.writeText(value)
+//        println("Processing complete. Output written to ${outFile.absolutePath}")
+//    } catch (e: FileNotFoundException) {
+//        println("Error: Input file not found at ${inFile.absolutePath}")
+//    } catch (e: Exception) {
+//        println("An error occurred: ${e.message}")
+//    }
 }
 
 /**
