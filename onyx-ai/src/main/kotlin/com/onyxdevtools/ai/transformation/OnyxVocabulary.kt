@@ -42,35 +42,6 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
     // Global commit lock to serialize commits vs. writers
     private val commitLock = ReentrantLock()
 
-    override fun getId(token: String): Int {
-        tokenToIdCache[token]?.let { return it }
-
-        // Avoid racing with commit
-        val commitHeld = commitLock.tryLock()
-        try {
-            // Stripe lock per token to avoid duplicate inserts
-            val lock = lockFor(token)
-            lock.lock()
-            try {
-                tokenToIdCache[token]?.let { return it }
-
-                val existing = manager.from<VocabularyEntry>()
-                    .where("token" eq token)
-                    .firstOrNull<VocabularyEntry>()
-
-                val id = existing?.id ?: manager.saveEntity(VocabularyEntry(token = token)).id
-
-                tokenToIdCache[token] = id
-                idToTokenCache[id] = token
-                return id
-            } finally {
-                lock.unlock()
-            }
-        } finally {
-            if (commitHeld) commitLock.unlock()
-        }
-    }
-
     override fun getToken(id: Int): String? {
         idToTokenCache[id]?.let { return it }
 
@@ -95,7 +66,14 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
     }
 
     override fun addToken(token: String) {
-        getId(token)
+        val existing = manager.from<VocabularyEntry>()
+            .where("token" eq token)
+            .firstOrNull<VocabularyEntry>()
+
+        val id = existing?.id ?: manager.saveEntity(VocabularyEntry(token = token)).id
+
+        tokenToIdCache[token] = id
+        idToTokenCache[id] = token
     }
 
     override val size: Int
@@ -105,7 +83,10 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
      * Increment token frequency; creates token if missing.
      */
     fun incrementFrequency(token: String, amount: Long = 1) {
-        val id = getId(token)
+        val id = findId(token) ?: run {
+            addToken(token)
+            tokenToIdCache[token] ?: throw IllegalStateException("Failed to add token $token")
+        }
         val entry = manager.findById<VocabularyEntry>(id)!!
         entry.frequency += amount
         manager.saveEntity(entry)
@@ -130,9 +111,17 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
             val top = all
                 .sortedWith(compareByDescending<VocabularyEntry> { it.frequency }.thenBy { it.token })
                 .take(maxTokens)
+                .toMutableList()
+
+            val tokenizer = BPETokenizer(this)
+            tokenizer.defaultTokens.forEach { token ->
+                if (token !in top.map { it.token }) {
+                    top.add(VocabularyEntry(token = token, frequency = 0))
+                }
+            }
 
             // Wipe table
-            all.forEach { manager.delete(it) }
+            manager.from<VocabularyEntry>().delete()
 
             // Optional: reset sequence here if your store supports it
             // manager.resetIdSequence(VocabularyEntry::class) // (pseudo)
@@ -141,11 +130,14 @@ class OnyxVocabulary(databasePath: String) : Vocabulary {
             tokenToIdCache.clear()
             idToTokenCache.clear()
 
+            var i = 1
             // Reinsert in rank order to get sequential IDs
             top.forEach { e ->
-                val saved = manager.saveEntity(VocabularyEntry(token = e.token, frequency = e.frequency))
+                e.id = i // Reset ID to sequential
+                val saved = manager.saveEntity(e)
                 tokenToIdCache[e.token] = saved.id
                 idToTokenCache[saved.id] = e.token
+                i+=1
             }
         } finally {
             commitLock.unlock()

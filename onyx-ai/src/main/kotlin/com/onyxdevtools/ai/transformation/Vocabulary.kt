@@ -42,7 +42,7 @@ interface Vocabulary {
      * @return The unique integer ID associated with the token. IDs are typically
      *         assigned sequentially starting from 0.
      */
-    fun getId(token: String): Int
+    fun getId(token: String): Int = findId(token) ?: findId("[UNK]")!!
 
     /**
      * Retrieves the token associated with a given ID.

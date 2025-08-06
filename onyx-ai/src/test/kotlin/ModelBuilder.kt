@@ -1,5 +1,5 @@
 import com.onyxdevtools.ai.NeuralNetwork
-import com.onyxdevtools.ai.data.SparseSequenceGenerator
+import com.onyxdevtools.ai.data.DefaultSequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.BPETokenizer
@@ -22,7 +22,7 @@ fun generateCorpusSequence(
     require(stride > 0) { "stride must be > 0" }
 
     val tokenizer = BPETokenizer(vocabulary)
-    val generator = SparseSequenceGenerator(vocabulary)
+    val generator = DefaultSequenceGenerator(vocabulary)
     val all = booksDir.listFiles()?.filter { it.isFile && it.extension.contains("txt") } ?: emptyList()
     val files = if (shuffleFiles) (rng?.let { all.shuffled(it) } ?: all.shuffled()) else all
 
@@ -71,8 +71,8 @@ class ComprehensiveLossFunction(
 }
 
 fun main() {
-    val books = File("/Volumes/onyx/books/gutenberg_books")
-    val vocabulary = OnyxVocabulary("/Users/tosborn/Desktop/model/vocabulary.dat")
+    val books = File("/mnt/onyx/books/gutenberg_books")
+    val vocabulary = OnyxVocabulary("/mnt/onyx/books/vocabulary.dat")
 
     if (vocabulary.size == 0) {
         books.listFiles()?.forEach {
@@ -82,7 +82,7 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 256
+    val maxSequenceLength = 512
     val stride = maxSequenceLength
 
     // Configure neural network
@@ -122,8 +122,8 @@ fun main() {
     try {
         model = model.trainStreamingSparse(
             source = source,
-            batchSize = 5,
-            maxEpochs = 1,
+            batchSize = 32,
+            maxEpochs = 100,
             patience = 10,
             lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
             comprehensiveLossFn = comprehensiveLossFn,

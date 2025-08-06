@@ -33,7 +33,7 @@ import com.onyxdevtools.ai.transformation.Vocabulary
  */
 class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGenerator {
 
-    private val padId: Int = vocabulary.getId("[PAD]") ?: throw IllegalArgumentException("[PAD] token not found in vocabulary")
+    private val padId: Int = vocabulary.findId("[PAD]") ?: throw IllegalArgumentException("[PAD] token not found in vocabulary")
 
     /**
      * Generates training sequences from tokens with optional shuffled order and one-hot encoded targets.
@@ -73,17 +73,6 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
         stride: Int,
         shuffle: Boolean
     ): Sequence<Pair<DoubleArray, IntArray>> {
-        // Enhanced validation for robustness
-        require(seqLength > 0) { "seqLength must be positive" }
-        require(stride > 0) { "stride must be positive" }
-        require(tokens.isNotEmpty()) { "tokens list must not be empty" }
-
-        val vocabSize = vocabulary.size
-        val minToken = tokens.minOrNull() ?: throw IllegalArgumentException("tokens list is empty")
-        val maxToken = tokens.maxOrNull() ?: throw IllegalArgumentException("tokens list is empty")
-        require(minToken >= 0 && maxToken < vocabSize) {
-            "All token IDs must be in [0, $vocabSize). Found min: $minToken, max: $maxToken"
-        }
 
         return sequence {
             // Calculate possible start indices up to the last token

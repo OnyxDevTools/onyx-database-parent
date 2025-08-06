@@ -39,18 +39,7 @@ class BPETokenizer(
 
     // Add inside BPETokenizer
     val defaultTokens: Set<String>
-        get() {
-            val punctuation = defaultPunctuation
-            val baseKeywords = if (customKeywords.isNotEmpty()) customKeywords else keywords
-            return buildSet {
-                addAll(specialTokens)
-                add(unkToken)
-                addAll(baseKeywords)
-                addAll(operators)
-                addAll(mathSymbols)
-                addAll(punctuation)
-            }
-        }
+        get() = specialTokens
 
     private val specialTokens = setOf(
         "[PAD]", "[CLS]", "[SEP]", "[UNK]", "[MASK]",

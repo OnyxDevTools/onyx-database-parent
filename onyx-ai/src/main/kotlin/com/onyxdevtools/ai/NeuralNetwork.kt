@@ -445,7 +445,7 @@ data class NeuralNetwork(
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
-        testFrac: Double = 0.2,
+        testFrac: Double = 0.1,
         shuffle: Boolean = true,
         trace: Boolean = true,
         lossFn: (pred: Matrix, sparseTargets: IntArray) -> Double =
