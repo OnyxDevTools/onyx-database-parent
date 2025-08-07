@@ -73,12 +73,12 @@ class LLMTrainingTest {
             model = model.trainStreamingSparse(
                 source = mixedSource,
                 batchSize = 16,
-                maxEpochs = 500,
-                patience = 10,
+                maxEpochs = 1000,
+                patience = 100,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 comprehensiveLossFn = { net ->
                     var generatedText = model.chat(
-                        prompt = "[SOT]Alice was beginning to get very tired[SEP]",
+                        prompt = "[SOT]Alice was beginning to get very tired ",
                         vocabulary = vocabulary,
                         seqLength = seqLength
                     )

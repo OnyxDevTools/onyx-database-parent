@@ -1,22 +1,43 @@
 package com.onyxdevtools.ai.extensions
 
 import com.onyxdevtools.ai.Matrix
+import jdk.incubator.vector.DoubleVector
+import jdk.incubator.vector.VectorOperators
+import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
 import kotlin.math.*
 
-/** Small constant added to denominator in Adam updates for numerical stability. */
 const val EPSILON = 1e-8
 const val BLOCK_SIZE_TRANSPOSED = 128
 
-/**
- * Multiplies two matrices using a block-based, cache-friendly algorithm with parallelism.
- * Falls back to a simpler implementation for small matrices.
- *
- * @param matrixA The left-hand side matrix.
- * @param matrixB The right-hand side matrix.
- * @return A matrix representing the product of matrixA × matrixB.
- */
-fun matrixMultiply(matrixA: Matrix, matrixB: Matrix): Matrix {
+private val SPEC: VectorSpecies<Double> = DoubleVector.SPECIES_PREFERRED
+
+private const val SIMPLE_WORK_MAX = 50_000
+private const val SKINNY_DIM = 128
+private const val PARALLEL_ROWS_MIN = 64
+private const val PARALLEL_COLS_MIN = 256
+
+fun matrixMultiply(A: Matrix, B: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+
+    val work = m * k * n
+    if (work <= SIMPLE_WORK_MAX) return matrixMultiplySimple(A, B)
+
+    val skinny = min(m, n) < SKINNY_DIM
+
+    return if (skinny) {
+        // Parallelize only when there’s enough outer parallelism to amortize overhead
+        val parallel = (m >= PARALLEL_ROWS_MIN) || (n >= PARALLEL_COLS_MIN)
+        if (parallel) matrixMultiplySkinnyVectorizedParallel(A, B)
+        else          matrixMultiplySkinnyVectorized(A, B)
+    } else {
+        matrixMultiplyParallelJVM(A, B)
+    }
+}
+
+private fun matrixMultiplyParallelJVM(matrixA: Matrix, matrixB: Matrix): Matrix {
     val rowsA = matrixA.size
     val colsA = matrixA[0].size
     val colsB = matrixB[0].size
@@ -57,6 +78,166 @@ fun matrixMultiply(matrixA: Matrix, matrixB: Matrix): Matrix {
     } else {
         return matrixMultiplySimple(matrixA, matrixB)
     }
+}
+
+private fun matrixMultiplySkinnyVectorized(A: Matrix, B: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+
+    // Transpose B to B^T so each column of B is a contiguous row in Bt
+    val Bt = Array(n) { j -> DoubleArray(k) { ii -> B[ii][j] } }
+
+    val result = Array(m) { DoubleArray(n) }
+    val tile = 8 // process 8 output columns at a time; tune 4/8/16
+
+    for (i in 0 until m) {
+        val aRow = A[i]
+        var j = 0
+        while (j + tile <= n) {
+            // tile accumulators
+            var acc0 = 0.0; var acc1 = 0.0; var acc2 = 0.0; var acc3 = 0.0
+            var acc4 = 0.0; var acc5 = 0.0; var acc6 = 0.0; var acc7 = 0.0
+
+            var p = 0
+            val upper = SPEC.loopBound(k)
+            // vectorized main loop
+            while (p < upper) {
+                val va = DoubleVector.fromArray(SPEC, aRow, p)
+                val vb0 = DoubleVector.fromArray(SPEC, Bt[j + 0], p)
+                val vb1 = DoubleVector.fromArray(SPEC, Bt[j + 1], p)
+                val vb2 = DoubleVector.fromArray(SPEC, Bt[j + 2], p)
+                val vb3 = DoubleVector.fromArray(SPEC, Bt[j + 3], p)
+                val vb4 = DoubleVector.fromArray(SPEC, Bt[j + 4], p)
+                val vb5 = DoubleVector.fromArray(SPEC, Bt[j + 5], p)
+                val vb6 = DoubleVector.fromArray(SPEC, Bt[j + 6], p)
+                val vb7 = DoubleVector.fromArray(SPEC, Bt[j + 7], p)
+
+                acc0 += va.mul(vb0).reduceLanes(VectorOperators.ADD)
+                acc1 += va.mul(vb1).reduceLanes(VectorOperators.ADD)
+                acc2 += va.mul(vb2).reduceLanes(VectorOperators.ADD)
+                acc3 += va.mul(vb3).reduceLanes(VectorOperators.ADD)
+                acc4 += va.mul(vb4).reduceLanes(VectorOperators.ADD)
+                acc5 += va.mul(vb5).reduceLanes(VectorOperators.ADD)
+                acc6 += va.mul(vb6).reduceLanes(VectorOperators.ADD)
+                acc7 += va.mul(vb7).reduceLanes(VectorOperators.ADD)
+
+                p += SPEC.length()
+            }
+            // scalar tail
+            while (p < k) {
+                val a = aRow[p]
+                acc0 += a * Bt[j + 0][p]
+                acc1 += a * Bt[j + 1][p]
+                acc2 += a * Bt[j + 2][p]
+                acc3 += a * Bt[j + 3][p]
+                acc4 += a * Bt[j + 4][p]
+                acc5 += a * Bt[j + 5][p]
+                acc6 += a * Bt[j + 6][p]
+                acc7 += a * Bt[j + 7][p]
+                p++
+            }
+
+            val r = result[i]
+            r[j + 0] = acc0; r[j + 1] = acc1; r[j + 2] = acc2; r[j + 3] = acc3
+            r[j + 4] = acc4; r[j + 5] = acc5; r[j + 6] = acc6; r[j + 7] = acc7
+            j += tile
+        }
+        // leftover columns (< tile)
+        while (j < n) {
+            var acc = 0.0
+            var p = 0
+            val upper = SPEC.loopBound(k)
+            while (p < upper) {
+                val va = DoubleVector.fromArray(SPEC, aRow, p)
+                val vb = DoubleVector.fromArray(SPEC, Bt[j], p)
+                acc += va.mul(vb).reduceLanes(VectorOperators.ADD)
+                p += SPEC.length()
+            }
+            while (p < k) { acc += aRow[p] * Bt[j][p]; p++ }
+            result[i][j] = acc
+            j++
+        }
+    }
+    return result
+}
+
+private fun matrixMultiplySkinnyVectorizedParallel(A: Matrix, B: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+
+    // Transpose once for contiguous access
+    val Bt = Array(n) { j -> DoubleArray(k) { ii -> B[ii][j] } }
+    val result = Array(m) { DoubleArray(n) }
+    val tile = 8
+
+    IntStream.range(0, m).parallel().forEach { i ->
+        val aRow = A[i]
+        var j = 0
+        while (j + tile <= n) {
+            var acc0 = 0.0; var acc1 = 0.0; var acc2 = 0.0; var acc3 = 0.0
+            var acc4 = 0.0; var acc5 = 0.0; var acc6 = 0.0; var acc7 = 0.0
+
+            var p = 0
+            val upper = SPEC.loopBound(k)
+            while (p < upper) {
+                val va = DoubleVector.fromArray(SPEC, aRow, p)
+                val vb0 = DoubleVector.fromArray(SPEC, Bt[j + 0], p)
+                val vb1 = DoubleVector.fromArray(SPEC, Bt[j + 1], p)
+                val vb2 = DoubleVector.fromArray(SPEC, Bt[j + 2], p)
+                val vb3 = DoubleVector.fromArray(SPEC, Bt[j + 3], p)
+                val vb4 = DoubleVector.fromArray(SPEC, Bt[j + 4], p)
+                val vb5 = DoubleVector.fromArray(SPEC, Bt[j + 5], p)
+                val vb6 = DoubleVector.fromArray(SPEC, Bt[j + 6], p)
+                val vb7 = DoubleVector.fromArray(SPEC, Bt[j + 7], p)
+
+                acc0 += va.mul(vb0).reduceLanes(VectorOperators.ADD)
+                acc1 += va.mul(vb1).reduceLanes(VectorOperators.ADD)
+                acc2 += va.mul(vb2).reduceLanes(VectorOperators.ADD)
+                acc3 += va.mul(vb3).reduceLanes(VectorOperators.ADD)
+                acc4 += va.mul(vb4).reduceLanes(VectorOperators.ADD)
+                acc5 += va.mul(vb5).reduceLanes(VectorOperators.ADD)
+                acc6 += va.mul(vb6).reduceLanes(VectorOperators.ADD)
+                acc7 += va.mul(vb7).reduceLanes(VectorOperators.ADD)
+
+                p += SPEC.length()
+            }
+            while (p < k) {
+                val a = aRow[p]
+                acc0 += a * Bt[j + 0][p]
+                acc1 += a * Bt[j + 1][p]
+                acc2 += a * Bt[j + 2][p]
+                acc3 += a * Bt[j + 3][p]
+                acc4 += a * Bt[j + 4][p]
+                acc5 += a * Bt[j + 5][p]
+                acc6 += a * Bt[j + 6][p]
+                acc7 += a * Bt[j + 7][p]
+                p++
+            }
+
+            val r = result[i]
+            r[j + 0] = acc0; r[j + 1] = acc1; r[j + 2] = acc2; r[j + 3] = acc3
+            r[j + 4] = acc4; r[j + 5] = acc5; r[j + 6] = acc6; r[j + 7] = acc7
+            j += tile
+        }
+        while (j < n) {
+            var acc = 0.0
+            var p2 = 0
+            val upper2 = SPEC.loopBound(k)
+            while (p2 < upper2) {
+                val va = DoubleVector.fromArray(SPEC, aRow, p2)
+                val vb = DoubleVector.fromArray(SPEC, Bt[j], p2)
+                acc += va.mul(vb).reduceLanes(VectorOperators.ADD)
+                p2 += SPEC.length()
+            }
+            while (p2 < k) { acc += aRow[p2] * Bt[j][p2]; p2++ }
+            result[i][j] = acc
+            j++
+        }
+    }
+
+    return result
 }
 
 /**
