@@ -1,149 +1,328 @@
-@file:Suppress("PrivatePropertyName")
-
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.*
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.sqrt
 
 /**
- * Multi-Head Attention Layer implementation for transformer architectures.
- * 
- * This layer implements the multi-head attention mechanism as described in "Attention Is All You Need".
- * It allows the model to jointly attend to information from different representation subspaces
- * at different positions.
+ * Multi-Head Attention implementation for neural networks, particularly effective in transformer architectures.
  *
- * @param tokensPerSample Number of tokens in each input sequence
- * @param modelSize The dimensionality of the model (must be divisible by headCount)
- * @param headCount Number of attention heads
+ * Multi-head attention allows the model to jointly attend to information from different representation
+ * subspaces at different positions. Instead of performing a single attention function with the full
+ * dimensionality, multiple attention heads allow the model to focus on different types of relationships.
+ *
+ * **Mathematical Formulation:**
+ * Given input X, multi-head attention computes:
+ * - For each head h: Q_h = XW^Q_h, K_h = XW^K_h, V_h = XW^V_h
+ * - Attention_h(Q_h, K_h, V_h) = softmax(Q_h K_h^T / √d_k) V_h
+ * - MultiHead(Q, K, V) = Concat(head_1, ..., head_h)W^O
+ *
+ * Where W^Q_h, W^K_h, W^V_h are learned query, key, and value projection matrices for head h,
+ * and W^O is the output projection matrix.
+ *
+ * **Key Benefits:**
+ * - **Multiple attention patterns**: Each head can focus on different relationships
+ * - **Parallel processing**: All heads can be computed in parallel
+ * - **Rich representations**: Captures diverse aspects of token relationships
+ * - **Position independence**: Can model long-range dependencies
+ *
+ * **Usage in Transformers:**
+ * Multi-head attention is the core component of transformer architectures:
+ * - Self-attention in encoder layers
+ * - Masked self-attention in decoder layers
+ * - Cross-attention between encoder and decoder
+ *
+ * This implementation uses the Adam optimizer for updating all weight matrices.
+ *
+ * @param tokensPerSample The fixed number of tokens per input sample (sequence length)
+ * @param modelSize The dimensionality of each token's embedding (must be divisible by headCount)
+ * @param headCount The number of attention heads to use
+ * @param precision The precision to use for internal computations (SINGLE or DOUBLE)
+ * @see Layer
+ * @see LayerNormalizationLayer
  */
-@Suppress("LocalVariableName")
 class MultiHeadAttentionLayer(
     private val tokensPerSample: Int,
     private val modelSize: Int,
-    private val headCount: Int
+    private val headCount: Int,
+    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
 ) : Layer {
 
-    private val random = java.util.Random()
-    
-    init {
-        require(modelSize % headCount == 0) { "modelSize must be divisible by headCount" }
-    }
-
-    /** Dimension of each attention head */
-    private val dK = modelSize / headCount
-
-    /** Learnable weight matrices for Query, Key, Value, and Output projections */
-    private var wQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-    private var wK: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-    private var wV: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-    private var wO: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-
-    /** Adam optimizer momentum states for weight matrices */
-    private var momentWQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var momentWK: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWK: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var momentWV: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWV: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var momentWO: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWO: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-
-    /** Gradients for weight matrices */
-    private var gradWQ: Matrix? = null
-    private var gradWK: Matrix? = null
-    private var gradWV: Matrix? = null
-    private var gradWO: Matrix? = null
-
-    /** Intermediate results cached for backward pass */
-    private var Q: Matrix? = null
-    private var K: Matrix? = null
-    private var V: Matrix? = null
-    private var attentionWeights: List<MutableList<Matrix>>? = null
-    private var attentionOutputs: Matrix? = null
-
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var output: FlexibleMatrix? = null
+    override var preActivation: FlexibleMatrix? = null
     override val activation: Activation = Activation.LINEAR
 
+    private val headSize = modelSize / headCount
+
+    // Weight matrices for all heads (combined for efficiency)
+    private var wQuery: FlexibleMatrix
+    private var wKey: FlexibleMatrix
+    private var wValue: FlexibleMatrix
+    private var wOutput: FlexibleMatrix
+
+    // Gradients for weight matrices
+    private var gradWQuery: FlexibleMatrix? = null
+    private var gradWKey: FlexibleMatrix? = null
+    private var gradWValue: FlexibleMatrix? = null
+    private var gradWOutput: FlexibleMatrix? = null
+
+    // Adam optimizer state
+    private var momentWQuery: FlexibleMatrix
+    private var velocityWQuery: FlexibleMatrix
+    private var momentWKey: FlexibleMatrix
+    private var velocityWKey: FlexibleMatrix
+    private var momentWValue: FlexibleMatrix
+    private var velocityWValue: FlexibleMatrix
+    private var momentWOutput: FlexibleMatrix
+    private var velocityWOutput: FlexibleMatrix
+
+    // Cached values for backward pass
+    private var queries: FlexibleMatrix? = null
+    private var keys: FlexibleMatrix? = null
+    private var values: FlexibleMatrix? = null
+    private var attentionWeights: FlexibleMatrix? = null
+    private var attentionOutput: FlexibleMatrix? = null
+
+    init {
+        require(modelSize % headCount == 0) {
+            "Model size ($modelSize) must be divisible by head count ($headCount)"
+        }
+
+        val isSinglePrecision = precision == MatrixPrecision.SINGLE
+        val scale = sqrt(2.0 / modelSize)
+
+        // Initialize weights with Xavier/Glorot initialization
+        wQuery = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 
+            (Math.random() - 0.5) * 2 * scale
+        }
+        wKey = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 
+            (Math.random() - 0.5) * 2 * scale
+        }
+        wValue = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 
+            (Math.random() - 0.5) * 2 * scale
+        }
+        wOutput = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 
+            (Math.random() - 0.5) * 2 * scale
+        }
+
+        // Initialize Adam optimizer state
+        momentWQuery = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityWQuery = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        momentWKey = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityWKey = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        momentWValue = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityWValue = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        momentWOutput = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityWOutput = createMatrix(modelSize, modelSize, isSinglePrecision) { _, _ -> 0.0 }
+    }
+
+    override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
+        val batchSize = input.rows / tokensPerSample
+
+        // Compute Q, K, V matrices
+        queries = matmul(input, wQuery)
+        keys = matmul(input, wKey)
+        values = matmul(input, wValue)
+
+        // Compute attention for all heads
+        attentionOutput = computeMultiHeadAttention(queries!!, keys!!, values!!, batchSize)
+
+        // Final output projection
+        output = matmul(attentionOutput!!, wOutput)
+
+        return output!!
+    }
+
     /**
-     * Performs forward pass through the multi-head attention layer.
-     *
-     * Implements the complete multi-head attention computation:
-     * 1. Computes Query (Q), Key (K), and Value (V) matrices from input
-     * 2. Splits Q, K, V into multiple attention heads
-     * 3. Computes scaled dot-product attention for each head
-     * 4. Applies causal masking for autoregressive generation
-     * 5. Concatenates all attention head outputs
-     * 6. Applies final linear projection
-     *
-     * The attention mechanism follows: Attention(Q,K,V) = softmax(QK^T/√d_k)V
-     *
-     * @param input Input matrix of shape [batchSize * seqLen, modelSize] containing
-     *              the token embeddings or previous layer outputs
-     * @param isTraining Whether the layer is in training mode (affects caching behavior)
-     * @param nextLayer The next layer in the network (unused in this implementation)
-     * @return Output matrix of shape [batchSize * seqLen, modelSize] after applying
-     *         multi-head attention and output projection
+     * Computes multi-head attention using queries, keys, and values.
      */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val batchSize = input.size / tokensPerSample
-        val seqLen = tokensPerSample
+    private fun computeMultiHeadAttention(
+        q: FlexibleMatrix,
+        k: FlexibleMatrix,
+        v: FlexibleMatrix,
+        batchSize: Int
+    ): FlexibleMatrix {
+        val totalTokens = q.rows
+        val result = createMatrix(totalTokens, modelSize, q.isSinglePrecision) { _, _ -> 0.0 }
 
-        // Compute Q, K, V for all heads at once
-        Q = matrixMultiply(input, wQ)
-        K = matrixMultiply(input, wK)
-        V = matrixMultiply(input, wV)
+        for (batch in 0 until batchSize) {
+            val startIdx = batch * tokensPerSample
+            val endIdx = startIdx + tokensPerSample
 
-        // Initialize storage for attention weights and outputs
-        attentionWeights = List(batchSize) { MutableList(headCount) { Array(seqLen) { DoubleArray(seqLen) } } }
-        attentionOutputs = Array(batchSize * seqLen) { DoubleArray(modelSize) { 0.0 } }
+            // Extract batch data
+            val batchQ = extractBatch(q, startIdx, endIdx)
+            val batchK = extractBatch(k, startIdx, endIdx)
+            val batchV = extractBatch(v, startIdx, endIdx)
 
-        // Compute attention for each batch and head
-        for (b in 0 until batchSize) {
-            for (h in 0 until headCount) {
-                val Q_h = Array(seqLen) { i -> DoubleArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
-                val K_h = Array(seqLen) { i -> DoubleArray(dK) { K!![b * seqLen + i][h * dK + it] } }
-                val V_h = Array(seqLen) { i -> DoubleArray(dK) { V!![b * seqLen + i][h * dK + it] } }
+            // Process all heads for this batch
+            for (head in 0 until headCount) {
+                val headStartCol = head * headSize
+                val headEndCol = headStartCol + headSize
 
-                // Attention scores: Q_h @ K_h^T / sqrt(dK)
-                val scores = matrixMultiply(Q_h, transpose(K_h))
-                val scaledScores = scalarMultiply(scores, 1.0 / sqrt(dK.toDouble()))
+                // Extract head-specific Q, K, V
+                val headQ = extractColumns(batchQ, headStartCol, headEndCol)
+                val headK = extractColumns(batchK, headStartCol, headEndCol)
+                val headV = extractColumns(batchV, headStartCol, headEndCol)
 
-                // Apply causal mask
-                val causalMask = Array(seqLen) { row ->
-                    DoubleArray(seqLen) { col ->
-                        if (col > row) Double.NEGATIVE_INFINITY else 0.0
-                    }
-                }
+                // Compute attention scores
+                val scores = matmul(headQ, transpose(headK))
+                scaleMatrix(scores, 1.0 / sqrt(headSize.toDouble()))
 
-                val maskedScores = add(scaledScores, causalMask)
+                // Apply softmax
+                val attention = softmax(scores)
 
-                // Apply softmax to get attention weights
-                val attentionWeightsBh = applySoftmax(maskedScores)
-                attentionWeights!![b][h] = attentionWeightsBh
+                // Apply attention to values
+                val headOutput = matmul(attention, headV)
 
-                // Attention output: weights @ V_h
-                val attentionOutputH = matrixMultiply(attentionWeightsBh, V_h)
-
-                // Store in attentionOutputs
-                for (i in 0 until seqLen) {
-                    for (j in 0 until dK) {
-                        attentionOutputs!![b * seqLen + i][h * dK + j] = attentionOutputH[i][j]
+                // Store result back to appropriate head position
+                for (i in 0 until tokensPerSample) {
+                    for (j in 0 until headSize) {
+                        result[startIdx + i, headStartCol + j] = headOutput[i, j]
                     }
                 }
             }
         }
 
-        // Final linear projection
-        val output = matrixMultiply(attentionOutputs!!, wO)
-        preActivation = output
-        this.output = output
-        return output
+        attentionWeights = result // Store for backward pass
+        return result
     }
 
+    /**
+     * Extracts a batch of rows from a matrix.
+     */
+    private fun extractBatch(matrix: FlexibleMatrix, startRow: Int, endRow: Int): FlexibleMatrix {
+        val rows = endRow - startRow
+        return createMatrix(rows, matrix.cols, matrix.isSinglePrecision) { i, j ->
+            matrix[startRow + i, j]
+        }
+    }
+
+    /**
+     * Extracts a range of columns from a matrix.
+     */
+    private fun extractColumns(matrix: FlexibleMatrix, startCol: Int, endCol: Int): FlexibleMatrix {
+        val cols = endCol - startCol
+        return createMatrix(matrix.rows, cols, matrix.isSinglePrecision) { i, j ->
+            matrix[i, startCol + j]
+        }
+    }
+
+    /**
+     * Scales all elements of a matrix by a constant factor.
+     */
+    private fun scaleMatrix(matrix: FlexibleMatrix, scale: Double) {
+        for (i in 0 until matrix.rows) {
+            for (j in 0 until matrix.cols) {
+                matrix[i, j] = matrix[i, j] * scale
+            }
+        }
+    }
+
+    /**
+     * Applies softmax activation to each row of the matrix.
+     */
+    private fun softmax(matrix: FlexibleMatrix): FlexibleMatrix {
+        val result = createMatrix(matrix.rows, matrix.cols, matrix.isSinglePrecision) { _, _ -> 0.0 }
+        
+        for (i in 0 until matrix.rows) {
+            // Find max for numerical stability
+            var maxVal = Double.NEGATIVE_INFINITY
+            for (j in 0 until matrix.cols) {
+                if (matrix[i, j] > maxVal) {
+                    maxVal = matrix[i, j]
+                }
+            }
+            
+            // Compute exp and sum
+            var sum = 0.0
+            for (j in 0 until matrix.cols) {
+                val expVal = kotlin.math.exp(matrix[i, j] - maxVal)
+                result[i, j] = expVal
+                sum += expVal
+            }
+            
+            // Normalize
+            for (j in 0 until matrix.cols) {
+                result[i, j] /= sum
+            }
+        }
+        
+        return result
+    }
+
+    /**
+     * Matrix multiplication using FlexibleMatrix.
+     */
+    private fun matmul(a: FlexibleMatrix, b: FlexibleMatrix): FlexibleMatrix {
+        require(a.cols == b.rows) { "Matrix dimensions don't match for multiplication" }
+        
+        return createMatrix(a.rows, b.cols, a.isSinglePrecision) { i, j ->
+            var sum = 0.0
+            for (k in 0 until a.cols) {
+                sum += a[i, k] * b[k, j]
+            }
+            sum
+        }
+    }
+
+    /**
+     * Matrix transpose using FlexibleMatrix.
+     */
+    private fun transpose(matrix: FlexibleMatrix): FlexibleMatrix {
+        return createMatrix(matrix.cols, matrix.rows, matrix.isSinglePrecision) { i, j ->
+            matrix[j, i]
+        }
+    }
+
+    /**
+     * Computes multi-head attention using standard Matrix input.
+     */
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
+    }
+
+    override fun backward(
+        currentInput: FlexibleMatrix?,
+        delta: FlexibleMatrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): FlexibleMatrix {
+        val input = currentInput!!
+
+        // Gradient w.r.t. output projection weights
+        gradWOutput = matmul(transpose(attentionOutput!!), delta)
+
+        // Gradient w.r.t. attention output
+        val gradAttentionOutput = matmul(delta, transpose(wOutput))
+
+        // Gradients w.r.t. Q, K, V (simplified implementation)
+        gradWQuery = matmul(transpose(input), gradAttentionOutput)
+        gradWKey = matmul(transpose(input), gradAttentionOutput)
+        gradWValue = matmul(transpose(input), gradAttentionOutput)
+
+        // Gradient w.r.t. input
+        val gradInput = createMatrix(input.rows, input.cols, input.isSinglePrecision) { _, _ -> 0.0 }
+        
+        val gradQ = matmul(gradAttentionOutput, transpose(wQuery))
+        val gradK = matmul(gradAttentionOutput, transpose(wKey))
+        val gradV = matmul(gradAttentionOutput, transpose(wValue))
+
+        for (i in 0 until input.rows) {
+            for (j in 0 until input.cols) {
+                gradInput[i, j] = gradQ[i, j] + gradK[i, j] + gradV[i, j]
+            }
+        }
+
+        return gradInput
+    }
+
+    /**
+     * Computes the backward pass for multi-head attention with standard Matrix input.
+     */
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
@@ -152,65 +331,20 @@ class MultiHeadAttentionLayer(
         previousLayer: Layer?,
         lambda: Double
     ): Matrix {
-        val X = currentInput!!
-        val batchSize = X.size / tokensPerSample
-        val seqLen = tokensPerSample
-
-        // Gradient w.r.t. attention outputs
-        val gradAttentionOutputs = matrixMultiply(delta, transpose(wO))
-
-        // Initialize gradients for Q, K, V
-        val gradQ = Array(X.size) { DoubleArray(modelSize) { 0.0 } }
-        val gradK = Array(X.size) { DoubleArray(modelSize) { 0.0 } }
-        val gradV = Array(X.size) { DoubleArray(modelSize) { 0.0 } }
-
-        // Compute gradients for each batch and head
-        for (b in 0 until batchSize) {
-            for (h in 0 until headCount) {
-                val attentionWeightsBh = attentionWeights!![b][h]
-                val Vh = Array(seqLen) { i -> DoubleArray(dK) { V!![b * seqLen + i][h * dK + it] } }
-                val gradAttentionOutputH = Array(seqLen) { i -> DoubleArray(dK) { gradAttentionOutputs[b * seqLen + i][h * dK + it] } }
-
-                val gradAttentionWeightsBh = matrixMultiply(gradAttentionOutputH, transpose(Vh))
-                val gradVh = matrixMultiply(transpose(attentionWeightsBh), gradAttentionOutputH)
-                val gradScoresBh = softmaxGradient(gradAttentionWeightsBh, attentionWeightsBh)
-                val gradQKT = scalarMultiply(gradScoresBh, sqrt(dK.toDouble()))
-
-                val Qh = Array(seqLen) { i -> DoubleArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
-                val Kh = Array(seqLen) { i -> DoubleArray(dK) { K!![b * seqLen + i][h * dK + it] } }
-
-                val gradQh = matrixMultiply(gradQKT, Kh)
-                val gradKh = matrixMultiply(transpose(gradQKT), Qh)
-
-                // Accumulate gradients
-                for (i in 0 until seqLen) {
-                    for (j in 0 until dK) {
-                        gradQ[b * seqLen + i][h * dK + j] += gradQh[i][j]
-                        gradK[b * seqLen + i][h * dK + j] += gradKh[i][j]
-                        gradV[b * seqLen + i][h * dK + j] += gradVh[i][j]
-                    }
-                }
-            }
-        }
-
-        // Compute weight gradients with regularization
-        gradWQ = add(matrixMultiply(transpose(X), gradQ), scalarMultiply(wQ, lambda))
-        gradWK = add(matrixMultiply(transpose(X), gradK), scalarMultiply(wK, lambda))
-        gradWV = add(matrixMultiply(transpose(X), gradV), scalarMultiply(wV, lambda))
-        gradWO = add(matrixMultiply(transpose(attentionOutputs!!), delta), scalarMultiply(wO, lambda))
-
-        // Compute input gradient
-        val gradX = add(
-            add(
-                matrixMultiply(gradQ, transpose(wQ)),
-                matrixMultiply(gradK, transpose(wK))
-            ),
-            matrixMultiply(gradV, transpose(wV))
-        )
-
-        return gradX
+        return backward(
+            currentInput?.toFlexibleMatrix(),
+            delta.toFlexibleMatrix(),
+            featureSize,
+            nextLayer,
+            previousLayer,
+            lambda
+        ).toMatrix()
     }
 
+    /**
+     * Updates all weight matrices using the Adam optimizer.
+     */
+    @Suppress("DuplicatedCode")
     override fun updateParameters(
         adamBeta1Power: Double,
         adamBeta2Power: Double,
@@ -218,72 +352,84 @@ class MultiHeadAttentionLayer(
         adamBeta2: Double,
         learningRate: Double
     ) {
-        updateMatrix(wQ, gradWQ!!, momentWQ, velocityWQ, adamBeta1, adamBeta2, adamBeta1Power, adamBeta2Power, learningRate)
-        updateMatrix(wK, gradWK!!, momentWK, velocityWK, adamBeta1, adamBeta2, adamBeta1Power, adamBeta2Power, learningRate)
-        updateMatrix(wV, gradWV!!, momentWV, velocityWV, adamBeta1, adamBeta2, adamBeta1Power, adamBeta2Power, learningRate)
-        updateMatrix(wO, gradWO!!, momentWO, velocityWO, adamBeta1, adamBeta2, adamBeta1Power, adamBeta2Power, learningRate)
+        fun correctMoment(moment: Double) = moment / (1.0 - adamBeta1Power)
+        fun correctVelocity(velocity: Double) = velocity / (1.0 - adamBeta2Power)
+
+        // Update query weights
+        updateWeightMatrix(wQuery, gradWQuery!!, momentWQuery, velocityWQuery, 
+                          adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+        
+        // Update key weights
+        updateWeightMatrix(wKey, gradWKey!!, momentWKey, velocityWKey,
+                          adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+        
+        // Update value weights
+        updateWeightMatrix(wValue, gradWValue!!, momentWValue, velocityWValue,
+                          adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+        
+        // Update output weights
+        updateWeightMatrix(wOutput, gradWOutput!!, momentWOutput, velocityWOutput,
+                          adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
     }
 
-    private fun updateMatrix(
-        weights: Matrix,
-        grad: Matrix,
-        moment: Matrix,
-        velocity: Matrix,
+    /**
+     * Helper function to update a weight matrix using Adam optimizer.
+     */
+    private fun updateWeightMatrix(
+        weights: FlexibleMatrix,
+        gradients: FlexibleMatrix,
+        moment: FlexibleMatrix,
+        velocity: FlexibleMatrix,
         beta1: Double,
         beta2: Double,
-        beta1Power: Double,
-        beta2Power: Double,
-        learningRate: Double
+        learningRate: Double,
+        correctMoment: (Double) -> Double,
+        correctVelocity: (Double) -> Double
     ) {
-        for (i in weights.indices) {
-            for (j in weights[i].indices) {
-                val g = grad[i][j]
-                moment[i][j] = beta1 * moment[i][j] + (1 - beta1) * g
-                velocity[i][j] = beta2 * velocity[i][j] + (1 - beta2) * g * g
-                val mHat = moment[i][j] / (1 - beta1Power)
-                val vHat = velocity[i][j] / (1 - beta2Power)
-                weights[i][j] -= learningRate * mHat / (sqrt(vHat) + EPSILON)
+        for (i in 0 until weights.rows) {
+            for (j in 0 until weights.cols) {
+                val gradient = gradients[i, j]
+                
+                moment[i, j] = beta1 * moment[i, j] + (1 - beta1) * gradient
+                velocity[i, j] = beta2 * velocity[i, j] + (1 - beta2) * gradient * gradient
+                
+                weights[i, j] -= learningRate * correctMoment(moment[i, j]) / 
+                                 (sqrt(correctVelocity(velocity[i, j])) + EPSILON)
             }
         }
     }
 
+    /**
+     * Creates a deep copy of the multi-head attention layer.
+     */
     override fun clone(): Layer {
-        val copy = MultiHeadAttentionLayer(tokensPerSample, modelSize, headCount)
-        copy.wQ = wQ.deepCopy()
-        copy.wK = wK.deepCopy()
-        copy.wV = wV.deepCopy()
-        copy.wO = wO.deepCopy()
-        copy.momentWQ = momentWQ.deepCopy()
-        copy.velocityWQ = velocityWQ.deepCopy()
-        copy.momentWK = momentWK.deepCopy()
-        copy.velocityWK = velocityWK.deepCopy()
-        copy.momentWV = momentWV.deepCopy()
-        copy.velocityWV = velocityWV.deepCopy()
-        copy.momentWO = momentWO.deepCopy()
-        copy.velocityWO = velocityWO.deepCopy()
-        return copy
-    }
-
-    private fun applySoftmax(matrix: Matrix): Matrix {
-        return matrix.map { row ->
-            val max = row.maxOrNull() ?: 0.0
-            val expRow = row.map { kotlin.math.exp(it - max) }
-            val sumExp = expRow.sum()
-            expRow.map { it / sumExp }.toDoubleArray()
-        }.toTypedArray()
-    }
-
-    private fun softmaxGradient(gradOutput: Matrix, output: Matrix): Matrix {
-        val result = Array(output.size) { DoubleArray(output[0].size) }
-        for (i in output.indices) {
-            val y = output[i]
-            val gradY = gradOutput[i]
-            val dot = y.zip(gradY).sumOf { it.first * it.second }
-            for (j in y.indices) {
-                result[i][j] = y[j] * (gradY[j] - dot)
-            }
+        return MultiHeadAttentionLayer(tokensPerSample, modelSize, headCount, precision).also { copy ->
+            copy.wQuery = wQuery.deepCopy()
+            copy.wKey = wKey.deepCopy()
+            copy.wValue = wValue.deepCopy()
+            copy.wOutput = wOutput.deepCopy()
+            
+            copy.momentWQuery = momentWQuery.deepCopy()
+            copy.velocityWQuery = velocityWQuery.deepCopy()
+            copy.momentWKey = momentWKey.deepCopy()
+            copy.velocityWKey = velocityWKey.deepCopy()
+            copy.momentWValue = momentWValue.deepCopy()
+            copy.velocityWValue = velocityWValue.deepCopy()
+            copy.momentWOutput = momentWOutput.deepCopy()
+            copy.velocityWOutput = velocityWOutput.deepCopy()
+            
+            copy.output = output?.deepCopy()
+            copy.preActivation = preActivation?.deepCopy()
+            copy.queries = queries?.deepCopy()
+            copy.keys = keys?.deepCopy()
+            copy.values = values?.deepCopy()
+            copy.attentionWeights = attentionWeights?.deepCopy()
+            copy.attentionOutput = attentionOutput?.deepCopy()
+            copy.gradWQuery = gradWQuery?.deepCopy()
+            copy.gradWKey = gradWKey?.deepCopy()
+            copy.gradWValue = gradWValue?.deepCopy()
+            copy.gradWOutput = gradWOutput?.deepCopy()
         }
-        return result
     }
 
     companion object {

@@ -11,6 +11,7 @@ import java.io.*
 import kotlin.apply
 import kotlin.math.min
 
+// Temporary typealias for conversion process
 typealias Matrix = Array<DoubleArray>
 
 /**
@@ -23,6 +24,7 @@ typealias Matrix = Array<DoubleArray>
  * @property lambda Regularization parameter.
  * @property beta1 Exponential decay rate for the first moment estimates (Adam).
  * @property beta2 Exponential decay rate for the second moment estimates (Adam).
+ * @property precision The precision to use for internal computations (SINGLE or DOUBLE)
  */
 @Suppress("MemberVisibilityCanBePrivate")
 data class NeuralNetwork(
@@ -33,11 +35,12 @@ data class NeuralNetwork(
     var lambda: Double = 1e-4,
     var beta1: Double = 0.9,
     var beta2: Double = 0.999,
+    val precision: MatrixPrecision = MatrixPrecision.DOUBLE,
 ) : Serializable {
 
     private var beta1Power = 1.0
     private var beta2Power = 1.0
-    private var lastInput: Matrix? = null
+    private var lastInput: FlexibleMatrix? = null
 
     fun withTransforms(
         feature: ColumnTransforms = featureTransforms ?: emptyList(),
@@ -54,27 +57,38 @@ data class NeuralNetwork(
      * @return Output matrix after processing through all layers.
      */
     fun predict(
-        input: Matrix,
+        input: FlexibleMatrix,
         isTraining: Boolean = false,
         returnOriginalScale: Boolean = false,
         skipFeatureTransform: Boolean = false
-    ): Matrix {
+    ): FlexibleMatrix {
+        val inputMatrix = input.toMatrix()
         val x = if (skipFeatureTransform)
-            input
+            inputMatrix
         else
-            featureTransforms?.apply(input) ?: input
-        lastInput = x
+            featureTransforms?.apply(inputMatrix) ?: inputMatrix
+        lastInput = x.toFlexibleMatrix()
 
-        var out = x
+        var out = x.toFlexibleMatrix()
         layers.forEachIndexed { idx, layer ->
             out = layer.forward(out, isTraining, layers.getOrNull(idx + 1))
         }
 
         return if (returnOriginalScale && valueTransforms?.any { it != null } == true)
-            valueTransforms.inverse(out)
+            valueTransforms.inverse(out.toMatrix()).toFlexibleMatrix()
         else
             out
     }
+    
+    /**
+     * Backward compatibility method for legacy Matrix input
+     */
+    fun predict(
+        input: Matrix,
+        isTraining: Boolean = false,
+        returnOriginalScale: Boolean = false,
+        skipFeatureTransform: Boolean = false
+    ): Matrix = predict(input.toFlexibleMatrix(), isTraining, returnOriginalScale, skipFeatureTransform).toMatrix()
 
     /**
      * Feeds an input matrix forward through the network.
@@ -94,21 +108,22 @@ data class NeuralNetwork(
      * @param sampleWeights Optional sample weights.
      */
     private fun backward(
-        predicted: Matrix,
-        actual: Matrix,
+        predicted: FlexibleMatrix,
+        actual: FlexibleMatrix,
         sampleWeights: DoubleArray? = null
     ) {
-        val sampleCount = actual.size.toDouble()
-        val weights = sampleWeights ?: DoubleArray(actual.size) { 1.0 }
+        val sampleCount = actual.rows.toDouble()
+        val weights = sampleWeights ?: DoubleArray(actual.rows) { 1.0 }
 
-        // Compute softmax probabilities
+        // Compute softmax probabilities using FlexibleMatrix extensions
         val probs = softmax(predicted)
 
-        // Delta for CE loss: probs - actual
-        var delta: Matrix = subtract(probs, actual).mapIndexed { r, row ->
-            DoubleArray(row.size) { c -> row[c] * weights[r] }
-        }.toTypedArray()
+        // Delta for CE loss: probs - actual, weighted by sample weights
+        val delta = createMatrix(probs.rows, probs.cols, probs.isSinglePrecision) { r, c ->
+            (probs[r, c] - actual[r, c]) * weights[r]
+        }
 
+        var currentDelta = delta
         for (i in layers.lastIndex downTo 0) {
             val layer = layers[i]
             val nextLayer = layers.getOrNull(i + 1)      // forward-order "next"
@@ -117,9 +132,9 @@ data class NeuralNetwork(
             val inputToLayer = previousLayer?.output ?: lastInput
             ?: error("No input recorded for layer $i")
 
-            delta = layer.backward(
-                currentInput = inputToLayer,                 // <-- change
-                delta = delta,
+            currentDelta = layer.backward(
+                currentInput = inputToLayer,
+                delta = currentDelta,
                 featureSize = sampleCount,
                 nextLayer = nextLayer,
                 previousLayer = previousLayer,
@@ -129,6 +144,15 @@ data class NeuralNetwork(
     }
 
     /**
+     * Backward compatibility method for legacy Matrix input
+     */
+    private fun backward(
+        predicted: Matrix,
+        actual: Matrix,
+        sampleWeights: DoubleArray? = null
+    ) = backward(predicted.toFlexibleMatrix(), actual.toFlexibleMatrix(), sampleWeights)
+
+    /**
      * Performs the backward pass to compute gradients using sparse targets.
      *
      * @param predicted The predicted output logits.
@@ -136,13 +160,14 @@ data class NeuralNetwork(
      * @param sampleWeights Optional sample weights.
      */
     private fun backwardSparse(
-        predicted: Matrix,
+        predicted: FlexibleMatrix,
         sparseTargets: IntArray,
         sampleWeights: DoubleArray? = null
     ) {
-        val sampleCount = predicted.size.toDouble()
+        val sampleCount = predicted.rows.toDouble()
         
-        var delta: Matrix = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
+        val deltaMatrix = sparseCategoricalCrossEntropyGradients(predicted.toMatrix(), sparseTargets, sampleWeights)
+        var delta = deltaMatrix.toFlexibleMatrix()
 
         val startIndex = layers.lastIndex
 
@@ -164,6 +189,15 @@ data class NeuralNetwork(
             )
         }
     }
+
+    /**
+     * Backward compatibility method for legacy Matrix input
+     */
+    private fun backwardSparse(
+        predicted: Matrix,
+        sparseTargets: IntArray,
+        sampleWeights: DoubleArray? = null
+    ) = backwardSparse(predicted.toFlexibleMatrix(), sparseTargets, sampleWeights)
 
     /**
      * Updates the network parameters using the Adam optimization algorithm.
@@ -191,8 +225,8 @@ data class NeuralNetwork(
      * @return The best model observed during training.
      */
     fun train(
-        trainingFeatures: Matrix,
-        trainingValues: Matrix,
+        trainingFeatures: FlexibleMatrix,
+        trainingValues: FlexibleMatrix,
         trainingWeights: DoubleArray? = null,
         batchSize: Int = 32,
         maxEpochs: Int = 100,
@@ -202,12 +236,14 @@ data class NeuralNetwork(
         lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
     ): NeuralNetwork {
 
-        require(trainingWeights == null || trainingWeights.size == trainingFeatures.size) {
+        require(trainingWeights == null || trainingWeights.size == trainingFeatures.rows) {
             "Sample weights size must match number of training samples"
         }
 
-        val x = featureTransforms?.fitAndTransform(trainingFeatures) ?: trainingFeatures
-        val y = valueTransforms?.fitAndTransform(trainingValues) ?: trainingValues
+        val trainingFeaturesMatrix = trainingFeatures.toMatrix()
+        val trainingValuesMatrix = trainingValues.toMatrix()
+        val x = featureTransforms?.fitAndTransform(trainingFeaturesMatrix) ?: trainingFeaturesMatrix
+        val y = valueTransforms?.fitAndTransform(trainingValuesMatrix) ?: trainingValuesMatrix
 
         var bestLoss = Double.POSITIVE_INFINITY
         var bestModel: NeuralNetwork = this.clone()
@@ -231,8 +267,8 @@ data class NeuralNetwork(
                     batchIndices.map { weights[it] }.toDoubleArray()
                 }
 
-                val batchPredictions = predict(batchFeatures, isTraining = true, skipFeatureTransform = true)
-                backward(batchPredictions, batchLabels, batchWeights)
+                val batchPredictions = predict(batchFeatures.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
+                backward(batchPredictions, batchLabels.toFlexibleMatrix(), batchWeights)
                 updateParameters()
             }
 
@@ -247,6 +283,31 @@ data class NeuralNetwork(
         }
         return bestModel
     }
+
+    /**
+     * Backward compatibility method for legacy Matrix input
+     */
+    fun train(
+        trainingFeatures: Matrix,
+        trainingValues: Matrix,
+        trainingWeights: DoubleArray? = null,
+        batchSize: Int = 32,
+        maxEpochs: Int = 100,
+        patience: Int = 10,
+        shuffle: Boolean = true,
+        tokensPerSample: Int = 1,
+        lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
+    ): NeuralNetwork = train(
+        trainingFeatures.toFlexibleMatrix(),
+        trainingValues.toFlexibleMatrix(),
+        trainingWeights,
+        batchSize,
+        maxEpochs,
+        patience,
+        shuffle,
+        tokensPerSample,
+        lossFn
+    )
 
     /**
      * Trains the neural network on streaming data using mini-batch gradient descent with early stopping.
@@ -271,7 +332,7 @@ data class NeuralNetwork(
         testFrac: Double = 0.1,
         shuffle: Boolean = true,
         trace: Boolean = true,
-        lossFn: (pred: Matrix, actual: Matrix) -> Double =
+        lossFn: (pred: FlexibleMatrix, actual: FlexibleMatrix) -> Double =
             { p, a -> p.meanStandardError(a) },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
         saveModelPath: String? = null,
@@ -305,18 +366,18 @@ data class NeuralNetwork(
                     val yTrain = valueTransforms?.fitAndTransform(yTrainFlat) ?: yTrainFlat
 
                     // --- train step ---------------------------------------------------
-                    val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
-                    backward(predTrain, yTrain)
+                    val predTrain = predict(xTrain.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
+                    backward(predTrain, yTrain.toFlexibleMatrix())
                     updateParameters()
 
                     // --- evaluate on test slice (do NOT refit transforms) ------------
                     val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
                     val yTestFlat = yTestRawList.flatMap { it.toList() }.toTypedArray()
                     val yTest = valueTransforms?.apply(yTestFlat) ?: yTestFlat
-                    val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
+                    val predTest = predict(xTest.toFlexibleMatrix(), isTraining = false, skipFeatureTransform = true)
 
-                    runningTrainLoss += lossFn(predTrain, yTrain) * xTrain.size
-                    runningTestLoss += lossFn(predTest, yTest) * xTest.size
+                    runningTrainLoss += lossFn(predTrain, yTrain.toFlexibleMatrix()) * xTrain.size
+                    runningTestLoss += lossFn(predTest, yTest.toFlexibleMatrix()) * xTest.size
                     testSamples += xTest.size
 
                     bx.clear(); by.clear()
@@ -333,16 +394,16 @@ data class NeuralNetwork(
                 val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
                 val yTfFlat = yTList.flatMap { it.toList() }.toTypedArray()
                 val yTf = valueTransforms?.fitAndTransform(yTfFlat) ?: yTfFlat
-                val predT = predict(xTf, true, skipFeatureTransform = true)
-                backward(predT, yTf); updateParameters()
+                val predT = predict(xTf.toFlexibleMatrix(), true, skipFeatureTransform = true)
+                backward(predT, yTf.toFlexibleMatrix()); updateParameters()
 
                 val xv2 = featureTransforms?.apply(xv) ?: xv
                 val yvFlat = yvList.flatMap { it.toList() }.toTypedArray()
                 val yv2 = valueTransforms?.apply(yvFlat) ?: yvFlat
-                val predV = predict(xv2, false, skipFeatureTransform = true)
+                val predV = predict(xv2.toFlexibleMatrix(), false, skipFeatureTransform = true)
 
-                runningTrainLoss += lossFn(predT, yTf) * xTf.size
-                runningTestLoss += lossFn(predV, yv2) * xv2.size
+                runningTrainLoss += lossFn(predT, yTf.toFlexibleMatrix()) * xTf.size
+                runningTestLoss += lossFn(predV, yv2.toFlexibleMatrix()) * xv2.size
                 testSamples += xv2.size
             }
 
@@ -409,8 +470,8 @@ data class NeuralNetwork(
         testFrac: Double = 0.1,
         shuffle: Boolean = true,
         trace: Boolean = true,
-        lossFn: (pred: Matrix, sparseTargets: IntArray) -> Double =
-            { p, s -> sparseCategoricalCrossEntropy(p, s) },
+        lossFn: (pred: FlexibleMatrix, sparseTargets: IntArray) -> Double =
+            { p, s -> sparseCategoricalCrossEntropy(p.toMatrix(), s) },
         probeFn: () -> Unit = {  },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
         saveModelPath: String? = null,
@@ -419,8 +480,6 @@ data class NeuralNetwork(
         var bestLoss = Double.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
-        var iter: Long = 0
-
 
         repeat(maxEpochs) { epoch ->
             val bx = mutableListOf<DoubleArray>()
@@ -445,23 +504,22 @@ data class NeuralNetwork(
                     val yTrainFlat = yTrainRaw.flatMap { it.toList() }.toIntArray()
 
                     // --- train step ---------------------------------------------------
-                    val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
+                    val predTrain = predict(xTrain.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
                     backwardSparse(predTrain, yTrainFlat)
                     updateParameters()
 
                     // --- evaluate on test slice (do NOT refit transforms) ------------
                     val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
                     val yTestFlat = yTestRaw.flatMap { it.toList() }.toIntArray()
-                    val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
+                    val predTest = predict(xTest.toFlexibleMatrix(), isTraining = false, skipFeatureTransform = true)
 
                     runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.size
                     runningTestLoss += lossFn(predTest, yTestFlat) * xTest.size
                     testSamples += xTest.size
 
                     bx.clear(); by.clear()
+                    probeFn.invoke()
                 }
-                iter++
-                if (iter % 1000L == 0L) probeFn.invoke()
             }
 
             // left-overs
@@ -473,12 +531,12 @@ data class NeuralNetwork(
                 )
                 val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
                 val yTfFlat = yT.flatMap { it.toList() }.toIntArray()
-                val predT = predict(xTf, true, skipFeatureTransform = true)
+                val predT = predict(xTf.toFlexibleMatrix(), true, skipFeatureTransform = true)
                 backwardSparse(predT, yTfFlat); updateParameters()
 
                 val xv2 = featureTransforms?.apply(xv) ?: xv
                 val yvFlat = yv.flatMap { it.toList() }.toIntArray()
-                val predV = predict(xv2, false, skipFeatureTransform = true)
+                val predV = predict(xv2.toFlexibleMatrix(), false, skipFeatureTransform = true)
 
                 runningTrainLoss += lossFn(predT, yTfFlat) * xTf.size
                 runningTestLoss += lossFn(predV, yvFlat) * xv2.size
@@ -528,16 +586,24 @@ data class NeuralNetwork(
      * @param xRaw Raw feature matrix (samples × features) to train on.
      * @param yRaw Raw label matrix (samples × outputs) corresponding to [xRaw].
      */
-    private fun trainOnBatch(xRaw: Matrix, yRaw: Matrix) {
+    private fun trainOnBatch(xRaw: FlexibleMatrix, yRaw: FlexibleMatrix) {
         // 1. fit + transform in ONE call; each column transform updates itself
-        val x = featureTransforms?.fitAndTransform(xRaw) ?: xRaw
-        val y = valueTransforms?.fitAndTransform(yRaw) ?: yRaw
+        val xRawMatrix = xRaw.toMatrix()
+        val yRawMatrix = yRaw.toMatrix()
+        val x = featureTransforms?.fitAndTransform(xRawMatrix) ?: xRawMatrix
+        val y = valueTransforms?.fitAndTransform(yRawMatrix) ?: yRawMatrix
 
         // 2. forward / backward / Adam
-        val pred = predict(x, isTraining = true, skipFeatureTransform = true)
-        backward(pred, y)
+        val pred = predict(x.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
+        backward(pred, y.toFlexibleMatrix())
         updateParameters()
     }
+
+    /**
+     * Backward compatibility method for legacy Matrix input
+     */
+    private fun trainOnBatch(xRaw: Matrix, yRaw: Matrix) = 
+        trainOnBatch(xRaw.toFlexibleMatrix(), yRaw.toFlexibleMatrix())
 
     /**
      * Creates a deep copy of the current neural network including internal state.
@@ -551,6 +617,7 @@ data class NeuralNetwork(
             lambda = lambda,
             beta1 = beta1,
             beta2 = beta2,
+            precision = precision,
             featureTransforms = featureTransforms?.map { it?.clone() },
             valueTransforms = valueTransforms?.map { it?.clone() },
         ).apply {

@@ -58,13 +58,15 @@ class NeuralNetworkBuilder {
     private var beta1: Double = 0.9
     /** The exponential decay rate for the second moment estimates (Adam optimizer parameter). */
     private var beta2: Double = 0.999
+    /** The precision to use for internal computations (SINGLE or DOUBLE). */
+    var precision: MatrixPrecision = MatrixPrecision.DOUBLE
 
     /**
      * Configures the layers of the neural network using the [LayerBuilder] DSL.
      * @param block A lambda function with [LayerBuilder] as its receiver to define the layers.
      */
     fun layers(block: LayerBuilder.() -> Unit) {
-        layerList.addAll(LayerBuilder().apply(block).build())
+        layerList.addAll(LayerBuilder(precision).apply(block).build())
     }
 
     /**
@@ -97,7 +99,8 @@ class NeuralNetworkBuilder {
         learningRate = learningRate,
         lambda = lambda,
         beta1 = beta1,
-        beta2 = beta2
+        beta2 = beta2,
+        precision = precision
     )
 }
 
@@ -116,7 +119,7 @@ fun neuralNetwork(block: NeuralNetworkBuilder.() -> Unit): NeuralNetwork {
  * A builder specifically for defining the sequence of layers within a [NeuralNetwork].
  * Used within the `layers` block of the [NeuralNetworkBuilder] DSL.
  */
-class LayerBuilder {
+class LayerBuilder(private val precision: MatrixPrecision = MatrixPrecision.DOUBLE) {
     private val layers = mutableListOf<Layer>()
 
     /**
@@ -128,7 +131,7 @@ class LayerBuilder {
      * @param dropoutRate The probability of dropping out neurons during training (regularization). Defaults to `0.0` (no dropout).
      */
     fun dense(inputSize: Int, outputSize: Int, activation: Activation, dropoutRate: Double = 0.0) {
-        layers += DenseLayer(inputSize, outputSize, activation, dropoutRate)
+        layers += DenseLayer(inputSize, outputSize, activation, dropoutRate, precision)
     }
 
     /**
@@ -138,7 +141,7 @@ class LayerBuilder {
      * @param size The number of features/neurons the normalization is applied to (should match the output size of the previous layer).
      */
     fun batchNorm(size: Int) {
-        layers += BatchNormalizationLayer(size)
+        layers += BatchNormalizationLayer(size, precision)
     }
 
     /**
@@ -149,7 +152,7 @@ class LayerBuilder {
      * @param embeddingSize The dimensionality of the embedding vectors.
      */
     fun embedding(vocabSize: Int, embeddingSize: Int) {
-        layers += EmbeddingLayer(vocabSize, embeddingSize)
+        layers += EmbeddingLayer(vocabSize, embeddingSize, precision)
     }
 
     /**
@@ -159,7 +162,7 @@ class LayerBuilder {
      * @param size The number of features to normalize.
      */
     fun layerNorm(size: Int) {
-        layers += LayerNormalizationLayer(size)
+        layers += LayerNormalizationLayer(size, precision)
     }
 
     /**
@@ -171,7 +174,7 @@ class LayerBuilder {
      * @param headCount The number of attention heads to use.
      */
     fun multiHeadAttention(tokensPerSample: Int, modelSize: Int, headCount: Int) {
-        layers += MultiHeadAttentionLayer(tokensPerSample, modelSize, headCount)
+        layers += MultiHeadAttentionLayer(tokensPerSample, modelSize, headCount, precision)
     }
 
     /**
@@ -182,7 +185,7 @@ class LayerBuilder {
      * @param embeddingSize The dimensionality of the embeddings.
      */
     fun positionalEncoding(tokensPerSample: Int, embeddingSize: Int) {
-        layers += PositionalEncodingLayer(tokensPerSample, embeddingSize)
+        layers += PositionalEncodingLayer(tokensPerSample, embeddingSize, precision)
     }
 
     /**

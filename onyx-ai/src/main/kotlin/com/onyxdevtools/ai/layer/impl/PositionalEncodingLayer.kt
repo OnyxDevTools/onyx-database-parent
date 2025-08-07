@@ -1,109 +1,109 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
-import com.onyxdevtools.ai.extensions.add
+import com.onyxdevtools.ai.*
+import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 
 /**
- * Positional encoding layer that adds position information to token embeddings in transformer architectures.
+ * Positional Encoding implementation for transformer architectures.
  *
- * Transformer models lack inherent understanding of sequence order since attention mechanisms
- * are permutation-invariant. This layer addresses this by adding deterministic positional
- * encodings to input embeddings, allowing the model to understand token positions within sequences.
+ * Positional encoding injects information about the position of tokens in a sequence into their embeddings.
+ * This is crucial for transformer models since attention mechanisms are inherently permutation-invariant
+ * and don't have built-in notion of sequence order.
  *
  * **Mathematical Formulation:**
- * Uses sine and cosine functions with different frequencies as described in "Attention Is All You Need":
- * - PE(pos, 2i) = sin(pos / 10000^(2i / d_model))
- * - PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
+ * For position pos and dimension i, the positional encoding is computed as:
+ * - PE(pos, 2i) = sin(pos / 10000^(2i/d_model))
+ * - PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))
  *
- * Where:
- * - pos = position in the sequence
- * - i = dimension index
- * - d_model = embedding dimension
+ * Where d_model is the embedding dimension.
  *
- * **Key Properties:**
- * - **Deterministic**: Same position always gets the same encoding
- * - **Unique**: Each position has a unique encoding pattern
- * - **Relative Distance**: Model can learn to attend to relative positions
- * - **Extrapolation**: Can handle sequences longer than seen during training
- * - **No Parameters**: Fixed encodings require no training
+ * **Key Benefits:**
+ * - **Fixed patterns**: Uses deterministic sinusoidal functions, no learnable parameters
+ * - **Relative positions**: The model can learn to attend by relative positions
+ * - **Extrapolation**: Can potentially handle sequences longer than those seen during training
+ * - **Unique encoding**: Each position gets a unique encoding pattern
  *
- * **Advantages over Learned Positional Embeddings:**
- * - Works with variable sequence lengths
- * - Can extrapolate to longer sequences
- * - No additional parameters to learn
- * - Captures smooth positional relationships
+ * **Usage in Transformers:**
+ * Positional encodings are typically:
+ * - Added to input embeddings at the beginning of the model
+ * - Applied before the first transformer block
+ * - Combined with token embeddings via element-wise addition
  *
- * **Usage in Architecture:**
- * Typically applied immediately after the embedding layer and before
- * the first transformer block in models like GPT, BERT, and T5.
+ * This implementation is parameter-free and simply adds pre-computed positional encodings
+ * to the input embeddings during the forward pass.
  *
- * @param tokensPerSample The maximum sequence length that will be processed.
- *                       Determines the size of the precomputed encoding matrix.
- * @param embeddingSize The dimensionality of the input embeddings.
- *                     Must match the embedding dimension of input tokens.
+ * @param tokensPerSample The maximum sequence length (number of positions to encode)
+ * @param embeddingSize The dimensionality of the embeddings (must match input dimension)
+ * @param precision The precision to use for internal computations (SINGLE or DOUBLE)
+ * @see Layer
  * @see EmbeddingLayer
  * @see MultiHeadAttentionLayer
  */
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
-    private val embeddingSize: Int
+    private val embeddingSize: Int,
+    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var output: FlexibleMatrix? = null
+    override var preActivation: FlexibleMatrix? = null
     override val activation: Activation = Activation.LINEAR
 
-    // Precomputed positional encoding matrix of shape (sequenceLength, embeddingDim)
-    private val positionalEncoding: Matrix
+    // Pre-computed positional encodings (fixed, not learnable)
+    private val positionalEncodings: FlexibleMatrix
 
     init {
-        positionalEncoding = computePositionalEncoding(tokensPerSample, embeddingSize)
-    }
-
-    /**
-     * Computes the positional encoding matrix using sine and cosine functions.
-     * For position pos and dimension i:
-     * - pe[pos, 2k] = sin(pos / 10000^(2k / embeddingDim))
-     * - pe[pos, 2k+1] = cos(pos / 10000^(2k / embeddingDim))
-     */
-    private fun computePositionalEncoding(seqLen: Int, embDim: Int): Matrix {
-        val pe = Array(seqLen) { DoubleArray(embDim) }
-        for (pos in 0 until seqLen) {
-            for (i in 0 until embDim step 2) {
-                val denominator = 10000.0.pow((i / embDim.toDouble()))
-                pe[pos][i] = sin(pos / denominator)
-                if (i + 1 < embDim) {
-                    pe[pos][i + 1] = cos(pos / denominator)
-                }
+        val isSinglePrecision = precision == MatrixPrecision.SINGLE
+        
+        // Pre-compute positional encodings using sinusoidal functions
+        positionalEncodings = createMatrix(tokensPerSample, embeddingSize, isSinglePrecision) { pos, i ->
+            val angle = pos.toDouble() / 10000.0.pow(2.0 * (i / 2) / embeddingSize.toDouble())
+            if (i % 2 == 0) {
+                sin(angle)
+            } else {
+                cos(angle)
             }
         }
-        return pe
     }
 
-    /**
-     * Adds positional encodings to the input embeddings.
-     * Input shape: (batchSize * sequenceLength, embeddingDim)
-     * Output shape: (batchSize * sequenceLength, embeddingDim)
-     */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val batchSize = input.size / tokensPerSample
-        // Create positional encodings matrix matching input shape
-        val posEncodings = Array(batchSize * tokensPerSample) { i ->
-            val t = i % tokensPerSample
-            positionalEncoding[t].copyOf()
+    override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
+        val batchSize = input.rows / tokensPerSample
+        
+        // Add positional encodings to input embeddings
+        output = createMatrix(input.rows, input.cols, input.isSinglePrecision) { row, col ->
+            val positionInSequence = row % tokensPerSample
+            input[row, col] + positionalEncodings[positionInSequence, col]
         }
-        preActivation = input
-        output = add(input, posEncodings) // Element-wise addition
+
         return output!!
     }
 
     /**
-     * Passes the gradient through unchanged, as positional encodings are fixed.
+     * Adds positional encodings to input embeddings using standard Matrix input.
+     */
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
+    }
+
+    override fun backward(
+        currentInput: FlexibleMatrix?,
+        delta: FlexibleMatrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): FlexibleMatrix {
+        // Positional encoding has no learnable parameters, so gradient simply passes through
+        return delta
+    }
+
+    /**
+     * Computes the backward pass for positional encoding with standard Matrix input.
      */
     override fun backward(
         currentInput: Matrix?,
@@ -113,11 +113,18 @@ class PositionalEncodingLayer(
         previousLayer: Layer?,
         lambda: Double
     ): Matrix {
-        return delta
+        return backward(
+            currentInput?.toFlexibleMatrix(),
+            delta.toFlexibleMatrix(),
+            featureSize,
+            nextLayer,
+            previousLayer,
+            lambda
+        ).toMatrix()
     }
 
     /**
-     * No learnable parameters to update.
+     * No parameters to update since positional encodings are fixed.
      */
     override fun updateParameters(
         adamBeta1Power: Double,
@@ -126,13 +133,16 @@ class PositionalEncodingLayer(
         adamBeta2: Double,
         learningRate: Double
     ) {
-        // No-op
+        // No parameters to update - positional encodings are fixed
     }
 
     /**
-     * Creates a new instance with the same parameters.
+     * Creates a deep copy of the positional encoding layer.
      */
     override fun clone(): Layer {
-        return PositionalEncodingLayer(tokensPerSample, embeddingSize)
+        return PositionalEncodingLayer(tokensPerSample, embeddingSize, precision).also { copy ->
+            copy.output = output?.deepCopy()
+            copy.preActivation = preActivation?.deepCopy()
+        }
     }
 }

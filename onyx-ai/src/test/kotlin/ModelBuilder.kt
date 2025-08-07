@@ -1,8 +1,11 @@
+import Activation
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.data.DefaultSequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
+import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
+import com.onyxdevtools.ai.toMatrix
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.OnyxVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
@@ -13,18 +16,19 @@ import java.io.File
 // Add somewhere above train call
 fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
     val qs = listOf(
-        "[SOT]What are you?[SEP]",
-        "[SOT]Who is Alice?[SEP]",
-        "[SOT]Who is the White Rabbit?[SEP]",
-        "[SOT]Where is Wonderland?[SEP]",
-        "[SOT]What game does the Queen of Hearts play?[SEP]",
+        "[SOT]What are you?[SEP] ",
+        "[SOT]Who is Alice?[SEP] ",
+        "[SOT]Who is the White Rabbit?[SEP] ",
+        "[SOT]Where is Wonderland?[SEP] ",
+        "[SOT]What game does the Queen of Hearts play?[SEP] ",
         "[SOT]Alice was beginning to get very tired "
     )
     qs.forEach { q ->
         val out = model.chat(
             prompt = q,
             vocabulary = vocab,
-            seqLength = seqLen
+            seqLength = seqLen,
+            maxTokens = 5,
         )
         println("$q $out")
     }
@@ -92,8 +96,8 @@ class ComprehensiveLossFunction(
 }
 
 fun main() {
-    val books = File("/mnt/onyx/books/formatted_books")
-    val vocabulary = OnyxVocabulary("/mnt/onyx/books/vocabulary.dat")
+    val books = File("/Volumes/onyx/books/formatted_books")
+    val vocabulary = OnyxVocabulary("/Users/tosborn/Desktop/onyx/books/vocabulary_1.dat")
 
     if (vocabulary.size == 0) {
         books.listFiles()?.forEach {
@@ -104,13 +108,13 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 1024
+    val maxSequenceLength = 256
     val stride = maxSequenceLength
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
     val numHeads = 8
-    val ffHiddenDim = 128
+    val ffHiddenDim = 64
 
     val layers = listOf(
         EmbeddingLayer(vocabulary.size, embeddingDim),
@@ -147,7 +151,7 @@ fun main() {
             batchSize = 16,
             maxEpochs = 200,
             patience = 100,
-            lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
+            lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred.toMatrix(), sparseTargets) },
             probeFn = {
                 askProbes(model, vocabulary, maxSequenceLength)
             },

@@ -1,7 +1,8 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.FlexibleMatrix
+import com.onyxdevtools.ai.*
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import java.util.*
@@ -9,6 +10,9 @@ import java.util.concurrent.ThreadLocalRandom
 import java.util.stream.IntStream
 import kotlin.math.sqrt
 import kotlin.random.Random
+
+// Temporary typealias for conversion process
+typealias Matrix = Array<DoubleArray>
 
 /**
  * A fully connected (dense) neural network layer with dropout regularization and Adam optimization.
@@ -46,6 +50,7 @@ import kotlin.random.Random
  * @param activation The activation function applied after the linear transformation
  * @param dropoutRate The probability of setting each input to zero during training.
  *                    Range: [0.0, 1.0] where 0.0 = no dropout, 0.5 = 50% dropout
+ * @param precision The precision to use for internal computations (SINGLE or DOUBLE)
  * @see Layer
  * @see Activation
  */
@@ -53,32 +58,42 @@ class DenseLayer(
     private val inputSize: Int,
     private val outputSize: Int,
     override val activation: Activation,
-    val dropoutRate: Double = 0.0
+    val dropoutRate: Double = 0.0,
+    private val precision: MatrixPrecision = MatrixPrecision.SINGLE
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var preActivation: FlexibleMatrix? = null
+    override var output: FlexibleMatrix? = null
 
-    var weights: Matrix
-    private var biases = DoubleArray(outputSize) { 0.0 }
+    var weights: FlexibleMatrix
+    private var biases: FlexibleMatrix
 
-    private var momentWeights: Matrix
-    private var velocityWeights: Matrix
-    private var momentBiases = DoubleArray(outputSize)
-    private var velocityBiases = DoubleArray(outputSize)
+    private var momentWeights: FlexibleMatrix
+    private var velocityWeights: FlexibleMatrix
+    private var momentBiases: FlexibleMatrix
+    private var velocityBiases: FlexibleMatrix
 
-    private var dropoutMask: Matrix? = null
-    private var gradientWeights: Matrix? = null
-    private var gradientBiases: DoubleArray? = null
+    private var dropoutMask: FlexibleMatrix? = null
+    private var gradientWeights: FlexibleMatrix? = null
+    private var gradientBiases: FlexibleMatrix? = null
 
     init {
+        val isSinglePrecision = precision == MatrixPrecision.SINGLE
         val weightInitLimit = when (activation) {
             Activation.RELU, Activation.LEAKY_RELU -> sqrt(2.0 / inputSize)
             else -> sqrt(6.0 / (inputSize + outputSize))
         }
-        weights = Array(inputSize) { DoubleArray(outputSize) { Random.nextDouble(-weightInitLimit, weightInitLimit) } }
-        momentWeights = Array(inputSize) { DoubleArray(outputSize) }
-        velocityWeights = Array(inputSize) { DoubleArray(outputSize) }
+        
+        weights = createMatrix(inputSize, outputSize, isSinglePrecision) { _, _ ->
+            Random.nextDouble(-weightInitLimit, weightInitLimit)
+        }
+        
+        biases = createMatrix(1, outputSize, isSinglePrecision) { _, _ -> 0.0 }
+        
+        momentWeights = createMatrix(inputSize, outputSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityWeights = createMatrix(inputSize, outputSize, isSinglePrecision) { _, _ -> 0.0 }
+        momentBiases = createMatrix(1, outputSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityBiases = createMatrix(1, outputSize, isSinglePrecision) { _, _ -> 0.0 }
     }
 
     /**
@@ -88,35 +103,22 @@ class DenseLayer(
         val activations = output ?: error("Layer output must not be null before applying dropout.")
         if (dropoutRate == 0.0) return
 
-        val rows = activations.size
-        val cols = activations[0].size
+        val rows = activations.rows
+        val cols = activations.cols
         val keepProbability = 1.0 - dropoutRate
         val scaleFactor = 1.0 / keepProbability
 
-        if (dropoutMask == null || dropoutMask!!.size != rows || dropoutMask!![0].size != cols) {
-            dropoutMask = Array(rows) { DoubleArray(cols) }
+        if (dropoutMask == null || dropoutMask!!.rows != rows || dropoutMask!!.cols != cols) {
+            dropoutMask = createMatrix(rows, cols, activations.isSinglePrecision) { _, _ -> 0.0 }
         }
 
         val mask = dropoutMask!!
 
-        IntStream.range(0, rows).parallel().forEach { rowIndex ->
+        // Generate dropout mask
+        for (i in 0 until rows) {
             val rng = random.get()
-            val rowMask = mask[rowIndex]
-            var colIndex = 0
-            while (colIndex <= cols - 4) {
-                val r1 = rng.nextDouble()
-                val r2 = rng.nextDouble()
-                val r3 = rng.nextDouble()
-                val r4 = rng.nextDouble()
-                rowMask[colIndex] = if (r1 < keepProbability) scaleFactor else 0.0
-                rowMask[colIndex + 1] = if (r2 < keepProbability) scaleFactor else 0.0
-                rowMask[colIndex + 2] = if (r3 < keepProbability) scaleFactor else 0.0
-                rowMask[colIndex + 3] = if (r4 < keepProbability) scaleFactor else 0.0
-                colIndex += 4
-            }
-            while (colIndex < cols) {
-                rowMask[colIndex] = if (rng.nextDouble() < keepProbability) scaleFactor else 0.0
-                colIndex++
+            for (j in 0 until cols) {
+                mask[i, j] = if (rng.nextDouble() < keepProbability) scaleFactor else 0.0
             }
         }
 
@@ -126,13 +128,32 @@ class DenseLayer(
     /**
      * Performs the forward pass of the layer.
      */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val linearOutput = addVectorToRows(matrixMultiply(input, weights), biases)
-        val nextInput = nextLayer?.preForward(linearOutput, isTraining) ?: linearOutput
+    override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
+        // Linear transformation: input × weights + biases
+        val linearOutput = matrixMultiply(input, weights)
+        
+        // Add biases to each row
+        val biasedOutput = createMatrix(linearOutput.rows, linearOutput.cols, linearOutput.isSinglePrecision) { i, j ->
+            linearOutput[i, j] + biases[0, j]
+        }
+        
+        val nextInput = nextLayer?.preForward(biasedOutput.toMatrix(), isTraining)?.toFlexibleMatrix() ?: biasedOutput
         this.preActivation = nextInput
-        output = applyElementWise(nextInput, activation::activate)
+        
+        // Apply activation function
+        output = createMatrix(nextInput.rows, nextInput.cols, nextInput.isSinglePrecision) { i, j ->
+            activation.activate(nextInput[i, j])
+        }
+        
         if (isTraining) applyDropout()
         return output!!
+    }
+
+    /**
+     * Performs the forward pass of the layer (Matrix version for backward compatibility).
+     */
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
     }
 
     /**
@@ -149,27 +170,72 @@ class DenseLayer(
         fun correctMoment(m: Double) = m / (1.0 - adamBeta1Power)
         fun correctVelocity(v: Double) = v / (1.0 - adamBeta2Power)
 
+        // Update weights
         for (i in 0 until inputSize) {
             for (j in 0 until outputSize) {
-                val gradient = gradientWeights!![i][j]
-                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1 - adamBeta1) * gradient
-                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1 - adamBeta2) * gradient * gradient
-                weights[i][j] -= learningRate *
-                        correctMoment(momentWeights[i][j]) / (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
+                val gradient = gradientWeights!![i, j]
+                momentWeights[i, j] = adamBeta1 * momentWeights[i, j] + (1 - adamBeta1) * gradient
+                velocityWeights[i, j] = adamBeta2 * velocityWeights[i, j] + (1 - adamBeta2) * gradient * gradient
+                weights[i, j] -= learningRate *
+                        correctMoment(momentWeights[i, j]) / (sqrt(correctVelocity(velocityWeights[i, j])) + EPSILON)
             }
         }
 
+        // Update biases
         for (j in 0 until outputSize) {
-            val gradient = gradientBiases!![j]
-            momentBiases[j] = adamBeta1 * momentBiases[j] + (1 - adamBeta1) * gradient
-            velocityBiases[j] = adamBeta2 * velocityBiases[j] + (1 - adamBeta2) * gradient * gradient
-            biases[j] -= learningRate *
-                    correctMoment(momentBiases[j]) / (sqrt(correctVelocity(velocityBiases[j])) + EPSILON)
+            val gradient = gradientBiases!![0, j]
+            momentBiases[0, j] = adamBeta1 * momentBiases[0, j] + (1 - adamBeta1) * gradient
+            velocityBiases[0, j] = adamBeta2 * velocityBiases[0, j] + (1 - adamBeta2) * gradient * gradient
+            biases[0, j] -= learningRate *
+                    correctMoment(momentBiases[0, j]) / (sqrt(correctVelocity(velocityBiases[0, j])) + EPSILON)
         }
     }
 
     /**
      * Performs the backward pass of the layer.
+     */
+    override fun backward(
+        currentInput: FlexibleMatrix?,
+        delta: FlexibleMatrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): FlexibleMatrix {
+        val preActivationMatrix = preActivation!!
+        
+        // Apply activation derivative
+        val currentDelta = createMatrix(delta.rows, delta.cols, delta.isSinglePrecision) { i, j ->
+            delta[i, j] * activation.derivative(preActivationMatrix[i, j])
+        }
+
+        val previousOutput = if (previousLayer?.output != null) {
+            previousLayer.output!!
+        } else {
+            currentInput!!
+        }
+
+        // Compute weight gradients with regularization
+        val weightGrad = matrixMultiply(transpose(previousOutput), currentDelta)
+        gradientWeights = createMatrix(weights.rows, weights.cols, weights.isSinglePrecision) { i, j ->
+            weightGrad[i, j] / featureSize + lambda * weights[i, j]
+        }
+        
+        // Compute bias gradients
+        gradientBiases = createMatrix(1, outputSize, currentDelta.isSinglePrecision) { _, j ->
+            var sum = 0.0
+            for (i in 0 until currentDelta.rows) {
+                sum += currentDelta[i, j]
+            }
+            sum / featureSize
+        }
+
+        // Return gradient for previous layer
+        return matrixMultiply(currentDelta, transpose(weights))
+    }
+
+    /**
+     * Performs the backward pass of the layer (Matrix version for backward compatibility).
      */
     override fun backward(
         currentInput: Matrix?,
@@ -179,48 +245,41 @@ class DenseLayer(
         previousLayer: Layer?,
         lambda: Double
     ): Matrix {
-        // CHANGED: always apply activation derivative; no BN special-case
-        val currentDelta = elementWiseMultiply(
-            delta,
-            applyElementWise(preActivation!!, activation::derivative)
-        )
-
-        val previousOutput = previousLayer?.output ?: currentInput!!
-
-        gradientWeights = add(
-            scalarMultiply(matrixMultiply(transpose(previousOutput), currentDelta), 1.0 / featureSize),
-            scalarMultiply(weights, lambda)
-        )
-        gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toDoubleArray()
-
-        return matrixMultiply(currentDelta, transpose(weights))
+        return backward(
+            currentInput?.toFlexibleMatrix(),
+            delta.toFlexibleMatrix(),
+            featureSize,
+            nextLayer,
+            previousLayer,
+            lambda
+        ).toMatrix()
     }
 
     /**
      * Creates a deep copy of the dense layer, including weights, biases, and optimizer states.
      */
     override fun clone(): DenseLayer {
-        return DenseLayer(inputSize, outputSize, activation, dropoutRate).also { copy ->
+        return DenseLayer(inputSize, outputSize, activation, dropoutRate, precision).also { copy ->
             copy.weights = weights.deepCopy()
-            copy.biases = biases.copyOf()
+            copy.biases = biases.deepCopy()
             copy.momentWeights = momentWeights.deepCopy()
             copy.velocityWeights = velocityWeights.deepCopy()
-            copy.momentBiases = momentBiases.copyOf()
-            copy.velocityBiases = velocityBiases.copyOf()
+            copy.momentBiases = momentBiases.deepCopy()
+            copy.velocityBiases = velocityBiases.deepCopy()
             copy.preActivation = preActivation?.deepCopy()
             copy.output = output?.deepCopy()
             copy.dropoutMask = dropoutMask?.deepCopy()
             copy.gradientWeights = gradientWeights?.deepCopy()
-            copy.gradientBiases = gradientBiases?.copyOf()
+            copy.gradientBiases = gradientBiases?.deepCopy()
         }
     }
-
 
     companion object {
         private val random = ThreadLocal.withInitial {
             SplittableRandom(ThreadLocalRandom.current().nextLong())
         }
 
+        private const val EPSILON = 1e-8
         private const val serialVersionUID = 1L
     }
 }

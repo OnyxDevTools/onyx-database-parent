@@ -1,28 +1,30 @@
 package com.onyxdevtools.ai.extensions
 
-import com.onyxdevtools.ai.Matrix
 import jdk.incubator.vector.DoubleVector
 import jdk.incubator.vector.VectorOperators
 import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
 import kotlin.math.*
 
+// Temporary typealias for conversion process
+typealias Matrix = Array<DoubleArray>
+
 const val EPSILON = 1e-8
 const val BLOCK_SIZE_TRANSPOSED = 128
 
 private val SPEC: VectorSpecies<Double> = DoubleVector.SPECIES_PREFERRED
 
-private const val SIMPLE_WORK_MAX = 50_000
-private const val SKINNY_DIM = 128
+private const val SIMPLE_WORK_MAX = 50_000.toLong()
+private const val SKINNY_DIM = 128.toLong()
 private const val PARALLEL_ROWS_MIN = 64
 private const val PARALLEL_COLS_MIN = 256
 
 fun matrixMultiply(A: Matrix, B: Matrix): Matrix {
-    val m = A.size
-    val k = A[0].size
-    val n = B[0].size
+    val m = A.size.toLong()
+    val k = A[0].size.toLong()
+    val n = B[0].size.toLong()
 
-    val work = m * k * n
+    val work: Long = m * k * n
     if (work <= SIMPLE_WORK_MAX) return matrixMultiplySimple(A, B)
 
     val skinny = min(m, n) < SKINNY_DIM

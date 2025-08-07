@@ -1,18 +1,20 @@
+import Activation
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.data.SparseSequenceGenerator
 import com.onyxdevtools.ai.data.SequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
+import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.loss.CrossEntropyLoss
 import com.onyxdevtools.ai.loss.LossFunction
+import com.onyxdevtools.ai.toMatrix
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.MutableVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
-import kotlin.test.Test
+import kotlin.test.*
 import java.io.File
-import kotlin.test.assertTrue
 
 class LLMTrainingTest {
 
@@ -21,6 +23,7 @@ class LLMTrainingTest {
         // Load full text
         val fullText = File("src/test/resources/alice_full_packed.txt").readText()
         val qaText = File("src/test/resources/qa_alice.txt").readText()
+
 
         // Define or build vocabulary using the new function
         val vocabulary: Vocabulary = MutableVocabulary()
@@ -75,7 +78,7 @@ class LLMTrainingTest {
                 batchSize = 16,
                 maxEpochs = 1000,
                 patience = 100,
-                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
+                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred.toMatrix(), sparseTargets) },
                 comprehensiveLossFn = { net ->
                     var generatedText = model.chat(
                         prompt = "[SOT]Alice was beginning to get very tired ",

@@ -1,8 +1,8 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
-import com.onyxdevtools.ai.extensions.deepCopy
+import com.onyxdevtools.ai.*
+import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import java.util.*
 import kotlin.math.sqrt
@@ -51,46 +51,91 @@ import kotlin.math.sqrt
  *                  Must be greater than the maximum token ID that will be input.
  * @param embeddingSize The dimensionality of the embedding vectors.
  *                     Common values are 128, 256, 512, 768, or 1024.
+ * @param precision The precision to use for internal computations (SINGLE or DOUBLE)
  * @see Layer
  * @see BPETokenizer
  * @see Vocabulary
  */
 class EmbeddingLayer(
     private val vocabSize: Int,
-    private val embeddingSize: Int
+    private val embeddingSize: Int,
+    private val precision: MatrixPrecision = MatrixPrecision.SINGLE
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var preActivation: FlexibleMatrix? = null
+    override var output: FlexibleMatrix? = null
     override val activation: Activation = Activation.LINEAR
 
     private val random: Random = Random()
 
-    private var weights: Matrix
-    private var momentWeights: Matrix
-    private var velocityWeights: Matrix
-    private var gradientWeights: Matrix? = null
+    private var weights: FlexibleMatrix
+    private var momentWeights: FlexibleMatrix
+    private var velocityWeights: FlexibleMatrix
+    private var gradientWeights: FlexibleMatrix? = null
 
     init {
-        weights = Array(vocabSize) { DoubleArray(embeddingSize) { random.nextGaussian() * 0.02 } }
+        val isSinglePrecision = precision == MatrixPrecision.SINGLE
+        
+        weights = createMatrix(vocabSize, embeddingSize, isSinglePrecision) { _, _ ->
+            random.nextGaussian() * 0.02
+        }
+        
         // Initialize moment and velocity matrices for Adam optimizer
-        momentWeights = Array(vocabSize) { DoubleArray(embeddingSize) { 0.0 } }
-        velocityWeights = Array(vocabSize) { DoubleArray(embeddingSize) { 0.0 } }
+        momentWeights = createMatrix(vocabSize, embeddingSize, isSinglePrecision) { _, _ -> 0.0 }
+        velocityWeights = createMatrix(vocabSize, embeddingSize, isSinglePrecision) { _, _ -> 0.0 }
     }
 
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val batchSize = input.size
-        val sequenceLength = input[0].size
+    override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
+        val inputMatrix = input.toMatrix()
+        val batchSize = inputMatrix.size
+        val sequenceLength = inputMatrix[0].size
+        
         // Convert input token IDs to embeddings and flatten batch and sequence dimensions
-        val embeddings = Array(batchSize * sequenceLength) { i ->
+        val embeddings = createMatrix(batchSize * sequenceLength, embeddingSize, weights.isSinglePrecision) { i, j ->
             val b = i / sequenceLength
             val t = i % sequenceLength
-            val tokenId = input[b][t].toInt()
-            weights[tokenId].copyOf() // Lookup embedding vector
+            val tokenId = inputMatrix[b][t].toInt()
+            weights[tokenId, j] // Lookup embedding vector
         }
+        
         preActivation = embeddings
         output = embeddings
         return output!!
+    }
+
+    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
+    }
+
+    override fun backward(
+        currentInput: FlexibleMatrix?,
+        delta: FlexibleMatrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): FlexibleMatrix {
+        val inputMatrix = currentInput!!.toMatrix()
+        val batchSize = inputMatrix.size
+        val sequenceLength = inputMatrix[0].size
+        
+        // Initialize gradient matrix for weights
+        gradientWeights = createMatrix(vocabSize, embeddingSize, weights.isSinglePrecision) { _, _ -> 0.0 }
+        
+        var deltaIndex = 0
+        // Accumulate gradients for each token's embedding
+        for (b in 0 until batchSize) {
+            for (t in 0 until sequenceLength) {
+                val tokenId = inputMatrix[b][t].toInt()
+                for (d in 0 until embeddingSize) {
+                    gradientWeights!![tokenId, d] += delta[deltaIndex, d]
+                }
+                deltaIndex++
+            }
+        }
+        
+        // Return zero matrix for input gradient (no backprop to token IDs)
+        return createMatrix(batchSize, sequenceLength, delta.isSinglePrecision) { _, _ -> 0.0 }
     }
 
     override fun backward(
@@ -101,23 +146,14 @@ class EmbeddingLayer(
         previousLayer: Layer?,
         lambda: Double
     ): Matrix {
-        val batchSize = currentInput!!.size
-        val sequenceLength = currentInput[0].size
-        // Initialize gradient matrix for weights
-        gradientWeights = Array(vocabSize) { DoubleArray(embeddingSize) { 0.0 } }
-        var deltaIndex = 0
-        // Accumulate gradients for each token's embedding
-        for (b in 0 until batchSize) {
-            for (t in 0 until sequenceLength) {
-                val tokenId = currentInput[b][t].toInt()
-                for (d in 0 until embeddingSize) {
-                    gradientWeights!![tokenId][d] += delta[deltaIndex][d]
-                }
-                deltaIndex++
-            }
-        }
-        // Return zero matrix for input gradient (no backprop to token IDs)
-        return Array(batchSize) { DoubleArray(sequenceLength) { 0.0 } }
+        return backward(
+            currentInput?.toFlexibleMatrix(),
+            delta.toFlexibleMatrix(),
+            featureSize,
+            nextLayer,
+            previousLayer,
+            lambda
+        ).toMatrix()
     }
 
     @Suppress("DuplicatedCode")
@@ -131,19 +167,20 @@ class EmbeddingLayer(
         // Adam optimizer update for embedding weights
         fun correctMoment(m: Double) = m / (1.0 - adamBeta1Power)
         fun correctVelocity(v: Double) = v / (1.0 - adamBeta2Power)
+        
         for (i in 0 until vocabSize) {
             for (j in 0 until embeddingSize) {
-                val gradient = gradientWeights!![i][j]
-                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1 - adamBeta1) * gradient
-                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1 - adamBeta2) * gradient * gradient
-                weights[i][j] -= learningRate * correctMoment(momentWeights[i][j]) /
-                        (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
+                val gradient = gradientWeights!![i, j]
+                momentWeights[i, j] = adamBeta1 * momentWeights[i, j] + (1 - adamBeta1) * gradient
+                velocityWeights[i, j] = adamBeta2 * velocityWeights[i, j] + (1 - adamBeta2) * gradient * gradient
+                weights[i, j] -= learningRate * correctMoment(momentWeights[i, j]) /
+                        (sqrt(correctVelocity(velocityWeights[i, j])) + EPSILON)
             }
         }
     }
 
     override fun clone(): Layer {
-        return EmbeddingLayer(vocabSize, embeddingSize).also { copy ->
+        return EmbeddingLayer(vocabSize, embeddingSize, precision).also { copy ->
             copy.weights = weights.deepCopy()
             copy.momentWeights = momentWeights.deepCopy()
             copy.velocityWeights = velocityWeights.deepCopy()

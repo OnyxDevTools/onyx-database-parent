@@ -1,7 +1,8 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.*
+import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -38,48 +39,142 @@ import kotlin.math.sqrt
  *
  * @param size The number of features/dimensions to normalize. Must match the last dimension
  *             of input tensors passed to this layer.
+ * @param precision The precision to use for internal computations (SINGLE or DOUBLE)
  * @see Layer
  * @see MultiHeadAttentionLayer
  */
-class LayerNormalizationLayer(private val size: Int) : Layer {
+class LayerNormalizationLayer(
+    private val size: Int,
+    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
+) : Layer {
 
-    override var output: Matrix? = null
-    override var preActivation: Matrix? = null
+    override var output: FlexibleMatrix? = null
+    override var preActivation: FlexibleMatrix? = null
     override val activation: Activation = Activation.LINEAR
 
-    private var gamma = DoubleArray(size) { 1.0 }
-    private var beta = DoubleArray(size) { 0.0 }
-    private var mean: DoubleArray? = null
-    private var variance: DoubleArray? = null
-    private var normalized: Matrix? = null
+    private var gamma: FlexibleMatrix
+    private var beta: FlexibleMatrix
+    private var mean: FlexibleMatrix? = null
+    private var variance: FlexibleMatrix? = null
+    private var normalized: FlexibleMatrix? = null
 
-    private var gradGamma: DoubleArray? = null
-    private var gradBeta: DoubleArray? = null
+    private var gradGamma: FlexibleMatrix? = null
+    private var gradBeta: FlexibleMatrix? = null
 
-    private var momentGamma = DoubleArray(size) { 0.0 }
-    private var velocityGamma = DoubleArray(size) { 0.0 }
-    private var momentBeta = DoubleArray(size) { 0.0 }
-    private var velocityBeta = DoubleArray(size) { 0.0 }
+    private var momentGamma: FlexibleMatrix
+    private var velocityGamma: FlexibleMatrix
+    private var momentBeta: FlexibleMatrix
+    private var velocityBeta: FlexibleMatrix
+
+    init {
+        val isSinglePrecision = precision == MatrixPrecision.SINGLE
+        gamma = createMatrix(1, size, isSinglePrecision) { _, _ -> 1.0 }
+        beta = createMatrix(1, size, isSinglePrecision) { _, _ -> 0.0 }
+        momentGamma = createMatrix(1, size, isSinglePrecision) { _, _ -> 0.0 }
+        velocityGamma = createMatrix(1, size, isSinglePrecision) { _, _ -> 0.0 }
+        momentBeta = createMatrix(1, size, isSinglePrecision) { _, _ -> 0.0 }
+        velocityBeta = createMatrix(1, size, isSinglePrecision) { _, _ -> 0.0 }
+    }
+
+    override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
+        val batchSize = input.rows
+        
+        // Compute mean for each sample across features
+        mean = createMatrix(batchSize, 1, input.isSinglePrecision) { i, _ -> 
+            var sum = 0.0
+            for (j in 0 until size) {
+                sum += input[i, j]
+            }
+            sum / size
+        }
+        
+        // Compute variance for each sample across features  
+        variance = createMatrix(batchSize, 1, input.isSinglePrecision) { i, _ ->
+            var sum = 0.0
+            for (j in 0 until size) {
+                sum += (input[i, j] - mean!![i, 0]).pow(2)
+            }
+            sum / size
+        }
+
+        // Normalize input
+        normalized = createMatrix(batchSize, size, input.isSinglePrecision) { i, j ->
+            (input[i, j] - mean!![i, 0]) / sqrt(variance!![i, 0] + EPSILON)
+        }
+
+        // Apply affine transformation
+        output = createMatrix(batchSize, size, input.isSinglePrecision) { i, j ->
+            gamma[0, j] * normalized!![i, j] + beta[0, j]
+        }
+
+        return output!!
+    }
 
     /**
      * Normalizes the input using layer statistics and applies learned affine transformation.
      */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val batchSize = input.size
-        mean = DoubleArray(batchSize) { i -> input[i].average() }
-        variance = DoubleArray(batchSize) { i ->
-            input[i].sumOf { (it - mean!![i]).pow(2) } / size
+        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
+    }
+
+    override fun backward(
+        currentInput: FlexibleMatrix?,
+        delta: FlexibleMatrix,
+        featureSize: Double,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Double
+    ): FlexibleMatrix {
+        val batchSize = delta.rows
+        val input = currentInput!!
+
+        // Gradients w.r.t. gamma and beta
+        gradGamma = createMatrix(1, size, delta.isSinglePrecision) { _, j ->
+            var sum = 0.0
+            for (i in 0 until batchSize) {
+                sum += delta[i, j] * normalized!![i, j]
+            }
+            sum
+        }
+        
+        gradBeta = createMatrix(1, size, delta.isSinglePrecision) { _, j ->
+            var sum = 0.0
+            for (i in 0 until batchSize) {
+                sum += delta[i, j]
+            }
+            sum
         }
 
-        normalized = Array(batchSize) { i ->
-            DoubleArray(size) { j -> (input[i][j] - mean!![i]) / sqrt(variance!![i] + EPSILON) }
+        // Gradient w.r.t. normalized input
+        val gradNormalized = createMatrix(batchSize, size, delta.isSinglePrecision) { i, j ->
+            delta[i, j] * gamma[0, j]
         }
 
-        output = Array(batchSize) { i ->
-            DoubleArray(size) { j -> gamma[j] * normalized!![i][j] + beta[j] }
+        // Gradient w.r.t. variance
+        val gradVariance = createMatrix(batchSize, 1, delta.isSinglePrecision) { i, _ ->
+            var sum = 0.0
+            for (j in 0 until size) {
+                sum += gradNormalized[i, j] * (input[i, j] - mean!![i, 0])
+            }
+            -0.5 * sum / (variance!![i, 0] + EPSILON).pow(1.5)
         }
 
-        return output!!
+        // Gradient w.r.t. mean
+        val gradMean = createMatrix(batchSize, 1, delta.isSinglePrecision) { i, _ ->
+            var sum1 = 0.0
+            for (j in 0 until size) {
+                sum1 += gradNormalized[i, j]
+            }
+            -sum1 / sqrt(variance!![i, 0] + EPSILON)
+        }
+
+        // Gradient w.r.t. input
+        return createMatrix(batchSize, size, delta.isSinglePrecision) { i, j ->
+            val term1 = gradNormalized[i, j] / sqrt(variance!![i, 0] + EPSILON)
+            val term2 = gradMean[i, 0] / size
+            val term3 = gradVariance[i, 0] * 2.0 * (input[i, j] - mean!![i, 0]) / size
+            term1 + term2 + term3
+        }
     }
 
     /**
@@ -93,45 +188,14 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
         previousLayer: Layer?,
         lambda: Double
     ): Matrix {
-        val batchSize = delta.size
-        val input = currentInput!!
-
-        // Gradients w.r.t. gamma and beta
-        gradGamma = DoubleArray(size) { j ->
-            (0 until batchSize).sumOf { i -> delta[i][j] * normalized!![i][j] }
-        }
-        gradBeta = DoubleArray(size) { j ->
-            (0 until batchSize).sumOf { i -> delta[i][j] }
-        }
-
-        // Gradient w.r.t. normalized input
-        val gradNormalized = Array(batchSize) { i ->
-            DoubleArray(size) { j -> delta[i][j] * gamma[j] }
-        }
-
-        // Gradient w.r.t. variance
-        val gradVariance = DoubleArray(batchSize) { i ->
-            val sum = (0 until size).sumOf { j -> gradNormalized[i][j] * (input[i][j] - mean!![i]) }
-            -0.5 * sum / (variance!![i] + EPSILON).pow(1.5)
-        }
-
-        // Gradient w.r.t. mean
-        val gradMean = DoubleArray(batchSize) { i ->
-            val sum1 = (0 until size).sumOf { j -> gradNormalized[i][j] }
-            -sum1 / sqrt(variance!![i] + EPSILON)
-        }
-
-        // Gradient w.r.t. input
-        val gradInput = Array(batchSize) { i ->
-            DoubleArray(size) { j ->
-                val term1 = gradNormalized[i][j] / sqrt(variance!![i] + EPSILON)
-                val term2 = gradMean[i] / size
-                val term3 = gradVariance[i] * 2.0 * (input[i][j] - mean!![i]) / size
-                term1 + term2 + term3
-            }
-        }
-
-        return gradInput
+        return backward(
+            currentInput?.toFlexibleMatrix(),
+            delta.toFlexibleMatrix(),
+            featureSize,
+            nextLayer,
+            previousLayer,
+            lambda
+        ).toMatrix()
     }
 
     /**
@@ -149,16 +213,16 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
         fun correctVelocity(velocity: Double) = velocity / (1.0 - adamBeta2Power)
 
         for (j in 0 until size) {
-            val gradientGamma = gradGamma!![j]
-            val gradientBeta = gradBeta!![j]
+            val gradientGamma = gradGamma!![0, j]
+            val gradientBeta = gradBeta!![0, j]
 
-            momentGamma[j] = adamBeta1 * momentGamma[j] + (1 - adamBeta1) * gradientGamma
-            velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1 - adamBeta2) * gradientGamma * gradientGamma
-            gamma[j] -= learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
+            momentGamma[0, j] = adamBeta1 * momentGamma[0, j] + (1 - adamBeta1) * gradientGamma
+            velocityGamma[0, j] = adamBeta2 * velocityGamma[0, j] + (1 - adamBeta2) * gradientGamma * gradientGamma
+            gamma[0, j] -= learningRate * correctMoment(momentGamma[0, j]) / (sqrt(correctVelocity(velocityGamma[0, j])) + EPSILON)
 
-            momentBeta[j] = adamBeta1 * momentBeta[j] + (1 - adamBeta1) * gradientBeta
-            velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1 - adamBeta2) * gradientBeta * gradientBeta
-            beta[j] -= learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
+            momentBeta[0, j] = adamBeta1 * momentBeta[0, j] + (1 - adamBeta1) * gradientBeta
+            velocityBeta[0, j] = adamBeta2 * velocityBeta[0, j] + (1 - adamBeta2) * gradientBeta * gradientBeta
+            beta[0, j] -= learningRate * correctMoment(momentBeta[0, j]) / (sqrt(correctVelocity(velocityBeta[0, j])) + EPSILON)
         }
     }
 
@@ -166,13 +230,20 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
      * Creates a deep copy of the layer normalization layer.
      */
     override fun clone(): Layer {
-        return LayerNormalizationLayer(size).also { copy ->
-            copy.gamma = gamma.copyOf()
-            copy.beta = beta.copyOf()
-            copy.momentGamma = momentGamma.copyOf()
-            copy.velocityGamma = velocityGamma.copyOf()
-            copy.momentBeta = momentBeta.copyOf()
-            copy.velocityBeta = velocityBeta.copyOf()
+        return LayerNormalizationLayer(size, precision).also { copy ->
+            copy.gamma = gamma.deepCopy()
+            copy.beta = beta.deepCopy()
+            copy.momentGamma = momentGamma.deepCopy()
+            copy.velocityGamma = velocityGamma.deepCopy()
+            copy.momentBeta = momentBeta.deepCopy()
+            copy.velocityBeta = velocityBeta.deepCopy()
+            copy.output = output?.deepCopy()
+            copy.preActivation = preActivation?.deepCopy()
+            copy.mean = mean?.deepCopy()
+            copy.variance = variance?.deepCopy()
+            copy.normalized = normalized?.deepCopy()
+            copy.gradGamma = gradGamma?.deepCopy()
+            copy.gradBeta = gradBeta?.deepCopy()
         }
     }
 
