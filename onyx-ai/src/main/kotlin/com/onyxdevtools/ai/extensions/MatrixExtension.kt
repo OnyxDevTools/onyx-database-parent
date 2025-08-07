@@ -10,7 +10,6 @@ import kotlin.math.*
 typealias Matrix = Array<DoubleArray>
 
 const val EPSILON = 1e-8
-const val BLOCK_SIZE_TRANSPOSED = 128
 
 private val SPEC: VectorSpecies<Double> = DoubleVector.SPECIES_PREFERRED
 
@@ -18,6 +17,7 @@ private const val SIMPLE_WORK_MAX = 50_000.toLong()
 private const val SKINNY_DIM = 128.toLong()
 private const val PARALLEL_ROWS_MIN = 64
 private const val PARALLEL_COLS_MIN = 256
+private const val BLOCK_SIZE_TRANSPOSED = 128
 
 fun matrixMultiply(A: Matrix, B: Matrix): Matrix {
     val m = A.size.toLong()
@@ -29,7 +29,7 @@ fun matrixMultiply(A: Matrix, B: Matrix): Matrix {
 
     val skinny = min(m, n) < SKINNY_DIM
 
-    return if (skinny) {
+    return if (!skinny) {
         // Parallelize only when there’s enough outer parallelism to amortize overhead
         val parallel = (m >= PARALLEL_ROWS_MIN) || (n >= PARALLEL_COLS_MIN)
         if (parallel) matrixMultiplySkinnyVectorizedParallel(A, B)
@@ -375,8 +375,13 @@ fun Matrix.deepCopy(): Matrix = map { it.copyOf() }.toTypedArray()
  * @receiver The matrix to flatten.
  * @return A flat array of all elements in the matrix.
  */
-fun Matrix.flatten(): DoubleArray =
-    buildList { for (row in this@flatten) addAll(row.asList()) }.toDoubleArray()
+fun Matrix.flatten(): DoubleArray {
+    val result = mutableListOf<Double>()
+    for (row in this) {
+        result.addAll(row.asList())
+    }
+    return result.toDoubleArray()
+}
 
 /**
  * Calculates mean standard error
@@ -575,12 +580,17 @@ fun Matrix.calculateColumnStats(): List<ColumnStats> {
     val statsList = mutableListOf<ColumnStats>()
     for (j in 0 until colCount()) {
         val column = this.getColumn(j)
-        statsList.add(
-            ColumnStats(
-                min = column.minOrNull() ?: Double.NaN,
-                max = column.maxOrNull() ?: Double.NaN
-            )
-        )
+        var min = Double.NaN
+        var max = Double.NaN
+        if (column.isNotEmpty()) {
+            min = column[0]
+            max = column[0]
+            for (value in column) {
+                if (value < min) min = value
+                if (value > max) max = value
+            }
+        }
+        statsList.add(ColumnStats(min = min, max = max))
     }
     return statsList
 }
@@ -643,7 +653,12 @@ fun Matrix.calculateColumnMaxAbs(): List<Double> {
     if (this.isEmpty()) return emptyList()
     val maxAbsList = mutableListOf<Double>()
     for (j in 0 until colCount()) {
-        val maxAbs = this.getColumn(j).maxOfOrNull { abs(it) } ?: 0.0
+        val column = this.getColumn(j)
+        var maxAbs = 0.0
+        for (value in column) {
+            val absValue = abs(value)
+            if (absValue > maxAbs) maxAbs = absValue
+        }
         maxAbsList.add(maxAbs)
     }
     return maxAbsList
@@ -660,7 +675,11 @@ fun Matrix.calculateRowNorms(): List<Double> {
     val norms = mutableListOf<Double>()
     for (i in 0 until rowCount()) {
         val row = this[i] // Direct access to DoubleArray is efficient here
-        val norm = sqrt(row.sumOf { it * it })
+        var sumSquares = 0.0
+        for (value in row) {
+            sumSquares += value * value
+        }
+        val norm = sqrt(sumSquares)
         norms.add(norm)
     }
     return norms
@@ -668,7 +687,10 @@ fun Matrix.calculateRowNorms(): List<Double> {
 
 fun softmax(matrix: Matrix): Matrix {
     return matrix.map { logits ->
-        val max = logits.maxOrNull() ?: 0.0  // For numerical stability
+        var max = if (logits.isNotEmpty()) logits[0] else 0.0
+        for (value in logits) {
+            if (value > max) max = value
+        }
         val expLogits = logits.map { exp(it - max) }
         val sumExp = expLogits.sum()
         expLogits.map { it / sumExp }.toDoubleArray()

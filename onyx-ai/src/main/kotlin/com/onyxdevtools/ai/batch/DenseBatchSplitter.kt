@@ -17,7 +17,7 @@ import com.onyxdevtools.ai.Matrix
  * val (xTrain, yTrain, xTest, yTest) = splitter.splitBatch(features, targets, testFraction = 0.2)
  * ```
  */
-class DenseBatchSplitter : BatchSplitter<Matrix, Matrix> {
+class DenseBatchSplitter : LegacyBatchSplitter<Matrix, Matrix> {
     
     /**
      * Splits dense feature and target matrices into training and test subsets.

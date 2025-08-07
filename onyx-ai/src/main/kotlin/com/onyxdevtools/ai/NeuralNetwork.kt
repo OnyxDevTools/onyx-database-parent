@@ -48,6 +48,40 @@ data class NeuralNetwork(
     ): NeuralNetwork = copy(featureTransforms = feature, valueTransforms = label)
 
     /**
+     * Helper function to create FlexibleMatrix from Matrix array
+     */
+    private fun createFlexibleMatrixFromArray(matrices: Array<DoubleArray>): FlexibleMatrix {
+        return matrices.toFlexibleMatrix()
+    }
+
+    /**
+     * Helper function to stack multiple FlexibleMatrix vertically
+     */
+    private fun stackMatricesVertically(matrices: List<FlexibleMatrix>): FlexibleMatrix {
+        if (matrices.isEmpty()) {
+            return createMatrix(0, 0, precision == MatrixPrecision.SINGLE)
+        }
+        if (matrices.size == 1) {
+            return matrices[0]
+        }
+        
+        val totalRows = matrices.map { it.rows }.sum()
+        val cols = matrices[0].cols
+        val isSingle = matrices[0].isSinglePrecision
+        
+        return createMatrix(totalRows, cols, isSingle) { r, c ->
+            var currentRowOffset = 0
+            for (matrix in matrices) {
+                if (r >= currentRowOffset && r < currentRowOffset + matrix.rows) {
+                    return@createMatrix matrix[r - currentRowOffset, c]
+                }
+                currentRowOffset += matrix.rows
+            }
+            0.0 // Should never reach here
+        }
+    }
+
+    /**
      * Feeds an input matrix forward through the network.
      *
      * @param input Input matrix.
@@ -463,7 +497,7 @@ data class NeuralNetwork(
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreamingSparse(
-        source: () -> Sequence<Pair<DoubleArray, IntArray>>,
+        source: () -> Sequence<Pair<FlexibleMatrix, IntArray>>,
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
@@ -482,7 +516,7 @@ data class NeuralNetwork(
         var epochsWithoutImprovement = 0
 
         repeat(maxEpochs) { epoch ->
-            val bx = mutableListOf<DoubleArray>()
+            val bx = mutableListOf<FlexibleMatrix>()
             val by = mutableListOf<IntArray>()
             var runningTrainLoss = 0.0
             var runningTestLoss = 0.0
@@ -499,23 +533,35 @@ data class NeuralNetwork(
                             testFraction = testFrac, shuffle = shuffle
                         )
 
-                    // --- fit+transform *only* on training slice ----------------------
-                    val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
+                    // --- Skip legacy transforms for now and work directly with FlexibleMatrix ----------------------
                     val yTrainFlat = yTrainRaw.flatMap { it.toList() }.toIntArray()
 
                     // --- train step ---------------------------------------------------
-                    val predTrain = predict(xTrain.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
-                    backwardSparse(predTrain, yTrainFlat)
-                    updateParameters()
+                    // Use a batch concatenation approach - stack all FlexibleMatrix vertically  
+                    val predTrain = if (xTrainRaw.isNotEmpty()) {
+                        val batchInput = stackMatricesVertically(xTrainRaw.toList())
+                        predict(batchInput, isTraining = true, skipFeatureTransform = true)
+                    } else {
+                        createMatrix(0, 0, precision == MatrixPrecision.SINGLE)
+                    }
+                    
+                    if (yTrainFlat.isNotEmpty()) {
+                        backwardSparse(predTrain, yTrainFlat)
+                        updateParameters()
+                    }
 
                     // --- evaluate on test slice (do NOT refit transforms) ------------
-                    val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
                     val yTestFlat = yTestRaw.flatMap { it.toList() }.toIntArray()
-                    val predTest = predict(xTest.toFlexibleMatrix(), isTraining = false, skipFeatureTransform = true)
+                    val predTest = if (xTestRaw.isNotEmpty()) {
+                        val batchInput = stackMatricesVertically(xTestRaw.toList())
+                        predict(batchInput, isTraining = false, skipFeatureTransform = true)
+                    } else {
+                        createMatrix(0, 0, precision == MatrixPrecision.SINGLE)
+                    }
 
-                    runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.size
-                    runningTestLoss += lossFn(predTest, yTestFlat) * xTest.size
-                    testSamples += xTest.size
+                    runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrainRaw.size
+                    runningTestLoss += lossFn(predTest, yTestFlat) * xTestRaw.size
+                    testSamples += xTestRaw.size
 
                     bx.clear(); by.clear()
                     probeFn.invoke()
@@ -529,18 +575,31 @@ data class NeuralNetwork(
                     bx.toTypedArray(), by.toTypedArray(),
                     testFraction = testFrac, shuffle = shuffle
                 )
-                val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
+                
+                // Skip legacy transforms and work directly with FlexibleMatrix
                 val yTfFlat = yT.flatMap { it.toList() }.toIntArray()
-                val predT = predict(xTf.toFlexibleMatrix(), true, skipFeatureTransform = true)
-                backwardSparse(predT, yTfFlat); updateParameters()
+                val predT = if (xT.isNotEmpty()) {
+                    val batchInput = stackMatricesVertically(xT.toList())
+                    predict(batchInput, true, skipFeatureTransform = true)
+                } else {
+                    createMatrix(0, 0, precision == MatrixPrecision.SINGLE)
+                }
+                
+                if (yTfFlat.isNotEmpty()) {
+                    backwardSparse(predT, yTfFlat); updateParameters()
+                }
 
-                val xv2 = featureTransforms?.apply(xv) ?: xv
                 val yvFlat = yv.flatMap { it.toList() }.toIntArray()
-                val predV = predict(xv2.toFlexibleMatrix(), false, skipFeatureTransform = true)
+                val predV = if (xv.isNotEmpty()) {
+                    val batchInput = stackMatricesVertically(xv.toList())
+                    predict(batchInput, false, skipFeatureTransform = true)
+                } else {
+                    createMatrix(0, 0, precision == MatrixPrecision.SINGLE)
+                }
 
-                runningTrainLoss += lossFn(predT, yTfFlat) * xTf.size
-                runningTestLoss += lossFn(predV, yvFlat) * xv2.size
-                testSamples += xv2.size
+                runningTrainLoss += lossFn(predT, yTfFlat) * xT.size
+                runningTestLoss += lossFn(predV, yvFlat) * xv.size
+                testSamples += xv.size
             }
 
             val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)

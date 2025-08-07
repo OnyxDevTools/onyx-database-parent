@@ -11,7 +11,7 @@ private val FLOAT_SPEC: VectorSpecies<Float> = FloatVector.SPECIES_PREFERRED
 
 // Performance constants
 private const val SIMPLE_WORK_MAX = 50_000
-private const val SKINNY_DIM = 128
+private const val SKINNY_DIM = 64
 private const val PARALLEL_ROWS_MIN = 64
 private const val PARALLEL_COLS_MIN = 256
 
@@ -30,12 +30,14 @@ fun matrixMultiply(A: FlexibleMatrix, B: FlexibleMatrix): FlexibleMatrix {
     if (work <= SIMPLE_WORK_MAX) return matrixMultiplySimple(A, B)
     
     val skinny = min(m, n) < SKINNY_DIM
+    val shouldParallelize = (m >= PARALLEL_ROWS_MIN) || (n >= PARALLEL_COLS_MIN)
     
-    return if (skinny) {
-        val parallel = (m >= PARALLEL_ROWS_MIN) || (n >= PARALLEL_COLS_MIN)
-        if (parallel) matrixMultiplySkinnyVectorizedParallel(A, B)
+    return if (!skinny) {
+        // For skinny matrices, vectorization is very effective
+        if (shouldParallelize) matrixMultiplySkinnyVectorizedParallel(A, B)
         else matrixMultiplySkinnyVectorized(A, B)
     } else {
+        // For larger matrices, use block-based parallel approach for best performance
         matrixMultiplyParallelJVM(A, B)
     }
 }
@@ -52,19 +54,20 @@ private fun matrixMultiplyParallelJVM(A: FlexibleMatrix, B: FlexibleMatrix): Fle
     val useSinglePrecision = A.isSinglePrecision && B.isSinglePrecision
     val result = createMatrix(m, n, useSinglePrecision)
     
-    if (m > BLOCK_SIZE_TRANSPOSED) {
-        val BTransposed = transpose(B)
-        val numRowBlocks = (m + BLOCK_SIZE_TRANSPOSED - 1) / BLOCK_SIZE_TRANSPOSED
+    val blockSize = 64  // Local block size for this implementation
+    if (m > blockSize) {
+        val BTransposed = B.transpose()
+        val numRowBlocks = (m + blockSize - 1) / blockSize
         
         IntStream.range(0, numRowBlocks).parallel().forEach { blockIndex ->
-            val rowStart = blockIndex * BLOCK_SIZE_TRANSPOSED
-            val rowEnd = min(rowStart + BLOCK_SIZE_TRANSPOSED, m)
+            val rowStart = blockIndex * blockSize
+            val rowEnd = min(rowStart + blockSize, m)
             
-            for (colStart in 0 until n step BLOCK_SIZE_TRANSPOSED) {
-                val colEnd = min(colStart + BLOCK_SIZE_TRANSPOSED, n)
+            for (colStart in 0 until n step blockSize) {
+                val colEnd = min(colStart + blockSize, n)
                 
-                for (kStart in 0 until k step BLOCK_SIZE_TRANSPOSED) {
-                    val kEnd = min(kStart + BLOCK_SIZE_TRANSPOSED, k)
+                for (kStart in 0 until k step blockSize) {
+                    val kEnd = min(kStart + blockSize, k)
                     
                     for (rowIndex in rowStart until rowEnd) {
                         for (colIndex in colStart until colEnd) {
@@ -311,7 +314,7 @@ private fun matrixMultiplySkinnyVectorizedParallel(A: FlexibleMatrix, B: Flexibl
 }
 
 /**
- * Simple matrix multiplication for small matrices
+ * Simple matrix multiplication for small matrices - optimized for direct access
  */
 private fun matrixMultiplySimple(A: FlexibleMatrix, B: FlexibleMatrix): FlexibleMatrix {
     val m = A.rows
@@ -321,6 +324,27 @@ private fun matrixMultiplySimple(A: FlexibleMatrix, B: FlexibleMatrix): Flexible
     val useSinglePrecision = A.isSinglePrecision && B.isSinglePrecision
     val result = createMatrix(m, n, useSinglePrecision)
     
+    // Fast path: both are DoubleMatrix - use direct array access
+    if (A is DoubleMatrix && B is DoubleMatrix && result is DoubleMatrix) {
+        val aData = A.data
+        val bData = B.data
+        val resultData = result.data
+        
+        for (i in 0 until m) {
+            val aRow = aData[i]
+            val resultRow = resultData[i]
+            for (j in 0 until n) {
+                var sum = 0.0
+                for (p in 0 until k) {
+                    sum += aRow[p] * bData[p][j]
+                }
+                resultRow[j] = sum
+            }
+        }
+        return result
+    }
+    
+    // Fallback to interface methods for mixed types
     for (i in 0 until m) {
         for (j in 0 until n) {
             var sum = 0.0
@@ -335,11 +359,134 @@ private fun matrixMultiplySimple(A: FlexibleMatrix, B: FlexibleMatrix): Flexible
 }
 
 /**
- * Transposes a FlexibleMatrix
+ * Transpose operation for FlexibleMatrix
  */
-fun transpose(matrix: FlexibleMatrix): FlexibleMatrix {
-    if (matrix.rows == 0) return createMatrix(0, 0, matrix.isSinglePrecision)
-    return createMatrix(matrix.cols, matrix.rows, matrix.isSinglePrecision) { r, c -> matrix[c, r] }
+fun FlexibleMatrix.transpose(): FlexibleMatrix {
+    return createMatrix(this.cols, this.rows, this.isSinglePrecision) { i, j -> this[j, i] }
+}
+
+/**
+ * Applies the ReLU activation function element-wise to the matrix.
+ * ReLU(x) = max(0, x)
+ */
+fun FlexibleMatrix.relu(): FlexibleMatrix {
+    return applyElementWise(this) { max(0.0, it) }
+}
+
+/**
+ * Computes sparse categorical cross-entropy loss between predictions and sparse targets.
+ * FlexibleMatrix version - eliminates array copying for better performance.
+ *
+ * @param sparseTargets Array of target token IDs for each sample position.
+ * @param sampleWeights Optional weights for each sample. If null, all samples weighted equally.
+ * @return The mean sparse categorical cross-entropy loss, ignoring masked positions.
+ */
+fun FlexibleMatrix.sparseCategoricalCrossEntropy(
+    sparseTargets: IntArray,
+    sampleWeights: DoubleArray? = null
+): Double {
+    require(this.rows == sparseTargets.size) {
+        "Predictions and targets must have same number of samples"
+    }
+    require(sampleWeights == null || sampleWeights.size == sparseTargets.size) {
+        "Sample weights size must match targets size"
+    }
+    
+    val vocabSize = this.cols
+    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
+    
+    var totalLoss = 0.0
+    var totalWeight = 0.0
+    
+    for (i in 0 until this.rows) {
+        val targetId = sparseTargets[i]
+        if (targetId == -1) continue  // Skip ignored positions
+        
+        require(targetId >= 0 && targetId < vocabSize) {
+            "Target token ID $targetId at position $i is out of vocabulary range [0, $vocabSize)"
+        }
+        
+        val weight = weights[i]
+        
+        // Compute log-softmax for numerical stability (direct FlexibleMatrix access)
+        var maxLogit = this[i, 0]
+        for (j in 1 until this.cols) {
+            val logit = this[i, j]
+            if (logit > maxLogit) maxLogit = logit
+        }
+        
+        var sumExp = 0.0
+        for (j in 0 until this.cols) {
+            sumExp += kotlin.math.exp(this[i, j] - maxLogit)
+        }
+        val logSumExp = kotlin.math.ln(sumExp) + maxLogit
+        val logProb = this[i, targetId] - logSumExp
+        
+        totalLoss += weight * (-logProb)  // Negative log likelihood
+        totalWeight += weight
+    }
+    
+    return if (totalWeight > 0) totalLoss / totalWeight else 0.0
+}
+
+/**
+ * Computes gradients for sparse categorical cross-entropy loss.
+ * FlexibleMatrix version - eliminates array copying for better performance.
+ *
+ * @param sparseTargets Array of target token IDs for each sample position
+ * @param sampleWeights Optional weights for each sample. If null, all samples weighted equally.
+ * @return Gradient matrix with same shape as predicted, zero for ignored positions
+ */
+fun FlexibleMatrix.sparseCategoricalCrossEntropyGradients(
+    sparseTargets: IntArray,
+    sampleWeights: DoubleArray? = null
+): FlexibleMatrix {
+    require(this.rows == sparseTargets.size) {
+        "Predictions and targets must have same number of samples"
+    }
+    require(sampleWeights == null || sampleWeights.size == sparseTargets.size) {
+        "Sample weights size must match targets size"
+    }
+    
+    val vocabSize = this.cols
+    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
+    val gradients = createMatrix(this.rows, vocabSize, this.isSinglePrecision)
+    
+    for (i in 0 until this.rows) {
+        val targetId = sparseTargets[i]
+        if (targetId == -1) continue  // Skip ignored positions - gradients remain 0
+        
+        require(targetId >= 0 && targetId < vocabSize) {
+            "Target token ID $targetId at position $i is out of vocabulary range [0, $vocabSize)"
+        }
+        
+        val weight = weights[i]
+        
+        // Compute softmax probabilities (direct FlexibleMatrix access)
+        var maxLogit = this[i, 0]
+        for (j in 1 until this.cols) {
+            val logit = this[i, j]
+            if (logit > maxLogit) maxLogit = logit
+        }
+        
+        // First pass: compute sum of exponentials
+        var sumExp = 0.0
+        for (j in 0 until this.cols) {
+            sumExp += kotlin.math.exp(this[i, j] - maxLogit)
+        }
+        
+        // Second pass: compute gradients using softmax probabilities
+        for (j in 0 until this.cols) {
+            val softmaxProb = kotlin.math.exp(this[i, j] - maxLogit) / sumExp
+            gradients[i, j] = weight * if (j == targetId) {
+                softmaxProb - 1.0  // Target position: p - 1
+            } else {
+                softmaxProb  // Non-target position: p
+            }
+        }
+    }
+    
+    return gradients
 }
 
 /**

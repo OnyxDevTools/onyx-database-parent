@@ -52,19 +52,21 @@ sealed interface FlexibleMatrix {
 class DoubleMatrix(
     override val rows: Int,
     override val cols: Int,
-    private val data: Array<DoubleArray> = Array(rows) { DoubleArray(cols) }
+    internal val data: Array<DoubleArray> = Array(rows) { DoubleArray(cols) }
 ) : FlexibleMatrix {
     
     constructor(data: Array<DoubleArray>) : this(data.size, if (data.isEmpty()) 0 else data[0].size, data)
     
     override val isSinglePrecision: Boolean = false
     
+    // Direct access methods for performance
     override fun get(row: Int, col: Int): Double = data[row][col]
     
     override fun set(row: Int, col: Int, value: Double) {
         data[row][col] = value
     }
     
+    // Direct array access without copying
     override fun get(row: Int): DoubleArray = data[row]
     
     override fun deepCopy(): FlexibleMatrix = DoubleMatrix(rows, cols, data.map { it.copyOf() }.toTypedArray())
@@ -76,9 +78,14 @@ class DoubleMatrix(
     }.toTypedArray()
     
     /**
-     * Gets the underlying DoubleArray for efficient access
+     * Gets the underlying DoubleArray for efficient direct access - NO COPYING
      */
-    fun getDoubleArray(row: Int): DoubleArray = data[row]
+    fun getDoubleArrayDirect(row: Int): DoubleArray = data[row]
+    
+    /**
+     * Gets the underlying data for maximum performance - USE WITH CAUTION
+     */
+    fun getInternalData(): Array<DoubleArray> = data
 }
 
 /**

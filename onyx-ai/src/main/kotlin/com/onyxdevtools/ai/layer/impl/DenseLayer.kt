@@ -76,6 +76,11 @@ class DenseLayer(
     private var dropoutMask: FlexibleMatrix? = null
     private var gradientWeights: FlexibleMatrix? = null
     private var gradientBiases: FlexibleMatrix? = null
+    
+    // Pre-allocated working buffers to avoid constant allocations
+    private var workingBuffer1: FlexibleMatrix? = null
+    private var workingBuffer2: FlexibleMatrix? = null
+    private var gradWeightBuffer: FlexibleMatrix? = null
 
     init {
         val isSinglePrecision = precision == MatrixPrecision.SINGLE
@@ -94,10 +99,14 @@ class DenseLayer(
         velocityWeights = createMatrix(inputSize, outputSize, isSinglePrecision) { _, _ -> 0.0 }
         momentBiases = createMatrix(1, outputSize, isSinglePrecision) { _, _ -> 0.0 }
         velocityBiases = createMatrix(1, outputSize, isSinglePrecision) { _, _ -> 0.0 }
+        
+        // Pre-allocate gradient matrices
+        gradientWeights = createMatrix(inputSize, outputSize, isSinglePrecision) { _, _ -> 0.0 }
+        gradientBiases = createMatrix(1, outputSize, isSinglePrecision) { _, _ -> 0.0 }
     }
 
     /**
-     * Applies dropout to the layer's output using a shared dropout mask and parallelized random number generation.
+     * High-performance dropout using in-place operations
      */
     private fun applyDropout() {
         val activations = output ?: error("Layer output must not be null before applying dropout.")
@@ -108,42 +117,55 @@ class DenseLayer(
         val keepProbability = 1.0 - dropoutRate
         val scaleFactor = 1.0 / keepProbability
 
-        if (dropoutMask == null || dropoutMask!!.rows != rows || dropoutMask!!.cols != cols) {
-            dropoutMask = createMatrix(rows, cols, activations.isSinglePrecision) { _, _ -> 0.0 }
-        }
-
-        val mask = dropoutMask!!
-
-        // Generate dropout mask
+        // Apply dropout directly in-place
         for (i in 0 until rows) {
             val rng = random.get()
             for (j in 0 until cols) {
-                mask[i, j] = if (rng.nextDouble() < keepProbability) scaleFactor else 0.0
+                if (rng.nextDouble() < keepProbability) {
+                    activations[i, j] *= scaleFactor
+                } else {
+                    activations[i, j] = 0.0
+                }
             }
         }
-
-        output = elementWiseMultiply(activations, mask)
     }
 
     /**
-     * Performs the forward pass of the layer.
+     * High-performance forward pass using buffer reuse and in-place operations
      */
     override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
-        // Linear transformation: input × weights + biases
-        val linearOutput = matrixMultiply(input, weights)
+        val batchSize = input.rows
         
-        // Add biases to each row
-        val biasedOutput = createMatrix(linearOutput.rows, linearOutput.cols, linearOutput.isSinglePrecision) { i, j ->
-            linearOutput[i, j] + biases[0, j]
+        // Ensure working buffers are allocated and sized correctly
+        if (workingBuffer1 == null || workingBuffer1!!.rows != batchSize || workingBuffer1!!.cols != outputSize) {
+            workingBuffer1 = createMatrix(batchSize, outputSize, input.isSinglePrecision)
+            workingBuffer2 = createMatrix(batchSize, outputSize, input.isSinglePrecision)
         }
         
-        val nextInput = nextLayer?.preForward(biasedOutput.toMatrix(), isTraining)?.toFlexibleMatrix() ?: biasedOutput
+        val linearOutput = workingBuffer1!!
+        val activatedOutput = workingBuffer2!!
+        
+        // High-performance matrix multiplication: input × weights
+        val matMulResult = com.onyxdevtools.ai.extensions.matrixMultiply(input, weights)
+        
+        // Add biases efficiently in single pass
+        for (i in 0 until batchSize) {
+            for (j in 0 until outputSize) {
+                linearOutput[i, j] = matMulResult[i, j] + biases[0, j]
+            }
+        }
+        
+        val nextInput = nextLayer?.preForward(linearOutput.toMatrix(), isTraining)?.toFlexibleMatrix() ?: linearOutput
         this.preActivation = nextInput
         
-        // Apply activation function
-        output = createMatrix(nextInput.rows, nextInput.cols, nextInput.isSinglePrecision) { i, j ->
-            activation.activate(nextInput[i, j])
+        // Apply activation function efficiently
+        for (i in 0 until nextInput.rows) {
+            for (j in 0 until nextInput.cols) {
+                activatedOutput[i, j] = activation.activate(nextInput[i, j])
+            }
         }
+        
+        output = activatedOutput
         
         if (isTraining) applyDropout()
         return output!!
@@ -192,7 +214,7 @@ class DenseLayer(
     }
 
     /**
-     * Performs the backward pass of the layer.
+     * High-performance backward pass using pre-allocated buffers and in-place operations
      */
     override fun backward(
         currentInput: FlexibleMatrix?,
@@ -203,10 +225,20 @@ class DenseLayer(
         lambda: Double
     ): FlexibleMatrix {
         val preActivationMatrix = preActivation!!
+        val batchSize = delta.rows
         
-        // Apply activation derivative
-        val currentDelta = createMatrix(delta.rows, delta.cols, delta.isSinglePrecision) { i, j ->
-            delta[i, j] * activation.derivative(preActivationMatrix[i, j])
+        // Allocate working buffer for current delta if needed
+        if (gradWeightBuffer == null || gradWeightBuffer!!.rows != batchSize || gradWeightBuffer!!.cols != outputSize) {
+            gradWeightBuffer = createMatrix(batchSize, outputSize, delta.isSinglePrecision)
+        }
+        
+        val currentDelta = gradWeightBuffer!!
+        
+        // Apply activation derivative in-place
+        for (i in 0 until batchSize) {
+            for (j in 0 until outputSize) {
+                currentDelta[i, j] = delta[i, j] * activation.derivative(preActivationMatrix[i, j])
+            }
         }
 
         val previousOutput = if (previousLayer?.output != null) {
@@ -215,23 +247,26 @@ class DenseLayer(
             currentInput!!
         }
 
-        // Compute weight gradients with regularization
-        val weightGrad = matrixMultiply(transpose(previousOutput), currentDelta)
-        gradientWeights = createMatrix(weights.rows, weights.cols, weights.isSinglePrecision) { i, j ->
-            weightGrad[i, j] / featureSize + lambda * weights[i, j]
+        // Compute weight gradients with regularization - reuse existing gradient matrix
+        val weightGrad = com.onyxdevtools.ai.extensions.matrixMultiply(previousOutput.transpose(), currentDelta)
+        val featureSizeInv = 1.0 / featureSize
+        for (i in 0 until weights.rows) {
+            for (j in 0 until weights.cols) {
+                gradientWeights!![i, j] = weightGrad[i, j] * featureSizeInv + lambda * weights[i, j]
+            }
         }
         
-        // Compute bias gradients
-        gradientBiases = createMatrix(1, outputSize, currentDelta.isSinglePrecision) { _, j ->
+        // Compute bias gradients efficiently
+        for (j in 0 until outputSize) {
             var sum = 0.0
-            for (i in 0 until currentDelta.rows) {
+            for (i in 0 until batchSize) {
                 sum += currentDelta[i, j]
             }
-            sum / featureSize
+            gradientBiases!![0, j] = sum * featureSizeInv
         }
 
         // Return gradient for previous layer
-        return matrixMultiply(currentDelta, transpose(weights))
+        return com.onyxdevtools.ai.extensions.matrixMultiply(currentDelta, weights.transpose())
     }
 
     /**

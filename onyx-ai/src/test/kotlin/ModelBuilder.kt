@@ -1,11 +1,10 @@
 import Activation
-import com.onyxdevtools.ai.NeuralNetwork
+import com.onyxdevtools.ai.*
 import com.onyxdevtools.ai.data.DefaultSequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
-import com.onyxdevtools.ai.toMatrix
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.OnyxVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
@@ -36,7 +35,7 @@ fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
                 maxTokens = 5,
             )
             println(out)
-            writer.appendLine(out)
+            writer.append(out + "\n")
         }
     }
 }
@@ -49,7 +48,7 @@ fun generateCorpusSequence(
     shuffleFiles: Boolean = true,
     rng: Random? = null,
     shuffleWithinFile: Boolean = false
-): Sequence<Pair<DoubleArray, IntArray>> {
+): Sequence<Pair<FlexibleMatrix, IntArray>> {
     require(seqLength > 0) { "seqLength must be > 0" }
     require(stride > 0) { "stride must be > 0" }
 
@@ -95,10 +94,31 @@ class ComprehensiveLossFunction(
         val valPairs = valSeq.take(numValExamples).toList()
         if (valPairs.isEmpty()) return 0.0
 
-        val valInputs = valPairs.map { it.first }.toTypedArray()
+        val valInputsList = valPairs.map { it.first }
         val valSparseTargets = valPairs.flatMap { it.second.toList() }.toIntArray()
+        
+        // Stack all FlexibleMatrix vertically to create a single input matrix
+        val valInputs = if (valInputsList.isNotEmpty()) {
+            val totalRows = valInputsList.map { it.rows }.sum()
+            val cols = valInputsList[0].cols
+            val isSingle = valInputsList[0].isSinglePrecision
+            
+            createMatrix(totalRows, cols, isSingle) { r, c ->
+                var currentRowOffset = 0
+                for (matrix in valInputsList) {
+                    if (r >= currentRowOffset && r < currentRowOffset + matrix.rows) {
+                        return@createMatrix matrix[r - currentRowOffset, c]
+                    }
+                    currentRowOffset += matrix.rows
+                }
+                0.0
+            }
+        } else {
+            createMatrix(0, 0, true)
+        }
+        
         val valPred = net.predict(valInputs)
-        return sparseCategoricalCrossEntropy(valPred, valSparseTargets)
+        return valPred.sparseCategoricalCrossEntropy(valSparseTargets)
     }
 }
 
@@ -115,26 +135,27 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 256
+    val maxSequenceLength = 512
     val stride = maxSequenceLength
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
     val numHeads = 8
     val ffHiddenDim = 64
+    val precision = MatrixPrecision.SINGLE
 
     val layers = listOf(
-        EmbeddingLayer(vocabulary.size, embeddingDim),
-        PositionalEncodingLayer(maxSequenceLength, embeddingDim),
-        MultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads),
-        LayerNormalizationLayer(embeddingDim),
-        DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-        DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
-        LayerNormalizationLayer(embeddingDim),
-        DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
+        EmbeddingLayer(vocabulary.size, embeddingDim, precision = precision),
+        PositionalEncodingLayer(maxSequenceLength, embeddingDim, precision = precision),
+        MultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads, precision = precision),
+        LayerNormalizationLayer(embeddingDim, precision = precision),
+        DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU, precision = precision),
+        DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR, precision = precision),
+        LayerNormalizationLayer(embeddingDim, precision = precision),
+        DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR, precision = precision)
     )
 
-    var model = NeuralNetwork(layers, learningRate = 0.001)
+    var model = NeuralNetwork(layers, learningRate = 0.001, precision = precision)
 
     // Create corpus sequence generator (streams all books)
     val source = {
@@ -158,7 +179,7 @@ fun main() {
             batchSize = 16,
             maxEpochs = 200,
             patience = 100,
-            lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred.toMatrix(), sparseTargets) },
+            lossFn = { pred, sparseTargets -> pred.sparseCategoricalCrossEntropy(sparseTargets) },
             probeFn = {
                 askProbes(model, vocabulary, maxSequenceLength)
             },

@@ -17,7 +17,7 @@ package com.onyxdevtools.ai.batch
  * val (xTrain, yTrain, xTest, yTest) = splitter.splitBatch(features, sequenceTargets, testFraction = 0.2)
  * ```
  */
-class SequentialBatchSplitter : BatchSplitter<Array<Array<DoubleArray>>, List<Array<DoubleArray>>> {
+class SequentialBatchSplitter : LegacyBatchSplitter<Array<Array<DoubleArray>>, List<Array<DoubleArray>>> {
     
     /**
      * Splits feature vectors and sequential target data into training and test subsets.

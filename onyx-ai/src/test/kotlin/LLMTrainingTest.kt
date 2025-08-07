@@ -1,4 +1,5 @@
 import Activation
+import com.onyxdevtools.ai.MatrixPrecision
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.data.SparseSequenceGenerator
 import com.onyxdevtools.ai.data.SequenceGenerator
@@ -46,16 +47,17 @@ class LLMTrainingTest {
         val numHeads = 4
         val ffHiddenDim = 128
         val tokensPerSample = seqLength
+        val precision = MatrixPrecision.SINGLE
 
         val layers = listOf(
-            EmbeddingLayer(vocabulary.size, embeddingDim),
-            PositionalEncodingLayer(tokensPerSample, embeddingDim),
-            MultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
-            LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
-            LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
+            EmbeddingLayer(vocabulary.size, embeddingDim, precision = precision),
+            PositionalEncodingLayer(tokensPerSample, embeddingDim, precision = precision),
+            MultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads, precision = precision),
+            LayerNormalizationLayer(embeddingDim, precision = precision),
+            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU, precision = precision),
+            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR, precision = precision),
+            LayerNormalizationLayer(embeddingDim, precision = precision),
+            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR, precision = precision) // ← Optimized output layer!
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.0001)

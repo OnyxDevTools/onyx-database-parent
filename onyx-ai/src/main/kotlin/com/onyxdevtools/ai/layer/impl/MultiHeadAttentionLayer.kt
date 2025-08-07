@@ -121,22 +121,23 @@ class MultiHeadAttentionLayer(
     override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
         val batchSize = input.rows / tokensPerSample
 
-        // Compute Q, K, V matrices
-        queries = matmul(input, wQuery)
-        keys = matmul(input, wKey)
-        values = matmul(input, wValue)
+        // Compute Q, K, V matrices using high-performance matrix multiplication
+        queries = com.onyxdevtools.ai.extensions.matrixMultiply(input, wQuery)
+        keys = com.onyxdevtools.ai.extensions.matrixMultiply(input, wKey)
+        values = com.onyxdevtools.ai.extensions.matrixMultiply(input, wValue)
 
         // Compute attention for all heads
         attentionOutput = computeMultiHeadAttention(queries!!, keys!!, values!!, batchSize)
 
         // Final output projection
-        output = matmul(attentionOutput!!, wOutput)
+        output = com.onyxdevtools.ai.extensions.matrixMultiply(attentionOutput!!, wOutput)
 
         return output!!
     }
 
     /**
-     * Computes multi-head attention using queries, keys, and values.
+     * Computes multi-head attention using queries, keys, and values with high performance.
+     * This version uses direct memory operations and reuses buffers to avoid allocations.
      */
     private fun computeMultiHeadAttention(
         q: FlexibleMatrix,
@@ -145,41 +146,44 @@ class MultiHeadAttentionLayer(
         batchSize: Int
     ): FlexibleMatrix {
         val totalTokens = q.rows
-        val result = createMatrix(totalTokens, modelSize, q.isSinglePrecision) { _, _ -> 0.0 }
+        val result = createMatrix(totalTokens, modelSize, q.isSinglePrecision)
+        
+        // Pre-allocate working buffers to avoid repeated allocations
+        val scoresBuffer = createMatrix(tokensPerSample, tokensPerSample, q.isSinglePrecision)
+        val attentionBuffer = createMatrix(tokensPerSample, tokensPerSample, q.isSinglePrecision)
+
+        val scale = 1.0 / sqrt(headSize.toDouble())
 
         for (batch in 0 until batchSize) {
             val startIdx = batch * tokensPerSample
-            val endIdx = startIdx + tokensPerSample
-
-            // Extract batch data
-            val batchQ = extractBatch(q, startIdx, endIdx)
-            val batchK = extractBatch(k, startIdx, endIdx)
-            val batchV = extractBatch(v, startIdx, endIdx)
 
             // Process all heads for this batch
             for (head in 0 until headCount) {
                 val headStartCol = head * headSize
-                val headEndCol = headStartCol + headSize
 
-                // Extract head-specific Q, K, V
-                val headQ = extractColumns(batchQ, headStartCol, headEndCol)
-                val headK = extractColumns(batchK, headStartCol, headEndCol)
-                val headV = extractColumns(batchV, headStartCol, headEndCol)
-
-                // Compute attention scores
-                val scores = matmul(headQ, transpose(headK))
-                scaleMatrix(scores, 1.0 / sqrt(headSize.toDouble()))
-
-                // Apply softmax
-                val attention = softmax(scores)
-
-                // Apply attention to values
-                val headOutput = matmul(attention, headV)
-
-                // Store result back to appropriate head position
+                // Compute attention scores: Q * K^T for this head
+                // Working directly with matrix elements to avoid allocations
                 for (i in 0 until tokensPerSample) {
-                    for (j in 0 until headSize) {
-                        result[startIdx + i, headStartCol + j] = headOutput[i, j]
+                    for (j in 0 until tokensPerSample) {
+                        var score = 0.0
+                        for (d in 0 until headSize) {
+                            score += q[startIdx + i, headStartCol + d] * k[startIdx + j, headStartCol + d]
+                        }
+                        scoresBuffer[i, j] = score * scale
+                    }
+                }
+
+                // Apply softmax to each row (using high-performance version)
+                applySoftmaxInPlace(scoresBuffer, attentionBuffer)
+
+                // Apply attention to values: Attention * V for this head
+                for (i in 0 until tokensPerSample) {
+                    for (d in 0 until headSize) {
+                        var output = 0.0
+                        for (j in 0 until tokensPerSample) {
+                            output += attentionBuffer[i, j] * v[startIdx + j, headStartCol + d]
+                        }
+                        result[startIdx + i, headStartCol + d] = output
                     }
                 }
             }
@@ -188,91 +192,32 @@ class MultiHeadAttentionLayer(
         attentionWeights = result // Store for backward pass
         return result
     }
-
+    
     /**
-     * Extracts a batch of rows from a matrix.
+     * High-performance in-place softmax that reuses buffers
      */
-    private fun extractBatch(matrix: FlexibleMatrix, startRow: Int, endRow: Int): FlexibleMatrix {
-        val rows = endRow - startRow
-        return createMatrix(rows, matrix.cols, matrix.isSinglePrecision) { i, j ->
-            matrix[startRow + i, j]
-        }
-    }
-
-    /**
-     * Extracts a range of columns from a matrix.
-     */
-    private fun extractColumns(matrix: FlexibleMatrix, startCol: Int, endCol: Int): FlexibleMatrix {
-        val cols = endCol - startCol
-        return createMatrix(matrix.rows, cols, matrix.isSinglePrecision) { i, j ->
-            matrix[i, startCol + j]
-        }
-    }
-
-    /**
-     * Scales all elements of a matrix by a constant factor.
-     */
-    private fun scaleMatrix(matrix: FlexibleMatrix, scale: Double) {
-        for (i in 0 until matrix.rows) {
-            for (j in 0 until matrix.cols) {
-                matrix[i, j] = matrix[i, j] * scale
-            }
-        }
-    }
-
-    /**
-     * Applies softmax activation to each row of the matrix.
-     */
-    private fun softmax(matrix: FlexibleMatrix): FlexibleMatrix {
-        val result = createMatrix(matrix.rows, matrix.cols, matrix.isSinglePrecision) { _, _ -> 0.0 }
-        
-        for (i in 0 until matrix.rows) {
+    private fun applySoftmaxInPlace(input: FlexibleMatrix, output: FlexibleMatrix) {
+        for (i in 0 until input.rows) {
             // Find max for numerical stability
-            var maxVal = Double.NEGATIVE_INFINITY
-            for (j in 0 until matrix.cols) {
-                if (matrix[i, j] > maxVal) {
-                    maxVal = matrix[i, j]
-                }
+            var maxVal = input[i, 0]
+            for (j in 1 until input.cols) {
+                val value = input[i, j]
+                if (value > maxVal) maxVal = value
             }
             
             // Compute exp and sum
             var sum = 0.0
-            for (j in 0 until matrix.cols) {
-                val expVal = kotlin.math.exp(matrix[i, j] - maxVal)
-                result[i, j] = expVal
+            for (j in 0 until input.cols) {
+                val expVal = kotlin.math.exp(input[i, j] - maxVal)
+                output[i, j] = expVal
                 sum += expVal
             }
             
             // Normalize
-            for (j in 0 until matrix.cols) {
-                result[i, j] /= sum
+            val invSum = 1.0 / sum
+            for (j in 0 until input.cols) {
+                output[i, j] *= invSum
             }
-        }
-        
-        return result
-    }
-
-    /**
-     * Matrix multiplication using FlexibleMatrix.
-     */
-    private fun matmul(a: FlexibleMatrix, b: FlexibleMatrix): FlexibleMatrix {
-        require(a.cols == b.rows) { "Matrix dimensions don't match for multiplication" }
-        
-        return createMatrix(a.rows, b.cols, a.isSinglePrecision) { i, j ->
-            var sum = 0.0
-            for (k in 0 until a.cols) {
-                sum += a[i, k] * b[k, j]
-            }
-            sum
-        }
-    }
-
-    /**
-     * Matrix transpose using FlexibleMatrix.
-     */
-    private fun transpose(matrix: FlexibleMatrix): FlexibleMatrix {
-        return createMatrix(matrix.cols, matrix.rows, matrix.isSinglePrecision) { i, j ->
-            matrix[j, i]
         }
     }
 
@@ -294,22 +239,22 @@ class MultiHeadAttentionLayer(
         val input = currentInput!!
 
         // Gradient w.r.t. output projection weights
-        gradWOutput = matmul(transpose(attentionOutput!!), delta)
+        gradWOutput = com.onyxdevtools.ai.extensions.matrixMultiply(attentionOutput!!.transpose(), delta)
 
         // Gradient w.r.t. attention output
-        val gradAttentionOutput = matmul(delta, transpose(wOutput))
+        val gradAttentionOutput = com.onyxdevtools.ai.extensions.matrixMultiply(delta, wOutput.transpose())
 
         // Gradients w.r.t. Q, K, V (simplified implementation)
-        gradWQuery = matmul(transpose(input), gradAttentionOutput)
-        gradWKey = matmul(transpose(input), gradAttentionOutput)
-        gradWValue = matmul(transpose(input), gradAttentionOutput)
+        gradWQuery = com.onyxdevtools.ai.extensions.matrixMultiply(input.transpose(), gradAttentionOutput)
+        gradWKey = com.onyxdevtools.ai.extensions.matrixMultiply(input.transpose(), gradAttentionOutput)
+        gradWValue = com.onyxdevtools.ai.extensions.matrixMultiply(input.transpose(), gradAttentionOutput)
 
         // Gradient w.r.t. input
         val gradInput = createMatrix(input.rows, input.cols, input.isSinglePrecision) { _, _ -> 0.0 }
         
-        val gradQ = matmul(gradAttentionOutput, transpose(wQuery))
-        val gradK = matmul(gradAttentionOutput, transpose(wKey))
-        val gradV = matmul(gradAttentionOutput, transpose(wValue))
+        val gradQ = com.onyxdevtools.ai.extensions.matrixMultiply(gradAttentionOutput, wQuery.transpose())
+        val gradK = com.onyxdevtools.ai.extensions.matrixMultiply(gradAttentionOutput, wKey.transpose())
+        val gradV = com.onyxdevtools.ai.extensions.matrixMultiply(gradAttentionOutput, wValue.transpose())
 
         for (i in 0 until input.rows) {
             for (j in 0 until input.cols) {

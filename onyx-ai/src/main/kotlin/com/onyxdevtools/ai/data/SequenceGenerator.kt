@@ -1,98 +1,63 @@
 package com.onyxdevtools.ai.data
 
-import com.onyxdevtools.ai.transformation.Vocabulary
+import com.onyxdevtools.ai.FlexibleMatrix
+import com.onyxdevtools.ai.MatrixPrecision
 
 /**
- * Sealed class representing different target representations for sequence generation.
- * Allows generators to return either dense one-hot vectors or sparse token IDs.
- */
-sealed class SequenceTarget {
-    /**
-     * Dense target representation using one-hot encoded vectors.
-     * Memory usage: O(vocab_size × seq_length) per training example.
-     * Compatible with standard categorical cross-entropy loss.
-     */
-    data class Dense(val vectors: Array<DoubleArray>) : SequenceTarget() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            other as Dense
-            return vectors.contentDeepEquals(other.vectors)
-        }
-
-        override fun hashCode(): Int = vectors.contentDeepHashCode()
-    }
-
-    /**
-     * Sparse target representation using token IDs.
-     * Memory usage: O(seq_length) per training example.
-     * Compatible with sparse categorical cross-entropy loss.
-     * Uses -1 to indicate positions that should be ignored in loss computation.
-     */
-    data class Sparse(val tokenIds: IntArray) : SequenceTarget() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            other as Sparse
-            return tokenIds.contentEquals(other.tokenIds)
-        }
-
-        override fun hashCode(): Int = tokenIds.contentHashCode()
-    }
-}
-
-/**
- * Interface for generating training sequences from tokenized text data.
+ * Interface for generating training sequences from tokenized text data with precision control.
  *
- * Sequence generators are responsible for creating input-target pairs from a stream
- * of tokens, which are essential for training language models and other sequence-based
- * neural networks. The generator creates sliding windows over the token sequence,
- * where each window becomes a training example.
+ * Sequence generators transform raw token sequences into structured training data
+ * suitable for neural network training, particularly for language modeling tasks.
+ * They handle the conversion from discrete tokens to appropriate input/output pairs
+ * while managing sequence length, padding, and target encoding requirements.
  *
- * The typical workflow involves:
- * 1. Taking a list of tokenized integers representing text
- * 2. Creating overlapping sequences of specified length
- * 3. Converting tokens to appropriate numerical representations
- * 4. Pairing input sequences with their corresponding targets
+ * Key features:
+ * - **Precision Control**: Generate data in SINGLE or DOUBLE precision to match network requirements
+ * - **Memory Efficient**: Avoid constant conversions between precision formats
+ * - **FlexibleMatrix Integration**: Direct integration with FlexibleMatrix for optimal performance
+ * - **Lazy Evaluation**: Memory-efficient processing for large datasets
  *
- * This is commonly used in:
- * - Language model training (GPT-style models)
- * - Text generation tasks
- * - Sequence-to-sequence learning
- * - Time series prediction with text data
+ * This abstraction allows for different sequence generation strategies:
+ * - Dense one-hot encoded targets for categorical cross-entropy
+ * - Sparse integer targets for memory-efficient training
+ * - Custom sequence windowing and overlap patterns
+ * - Different padding and truncation strategies
+ *
+ * Implementations should be stateless and thread-safe to support concurrent
+ * data loading and training scenarios.
  *
  * @see DefaultSequenceGenerator
+ * @see SparseSequenceGenerator
  */
 interface SequenceGenerator {
+
     /**
-     * Generates training sequences from a list of tokens using sliding windows.
+     * Generates training sequences from a list of tokens with precision control.
      *
-     * Creates overlapping sequences from the input tokens where each sequence
-     * serves as a training example. The method returns pairs where the first
-     * element is the input sequence and the second element contains the target
-     * sequences (typically the next tokens in the sequence).
-     *
-     * The sliding window approach allows for efficient use of training data by
-     * creating multiple overlapping examples from a single text sequence.
+     * This method creates sliding window sequences of fixed length from the input tokens,
+     * where each sequence serves as input and the corresponding shifted sequence serves as target.
+     * The precision parameter ensures data matches the neural network's precision requirements.
      *
      * @param tokens List of integer tokens representing the tokenized text.
-     *               Each integer should correspond to a valid token in the vocabulary.
-     * @param seqLength The length of each generated sequence. This determines
-     *                  how many tokens are included in each training example.
-     * @param stride The step size between consecutive sequences. A stride of 1
-     *               creates maximally overlapping sequences, while larger strides
-     *               create less overlap and fewer training examples.
-     * @return A Sequence of training pairs where:
-     *         - First element (DoubleArray): Input sequence representation
-     *         - Second element (Array<DoubleArray>): Target sequence representations
-     *         The Sequence is lazy-evaluated for memory efficiency with large datasets.
-     * @throws IllegalArgumentException if seqLength <= 0, stride <= 0, or
-     *                                 tokens list is too short for the specified sequence length
+     *               Token IDs should be within the vocabulary range supported by the implementation.
+     * @param seqLength The desired length of each generated sequence.
+     *                  Determines the context window size for the model.
+     * @param stride The step size between consecutive sequence starts.
+     *               Smaller values create more overlapping sequences but increase dataset size.
+     * @param shuffle Whether to randomize the order of generated sequences (default: true).
+     *                Randomization improves training convergence and prevents overfitting to data ordering.
+     * @param precision The precision to use for generated data (SINGLE or DOUBLE).
+     *                  Must match the neural network's precision to avoid conversions.
+     * @return A lazy [Sequence] of training pairs where:
+     *         - First: Input sequence as FlexibleMatrix (batchSize=1, cols=seqLength)
+     *         - Second: Target tokens as IntArray for sparse categorical cross-entropy
+     * @throws IllegalArgumentException if parameters are invalid or tokens contain unsupported values.
      */
     fun generateSequences(
         tokens: List<Int>,
         seqLength: Int,
-        stride: Int,
-        shuffle: Boolean
-    ): Sequence<Pair<DoubleArray, IntArray>>
+        stride: Int = 1,
+        shuffle: Boolean = true,
+        precision: MatrixPrecision = MatrixPrecision.SINGLE
+    ): Sequence<Pair<FlexibleMatrix, IntArray>>
 }
