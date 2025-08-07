@@ -12,5 +12,16 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
+    compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs("--add-modules=jdk.incubator.vector")
+}
+tasks.withType<JavaExec>().configureEach {
+    jvmArgs("--add-modules=jdk.incubator.vector")
+}
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
 }

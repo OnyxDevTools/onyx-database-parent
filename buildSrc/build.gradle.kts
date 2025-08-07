@@ -11,3 +11,7 @@ repositories {
     // Use the plugin portal to apply community plugins in convention plugins.
     gradlePluginPortal()
 }
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
+}
