@@ -44,7 +44,7 @@ fun generateCorpusSequence(
 
     val tokenizer = BPETokenizer(vocabulary)
     val generator = DefaultSequenceGenerator(vocabulary)
-    val all = booksDir.listFiles()?.filter { it.isFile && it.extension.contains("txt") } ?: emptyList()
+    val all = booksDir.listFiles()?.filter { !it.isHidden && it.isFile && it.extension.contains("txt") } ?: emptyList()
     val files = if (shuffleFiles) (rng?.let { all.shuffled(it) } ?: all.shuffled()) else all
 
     return sequence {
@@ -97,6 +97,7 @@ fun main() {
 
     if (vocabulary.size == 0) {
         books.listFiles()?.forEach {
+            if (it.isHidden) return@forEach
             vocabulary.appendToVocabulary(it.readText())
         }
         vocabulary.commit()
