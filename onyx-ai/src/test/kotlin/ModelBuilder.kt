@@ -12,6 +12,7 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.random.Random
 import java.io.File
+import java.io.FileWriter
 
 // Add somewhere above train call
 fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
@@ -23,14 +24,20 @@ fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
         "[SOT]What game does the Queen of Hearts play?[SEP] ",
         "[SOT]Alice was beginning to get very tired "
     )
-    qs.forEach { q ->
-        val out = model.chat(
-            prompt = q,
-            vocabulary = vocab,
-            seqLength = seqLen,
-            maxTokens = 5,
-        )
-        println("$q $out")
+
+    val logFile = File("log.txt")
+    FileWriter(logFile, true).use { writer ->
+
+        qs.forEach { q ->
+            val out = model.chat(
+                prompt = q,
+                vocabulary = vocab,
+                seqLength = seqLen,
+                maxTokens = 5,
+            )
+            println(out)
+            writer.appendLine(out)
+        }
     }
 }
 
@@ -55,7 +62,7 @@ fun generateCorpusSequence(
         for (f in files) {
             val tokens = mutableListOf<Int>()
             f.forEachLine { line ->
-                    for (tok in tokenizer.tokenize(line)) {
+                for (tok in tokenizer.tokenize(line)) {
                     tokens.add(vocabulary.getId(tok))
                 }
                 tokens.add(vocabulary.getId("\n"))
