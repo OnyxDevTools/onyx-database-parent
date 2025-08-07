@@ -1,10 +1,8 @@
-import Activation
 import com.onyxdevtools.ai.MatrixPrecision
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.data.SparseSequenceGenerator
 import com.onyxdevtools.ai.data.SequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
-import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.loss.CrossEntropyLoss
@@ -52,7 +50,7 @@ class LLMTrainingTest {
         val layers = listOf(
             EmbeddingLayer(vocabulary.size, embeddingDim, precision = precision),
             PositionalEncodingLayer(tokensPerSample, embeddingDim, precision = precision),
-            MultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads, precision = precision),
+            CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads, precision = precision),
             LayerNormalizationLayer(embeddingDim, precision = precision),
             DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU, precision = precision),
             DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR, precision = precision),
@@ -60,7 +58,7 @@ class LLMTrainingTest {
             DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR, precision = precision) // ← Optimized output layer!
         )
 
-        var model = NeuralNetwork(layers, learningRate = 0.0001)
+        var model = NeuralNetwork(layers, learningRate = 0.001)
 
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch (using sparse generator)
         val sequenceGenerator: SequenceGenerator = SparseSequenceGenerator(vocabulary)
@@ -83,21 +81,21 @@ class LLMTrainingTest {
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred.toMatrix(), sparseTargets) },
                 comprehensiveLossFn = { net ->
                     var generatedText = model.chat(
-                        prompt = "[SOT]Alice was beginning to get very tired ",
+                        prompt = "Alice was beginning to get very tired ",
                         vocabulary = vocabulary,
                         seqLength = seqLength
                     )
                     println("Generated text: $generatedText")
 
                     generatedText = model.chat(
-                        prompt = "[SOT]Who are you?[SEP] ",
+                        prompt = "Who are you? ",
                         vocabulary = vocabulary,
                         seqLength = seqLength
                     )
                     println("Generated text: $generatedText")
 
                     val generatedAnswer = model.chat(
-                        prompt = "[SOT]Who is the main character in the story?[SEP] ",
+                        prompt = "Who is the main character in the story? ",
                         vocabulary = vocabulary,
                         seqLength = seqLength
                     )
@@ -122,14 +120,14 @@ class LLMTrainingTest {
         }
 
         val generatedText = model.chat(
-            prompt = "[SOT]Alice was beginning to get very tired",
+            prompt = "Alice was beginning to get very tired",
             vocabulary = vocabulary,
             seqLength = seqLength
         )
         println("Generated text: $generatedText")
 
         val generatedAnswer = model.chat(
-            prompt = "Question: Who is the main character in the story? Answer:",
+            prompt = "Who is the main character in the story? Answer:",
             vocabulary = vocabulary,
             seqLength = seqLength
         )

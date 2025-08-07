@@ -1,8 +1,6 @@
-import Activation
 import com.onyxdevtools.ai.*
 import com.onyxdevtools.ai.data.DefaultSequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
-import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.BPETokenizer
@@ -31,8 +29,8 @@ fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
             val out = model.chat(
                 prompt = q,
                 vocabulary = vocab,
-                seqLength = seqLen,
-                maxTokens = 5,
+                seqLength = 16,
+                maxTokens = 150,
             )
             println(out)
             writer.append(out + "\n")
@@ -147,7 +145,7 @@ fun main() {
     val layers = listOf(
         EmbeddingLayer(vocabulary.size, embeddingDim, precision = precision),
         PositionalEncodingLayer(maxSequenceLength, embeddingDim, precision = precision),
-        MultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads, precision = precision),
+        CachedMultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads, precision = precision),
         LayerNormalizationLayer(embeddingDim, precision = precision),
         DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU, precision = precision),
         DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR, precision = precision),

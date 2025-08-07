@@ -89,6 +89,8 @@ class BatchNormalizationLayer(
     }
 
     private fun preForwardFlexible(input: FlexibleMatrix, isTraining: Boolean): FlexibleMatrix {
+        val outputMatrix = createMatrix(input.rows, input.cols, input.isSinglePrecision)
+
         if (isTraining) {
             // Compute batch statistics
             val meanVector = createMatrix(1, size, input.isSinglePrecision) { _, j -> 
@@ -109,29 +111,35 @@ class BatchNormalizationLayer(
             this.mean = meanVector
             this.variance = varianceVector
 
-            // Normalize using batch statistics
-            this.normalized = createMatrix(input.rows, input.cols, input.isSinglePrecision) { i, j ->
+            // Normalize and apply affine transformation
+            val normalizedLocal = createMatrix(input.rows, input.cols, input.isSinglePrecision) { i, j ->
                 (input[i, j] - meanVector[0, j]) / sqrt(varianceVector[0, j] + EPSILON)
             }
+            this.normalized = normalizedLocal
 
-            // Update running statistics (not used for current normalization)
+            for (i in 0 until input.rows) {
+                for (j in 0 until size) {
+                    outputMatrix[i, j] = gamma[0, j] * normalizedLocal[i, j] + beta[0, j]
+                }
+            }
+
+            // Update running statistics
             for (j in 0 until size) {
                 runningMean[0, j] = momentum * runningMean[0, j] + (1 - momentum) * meanVector[0, j]
                 runningVariance[0, j] = momentum * runningVariance[0, j] + (1 - momentum) * varianceVector[0, j]
             }
         } else {
-            // Use running statistics for inference
-            this.normalized = createMatrix(input.rows, input.cols, input.isSinglePrecision) { i, j ->
-                (input[i, j] - runningMean[0, j]) / sqrt(runningVariance[0, j] + EPSILON)
+            // Direct computation without storing normalized
+            for (i in 0 until input.rows) {
+                for (j in 0 until size) {
+                    val norm = (input[i, j] - runningMean[0, j]) / sqrt(runningVariance[0, j] + EPSILON)
+                    outputMatrix[i, j] = gamma[0, j] * norm + beta[0, j]
+                }
             }
         }
 
-        // Apply affine transformation
-        this.output = createMatrix(input.rows, input.cols, input.isSinglePrecision) { i, j ->
-            gamma[0, j] * normalized!![i, j] + beta[0, j]
-        }
-
-        return output!!
+        this.output = outputMatrix
+        return outputMatrix
     }
 
     override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
