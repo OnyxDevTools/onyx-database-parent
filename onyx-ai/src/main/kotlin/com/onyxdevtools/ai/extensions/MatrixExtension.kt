@@ -101,6 +101,38 @@ private fun matrixMultiplySkinnyVectorized(A: Matrix, B: Matrix): Matrix {
     return matrixMultiplySkinnyVectorizedFloat(A, B, result)
 }
 
+fun transposeParallelTiled(B: Array<FloatArray>, tile: Int = 64): Array<FloatArray> {
+    val k = B.size
+    val n = B[0].size
+    val Bt = Array(n) { FloatArray(k) }
+
+    val tCols = (n + tile - 1) / tile
+    val tRows = (k + tile - 1) / tile
+
+    // Parallelize over tile columns (good balance, avoids too many tiny tasks)
+    IntStream.range(0, tCols).parallel().forEach { tj ->
+        val j0 = tj * tile
+        val j1 = min(n, j0 + tile)
+        var ti = 0
+        while (ti < tRows) {
+            val i0 = ti * tile
+            val i1 = min(k, i0 + tile)
+            var i = i0
+            while (i < i1) {
+                val src = B[i]
+                var j = j0
+                while (j < j1) {
+                    Bt[j][i] = src[j]
+                    j++
+                }
+                i++
+            }
+            ti++
+        }
+    }
+    return Bt
+}
+
 /**
  * Float-optimized vectorized multiplication
  */
@@ -111,7 +143,7 @@ private fun matrixMultiplySkinnyVectorizedFloat(A: Matrix, B: Matrix, result: Ma
     val tile = 8
 
     // Transpose B for better cache locality
-    val Bt = Array(n) { j -> FloatArray(k) { i -> B[i][j] } }
+    val Bt = transposeParallelTiled(B, 64)
 
     for (i in 0 until m) {
         val aRow = A[i]
@@ -187,47 +219,35 @@ private fun matrixMultiplySkinnyVectorizedParallel(A: Matrix, B: Matrix): Matrix
     val k = A[0].size
     val n = B[0].size
 
-    val result = Array(m) { FloatArray(n) }
+    // Parallel tiled transpose tends to help large shapes
+    val Bt = transposeParallelTiled(B, tile = 64)
 
-    // Transpose B for better cache locality
-    val Bt = Array(n) { j -> FloatArray(k) { i -> B[i][j] } }
-    val tile = 8
+    val result = Array(m) { FloatArray(n) }
+    val species = FloatVector.SPECIES_PREFERRED
+    val L = species.length()
 
     IntStream.range(0, m).parallel().forEach { i ->
         val aRow = A[i]
         var j = 0
-
-        while (j + tile <= n) {
-            var acc0 = 0.0f; var acc1 = 0.0f; var acc2 = 0.0f; var acc3 = 0.0f
-            var acc4 = 0.0f; var acc5 = 0.0f; var acc6 = 0.0f; var acc7 = 0.0f
-
-            for (p in 0 until k) {
-                val a = aRow[p]
-                acc0 += a * Bt[j + 0][p]
-                acc1 += a * Bt[j + 1][p]
-                acc2 += a * Bt[j + 2][p]
-                acc3 += a * Bt[j + 3][p]
-                acc4 += a * Bt[j + 4][p]
-                acc5 += a * Bt[j + 5][p]
-                acc6 += a * Bt[j + 6][p]
-                acc7 += a * Bt[j + 7][p]
-            }
-
-            result[i][j + 0] = acc0; result[i][j + 1] = acc1; result[i][j + 2] = acc2; result[i][j + 3] = acc3
-            result[i][j + 4] = acc4; result[i][j + 5] = acc5; result[i][j + 6] = acc6; result[i][j + 7] = acc7
-            j += tile
-        }
-
         while (j < n) {
-            var acc = 0.0f
-            for (p in 0 until k) {
-                acc += A[i][p] * Bt[j][p]
+            val btRow = Bt[j]
+            var p = 0
+            var accVec = FloatVector.zero(species)
+            while (p + L <= k) {
+                val av = FloatVector.fromArray(species, aRow, p)
+                val bv = FloatVector.fromArray(species, btRow, p)
+                accVec = av.fma(bv, accVec) // (a*b)+acc with FMA if supported
+                p += L
+            }
+            var acc = accVec.reduceLanes(VectorOperators.ADD)
+            while (p < k) {
+                acc += aRow[p] * btRow[p]
+                p++
             }
             result[i][j] = acc
             j++
         }
     }
-
     return result
 }
 

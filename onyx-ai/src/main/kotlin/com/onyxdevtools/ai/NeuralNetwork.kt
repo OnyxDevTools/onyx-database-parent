@@ -461,9 +461,9 @@ data class NeuralNetwork(
                     }
 
                     bx.clear(); by.clear()
-                    if (iter > 0)
-                        probeFn.invoke()
                 }
+                if (iter.rem(100) == 0)
+                    probeFn.invoke()
                 iter++
             }
 

@@ -143,7 +143,7 @@ fun main() {
     try {
         model = model.trainStreamingSparse(
             source = source,
-            batchSize = 2,
+            batchSize = 1,
             maxEpochs = 200,
             patience = 100,
             testFrac = 0.0f,
