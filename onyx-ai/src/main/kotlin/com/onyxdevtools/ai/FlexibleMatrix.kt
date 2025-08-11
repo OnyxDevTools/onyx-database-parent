@@ -1,6 +1,5 @@
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.extensions.Matrix
 import kotlin.reflect.KClass
 
 /**
@@ -152,14 +151,6 @@ fun createMatrix(rows: Int, cols: Int, useSinglePrecision: Boolean = false, init
 
 // Conversion functions
 fun Array<FloatArray>.toFlexibleMatrix(): FloatMatrix = FloatMatrix(this)
+fun Array<DoubleArray>.toFlexibleMatrix(): DoubleMatrix = DoubleMatrix(this)
 
-// Extension functions for easy conversion
-fun Matrix.toFlexibleMatrix(useSinglePrecision: Boolean = false): FlexibleMatrix {
-    return if (useSinglePrecision) {
-        FloatMatrix(this.map { row -> FloatArray(row.size) { row[it].toFloat() } }.toTypedArray())
-    } else {
-        DoubleMatrix(this)
-    }
-}
-
-fun FlexibleMatrix.toMatrix(): Matrix = this.toDoubleMatrix()
+// Extension functions removed - Matrix typealias eliminated to prevent forced double usage

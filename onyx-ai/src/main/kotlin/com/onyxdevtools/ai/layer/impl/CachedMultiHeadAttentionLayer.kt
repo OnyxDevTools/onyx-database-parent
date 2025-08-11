@@ -25,7 +25,7 @@ class CachedMultiHeadAttentionLayer(
     private val tokensPerSample: Int,
     private val modelSize: Int,
     private val headCount: Int,
-    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
+    private val precision: MatrixPrecision = MatrixPrecision.SINGLE
 ) : Layer {
 
     override var output: FlexibleMatrix? = null
@@ -361,9 +361,6 @@ class CachedMultiHeadAttentionLayer(
         }
     }
 
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
-    }
 
     // Backward pass implementation (same as original)
     override fun backward(
@@ -398,23 +395,6 @@ class CachedMultiHeadAttentionLayer(
         return gradInput
     }
 
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
-    }
 
     // Parameter updates (same as original)
     @Suppress("DuplicatedCode")

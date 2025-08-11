@@ -1,7 +1,5 @@
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.extensions.Matrix
-
 /**
  * Configuration for matrix precision to balance memory usage and computational accuracy.
  */
@@ -73,9 +71,4 @@ fun createMatrix(rows: Int, cols: Int, precision: MatrixPrecision, initializer: 
     return createMatrix(rows, cols, precision.isSinglePrecision, initializer)
 }
 
-/**
- * Extension function to convert legacy Matrix to FlexibleMatrix using global precision
- */
-fun Matrix.toFlexibleMatrix(): FlexibleMatrix {
-    return this.toFlexibleMatrix(MatrixConfig.defaultPrecision.isSinglePrecision)
-}
+// Matrix typealias removed - all conversions now handled by FlexibleMatrix directly
