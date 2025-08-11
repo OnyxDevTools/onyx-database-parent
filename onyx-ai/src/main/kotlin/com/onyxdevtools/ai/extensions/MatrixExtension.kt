@@ -35,7 +35,7 @@ fun matrixMultiply(A: Matrix, B: Matrix): Matrix {
     val skinny = minOf(m, n) < SKINNY_DIM
     val shouldParallelize = (m >= PARALLEL_ROWS_MIN) || (n >= PARALLEL_COLS_MIN)
 
-    return if (!skinny) {
+    return if (skinny) {
         // For skinny matrices, vectorization is very effective
         if (shouldParallelize) matrixMultiplySkinnyVectorizedParallel(A, B)
         else matrixMultiplySkinnyVectorized(A, B)
@@ -308,10 +308,21 @@ fun subtract(matrixA: Matrix, matrixB: Matrix): Matrix =
  * @param matrixB The second matrix.
  * @return A new matrix representing matrixA + matrixB.
  */
-fun add(matrixA: Matrix, matrixB: Matrix): Matrix =
-    matrixA.mapIndexed { rowIndex, row ->
-        FloatArray(row.size) { colIndex -> row[colIndex] + matrixB[rowIndex][colIndex] }
+fun add(matrixA: Matrix, matrixB: Matrix): Matrix {
+    require(matrixA.size == matrixB.size) { 
+        "Matrix row dimensions don't match for addition: ${matrixA.size} vs ${matrixB.size}" 
+    }
+    
+    if (matrixA.isEmpty()) return arrayOf()
+    
+    return matrixA.mapIndexed { rowIndex, row ->
+        val rowB = matrixB[rowIndex]
+        require(row.size == rowB.size) { 
+            "Matrix column dimensions don't match at row $rowIndex: ${row.size} vs ${rowB.size}" 
+        }
+        FloatArray(row.size) { colIndex -> row[colIndex] + rowB[colIndex] }
     }.toTypedArray()
+}
 
 /**
  * Multiplies each element in the matrix by a scalar.

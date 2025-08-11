@@ -114,7 +114,7 @@ fun main() {
     val layers = listOf(
         EmbeddingLayer(vocabulary.size, embeddingDim),
         PositionalEncodingLayer(maxSequenceLength, embeddingDim),
-        MultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads),
+        CachedMultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads),
         LayerNormalizationLayer(embeddingDim),
         DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
         DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
