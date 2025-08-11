@@ -55,29 +55,3 @@ interface BatchSplitter<YIn, YOut> {
     ): Quad<Array<FlexibleMatrix>, YOut, Array<FlexibleMatrix>, YOut>
 }
 
-/**
- * Legacy batch splitter interface for backward compatibility with DoubleArray-based code.
- *
- * @deprecated Use BatchSplitter with FlexibleMatrix for better performance and precision control.
- */
-interface LegacyBatchSplitter<YIn, YOut> {
-    /**
-     * Legacy method using DoubleArray format.
-     * @deprecated Use FlexibleMatrix-based splitting for better performance.
-     */
-    fun splitBatch(
-        x: Array<DoubleArray>,
-        y: YIn,
-        testFraction: Double = 0.1,
-        shuffle: Boolean = true
-    ): Quad<Array<DoubleArray>, YOut, Array<DoubleArray>, YOut>
-}
-
-/**
- * Enumeration of available batch splitting strategies.
- *
- * @property DENSE For dense matrix targets (standard classification/regression).
- * @property SEQUENTIAL For sequential dense targets (sequence-to-sequence models).
- * @property TOKEN For sparse token targets (language modeling, tokenized sequences).
- */
-enum class SplitType { DENSE, SEQUENTIAL, TOKEN }

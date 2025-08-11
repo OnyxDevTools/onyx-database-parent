@@ -5,7 +5,6 @@ package com.onyxdevtools.ai
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
-import com.onyxdevtools.ai.batch.SequentialBatchSplitter
 import com.onyxdevtools.ai.batch.TokenBatchSplitter
 import java.io.*
 import kotlin.apply
@@ -197,8 +196,8 @@ data class NeuralNetwork(
     ) {
         val sampleCount = predicted.rows.toDouble()
         
-        val deltaMatrix = sparseCategoricalCrossEntropyGradients(predicted.toMatrix(), sparseTargets, sampleWeights)
-        var delta = deltaMatrix.toFlexibleMatrix()
+        // Use FlexibleMatrix version to avoid copying
+        var delta = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
 
         val startIndex = layers.lastIndex
 
@@ -277,7 +276,7 @@ data class NeuralNetwork(
         val y = valueTransforms?.fitAndTransform(trainingValuesMatrix) ?: trainingValuesMatrix
 
         var bestLoss = Double.POSITIVE_INFINITY
-        var bestModel: NeuralNetwork = this.clone()
+        var bestModel: NeuralNetwork = this.copy()
         var epochsWithoutImprovement = 0
 
         val indices = x.indices.toMutableList()
@@ -306,7 +305,7 @@ data class NeuralNetwork(
             val loss = lossFn(this)
             if (loss < bestLoss) {
                 bestLoss = loss
-                bestModel = this.clone()
+                bestModel = this.copy()
                 epochsWithoutImprovement = 0
             } else if (++epochsWithoutImprovement > patience) {
                 break
@@ -370,82 +369,63 @@ data class NeuralNetwork(
     ): NeuralNetwork {
 
         var bestLoss = Double.POSITIVE_INFINITY
-        var best = this.clone()
+        var best = this.copy()
         var epochsWithoutImprovement = 0
 
         repeat(maxEpochs) { epoch ->
             val bx = mutableListOf<DoubleArray>()
             val by = mutableListOf<Array<DoubleArray>>()
-            var runningTrainLoss = 0.0
-            var runningTestLoss = 0.0
-            var testSamples = 0
+            var runningLoss = 0.0
+            var batchCount = 0
 
             for ((inputSeq, targetSeqs) in source()) {
                 bx += inputSeq; by += targetSeqs
                 if (bx.size == batchSize) {
-                    // --- split batch --------------------------------------------------
-                    val seqSplitter = SequentialBatchSplitter()
-                    val (xTrainRaw, yTrainRawList, xTestRaw, yTestRawList) =
-                        seqSplitter.splitBatch(
-                            bx.toTypedArray(), by.toTypedArray(),
-                            testFraction = testFrac, shuffle = shuffle
-                        )
-
-                    // --- fit+transform *only* on training slice ----------------------
-                    val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
-                    val yTrainFlat = yTrainRawList.flatMap { it.toList() }.toTypedArray()
-                    val yTrain = valueTransforms?.fitAndTransform(yTrainFlat) ?: yTrainFlat
-
-                    // --- train step ---------------------------------------------------
-                    val predTrain = predict(xTrain.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
-                    backward(predTrain, yTrain.toFlexibleMatrix())
+                    // Simple batch processing
+                    val xBatch = bx.toTypedArray()
+                    val yBatch = by.flatMap { it.toList() }.toTypedArray()
+                    
+                    // Apply transforms if available
+                    val xTrained = featureTransforms?.fitAndTransform(xBatch) ?: xBatch
+                    val yTrained = valueTransforms?.fitAndTransform(yBatch) ?: yBatch
+                    
+                    // Train step
+                    val predTrain = predict(xTrained.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
+                    backward(predTrain, yTrained.toFlexibleMatrix())
                     updateParameters()
-
-                    // --- evaluate on test slice (do NOT refit transforms) ------------
-                    val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
-                    val yTestFlat = yTestRawList.flatMap { it.toList() }.toTypedArray()
-                    val yTest = valueTransforms?.apply(yTestFlat) ?: yTestFlat
-                    val predTest = predict(xTest.toFlexibleMatrix(), isTraining = false, skipFeatureTransform = true)
-
-                    runningTrainLoss += lossFn(predTrain, yTrain.toFlexibleMatrix()) * xTrain.size
-                    runningTestLoss += lossFn(predTest, yTest.toFlexibleMatrix()) * xTest.size
-                    testSamples += xTest.size
+                    
+                    // Track loss
+                    runningLoss += lossFn(predTrain, yTrained.toFlexibleMatrix())
+                    batchCount++
 
                     bx.clear(); by.clear()
                 }
             }
 
-            // left-overs
+            // Process remaining samples
             if (bx.isNotEmpty()) {
-                val seqSplitter = SequentialBatchSplitter()
-                val (xT, yTList, xv, yvList) = seqSplitter.splitBatch(
-                    bx.toTypedArray(), by.toTypedArray(),
-                    testFraction = testFrac, shuffle = shuffle
-                )
-                val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
-                val yTfFlat = yTList.flatMap { it.toList() }.toTypedArray()
-                val yTf = valueTransforms?.fitAndTransform(yTfFlat) ?: yTfFlat
-                val predT = predict(xTf.toFlexibleMatrix(), true, skipFeatureTransform = true)
-                backward(predT, yTf.toFlexibleMatrix()); updateParameters()
+                val xBatch = bx.toTypedArray()
+                val yBatch = by.flatMap { it.toList() }.toTypedArray()
+                
+                val xTrained = featureTransforms?.fitAndTransform(xBatch) ?: xBatch
+                val yTrained = valueTransforms?.fitAndTransform(yBatch) ?: yBatch
+                val predTrain = predict(xTrained.toFlexibleMatrix(), true, skipFeatureTransform = true)
+                backward(predTrain, yTrained.toFlexibleMatrix())
+                updateParameters()
 
-                val xv2 = featureTransforms?.apply(xv) ?: xv
-                val yvFlat = yvList.flatMap { it.toList() }.toTypedArray()
-                val yv2 = valueTransforms?.apply(yvFlat) ?: yvFlat
-                val predV = predict(xv2.toFlexibleMatrix(), false, skipFeatureTransform = true)
-
-                runningTrainLoss += lossFn(predT, yTf.toFlexibleMatrix()) * xTf.size
-                runningTestLoss += lossFn(predV, yv2.toFlexibleMatrix()) * xv2.size
-                testSamples += xv2.size
+                runningLoss += lossFn(predTrain, yTrained.toFlexibleMatrix())
+                batchCount++
             }
 
-            val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
+            val epochLoss = if (batchCount > 0) runningLoss / batchCount else Double.POSITIVE_INFINITY
+            val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: epochLoss
 
             if (trace)
                 println("epoch $epoch  test-loss $epochTestLoss")
 
             if (epochTestLoss < bestLoss) {
                 bestLoss = epochTestLoss
-                best = this.clone()
+                best = this.copy()
                 epochsWithoutImprovement = 0
                 
                 // Save model to disk if saveModelPath is provided
@@ -502,14 +482,14 @@ data class NeuralNetwork(
         shuffle: Boolean = true,
         trace: Boolean = true,
         lossFn: (pred: FlexibleMatrix, sparseTargets: IntArray) -> Double =
-            { p, s -> sparseCategoricalCrossEntropy(p.toMatrix(), s) },
+            { p, s -> sparseCategoricalCrossEntropy(p, s) },
         probeFn: () -> Unit = {  },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
         var bestLoss = Double.POSITIVE_INFINITY
-        var best = this.clone()
+        var best = this.copy()
         var epochsWithoutImprovement = 0
 
         repeat(maxEpochs) { epoch ->
@@ -606,7 +586,7 @@ data class NeuralNetwork(
 
             if (epochTestLoss < bestLoss) {
                 bestLoss = epochTestLoss
-                best = this.clone()
+                best = this.copy()
                 epochsWithoutImprovement = 0
                 
                 // Save model to disk if saveModelPath is provided

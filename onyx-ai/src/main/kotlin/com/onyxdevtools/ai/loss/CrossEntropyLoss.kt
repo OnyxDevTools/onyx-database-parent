@@ -1,5 +1,6 @@
 package com.onyxdevtools.ai.loss
 
+import com.onyxdevtools.ai.FlexibleMatrix
 import com.onyxdevtools.ai.extensions.Matrix
 import kotlin.math.exp
 import kotlin.math.ln
@@ -30,7 +31,7 @@ import kotlin.math.ln
  */
 class CrossEntropyLoss : LossFunction {
     /**
-     * Calculates the cross-entropy loss between predictions and targets.
+     * Calculates the cross-entropy loss between predictions and targets using FlexibleMatrix.
      *
      * The implementation performs the following steps:
      * 1. Applies softmax to convert logits to probabilities
@@ -38,9 +39,9 @@ class CrossEntropyLoss : LossFunction {
      * 3. Computes negative log-likelihood of the correct class probability
      * 4. Averages the loss across all samples in the batch
      *
-     * @param predictions Matrix of raw logits from the neural network.
+     * @param predictions FlexibleMatrix of raw logits from the neural network.
      *                   Shape: [batch_size, num_classes]
-     * @param targets Matrix of one-hot encoded target labels.
+     * @param targets FlexibleMatrix of one-hot encoded target labels.
      *               Shape: [batch_size, num_classes] where each row contains
      *               exactly one 1.0 at the correct class index and 0.0 elsewhere
      * @return The calculated cross-entropy loss averaged across the batch.
@@ -48,16 +49,21 @@ class CrossEntropyLoss : LossFunction {
      * @throws IllegalArgumentException if matrix dimensions don't match or targets
      *                                 are not properly one-hot encoded
      */
-    override fun calculate(predictions: Matrix, targets: Matrix): Double {
+    override fun calculate(predictions: FlexibleMatrix, targets: FlexibleMatrix): Double {
         var loss = 0.0
-        val batchSize = targets.size
+        val batchSize = predictions.rows
 
         for (batchIndex in 0 until batchSize) {
-            val logits = predictions[batchIndex]
+            val logits = DoubleArray(predictions.cols) { colIndex ->
+                predictions[batchIndex, colIndex]
+            }
             val expSum = logits.sumOf { exp(it) }
             val probs = logits.map { exp(it) / expSum }.toDoubleArray()
 
-            val targetIndex = targets[batchIndex].indexOfFirst { it == 1.0 }
+            val targetRow = DoubleArray(targets.cols) { colIndex ->
+                targets[batchIndex, colIndex]
+            }
+            val targetIndex = targetRow.indexOfFirst { it == 1.0 }
             if (targetIndex >= 0 && targetIndex < probs.size) {
                 loss -= ln(probs[targetIndex] + 1e-10)
             }

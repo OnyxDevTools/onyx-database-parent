@@ -1,5 +1,7 @@
 package com.onyxdevtools.ai.batch
 
+import com.onyxdevtools.ai.FlexibleMatrix
+
 /**
  * Batch splitter implementation for sequential dense targets.
  *
@@ -17,38 +19,40 @@ package com.onyxdevtools.ai.batch
  * val (xTrain, yTrain, xTest, yTest) = splitter.splitBatch(features, sequenceTargets, testFraction = 0.2)
  * ```
  */
-class SequentialBatchSplitter : LegacyBatchSplitter<Array<Array<DoubleArray>>, List<Array<DoubleArray>>> {
+class SequentialBatchSplitter : BatchSplitter<Array<Array<FlexibleMatrix>>, Array<Array<FlexibleMatrix>>> {
     
     /**
      * Splits feature vectors and sequential target data into training and test subsets.
      *
      * The method randomly shuffles sample indices (if enabled) and splits them according
-     * to the specified test fraction. Each input feature vector corresponds to a sequence
-     * of target vectors, and the splitting maintains this correspondence.
+     * to the specified test fraction. Each input FlexibleMatrix corresponds to a sequence
+     * of target FlexibleMatrix objects, and the splitting maintains this correspondence.
      *
-     * @param x Input feature matrix where each row represents a single sample vector.
-     * @param y Sequential target data where each element is an array of target vectors for the corresponding sample.
+     * @param x Input feature array where each element is a FlexibleMatrix representing a sample.
+     * @param y Sequential target data where each element is an array of FlexibleMatrix for the corresponding sample.
      * @param testFraction Fraction of data to reserve for testing (0.0 to 1.0). Default is 0.1.
      * @param shuffle Whether to randomly shuffle samples before splitting. Default is true.
      * @return A [Quad] containing (training features, training target sequences, test features, test target sequences).
      * @throws IllegalArgumentException if testFraction is not in [0.0, 1.0] or if x and y have different numbers of samples.
      */
     override fun splitBatch(
-        x: Array<DoubleArray>,
-        y: Array<Array<DoubleArray>>,
+        x: Array<FlexibleMatrix>,
+        y: Array<Array<FlexibleMatrix>>,
         testFraction: Double,
         shuffle: Boolean
-    ): Quad<Array<DoubleArray>, List<Array<DoubleArray>>, Array<DoubleArray>, List<Array<DoubleArray>>> {
+    ): Quad<Array<FlexibleMatrix>, Array<Array<FlexibleMatrix>>, Array<FlexibleMatrix>, Array<Array<FlexibleMatrix>>> {
+        require(testFraction in 0.0..1.0) { "Test fraction must be between 0.0 and 1.0" }
+        require(x.size == y.size) { "Features and targets must have the same number of samples" }
 
         val idx = x.indices.toMutableList().apply { if (shuffle) shuffle() }
         val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
         val testIdx = idx.take(testSize)
         val trainIdx = idx.drop(testSize)
 
-        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
+        fun subsetInputs(src: Array<FlexibleMatrix>, ids: List<Int>) =
             Array(ids.size) { i -> src[ids[i]] }
-        fun subsetTargets(src: Array<Array<DoubleArray>>, ids: List<Int>) =
-            ids.map { src[it] }
+        fun subsetTargets(src: Array<Array<FlexibleMatrix>>, ids: List<Int>) =
+            ids.map { src[it] }.toTypedArray()
 
         return Quad(
             subsetInputs(x, trainIdx), subsetTargets(y, trainIdx),

@@ -1,5 +1,7 @@
 package com.onyxdevtools.ai.extensions
 
+import com.onyxdevtools.ai.FlexibleMatrix
+import com.onyxdevtools.ai.createMatrix
 import kotlin.math.exp
 import kotlin.math.ln
 
@@ -7,41 +9,39 @@ import kotlin.math.ln
  * Utility functions for sparse categorical cross-entropy operations.
  * These functions enable memory-efficient training with large vocabularies by working
  * directly with token IDs instead of one-hot encoded vectors.
+ * Updated to work directly with FlexibleMatrix to avoid unnecessary copying.
  */
 
 /**
  * Computes sparse categorical cross-entropy loss between predictions and sparse targets.
+ * Works directly with FlexibleMatrix to avoid copying.
  *
- * This function calculates cross-entropy loss directly from logits and target token IDs,
- * avoiding the memory overhead of creating one-hot encoded target vectors.
- * Positions with target ID -1 are ignored in the loss computation (masked out).
- *
- * @param predicted Matrix of prediction logits (samples × vocab_size)
+ * @param predicted FlexibleMatrix of prediction logits (samples × vocab_size)
  * @param sparseTargets Array of target token IDs for each sample position.
- *                     Each element should be in range [0, vocab_size) or -1 to ignore.
- * @param sampleWeights Optional weights for each sample. If null, all samples weighted equally.
+ * @param sampleWeights Optional weights for each sample.
  * @return The mean sparse categorical cross-entropy loss, ignoring masked positions.
- * @throws IllegalArgumentException if array dimensions don't match or contain invalid values
  */
 fun sparseCategoricalCrossEntropy(
-    predicted: Array<DoubleArray>,
+    predicted: FlexibleMatrix,
     sparseTargets: IntArray,
     sampleWeights: DoubleArray? = null
 ): Double {
-    require(predicted.size == sparseTargets.size) {
+    require(predicted.rows == sparseTargets.size) {
         "Predictions and targets must have same number of samples"
     }
     require(sampleWeights == null || sampleWeights.size == sparseTargets.size) {
         "Sample weights size must match targets size"
     }
     
-    val vocabSize = predicted.firstOrNull()?.size ?: return 0.0
+    if (predicted.rows == 0 || predicted.cols == 0) return 0.0
+    
+    val vocabSize = predicted.cols
     val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
     
     var totalLoss = 0.0
     var totalWeight = 0.0
     
-    for (i in predicted.indices) {
+    for (i in 0 until predicted.rows) {
         val targetId = sparseTargets[i]
         if (targetId == -1) continue  // Skip ignored positions
         
@@ -49,17 +49,21 @@ fun sparseCategoricalCrossEntropy(
             "Target token ID $targetId at position $i is out of vocabulary range [0, $vocabSize)"
         }
         
-        val logits = predicted[i]
         val weight = weights[i]
         
-        // Compute log-softmax for numerical stability (optimized - no temporary collections)
-        val maxLogit = logits.maxOrNull() ?: continue
+        // Compute log-softmax for numerical stability (direct FlexibleMatrix access)
+        var maxLogit = Double.NEGATIVE_INFINITY
+        for (j in 0 until predicted.cols) {
+            val logit = predicted[i, j]
+            if (logit > maxLogit) maxLogit = logit
+        }
+        
         var sumExp = 0.0
-        for (logit in logits) {
-            sumExp += exp(logit - maxLogit)
+        for (j in 0 until predicted.cols) {
+            sumExp += exp(predicted[i, j] - maxLogit)
         }
         val logSumExp = ln(sumExp) + maxLogit
-        val logProb = logits[targetId] - logSumExp
+        val logProb = predicted[i, targetId] - logSumExp
         
         totalLoss += weight * (-logProb)  // Negative log likelihood
         totalWeight += weight
@@ -70,38 +74,34 @@ fun sparseCategoricalCrossEntropy(
 
 /**
  * Computes gradients for sparse categorical cross-entropy loss.
+ * Works directly with FlexibleMatrix to avoid copying.
  *
- * This function calculates the gradients of sparse categorical cross-entropy loss
- * with respect to the logits, returning gradients only for the actual target positions.
- * Positions with target ID -1 are ignored (gradient = 0).
- *
- * The gradient for sparse categorical cross-entropy is:
- * grad[i,j] = softmax[i,j] - 1 if j == target[i], softmax[i,j] otherwise
- * where softmax[i,j] = exp(logits[i,j]) / sum_k(exp(logits[i,k]))
- *
- * @param predicted Matrix of prediction logits (samples × vocab_size)
+ * @param predicted FlexibleMatrix of prediction logits (samples × vocab_size)
  * @param sparseTargets Array of target token IDs for each sample position
- * @param sampleWeights Optional weights for each sample. If null, all samples weighted equally.
- * @return Gradient matrix with same shape as predicted, zero for ignored positions
- * @throws IllegalArgumentException if array dimensions don't match or contain invalid values
+ * @param sampleWeights Optional weights for each sample.
+ * @return Gradient FlexibleMatrix with same shape as predicted
  */
 fun sparseCategoricalCrossEntropyGradients(
-    predicted: Array<DoubleArray>,
+    predicted: FlexibleMatrix,
     sparseTargets: IntArray,
     sampleWeights: DoubleArray? = null
-): Array<DoubleArray> {
-    require(predicted.size == sparseTargets.size) {
+): FlexibleMatrix {
+    require(predicted.rows == sparseTargets.size) {
         "Predictions and targets must have same number of samples"
     }
     require(sampleWeights == null || sampleWeights.size == sparseTargets.size) {
         "Sample weights size must match targets size"
     }
     
-    val vocabSize = predicted.firstOrNull()?.size ?: return emptyArray()
-    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
-    val gradients = Array(predicted.size) { DoubleArray(vocabSize) }
+    if (predicted.rows == 0 || predicted.cols == 0) {
+        return createMatrix(0, 0, predicted.isSinglePrecision)
+    }
     
-    for (i in predicted.indices) {
+    val vocabSize = predicted.cols
+    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
+    val gradients = createMatrix(predicted.rows, predicted.cols, predicted.isSinglePrecision)
+    
+    for (i in 0 until predicted.rows) {
         val targetId = sparseTargets[i]
         if (targetId == -1) continue  // Skip ignored positions - gradients remain 0
         
@@ -109,22 +109,25 @@ fun sparseCategoricalCrossEntropyGradients(
             "Target token ID $targetId at position $i is out of vocabulary range [0, $vocabSize)"
         }
         
-        val logits = predicted[i]
         val weight = weights[i]
         
-        // Compute softmax probabilities (optimized - no temporary collections)
-        val maxLogit = logits.maxOrNull() ?: continue
+        // Compute softmax probabilities (direct FlexibleMatrix access)
+        var maxLogit = Double.NEGATIVE_INFINITY
+        for (j in 0 until predicted.cols) {
+            val logit = predicted[i, j]
+            if (logit > maxLogit) maxLogit = logit
+        }
         
         // First pass: compute sum of exponentials
         var sumExp = 0.0
-        for (logit in logits) {
-            sumExp += exp(logit - maxLogit)
+        for (j in 0 until predicted.cols) {
+            sumExp += exp(predicted[i, j] - maxLogit)
         }
         
         // Second pass: compute gradients using softmax probabilities
-        for (j in logits.indices) {
-            val softmaxProb = exp(logits[j] - maxLogit) / sumExp
-            gradients[i][j] = weight * if (j == targetId) {
+        for (j in 0 until predicted.cols) {
+            val softmaxProb = exp(predicted[i, j] - maxLogit) / sumExp
+            gradients[i, j] = weight * if (j == targetId) {
                 softmaxProb - 1.0  // Target position: p - 1
             } else {
                 softmaxProb  // Non-target position: p
@@ -135,3 +138,17 @@ fun sparseCategoricalCrossEntropyGradients(
     return gradients
 }
 
+// Backward compatibility functions for legacy Matrix types
+fun sparseCategoricalCrossEntropy(
+    predicted: Array<DoubleArray>,
+    sparseTargets: IntArray,
+    sampleWeights: DoubleArray? = null
+): Double = sparseCategoricalCrossEntropy(
+    predicted = predicted.let { matrix ->
+        createMatrix(matrix.size, matrix.firstOrNull()?.size ?: 0, false) { r, c ->
+            matrix[r][c]
+        }
+    },
+    sparseTargets = sparseTargets,
+    sampleWeights = sampleWeights
+)

@@ -1,6 +1,9 @@
 package com.onyxdevtools.ai.loss
 
+import com.onyxdevtools.ai.FlexibleMatrix
 import com.onyxdevtools.ai.extensions.Matrix
+import com.onyxdevtools.ai.toFlexibleMatrix
+import com.onyxdevtools.ai.toMatrix
 
 
 /**
@@ -19,17 +22,23 @@ import com.onyxdevtools.ai.extensions.Matrix
  */
 interface LossFunction {
     /**
-     * Calculates the loss value between predicted outputs and target values.
+     * Calculates the loss value between predicted outputs and target values using FlexibleMatrix.
      *
      * The loss function computes a scalar value representing how far the predictions
      * are from the target values. Lower values indicate better model performance.
      *
-     * @param predictions The predicted output matrix from the neural network.
+     * @param predictions The predicted output FlexibleMatrix from the neural network.
      *                   Shape should be [batch_size, output_features]
-     * @param targets The target/ground truth matrix for comparison.
+     * @param targets The target/ground truth FlexibleMatrix for comparison.
      *               Shape should match predictions: [batch_size, output_features]
      * @return The calculated loss value as a Double. Lower values indicate better predictions.
      * @throws IllegalArgumentException if matrix dimensions don't match
      */
-    fun calculate(predictions: Matrix, targets: Matrix): Double
+    fun calculate(predictions: FlexibleMatrix, targets: FlexibleMatrix): Double
+
+    /**
+     * Backward compatibility method for legacy Matrix input
+     */
+    fun calculate(predictions: Matrix, targets: Matrix): Double = 
+        calculate(predictions.toFlexibleMatrix(), targets.toFlexibleMatrix())
 }

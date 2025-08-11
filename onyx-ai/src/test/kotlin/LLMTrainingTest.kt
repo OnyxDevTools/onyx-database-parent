@@ -78,7 +78,7 @@ class LLMTrainingTest {
                 batchSize = 16,
                 maxEpochs = 1000,
                 patience = 100,
-                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred.toMatrix(), sparseTargets) },
+                lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 comprehensiveLossFn = { net ->
                     var generatedText = model.chat(
                         prompt = "Alice was beginning to get very tired ",
