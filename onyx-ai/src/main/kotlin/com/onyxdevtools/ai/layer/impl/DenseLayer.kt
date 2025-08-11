@@ -73,8 +73,8 @@ class DenseLayer(
 
     init {
         val weightInitLimit: Float = when (activation) {
-            Activation.RELU, Activation.LEAKY_RELU -> kotlin.math.sqrt((2.0f / inputSize.toFloat()).toDouble()).toFloat()
-            else -> kotlin.math.sqrt((6.0f / (inputSize.toFloat() + outputSize.toFloat())).toDouble()).toFloat()
+            Activation.RELU, Activation.LEAKY_RELU -> sqrt((2.0f / inputSize.toFloat()).toDouble()).toFloat()
+            else -> sqrt((6.0f / (inputSize.toFloat() + outputSize.toFloat())).toDouble()).toFloat()
         }
         weights = Array(inputSize) { FloatArray(outputSize) { (Random.nextFloat() * 2.0f - 1.0f) * weightInitLimit } }
         momentWeights = Array(inputSize) { FloatArray(outputSize) }

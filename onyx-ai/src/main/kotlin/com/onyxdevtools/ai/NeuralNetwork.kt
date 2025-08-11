@@ -427,6 +427,7 @@ data class NeuralNetwork(
             var runningTestLoss = 0.0f
             var testSamples = 0
 
+            var iter = 0
             for ((inputSeq, targetSeq) in source()) {
                 bx += inputSeq; by += targetSeq
                 if (bx.size == batchSize) {
@@ -460,8 +461,10 @@ data class NeuralNetwork(
                     }
 
                     bx.clear(); by.clear()
-                    probeFn.invoke()
+                    if (iter > 0)
+                        probeFn.invoke()
                 }
+                iter++
             }
 
             // left-overs

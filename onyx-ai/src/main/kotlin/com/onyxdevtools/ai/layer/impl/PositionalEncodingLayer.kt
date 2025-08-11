@@ -91,12 +91,26 @@ class PositionalEncodingLayer(
      * Output shape: (batchSize * sequenceLength, embeddingDim)
      */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val batchSize = input.size / tokensPerSample
-        // Create positional encodings matrix matching input shape
-        val posEncodings = Array(batchSize * tokensPerSample) { i ->
-            val t = i % tokensPerSample
-            positionalEncoding[t].copyOf()
+        if (input.isEmpty()) {
+            preActivation = input
+            output = input
+            return output!!
         }
+        
+        // Handle cases where input size is less than tokensPerSample
+        val actualSequenceLength = minOf(input.size, tokensPerSample)
+        val batchSize = maxOf(1, input.size / tokensPerSample)
+        
+        // Create positional encodings matrix matching input shape exactly
+        val posEncodings = Array(input.size) { i ->
+            val t = i % actualSequenceLength
+            if (t < positionalEncoding.size) {
+                positionalEncoding[t].copyOf()
+            } else {
+                FloatArray(embeddingSize) // Zero vector for positions beyond precomputed range
+            }
+        }
+        
         preActivation = input
         output = add(input, posEncodings) // Element-wise addition
         return output!!

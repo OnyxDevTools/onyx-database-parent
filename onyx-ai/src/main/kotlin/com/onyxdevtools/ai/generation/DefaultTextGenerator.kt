@@ -1,5 +1,6 @@
 package com.onyxdevtools.ai.generation
 
+import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.transformation.BPETokenizer
@@ -23,8 +24,8 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 class DefaultTextGenerator : TextGenerator {
 
     // Pre-allocated buffers for sampling to avoid repeated allocations
-    private var cachedLogits: DoubleArray? = null
-    private var cachedProbs: DoubleArray? = null
+    private var cachedLogits: FloatArray? = null
+    private var cachedProbs: FloatArray? = null
     private var topKCandidates: IntArray? = null
 
     /**
@@ -63,8 +64,8 @@ class DefaultTextGenerator : TextGenerator {
     /**
      * Optimized softmax with temperature that reuses pre-allocated arrays.
      */
-    private fun softmaxTempOptimized(logits: DoubleArray, temperature: Double, output: DoubleArray): DoubleArray {
-        val t = temperature.coerceAtLeast(1e-6)
+    private fun softmaxTempOptimized(logits: FloatArray, temperature: Float, output: FloatArray): FloatArray {
+        val t = temperature.coerceAtLeast(EPSILON)
 
         // Find max for numerical stability
         var maxLogit = logits[0]
@@ -73,7 +74,7 @@ class DefaultTextGenerator : TextGenerator {
         }
 
         // Compute exp and sum in one pass
-        var sum = 0.0
+        var sum = 0.0f
         for (i in logits.indices) {
             val exp = kotlin.math.exp((logits[i] - maxLogit) / t)
             output[i] = exp
@@ -81,7 +82,7 @@ class DefaultTextGenerator : TextGenerator {
         }
 
         // Normalize
-        val invSum = 1.0 / sum.coerceAtLeast(1e-12)
+        val invSum = 1.0f / sum.coerceAtLeast(EPSILON)
         for (i in output.indices) {
             output[i] *= invSum
         }
@@ -93,7 +94,7 @@ class DefaultTextGenerator : TextGenerator {
      * Efficient top-k/top-p sampling without full sorting.
      * Uses partial sorting and early termination for better performance.
      */
-    private fun sampleOptimized(probs: DoubleArray, topP: Double, topK: Int): Int {
+    private fun sampleOptimized(probs: FloatArray, topP: Float, topK: Int): Int {
         val vocabSize = probs.size
 
         // Initialize candidates array if needed
@@ -113,16 +114,16 @@ class DefaultTextGenerator : TextGenerator {
 
         // Apply top-p filtering on the top-k candidates
         val nucleus = mutableListOf<Int>()
-        var cumProb = 0.0
+        var cumProb = 0.0f
 
         for (i in 0 until k) {
             val idx = candidates[i]
-            if (probs[idx] <= 0.0) break // Skip invalid probabilities
+            if (probs[idx] <= 0.0f) break // Skip invalid probabilities
 
             nucleus.add(idx)
             cumProb += probs[idx]
 
-            if (topP in 0.0..0.999 && cumProb >= topP) break
+            if (topP in 0.0f..0.999f && cumProb >= topP) break
         }
 
         if (nucleus.isEmpty()) {
@@ -131,8 +132,8 @@ class DefaultTextGenerator : TextGenerator {
         }
 
         // Sample from nucleus
-        val targetProb = kotlin.random.Random.Default.nextDouble() * cumProb
-        var acc = 0.0
+        val targetProb = kotlin.random.Random.Default.nextFloat() * cumProb
+        var acc = 0.0f
 
         for (idx in nucleus) {
             acc += probs[idx]
@@ -146,7 +147,7 @@ class DefaultTextGenerator : TextGenerator {
      * Efficient partial sort using quickselect-style algorithm.
      * Only sorts enough to get the top-k elements.
      */
-    private fun partialSort(indices: IntArray, probs: DoubleArray, k: Int) {
+    private fun partialSort(indices: IntArray, probs: FloatArray, k: Int) {
         fun partition(low: Int, high: Int): Int {
             val pivot = probs[indices[high]]
             var i = low - 1
@@ -194,8 +195,8 @@ class DefaultTextGenerator : TextGenerator {
     /**
      * Applies repetition penalty efficiently in-place.
      */
-    private fun applyRepetitionPenalty(logits: DoubleArray, seenCounts: IntArray, penalty: Double) {
-        if (penalty <= 1.0) return
+    private fun applyRepetitionPenalty(logits: FloatArray, seenCounts: IntArray, penalty: Float) {
+        if (penalty <= 1.0f) return
 
         for (i in logits.indices) {
             if (seenCounts[i] > 0) {
@@ -255,17 +256,17 @@ class DefaultTextGenerator : TextGenerator {
         }
 
         // --- Sampling hyperparams ---
-        val temperature = 0.9
-        val topP = 0.9
+        val temperature = 0.9f
+        val topP = 0.9f
         val topK = 40
-        val repetitionPenalty = 1.1
+        val repetitionPenalty = 1.1f
         val useNoRepeatNgram = true
 
         // Initialize buffers
         val vocabSize = vocabulary.size
         if (cachedLogits == null || cachedLogits!!.size != vocabSize) {
-            cachedLogits = DoubleArray(vocabSize)
-            cachedProbs = DoubleArray(vocabSize)
+            cachedLogits = FloatArray(vocabSize)
+            cachedProbs = FloatArray(vocabSize)
         }
 
         // Enable KV caching for significant speedup
@@ -302,7 +303,7 @@ class DefaultTextGenerator : TextGenerator {
 
                 // Mask special tokens
                 neverSample.forEach { bad ->
-                    if (bad in cachedLogits!!.indices) cachedLogits!![bad] = Double.NEGATIVE_INFINITY
+                    if (bad in cachedLogits!!.indices) cachedLogits!![bad] = Float.NEGATIVE_INFINITY
                 }
 
                 // Apply repetition penalty
@@ -316,11 +317,11 @@ class DefaultTextGenerator : TextGenerator {
                     val mask = BooleanArray(cachedProbs!!.size) { true }
                     blockNGramRepetition(mask, ids, 2)
                     for (i in mask.indices) {
-                        if (!mask[i]) cachedProbs!![i] = 0.0
+                        if (!mask[i]) cachedProbs!![i] = 0.0f
                     }
 
                     // Renormalize
-                    val sum = cachedProbs!!.sum().coerceAtLeast(1e-12)
+                    val sum = cachedProbs!!.sum().coerceAtLeast(EPSILON)
                     for (i in cachedProbs!!.indices) cachedProbs!![i] /= sum
                 }
 
