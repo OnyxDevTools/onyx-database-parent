@@ -5,7 +5,7 @@ import java.util.stream.IntStream
 import kotlin.math.*
 
 /** Small constant added to denominator in Adam updates for numerical stability. */
-const val EPSILON = 1e-8
+const val EPSILON = 1e-8f
 const val BLOCK_SIZE_TRANSPOSED = 128
 
 /**
@@ -23,7 +23,7 @@ fun matrixMultiply(matrixA: Matrix, matrixB: Matrix): Matrix {
 
     if (rowsA > BLOCK_SIZE_TRANSPOSED) {
         val matrixBTransposed = transpose(matrixB)
-        val result = Array(rowsA) { DoubleArray(colsB) }
+        val result = Array(rowsA) { FloatArray(colsB) }
 
         val numRowBlocks = (rowsA + BLOCK_SIZE_TRANSPOSED - 1) / BLOCK_SIZE_TRANSPOSED
 
@@ -41,7 +41,7 @@ fun matrixMultiply(matrixA: Matrix, matrixB: Matrix): Matrix {
                         val rowA = matrixA[rowIndex]
                         val resultRow = result[rowIndex]
                         for (colIndex in colStart until colEnd) {
-                            var dotProduct = 0.0
+                            var dotProduct = 0.0f
                             val rowBTransposed = matrixBTransposed[colIndex]
                             for (kIndex in kStart until kEnd) {
                                 dotProduct += rowA[kIndex] * rowBTransposed[kIndex]
@@ -70,7 +70,7 @@ fun matrixMultiplySimple(matrixA: Matrix, matrixB: Matrix): Matrix {
     val numRows = matrixA.size
     val sharedDim = matrixA[0].size
     val numCols = matrixB[0].size
-    val result = Matrix(numRows) { DoubleArray(numCols) }
+    val result = Matrix(numRows) { FloatArray(numCols) }
 
     for (row in 0 until numRows) {
         val resultRow = result[row]
@@ -92,8 +92,8 @@ fun matrixMultiplySimple(matrixA: Matrix, matrixB: Matrix): Matrix {
  * @param vector The vector to add.
  * @return A new matrix where the vector is added to each row.
  */
-fun addVectorToRows(matrix: Matrix, vector: DoubleArray): Matrix =
-    matrix.map { row -> DoubleArray(row.size) { colIndex -> row[colIndex] + vector[colIndex] } }.toTypedArray()
+fun addVectorToRows(matrix: Matrix, vector: FloatArray): Matrix =
+    matrix.map { row -> FloatArray(row.size) { colIndex -> row[colIndex] + vector[colIndex] } }.toTypedArray()
 
 /**
  * Applies a function to each element of the matrix.
@@ -102,8 +102,8 @@ fun addVectorToRows(matrix: Matrix, vector: DoubleArray): Matrix =
  * @param transform The function to apply to each element.
  * @return A new matrix with transformed elements.
  */
-inline fun applyElementWise(matrix: Matrix, transform: (Double) -> Double): Matrix =
-    matrix.map { row -> DoubleArray(row.size) { colIndex -> transform(row[colIndex]) } }.toTypedArray()
+inline fun applyElementWise(matrix: Matrix, transform: (Float) -> Float): Matrix =
+    matrix.map { row -> FloatArray(row.size) { colIndex -> transform(row[colIndex]) } }.toTypedArray()
 
 /**
  * Performs element-wise multiplication of two matrices.
@@ -114,7 +114,7 @@ inline fun applyElementWise(matrix: Matrix, transform: (Double) -> Double): Matr
  */
 fun elementWiseMultiply(matrixA: Matrix, matrixB: Matrix): Matrix =
     matrixA.mapIndexed { rowIndex, row ->
-        DoubleArray(row.size) { colIndex -> row[colIndex] * matrixB[rowIndex][colIndex] }
+        FloatArray(row.size) { colIndex -> row[colIndex] * matrixB[rowIndex][colIndex] }
     }.toTypedArray()
 
 /**
@@ -126,7 +126,7 @@ fun elementWiseMultiply(matrixA: Matrix, matrixB: Matrix): Matrix =
  */
 fun subtract(matrixA: Matrix, matrixB: Matrix): Matrix =
     matrixA.mapIndexed { rowIndex, row ->
-        DoubleArray(row.size) { colIndex -> row[colIndex] - matrixB[rowIndex][colIndex] }
+        FloatArray(row.size) { colIndex -> row[colIndex] - matrixB[rowIndex][colIndex] }
     }.toTypedArray()
 
 /**
@@ -138,7 +138,7 @@ fun subtract(matrixA: Matrix, matrixB: Matrix): Matrix =
  */
 fun add(matrixA: Matrix, matrixB: Matrix): Matrix =
     matrixA.mapIndexed { rowIndex, row ->
-        DoubleArray(row.size) { colIndex -> row[colIndex] + matrixB[rowIndex][colIndex] }
+        FloatArray(row.size) { colIndex -> row[colIndex] + matrixB[rowIndex][colIndex] }
     }.toTypedArray()
 
 /**
@@ -148,8 +148,8 @@ fun add(matrixA: Matrix, matrixB: Matrix): Matrix =
  * @param scalar The scalar value.
  * @return A new matrix scaled by the given scalar.
  */
-fun scalarMultiply(matrix: Matrix, scalar: Double): Matrix =
-    matrix.map { row -> DoubleArray(row.size) { colIndex -> row[colIndex] * scalar } }.toTypedArray()
+fun scalarMultiply(matrix: Matrix, scalar: Float): Matrix =
+    matrix.map { row -> FloatArray(row.size) { colIndex -> row[colIndex] * scalar } }.toTypedArray()
 
 /**
  * Transposes the matrix (swaps rows and columns).
@@ -160,7 +160,7 @@ fun scalarMultiply(matrix: Matrix, scalar: Double): Matrix =
 fun transpose(matrix: Matrix): Matrix =
     if (matrix.isEmpty()) arrayOf()
     else Array(matrix[0].size) { colIndex ->
-        DoubleArray(matrix.size) { rowIndex -> matrix[rowIndex][colIndex] }
+        FloatArray(matrix.size) { rowIndex -> matrix[rowIndex][colIndex] }
     }
 
 /**
@@ -169,8 +169,8 @@ fun transpose(matrix: Matrix): Matrix =
  * @param matrix The input matrix.
  * @return A vector containing the sum of each column.
  */
-fun sumColumns(matrix: Matrix): DoubleArray =
-    DoubleArray(if (matrix.isEmpty()) 0 else matrix[0].size).also { columnSums ->
+fun sumColumns(matrix: Matrix): FloatArray =
+    FloatArray(if (matrix.isEmpty()) 0 else matrix[0].size).also { columnSums ->
         for (row in matrix) {
             for (colIndex in row.indices) {
                 columnSums[colIndex] += row[colIndex]
@@ -192,8 +192,8 @@ fun Matrix.deepCopy(): Matrix = map { it.copyOf() }.toTypedArray()
  * @receiver The matrix to flatten.
  * @return A flat array of all elements in the matrix.
  */
-fun Matrix.flatten(): DoubleArray =
-    buildList { for (row in this@flatten) addAll(row.asList()) }.toDoubleArray()
+fun Matrix.flatten(): FloatArray =
+    buildList { for (row in this@flatten) addAll(row.asList()) }.toFloatArray()
 
 /**
  * Calculates mean standard error
@@ -201,8 +201,8 @@ fun Matrix.flatten(): DoubleArray =
  *
  * @param actual Actual results
  */
-fun Matrix.meanStandardError(actual: Matrix): Double {
-    var sum = 0.0
+fun Matrix.meanStandardError(actual: Matrix): Float {
+    var sum = 0.0f
     var total = 0
 
     val rows = minOf(this.size, actual.size)
@@ -213,7 +213,7 @@ fun Matrix.meanStandardError(actual: Matrix): Double {
             total++
         }
     }
-    return if (total > 0) sum / total else 0.0
+    return if (total > 0) sum / total else 0.0f
 }
 
 
@@ -259,23 +259,23 @@ fun Matrix.copy(): Matrix {
  * Retrieves a specific column from the matrix as a list.
  * @receiver The Matrix.
  * @param colIndex The index of the column to retrieve (0-based).
- * @return A List<Double> containing the elements of the specified column.
+ * @return A List<Float> containing the elements of the specified column.
  * @throws IndexOutOfBoundsException if colIndex is out of bounds.
  */
-fun Matrix.getColumn(colIndex: Int): List<Double> {
+fun Matrix.getColumn(colIndex: Int): List<Float> {
     require(colIndex >= 0 && colIndex < colCount()) { "Column index out of bounds: $colIndex" }
     return List(rowCount()) { rowIndex -> this[rowIndex][colIndex] }
 }
 
 /**
  * Retrieves a specific row from the matrix as a list.
- * Note: The underlying row is already a DoubleArray, this converts it to List<Double>.
+ * Note: The underlying row is already a FloatArray, this converts it to List<Float>.
  * @receiver The Matrix.
  * @param rowIndex The index of the row to retrieve (0-based).
- * @return A List<Double> containing the elements of the specified row.
+ * @return A List<Float> containing the elements of the specified row.
  * @throws IndexOutOfBoundsException if rowIndex is out of bounds.
  */
-fun Matrix.getRow(rowIndex: Int): List<Double> {
+fun Matrix.getRow(rowIndex: Int): List<Float> {
     // No bounds check needed here as Array access does it, but could add for consistency
     // require(rowIndex >= 0 && rowIndex < rowCount()) { "Row index out of bounds: $rowIndex" }
     return this[rowIndex].toList()
@@ -285,21 +285,21 @@ fun Matrix.getRow(rowIndex: Int): List<Double> {
 
 /**
  * Applies a given transformation function to each column of the matrix, returning a new matrix.
- * The transformation function receives the column index and the column data as a List<Double>,
- * and should return the transformed column data as a List<Double> of the same size.
+ * The transformation function receives the column index and the column data as a List<Float>,
+ * and should return the transformed column data as a List<Float> of the same size.
  *
  * @receiver The original Matrix.
- * @param transform A function that takes a column index (Int) and column data (List<Double>)
- * and returns the transformed column data (List<Double>).
+ * @param transform A function that takes a column index (Int) and column data (List<Float>)
+ * and returns the transformed column data (List<Float>).
  * @return A new Matrix containing the transformed columns.
  * @throws IllegalArgumentException if the transform function returns lists of inconsistent sizes.
  */
-fun Matrix.mapColumnsIndexed(transform: (colIndex: Int, List<Double>) -> List<Double>): Matrix {
+fun Matrix.mapColumnsIndexed(transform: (colIndex: Int, List<Float>) -> List<Float>): Matrix {
     if (this.isEmpty()) return emptyArray() // Handle empty matrix
 
     val numRows = rowCount()
     val numCols = colCount()
-    val resultMatrix = Array(numRows) { DoubleArray(numCols) }
+    val resultMatrix = Array(numRows) { FloatArray(numCols) }
     var expectedRowCount = -1 // To check consistency
 
     for (j in 0 until numCols) {
@@ -328,25 +328,25 @@ fun Matrix.mapColumnsIndexed(transform: (colIndex: Int, List<Double>) -> List<Do
 
 /**
  * Applies a given transformation function to each row of the matrix, returning a new matrix.
- * The transformation function receives the row index and the row data as a List<Double>,
- * and should return the transformed row data as a List<Double> of the same size.
+ * The transformation function receives the row index and the row data as a List<Float>,
+ * and should return the transformed row data as a List<Float> of the same size.
  *
  * @receiver The original Matrix.
- * @param transform A function that takes a row index (Int) and row data (List<Double>)
- * and returns the transformed row data (List<Double>).
+ * @param transform A function that takes a row index (Int) and row data (List<Float>)
+ * and returns the transformed row data (List<Float>).
  * @return A new Matrix containing the transformed rows.
  * @throws IllegalArgumentException if the transform function returns lists of inconsistent sizes.
  */
-fun Matrix.mapRowsIndexed(transform: (rowIndex: Int, List<Double>) -> List<Double>): Matrix {
+fun Matrix.mapRowsIndexed(transform: (rowIndex: Int, List<Float>) -> List<Float>): Matrix {
     if (this.isEmpty()) return emptyArray() // Handle empty matrix
 
     val numRows = rowCount()
     val numCols = colCount()
-    val resultMatrix = Array(numRows) { DoubleArray(numCols) }
+    val resultMatrix = Array(numRows) { FloatArray(numCols) }
     var expectedColCount = -1 // To check consistency
 
     for (i in 0 until numRows) {
-        val originalRow = this.getRow(i) // Gets List<Double>
+        val originalRow = this.getRow(i) // Gets List<Float>
         val transformedRow = transform(i, originalRow)
 
         if (expectedColCount == -1) {
@@ -373,12 +373,12 @@ fun Matrix.mapRowsIndexed(transform: (rowIndex: Int, List<Double>) -> List<Doubl
  * Note: This is defined locally here but could be the same as the one in the transformer file.
  */
 data class ColumnStats(
-    val min: Double = Double.NaN,
-    val max: Double = Double.NaN,
-    val median: Double = Double.NaN,
-    val q1: Double = Double.NaN, // 25th percentile
-    val q3: Double = Double.NaN, // 75th percentile
-    val maxAbs: Double = Double.NaN
+    val min: Float = Float.NaN,
+    val max: Float = Float.NaN,
+    val median: Float = Float.NaN,
+    val q1: Float = Float.NaN, // 25th percentile
+    val q3: Float = Float.NaN, // 75th percentile
+    val maxAbs: Float = Float.NaN
 )
 
 /**
@@ -394,8 +394,8 @@ fun Matrix.calculateColumnStats(): List<ColumnStats> {
         val column = this.getColumn(j)
         statsList.add(
             ColumnStats(
-                min = column.minOrNull() ?: Double.NaN,
-                max = column.maxOrNull() ?: Double.NaN
+                min = column.minOrNull() ?: Float.NaN,
+                max = column.maxOrNull() ?: Float.NaN
             )
         )
     }
@@ -421,12 +421,12 @@ fun Matrix.calculateColumnStatsWithMedianIQR(): List<ColumnStats> {
         }
 
         // Median (Q2)
-        val median = if (n % 2 == 0) (column[n / 2 - 1] + column[n / 2]) / 2.0 else column[n / 2]
+        val median = if (n % 2 == 0) (column[n / 2 - 1] + column[n / 2]) / 2.0f else column[n / 2]
 
         // Simple Percentile Calculation (Method: R-7, Nearest Rank - commonly used default)
         // More sophisticated methods exist (e.g., linear interpolation)
-        fun getPercentile(p: Double): Double {
-            if (n == 0) return Double.NaN
+        fun getPercentile(p: Float): Float {
+            if (n == 0) return Float.NaN
             val index = p * (n - 1) // 0-based index
             val lowerIndex = floor(index).toInt()
             val upperIndex = ceil(index).toInt()
@@ -436,8 +436,8 @@ fun Matrix.calculateColumnStatsWithMedianIQR(): List<ColumnStats> {
             return column[round(index).toInt()] // Round to nearest index
         }
 
-        val q1 = getPercentile(0.25)
-        val q3 = getPercentile(0.75)
+        val q1 = getPercentile(0.25f)
+        val q3 = getPercentile(0.75f)
 
         statsList.add(
             ColumnStats(
@@ -454,13 +454,13 @@ fun Matrix.calculateColumnStatsWithMedianIQR(): List<ColumnStats> {
  * Calculates the maximum absolute value for each column.
  * Used by MaxAbsScaler.
  * @receiver The Matrix.
- * @return A List of Doubles, where each element is the max absolute value of the corresponding column.
+ * @return A List of Floats, where each element is the max absolute value of the corresponding column.
  */
-fun Matrix.calculateColumnMaxAbs(): List<Double> {
+fun Matrix.calculateColumnMaxAbs(): List<Float> {
     if (this.isEmpty()) return emptyList()
-    val maxAbsList = mutableListOf<Double>()
+    val maxAbsList = mutableListOf<Float>()
     for (j in 0 until colCount()) {
-        val maxAbs = this.getColumn(j).maxOfOrNull { abs(it) } ?: 0.0
+        val maxAbs = this.getColumn(j).maxOfOrNull { abs(it) } ?: 0.0f
         maxAbsList.add(maxAbs)
     }
     return maxAbsList
@@ -470,14 +470,18 @@ fun Matrix.calculateColumnMaxAbs(): List<Double> {
  * Calculates the L2 norm (Euclidean length) for each row.
  * Used by UnitVectorNormalizer.
  * @receiver The Matrix.
- * @return A List of Doubles, where each element is the L2 norm of the corresponding row.
+ * @return A List of Floats, where each element is the L2 norm of the corresponding row.
  */
-fun Matrix.calculateRowNorms(): List<Double> {
+fun Matrix.calculateRowNorms(): List<Float> {
     if (this.isEmpty()) return emptyList()
-    val norms = mutableListOf<Double>()
+    val norms = mutableListOf<Float>()
     for (i in 0 until rowCount()) {
-        val row = this[i] // Direct access to DoubleArray is efficient here
-        val norm = sqrt(row.sumOf { it * it })
+        val row = this[i] // Direct access to FloatArray is efficient here
+        var sumSquares = 0.0
+        for (value in row) {
+            sumSquares += value * value
+        }
+        val norm = sqrt(sumSquares).toFloat()
         norms.add(norm)
     }
     return norms
@@ -485,9 +489,9 @@ fun Matrix.calculateRowNorms(): List<Double> {
 
 fun softmax(matrix: Matrix): Matrix {
     return matrix.map { logits ->
-        val max = logits.maxOrNull() ?: 0.0  // For numerical stability
+        val max = logits.maxOrNull() ?: 0.0f  // For numerical stability
         val expLogits = logits.map { exp(it - max) }
         val sumExp = expLogits.sum()
-        expLogits.map { it / sumExp }.toDoubleArray()
+        expLogits.map { it / sumExp }.toFloatArray()
     }.toTypedArray()
 }

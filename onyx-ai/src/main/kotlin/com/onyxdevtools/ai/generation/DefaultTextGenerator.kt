@@ -7,15 +7,15 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 // DefaultTextGenerator changes
 class DefaultTextGenerator : TextGenerator {
 
-    private fun softmaxTemp(logits: DoubleArray, temperature: Double): DoubleArray {
-        val t = temperature.coerceAtLeast(1e-6)
-        val maxLogit = logits.maxOrNull() ?: 0.0
-        val exps = DoubleArray(logits.size) { kotlin.math.exp((logits[it] - maxLogit) / t) }
-        val sum = exps.sum().coerceAtLeast(1e-12)
-        return DoubleArray(exps.size) { exps[it] / sum }
+    private fun softmaxTemp(logits: FloatArray, temperature: Float): FloatArray {
+        val t = temperature.coerceAtLeast(1e-6f)
+        val maxLogit = logits.maxOrNull() ?: 0.0f
+        val exps = FloatArray(logits.size) { kotlin.math.exp((logits[it] - maxLogit) / t) }
+        val sum = exps.sum().coerceAtLeast(1e-12f)
+        return FloatArray(exps.size) { exps[it] / sum }
     }
 
-    private fun applyRepetitionPenalty(logits: DoubleArray, seenCounts: IntArray, penalty: Double) {
+    private fun applyRepetitionPenalty(logits: FloatArray, seenCounts: IntArray, penalty: Float) {
         if (penalty <= 1.0) return
         for (i in logits.indices) {
             if (seenCounts[i] > 0) {
@@ -25,13 +25,13 @@ class DefaultTextGenerator : TextGenerator {
     }
 
 
-    private fun sampleTopPTopK(probs: DoubleArray, topP: Double, topK: Int): Int {
+    private fun sampleTopPTopK(probs: FloatArray, topP: Float, topK: Int): Int {
         // mask invalid (<0) probs
-        val pairs = probs.withIndex().filter { it.value > 0.0 }.sortedByDescending { it.value }
+        val pairs = probs.withIndex().filter { it.value > 0.0f }.sortedByDescending { it.value }
         val truncated = if (topK > 0) pairs.take(topK) else pairs
-        var cum = 0.0
-        val nucleus = if (topP in 0.0..0.999) {
-            val lst = mutableListOf<IndexedValue<Double>>()
+        var cum = 0.0f
+        val nucleus = if (topP in 0.0f..0.999f) {
+            val lst = mutableListOf<IndexedValue<Float>>()
             for (p in truncated) {
                 cum += p.value
                 lst += p
@@ -40,9 +40,9 @@ class DefaultTextGenerator : TextGenerator {
             if (lst.isEmpty()) truncated.take(1) else lst
         } else truncated
 
-        val sum = nucleus.sumOf { it.value }
-        val r = kotlin.random.Random.Default.nextDouble() * sum
-        var acc = 0.0
+        val sum = nucleus.sumOf { it.value.toDouble() }.toFloat()
+        val r = kotlin.random.Random.Default.nextFloat() * sum
+        var acc = 0.0f
         for (p in nucleus) {
             acc += p.value
             if (r <= acc) return p.index
@@ -89,10 +89,10 @@ class DefaultTextGenerator : TextGenerator {
         }
 
         // --- sampling hyperparams ---
-        val temperature = 0.9
-        val topP = 0.9
+        val temperature = 0.9f
+        val topP = 0.9f
         val topK = 40
-        val repetitionPenalty = 1.1
+        val repetitionPenalty = 1.1f
         val useNoRepeatBigram = true
 
         // *** use CAUSAL encoding ***
@@ -107,7 +107,7 @@ class DefaultTextGenerator : TextGenerator {
                 val pad = padId ?: 0
                 List(seqLength - ids.size) { pad } + ids
             }
-            val input = current.map { it.toDouble() }.toDoubleArray()
+            val input = current.map { it.toFloat() }.toFloatArray()
             val predictions = model.predict(arrayOf(input))
 
             // If your model returns [timeSteps x vocab], last step is usually the one we want.
@@ -116,7 +116,7 @@ class DefaultTextGenerator : TextGenerator {
 
             // mask specials
             neverSample.forEach { bad ->
-                if (bad in logits.indices) logits[bad] = Double.NEGATIVE_INFINITY
+                if (bad in logits.indices) logits[bad] = Float.NEGATIVE_INFINITY
             }
 
             // repetition penalty
@@ -129,11 +129,11 @@ class DefaultTextGenerator : TextGenerator {
             if (useNoRepeatBigram) {
                 val mask = BooleanArray(probs.size) { true }
                 blockNoRepeatBigram(mask, ids)
-                for (i in probs.indices) if (!mask[i]) probs[i] = 0.0
+                for (i in probs.indices) if (!mask[i]) probs[i] = 0.0f
             }
 
             // renormalize
-            val s = probs.sum().coerceAtLeast(1e-12)
+            val s = probs.sum().coerceAtLeast(1e-12f)
             for (i in probs.indices) probs[i] /= s
 
             val nextId = sampleTopPTopK(probs, topP, topK)

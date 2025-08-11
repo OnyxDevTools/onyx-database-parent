@@ -72,10 +72,10 @@ class EmbeddingLayer(
     private var gradientWeights: Matrix? = null
 
     init {
-        weights = Array(vocabSize) { DoubleArray(embeddingSize) { random.nextGaussian() * 0.02 } }
+        weights = Array(vocabSize) { FloatArray(embeddingSize) { random.nextGaussian().toFloat() * 0.02f } }
         // Initialize moment and velocity matrices for Adam optimizer
-        momentWeights = Array(vocabSize) { DoubleArray(embeddingSize) { 0.0 } }
-        velocityWeights = Array(vocabSize) { DoubleArray(embeddingSize) { 0.0 } }
+        momentWeights = Array(vocabSize) { FloatArray(embeddingSize) { 0.0f } }
+        velocityWeights = Array(vocabSize) { FloatArray(embeddingSize) { 0.0f } }
     }
 
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
@@ -96,15 +96,15 @@ class EmbeddingLayer(
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
-        featureSize: Double,
+        featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
-        lambda: Double
+        lambda: Float
     ): Matrix {
         val batchSize = currentInput!!.size
         val sequenceLength = currentInput[0].size
         // Initialize gradient matrix for weights
-        gradientWeights = Array(vocabSize) { DoubleArray(embeddingSize) { 0.0 } }
+        gradientWeights = Array(vocabSize) { FloatArray(embeddingSize) { 0.0f } }
         var deltaIndex = 0
         // Accumulate gradients for each token's embedding
         for (b in 0 until batchSize) {
@@ -117,26 +117,26 @@ class EmbeddingLayer(
             }
         }
         // Return zero matrix for input gradient (no backprop to token IDs)
-        return Array(batchSize) { DoubleArray(sequenceLength) { 0.0 } }
+        return Array(batchSize) { FloatArray(sequenceLength) { 0.0f } }
     }
 
     @Suppress("DuplicatedCode")
     override fun updateParameters(
-        adamBeta1Power: Double,
-        adamBeta2Power: Double,
-        adamBeta1: Double,
-        adamBeta2: Double,
-        learningRate: Double
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
     ) {
         // Adam optimizer update for embedding weights
-        fun correctMoment(m: Double) = m / (1.0 - adamBeta1Power)
-        fun correctVelocity(v: Double) = v / (1.0 - adamBeta2Power)
+        fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
+        fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
         for (i in 0 until vocabSize) {
             for (j in 0 until embeddingSize) {
                 val gradient = gradientWeights!![i][j]
-                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1 - adamBeta1) * gradient
-                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1 - adamBeta2) * gradient * gradient
-                weights[i][j] -= learningRate * correctMoment(momentWeights[i][j]) /
+                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1.0f - adamBeta1) * gradient
+                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1.0f - adamBeta2) * gradient * gradient
+                weights[i][j] = weights[i][j] - learningRate * correctMoment(momentWeights[i][j]) /
                         (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
             }
         }
@@ -154,6 +154,6 @@ class EmbeddingLayer(
     }
 
     companion object {
-        private const val EPSILON = 1e-8
+        private const val EPSILON = 1e-8f
     }
 }

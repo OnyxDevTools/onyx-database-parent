@@ -55,11 +55,11 @@ interface Layer : java.io.Serializable {
      * @param learningRate The learning rate for weight updates.
      */
     fun updateParameters(
-        adamBeta1Power: Double,
-        adamBeta2Power: Double,
-        adamBeta1: Double,
-        adamBeta2: Double,
-        learningRate: Double
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
     )
 
     /**
@@ -76,10 +76,10 @@ interface Layer : java.io.Serializable {
     fun backward(
         currentInput: Matrix?,
         delta: Matrix,
-        featureSize: Double,
+        featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
-        lambda: Double
+        lambda: Float
     ): Matrix
 
     /**

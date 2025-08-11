@@ -19,8 +19,8 @@ enum class Activation : Serializable {
      * d(x) = 1 if x > 0, else 0.01
      */
     LEAKY_RELU {
-        override fun activate(x: Double): Double = if (x > 0) x else 0.01 * x
-        override fun derivative(x: Double): Double = if (x > 0) 1.0 else 0.01
+        override fun activate(x: Float): Float = if (x > 0) x else 0.01f * x
+        override fun derivative(x: Float): Float = if (x > 0) 1.0f else 0.01f
     },
 
     /**
@@ -31,8 +31,8 @@ enum class Activation : Serializable {
      * d(x) = 1 if x > 0, else 0
      */
     RELU {
-        override fun activate(x: Double): Double = if (x > 0) x else 0.0
-        override fun derivative(x: Double): Double = if (x > 0) 1.0 else 0.0
+        override fun activate(x: Float): Float = if (x > 0) x else 0.0f
+        override fun derivative(x: Float): Float = if (x > 0) 1.0f else 0.0f
     },
 
     /**
@@ -43,8 +43,8 @@ enum class Activation : Serializable {
      * d(x) = 1 if x > 0, else f(x) + α
      */
     ELU {
-        override fun activate(x: Double): Double = if (x > 0) x else ALPHA * (exp(x) - 1)
-        override fun derivative(x: Double): Double = if (x > 0) 1.0 else activate(x) + ALPHA
+        override fun activate(x: Float): Float = if (x > 0) x else ALPHA.toFloat() * (exp(x) - 1)
+        override fun derivative(x: Float): Float = if (x > 0) 1.0f else activate(x) + ALPHA.toFloat()
     },
 
     /**
@@ -55,10 +55,10 @@ enum class Activation : Serializable {
      * d(x) = 1 - tanh²(x)
      */
     TANH {
-        override fun activate(x: Double): Double = tanh(x)
-        override fun derivative(x: Double): Double {
+        override fun activate(x: Float): Float = tanh(x)
+        override fun derivative(x: Float): Float {
             val tanhValue = tanh(x)
-            return 1.0 - tanhValue * tanhValue
+            return 1.0f - tanhValue * tanhValue
         }
     },
 
@@ -70,8 +70,8 @@ enum class Activation : Serializable {
      * d(x) = 1
      */
     LINEAR {
-        override fun activate(x: Double): Double = x
-        override fun derivative(x: Double): Double = 1.0
+        override fun activate(x: Float): Float = x
+        override fun derivative(x: Float): Float = 1.0f
     };
 
     /**
@@ -80,7 +80,7 @@ enum class Activation : Serializable {
      * @param x The input value.
      * @return The result of applying the activation function.
      */
-    abstract fun activate(x: Double): Double
+    abstract fun activate(x: Float): Float
 
     /**
      * Computes the derivative of the activation function at a given point.
@@ -88,7 +88,7 @@ enum class Activation : Serializable {
      * @param x The input value.
      * @return The derivative of the activation function at x.
      */
-    abstract fun derivative(x: Double): Double
+    abstract fun derivative(x: Float): Float
 
     companion object {
         private const val ALPHA = 1.0

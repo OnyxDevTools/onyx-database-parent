@@ -14,8 +14,8 @@ import kotlin.math.sqrt
  */
 class ColumnL2Normalizer : ColumnTransform, Serializable {
 
-    private var sumSq = 0.0               // running Σ x²
-    private var norm  = 1.0               // √sumSq (updated after each fit)
+    private var sumSq = 0.0f               // running Σ x²
+    private var norm  = 1.0f               // √sumSq (updated after each fit)
     private var fitted = false
 
     /* ---------- contract ---------- */
@@ -24,33 +24,33 @@ class ColumnL2Normalizer : ColumnTransform, Serializable {
 
     /* ---------- incremental fit ---------- */
 
-    override fun fit(values: DoubleArray) {
+    override fun fit(values: FloatArray) {
         // accumulate squared magnitude
-        sumSq += values.sumOf { it * it }
+        sumSq += values.sumOf { (it * it).toDouble() }.toFloat()
         norm   = sqrt(sumSq).coerceAtLeast(EPSILON)
         fitted = true
     }
 
     /* ---------- forward transform ---------- */
 
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         if (!fitted) fit(values)          // lazy first-fit
 
         return if (norm < EPSILON * 10)
-            DoubleArray(values.size)      // constant/zero column → zeros
+            FloatArray(values.size)      // constant/zero column → zeros
         else
-            DoubleArray(values.size) { i -> values[i] / norm }
+            FloatArray(values.size) { i -> values[i] / norm }
     }
 
     /* ---------- inverse transform ---------- */
 
-    override fun inverse(values: DoubleArray): DoubleArray {
+    override fun inverse(values: FloatArray): FloatArray {
         if (!fitted) throw IllegalStateException("inverse() before fit/apply")
 
         return if (norm < EPSILON * 10)
-            DoubleArray(values.size)
+            FloatArray(values.size)
         else
-            DoubleArray(values.size) { i -> values[i] * norm }
+            FloatArray(values.size) { i -> values[i] * norm }
     }
 
     /**

@@ -20,8 +20,8 @@ class CategoricalIndexer(
     private val handleUnknown: String = "new"   // "error" | "nan" | "new"
 ) : ColumnTransform, Serializable {
 
-    private val categories = mutableListOf<Double>()      // keeps insertion order
-    private val catToIndex = hashMapOf<Double, Int>()
+    private val categories = mutableListOf<Float>()      // keeps insertion order
+    private val catToIndex = hashMapOf<Float, Int>()
     private var fitted = false
 
     /* ---------- contract ---------- */
@@ -30,7 +30,7 @@ class CategoricalIndexer(
 
     /* ---------- incremental fit ---------- */
 
-    override fun fit(values: DoubleArray) {
+    override fun fit(values: FloatArray) {
         values.forEach { v ->
             if (v !in catToIndex) {
                 val newIdx = categories.size
@@ -43,14 +43,14 @@ class CategoricalIndexer(
 
     /* ---------- forward transform ---------- */
 
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         if (!fitted) fit(values)                     // lazy first-fit
 
-        return DoubleArray(values.size) { idx ->
+        return FloatArray(values.size) { idx ->
             val v = values[idx]
             val idxKnown = catToIndex[v] ?: when (handleUnknown) {
                 "error" -> throw IllegalArgumentException("Unknown category $v")
-                "nan"   -> return@DoubleArray Double.NaN
+                "nan"   -> return@FloatArray Float.NaN
                 "new"   -> {
                     val newIdx = categories.size
                     categories += v
@@ -59,16 +59,16 @@ class CategoricalIndexer(
                 }
                 else   -> error("handleUnknown must be 'error', 'nan', or 'new'")
             }
-            idxKnown.toDouble()
+            idxKnown.toFloat()
         }
     }
 
     /* ---------- inverse transform ---------- */
 
-    override fun inverse(values: DoubleArray): DoubleArray =
-        DoubleArray(values.size) { idx ->
+    override fun inverse(values: FloatArray): FloatArray =
+        FloatArray(values.size) { idx ->
             val code = values[idx].toInt()
-            if (code in categories.indices) categories[code] else Double.NaN
+            if (code in categories.indices) categories[code] else Float.NaN
         }
 
     /**

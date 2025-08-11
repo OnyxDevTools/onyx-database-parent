@@ -15,15 +15,15 @@ import kotlin.math.sqrt
  */
 class MeanStdNormalizer(private val unbiased: Boolean = false) : ColumnTransform {
     private var n = 0L
-    private var mean = 0.0
-    private var m2   = 0.0          // Σ(x-μ)²
+    private var mean = 0.0f
+    private var m2   = 0.0f          // Σ(x-μ)²
     override fun isFitted() = n > 0          // optional helper
 
-    private fun currentStd(): Double =
+    private fun currentStd(): Float =
         sqrt((m2 / if (unbiased) max(1, n - 1) else n).coerceAtLeast(EPSILON))
 
     /* ── incremental fit ─────────────────────────────────────── */
-    override fun fit(values: DoubleArray) {
+    override fun fit(values: FloatArray) {
         values.forEach { v ->
             n++
             val delta = v - mean
@@ -33,14 +33,14 @@ class MeanStdNormalizer(private val unbiased: Boolean = false) : ColumnTransform
     }
 
     /* ── forward / inverse ───────────────────────────────────── */
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         val std = currentStd()
-        return DoubleArray(values.size) { i -> (values[i] - mean) / std }
+        return FloatArray(values.size) { i -> (values[i] - mean) / std }
     }
 
-    override fun inverse(values: DoubleArray): DoubleArray {
+    override fun inverse(values: FloatArray): FloatArray {
         val std = currentStd()
-        return DoubleArray(values.size) { i -> values[i] * std + mean }
+        return FloatArray(values.size) { i -> values[i] * std + mean }
     }
 
     /**

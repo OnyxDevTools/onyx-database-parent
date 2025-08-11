@@ -24,10 +24,10 @@ import kotlin.math.ln
  * @throws IllegalArgumentException if array dimensions don't match or contain invalid values
  */
 fun sparseCategoricalCrossEntropy(
-    predicted: Array<DoubleArray>,
+    predicted: Array<FloatArray>,
     sparseTargets: IntArray,
-    sampleWeights: DoubleArray? = null
-): Double {
+    sampleWeights: FloatArray? = null
+): Float {
     require(predicted.size == sparseTargets.size) {
         "Predictions and targets must have same number of samples"
     }
@@ -35,11 +35,11 @@ fun sparseCategoricalCrossEntropy(
         "Sample weights size must match targets size"
     }
     
-    val vocabSize = predicted.firstOrNull()?.size ?: return 0.0
-    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
+    val vocabSize = predicted.firstOrNull()?.size ?: return 0.0f
+    val weights = sampleWeights ?: FloatArray(sparseTargets.size) { 1.0f }
     
-    var totalLoss = 0.0
-    var totalWeight = 0.0
+    var totalLoss = 0.0f
+    var totalWeight = 0.0f
     
     for (i in predicted.indices) {
         val targetId = sparseTargets[i]
@@ -53,8 +53,8 @@ fun sparseCategoricalCrossEntropy(
         val weight = weights[i]
         
         // Compute log-softmax for numerical stability (optimized - no temporary collections)
-        val maxLogit = logits.maxOrNull() ?: continue
-        var sumExp = 0.0
+        val maxLogit = logits.maxOrNull()?.toFloat() ?: continue
+        var sumExp = 0.0f
         for (logit in logits) {
             sumExp += exp(logit - maxLogit)
         }
@@ -65,7 +65,7 @@ fun sparseCategoricalCrossEntropy(
         totalWeight += weight
     }
     
-    return if (totalWeight > 0) totalLoss / totalWeight else 0.0
+    return if (totalWeight > 0) totalLoss / totalWeight else 0.0f
 }
 
 /**
@@ -86,10 +86,10 @@ fun sparseCategoricalCrossEntropy(
  * @throws IllegalArgumentException if array dimensions don't match or contain invalid values
  */
 fun sparseCategoricalCrossEntropyGradients(
-    predicted: Array<DoubleArray>,
+    predicted: Array<FloatArray>,
     sparseTargets: IntArray,
-    sampleWeights: DoubleArray? = null
-): Array<DoubleArray> {
+    sampleWeights: FloatArray? = null
+): Array<FloatArray> {
     require(predicted.size == sparseTargets.size) {
         "Predictions and targets must have same number of samples"
     }
@@ -98,8 +98,8 @@ fun sparseCategoricalCrossEntropyGradients(
     }
     
     val vocabSize = predicted.firstOrNull()?.size ?: return emptyArray()
-    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
-    val gradients = Array(predicted.size) { DoubleArray(vocabSize) }
+    val weights = sampleWeights ?: FloatArray(sparseTargets.size) { 1.0f }
+    val gradients = Array(predicted.size) { FloatArray(vocabSize) }
     
     for (i in predicted.indices) {
         val targetId = sparseTargets[i]
@@ -116,7 +116,7 @@ fun sparseCategoricalCrossEntropyGradients(
         val maxLogit = logits.maxOrNull() ?: continue
         
         // First pass: compute sum of exponentials
-        var sumExp = 0.0
+        var sumExp = 0.0f
         for (logit in logits) {
             sumExp += exp(logit - maxLogit)
         }
@@ -125,7 +125,7 @@ fun sparseCategoricalCrossEntropyGradients(
         for (j in logits.indices) {
             val softmaxProb = exp(logits[j] - maxLogit) / sumExp
             gradients[i][j] = weight * if (j == targetId) {
-                softmaxProb - 1.0  // Target position: p - 1
+                softmaxProb - 1.0f  // Target position: p - 1
             } else {
                 softmaxProb  // Non-target position: p
             }
@@ -134,4 +134,3 @@ fun sparseCategoricalCrossEntropyGradients(
     
     return gradients
 }
-

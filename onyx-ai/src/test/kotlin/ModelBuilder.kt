@@ -38,7 +38,7 @@ fun generateCorpusSequence(
     shuffleFiles: Boolean = true,
     rng: Random? = null,
     shuffleWithinFile: Boolean = false
-): Sequence<Pair<DoubleArray, IntArray>> {
+): Sequence<Pair<FloatArray, IntArray>> {
     require(seqLength > 0) { "seqLength must be > 0" }
     require(stride > 0) { "stride must be > 0" }
 
@@ -71,8 +71,8 @@ class ComprehensiveLossFunction(
     private val stride: Int,
     private val numValExamples: Int = 10,
     private val shuffleForVal: Boolean = false
-) : (NeuralNetwork) -> Double {
-    override fun invoke(net: NeuralNetwork): Double {
+) : (NeuralNetwork) -> Float {
+    override fun invoke(net: NeuralNetwork): Float {
         val valSeq = generateCorpusSequence(
             booksDir,
             vocabulary,
@@ -82,7 +82,7 @@ class ComprehensiveLossFunction(
             rng = if (shuffleForVal) Random(42) else null
         )
         val valPairs = valSeq.take(numValExamples).toList()
-        if (valPairs.isEmpty()) return 0.0
+        if (valPairs.isEmpty()) return 0.0f
 
         val valInputs = valPairs.map { it.first }.toTypedArray()
         val valSparseTargets = valPairs.flatMap { it.second.toList() }.toIntArray()
@@ -122,7 +122,7 @@ fun main() {
         DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
     )
 
-    var model = NeuralNetwork(layers, learningRate = 0.001)
+    var model = NeuralNetwork(layers, learningRate = 0.001f)
 
     // Create corpus sequence generator (streams all books)
     val source = {

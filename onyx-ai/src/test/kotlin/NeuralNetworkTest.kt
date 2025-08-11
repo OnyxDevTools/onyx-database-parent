@@ -25,9 +25,9 @@ class NeuralNetworkTest {
      * @return A pair of feature and label matrices.
      */
     private fun generateLinearRegressionData(size: Int): Pair<Matrix, Matrix> {
-        val features = Array(size) { DoubleArray(1) { Random.nextDouble(-5.0, 5.0) } }
+        val features = Array(size) { FloatArray(1) { Random.nextFloat() * 10.0f - 5.0f } }
         val labels = Array(size) {
-            DoubleArray(1) { 2 * features[it][0] + 3 + Random.nextDouble(-0.05, 0.05) }
+            FloatArray(1) { 2 * features[it][0] + 3 + (Random.nextFloat() * 0.1f - 0.05f) }
         }
         return features to labels
     }
@@ -38,7 +38,7 @@ class NeuralNetworkTest {
     @Test
     fun `predict output dimensions match last layer`() {
         val model = NeuralNetwork(listOf(DenseLayer(3, 4, Activation.RELU), DenseLayer(4, 2, Activation.LINEAR)))
-        val input = Array(5) { DoubleArray(3) { Random.nextDouble() } }
+        val input = Array(5) { FloatArray(3) { Random.nextFloat() } }
         val output = model.predict(input)
         assertEquals(5, output.size)
         assertEquals(2, output[0].size)
@@ -52,7 +52,7 @@ class NeuralNetworkTest {
         val layer = DenseLayer(2, 2, Activation.LINEAR)
         val original = NeuralNetwork(listOf(layer))
         val cloned = original.clone()
-        cloned.layers.filterIsInstance<DenseLayer>().first().weights[0][0] += 1.0
+        cloned.layers.filterIsInstance<DenseLayer>().first().weights[0][0] += 1.0f
         val originalWeight = original.layers.filterIsInstance<DenseLayer>().first().weights[0][0]
         val mutatedWeight = cloned.layers.filterIsInstance<DenseLayer>().first().weights[0][0]
         assertNotEquals(originalWeight, mutatedWeight, "clone() must deep-copy weight arrays")
@@ -64,7 +64,7 @@ class NeuralNetworkTest {
     @Test
     fun `training on linear data reduces loss`() {
         val (features, labels) = generateLinearRegressionData(200)
-        val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.01)
+        val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.01f)
 
         val initialLoss = model.predict(features).meanStandardError(labels)
         val trained = model.train(
@@ -84,11 +84,11 @@ class NeuralNetworkTest {
     @Test
     @Ignore
     fun `sample weights influence training`() {
-        val features = Array(100) { DoubleArray(1) { it.toDouble() } }
-        val labels = Array(100) { DoubleArray(1) { if (it < 50) 1.0 else 10.0 } }
-        val weights = DoubleArray(100) { if (it < 50) 1.0 else 0.1 }
+        val features = Array(100) { FloatArray(1) { it.toFloat() } }
+        val labels = Array(100) { FloatArray(1) { if (it < 50) 1.0f else 10.0f } }
+        val weights = FloatArray(100) { if (it < 50) 1.0f else 0.1f }
 
-        val weightedModel = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.05)
+        val weightedModel = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.05f)
         val unweightedModel = weightedModel.clone()
 
         weightedModel.train(features, labels, trainingWeights = weights, maxEpochs = 200, patience = 15) {
@@ -109,7 +109,7 @@ class NeuralNetworkTest {
     @Test
     fun `early stopping stops before max epochs`() {
         val (features, labels) = generateLinearRegressionData(50)
-        val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.02)
+        val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.02f)
 
         var epochsTrained = 0
         model.train(features, labels, maxEpochs = 1000, patience = 5) {
@@ -124,9 +124,9 @@ class NeuralNetworkTest {
      */
     @Test
     fun `dropout scaling keeps expectation`() {
-        val dropoutLayer = DenseLayer(10, 10, Activation.LINEAR, dropoutRate = 0.5)
+        val dropoutLayer = DenseLayer(10, 10, Activation.LINEAR, dropoutRate = 0.5f)
         val model = NeuralNetwork(listOf(dropoutLayer))
-        val input = Array(2000) { DoubleArray(10) { 1.0 } }
+        val input = Array(2000) { FloatArray(10) { 1.0f } }
 
         val trainOutput = model.predict(input, isTraining = true)
         val evalOutput = model.predict(input, isTraining = false)
@@ -146,7 +146,7 @@ class NeuralNetworkTest {
         ObjectOutputStream(outputStream).use { it.writeObject(model) }
         val serializedData = outputStream.toByteArray()
         val deserialized = ObjectInputStream(ByteArrayInputStream(serializedData)).readObject() as NeuralNetwork
-        assertNotNull(deserialized.predict(arrayOf(doubleArrayOf(0.0, 0.0))))
+        assertNotNull(deserialized.predict(arrayOf(floatArrayOf(0.0f, 0.0f))))
     }
 
     /**
@@ -154,12 +154,12 @@ class NeuralNetworkTest {
      */
     @Test
     fun `mismatched weight length throws`() {
-        val features = Array(2) { DoubleArray(1) { 0.0 } }
-        val labels = Array(2) { DoubleArray(1) { 0.0 } }
-        val weights = DoubleArray(1) { 1.0 } // Incorrect length
+        val features = Array(2) { FloatArray(1) { 0.0f } }
+        val labels = Array(2) { FloatArray(1) { 0.0f } }
+        val weights = FloatArray(1) { 1.0f } // Incorrect length
         val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)))
         assertThrows(IllegalArgumentException::class.java) {
-            model.train(features, labels, trainingWeights = weights, maxEpochs = 1) { 0.0 }
+            model.train(features, labels, trainingWeights = weights, maxEpochs = 1) { 0.0f }
         }
     }
 
@@ -175,7 +175,7 @@ class NeuralNetworkTest {
                 BatchNormalizationLayer(16),
                 DenseLayer(16, 1, Activation.LINEAR)
             ),
-            learningRate = 0.01
+            learningRate = 0.01f
         )
 
         val initialLoss = model.predict(features).meanStandardError(labels)
@@ -186,6 +186,6 @@ class NeuralNetworkTest {
             patience = 20
         ) { it.predict(features).meanStandardError(labels) }
         val finalLoss = trained.predict(features).meanStandardError(labels)
-        assertTrue(finalLoss < initialLoss * 0.1, "BatchNorm-enhanced model should reduce loss by at least 90%")
+        assertTrue(finalLoss < initialLoss * 0.1f, "BatchNorm-enhanced model should reduce loss by at least 90%")
     }
 }

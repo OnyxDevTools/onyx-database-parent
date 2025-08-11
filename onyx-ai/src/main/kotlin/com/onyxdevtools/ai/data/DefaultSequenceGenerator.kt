@@ -61,8 +61,8 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
      * @param shuffle Whether to randomize the order of sequence starts (default: true).
      *                If false, sequences are generated in sequential order.
      * @return A lazy Sequence of training pairs where:
-     *         - First element: Input sequence as DoubleArray of token IDs (padded if needed)
-     *         - Second element: Target sequences as Array<DoubleArray> of one-hot vectors (all-zero for ignore/padded)
+     *         - First element: Input sequence as FloatArray of token IDs (padded if needed)
+     *         - Second element: Target sequences as Array<FloatArray> of one-hot vectors (all-zero for ignore/padded)
      *         Each target vector has size equal to vocabulary.size.
      * @throws IllegalArgumentException if parameters are invalid, tokens are empty,
      *                                  or contain IDs outside vocabulary range
@@ -72,7 +72,7 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
         seqLength: Int,
         stride: Int,
         shuffle: Boolean
-    ): Sequence<Pair<DoubleArray, IntArray>> {
+    ): Sequence<Pair<FloatArray, IntArray>> {
 
         return sequence {
             // Calculate possible start indices up to the last token
@@ -82,7 +82,7 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
             }
 
             for (i in indices) {
-                val input = DoubleArray(seqLength)
+                val input = FloatArray(seqLength)
                 val target = IntArray(seqLength)
 
                 for (pos in 0 until seqLength) {
@@ -90,9 +90,9 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
                     val targetIndex = i + pos + 1
 
                     input[pos] = if (inputIndex < tokens.size) {
-                        tokens[inputIndex].toDouble()
+                        tokens[inputIndex].toFloat()
                     } else {
-                        padId.toDouble()
+                        padId.toFloat()
                     }
 
                     target[pos] = if (targetIndex < tokens.size) {

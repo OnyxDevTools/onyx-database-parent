@@ -53,32 +53,32 @@ class DenseLayer(
     private val inputSize: Int,
     private val outputSize: Int,
     override val activation: Activation,
-    val dropoutRate: Double = 0.0
+    val dropoutRate: Float = 0.0f
 ) : Layer {
 
     override var preActivation: Matrix? = null
     override var output: Matrix? = null
 
     var weights: Matrix
-    private var biases = DoubleArray(outputSize) { 0.0 }
+    private var biases = FloatArray(outputSize) { 0.0f }
 
     private var momentWeights: Matrix
     private var velocityWeights: Matrix
-    private var momentBiases = DoubleArray(outputSize)
-    private var velocityBiases = DoubleArray(outputSize)
+    private var momentBiases = FloatArray(outputSize)
+    private var velocityBiases = FloatArray(outputSize)
 
     private var dropoutMask: Matrix? = null
     private var gradientWeights: Matrix? = null
-    private var gradientBiases: DoubleArray? = null
+    private var gradientBiases: FloatArray? = null
 
     init {
-        val weightInitLimit = when (activation) {
-            Activation.RELU, Activation.LEAKY_RELU -> sqrt(2.0 / inputSize)
-            else -> sqrt(6.0 / (inputSize + outputSize))
+        val weightInitLimit: Float = when (activation) {
+            Activation.RELU, Activation.LEAKY_RELU -> kotlin.math.sqrt((2.0f / inputSize.toFloat()).toDouble()).toFloat()
+            else -> kotlin.math.sqrt((6.0f / (inputSize.toFloat() + outputSize.toFloat())).toDouble()).toFloat()
         }
-        weights = Array(inputSize) { DoubleArray(outputSize) { Random.nextDouble(-weightInitLimit, weightInitLimit) } }
-        momentWeights = Array(inputSize) { DoubleArray(outputSize) }
-        velocityWeights = Array(inputSize) { DoubleArray(outputSize) }
+        weights = Array(inputSize) { FloatArray(outputSize) { (Random.nextFloat() * 2.0f - 1.0f) * weightInitLimit } }
+        momentWeights = Array(inputSize) { FloatArray(outputSize) }
+        velocityWeights = Array(inputSize) { FloatArray(outputSize) }
     }
 
     /**
@@ -86,15 +86,15 @@ class DenseLayer(
      */
     private fun applyDropout() {
         val activations = output ?: error("Layer output must not be null before applying dropout.")
-        if (dropoutRate == 0.0) return
+        if (dropoutRate == 0.0f) return
 
         val rows = activations.size
         val cols = activations[0].size
-        val keepProbability = 1.0 - dropoutRate
-        val scaleFactor = 1.0 / keepProbability
+        val keepProbability = 1.0f - dropoutRate
+        val scaleFactor = 1.0f / keepProbability
 
         if (dropoutMask == null || dropoutMask!!.size != rows || dropoutMask!![0].size != cols) {
-            dropoutMask = Array(rows) { DoubleArray(cols) }
+            dropoutMask = Array(rows) { FloatArray(cols) }
         }
 
         val mask = dropoutMask!!
@@ -104,18 +104,18 @@ class DenseLayer(
             val rowMask = mask[rowIndex]
             var colIndex = 0
             while (colIndex <= cols - 4) {
-                val r1 = rng.nextDouble()
-                val r2 = rng.nextDouble()
-                val r3 = rng.nextDouble()
-                val r4 = rng.nextDouble()
-                rowMask[colIndex] = if (r1 < keepProbability) scaleFactor else 0.0
-                rowMask[colIndex + 1] = if (r2 < keepProbability) scaleFactor else 0.0
-                rowMask[colIndex + 2] = if (r3 < keepProbability) scaleFactor else 0.0
-                rowMask[colIndex + 3] = if (r4 < keepProbability) scaleFactor else 0.0
+                val r1 = rng.nextFloat()
+                val r2 = rng.nextFloat()
+                val r3 = rng.nextFloat()
+                val r4 = rng.nextFloat()
+                rowMask[colIndex] = if (r1 < keepProbability) scaleFactor else 0.0f
+                rowMask[colIndex + 1] = if (r2 < keepProbability) scaleFactor else 0.0f
+                rowMask[colIndex + 2] = if (r3 < keepProbability) scaleFactor else 0.0f
+                rowMask[colIndex + 3] = if (r4 < keepProbability) scaleFactor else 0.0f
                 colIndex += 4
             }
             while (colIndex < cols) {
-                rowMask[colIndex] = if (rng.nextDouble() < keepProbability) scaleFactor else 0.0
+                rowMask[colIndex] = if (rng.nextFloat() < keepProbability) scaleFactor else 0.0f
                 colIndex++
             }
         }
@@ -140,30 +140,30 @@ class DenseLayer(
      */
     @Suppress("DuplicatedCode")
     override fun updateParameters(
-        adamBeta1Power: Double,
-        adamBeta2Power: Double,
-        adamBeta1: Double,
-        adamBeta2: Double,
-        learningRate: Double
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
     ) {
-        fun correctMoment(m: Double) = m / (1.0 - adamBeta1Power)
-        fun correctVelocity(v: Double) = v / (1.0 - adamBeta2Power)
+        fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
+        fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
 
         for (i in 0 until inputSize) {
             for (j in 0 until outputSize) {
                 val gradient = gradientWeights!![i][j]
-                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1 - adamBeta1) * gradient
-                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1 - adamBeta2) * gradient * gradient
-                weights[i][j] -= learningRate *
+                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1.0f - adamBeta1) * gradient
+                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1.0f - adamBeta2) * gradient * gradient
+                weights[i][j] = weights[i][j] - learningRate *
                         correctMoment(momentWeights[i][j]) / (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
             }
         }
 
         for (j in 0 until outputSize) {
             val gradient = gradientBiases!![j]
-            momentBiases[j] = adamBeta1 * momentBiases[j] + (1 - adamBeta1) * gradient
-            velocityBiases[j] = adamBeta2 * velocityBiases[j] + (1 - adamBeta2) * gradient * gradient
-            biases[j] -= learningRate *
+            momentBiases[j] = adamBeta1 * momentBiases[j] + (1.0f - adamBeta1) * gradient
+            velocityBiases[j] = adamBeta2 * velocityBiases[j] + (1.0f - adamBeta2) * gradient * gradient
+            biases[j] = biases[j] - learningRate *
                     correctMoment(momentBiases[j]) / (sqrt(correctVelocity(velocityBiases[j])) + EPSILON)
         }
     }
@@ -174,10 +174,10 @@ class DenseLayer(
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
-        featureSize: Double,
+        featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
-        lambda: Double
+        lambda: Float
     ): Matrix {
         // CHANGED: always apply activation derivative; no BN special-case
         val currentDelta = elementWiseMultiply(
@@ -188,10 +188,10 @@ class DenseLayer(
         val previousOutput = previousLayer?.output ?: currentInput!!
 
         gradientWeights = add(
-            scalarMultiply(matrixMultiply(transpose(previousOutput), currentDelta), 1.0 / featureSize),
+            scalarMultiply(matrixMultiply(transpose(previousOutput), currentDelta), 1.0f / featureSize),
             scalarMultiply(weights, lambda)
         )
-        gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toDoubleArray()
+        gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
 
         return matrixMultiply(currentDelta, transpose(weights))
     }
@@ -221,6 +221,7 @@ class DenseLayer(
             SplittableRandom(ThreadLocalRandom.current().nextLong())
         }
 
+        private const val EPSILON = 1e-8f
         private const val serialVersionUID = 1L
     }
 }

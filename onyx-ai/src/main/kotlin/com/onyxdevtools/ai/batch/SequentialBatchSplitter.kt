@@ -17,7 +17,7 @@ package com.onyxdevtools.ai.batch
  * val (xTrain, yTrain, xTest, yTest) = splitter.splitBatch(features, sequenceTargets, testFraction = 0.2)
  * ```
  */
-class SequentialBatchSplitter : BatchSplitter<Array<Array<DoubleArray>>, List<Array<DoubleArray>>> {
+class SequentialBatchSplitter : BatchSplitter<Array<Array<FloatArray>>, List<Array<FloatArray>>> {
     
     /**
      * Splits feature vectors and sequential target data into training and test subsets.
@@ -34,20 +34,20 @@ class SequentialBatchSplitter : BatchSplitter<Array<Array<DoubleArray>>, List<Ar
      * @throws IllegalArgumentException if testFraction is not in [0.0, 1.0] or if x and y have different numbers of samples.
      */
     override fun splitBatch(
-        x: Array<DoubleArray>,
-        y: Array<Array<DoubleArray>>,
-        testFraction: Double,
+        x: Array<FloatArray>,
+        y: Array<Array<FloatArray>>,
+        testFraction: Float,
         shuffle: Boolean
-    ): Quad<Array<DoubleArray>, List<Array<DoubleArray>>, Array<DoubleArray>, List<Array<DoubleArray>>> {
+    ): Quad<Array<FloatArray>, List<Array<FloatArray>>, Array<FloatArray>, List<Array<FloatArray>>> {
 
         val idx = x.indices.toMutableList().apply { if (shuffle) shuffle() }
         val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
         val testIdx = idx.take(testSize)
         val trainIdx = idx.drop(testSize)
 
-        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
+        fun subsetInputs(src: Array<FloatArray>, ids: List<Int>) =
             Array(ids.size) { i -> src[ids[i]] }
-        fun subsetTargets(src: Array<Array<DoubleArray>>, ids: List<Int>) =
+        fun subsetTargets(src: Array<Array<FloatArray>>, ids: List<Int>) =
             ids.map { src[it] }
 
         return Quad(

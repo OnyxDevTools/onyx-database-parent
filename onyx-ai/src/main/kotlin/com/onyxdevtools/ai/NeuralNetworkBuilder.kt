@@ -51,13 +51,13 @@ class NeuralNetworkBuilder {
     private val valueTransformList = mutableListOf<ColumnTransform>()
 
     /** The learning rate used during training by the optimizer (e.g., Adam). */
-    var learningRate: Double = 1e-3
+    var learningRate: Float = 1e-3f
     /** The L2 regularization parameter (lambda) to penalize large weights. */
-    var lambda: Double = 1e-4
+    var lambda: Float = 1e-4f
     /** The exponential decay rate for the first moment estimates (Adam optimizer parameter). */
-    private var beta1: Double = 0.9
+    private var beta1: Float = 0.9f
     /** The exponential decay rate for the second moment estimates (Adam optimizer parameter). */
-    private var beta2: Double = 0.999
+    private var beta2: Float = 0.999f
 
     /**
      * Configures the layers of the neural network using the [LayerBuilder] DSL.
@@ -127,7 +127,7 @@ class LayerBuilder {
      * @param activation The [Activation] function to apply to the layer's output.
      * @param dropoutRate The probability of dropping out neurons during training (regularization). Defaults to `0.0` (no dropout).
      */
-    fun dense(inputSize: Int, outputSize: Int, activation: Activation, dropoutRate: Double = 0.0) {
+    fun dense(inputSize: Int, outputSize: Int, activation: Activation, dropoutRate: Float = 0.0f) {
         layers += DenseLayer(inputSize, outputSize, activation, dropoutRate)
     }
 
@@ -231,7 +231,7 @@ class TransformBuilder {
      * Applies a time-based decay factor, useful for time-series data where recent data might be more relevant.
      * @param lambda The decay rate parameter.
      */
-    fun timeDecay(lambda: Double) {
+    fun timeDecay(lambda: Float) {
         transforms += TimeDecayTransform(lambda)
     }
 

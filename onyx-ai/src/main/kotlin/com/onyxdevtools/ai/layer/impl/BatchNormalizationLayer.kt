@@ -20,82 +20,82 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     override var preActivation: Matrix? = null
     override val activation: Activation = Activation.LINEAR
 
-    private var gamma = DoubleArray(size) { 1.0 }
-    private var beta = DoubleArray(size)
-    private var mean: DoubleArray? = null
-    private var variance: DoubleArray? = null
+    private var gamma = FloatArray(size) { 1.0f }
+    private var beta = FloatArray(size)
+    private var mean: FloatArray? = null
+    private var variance: FloatArray? = null
     private var normalized: Matrix? = null
 
     // Added running statistics
-    private var runningMean = DoubleArray(size) { 0.0 }
-    private var runningVariance = DoubleArray(size) { 1.0 }
-    private val momentum = 0.9 // Common momentum value; adjust as needed
+    private var runningMean = FloatArray(size) { 0.0f }
+    private var runningVariance = FloatArray(size) { 1.0f }
+    private val momentum = 0.9f // Common momentum value; adjust as needed
 
-    private var gradGamma: DoubleArray? = null
-    private var gradBeta: DoubleArray? = null
+    private var gradGamma: FloatArray? = null
+    private var gradBeta: FloatArray? = null
 
-    private var momentGamma = DoubleArray(size)
-    private var velocityGamma = DoubleArray(size)
-    private var momentBeta = DoubleArray(size)
-    private var velocityBeta = DoubleArray(size)
+    private var momentGamma = FloatArray(size)
+    private var velocityGamma = FloatArray(size)
+    private var momentBeta = FloatArray(size)
+    private var velocityBeta = FloatArray(size)
 
     /**
      * Updates gamma and beta parameters using the Adam optimizer.
      */
     @Suppress("DuplicatedCode")
     override fun updateParameters(
-        adamBeta1Power: Double,
-        adamBeta2Power: Double,
-        adamBeta1: Double,
-        adamBeta2: Double,
-        learningRate: Double
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
     ) {
-        fun correctMoment(moment: Double) = moment / (1.0 - adamBeta1Power)
-        fun correctVelocity(velocity: Double) = velocity / (1.0 - adamBeta2Power)
+        fun correctMoment(moment: Float) = moment / (1.0f - adamBeta1Power)
+        fun correctVelocity(velocity: Float) = velocity / (1.0f - adamBeta2Power)
 
         for (j in 0 until size) {
             val gradientGamma = gradGamma!![j]
             val gradientBeta = gradBeta!![j]
 
-            momentGamma[j] = adamBeta1 * momentGamma[j] + (1 - adamBeta1) * gradientGamma
-            velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1 - adamBeta2) * gradientGamma * gradientGamma
-            gamma[j] -= learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
+            momentGamma[j] = adamBeta1 * momentGamma[j] + (1.0f - adamBeta1) * gradientGamma
+            velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1.0f - adamBeta2) * gradientGamma * gradientGamma
+            gamma[j] = gamma[j] - learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
 
-            momentBeta[j] = adamBeta1 * momentBeta[j] + (1 - adamBeta1) * gradientBeta
-            velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1 - adamBeta2) * gradientBeta * gradientBeta
-            beta[j] -= learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
+            momentBeta[j] = adamBeta1 * momentBeta[j] + (1.0f - adamBeta1) * gradientBeta
+            velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1.0f - adamBeta2) * gradientBeta * gradientBeta
+            beta[j] = beta[j] - learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
         }
     }
 
     override fun preForward(input: Matrix, isTraining: Boolean): Matrix {
         if (isTraining) {
             // Compute batch statistics
-            val meanVector = DoubleArray(size) { j -> input.sumOf { it[j] } / input.size }
-            val varianceVector = DoubleArray(size) { j -> input.sumOf { (it[j] - meanVector[j]).pow(2) } / input.size }
+            val meanVector = FloatArray(size) { j -> input.sumOf { it[j].toDouble() }.toFloat() / input.size }
+            val varianceVector = FloatArray(size) { j -> input.sumOf { (it[j] - meanVector[j]).pow(2).toDouble() }.toFloat() / input.size }
 
             this.mean = meanVector
             this.variance = varianceVector
 
             // Normalize using batch statistics
             this.normalized = input.map { row ->
-                DoubleArray(row.size) { j -> (row[j] - meanVector[j]) / sqrt(varianceVector[j] + EPSILON) }
+                FloatArray(row.size) { j -> (row[j] - meanVector[j]) / sqrt(varianceVector[j] + EPSILON) }
             }.toTypedArray()
 
             // Update running statistics (not used for current normalization)
             for (j in 0 until size) {
-                runningMean[j] = momentum * runningMean[j] + (1 - momentum) * meanVector[j]
-                runningVariance[j] = momentum * runningVariance[j] + (1 - momentum) * varianceVector[j]
+                runningMean[j] = momentum * runningMean[j] + (1.0f - momentum) * meanVector[j]
+                runningVariance[j] = momentum * runningVariance[j] + (1.0f - momentum) * varianceVector[j]
             }
         } else {
             // Use running statistics for inference
             this.normalized = input.map { row ->
-                DoubleArray(row.size) { j -> (row[j] - runningMean[j]) / sqrt(runningVariance[j] + EPSILON) }
+                FloatArray(row.size) { j -> (row[j] - runningMean[j]) / sqrt(runningVariance[j] + EPSILON) }
             }.toTypedArray()
         }
 
         // Apply affine transformation
         this.output = this.normalized!!.map { row ->
-            DoubleArray(row.size) { j -> gamma[j] * row[j] + beta[j] }
+            FloatArray(row.size) { j -> gamma[j] * row[j] + beta[j] }
         }.toTypedArray()
 
         return output!!
@@ -112,10 +112,10 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
-        featureSize: Double,
+        featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
-        lambda: Double
+        lambda: Float
     ): Matrix {
         checkNotNull(previousLayer) { "BatchNormalization Layer must not be the output layer." }
 
@@ -126,10 +126,10 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
             "Batch Normalization layer expects width=$size but got ${adjustedDelta[0].size}"
         }
 
-        val inverseStdDev = variance!!.map { 1.0 / sqrt(it + EPSILON) }.toDoubleArray()
+        val inverseStdDev = variance!!.map { (1.0f / sqrt(it + EPSILON)) }.toFloatArray()
 
-        gradGamma = DoubleArray(size)
-        gradBeta = DoubleArray(size)
+        gradGamma = FloatArray(size)
+        gradBeta = FloatArray(size)
 
         for (j in 0 until size) {
             for (i in adjustedDelta.indices) {
@@ -140,7 +140,7 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
         }
 
         return Array(adjustedDelta.size) { i ->
-            DoubleArray(size) { j ->
+            FloatArray(size) { j ->
                 val xHat = normalized!![i][j]
                 val dY = adjustedDelta[i][j]
                 gamma[j] * inverseStdDev[j] * (featureSize * dY - gradBeta!![j] - xHat * gradGamma!![j]) / featureSize
@@ -168,6 +168,7 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     }
 
     companion object {
+        private const val EPSILON = 1e-8f
         private const val serialVersionUID = 1L
     }
 }

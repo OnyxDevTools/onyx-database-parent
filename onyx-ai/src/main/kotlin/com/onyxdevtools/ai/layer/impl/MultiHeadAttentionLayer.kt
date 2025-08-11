@@ -36,20 +36,20 @@ class MultiHeadAttentionLayer(
     private val dK = modelSize / headCount
 
     /** Learnable weight matrices for Query, Key, Value, and Output projections */
-    private var wQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-    private var wK: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-    private var wV: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
-    private var wO: Matrix = Array(modelSize) { DoubleArray(modelSize) { random.nextGaussian() * 0.02 } }
+    private var wQ: Matrix = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * 0.02f } }
+    private var wK: Matrix = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * 0.02f } }
+    private var wV: Matrix = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * 0.02f } }
+    private var wO: Matrix = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * 0.02f } }
 
     /** Adam optimizer momentum states for weight matrices */
-    private var momentWQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWQ: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var momentWK: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWK: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var momentWV: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWV: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var momentWO: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
-    private var velocityWO: Matrix = Array(modelSize) { DoubleArray(modelSize) { 0.0 } }
+    private var momentWQ: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var velocityWQ: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var momentWK: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var velocityWK: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var momentWV: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var velocityWV: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var momentWO: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+    private var velocityWO: Matrix = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
 
     /** Gradients for weight matrices */
     private var gradWQ: Matrix? = null
@@ -98,24 +98,24 @@ class MultiHeadAttentionLayer(
         V = matrixMultiply(input, wV)
 
         // Initialize storage for attention weights and outputs
-        attentionWeights = List(batchSize) { MutableList(headCount) { Array(seqLen) { DoubleArray(seqLen) } } }
-        attentionOutputs = Array(batchSize * seqLen) { DoubleArray(modelSize) { 0.0 } }
+        attentionWeights = List(batchSize) { MutableList(headCount) { Array(seqLen) { FloatArray(seqLen) } } }
+        attentionOutputs = Array(batchSize * seqLen) { FloatArray(modelSize) { 0.0f } }
 
         // Compute attention for each batch and head
         for (b in 0 until batchSize) {
             for (h in 0 until headCount) {
-                val Q_h = Array(seqLen) { i -> DoubleArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
-                val K_h = Array(seqLen) { i -> DoubleArray(dK) { K!![b * seqLen + i][h * dK + it] } }
-                val V_h = Array(seqLen) { i -> DoubleArray(dK) { V!![b * seqLen + i][h * dK + it] } }
+                val Q_h = Array(seqLen) { i -> FloatArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
+                val K_h = Array(seqLen) { i -> FloatArray(dK) { K!![b * seqLen + i][h * dK + it] } }
+                val V_h = Array(seqLen) { i -> FloatArray(dK) { V!![b * seqLen + i][h * dK + it] } }
 
                 // Attention scores: Q_h @ K_h^T / sqrt(dK)
                 val scores = matrixMultiply(Q_h, transpose(K_h))
-                val scaledScores = scalarMultiply(scores, 1.0 / sqrt(dK.toDouble()))
+                val scaledScores = scalarMultiply(scores, 1.0f / sqrt(dK.toFloat()))
 
                 // Apply causal mask
                 val causalMask = Array(seqLen) { row ->
-                    DoubleArray(seqLen) { col ->
-                        if (col > row) Double.NEGATIVE_INFINITY else 0.0
+                    FloatArray(seqLen) { col ->
+                        if (col > row) Float.NEGATIVE_INFINITY else 0.0f
                     }
                 }
 
@@ -147,10 +147,10 @@ class MultiHeadAttentionLayer(
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
-        featureSize: Double,
+        featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
-        lambda: Double
+        lambda: Float
     ): Matrix {
         val X = currentInput!!
         val batchSize = X.size / tokensPerSample
@@ -160,24 +160,24 @@ class MultiHeadAttentionLayer(
         val gradAttentionOutputs = matrixMultiply(delta, transpose(wO))
 
         // Initialize gradients for Q, K, V
-        val gradQ = Array(X.size) { DoubleArray(modelSize) { 0.0 } }
-        val gradK = Array(X.size) { DoubleArray(modelSize) { 0.0 } }
-        val gradV = Array(X.size) { DoubleArray(modelSize) { 0.0 } }
+        val gradQ = Array(X.size) { FloatArray(modelSize) { 0.0f } }
+        val gradK = Array(X.size) { FloatArray(modelSize) { 0.0f } }
+        val gradV = Array(X.size) { FloatArray(modelSize) { 0.0f } }
 
         // Compute gradients for each batch and head
         for (b in 0 until batchSize) {
             for (h in 0 until headCount) {
                 val attentionWeightsBh = attentionWeights!![b][h]
-                val Vh = Array(seqLen) { i -> DoubleArray(dK) { V!![b * seqLen + i][h * dK + it] } }
-                val gradAttentionOutputH = Array(seqLen) { i -> DoubleArray(dK) { gradAttentionOutputs[b * seqLen + i][h * dK + it] } }
+                val Vh = Array(seqLen) { i -> FloatArray(dK) { V!![b * seqLen + i][h * dK + it] } }
+                val gradAttentionOutputH = Array(seqLen) { i -> FloatArray(dK) { gradAttentionOutputs[b * seqLen + i][h * dK + it] } }
 
                 val gradAttentionWeightsBh = matrixMultiply(gradAttentionOutputH, transpose(Vh))
                 val gradVh = matrixMultiply(transpose(attentionWeightsBh), gradAttentionOutputH)
                 val gradScoresBh = softmaxGradient(gradAttentionWeightsBh, attentionWeightsBh)
-                val gradQKT = scalarMultiply(gradScoresBh, sqrt(dK.toDouble()))
+                val gradQKT = scalarMultiply(gradScoresBh, sqrt(dK.toFloat()))
 
-                val Qh = Array(seqLen) { i -> DoubleArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
-                val Kh = Array(seqLen) { i -> DoubleArray(dK) { K!![b * seqLen + i][h * dK + it] } }
+                val Qh = Array(seqLen) { i -> FloatArray(dK) { Q!![b * seqLen + i][h * dK + it] } }
+                val Kh = Array(seqLen) { i -> FloatArray(dK) { K!![b * seqLen + i][h * dK + it] } }
 
                 val gradQh = matrixMultiply(gradQKT, Kh)
                 val gradKh = matrixMultiply(transpose(gradQKT), Qh)
@@ -212,11 +212,11 @@ class MultiHeadAttentionLayer(
     }
 
     override fun updateParameters(
-        adamBeta1Power: Double,
-        adamBeta2Power: Double,
-        adamBeta1: Double,
-        adamBeta2: Double,
-        learningRate: Double
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
     ) {
         updateMatrix(wQ, gradWQ!!, momentWQ, velocityWQ, adamBeta1, adamBeta2, adamBeta1Power, adamBeta2Power, learningRate)
         updateMatrix(wK, gradWK!!, momentWK, velocityWK, adamBeta1, adamBeta2, adamBeta1Power, adamBeta2Power, learningRate)
@@ -229,19 +229,19 @@ class MultiHeadAttentionLayer(
         grad: Matrix,
         moment: Matrix,
         velocity: Matrix,
-        beta1: Double,
-        beta2: Double,
-        beta1Power: Double,
-        beta2Power: Double,
-        learningRate: Double
+        beta1: Float,
+        beta2: Float,
+        beta1Power: Float,
+        beta2Power: Float,
+        learningRate: Float
     ) {
         for (i in weights.indices) {
             for (j in weights[i].indices) {
                 val g = grad[i][j]
-                moment[i][j] = beta1 * moment[i][j] + (1 - beta1) * g
-                velocity[i][j] = beta2 * velocity[i][j] + (1 - beta2) * g * g
-                val mHat = moment[i][j] / (1 - beta1Power)
-                val vHat = velocity[i][j] / (1 - beta2Power)
+                moment[i][j] = beta1 * moment[i][j] + (1.0f - beta1) * g
+                velocity[i][j] = beta2 * velocity[i][j] + (1.0f - beta2) * g * g
+                val mHat = moment[i][j] / (1.0f - beta1Power)
+                val vHat = velocity[i][j] / (1.0f - beta2Power)
                 weights[i][j] -= learningRate * mHat / (sqrt(vHat) + EPSILON)
             }
         }
@@ -266,19 +266,19 @@ class MultiHeadAttentionLayer(
 
     private fun applySoftmax(matrix: Matrix): Matrix {
         return matrix.map { row ->
-            val max = row.maxOrNull() ?: 0.0
+            val max = row.maxOrNull() ?: 0.0f
             val expRow = row.map { kotlin.math.exp(it - max) }
             val sumExp = expRow.sum()
-            expRow.map { it / sumExp }.toDoubleArray()
+            expRow.map { it / sumExp }.toFloatArray()
         }.toTypedArray()
     }
 
     private fun softmaxGradient(gradOutput: Matrix, output: Matrix): Matrix {
-        val result = Array(output.size) { DoubleArray(output[0].size) }
+        val result = Array(output.size) { FloatArray(output[0].size) }
         for (i in output.indices) {
             val y = output[i]
             val gradY = gradOutput[i]
-            val dot = y.zip(gradY).sumOf { it.first * it.second }
+            val dot = y.zip(gradY).sumOf { (it.first * it.second).toDouble() }.toFloat()
             for (j in y.indices) {
                 result[i][j] = y[j] * (gradY[j] - dot)
             }
@@ -287,6 +287,6 @@ class MultiHeadAttentionLayer(
     }
 
     companion object {
-        private const val EPSILON = 1e-8
+        private const val EPSILON = 1e-8f
     }
 }

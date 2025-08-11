@@ -48,20 +48,20 @@ class CrossEntropyLoss : LossFunction {
      * @throws IllegalArgumentException if matrix dimensions don't match or targets
      *                                 are not properly one-hot encoded
      */
-    override fun calculate(predictions: Matrix, targets: Matrix): Double {
+    override fun calculate(predictions: Matrix, targets: Matrix): Float {
         var loss = 0.0
         val batchSize = targets.size
 
         for (batchIndex in 0 until batchSize) {
             val logits = predictions[batchIndex]
-            val expSum = logits.sumOf { exp(it) }
-            val probs = logits.map { exp(it) / expSum }.toDoubleArray()
+            val expSum = logits.sumOf { exp(it.toDouble()) }
+            val probs = logits.map { (exp(it.toDouble()) / expSum).toFloat() }.toFloatArray()
 
-            val targetIndex = targets[batchIndex].indexOfFirst { it == 1.0 }
+            val targetIndex = targets[batchIndex].indexOfFirst { it == 1.0f }
             if (targetIndex >= 0 && targetIndex < probs.size) {
-                loss -= ln(probs[targetIndex] + 1e-10)
+                loss -= ln(probs[targetIndex] + 1e-10f)
             }
         }
-        return loss / batchSize
+        return (loss / batchSize).toFloat()
     }
 }

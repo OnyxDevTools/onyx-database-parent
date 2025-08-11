@@ -38,11 +38,11 @@ interface BatchSplitter<YIn, YOut> {
      * @return A [Quad] containing (training features, training targets, test features, test targets).
      */
     fun splitBatch(
-        x: Array<DoubleArray>,
+        x: Array<FloatArray>,
         y: YIn,
-        testFraction: Double = 0.1,
+        testFraction: Float = 0.1f,
         shuffle: Boolean = true
-    ): Quad<Array<DoubleArray>, YOut, Array<DoubleArray>, YOut>
+    ): Quad<Array<FloatArray>, YOut, Array<FloatArray>, YOut>
 }
 
 /**

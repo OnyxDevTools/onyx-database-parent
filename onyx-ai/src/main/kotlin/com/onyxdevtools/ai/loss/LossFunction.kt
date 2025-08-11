@@ -27,8 +27,8 @@ interface LossFunction {
      *                   Shape should be [batch_size, output_features]
      * @param targets The target/ground truth matrix for comparison.
      *               Shape should match predictions: [batch_size, output_features]
-     * @return The calculated loss value as a Double. Lower values indicate better predictions.
+     * @return The calculated loss value as a Float. Lower values indicate better predictions.
      * @throws IllegalArgumentException if matrix dimensions don't match
      */
-    fun calculate(predictions: Matrix, targets: Matrix): Double
+    fun calculate(predictions: Matrix, targets: Matrix): Float
 }

@@ -18,8 +18,8 @@ class NeuralNetworkBuilderTest {
     @Test
     fun `builder constructs network with specified layers and transforms`() {
         val model = neuralNetwork {
-            learningRate = 0.01
-            lambda       = 0.001
+            learningRate = 0.01f
+            lambda       = 0.001f
 
             layers {
                 dense(2, 4, Activation.RELU)
@@ -52,7 +52,7 @@ class NeuralNetworkBuilderTest {
             }
         }
 
-        val input  = Array(4) { DoubleArray(3) { 1.0 } }
+        val input  = Array(4) { FloatArray(3) { 1.0f } }
         val output = model.predict(input)
 
         assertEquals(4, output.size)       // rows
@@ -66,7 +66,7 @@ class NeuralNetworkBuilderTest {
     @Test
     fun `log and mean-std transforms apply without error`() {
         val pipeline = listOf(LogTransform(), MeanStdNormalizer())
-        val column   = DoubleArray(5) { (it + 1).toDouble() }
+        val column   = FloatArray(5) { (it + 1).toFloat() }
 
         pipeline.forEach { it.fit(column) }
         val transformed = pipeline.fold(column) { acc, t -> t.apply(acc) }
@@ -79,7 +79,7 @@ class NeuralNetworkBuilderTest {
 
     @Test
     fun `mean-std transform normalizes to zero mean and unit variance`() {
-        val data = DoubleArray(100) { (it + 1).toDouble() }
+        val data = FloatArray(100) { (it + 1).toFloat() }
         val norm = MeanStdNormalizer()
         norm.fit(data)
         val z = norm.apply(data)
@@ -93,7 +93,7 @@ class NeuralNetworkBuilderTest {
 
     @Test
     fun `log transform is reversible`() {
-        val original = DoubleArray(10) { (it + 1).toDouble() }
+        val original = FloatArray(10) { (it + 1).toFloat() }
         val logT = LogTransform()
         logT.fit(original)
         val z = logT.apply(original)
@@ -106,18 +106,18 @@ class NeuralNetworkBuilderTest {
 
     @Test
     fun `boolean transform centers 0 and 1 correctly`() {
-        val input = doubleArrayOf(0.0, 1.0, 0.0, 1.0)
+        val input = floatArrayOf(0.0f, 1.0f, 0.0f, 1.0f)
         val centered = BooleanTransform(centered = true)
         val output   = centered.apply(input)
 
-        assertEquals(-1.0, output[0])
-        assertEquals( 1.0, output[1])
+        assertEquals(-1.0f, output[0])
+        assertEquals( 1.0f, output[1])
     }
 
     @Test
     fun `time decay transform reduces successive rows`() {
-        val col   = DoubleArray(4) { 10.0 }
-        val decay = TimeDecayTransform(lambda = 0.5)
+        val col   = FloatArray(4) { 10.0f }
+        val decay = TimeDecayTransform(lambda = 0.5f)
         val out   = decay.apply(col)
 
         assertTrue(out[0] > out[1] && out[1] > out[2] && out[2] > out[3])
@@ -130,7 +130,7 @@ class NeuralNetworkBuilderTest {
     @Test
     fun `column pipeline applies and restores single column while leaving others`() {
         val rows = 5
-        val matrix = Array(rows) { r -> doubleArrayOf((r + 1).toDouble(), 100.0) }
+        val matrix = Array(rows) { r -> floatArrayOf((r + 1).toFloat(), 100.0f) }
 
         // Build per-column transform list: pipeline for col-0, null for col-1
         val transforms = listOf(
@@ -145,7 +145,7 @@ class NeuralNetworkBuilderTest {
         // Column-0 restored, column-1 untouched
         (0 until rows).forEach { i ->
             assertTrue(abs(matrix[i][0] - xBack[i][0]) < 1e-6)
-            assertEquals(100.0, xFit[i][1], 1e-12)
+            assertEquals(100.0f, xFit[i][1], 1e-12f)
         }
     }
 }

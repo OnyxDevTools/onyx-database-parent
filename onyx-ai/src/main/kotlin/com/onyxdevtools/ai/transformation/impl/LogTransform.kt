@@ -16,16 +16,16 @@ import java.io.Serializable
  * @param epsilon Value added before taking the log (default = `EPSILON`).
  */
 class LogTransform(
-    private val epsilon: Double = EPSILON
+    private val epsilon: Float = EPSILON
 ) : ColumnTransform, Serializable {
 
     /** Forward pass: `ln(x + ε)` */
-    override fun apply(values: DoubleArray): DoubleArray =
-        DoubleArray(values.size) { idx -> ln(values[idx] + epsilon) }
+    override fun apply(values: FloatArray): FloatArray =
+        FloatArray(values.size) { idx -> ln(values[idx] + epsilon) }
 
     /** Reverse pass: `exp(x) - ε` */
-    override fun inverse(values: DoubleArray): DoubleArray =
-        DoubleArray(values.size) { idx -> exp(values[idx]) - epsilon }
+    override fun inverse(values: FloatArray): FloatArray =
+        FloatArray(values.size) { idx -> exp(values[idx]) - epsilon }
 
     /**
      * Clone the transform so that if the state is mutated elsewhere,

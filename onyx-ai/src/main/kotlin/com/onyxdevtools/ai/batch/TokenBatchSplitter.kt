@@ -34,11 +34,11 @@ class TokenBatchSplitter : BatchSplitter<Array<IntArray>, List<IntArray>> {
      * @throws IllegalArgumentException if testFraction is not in [0.0, 1.0] or if x and y have different numbers of samples.
      */
     override fun splitBatch(
-        x: Array<DoubleArray>,
+        x: Array<FloatArray>,
         y: Array<IntArray>,
-        testFraction: Double,
+        testFraction: Float,
         shuffle: Boolean
-    ): Quad<Array<DoubleArray>, List<IntArray>, Array<DoubleArray>, List<IntArray>> {
+    ): Quad<Array<FloatArray>, List<IntArray>, Array<FloatArray>, List<IntArray>> {
         require(testFraction in 0.0..1.0) { "Test fraction must be between 0.0 and 1.0" }
         require(x.size == y.size) { "Features and targets must have the same number of samples" }
         
@@ -54,7 +54,7 @@ class TokenBatchSplitter : BatchSplitter<Array<IntArray>, List<IntArray>> {
         val testIdx = idx.take(testSize)
         val trainIdx = idx.drop(testSize)
 
-        fun subsetInputs(src: Array<DoubleArray>, ids: List<Int>) =
+        fun subsetInputs(src: Array<FloatArray>, ids: List<Int>) =
             Array(ids.size) { i -> src[ids[i]] }
         fun subsetSparse(src: Array<IntArray>, ids: List<Int>) =
             ids.map { src[it] }

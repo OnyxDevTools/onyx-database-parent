@@ -11,7 +11,7 @@ import java.io.*
 import kotlin.apply
 import kotlin.math.min
 
-typealias Matrix = Array<DoubleArray>
+typealias Matrix = Array<FloatArray>
 
 /**
  * Represents a multi-layer neural network using backpropagation and the Adam optimizer.
@@ -29,14 +29,14 @@ data class NeuralNetwork(
     val layers: List<Layer>,
     val featureTransforms: ColumnTransforms? = null,
     val valueTransforms: ColumnTransforms? = null,
-    var learningRate: Double = 1e-3,
-    var lambda: Double = 1e-4,
-    var beta1: Double = 0.9,
-    var beta2: Double = 0.999,
+    var learningRate: Float = 1e-3f,
+    var lambda: Float = 1e-4f,
+    var beta1: Float = 0.9f,
+    var beta2: Float = 0.999f,
 ) : Serializable {
 
-    private var beta1Power = 1.0
-    private var beta2Power = 1.0
+    private var beta1Power = 1.0f
+    private var beta2Power = 1.0f
     private var lastInput: Matrix? = null
 
     fun withTransforms(
@@ -96,17 +96,17 @@ data class NeuralNetwork(
     private fun backward(
         predicted: Matrix,
         actual: Matrix,
-        sampleWeights: DoubleArray? = null
+        sampleWeights: FloatArray? = null
     ) {
-        val sampleCount = actual.size.toDouble()
-        val weights = sampleWeights ?: DoubleArray(actual.size) { 1.0 }
+        val sampleCount = actual.size.toFloat()
+        val weights = sampleWeights ?: FloatArray(actual.size) { 1.0f }
 
         // Compute softmax probabilities
         val probs = softmax(predicted)
 
         // Delta for CE loss: probs - actual
         var delta: Matrix = subtract(probs, actual).mapIndexed { r, row ->
-            DoubleArray(row.size) { c -> row[c] * weights[r] }
+            FloatArray(row.size) { c -> row[c] * weights[r] }
         }.toTypedArray()
 
         for (i in layers.lastIndex downTo 0) {
@@ -138,9 +138,9 @@ data class NeuralNetwork(
     private fun backwardSparse(
         predicted: Matrix,
         sparseTargets: IntArray,
-        sampleWeights: DoubleArray? = null
+        sampleWeights: FloatArray? = null
     ) {
-        val sampleCount = predicted.size.toDouble()
+        val sampleCount = predicted.size.toFloat()
         
         var delta: Matrix = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
 
@@ -193,13 +193,13 @@ data class NeuralNetwork(
     fun train(
         trainingFeatures: Matrix,
         trainingValues: Matrix,
-        trainingWeights: DoubleArray? = null,
+        trainingWeights: FloatArray? = null,
         batchSize: Int = 32,
         maxEpochs: Int = 100,
         patience: Int = 10,
         shuffle: Boolean = true,
         tokensPerSample: Int = 1,
-        lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
+        lossFn: (NeuralNetwork) -> Float = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
     ): NeuralNetwork {
 
         require(trainingWeights == null || trainingWeights.size == trainingFeatures.size) {
@@ -209,7 +209,7 @@ data class NeuralNetwork(
         val x = featureTransforms?.fitAndTransform(trainingFeatures) ?: trainingFeatures
         val y = valueTransforms?.fitAndTransform(trainingValues) ?: trainingValues
 
-        var bestLoss = Double.POSITIVE_INFINITY
+        var bestLoss = Float.POSITIVE_INFINITY
         var bestModel: NeuralNetwork = this.clone()
         var epochsWithoutImprovement = 0
 
@@ -228,7 +228,7 @@ data class NeuralNetwork(
                 }
                 val batchLabels = batchTargetIndices.map { y[it] }.toTypedArray()
                 val batchWeights = trainingWeights?.let { weights ->
-                    batchIndices.map { weights[it] }.toDoubleArray()
+                    batchIndices.map { weights[it] }.toFloatArray()
                 }
 
                 val batchPredictions = predict(batchFeatures, isTraining = true, skipFeatureTransform = true)
@@ -252,8 +252,8 @@ data class NeuralNetwork(
      * Trains the neural network on streaming data using mini-batch gradient descent with early stopping.
      *
      * @receiver The neural network instance to train.
-     * @param source A lambda that provides a lazy [Sequence] of input-output pairs, where each pair is a feature vector ([DoubleArray])
-     *               and its corresponding label vector ([DoubleArray]).
+     * @param source A lambda that provides a lazy [Sequence] of input-output pairs, where each pair is a feature vector ([FloatArray])
+     *               and its corresponding label vector ([FloatArray]).
      * @param batchSize Number of samples per training batch. Default is 1024.
      * @param maxEpochs Maximum number of full passes over the data. Default is 20.
      * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
@@ -264,28 +264,28 @@ data class NeuralNetwork(
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreaming(
-        source: () -> Sequence<Pair<DoubleArray, Array<DoubleArray>>>,
+        source: () -> Sequence<Pair<FloatArray, Array<FloatArray>>>,
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
-        testFrac: Double = 0.1,
+        testFrac: Float = 0.1f,
         shuffle: Boolean = true,
         trace: Boolean = true,
-        lossFn: (pred: Matrix, actual: Matrix) -> Double =
+        lossFn: (pred: Matrix, actual: Matrix) -> Float =
             { p, a -> p.meanStandardError(a) },
-        comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
+        comprehensiveLossFn: ((NeuralNetwork) -> Float)? = null,
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
-        var bestLoss = Double.POSITIVE_INFINITY
+        var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
 
         repeat(maxEpochs) { epoch ->
-            val bx = mutableListOf<DoubleArray>()
-            val by = mutableListOf<Array<DoubleArray>>()
-            var runningTrainLoss = 0.0
-            var runningTestLoss = 0.0
+            val bx = mutableListOf<FloatArray>()
+            val by = mutableListOf<Array<FloatArray>>()
+            var runningTrainLoss = 0.0f
+            var runningTestLoss = 0.0f
             var testSamples = 0
 
             for ((inputSeq, targetSeqs) in source()) {
@@ -389,7 +389,7 @@ data class NeuralNetwork(
      * - trainStreamingSparse: ~4MB RAM for targets
      *
      * @param source A lambda that provides a lazy [Sequence] of input-output pairs with sparse targets,
-     *               where each pair is a feature vector ([DoubleArray]) and sparse target array ([IntArray]).
+     *               where each pair is a feature vector ([FloatArray]) and sparse target array ([IntArray]).
      * @param batchSize Number of samples per training batch. Default is 1024.
      * @param maxEpochs Maximum number of full passes over the data. Default is 20.
      * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
@@ -402,31 +402,31 @@ data class NeuralNetwork(
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreamingSparse(
-        source: () -> Sequence<Pair<DoubleArray, IntArray>>,
+        source: () -> Sequence<Pair<FloatArray, IntArray>>,
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
-        testFrac: Double = 0.1,
+        testFrac: Float = 0.1f,
         shuffle: Boolean = true,
         trace: Boolean = true,
-        lossFn: (pred: Matrix, sparseTargets: IntArray) -> Double =
+        lossFn: (pred: Matrix, sparseTargets: IntArray) -> Float =
             { p, s -> sparseCategoricalCrossEntropy(p, s) },
         probeFn: () -> Unit = {  },
-        comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
+        comprehensiveLossFn: ((NeuralNetwork) -> Float)? = null,
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
-        var bestLoss = Double.POSITIVE_INFINITY
+        var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
         var iter: Long = 0
 
 
         repeat(maxEpochs) { epoch ->
-            val bx = mutableListOf<DoubleArray>()
+            val bx = mutableListOf<FloatArray>()
             val by = mutableListOf<IntArray>()
-            var runningTrainLoss = 0.0
-            var runningTestLoss = 0.0
+            var runningTrainLoss = 0.0f
+            var runningTestLoss = 0.0f
             var testSamples = 0
 
             for ((inputSeq, targetSeq) in source()) {

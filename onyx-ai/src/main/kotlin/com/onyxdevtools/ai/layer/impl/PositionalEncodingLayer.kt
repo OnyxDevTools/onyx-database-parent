@@ -72,14 +72,14 @@ class PositionalEncodingLayer(
      * - pe[pos, 2k+1] = cos(pos / 10000^(2k / embeddingDim))
      */
     private fun computePositionalEncoding(seqLen: Int, embDim: Int): Matrix {
-        val pe = Array(seqLen) { DoubleArray(embDim) }
+        val pe = Array(seqLen) { FloatArray(embDim) }
         for (pos in 0 until seqLen) {
             for (i in 0 until embDim step 2) {
-                val denominator = 10000.0.pow((i / embDim.toDouble()))
-                pe[pos][i] = sin(pos / denominator)
-                if (i + 1 < embDim) {
-                    pe[pos][i + 1] = cos(pos / denominator)
-                }
+            val denominator = 10000.0.pow((i / embDim.toDouble()))
+            pe[pos][i] = sin(pos / denominator).toFloat()
+            if (i + 1 < embDim) {
+                pe[pos][i + 1] = cos(pos / denominator).toFloat()
+            }
             }
         }
         return pe
@@ -108,10 +108,10 @@ class PositionalEncodingLayer(
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
-        featureSize: Double,
+        featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
-        lambda: Double
+        lambda: Float
     ): Matrix {
         return delta
     }
@@ -120,11 +120,11 @@ class PositionalEncodingLayer(
      * No learnable parameters to update.
      */
     override fun updateParameters(
-        adamBeta1Power: Double,
-        adamBeta2Power: Double,
-        adamBeta1: Double,
-        adamBeta2: Double,
-        learningRate: Double
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
     ) {
         // No-op
     }

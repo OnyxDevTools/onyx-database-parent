@@ -55,7 +55,7 @@ class LLMTrainingTest {
             DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
         )
 
-        var model = NeuralNetwork(layers, learningRate = 0.0001)
+        var model = NeuralNetwork(layers, learningRate = 0.0001f)
 
         // Source for streaming: generate sequences on-the-fly, shuffled per epoch (using sparse generator)
         val sequenceGenerator: SequenceGenerator = SparseSequenceGenerator(vocabulary)
@@ -101,7 +101,7 @@ class LLMTrainingTest {
                     // For comprehensive loss, compute on sparse validation set
                     val valIndices = (0 until tokens.size - seqLength step stride).take(100) // small val set
                     val valInputs = valIndices.map { i ->
-                        tokens.subList(i, i + seqLength).map { it.toDouble() }.toDoubleArray()
+                        tokens.subList(i, i + seqLength).map { it.toFloat() }.toFloatArray()
                     }.toTypedArray()
                     val valSparseTargets = valIndices.flatMap { i ->
                         tokens.subList(i + 1, i + 1 + seqLength)
@@ -145,15 +145,15 @@ class LLMTrainingTest {
 
         // Create training samples where each input is a single token predicting the next
         val sampleTexts = listOf("hello world", "test data", "hello test", "world data")
-        val trainingInputs = mutableListOf<DoubleArray>()
-        val trainingTargets = mutableListOf<DoubleArray>()
+        val trainingInputs = mutableListOf<FloatArray>()
+        val trainingTargets = mutableListOf<FloatArray>()
 
         sampleTexts.forEach { text ->
             val tokens = tokenizer.tokenize(text).map { vocabulary.getId(it) }
             for (i in 0 until tokens.size - 1) {
-                trainingInputs.add(doubleArrayOf(tokens[i].toDouble()))
-                val targetOneHot = DoubleArray(vocabulary.size) { 0.0 }
-                targetOneHot[tokens[i + 1]] = 1.0
+                trainingInputs.add(floatArrayOf(tokens[i].toFloat()))
+                val targetOneHot = FloatArray(vocabulary.size) { 0.0f }
+                targetOneHot[tokens[i + 1]] = 1.0f
                 trainingTargets.add(targetOneHot)
             }
         }
@@ -178,7 +178,7 @@ class LLMTrainingTest {
             DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
         )
 
-        var model = NeuralNetwork(layers, learningRate = 0.001)
+        var model = NeuralNetwork(layers, learningRate = 0.001f)
 
         val lossFunction: LossFunction = CrossEntropyLoss()
 
@@ -220,7 +220,7 @@ class LLMTrainingTest {
         inputSequences.forEachIndexed { idx, input ->
             val prediction = model.predict(arrayOf(input))[0]
             val predictedToken = prediction.indices.maxByOrNull { prediction[it] } ?: 0
-            val actualToken = targetSequences[idx].indices.indexOfFirst { targetSequences[idx][it] == 1.0 }
+            val actualToken = targetSequences[idx].indices.indexOfFirst { targetSequences[idx][it] == 1.0f }
             println("Input: ${input[0].toInt()} -> Predicted: $predictedToken, Actual: $actualToken")
         }
 

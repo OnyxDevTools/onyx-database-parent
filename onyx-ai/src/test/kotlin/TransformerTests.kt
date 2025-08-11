@@ -15,17 +15,17 @@ class TransformerTests {
 
     @Test
     fun `columnL2Normalizer scales to unit norm`() {
-        val col = doubleArrayOf(3.0, 4.0, 0.0, 1.0)  // ||x|| = √(26) ≈ 5.099
+        val col = floatArrayOf(3.0f, 4.0f, 0.0f, 1.0f)  // ||x|| = √(26) ≈ 5.099
         val norm = ColumnL2Normalizer()
         val z = norm.apply(col)
 
-        val zNorm = sqrt(z.sumOf { it * it })
-        assertEquals(1.0, zNorm, EPSILON)
+        val zNorm = sqrt(z.sumOf { (it * it).toDouble() }).toFloat()
+        assertEquals(1.0f, zNorm, EPSILON)
 
         // Spot-check first two elements
-        val factor = sqrt(26.0)
-        assertEquals(3.0 / factor, z[0], EPSILON)
-        assertEquals(4.0 / factor, z[1], EPSILON)
+        val factor = sqrt(26.0).toFloat()
+        assertEquals(3.0f / factor, z[0], EPSILON)
+        assertEquals(4.0f / factor, z[1], EPSILON)
 
         // inverse restores
         val restored = norm.inverse(z)
@@ -38,16 +38,16 @@ class TransformerTests {
 
     @Test
     fun `robustScaler centers around median and scales by IQR`() {
-        val col = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 100.0)   // median=3, Q1=2, Q3=4, IQR=2
+        val col = floatArrayOf(1.0f, 2.0f, 3.0f, 4.0f, 100.0f)   // median=3, Q1=2, Q3=4, IQR=2
         val s = RobustScaler()
         val z = s.apply(col)
 
-        val expected = doubleArrayOf(-1.0, -0.5, 0.0, 0.5, 48.5)
+        val expected = floatArrayOf(-1.0f, -0.5f, 0.0f, 0.5f, 48.5f)
         expected.indices.forEach { i -> assertEquals(expected[i], z[i], EPSILON) }
 
         // median of transformed ≈ 0
         val medZ = z.sorted()[z.size / 2]
-        assertEquals(0.0, medZ, EPSILON)
+        assertEquals(0.0f, medZ, EPSILON)
 
         // inverse
         val restored = s.inverse(z)
@@ -60,11 +60,11 @@ class TransformerTests {
 
     @Test
     fun `quantileTransformer maps to uniform distribution`() {
-        val col = doubleArrayOf(10.0, 30.0, 20.0)  // ranks 0,2,1 → 0,1,0.5
+        val col = floatArrayOf(10.0f, 30.0f, 20.0f)  // ranks 0,2,1 → 0,1,0.5
         val qt  = QuantileTransformer()
         val z   = qt.apply(col)
 
-        val expected = doubleArrayOf(0.0, 1.0, 0.5)
+        val expected = floatArrayOf(0.0f, 1.0f, 0.5f)
         expected.indices.forEach { i -> assertEquals(expected[i], z[i], EPSILON) }
 
         // round-trip
@@ -78,21 +78,21 @@ class TransformerTests {
 
     @Test
     fun `minMaxScaler scales to default 0-1`() {
-        val col = doubleArrayOf(1.0, 3.0, 5.0)         // min=1, max=5
+        val col = floatArrayOf(1.0f, 3.0f, 5.0f)         // min=1, max=5
         val mm = MinMaxScaler()                        // [0,1]
         val z  = mm.apply(col)
 
-        assertArraysEqual(doubleArrayOf(0.0, 0.5, 1.0), z)
+        assertArraysEqual(floatArrayOf(0.0f, 0.5f, 1.0f), z)
         assertArraysEqual(col, mm.inverse(z))
     }
 
     @Test
     fun `minMaxScaler scales to custom range -1 to 1`() {
-        val col = doubleArrayOf(0.0, 50.0, 100.0)
-        val mm  = MinMaxScaler(minRange = -1.0, maxRange = 1.0)
+        val col = floatArrayOf(0.0f, 50.0f, 100.0f)
+        val mm  = MinMaxScaler(minRange = -1.0f, maxRange = 1.0f)
         val z   = mm.apply(col)
 
-        assertArraysEqual(doubleArrayOf(-1.0, 0.0, 1.0), z)
+        assertArraysEqual(floatArrayOf(-1.0f, 0.0f, 1.0f), z)
         assertArraysEqual(col, mm.inverse(z))
     }
 
@@ -102,11 +102,11 @@ class TransformerTests {
 
     @Test
     fun `maxAbsScaler scales by max abs`() {
-        val col = doubleArrayOf(-5.0, 0.0, 2.5)   // maxAbs = 5
+        val col = floatArrayOf(-5.0f, 0.0f, 2.5f)   // maxAbs = 5
         val ma  = MaxAbsScaler()
         val z   = ma.apply(col)
 
-        assertArraysEqual(doubleArrayOf(-1.0, 0.0, 0.5), z)
+        assertArraysEqual(floatArrayOf(-1.0f, 0.0f, 0.5f), z)
         assertArraysEqual(col, ma.inverse(z))
     }
 
@@ -116,13 +116,14 @@ class TransformerTests {
 
     @Test
     fun `timeDecay reduces values positionally`() {
-        val lambda = 0.5
-        val col    = DoubleArray(4) { 10.0 }
+        val lambda = 0.5f
+        val col    = FloatArray(4) { 10.0f }
         val td     = TimeDecayTransform(lambda)
 
         val z = td.apply(col)
         (0 until 4).forEach { i ->
-            assertEquals(10.0 * exp(-lambda * i), z[i], EPSILON)
+            val expected = 10.0f * exp(-lambda * i)
+            assertEquals(expected, z[i], EPSILON)
         }
 
         // order check
@@ -136,7 +137,7 @@ class TransformerTests {
      *  Helper
      * ──────────────────────────────────────────────────────────────── */
 
-    private fun assertArraysEqual(expected: DoubleArray, actual: DoubleArray, tol: Double = EPSILON) {
+    private fun assertArraysEqual(expected: FloatArray, actual: FloatArray, tol: Float = EPSILON) {
         assertEquals(expected.size, actual.size, "Length mismatch")
         expected.indices.forEach { i ->
             assertEquals(expected[i], actual[i], tol, "Mismatch at index $i")

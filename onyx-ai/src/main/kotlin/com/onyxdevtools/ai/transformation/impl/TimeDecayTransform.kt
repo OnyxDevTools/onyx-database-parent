@@ -14,7 +14,7 @@ import kotlin.math.exp
  * @param lambda Decay rate (λ ≥ 0). Larger λ → faster decay.
  */
 class TimeDecayTransform(
-    private val lambda: Double
+    private val lambda: Float
 ) : ColumnTransform, Serializable {
 
     init {
@@ -23,15 +23,15 @@ class TimeDecayTransform(
 
     /* ---------- forward ---------- */
 
-    override fun apply(values: DoubleArray): DoubleArray =
-        DoubleArray(values.size) { i ->
+    override fun apply(values: FloatArray): FloatArray =
+        FloatArray(values.size) { i ->
             values[i] * exp(-lambda * i)
         }
 
     /* ---------- inverse ---------- */
 
-    override fun inverse(values: DoubleArray): DoubleArray =
-        DoubleArray(values.size) { i ->
+    override fun inverse(values: FloatArray): FloatArray =
+        FloatArray(values.size) { i ->
             values[i] * exp(lambda * i)
         }
 

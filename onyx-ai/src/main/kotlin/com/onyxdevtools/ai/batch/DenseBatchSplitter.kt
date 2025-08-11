@@ -34,11 +34,11 @@ class DenseBatchSplitter : BatchSplitter<Matrix, Matrix> {
      * @throws IllegalArgumentException if testFraction is not in [0.0, 1.0] or if x and y have different numbers of samples.
      */
     override fun splitBatch(
-        x: Array<DoubleArray>,
+        x: Array<FloatArray>,
         y: Matrix,
-        testFraction: Double,
+        testFraction: Float,
         shuffle: Boolean
-    ): Quad<Array<DoubleArray>, Matrix, Array<DoubleArray>, Matrix> {
+    ): Quad<Array<FloatArray>, Matrix, Array<FloatArray>, Matrix> {
         require(testFraction in 0.0..1.0) { "Test fraction must be between 0.0 and 1.0" }
         require(x.size == y.size) { "Features and targets must have the same number of samples" }
         

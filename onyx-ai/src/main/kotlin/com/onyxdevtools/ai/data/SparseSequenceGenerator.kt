@@ -64,7 +64,7 @@ class SparseSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGene
      * @param shuffle Whether to randomize the order of sequence starts (default: true).
      *                If false, sequences are generated in sequential order.
      * @return A lazy Sequence of training pairs where:
-     *         - First element: Input sequence as DoubleArray of token IDs (padded if needed)
+     *         - First element: Input sequence as FloatArray of token IDs (padded if needed)
      *         - Second element: Target sequence as IntArray of sparse token IDs (-1 for ignore/padded)
      * @throws IllegalArgumentException if parameters are invalid, tokens are empty,
      *                                  or contain IDs outside vocabulary range
@@ -74,7 +74,7 @@ class SparseSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGene
         seqLength: Int,
         stride: Int,
         shuffle: Boolean
-    ): Sequence<Pair<DoubleArray, IntArray>> {
+    ): Sequence<Pair<FloatArray, IntArray>> {
         // Enhanced validation for robustness
         require(seqLength > 0) { "seqLength must be positive" }
         require(stride > 0) { "stride must be positive" }
@@ -95,7 +95,7 @@ class SparseSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGene
             }
 
             for (i in indices) {
-                val input = DoubleArray(seqLength)
+                val input = FloatArray(seqLength)
                 val target = IntArray(seqLength)
 
                 for (pos in 0 until seqLength) {
@@ -104,9 +104,9 @@ class SparseSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGene
 
                     // Set input token (padded if beyond sequence)
                     input[pos] = if (inputIndex < tokens.size) {
-                        tokens[inputIndex].toDouble()
+                        tokens[inputIndex].toFloat()
                     } else {
-                        padId.toDouble()
+                        padId.toFloat()
                     }
 
                     // Set target token (ignore if beyond sequence)

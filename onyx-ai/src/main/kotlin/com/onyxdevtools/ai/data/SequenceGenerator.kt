@@ -12,7 +12,7 @@ sealed class SequenceTarget {
      * Memory usage: O(vocab_size × seq_length) per training example.
      * Compatible with standard categorical cross-entropy loss.
      */
-    data class Dense(val vectors: Array<DoubleArray>) : SequenceTarget() {
+    data class Dense(val vectors: Array<FloatArray>) : SequenceTarget() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -83,8 +83,8 @@ interface SequenceGenerator {
      *               creates maximally overlapping sequences, while larger strides
      *               create less overlap and fewer training examples.
      * @return A Sequence of training pairs where:
-     *         - First element (DoubleArray): Input sequence representation
-     *         - Second element (Array<DoubleArray>): Target sequence representations
+     *         - First element (FloatArray): Input sequence representation
+     *         - Second element (Array<FloatArray>): Target sequence representations
      *         The Sequence is lazy-evaluated for memory efficiency with large datasets.
      * @throws IllegalArgumentException if seqLength <= 0, stride <= 0, or
      *                                 tokens list is too short for the specified sequence length
@@ -94,5 +94,5 @@ interface SequenceGenerator {
         seqLength: Int,
         stride: Int,
         shuffle: Boolean
-    ): Sequence<Pair<DoubleArray, IntArray>>
+    ): Sequence<Pair<FloatArray, IntArray>>
 }
