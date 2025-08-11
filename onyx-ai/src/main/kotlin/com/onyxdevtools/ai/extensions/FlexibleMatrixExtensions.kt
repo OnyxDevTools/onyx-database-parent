@@ -532,11 +532,11 @@ inline fun applyElementWise(matrix: FlexibleMatrix, crossinline transform: (Doub
 /**
  * Computes column sums
  */
-fun sumColumns(matrix: FlexibleMatrix): DoubleArray {
-    val result = DoubleArray(matrix.cols)
+fun sumColumns(matrix: FlexibleMatrix): FlexibleMatrix {
+    val result = createMatrix(1, matrix.cols, matrix.isSinglePrecision) { _, _ -> 0.0 }
     for (i in 0 until matrix.rows) {
         for (j in 0 until matrix.cols) {
-            result[j] += matrix[i, j]
+            result[0, j] = result[0, j] + matrix[i, j]
         }
     }
     return result
@@ -556,18 +556,15 @@ fun softmax(matrix: FlexibleMatrix): FlexibleMatrix {
             if (value > max) max = value
         }
         
+        // First pass: compute sum of exponentials
         var sumExp = 0.0
-        
-        // First pass: compute exp values and sum
-        val expValues = DoubleArray(matrix.cols)
         for (j in 0 until matrix.cols) {
-            expValues[j] = exp(matrix[i, j] - max)
-            sumExp += expValues[j]
+            sumExp += exp(matrix[i, j] - max)
         }
         
-        // Second pass: normalize
+        // Second pass: compute normalized values directly
         for (j in 0 until matrix.cols) {
-            result[i, j] = expValues[j] / sumExp
+            result[i, j] = exp(matrix[i, j] - max) / sumExp
         }
     }
     

@@ -47,7 +47,7 @@ class MultiHeadAttentionLayer(
     private val tokensPerSample: Int,
     private val modelSize: Int,
     private val headCount: Int,
-    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
+    private val precision: MatrixPrecision = MatrixPrecision.SINGLE
 ) : Layer {
 
     override var output: FlexibleMatrix? = null
@@ -221,12 +221,6 @@ class MultiHeadAttentionLayer(
         }
     }
 
-    /**
-     * Computes multi-head attention using standard Matrix input.
-     */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
-    }
 
     override fun backward(
         currentInput: FlexibleMatrix?,
@@ -265,26 +259,6 @@ class MultiHeadAttentionLayer(
         return gradInput
     }
 
-    /**
-     * Computes the backward pass for multi-head attention with standard Matrix input.
-     */
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
-    }
 
     /**
      * Updates all weight matrices using the Adam optimizer.

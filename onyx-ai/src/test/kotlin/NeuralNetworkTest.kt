@@ -1,10 +1,10 @@
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.extensions.Matrix
 import com.onyxdevtools.ai.extensions.flatten
 import com.onyxdevtools.ai.extensions.meanStandardError
 import com.onyxdevtools.ai.layer.impl.BatchNormalizationLayer
 import com.onyxdevtools.ai.layer.impl.DenseLayer
+import com.onyxdevtools.ai.toFlexibleMatrix
 import org.junit.Assert.*
 import org.junit.Ignore
 import java.io.*
@@ -25,7 +25,7 @@ class NeuralNetworkTest {
      * @param size Number of samples to generate.
      * @return A pair of feature and label matrices.
      */
-    private fun generateLinearRegressionData(size: Int): Pair<Matrix, Matrix> {
+    private fun generateLinearRegressionData(size: Int): Pair<Array<DoubleArray>, Array<DoubleArray>> {
         val features = Array(size) { DoubleArray(1) { Random.nextDouble(-5.0, 5.0) } }
         val labels = Array(size) {
             DoubleArray(1) { 2 * features[it][0] + 3 + Random.nextDouble(-0.05, 0.05) }
@@ -40,9 +40,9 @@ class NeuralNetworkTest {
     fun `predict output dimensions match last layer`() {
         val model = NeuralNetwork(listOf(DenseLayer(3, 4, Activation.RELU), DenseLayer(4, 2, Activation.LINEAR)))
         val input = Array(5) { DoubleArray(3) { Random.nextDouble() } }
-        val output = model.predict(input)
-        assertEquals(5, output.size)
-        assertEquals(2, output[0].size)
+        val output = model.predict(input.toFlexibleMatrix())
+        assertEquals(5, output.rows)
+        assertEquals(2, output.cols)
     }
 
     /**
@@ -67,15 +67,15 @@ class NeuralNetworkTest {
         val (features, labels) = generateLinearRegressionData(200)
         val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.01)
 
-        val initialLoss = model.predict(features).meanStandardError(labels)
+        val initialLoss = model.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         val trained = model.train(
-            trainingFeatures = features,
-            trainingValues = labels,
+            trainingFeatures = features.toFlexibleMatrix(),
+            trainingValues = labels.toFlexibleMatrix(),
             maxEpochs = 300,
             patience = 20
-        ) { net -> net.predict(features).meanStandardError(labels) }
+        ) { net -> net.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix()) }
 
-        val finalLoss = trained.predict(features).meanStandardError(labels)
+        val finalLoss = trained.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         assertTrue(finalLoss < initialLoss * 0.1, "loss should be reduced by at least 90%")
     }
 
@@ -92,15 +92,15 @@ class NeuralNetworkTest {
         val weightedModel = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.05)
         val unweightedModel = weightedModel.clone()
 
-        weightedModel.train(features, labels, trainingWeights = weights, maxEpochs = 200, patience = 15) {
-            it.predict(features).meanStandardError(labels)
+        weightedModel.train(features.toFlexibleMatrix(), labels.toFlexibleMatrix(), trainingWeights = weights, maxEpochs = 200, patience = 15) {
+            it.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         }
-        unweightedModel.train(features, labels, maxEpochs = 200, patience = 15) {
-            it.predict(features).meanStandardError(labels)
+        unweightedModel.train(features.toFlexibleMatrix(), labels.toFlexibleMatrix(), maxEpochs = 200, patience = 15) {
+            it.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         }
 
-        val lossWithWeights = weightedModel.predict(features).meanStandardError(labels)
-        val lossWithoutWeights = unweightedModel.predict(features).meanStandardError(labels)
+        val lossWithWeights = weightedModel.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
+        val lossWithoutWeights = unweightedModel.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         assertTrue(lossWithWeights < lossWithoutWeights)
     }
 
@@ -113,9 +113,9 @@ class NeuralNetworkTest {
         val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.02)
 
         var epochsTrained = 0
-        model.train(features, labels, maxEpochs = 1000, patience = 5) {
+        model.train(features.toFlexibleMatrix(), labels.toFlexibleMatrix(), maxEpochs = 1000, patience = 5) {
             epochsTrained++
-            it.predict(features).meanStandardError(labels)
+            it.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         }
         assertTrue(epochsTrained < 1000, "training should stop early due to patience")
     }
@@ -129,8 +129,8 @@ class NeuralNetworkTest {
         val model = NeuralNetwork(listOf(dropoutLayer))
         val input = Array(2000) { DoubleArray(10) { 1.0 } }
 
-        val trainOutput = model.predict(input, isTraining = true)
-        val evalOutput = model.predict(input, isTraining = false)
+        val trainOutput = model.predict(input.toFlexibleMatrix(), isTraining = true)
+        val evalOutput = model.predict(input.toFlexibleMatrix(), isTraining = false)
 
         val trainMean = trainOutput.flatten().average()
         val evalMean = evalOutput.flatten().average()
@@ -147,7 +147,7 @@ class NeuralNetworkTest {
         ObjectOutputStream(outputStream).use { it.writeObject(model) }
         val serializedData = outputStream.toByteArray()
         val deserialized = ObjectInputStream(ByteArrayInputStream(serializedData)).readObject() as NeuralNetwork
-        assertNotNull(deserialized.predict(arrayOf(doubleArrayOf(0.0, 0.0))))
+        assertNotNull(deserialized.predict(arrayOf(doubleArrayOf(0.0, 0.0)).toFlexibleMatrix()))
     }
 
     /**
@@ -160,7 +160,7 @@ class NeuralNetworkTest {
         val weights = DoubleArray(1) { 1.0 } // Incorrect length
         val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)))
         assertThrows(IllegalArgumentException::class.java) {
-            model.train(features, labels, trainingWeights = weights, maxEpochs = 1) { 0.0 }
+            model.train(features.toFlexibleMatrix(), labels.toFlexibleMatrix(), trainingWeights = weights, maxEpochs = 1) { 0.0 }
         }
     }
 
@@ -179,14 +179,14 @@ class NeuralNetworkTest {
             learningRate = 0.01
         )
 
-        val initialLoss = model.predict(features).meanStandardError(labels)
+        val initialLoss = model.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         val trained = model.train(
-            trainingFeatures = features,
-            trainingValues = labels,
+            trainingFeatures = features.toFlexibleMatrix(),
+            trainingValues = labels.toFlexibleMatrix(),
             maxEpochs = 500,
             patience = 20
-        ) { it.predict(features).meanStandardError(labels) }
-        val finalLoss = trained.predict(features).meanStandardError(labels)
+        ) { it.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix()) }
+        val finalLoss = trained.predict(features.toFlexibleMatrix()).meanStandardError(labels.toFlexibleMatrix())
         assertTrue(finalLoss < initialLoss * 0.1, "BatchNorm-enhanced model should reduce loss by at least 90%")
     }
 }

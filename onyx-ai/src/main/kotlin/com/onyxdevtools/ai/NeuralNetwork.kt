@@ -43,12 +43,6 @@ data class NeuralNetwork(
         label: ColumnTransforms = valueTransforms ?: emptyList(),
     ): NeuralNetwork = copy(featureTransforms = feature, valueTransforms = label)
 
-    /**
-     * Helper function to create FlexibleMatrix from Matrix array
-     */
-    private fun createFlexibleMatrixFromArray(matrices: Array<DoubleArray>): FlexibleMatrix {
-        return matrices.toFlexibleMatrix()
-    }
 
     /**
      * Helper function to stack multiple FlexibleMatrix vertically
@@ -92,43 +86,29 @@ data class NeuralNetwork(
         returnOriginalScale: Boolean = false,
         skipFeatureTransform: Boolean = false
     ): FlexibleMatrix {
-        val inputMatrix = input.toMatrix()
-        val x = if (skipFeatureTransform)
-            inputMatrix
-        else
-            featureTransforms?.apply(inputMatrix) ?: inputMatrix
-        lastInput = x.toFlexibleMatrix()
+        val x = if (skipFeatureTransform) {
+            input
+        } else {
+            // Apply transforms to Array<DoubleArray> then convert back to FlexibleMatrix
+            val inputArray = input.toDoubleMatrix()
+            val transformed = featureTransforms?.apply(inputArray) ?: inputArray
+            DoubleMatrix(transformed)
+        }
+        lastInput = x
 
-        var out = x.toFlexibleMatrix()
+        var out = x
         layers.forEachIndexed { idx, layer ->
             out = layer.forward(out, isTraining, layers.getOrNull(idx + 1))
         }
 
-        return if (returnOriginalScale && valueTransforms?.any { it != null } == true)
-            valueTransforms.inverse(out.toMatrix()).toFlexibleMatrix()
-        else
+        return if (returnOriginalScale && valueTransforms?.any { it != null } == true) {
+            val outArray = out.toDoubleMatrix()
+            DoubleMatrix(valueTransforms.inverse(outArray))
+        } else {
             out
+        }
     }
     
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    fun predict(
-        input: Matrix,
-        isTraining: Boolean = false,
-        returnOriginalScale: Boolean = false,
-        skipFeatureTransform: Boolean = false
-    ): Matrix = predict(input.toFlexibleMatrix(), isTraining, returnOriginalScale, skipFeatureTransform).toMatrix()
-
-    /**
-     * Feeds an input matrix forward through the network.
-     *
-     * @param input Input matrix.
-     * @return Output matrix after processing through all layers.
-     */
-    fun predict(
-        input: Matrix
-    ): Matrix = predict(input = input, isTraining = false, returnOriginalScale = true)
 
     /**
      * Performs the backward pass to compute gradients using dense targets.
@@ -173,14 +153,6 @@ data class NeuralNetwork(
         }
     }
 
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    private fun backward(
-        predicted: Matrix,
-        actual: Matrix,
-        sampleWeights: DoubleArray? = null
-    ) = backward(predicted.toFlexibleMatrix(), actual.toFlexibleMatrix(), sampleWeights)
 
     /**
      * Performs the backward pass to compute gradients using sparse targets.
@@ -220,14 +192,6 @@ data class NeuralNetwork(
         }
     }
 
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    private fun backwardSparse(
-        predicted: Matrix,
-        sparseTargets: IntArray,
-        sampleWeights: DoubleArray? = null
-    ) = backwardSparse(predicted.toFlexibleMatrix(), sparseTargets, sampleWeights)
 
     /**
      * Updates the network parameters using the Adam optimization algorithm.
@@ -270,8 +234,8 @@ data class NeuralNetwork(
             "Sample weights size must match number of training samples"
         }
 
-        val trainingFeaturesMatrix = trainingFeatures.toMatrix()
-        val trainingValuesMatrix = trainingValues.toMatrix()
+        val trainingFeaturesMatrix = trainingFeatures.toDoubleMatrix()
+        val trainingValuesMatrix = trainingValues.toDoubleMatrix()
         val x = featureTransforms?.fitAndTransform(trainingFeaturesMatrix) ?: trainingFeaturesMatrix
         val y = valueTransforms?.fitAndTransform(trainingValuesMatrix) ?: trainingValuesMatrix
 
@@ -297,8 +261,8 @@ data class NeuralNetwork(
                     batchIndices.map { weights[it] }.toDoubleArray()
                 }
 
-                val batchPredictions = predict(batchFeatures.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
-                backward(batchPredictions, batchLabels.toFlexibleMatrix(), batchWeights)
+                val batchPredictions = predict(DoubleMatrix(batchFeatures), isTraining = true, skipFeatureTransform = true)
+                backward(batchPredictions, DoubleMatrix(batchLabels), batchWeights)
                 updateParameters()
             }
 
@@ -314,30 +278,6 @@ data class NeuralNetwork(
         return bestModel
     }
 
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    fun train(
-        trainingFeatures: Matrix,
-        trainingValues: Matrix,
-        trainingWeights: DoubleArray? = null,
-        batchSize: Int = 32,
-        maxEpochs: Int = 100,
-        patience: Int = 10,
-        shuffle: Boolean = true,
-        tokensPerSample: Int = 1,
-        lossFn: (NeuralNetwork) -> Double = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
-    ): NeuralNetwork = train(
-        trainingFeatures.toFlexibleMatrix(),
-        trainingValues.toFlexibleMatrix(),
-        trainingWeights,
-        batchSize,
-        maxEpochs,
-        patience,
-        shuffle,
-        tokensPerSample,
-        lossFn
-    )
 
     /**
      * Trains the neural network on streaming data using mini-batch gradient descent with early stopping.
@@ -624,8 +564,8 @@ data class NeuralNetwork(
      */
     private fun trainOnBatch(xRaw: FlexibleMatrix, yRaw: FlexibleMatrix) {
         // 1. fit + transform in ONE call; each column transform updates itself
-        val xRawMatrix = xRaw.toMatrix()
-        val yRawMatrix = yRaw.toMatrix()
+        val xRawMatrix = xRaw.toDoubleMatrix()
+        val yRawMatrix = yRaw.toDoubleMatrix()
         val x = featureTransforms?.fitAndTransform(xRawMatrix) ?: xRawMatrix
         val y = valueTransforms?.fitAndTransform(yRawMatrix) ?: yRawMatrix
 
@@ -635,11 +575,6 @@ data class NeuralNetwork(
         updateParameters()
     }
 
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    private fun trainOnBatch(xRaw: Matrix, yRaw: Matrix) = 
-        trainOnBatch(xRaw.toFlexibleMatrix(), yRaw.toFlexibleMatrix())
 
     /**
      * Creates a deep copy of the current neural network including internal state.

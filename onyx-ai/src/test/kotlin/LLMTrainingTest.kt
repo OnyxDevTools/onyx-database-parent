@@ -7,7 +7,7 @@ import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.loss.CrossEntropyLoss
 import com.onyxdevtools.ai.loss.LossFunction
-import com.onyxdevtools.ai.toMatrix
+import com.onyxdevtools.ai.toFlexibleMatrix
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.MutableVocabulary
 import com.onyxdevtools.ai.transformation.Vocabulary
@@ -109,7 +109,7 @@ class LLMTrainingTest {
                     val valSparseTargets = valIndices.flatMap { i ->
                         tokens.subList(i + 1, i + 1 + seqLength)
                     }.toIntArray()
-                    val valPred = net.predict(valInputs)
+                    val valPred = net.predict(valInputs.toFlexibleMatrix())
                     sparseCategoricalCrossEntropy(valPred, valSparseTargets)
                 }
             )
@@ -186,20 +186,20 @@ class LLMTrainingTest {
         val lossFunction: LossFunction = CrossEntropyLoss()
 
         // Compute initial loss
-        val initialPredictions = model.predict(inputSequences)
-        val initialLoss = lossFunction.calculate(initialPredictions, targetSequences)
+        val initialPredictions = model.predict(inputSequences.toFlexibleMatrix())
+        val initialLoss = lossFunction.calculate(initialPredictions, targetSequences.toFlexibleMatrix())
 
         // Train the model
         try {
             model = model.train(
-                trainingFeatures = inputSequences,
-                trainingValues = targetSequences,
+                trainingFeatures = inputSequences.toFlexibleMatrix(),
+                trainingValues = targetSequences.toFlexibleMatrix(),
                 maxEpochs = 50000,
                 patience = 1000,
                 batchSize = inputSequences.size, // Use full batch
                 lossFn = { net ->
-                    val predictions = net.predict(inputSequences)
-                    lossFunction.calculate(predictions, targetSequences)
+                    val predictions = net.predict(inputSequences.toFlexibleMatrix())
+                    lossFunction.calculate(predictions, targetSequences.toFlexibleMatrix())
                 },
             )
             println("Training completed successfully")
@@ -209,8 +209,8 @@ class LLMTrainingTest {
         }
 
         // Compute final loss
-        val finalPredictions = model.predict(inputSequences)
-        val finalLoss = lossFunction.calculate(finalPredictions, targetSequences)
+        val finalPredictions = model.predict(inputSequences.toFlexibleMatrix())
+        val finalLoss = lossFunction.calculate(finalPredictions, targetSequences.toFlexibleMatrix())
 
         // Test that the model can at least make some predictions and loss is finite
         assertTrue(initialLoss.isFinite(), "Initial loss should be finite")
@@ -221,7 +221,7 @@ class LLMTrainingTest {
 
         // Show sample predictions
         inputSequences.forEachIndexed { idx, input ->
-            val prediction = model.predict(arrayOf(input))[0]
+            val prediction = model.predict(arrayOf(input).toFlexibleMatrix())[0]
             val predictedToken = prediction.indices.maxByOrNull { prediction[it] } ?: 0
             val actualToken = targetSequences[idx].indices.indexOfFirst { targetSequences[idx][it] == 1.0 }
             println("Input: ${input[0].toInt()} -> Predicted: $predictedToken, Actual: $actualToken")

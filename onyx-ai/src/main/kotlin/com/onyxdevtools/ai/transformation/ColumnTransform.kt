@@ -1,6 +1,5 @@
 package com.onyxdevtools.ai.transformation
 
-import com.onyxdevtools.ai.extensions.Matrix
 import java.io.Serializable
 
 typealias ColumnTransforms = List<ColumnTransform?>
@@ -59,12 +58,12 @@ interface ColumnTransform : Serializable {
     fun clone(): ColumnTransform
 }
 
-fun ColumnTransforms.fitAndTransform(matrix: Matrix): Matrix {
+fun ColumnTransforms.fitAndTransform(matrix: Array<DoubleArray>): Array<DoubleArray> {
     val rows = matrix.size
     val cols = matrix[0].size
     require(size == cols) { "Must supply one ColumnTransform (or null) per column" }
 
-    val result = Array(rows) { matrix[it].clone() }
+    val result = Array(rows) { matrix[it].copyOf() }
 
     for (c in 0 until cols) {
         val t = this[c] ?: continue
@@ -79,9 +78,9 @@ fun ColumnTransforms.fitAndTransform(matrix: Matrix): Matrix {
 }
 
 /** Apply already-fitted transforms to a new matrix. */
-fun ColumnTransforms.apply(matrix: Matrix): Matrix {
+fun ColumnTransforms.apply(matrix: Array<DoubleArray>): Array<DoubleArray> {
     val rows = matrix.size
-    val result = Array(rows) { matrix[it].clone() }
+    val result = Array(rows) { matrix[it].copyOf() }
 
     forEachIndexed { c, t ->
         if (t == null) return@forEachIndexed
@@ -93,9 +92,9 @@ fun ColumnTransforms.apply(matrix: Matrix): Matrix {
 }
 
 /** Restore original scale column-by-column. */
-fun ColumnTransforms.inverse(matrix: Matrix): Matrix {
+fun ColumnTransforms.inverse(matrix: Array<DoubleArray>): Array<DoubleArray> {
     val rows = matrix.size
-    val result = Array(rows) { matrix[it].clone() }
+    val result = Array(rows) { matrix[it].copyOf() }
 
     forEachIndexed { c, t ->
         if (t == null) return@forEachIndexed

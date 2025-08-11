@@ -1,7 +1,6 @@
 package com.onyxdevtools.ai.loss
 
 import com.onyxdevtools.ai.FlexibleMatrix
-import com.onyxdevtools.ai.extensions.Matrix
 import kotlin.math.exp
 import kotlin.math.ln
 
@@ -54,18 +53,32 @@ class CrossEntropyLoss : LossFunction {
         val batchSize = predictions.rows
 
         for (batchIndex in 0 until batchSize) {
-            val logits = DoubleArray(predictions.cols) { colIndex ->
-                predictions[batchIndex, colIndex]
+            // Find max logit for numerical stability
+            var maxLogit = predictions[batchIndex, 0]
+            for (colIndex in 1 until predictions.cols) {
+                val logit = predictions[batchIndex, colIndex]
+                if (logit > maxLogit) maxLogit = logit
             }
-            val expSum = logits.sumOf { exp(it) }
-            val probs = logits.map { exp(it) / expSum }.toDoubleArray()
+            
+            // Calculate exp sum for softmax denominator
+            var expSum = 0.0
+            for (colIndex in 0 until predictions.cols) {
+                expSum += exp(predictions[batchIndex, colIndex] - maxLogit)
+            }
 
-            val targetRow = DoubleArray(targets.cols) { colIndex ->
-                targets[batchIndex, colIndex]
+            // Find target class index and compute loss directly
+            var targetIndex = -1
+            for (colIndex in 0 until targets.cols) {
+                if (targets[batchIndex, colIndex] == 1.0) {
+                    targetIndex = colIndex
+                    break
+                }
             }
-            val targetIndex = targetRow.indexOfFirst { it == 1.0 }
-            if (targetIndex >= 0 && targetIndex < probs.size) {
-                loss -= ln(probs[targetIndex] + 1e-10)
+            
+            if (targetIndex >= 0) {
+                val targetLogit = predictions[batchIndex, targetIndex]
+                val prob = exp(targetLogit - maxLogit) / expSum
+                loss -= ln(prob + 1e-10)
             }
         }
         return loss / batchSize

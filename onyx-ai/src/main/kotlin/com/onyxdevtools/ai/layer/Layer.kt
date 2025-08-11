@@ -2,12 +2,9 @@ package com.onyxdevtools.ai.layer
 
 import Activation
 import com.onyxdevtools.ai.FlexibleMatrix
-import com.onyxdevtools.ai.extensions.Matrix
-import com.onyxdevtools.ai.toFlexibleMatrix
-import com.onyxdevtools.ai.toMatrix
 
 /**
- * Represents a neural network layer that supports both single and double precision matrices.
+ * Represents a neural network layer that supports FlexibleMatrix for memory-efficient operations.
  * A layer supports forward and backward passes, parameter updates, and cloning for training.
  */
 interface Layer : java.io.Serializable {
@@ -47,15 +44,6 @@ interface Layer : java.io.Serializable {
         isTraining: Boolean,
         nextLayer: Layer?
     ): FlexibleMatrix = input
-    
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    fun forward(
-        input: Matrix,
-        isTraining: Boolean,
-        nextLayer: Layer?
-    ): Matrix = forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
 
     /**
      * Updates this layer's learnable parameters using the Adam optimizer.
@@ -93,25 +81,6 @@ interface Layer : java.io.Serializable {
         previousLayer: Layer?,
         lambda: Double
     ): FlexibleMatrix
-    
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix = backward(
-        currentInput?.toFlexibleMatrix(),
-        delta.toFlexibleMatrix(),
-        featureSize,
-        nextLayer,
-        previousLayer,
-        lambda
-    ).toMatrix()
 
     /**
      * Prepares the input for forward propagation.
@@ -122,9 +91,4 @@ interface Layer : java.io.Serializable {
      * @return The processed input matrix.
      */
     fun preForward(input: FlexibleMatrix, isTraining: Boolean): FlexibleMatrix = input
-    
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    fun preForward(input: Matrix, isTraining: Boolean): Matrix = preForward(input.toFlexibleMatrix(), isTraining).toMatrix()
 }

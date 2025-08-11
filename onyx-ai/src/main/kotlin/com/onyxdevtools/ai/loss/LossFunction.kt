@@ -1,9 +1,6 @@
 package com.onyxdevtools.ai.loss
 
 import com.onyxdevtools.ai.FlexibleMatrix
-import com.onyxdevtools.ai.extensions.Matrix
-import com.onyxdevtools.ai.toFlexibleMatrix
-import com.onyxdevtools.ai.toMatrix
 
 
 /**
@@ -36,9 +33,4 @@ interface LossFunction {
      */
     fun calculate(predictions: FlexibleMatrix, targets: FlexibleMatrix): Double
 
-    /**
-     * Backward compatibility method for legacy Matrix input
-     */
-    fun calculate(predictions: Matrix, targets: Matrix): Double = 
-        calculate(predictions.toFlexibleMatrix(), targets.toFlexibleMatrix())
 }

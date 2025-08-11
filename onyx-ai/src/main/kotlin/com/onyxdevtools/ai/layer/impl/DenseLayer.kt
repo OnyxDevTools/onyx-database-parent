@@ -151,7 +151,7 @@ class DenseLayer(
             }
         }
         
-        val nextInput = nextLayer?.preForward(linearOutput.toMatrix(), isTraining)?.toFlexibleMatrix() ?: linearOutput
+        val nextInput = nextLayer?.preForward(linearOutput, isTraining) ?: linearOutput
         this.preActivation = nextInput
         
         // Apply activation function efficiently
@@ -167,12 +167,6 @@ class DenseLayer(
         return output!!
     }
 
-    /**
-     * Performs the forward pass of the layer (Matrix version for backward compatibility).
-     */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
-    }
 
     /**
      * Updates weights and biases using the Adam optimizer.
@@ -265,26 +259,6 @@ class DenseLayer(
         return com.onyxdevtools.ai.extensions.matrixMultiply(currentDelta, weights.transpose())
     }
 
-    /**
-     * Performs the backward pass of the layer (Matrix version for backward compatibility).
-     */
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
-    }
 
     /**
      * Creates a deep copy of the dense layer, including weights, biases, and optimizer states.

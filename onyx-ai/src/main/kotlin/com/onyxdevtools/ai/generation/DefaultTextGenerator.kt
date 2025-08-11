@@ -4,6 +4,7 @@ import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.Vocabulary
+import com.onyxdevtools.ai.toFlexibleMatrix
 
 /**
  * High-performance text generator optimized for autoregressive generation.
@@ -294,8 +295,8 @@ class DefaultTextGenerator : TextGenerator {
                 }
 
                 // Get predictions from model
-                val predictions = model.predict(input)
-                val logits = predictions.last() // Get the last time step prediction
+                val predictions = model.predict(input.toFlexibleMatrix())
+                val logits = predictions[predictions.rows - 1] // Get the last time step prediction
 
                 // Copy to our cached buffer
                 System.arraycopy(logits, 0, cachedLogits, 0, minOf(logits.size, cachedLogits!!.size))

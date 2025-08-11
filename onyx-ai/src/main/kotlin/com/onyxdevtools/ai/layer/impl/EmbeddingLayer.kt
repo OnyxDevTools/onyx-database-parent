@@ -86,25 +86,20 @@ class EmbeddingLayer(
     }
 
     override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
-        val inputMatrix = input.toMatrix()
-        val batchSize = inputMatrix.size
-        val sequenceLength = inputMatrix[0].size
+        val batchSize = input.rows
+        val sequenceLength = input.cols
         
         // Convert input token IDs to embeddings and flatten batch and sequence dimensions
         val embeddings = createMatrix(batchSize * sequenceLength, embeddingSize, weights.isSinglePrecision) { i, j ->
             val b = i / sequenceLength
             val t = i % sequenceLength
-            val tokenId = inputMatrix[b][t].toInt()
+            val tokenId = input[b, t].toInt()
             weights[tokenId, j] // Lookup embedding vector
         }
         
         preActivation = embeddings
         output = embeddings
         return output!!
-    }
-
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
     }
 
     override fun backward(
@@ -115,9 +110,8 @@ class EmbeddingLayer(
         previousLayer: Layer?,
         lambda: Double
     ): FlexibleMatrix {
-        val inputMatrix = currentInput!!.toMatrix()
-        val batchSize = inputMatrix.size
-        val sequenceLength = inputMatrix[0].size
+        val batchSize = currentInput!!.rows
+        val sequenceLength = currentInput!!.cols
         
         // Initialize gradient matrix for weights
         gradientWeights = createMatrix(vocabSize, embeddingSize, weights.isSinglePrecision) { _, _ -> 0.0 }
@@ -126,7 +120,7 @@ class EmbeddingLayer(
         // Accumulate gradients for each token's embedding
         for (b in 0 until batchSize) {
             for (t in 0 until sequenceLength) {
-                val tokenId = inputMatrix[b][t].toInt()
+                val tokenId = currentInput!![b, t].toInt()
                 for (d in 0 until embeddingSize) {
                     gradientWeights!![tokenId, d] += delta[deltaIndex, d]
                 }
@@ -136,24 +130,6 @@ class EmbeddingLayer(
         
         // Return zero matrix for input gradient (no backprop to token IDs)
         return createMatrix(batchSize, sequenceLength, delta.isSinglePrecision) { _, _ -> 0.0 }
-    }
-
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
     }
 
     @Suppress("DuplicatedCode")

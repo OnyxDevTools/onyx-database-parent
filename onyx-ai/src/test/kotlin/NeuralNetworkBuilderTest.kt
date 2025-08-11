@@ -4,6 +4,7 @@ package com.onyxdevtools.ai
 import com.onyxdevtools.ai.transformation.fitAndTransform
 import com.onyxdevtools.ai.transformation.impl.*
 import com.onyxdevtools.ai.transformation.inverse
+import com.onyxdevtools.ai.toFlexibleMatrix
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -53,10 +54,10 @@ class NeuralNetworkBuilderTest {
         }
 
         val input  = Array(4) { DoubleArray(3) { 1.0 } }
-        val output = model.predict(input)
+        val output = model.predict(input.toFlexibleMatrix())
 
-        assertEquals(4, output.size)       // rows
-        assertEquals(2, output[0].size)    // cols
+        assertEquals(4, output.rows)       // rows
+        assertEquals(2, output.cols)    // cols
     }
 
     /* --------------------------------------------------------------------- */

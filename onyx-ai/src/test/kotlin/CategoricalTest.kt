@@ -1,11 +1,9 @@
 package com.onyxdevtools.ai
 
 import com.onyxdevtools.ai.extensions.EPSILON
-import com.onyxdevtools.ai.extensions.Matrix
 import com.onyxdevtools.ai.transformation.fitAndTransform
 import com.onyxdevtools.ai.transformation.impl.CategoricalIndexer
 import com.onyxdevtools.ai.transformation.inverse
-import org.junit.Ignore
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,7 +40,7 @@ class CategoricalIndexerTest {
     /* ------------------------------------------------------------- */
 
     @Test
-    @Ignore
+    // @Disabled - temporarily removing to fix compilation
     fun `categorical indexer throws on unseen category by default`() {
         val train = doubleArrayOf(0.0, 1.0)
         val test  = doubleArrayOf(2.0)                 // unseen
@@ -74,7 +72,7 @@ class CategoricalIndexerTest {
     @Test
     fun `indexer works in per-column transform list`() {
         // Matrix: 2 feature columns (category, numeric)
-        val x: Matrix = arrayOf(
+        val x = arrayOf(
             doubleArrayOf(1.0, 100.0),
             doubleArrayOf(2.0, 200.0),
             doubleArrayOf(1.0, 300.0)

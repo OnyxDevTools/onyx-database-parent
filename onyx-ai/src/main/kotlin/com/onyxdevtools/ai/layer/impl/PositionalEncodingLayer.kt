@@ -47,7 +47,7 @@ import kotlin.math.sin
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
     private val embeddingSize: Int,
-    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
+    private val precision: MatrixPrecision = MatrixPrecision.SINGLE
 ) : Layer {
 
     override var output: FlexibleMatrix? = null
@@ -83,12 +83,6 @@ class PositionalEncodingLayer(
         return output!!
     }
 
-    /**
-     * Adds positional encodings to input embeddings using standard Matrix input.
-     */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
-    }
 
     override fun backward(
         currentInput: FlexibleMatrix?,
@@ -102,26 +96,6 @@ class PositionalEncodingLayer(
         return delta
     }
 
-    /**
-     * Computes the backward pass for positional encoding with standard Matrix input.
-     */
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
-    }
 
     /**
      * No parameters to update since positional encodings are fixed.

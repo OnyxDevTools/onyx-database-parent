@@ -45,7 +45,7 @@ import kotlin.math.sqrt
  */
 class LayerNormalizationLayer(
     private val size: Int,
-    private val precision: MatrixPrecision = MatrixPrecision.DOUBLE
+    private val precision: MatrixPrecision = MatrixPrecision.SINGLE
 ) : Layer {
 
     override var output: FlexibleMatrix? = null
@@ -110,12 +110,6 @@ class LayerNormalizationLayer(
         return output!!
     }
 
-    /**
-     * Normalizes the input using layer statistics and applies learned affine transformation.
-     */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
-    }
 
     override fun backward(
         currentInput: FlexibleMatrix?,
@@ -177,26 +171,6 @@ class LayerNormalizationLayer(
         }
     }
 
-    /**
-     * Computes the backward pass of the layer normalization layer.
-     */
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
-    }
 
     /**
      * Updates gamma and beta parameters using the Adam optimizer.

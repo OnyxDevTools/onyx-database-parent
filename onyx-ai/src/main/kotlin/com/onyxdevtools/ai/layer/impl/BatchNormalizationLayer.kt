@@ -84,11 +84,7 @@ class BatchNormalizationLayer(
         }
     }
 
-    override fun preForward(input: Matrix, isTraining: Boolean): Matrix {
-        return preForwardFlexible(input.toFlexibleMatrix(), isTraining).toMatrix()
-    }
-
-    private fun preForwardFlexible(input: FlexibleMatrix, isTraining: Boolean): FlexibleMatrix {
+    override fun preForward(input: FlexibleMatrix, isTraining: Boolean): FlexibleMatrix {
         val outputMatrix = createMatrix(input.rows, input.cols, input.isSinglePrecision)
 
         if (isTraining) {
@@ -143,12 +139,7 @@ class BatchNormalizationLayer(
     }
 
     override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
-        return preForwardFlexible(input, isTraining)
-    }
-
-    // Implement forward to use isTraining from the network
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return forward(input.toFlexibleMatrix(), isTraining, nextLayer).toMatrix()
+        return preForward(input, isTraining)
     }
 
     override fun backward(
@@ -190,26 +181,6 @@ class BatchNormalizationLayer(
         }
     }
 
-    /**
-     * Computes the backward pass of the batch normalization layer.
-     */
-    override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
-        featureSize: Double,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Double
-    ): Matrix {
-        return backward(
-            currentInput?.toFlexibleMatrix(),
-            delta.toFlexibleMatrix(),
-            featureSize,
-            nextLayer,
-            previousLayer,
-            lambda
-        ).toMatrix()
-    }
 
     override fun clone(): Layer {
         return BatchNormalizationLayer(size, precision).also { copy ->
