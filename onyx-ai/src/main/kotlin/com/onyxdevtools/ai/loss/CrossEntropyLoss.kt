@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.loss
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.extensions.Matrix
 import kotlin.math.exp
 import kotlin.math.ln
 

@@ -1,5 +1,6 @@
 package com.onyxdevtools.ai
 
+import com.onyxdevtools.ai.extensions.Matrix
 import com.onyxdevtools.ai.extensions.flatten
 import com.onyxdevtools.ai.extensions.meanStandardError
 import com.onyxdevtools.ai.layer.impl.BatchNormalizationLayer

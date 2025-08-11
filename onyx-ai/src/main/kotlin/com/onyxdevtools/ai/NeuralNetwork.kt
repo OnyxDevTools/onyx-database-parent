@@ -11,9 +11,6 @@ import java.io.*
 import kotlin.apply
 import kotlin.math.min
 
-// Temporary typealias for conversion process
-typealias Matrix = Array<DoubleArray>
-
 /**
  * Represents a multi-layer neural network using backpropagation and the Adam optimizer.
  *

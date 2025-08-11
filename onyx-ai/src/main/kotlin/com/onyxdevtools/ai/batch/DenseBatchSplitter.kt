@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.batch
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.extensions.Matrix
 
 /**
  * Batch splitter implementation for dense matrix targets.

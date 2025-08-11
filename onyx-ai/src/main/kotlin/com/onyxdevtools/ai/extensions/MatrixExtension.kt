@@ -6,7 +6,6 @@ import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
 import kotlin.math.*
 
-// Temporary typealias for conversion process
 typealias Matrix = Array<DoubleArray>
 
 const val EPSILON = 1e-8

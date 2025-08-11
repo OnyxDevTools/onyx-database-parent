@@ -1,6 +1,7 @@
 package com.onyxdevtools.ai
 
 import com.onyxdevtools.ai.extensions.EPSILON
+import com.onyxdevtools.ai.extensions.Matrix
 import com.onyxdevtools.ai.transformation.fitAndTransform
 import com.onyxdevtools.ai.transformation.impl.CategoricalIndexer
 import com.onyxdevtools.ai.transformation.inverse

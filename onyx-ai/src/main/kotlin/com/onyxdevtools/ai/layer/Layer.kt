@@ -2,11 +2,9 @@ package com.onyxdevtools.ai.layer
 
 import Activation
 import com.onyxdevtools.ai.FlexibleMatrix
+import com.onyxdevtools.ai.extensions.Matrix
 import com.onyxdevtools.ai.toFlexibleMatrix
 import com.onyxdevtools.ai.toMatrix
-
-// Temporary typealias for conversion process
-typealias Matrix = Array<DoubleArray>
 
 /**
  * Represents a neural network layer that supports both single and double precision matrices.

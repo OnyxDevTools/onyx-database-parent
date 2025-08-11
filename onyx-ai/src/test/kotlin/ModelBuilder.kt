@@ -29,7 +29,7 @@ fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
             val out = model.chat(
                 prompt = q,
                 vocabulary = vocab,
-                seqLength = 16,
+                seqLength = seqLen,
                 maxTokens = 150,
             )
             println(out)

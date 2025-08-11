@@ -7,12 +7,8 @@ import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.IntStream
 import kotlin.math.sqrt
 import kotlin.random.Random
-
-// Temporary typealias for conversion process
-typealias Matrix = Array<DoubleArray>
 
 /**
  * A fully connected (dense) neural network layer with dropout regularization and Adam optimization.

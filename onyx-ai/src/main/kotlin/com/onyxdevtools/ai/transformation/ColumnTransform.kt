@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.transformation
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.extensions.Matrix
 import java.io.Serializable
 
 typealias ColumnTransforms = List<ColumnTransform?>

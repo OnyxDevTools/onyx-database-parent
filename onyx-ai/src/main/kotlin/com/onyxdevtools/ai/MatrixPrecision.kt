@@ -1,5 +1,7 @@
 package com.onyxdevtools.ai
 
+import com.onyxdevtools.ai.extensions.Matrix
+
 /**
  * Configuration for matrix precision to balance memory usage and computational accuracy.
  */

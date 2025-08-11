@@ -1,6 +1,7 @@
 package com.onyxdevtools.ai.loss
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.extensions.Matrix
+
 
 /**
  * Interface defining the contract for loss functions used in neural network training.
