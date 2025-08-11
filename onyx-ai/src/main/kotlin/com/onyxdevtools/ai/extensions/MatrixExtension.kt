@@ -1,62 +1,234 @@
 package com.onyxdevtools.ai.extensions
 
-import com.onyxdevtools.ai.Matrix
+import jdk.incubator.vector.FloatVector
+import jdk.incubator.vector.VectorOperators
+import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
 import kotlin.math.*
 
-/** Small constant added to denominator in Adam updates for numerical stability. */
-const val EPSILON = 1e-8f
-const val BLOCK_SIZE_TRANSPOSED = 128
+// Matrix typealias
+typealias Matrix = Array<FloatArray>
+
+// Vector API Specifications
+private val FLOAT_SPEC: VectorSpecies<Float> = FloatVector.SPECIES_PREFERRED
+
+// Performance constants
+private const val SIMPLE_WORK_MAX = 50_000
+private const val SKINNY_DIM = 64
+private const val PARALLEL_ROWS_MIN = 64
+private const val PARALLEL_COLS_MIN = 256
 
 /**
- * Multiplies two matrices using a block-based, cache-friendly algorithm with parallelism.
- * Falls back to a simpler implementation for small matrices.
- *
- * @param matrixA The left-hand side matrix.
- * @param matrixB The right-hand side matrix.
- * @return A matrix representing the product of matrixA × matrixB.
+ * High-performance matrix multiplication that automatically chooses the best algorithm
+ * based on matrix dimensions and precision type.
  */
-fun matrixMultiply(matrixA: Matrix, matrixB: Matrix): Matrix {
-    val rowsA = matrixA.size
-    val colsA = matrixA[0].size
-    val colsB = matrixB[0].size
+fun matrixMultiply(A: Matrix, B: Matrix): Matrix {
+    val m = A.size.toLong()
+    val k = A[0].size.toLong()
+    val n = B[0].size.toLong()
 
-    if (rowsA > BLOCK_SIZE_TRANSPOSED) {
-        val matrixBTransposed = transpose(matrixB)
-        val result = Array(rowsA) { FloatArray(colsB) }
+    require(A[0].size == B.size) { "Matrix dimensions don't match for multiplication: ${A.size}x${A[0].size} * ${B.size}x${B[0].size}" }
 
-        val numRowBlocks = (rowsA + BLOCK_SIZE_TRANSPOSED - 1) / BLOCK_SIZE_TRANSPOSED
+    val work = m * k * n
+    if (work <= SIMPLE_WORK_MAX) return matrixMultiplySimple(A, B)
+
+    val skinny = minOf(m, n) < SKINNY_DIM
+    val shouldParallelize = (m >= PARALLEL_ROWS_MIN) || (n >= PARALLEL_COLS_MIN)
+
+    return if (!skinny) {
+        // For skinny matrices, vectorization is very effective
+        if (shouldParallelize) matrixMultiplySkinnyVectorizedParallel(A, B)
+        else matrixMultiplySkinnyVectorized(A, B)
+    } else {
+        // For larger matrices, use block-based parallel approach for best performance
+        matrixMultiplyParallelJVM(A, B)
+    }
+}
+
+/**
+ * Optimized matrix multiplication for large matrices using block-based parallel processing
+ */
+private fun matrixMultiplyParallelJVM(A: Matrix, B: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+
+    // Create result matrix
+    val result = Array(m) { FloatArray(n) }
+
+    val blockSize = 64  // Local block size for this implementation
+    if (m > blockSize) {
+        val BTransposed = transpose(B)
+        val numRowBlocks = (m + blockSize - 1) / blockSize
 
         IntStream.range(0, numRowBlocks).parallel().forEach { blockIndex ->
-            val rowStart = blockIndex * BLOCK_SIZE_TRANSPOSED
-            val rowEnd = min(rowStart + BLOCK_SIZE_TRANSPOSED, rowsA)
+            val rowStart = blockIndex * blockSize
+            val rowEnd = minOf(rowStart + blockSize, m)
 
-            for (colStart in 0 until colsB step BLOCK_SIZE_TRANSPOSED) {
-                val colEnd = min(colStart + BLOCK_SIZE_TRANSPOSED, colsB)
+            for (colStart in 0 until n step blockSize) {
+                val colEnd = minOf(colStart + blockSize, n)
 
-                for (kStart in 0 until colsA step BLOCK_SIZE_TRANSPOSED) {
-                    val kEnd = min(kStart + BLOCK_SIZE_TRANSPOSED, colsA)
+                for (kStart in 0 until k step blockSize) {
+                    val kEnd = minOf(kStart + blockSize, k)
 
                     for (rowIndex in rowStart until rowEnd) {
-                        val rowA = matrixA[rowIndex]
-                        val resultRow = result[rowIndex]
                         for (colIndex in colStart until colEnd) {
                             var dotProduct = 0.0f
-                            val rowBTransposed = matrixBTransposed[colIndex]
                             for (kIndex in kStart until kEnd) {
-                                dotProduct += rowA[kIndex] * rowBTransposed[kIndex]
+                                dotProduct += A[rowIndex][kIndex] * BTransposed[colIndex][kIndex]
                             }
-                            resultRow[colIndex] += dotProduct
+                            result[rowIndex][colIndex] = result[rowIndex][colIndex] + dotProduct
                         }
                     }
                 }
             }
         }
-
         return result
     } else {
-        return matrixMultiplySimple(matrixA, matrixB)
+        return matrixMultiplySimple(A, B)
     }
+}
+
+/**
+ * Vectorized matrix multiplication optimized for skinny matrices
+ */
+private fun matrixMultiplySkinnyVectorized(A: Matrix, B: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+
+    val result = Array(m) { FloatArray(n) }
+    return matrixMultiplySkinnyVectorizedFloat(A, B, result)
+}
+
+/**
+ * Float-optimized vectorized multiplication
+ */
+private fun matrixMultiplySkinnyVectorizedFloat(A: Matrix, B: Matrix, result: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+    val tile = 8
+
+    // Transpose B for better cache locality
+    val Bt = Array(n) { j -> FloatArray(k) { i -> B[i][j] } }
+
+    for (i in 0 until m) {
+        val aRow = A[i]
+        val resultRow = result[i]
+        var j = 0
+
+        while (j + tile <= n) {
+            var acc0 = 0.0f; var acc1 = 0.0f; var acc2 = 0.0f; var acc3 = 0.0f
+            var acc4 = 0.0f; var acc5 = 0.0f; var acc6 = 0.0f; var acc7 = 0.0f
+
+            var p = 0
+            val upper = FLOAT_SPEC.loopBound(k)
+
+            while (p < upper) {
+                val va = FloatVector.fromArray(FLOAT_SPEC, aRow, p)
+                val vb0 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 0], p)
+                val vb1 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 1], p)
+                val vb2 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 2], p)
+                val vb3 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 3], p)
+                val vb4 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 4], p)
+                val vb5 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 5], p)
+                val vb6 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 6], p)
+                val vb7 = FloatVector.fromArray(FLOAT_SPEC, Bt[j + 7], p)
+
+                acc0 += va.mul(vb0).reduceLanes(VectorOperators.ADD)
+                acc1 += va.mul(vb1).reduceLanes(VectorOperators.ADD)
+                acc2 += va.mul(vb2).reduceLanes(VectorOperators.ADD)
+                acc3 += va.mul(vb3).reduceLanes(VectorOperators.ADD)
+                acc4 += va.mul(vb4).reduceLanes(VectorOperators.ADD)
+                acc5 += va.mul(vb5).reduceLanes(VectorOperators.ADD)
+                acc6 += va.mul(vb6).reduceLanes(VectorOperators.ADD)
+                acc7 += va.mul(vb7).reduceLanes(VectorOperators.ADD)
+
+                p += FLOAT_SPEC.length()
+            }
+
+            while (p < k) {
+                val a = aRow[p]
+                acc0 += a * Bt[j + 0][p]
+                acc1 += a * Bt[j + 1][p]
+                acc2 += a * Bt[j + 2][p]
+                acc3 += a * Bt[j + 3][p]
+                acc4 += a * Bt[j + 4][p]
+                acc5 += a * Bt[j + 5][p]
+                acc6 += a * Bt[j + 6][p]
+                acc7 += a * Bt[j + 7][p]
+                p++
+            }
+
+            resultRow[j + 0] = acc0; resultRow[j + 1] = acc1; resultRow[j + 2] = acc2; resultRow[j + 3] = acc3
+            resultRow[j + 4] = acc4; resultRow[j + 5] = acc5; resultRow[j + 6] = acc6; resultRow[j + 7] = acc7
+            j += tile
+        }
+
+        while (j < n) {
+            var acc = 0.0f
+            for (p in 0 until k) {
+                acc += aRow[p] * Bt[j][p]
+            }
+            resultRow[j] = acc
+            j++
+        }
+    }
+
+    return result
+}
+
+/**
+ * Parallel version of skinny vectorized multiplication
+ */
+private fun matrixMultiplySkinnyVectorizedParallel(A: Matrix, B: Matrix): Matrix {
+    val m = A.size
+    val k = A[0].size
+    val n = B[0].size
+
+    val result = Array(m) { FloatArray(n) }
+
+    // Transpose B for better cache locality
+    val Bt = Array(n) { j -> FloatArray(k) { i -> B[i][j] } }
+    val tile = 8
+
+    IntStream.range(0, m).parallel().forEach { i ->
+        val aRow = A[i]
+        var j = 0
+
+        while (j + tile <= n) {
+            var acc0 = 0.0f; var acc1 = 0.0f; var acc2 = 0.0f; var acc3 = 0.0f
+            var acc4 = 0.0f; var acc5 = 0.0f; var acc6 = 0.0f; var acc7 = 0.0f
+
+            for (p in 0 until k) {
+                val a = aRow[p]
+                acc0 += a * Bt[j + 0][p]
+                acc1 += a * Bt[j + 1][p]
+                acc2 += a * Bt[j + 2][p]
+                acc3 += a * Bt[j + 3][p]
+                acc4 += a * Bt[j + 4][p]
+                acc5 += a * Bt[j + 5][p]
+                acc6 += a * Bt[j + 6][p]
+                acc7 += a * Bt[j + 7][p]
+            }
+
+            result[i][j + 0] = acc0; result[i][j + 1] = acc1; result[i][j + 2] = acc2; result[i][j + 3] = acc3
+            result[i][j + 4] = acc4; result[i][j + 5] = acc5; result[i][j + 6] = acc6; result[i][j + 7] = acc7
+            j += tile
+        }
+
+        while (j < n) {
+            var acc = 0.0f
+            for (p in 0 until k) {
+                acc += A[i][p] * Bt[j][p]
+            }
+            result[i][j] = acc
+            j++
+        }
+    }
+
+    return result
 }
 
 /**

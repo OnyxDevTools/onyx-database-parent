@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.extensions.EPSILON
+import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.transformation.impl.*
 import kotlin.math.abs
 import kotlin.math.exp

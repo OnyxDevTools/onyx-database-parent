@@ -92,8 +92,8 @@ class ComprehensiveLossFunction(
 }
 
 fun main() {
-    val books = File("/mnt/onyx/books/formatted_books")
-    val vocabulary = OnyxVocabulary("/mnt/onyx/books/vocabulary.dat")
+    val books = File("/Volumes/onyx/books/formatted_books")
+    val vocabulary = OnyxVocabulary("/Users/tosborn/onyx/books/vocabulary4.dat")
 
     if (vocabulary.size == 0) {
         books.listFiles()?.forEach {
@@ -143,9 +143,10 @@ fun main() {
     try {
         model = model.trainStreamingSparse(
             source = source,
-            batchSize = 16,
+            batchSize = 2,
             maxEpochs = 200,
             patience = 100,
+            testFrac = 0.0f,
             lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
             probeFn = {
                 askProbes(model, vocabulary, maxSequenceLength)

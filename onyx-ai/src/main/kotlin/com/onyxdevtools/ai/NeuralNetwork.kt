@@ -419,8 +419,6 @@ data class NeuralNetwork(
         var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
-        var iter: Long = 0
-
 
         repeat(maxEpochs) { epoch ->
             val bx = mutableListOf<FloatArray>()
@@ -452,16 +450,18 @@ data class NeuralNetwork(
                     // --- evaluate on test slice (do NOT refit transforms) ------------
                     val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
                     val yTestFlat = yTestRaw.flatMap { it.toList() }.toIntArray()
-                    val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
 
                     runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.size
-                    runningTestLoss += lossFn(predTest, yTestFlat) * xTest.size
-                    testSamples += xTest.size
+
+                    if (xTest.isNotEmpty()) {
+                        val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
+                        runningTestLoss += lossFn(predTest, yTestFlat) * xTest.size
+                        testSamples += xTest.size
+                    }
 
                     bx.clear(); by.clear()
+                    probeFn.invoke()
                 }
-                iter++
-                if (iter % 1000L == 0L) probeFn.invoke()
             }
 
             // left-overs

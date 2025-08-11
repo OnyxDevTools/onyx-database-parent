@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.transformation.impl
 
-import com.onyxdevtools.ai.extensions.EPSILON
+import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.transformation.ColumnTransform
 import kotlin.math.exp
 import kotlin.math.ln
