@@ -23,7 +23,7 @@ class ColumnTransformPipeline(
     private val transforms: List<ColumnTransform>
 ) : ColumnTransform, Serializable {
 
-    override fun fit(values: DoubleArray) {
+    override fun fit(values: FloatArray) {
         var data = values
         transforms.forEach { t ->
             t.fit(data)
@@ -31,13 +31,13 @@ class ColumnTransformPipeline(
         }
     }
 
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         var out = values
         transforms.forEach { t -> out = t.apply(out) }
         return out
     }
 
-    override fun inverse(values: DoubleArray): DoubleArray {
+    override fun inverse(values: FloatArray): FloatArray {
         var out = values
         transforms.asReversed().forEach { t -> out = t.inverse(out) }
         return out

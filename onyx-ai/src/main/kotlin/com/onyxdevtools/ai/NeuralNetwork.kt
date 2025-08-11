@@ -31,7 +31,7 @@ data class NeuralNetwork(
     var lambda: Double = 1e-4,
     var beta1: Double = 0.9,
     var beta2: Double = 0.999,
-    val precision: MatrixPrecision = MatrixPrecision.DOUBLE,
+    val precision: MatrixPrecision = MatrixPrecision.SINGLE,
 ) : Serializable {
 
     private var beta1Power = 1.0
@@ -120,10 +120,10 @@ data class NeuralNetwork(
     private fun backward(
         predicted: FlexibleMatrix,
         actual: FlexibleMatrix,
-        sampleWeights: DoubleArray? = null
+        sampleWeights: FloatArray? = null
     ) {
         val sampleCount = actual.rows.toDouble()
-        val weights = sampleWeights ?: DoubleArray(actual.rows) { 1.0 }
+        val weights = sampleWeights ?: FloatArray(actual.rows) { 1.0f }
 
         // Compute softmax probabilities using FlexibleMatrix extensions
         val probs = softmax(predicted)
@@ -164,12 +164,12 @@ data class NeuralNetwork(
     private fun backwardSparse(
         predicted: FlexibleMatrix,
         sparseTargets: IntArray,
-        sampleWeights: DoubleArray? = null
+        sampleWeights: FloatArray? = null
     ) {
         val sampleCount = predicted.rows.toDouble()
         
         // Use FlexibleMatrix version to avoid copying
-        var delta = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
+        var delta = predicted.sparseCategoricalCrossEntropyGradients(sparseTargets, sampleWeights)
 
         val startIndex = layers.lastIndex
 
@@ -221,7 +221,7 @@ data class NeuralNetwork(
     fun train(
         trainingFeatures: FlexibleMatrix,
         trainingValues: FlexibleMatrix,
-        trainingWeights: DoubleArray? = null,
+        trainingWeights: FloatArray? = null,
         batchSize: Int = 32,
         maxEpochs: Int = 100,
         patience: Int = 10,
@@ -258,7 +258,7 @@ data class NeuralNetwork(
                 }
                 val batchLabels = batchTargetIndices.map { y[it] }.toTypedArray()
                 val batchWeights = trainingWeights?.let { weights ->
-                    batchIndices.map { weights[it] }.toDoubleArray()
+                    batchIndices.map { weights[it] }.toFloatArray()
                 }
 
                 val batchPredictions = predict(DoubleMatrix(batchFeatures), isTraining = true, skipFeatureTransform = true)
@@ -283,8 +283,8 @@ data class NeuralNetwork(
      * Trains the neural network on streaming data using mini-batch gradient descent with early stopping.
      *
      * @receiver The neural network instance to train.
-     * @param source A lambda that provides a lazy [Sequence] of input-output pairs, where each pair is a feature vector ([DoubleArray])
-     *               and its corresponding label vector ([DoubleArray]).
+     * @param source A lambda that provides a lazy [Sequence] of input-output pairs, where each pair is a feature vector ([FloatArray])
+     *               and its corresponding label vector ([FloatArray]).
      * @param batchSize Number of samples per training batch. Default is 1024.
      * @param maxEpochs Maximum number of full passes over the data. Default is 20.
      * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
@@ -295,7 +295,7 @@ data class NeuralNetwork(
      * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
      */
     fun trainStreaming(
-        source: () -> Sequence<Pair<DoubleArray, Array<DoubleArray>>>,
+        source: () -> Sequence<Pair<FloatArray, Array<FloatArray>>>,
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
@@ -319,7 +319,8 @@ data class NeuralNetwork(
             var batchCount = 0
 
             for ((inputSeq, targetSeqs) in source()) {
-                bx += inputSeq; by += targetSeqs
+                bx.add(inputSeq.map { it.toDouble() }.toDoubleArray())
+                by.add(targetSeqs.map { it.map { f -> f.toDouble() }.toDoubleArray() }.toTypedArray())
                 if (bx.size == batchSize) {
                     // Simple batch processing
                     val xBatch = bx.toTypedArray()
@@ -422,7 +423,7 @@ data class NeuralNetwork(
         shuffle: Boolean = true,
         trace: Boolean = true,
         lossFn: (pred: FlexibleMatrix, sparseTargets: IntArray) -> Double =
-            { p, s -> sparseCategoricalCrossEntropy(p, s) },
+            { p, s -> p.sparseCategoricalCrossEntropy(s) },
         probeFn: () -> Unit = {  },
         comprehensiveLossFn: ((NeuralNetwork) -> Double)? = null,
         saveModelPath: String? = null,
@@ -550,31 +551,6 @@ data class NeuralNetwork(
         }
         return best
     }
-
-    /**
-     * Performs a single training step on a batch of raw input and label matrices.
-     *
-     * This method:
-     * 1. Fits and transforms the raw feature and label matrices using configured transforms.
-     * 2. Executes a forward pass in training mode (skipping feature transforms).
-     * 3. Performs backpropagation and updates model parameters using Adam optimizer.
-     *
-     * @param xRaw Raw feature matrix (samples × features) to train on.
-     * @param yRaw Raw label matrix (samples × outputs) corresponding to [xRaw].
-     */
-    private fun trainOnBatch(xRaw: FlexibleMatrix, yRaw: FlexibleMatrix) {
-        // 1. fit + transform in ONE call; each column transform updates itself
-        val xRawMatrix = xRaw.toDoubleMatrix()
-        val yRawMatrix = yRaw.toDoubleMatrix()
-        val x = featureTransforms?.fitAndTransform(xRawMatrix) ?: xRawMatrix
-        val y = valueTransforms?.fitAndTransform(yRawMatrix) ?: yRawMatrix
-
-        // 2. forward / backward / Adam
-        val pred = predict(x.toFlexibleMatrix(), isTraining = true, skipFeatureTransform = true)
-        backward(pred, y.toFlexibleMatrix())
-        updateParameters()
-    }
-
 
     /**
      * Creates a deep copy of the current neural network including internal state.

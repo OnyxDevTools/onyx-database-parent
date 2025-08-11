@@ -87,7 +87,7 @@ class NeuralNetworkTest {
     fun `sample weights influence training`() {
         val features = Array(100) { DoubleArray(1) { it.toDouble() } }
         val labels = Array(100) { DoubleArray(1) { if (it < 50) 1.0 else 10.0 } }
-        val weights = DoubleArray(100) { if (it < 50) 1.0 else 0.1 }
+        val weights = FloatArray(100) { if (it < 50) 1.0f else 0.1f }
 
         val weightedModel = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.05)
         val unweightedModel = weightedModel.clone()
@@ -157,7 +157,7 @@ class NeuralNetworkTest {
     fun `mismatched weight length throws`() {
         val features = Array(2) { DoubleArray(1) { 0.0 } }
         val labels = Array(2) { DoubleArray(1) { 0.0 } }
-        val weights = DoubleArray(1) { 1.0 } // Incorrect length
+        val weights = FloatArray(1) { 1.0f } // Incorrect length
         val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)))
         assertThrows(IllegalArgumentException::class.java) {
             model.train(features.toFlexibleMatrix(), labels.toFlexibleMatrix(), trainingWeights = weights, maxEpochs = 1) { 0.0 }

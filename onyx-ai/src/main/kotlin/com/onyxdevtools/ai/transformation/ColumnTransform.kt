@@ -22,7 +22,7 @@ interface ColumnTransform : Serializable {
      *
      * @param values The input column to fit on.
      */
-    fun fit(values: DoubleArray) = Unit
+    fun fit(values: FloatArray) = Unit
 
     /**
      * Applies the transformation to the provided column.
@@ -30,7 +30,7 @@ interface ColumnTransform : Serializable {
      * @param values The input column to transform.
      * @return A new column with the transformation applied.
      */
-    fun apply(values: DoubleArray): DoubleArray = values
+    fun apply(values: FloatArray): FloatArray = values
 
     /**
      * Reverses the transformation previously applied to a column.
@@ -41,7 +41,7 @@ interface ColumnTransform : Serializable {
      * @param values The transformed column to invert.
      * @return A column representing the inverse transformation, if supported.
      */
-    fun inverse(values: DoubleArray): DoubleArray = values
+    fun inverse(values: FloatArray): FloatArray = values
 
     /**
      * Identify whether the transform has been fit
@@ -58,7 +58,7 @@ interface ColumnTransform : Serializable {
     fun clone(): ColumnTransform
 }
 
-fun ColumnTransforms.fitAndTransform(matrix: Array<DoubleArray>): Array<DoubleArray> {
+fun ColumnTransforms.fitAndTransform(matrix: Array<FloatArray>): Array<FloatArray> {
     val rows = matrix.size
     val cols = matrix[0].size
     require(size == cols) { "Must supply one ColumnTransform (or null) per column" }
@@ -68,7 +68,7 @@ fun ColumnTransforms.fitAndTransform(matrix: Array<DoubleArray>): Array<DoubleAr
     for (c in 0 until cols) {
         val t = this[c] ?: continue
 
-        val col = DoubleArray(rows) { r -> result[r][c] }
+        val col = FloatArray(rows) { r -> result[r][c] }
         t.fit(col)
         val transformed = t.apply(col)
 
@@ -78,13 +78,13 @@ fun ColumnTransforms.fitAndTransform(matrix: Array<DoubleArray>): Array<DoubleAr
 }
 
 /** Apply already-fitted transforms to a new matrix. */
-fun ColumnTransforms.apply(matrix: Array<DoubleArray>): Array<DoubleArray> {
+fun ColumnTransforms.apply(matrix: Array<FloatArray>): Array<FloatArray> {
     val rows = matrix.size
     val result = Array(rows) { matrix[it].copyOf() }
 
     forEachIndexed { c, t ->
         if (t == null) return@forEachIndexed
-        val col = DoubleArray(rows) { r -> result[r][c] }
+        val col = FloatArray(rows) { r -> result[r][c] }
         val transformed = t.apply(col)
         for (r in 0 until rows) result[r][c] = transformed[r]
     }
@@ -92,13 +92,13 @@ fun ColumnTransforms.apply(matrix: Array<DoubleArray>): Array<DoubleArray> {
 }
 
 /** Restore original scale column-by-column. */
-fun ColumnTransforms.inverse(matrix: Array<DoubleArray>): Array<DoubleArray> {
+fun ColumnTransforms.inverse(matrix: Array<FloatArray>): Array<FloatArray> {
     val rows = matrix.size
     val result = Array(rows) { matrix[it].copyOf() }
 
     forEachIndexed { c, t ->
         if (t == null) return@forEachIndexed
-        val col = DoubleArray(rows) { r -> result[r][c] }
+        val col = FloatArray(rows) { r -> result[r][c] }
         val restored = t.inverse(col)
         for (r in 0 until rows) result[r][c] = restored[r]
     }

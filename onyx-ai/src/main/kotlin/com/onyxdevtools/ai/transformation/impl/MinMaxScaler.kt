@@ -19,16 +19,16 @@ import kotlin.math.max
  * batches seen so far.
  */
 class MinMaxScaler(
-    private val minRange: Double = 0.0,
-    private val maxRange: Double = 1.0
+    private val minRange: Float = 0.0f,
+    private val maxRange: Float = 1.0f
 ) : ColumnTransform, Serializable {
 
     init { require(minRange < maxRange) { "minRange must be < maxRange" } }
 
     private val targetRange = maxRange - minRange
 
-    private var dataMin = Double.POSITIVE_INFINITY
-    private var dataMax = Double.NEGATIVE_INFINITY
+    private var dataMin = Float.POSITIVE_INFINITY
+    private var dataMax = Float.NEGATIVE_INFINITY
     private var fitted  = false
 
     /* ---------- contract ---------- */
@@ -37,7 +37,7 @@ class MinMaxScaler(
 
     /* ---------- incremental fit ---------- */
 
-    override fun fit(values: DoubleArray) {
+    override fun fit(values: FloatArray) {
         if (values.isEmpty()) return
         dataMin = min(dataMin, values.minOrNull() ?: dataMin)
         dataMax = max(dataMax, values.maxOrNull() ?: dataMax)
@@ -46,30 +46,30 @@ class MinMaxScaler(
 
     /* ---------- forward ---------- */
 
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         if (!fitted) fit(values)            // lazy first-fit
 
         val scale = dataMax - dataMin
-        if (abs(scale) < EPSILON) {         // constant column
-            val mid = minRange + targetRange / 2.0
-            return DoubleArray(values.size) { mid }
+        if (abs(scale) < EPSILON.toFloat()) {         // constant column
+            val mid = minRange + targetRange / 2.0f
+            return FloatArray(values.size) { mid }
         }
 
-        return DoubleArray(values.size) { i ->
+        return FloatArray(values.size) { i ->
             minRange + (values[i] - dataMin) * targetRange / scale
         }
     }
 
     /* ---------- inverse ---------- */
 
-    override fun inverse(values: DoubleArray): DoubleArray {
+    override fun inverse(values: FloatArray): FloatArray {
         if (!fitted) throw IllegalStateException("inverse() before fit/apply")
 
         val scale = dataMax - dataMin
-        if (abs(scale) < EPSILON)           // constant column
-            return DoubleArray(values.size) { dataMin }
+        if (abs(scale) < EPSILON.toFloat())           // constant column
+            return FloatArray(values.size) { dataMin }
 
-        return DoubleArray(values.size) { i ->
+        return FloatArray(values.size) { i ->
             dataMin + (values[i] - minRange) * scale / targetRange
         }
     }

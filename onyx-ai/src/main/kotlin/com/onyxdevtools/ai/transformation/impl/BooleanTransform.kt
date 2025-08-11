@@ -29,14 +29,14 @@ class BooleanTransform(
     /**
      * Transforms the supplied **column**.
      *
-     * @param values A `DoubleArray` representing one feature column.
+     * @param values A `FloatArray` representing one feature column.
      * @return A *new* array with the transform applied.
      */
-    override fun apply(values: DoubleArray): DoubleArray =
-        DoubleArray(values.size) { idx ->
+    override fun apply(values: FloatArray): FloatArray =
+        FloatArray(values.size) { idx ->
             when (val v = values[idx]) {
-                0.0, 1.0 ->
-                    if (centered) (v - 0.5) * 2           // 0→-1, 1→1
+                0.0f, 1.0f ->
+                    if (centered) (v - 0.5f) * 2           // 0→-1, 1→1
                     else v                                // keep 0/1 as is
                 else -> v                                 // non-boolean values untouched
             }
@@ -46,11 +46,11 @@ class BooleanTransform(
      * Restores centered values back to {0.0, 1.0}.
      * If the transform was not centered, the input is returned unchanged.
      */
-    override fun inverse(values: DoubleArray): DoubleArray =
+    override fun inverse(values: FloatArray): FloatArray =
         if (!centered) values
-        else DoubleArray(values.size) { idx ->
+        else FloatArray(values.size) { idx ->
             when (val v = values[idx]) {
-                -1.0, 1.0 -> (v + 1) / 2                  // -1→0, 1→1
+                -1.0f, 1.0f -> (v + 1) / 2                  // -1→0, 1→1
                 else -> v
             }
         }

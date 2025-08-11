@@ -14,7 +14,7 @@ import kotlin.math.max
  */
 class MaxAbsScaler : ColumnTransform, Serializable {
 
-    private var maxAbs: Double = 0.0
+    private var maxAbs: Float = 0.0f
     private var fitted = false
 
     /* ---------- contract ---------- */
@@ -23,31 +23,31 @@ class MaxAbsScaler : ColumnTransform, Serializable {
 
     /* ---------- incremental fit ---------- */
 
-    override fun fit(values: DoubleArray) {
-        val batchMax = values.maxOfOrNull { abs(it) } ?: 0.0
+    override fun fit(values: FloatArray) {
+        val batchMax = values.maxOfOrNull { abs(it) } ?: 0.0f
         maxAbs = max(maxAbs, batchMax)
         fitted = true
     }
 
     /* ---------- forward transform ---------- */
 
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         if (!fitted) fit(values)        // lazy first-fit
 
         // near-constant column → map to zeros
-        if (maxAbs < EPSILON) return DoubleArray(values.size)
+        if (maxAbs < EPSILON.toFloat()) return FloatArray(values.size)
 
-        return DoubleArray(values.size) { i -> values[i] / maxAbs }
+        return FloatArray(values.size) { i -> values[i] / maxAbs }
     }
 
     /* ---------- inverse transform ---------- */
 
-    override fun inverse(values: DoubleArray): DoubleArray {
+    override fun inverse(values: FloatArray): FloatArray {
         if (!fitted) throw IllegalStateException("inverse() before fit/apply")
 
-        if (maxAbs < EPSILON) return DoubleArray(values.size)
+        if (maxAbs < EPSILON.toFloat()) return FloatArray(values.size)
 
-        return DoubleArray(values.size) { i -> values[i] * maxAbs }
+        return FloatArray(values.size) { i -> values[i] * maxAbs }
     }
 
     /**

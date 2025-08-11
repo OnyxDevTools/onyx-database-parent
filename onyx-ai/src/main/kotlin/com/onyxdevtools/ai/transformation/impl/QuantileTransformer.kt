@@ -13,16 +13,16 @@ import kotlin.math.roundToInt
 class QuantileTransformer : ColumnTransform, Serializable {
 
     /* ── state ─────────────────────────────────────────────────── */
-    private val values = mutableListOf<Double>()      // unique, ascending
-    private var sortedVals = DoubleArray(0)
-    private var quantiles  = DoubleArray(0)
+    private val values = mutableListOf<Float>()      // unique, ascending
+    private var sortedVals = FloatArray(0)
+    private var quantiles  = FloatArray(0)
     private var fitted = false
 
     /* ── contract ──────────────────────────────────────────────── */
     override fun isFitted(): Boolean = fitted
 
     /* ── incremental fit ───────────────────────────────────────── */
-    override fun fit(values: DoubleArray) {
+    override fun fit(values: FloatArray) {
         if (values.isEmpty()) return
 
         if (!fitted) {
@@ -31,18 +31,18 @@ class QuantileTransformer : ColumnTransform, Serializable {
         } else {
             // merge new uniques into the sorted list (O(n+m))
             val uniques = values.toSet()
-            val merged  = DoubleArray(this.values.size + uniques.size)  // upper bound
+            val merged  = FloatArray(this.values.size + uniques.size)  // upper bound
             var i = 0
             var k = 0
             val itUni = uniques.sorted().iterator()
             var nxtUni = if (itUni.hasNext()) itUni.next() else null
 
             while (i < this.values.size || nxtUni != null) {
-                val vCur = if (i < this.values.size) this.values[i] else Double.POSITIVE_INFINITY
-                val vNew = nxtUni ?: Double.POSITIVE_INFINITY
+                val vCur = if (i < this.values.size) this.values[i] else Float.POSITIVE_INFINITY
+                val vNew = nxtUni ?: Float.POSITIVE_INFINITY
                 when {
-                    vCur < vNew - EPSILON -> merged[k++] = this.values[i++]
-                    vNew < vCur - EPSILON -> { merged[k++] = vNew; nxtUni = if (itUni.hasNext()) itUni.next() else null }
+                    vCur < vNew - EPSILON.toFloat() -> merged[k++] = this.values[i++]
+                    vNew < vCur - EPSILON.toFloat() -> { merged[k++] = vNew; nxtUni = if (itUni.hasNext()) itUni.next() else null }
                     else -> { merged[k++] = vCur; i++; nxtUni = if (itUni.hasNext()) itUni.next() else null }
                 }
             }
@@ -55,21 +55,21 @@ class QuantileTransformer : ColumnTransform, Serializable {
     }
 
     private fun rebuildTables() {
-        sortedVals = values.toDoubleArray()
+        sortedVals = values.toFloatArray()
         val k = sortedVals.size
-        quantiles  = DoubleArray(k) { idx ->
-            if (k == 1) 0.5 else idx.toDouble() / (k - 1)
+        quantiles  = FloatArray(k) { idx ->
+            if (k == 1) 0.5f else idx.toFloat() / (k - 1)
         }
     }
 
     /* ── forward transform (value → uniform) ───────────────────── */
-    override fun apply(values: DoubleArray): DoubleArray {
+    override fun apply(values: FloatArray): FloatArray {
         if (!fitted) fit(values)
 
         val k = sortedVals.size
-        if (k == 1) return DoubleArray(values.size) { 0.5 }
+        if (k == 1) return FloatArray(values.size) { 0.5f }
 
-        return DoubleArray(values.size) { idx ->
+        return FloatArray(values.size) { idx ->
             val x = values[idx]
 
             // binary search for insertion point
@@ -78,7 +78,7 @@ class QuantileTransformer : ColumnTransform, Serializable {
             while (lo <= hi) {
                 val mid = (lo + hi).ushr(1)
                 when {
-                    abs(sortedVals[mid] - x) < EPSILON -> { lo = mid; break }
+                    abs(sortedVals[mid] - x) < EPSILON.toFloat() -> { lo = mid; break }
                     sortedVals[mid] < x -> lo = mid + 1
                     else -> hi = mid - 1
                 }
@@ -86,12 +86,12 @@ class QuantileTransformer : ColumnTransform, Serializable {
             val upper = min(lo, k - 1)
             val lower = max(upper - 1, 0)
 
-            if (upper == lower) return@DoubleArray quantiles[upper]
+            if (upper == lower) return@FloatArray quantiles[upper]
 
             val xLow = sortedVals[lower];  val xHigh = sortedVals[upper]
             val qLow = quantiles[lower];   val qHigh = quantiles[upper]
 
-            if (abs(xHigh - xLow) < EPSILON) qLow
+            if (abs(xHigh - xLow) < EPSILON.toFloat()) qLow
             else {
                 val t = (x - xLow) / (xHigh - xLow)
                 qLow + t * (qHigh - qLow)
@@ -100,14 +100,14 @@ class QuantileTransformer : ColumnTransform, Serializable {
     }
 
     /* ── inverse transform (uniform → value) ───────────────────── */
-    override fun inverse(values: DoubleArray): DoubleArray {
+    override fun inverse(values: FloatArray): FloatArray {
         if (!fitted) throw IllegalStateException("QuantileTransformer.inverse() before fit/apply")
 
         val k = sortedVals.size
-        if (k == 1) return DoubleArray(values.size) { sortedVals[0] }
+        if (k == 1) return FloatArray(values.size) { sortedVals[0] }
 
-        return DoubleArray(values.size) { idx ->
-            val q = values[idx].coerceIn(0.0, 1.0)
+        return FloatArray(values.size) { idx ->
+            val q = values[idx].coerceIn(0.0f, 1.0f)
 
             val pos = (q * (k - 1)).roundToInt()
             val upper = min(max(pos, 1), k - 1)
@@ -116,7 +116,7 @@ class QuantileTransformer : ColumnTransform, Serializable {
             val qLow = quantiles[lower]; val qHigh = quantiles[upper]
             val xLow = sortedVals[lower]; val xHigh = sortedVals[upper]
 
-            if (abs(qHigh - qLow) < EPSILON) xLow
+            if (abs(qHigh - qLow) < EPSILON.toFloat()) xLow
             else {
                 val t = (q - qLow) / (qHigh - qLow)
                 xLow + t * (xHigh - xLow)

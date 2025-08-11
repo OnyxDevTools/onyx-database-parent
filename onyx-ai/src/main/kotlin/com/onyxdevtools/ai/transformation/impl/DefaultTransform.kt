@@ -4,7 +4,7 @@ import com.onyxdevtools.ai.transformation.ColumnTransform
 import java.io.Serializable
 
 /**
- * An identity transformation that applies no changes to the input [DoubleArray].
+ * An identity transformation that applies no changes to the input [FloatArray].
  * Both the forward (`apply`) and inverse (`inverse`) operations return the matrix unmodified.
  *
  * This can be useful as a placeholder, a default transformation when none is specified,

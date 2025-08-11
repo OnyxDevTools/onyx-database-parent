@@ -383,7 +383,7 @@ fun FlexibleMatrix.relu(): FlexibleMatrix {
  */
 fun FlexibleMatrix.sparseCategoricalCrossEntropy(
     sparseTargets: IntArray,
-    sampleWeights: DoubleArray? = null
+    sampleWeights: FloatArray? = null
 ): Double {
     require(this.rows == sparseTargets.size) {
         "Predictions and targets must have same number of samples"
@@ -393,7 +393,7 @@ fun FlexibleMatrix.sparseCategoricalCrossEntropy(
     }
     
     val vocabSize = this.cols
-    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
+    val weights = sampleWeights ?: FloatArray(sparseTargets.size) { 1.0f }
     
     var totalLoss = 0.0
     var totalWeight = 0.0
@@ -439,7 +439,7 @@ fun FlexibleMatrix.sparseCategoricalCrossEntropy(
  */
 fun FlexibleMatrix.sparseCategoricalCrossEntropyGradients(
     sparseTargets: IntArray,
-    sampleWeights: DoubleArray? = null
+    sampleWeights: FloatArray? = null
 ): FlexibleMatrix {
     require(this.rows == sparseTargets.size) {
         "Predictions and targets must have same number of samples"
@@ -449,7 +449,7 @@ fun FlexibleMatrix.sparseCategoricalCrossEntropyGradients(
     }
     
     val vocabSize = this.cols
-    val weights = sampleWeights ?: DoubleArray(sparseTargets.size) { 1.0 }
+    val weights = sampleWeights ?: FloatArray(sparseTargets.size) { 1.0f }
     val gradients = createMatrix(this.rows, vocabSize, this.isSinglePrecision)
     
     for (i in 0 until this.rows) {
