@@ -13,12 +13,12 @@ import java.io.File
 // Add somewhere above train call
 fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
     val qs = listOf(
-        "[SOT]What are you?[SEP]",
-        "[SOT]Who is Alice?[SEP]",
-        "[SOT]Who is the White Rabbit?[SEP]",
-        "[SOT]Where is Wonderland?[SEP]",
-        "[SOT]What game does the Queen of Hearts play?[SEP]",
-        "[SOT]Alice was beginning to get very tired "
+        "What are you?",
+        "Who is Alice?",
+        "Who is the White Rabbit?",
+        "Where is Wonderland?",
+        "What game does the Queen of Hearts play?",
+        "Can you write a hello world program?",
     )
     qs.forEach { q ->
         val out = model.chat(
@@ -26,7 +26,7 @@ fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
             vocabulary = vocab,
             seqLength = seqLen
         )
-        println("$q $out")
+        println(out)
     }
 }
 
@@ -229,7 +229,7 @@ fun main() {
         totalProbes++
         if (totalProbes % 1000 == 0) {
             net.saveToFile("/mnt/onyx/books/model-checkpoint.ser")
-            println("✅ Saved checkpoint after $totalProbes probes → $ckptPath")
+            println("✅ Saved checkpoint after $totalProbes")
         }
     }
 

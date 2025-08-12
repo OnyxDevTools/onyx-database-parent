@@ -239,7 +239,7 @@ class DefaultTextGenerator : TextGenerator {
     ): String {
         // --- Token IDs ---
         fun id(tok: String) = vocabulary.getId(tok)
-        val padId = id("[PAD]") ?: 0
+        val padId = id("[PAD]")
         val clsId = id("[CLS]")
         val unkId = id("[UNK]")
         val maskId = id("[MASK]")
@@ -274,7 +274,7 @@ class DefaultTextGenerator : TextGenerator {
 
         try {
             // Encode prompt using causal encoding
-            val ids = tokenizer.encodeCausal(prompt).toMutableList()
+            val ids = tokenizer.encodeCausal(prompt, false).toMutableList()
 
             // Repetition bookkeeping
             val seenCounts = IntArray(vocabSize) { 0 }
@@ -356,5 +356,19 @@ fun NeuralNetwork.chat(
 ): String {
     val tokenizer = BPETokenizer(vocabulary)
     val textGenerator = DefaultTextGenerator()
-    return textGenerator.generate(this, tokenizer, vocabulary, prompt, maxTokens, seqLength)
+    return "[SOT][U]" + textGenerator.generate(this, tokenizer, vocabulary, prompt, maxTokens, seqLength) + "[EOT]"
+}
+
+/**
+ * Extension function for convenient optimized text generation.
+ */
+fun NeuralNetwork.complete(
+    prompt: String,
+    vocabulary: Vocabulary,
+    seqLength: Int = 256,
+    maxTokens: Int = seqLength
+): String {
+    val tokenizer = BPETokenizer(vocabulary)
+    val textGenerator = DefaultTextGenerator()
+    return "[SOT][U]" + textGenerator.generate(this, tokenizer, vocabulary, prompt, maxTokens, seqLength)
 }

@@ -142,7 +142,7 @@ class BPETokenizer(
 
     private val specialTokens = setOf(
         "[PAD]", "[CLS]", "[SEP]", "[UNK]", "[MASK]",
-        "[SOT]", "[EOT]"
+        "[SOT]", "[EOT]", "[U]", "[A]"
     )
 
     private val specialTokensPattern = specialTokens
@@ -412,9 +412,9 @@ class BPETokenizer(
     override fun encode(text: String): List<Int> {
         val tokens = tokenize(text)
         val ids = mutableListOf<Int>()
-        ids += vocabulary.getId("[CLS]") ?: vocabulary.getId(unkToken)!!
-        ids += tokens.map { vocabulary.getId(it) ?: vocabulary.getId(unkToken)!! }
-        ids += vocabulary.getId("[SEP]") ?: vocabulary.getId(unkToken)!!
+        ids += vocabulary.getId("[CLS]")
+        ids += tokens.map { vocabulary.getId(it) }
+        ids += vocabulary.getId("[SEP]")
         return ids
     }
 
@@ -422,7 +422,7 @@ class BPETokenizer(
         val t1 = tokenize(text)
         val t2 = tokenize(textPair)
         val all = listOf("[CLS]") + t1 + listOf("[SEP]") + t2 + listOf("[SEP]")
-        return all.map { vocabulary.getId(it) ?: vocabulary.getId(unkToken)!! }
+        return all.map { vocabulary.getId(it) }
     }
 
     override fun decode(ids: List<Int>): String {
