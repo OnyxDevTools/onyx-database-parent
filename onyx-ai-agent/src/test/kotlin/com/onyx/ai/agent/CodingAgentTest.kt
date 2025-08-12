@@ -38,4 +38,14 @@ class CodingAgentTest {
         ProjectIO.write("test-file.txt", "Hello World")
         assertTrue(tempDir.resolve("test-file.txt").toFile().exists())
     }
+    
+    @Test
+    fun testReadFileAction() {
+        // Test that we can read file contents
+        val testContent = "Test file content\nLine 2"
+        ProjectIO.write("read-test.txt", testContent)
+        
+        val readContent = ProjectIO.read("read-test.txt")
+        assertTrue(readContent == testContent)
+    }
 }
