@@ -17,7 +17,15 @@ object ComputeBackendFactory {
      */
     fun createBest(): ComputeBackend {
         return when {
-            isMetalAvailable() -> createMetal()
+            isMetalAvailable() -> {
+                try {
+                    MetalComputeBackend()
+                } catch (e: Exception) {
+                    println("Metal backend failed to initialize: ${e.message}")
+                    println("Falling back to CPU backend")
+                    createCPU()
+                }
+            }
             isCudaAvailable() -> createCuda() 
             isOpenCLAvailable() -> createOpenCL()
             else -> createCPU()
@@ -51,8 +59,16 @@ object ComputeBackendFactory {
      * Creates a Metal compute backend (macOS only)
      */
     fun createMetal(): ComputeBackend {
-        // TODO: Implement MetalComputeBackend
-        throw UnsupportedOperationException("Metal backend not yet implemented")
+        if (!isMetalAvailable()) {
+            throw RuntimeException("Metal backend is not available on this system")
+        }
+        return try {
+            MetalComputeBackend()
+        } catch (e: Exception) {
+            println("Failed to initialize Metal backend: ${e.message}")
+            println("Falling back to CPU backend")
+            createCPU()
+        }
     }
     
     /**
@@ -75,8 +91,19 @@ object ComputeBackendFactory {
      * Checks if Metal framework is available (macOS only)
      */
     private fun isMetalAvailable(): Boolean {
-        // TODO: Implement Metal detection
-        return false
+        return try {
+            // Check if we're on macOS first
+            val osName = System.getProperty("os.name").lowercase()
+            if (!osName.contains("mac")) {
+                return false
+            }
+            
+            // Try to call the Metal availability check
+            MetalComputeBackend.isMetalAvailable()
+        } catch (e: Throwable) {
+            // Metal framework or native library not available
+            false
+        }
     }
     
     /**

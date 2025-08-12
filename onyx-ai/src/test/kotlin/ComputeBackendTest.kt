@@ -67,7 +67,13 @@ class ComputeBackendTest {
     @Test
     fun testComputeContextFactory() {
         val context = DefaultComputeContext()
-        assertEquals(ComputeBackendType.CPU, context.backend.backendType)
+        // Should use the best available backend (Metal if available, otherwise CPU)
+        val expectedType = if (ComputeBackendFactory.getAvailableBackends().contains(ComputeBackendType.METAL)) {
+            ComputeBackendType.METAL
+        } else {
+            ComputeBackendType.CPU
+        }
+        assertEquals(expectedType, context.backend.backendType)
         
         // Test matrix creation
         val matrix = context.createMatrix(2, 3, 1.5f)
@@ -83,7 +89,13 @@ class ComputeBackendTest {
         assertTrue(availableBackends.contains(ComputeBackendType.CPU))
         
         val bestBackend = ComputeBackendFactory.createBest()
-        assertEquals(ComputeBackendType.CPU, bestBackend.backendType)
+        // Should use the best available backend (Metal if available, otherwise CPU)
+        val expectedType = if (availableBackends.contains(ComputeBackendType.METAL)) {
+            ComputeBackendType.METAL
+        } else {
+            ComputeBackendType.CPU
+        }
+        assertEquals(expectedType, bestBackend.backendType)
         
         val cpuBackend = ComputeBackendFactory.createCPU()
         assertEquals(ComputeBackendType.CPU, cpuBackend.backendType)
