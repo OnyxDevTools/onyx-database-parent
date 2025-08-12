@@ -204,8 +204,8 @@ class ComprehensiveLossFunction(
 }
 
 fun main() {
-    val books = File("/Volumes/onyx/books/formatted_books")
-    val vocabulary = OnyxVocabulary("/Users/tosborn/onyx/books/vocabulary4.dat")
+    val books = File("/Volumes/onyx/books/training_data")
+    val vocabulary = OnyxVocabulary("/Users/tosborn/onyx/books/vocabulary.dat")
 
     if (vocabulary.size == 0) {
         books.listFiles()?.forEach {
@@ -243,7 +243,7 @@ fun main() {
         LayerNormalizationLayer(embeddingDim),
         DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
     )
-    val checkpointPath = "/mnt/onyx/books/model-last.ser"   // <‑‑ the file you keep saving to
+    val checkpointPath = "/mnt/onyx/books/onyx-llm-checkpoint.ser"   // <‑‑ the file you keep saving to
 
     var model = NeuralNetwork.loadOrCreate(checkpointPath) {
         // This lambda is only executed when the file does **not** exist
@@ -257,7 +257,6 @@ fun main() {
     try {
         val maxEpochs = 200
         val baseSeed   = 42L                 // any number you like
-        var model = NeuralNetwork(layers, learningRate = 0.001f)
 
         repeat(maxEpochs) { epochIdx ->
             // 1️⃣  Build a *fresh* source for this epoch
@@ -278,7 +277,7 @@ fun main() {
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
                 comprehensiveLossFn = comprehensiveLossFn,
-                saveModelPath = "/mnt/onyx/books/model-epoch-$epochIdx.ser"
+                saveModelPath = "/mnt/onyx/books/onyx-llm-$epochIdx.ser"
             )
 
             println("=== Finished epoch ${epochIdx + 1} ===")
