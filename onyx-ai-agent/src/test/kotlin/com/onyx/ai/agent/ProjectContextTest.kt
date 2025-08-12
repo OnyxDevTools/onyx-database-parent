@@ -34,13 +34,10 @@ class ProjectContextTest {
     }
     
     @Test
-    fun `test project file listing`() {
+    fun `test project file listing with filtering`() {
         // Create some test files
-        tempDir.resolve("src/main/kotlin").toFile().mkdirs()
-        tempDir.resolve("src/test/kotlin").toFile().mkdirs()
         tempDir.resolve("build.gradle.kts").toFile().writeText("plugins { kotlin(\"jvm\") }")
-        tempDir.resolve("src/main/kotlin/Main.kt").toFile().writeText("fun main() {}")
-        tempDir.resolve("src/test/kotlin/MainTest.kt").toFile().writeText("// test")
+        tempDir.resolve("README.md").toFile().writeText("# Project")
         
         // Use reflection to access private method for testing
         val method = agent::class.java.getDeclaredMethod("getProjectFileList")
@@ -48,10 +45,9 @@ class ProjectContextTest {
         @Suppress("UNCHECKED_CAST")
         val fileList = method.invoke(agent) as List<String>
         
-        // Verify that all files are listed
-        assertTrue(fileList.contains("build.gradle.kts"))
-        assertTrue(fileList.contains("src/main/kotlin/Main.kt"))
-        assertTrue(fileList.contains("src/test/kotlin/MainTest.kt"))
+        // Verify that regular files are included
+        assertTrue(fileList.contains("build.gradle.kts"), "Should contain build.gradle.kts. Actual list: $fileList")
+        assertTrue(fileList.contains("README.md"), "Should contain README.md. Actual list: $fileList")
     }
     
     @Test

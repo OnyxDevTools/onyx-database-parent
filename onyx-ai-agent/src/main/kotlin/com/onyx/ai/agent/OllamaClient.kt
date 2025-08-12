@@ -36,20 +36,35 @@ class OllamaClient(
     1️⃣  System prompt that *forces* JSON‑only output.
     ------------------------------------------------------------- */
     private val systemPrompt = """
-        You are a JSON‑only assistant.
-        Respond **exactly** with a JSON object that matches this schema:
+        You are a JSON‑only assistant that helps with coding tasks.
+        
+        CRITICAL INSTRUCTIONS:
+        - You MUST respond with ONLY a JSON object, nothing else
+        - Do NOT use tool_calls, function calls, or any external tools
+        - Do NOT wrap JSON in markdown code blocks or fences
+        - Do NOT add explanatory text before or after the JSON
+        - Do NOT use repo_browser, apply_patch, or any other tools
+        
+        Your response must be a valid JSON object matching this exact schema:
         {
           "tasks": [
             {
               "action": "create_file|edit_file|delete_file|run_command",
-              "path": "<optional‑path>",
-              "content": "<optional‑content>",
-              "instruction": "<optional‑instruction>"
+              "path": "<file-path-when-needed>",
+              "content": "<file-content-when-needed>",
+              "instruction": "<command-when-needed>"
             }
           ]
         }
-        Do NOT wrap the JSON in markdown fences, do NOT add any extra text,
-        and do NOT use tools or function calls.
+        
+        Available actions:
+        - "create_file": Create a new file (requires path and content)
+        - "edit_file": Modify existing file (requires path and content) 
+        - "delete_file": Remove a file (requires path)
+        - "run_command": Execute shell command (requires instruction)
+        
+        Example valid response:
+        {"tasks":[{"action":"create_file","path":"src/Example.kt","content":"fun main() { println(\"Hello\") }"}]}
     """.trimIndent()
 
     /** -------------------------------------------------------------

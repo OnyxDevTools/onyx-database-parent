@@ -188,13 +188,70 @@ class CodingAgent(
     
     private fun getProjectFileList(): List<String> {
         return try {
+            val gitignorePatterns = loadGitignorePatterns()
             ProjectIO.root.toFile().walk()
                 .filter { it.isFile }
+                .filter { file -> !isHiddenFile(file) }
+                .filter { file -> !isGitignored(file, gitignorePatterns) }
                 .map { it.relativeTo(ProjectIO.root.toFile()).path }
                 .sorted()
                 .toList()
         } catch (e: Exception) {
             listOf("Error reading project files: ${e.message}")
+        }
+    }
+    
+    private fun isHiddenFile(file: java.io.File): Boolean {
+        val path = file.relativeTo(ProjectIO.root.toFile()).path
+        return path.split("/").any { it.startsWith(".") }
+    }
+    
+    private fun isGitignored(file: java.io.File, gitignorePatterns: List<String>): Boolean {
+        val relativePath = file.relativeTo(ProjectIO.root.toFile()).path
+        return gitignorePatterns.any { pattern ->
+            when {
+                pattern.isEmpty() || pattern.startsWith("#") -> false
+                pattern.endsWith("/") -> {
+                    val dirName = pattern.removeSuffix("/")
+                    relativePath == dirName || relativePath.startsWith("$dirName/")
+                }
+                pattern.contains("*") -> {
+                    val regex = pattern.replace("*", ".*").toRegex()
+                    regex.matches(relativePath)
+                }
+                else -> relativePath == pattern || relativePath.startsWith("$pattern/")
+            }
+        }
+    }
+    
+    private fun loadGitignorePatterns(): List<String> {
+        return try {
+            val gitignoreFile = ProjectIO.root.resolve(".gitignore").toFile()
+            if (gitignoreFile.exists()) {
+                gitignoreFile.readLines()
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() && !it.startsWith("#") }
+            } else {
+                // Default patterns to ignore common files
+                listOf(
+                    "*.class",
+                    "*.log",
+                    "*.jar",
+                    "*.war",
+                    "*.ear",
+                    "target/",
+                    "build/",
+                    ".gradle/",
+                    ".idea/",
+                    "*.iml",
+                    ".vscode/",
+                    "node_modules/",
+                    "*.tmp",
+                    "*.temp"
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
     

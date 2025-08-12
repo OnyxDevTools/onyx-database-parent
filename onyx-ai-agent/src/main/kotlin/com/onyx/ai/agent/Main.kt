@@ -5,7 +5,7 @@ import java.nio.file.Paths
 fun main() {
     // Set up test project directory
     val testProjectDir = "/Users/tosborn/OnyxWorkspace/onyx-database-parent"
-    
+
     val agent = CodingAgent(
         OllamaClient(
             model = "gpt-oss:20b",
