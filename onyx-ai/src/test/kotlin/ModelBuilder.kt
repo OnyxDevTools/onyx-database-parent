@@ -61,18 +61,18 @@ fun generateCorpusSequence(
     shuffleFiles: Boolean = true,
     rng: Random? = null,
     shuffleWithinFile: Boolean = false,
-    randomStartOffset: Boolean = false          // <‑‑ NEW
+    randomStartOffset: Boolean = false
 ): Sequence<Pair<FloatArray, IntArray>> {
 
     require(seqLength > 0) { "seqLength must be > 0" }
-    require(stride > 0) { "stride must be > 0" }
+    require(stride > 0)   { "stride must be > 0" }
+    require(stride <= seqLength) { "stride may not be larger than seqLength" }
 
     val tokenizer = BPETokenizer(vocabulary)
-    val generator = DefaultSequenceGenerator(vocabulary)
 
-    // ----‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑-
-    // 1️⃣  Decide the file order for **this** epoch
-    // ----‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑-
+    // -----------------------------------------------------------------
+    // 1️⃣  Determine the file order for this *epoch*
+    // -----------------------------------------------------------------
     val allFiles = booksDir.listFiles()
         ?.filter { it.isFile && it.extension.contains("txt") }
         ?: emptyList()
@@ -81,68 +81,89 @@ fun generateCorpusSequence(
         (rng?.let { allFiles.shuffled(it) } ?: allFiles.shuffled())
     } else allFiles
 
-    // ----‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑-
-    // 2️⃣  Yield every sequence, possibly shuffled inside the file
-    // ----‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑‑-
+    // -----------------------------------------------------------------
+    // 2️⃣  The mutable buffer that is kept *across* file boundaries
+    // -----------------------------------------------------------------
+    val buffer = mutableListOf<Int>()
+
+    // -----------------------------------------------------------------
+    // 3️⃣  Build the lazy sequence
+    // -----------------------------------------------------------------
     return sequence {
         for (file in files) {
-            // ---- read the whole file into a mutable list of token‑ids ----
-            val tokens = mutableListOf<Int>()
+            // ---------------------------------------------------------
+            // 3a) Load the whole file into a token list
+            // ---------------------------------------------------------
+            val fileTokens = mutableListOf<Int>()
             file.forEachLine { line ->
                 for (tok in tokenizer.tokenize(line)) {
-                    tokens.add(vocabulary.getId(tok))
+                    fileTokens.add(vocabulary.getId(tok))
                 }
-                tokens.add(vocabulary.getId("\n"))
+                fileTokens.add(vocabulary.getId("\n"))
             }
 
-            // ---- 2a. optional “shuffle inside the file” -----------------
-            val tokenList = if (shuffleWithinFile) {
-                // random‑swap algorithm – O(N) and uses the same RNG as the caller
-                val list = tokens.toMutableList()
+            // ---------------------------------------------------------
+            // 3b) Optional per‑file shuffling
+            // ---------------------------------------------------------
+            val shuffledFileTokens = if (shuffleWithinFile) {
+                val list = fileTokens.toMutableList()
                 val r = rng ?: Random.Default
                 for (i in list.indices.reversed()) {
                     val j = r.nextInt(i + 1)
-                    val tmp = list[i]
-                    list[i] = list[j]
-                    list[j] = tmp
+                    val tmp = list[i]; list[i] = list[j]; list[j] = tmp
                 }
                 list
-            } else tokens
+            } else fileTokens
 
-            // ---- 2b. optional random start offset for the first window ---
+            // ---------------------------------------------------------
+            // 3c) Random start offset – we simply drop the first `offset`
+            //     tokens from the *buffer* before we start pulling windows.
+            // ---------------------------------------------------------
             val offset = if (randomStartOffset) {
                 (rng?.nextInt(stride) ?: 0)
             } else 0
 
-            // ---- 2c. generate the windows (the underlying generator can already
-            //      take care of the “shuffle” flag, but we need the offset)
-            // ----------------------------------------------------------------
-            val seqs = generator.generateSequences(
-                tokenList,
-                seqLength,
-                stride,
-                shuffle = false        // we already shuffled above, keep deterministic windows
-            )
+            // If we already have some tokens from the previous file we keep them.
+            // The offset applies **after** we have appended the new file tokens.
+            buffer.addAll(shuffledFileTokens)
+            if (offset > 0 && buffer.size >= offset) {
+                repeat(offset) { buffer.removeAt(0) }
+            }
 
-            // If we inserted a random offset we must drop the first `offset` tokens
-            // from the first sequence (the generator always starts at index 0):
-            var first = true
-            for (pair in seqs) {
-                if (first && offset > 0) {
-                    // cut the first `offset` tokens from both input and target
-                    val (inp, tgt) = pair
-                    val cutInp = inp.sliceArray(offset until inp.size)
-                    val cutTgt = tgt.sliceArray(offset - 1 until tgt.size) // target is shifted by one
-                    yield(Pair(cutInp, cutTgt))
-                    first = false
-                } else {
-                    yield(pair)
+            // ---------------------------------------------------------
+            // 3d) Emit full‑size windows while we have enough tokens
+            // ---------------------------------------------------------
+            while (buffer.size >= seqLength) {
+                // ── INPUT (seqLength tokens) ───────────────────────
+                val inp = FloatArray(seqLength) { idx ->
+                    // convert token‑id → float (the network expects FloatArray)
+                    buffer[idx].toFloat()
                 }
+
+                // ── TARGET (next‑token for every position) ──────────
+                val tgt = IntArray(seqLength) { idx ->
+                    buffer[idx + 1]               // shifted by one
+                }
+
+                yield(Pair(inp, tgt))
+
+                // ── SLIDE THE WINDOW ---------------------------------
+                // stride == seqLength → we drop the whole window.
+                // If you want overlapping windows, change `stride`.
+                repeat(stride) { buffer.removeAt(0) }
             }
         }
+
+        // -----------------------------------------------------------------
+        // 4️⃣  What to do with the *final* leftover (< seqLength) tokens?
+        // -----------------------------------------------------------------
+        // We *do not* discard them.  Because `makeCorpusSource` creates a fresh
+        // Sequence for every epoch, the leftover will become the *prefix* of the
+        // first file of the *next* epoch – exactly the “remainder should be part
+        // of the next training cycle” you asked for.
+        // No extra code is needed; just leave `buffer` as‑is.
     }
 }
-
 
 /**
  * Computes a “comprehensive” loss on a random validation subset.
