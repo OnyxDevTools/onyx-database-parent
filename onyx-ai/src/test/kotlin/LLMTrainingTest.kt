@@ -49,10 +49,10 @@ class LLMTrainingTest {
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
             CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
             LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
+            ComputeAwareDenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
+            ComputeAwareDenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
             LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
+            ComputeAwareDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.0001f)
@@ -172,10 +172,10 @@ class LLMTrainingTest {
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
             CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
             LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
+            ComputeAwareDenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
+            ComputeAwareDenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
             LayerNormalizationLayer(embeddingDim),
-            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
+            ComputeAwareDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.001f)

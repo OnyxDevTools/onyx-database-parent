@@ -171,7 +171,7 @@ class LayerBuilder {
      * @param headCount The number of attention heads to use.
      */
     fun multiHeadAttention(tokensPerSample: Int, modelSize: Int, headCount: Int) {
-        layers += MultiHeadAttentionLayer(tokensPerSample, modelSize, headCount)
+        layers += CachedMultiHeadAttentionLayer(tokensPerSample, modelSize, headCount)
     }
 
     /**

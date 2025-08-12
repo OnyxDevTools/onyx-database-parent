@@ -1,9 +1,9 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
+import com.onyxdevtools.ai.compute.*
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import java.util.stream.IntStream
@@ -53,8 +53,13 @@ class DenseLayer(
     private val inputSize: Int,
     private val outputSize: Int,
     override val activation: Activation,
-    val dropoutRate: Float = 0.0f
+    val dropoutRate: Float = 0.0f,
+    @Transient private var computeContext: ComputeContext? = null
 ) : Layer {
+
+    // Lazy initialization of compute context
+    private val backend: ComputeContext
+        get() = computeContext ?: DefaultComputeContext().also { computeContext = it }
 
     override var preActivation: Matrix? = null
     override var output: Matrix? = null
@@ -120,17 +125,20 @@ class DenseLayer(
             }
         }
 
-        output = elementWiseMultiply(activations, mask)
+        output = backend.backend.elementWiseMultiply(activations, mask)
     }
 
     /**
      * Performs the forward pass of the layer.
      */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val linearOutput = addVectorToRows(matrixMultiply(input, weights), biases)
+        val linearOutput = backend.backend.addVectorToRows(
+            backend.backend.matrixMultiply(input, weights), 
+            biases
+        )
         val nextInput = nextLayer?.preForward(linearOutput, isTraining) ?: linearOutput
         this.preActivation = nextInput
-        output = applyElementWise(nextInput, activation::activate)
+        output = backend.backend.applyElementWise(nextInput, activation::activate)
         if (isTraining) applyDropout()
         return output!!
     }
@@ -179,38 +187,47 @@ class DenseLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Matrix {
-        // CHANGED: always apply activation derivative; no BN special-case
-        val currentDelta = elementWiseMultiply(
+        // Use compute backend for element-wise operations
+        val currentDelta = backend.backend.elementWiseMultiply(
             delta,
-            applyElementWise(preActivation!!, activation::derivative)
+            backend.backend.applyElementWise(preActivation!!, activation::derivative)
         )
 
         val previousOutput = previousLayer?.output ?: currentInput!!
 
-        gradientWeights = add(
-            scalarMultiply(matrixMultiply(transpose(previousOutput), currentDelta), 1.0f / featureSize),
-            scalarMultiply(weights, lambda)
+        // Use compute backend for gradient calculations
+        val gradWeights = backend.backend.matrixMultiply(
+            backend.backend.transpose(previousOutput), 
+            currentDelta
         )
-        gradientBiases = sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
+        
+        val scaledGradWeights = backend.backend.scalarMultiply(gradWeights, 1.0f / featureSize)
+        val regularization = backend.backend.scalarMultiply(weights, lambda)
+        
+        gradientWeights = backend.backend.add(scaledGradWeights, regularization)
+        gradientBiases = backend.backend.sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
 
-        return matrixMultiply(currentDelta, transpose(weights))
+        return backend.backend.matrixMultiply(
+            currentDelta, 
+            backend.backend.transpose(weights)
+        )
     }
 
     /**
      * Creates a deep copy of the dense layer, including weights, biases, and optimizer states.
      */
     override fun clone(): DenseLayer {
-        return DenseLayer(inputSize, outputSize, activation, dropoutRate).also { copy ->
-            copy.weights = weights.deepCopy()
+        return DenseLayer(inputSize, outputSize, activation, dropoutRate, backend).also { copy ->
+            copy.weights = backend.backend.deepCopy(weights)
             copy.biases = biases.copyOf()
-            copy.momentWeights = momentWeights.deepCopy()
-            copy.velocityWeights = velocityWeights.deepCopy()
+            copy.momentWeights = backend.backend.deepCopy(momentWeights)
+            copy.velocityWeights = backend.backend.deepCopy(velocityWeights)
             copy.momentBiases = momentBiases.copyOf()
             copy.velocityBiases = velocityBiases.copyOf()
-            copy.preActivation = preActivation?.deepCopy()
-            copy.output = output?.deepCopy()
-            copy.dropoutMask = dropoutMask?.deepCopy()
-            copy.gradientWeights = gradientWeights?.deepCopy()
+            copy.preActivation = preActivation?.let { backend.backend.deepCopy(it) }
+            copy.output = output?.let { backend.backend.deepCopy(it) }
+            copy.dropoutMask = dropoutMask?.let { backend.backend.deepCopy(it) }
+            copy.gradientWeights = gradientWeights?.let { backend.backend.deepCopy(it) }
             copy.gradientBiases = gradientBiases?.copyOf()
         }
     }

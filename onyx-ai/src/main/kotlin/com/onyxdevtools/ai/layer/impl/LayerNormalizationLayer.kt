@@ -39,7 +39,7 @@ import kotlin.math.sqrt
  * @param size The number of features/dimensions to normalize. Must match the last dimension
  *             of input tensors passed to this layer.
  * @see Layer
- * @see MultiHeadAttentionLayer
+ * @see CachedMultiHeadAttentionLayer
  */
 class LayerNormalizationLayer(private val size: Int) : Layer {
 

@@ -4,6 +4,7 @@ import Activation
 import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
+import com.onyxdevtools.ai.compute.*
 import kotlin.math.sqrt
 
 /**
@@ -25,7 +26,12 @@ class CachedMultiHeadAttentionLayer(
     private val tokensPerSample: Int,
     private val modelSize: Int,
     private val headCount: Int,
+    @Transient private var computeContext: ComputeContext? = null
 ) : Layer {
+
+    // Lazy initialization of compute context
+    private val backend: ComputeContext
+        get() = computeContext ?: DefaultComputeContext().also { computeContext = it }
 
     override var output: Matrix? = null
     override var preActivation: Matrix? = null
@@ -139,15 +145,15 @@ class CachedMultiHeadAttentionLayer(
         val batchSize = input.size / tokensPerSample
 
         // Compute Q, K, V matrices
-        queries = matrixMultiply(input, wQuery)
-        keys = matrixMultiply(input, wKey)
-        values = matrixMultiply(input, wValue)
+        queries = backend.backend.matrixMultiply(input, wQuery)
+        keys = backend.backend.matrixMultiply(input, wKey)
+        values = backend.backend.matrixMultiply(input, wValue)
 
         // Compute attention for all heads
         attentionOutput = computeMultiHeadAttention(queries!!, keys!!, values!!, batchSize)
 
         // Final output projection
-        output = matrixMultiply(attentionOutput!!, wOutput)
+        output = backend.backend.matrixMultiply(attentionOutput!!, wOutput)
         return output!!
     }
 
@@ -164,11 +170,11 @@ class CachedMultiHeadAttentionLayer(
         }
 
         // Compute queries for all positions (always needed)
-        queries = matrixMultiply(input, wQuery)
+        queries = backend.backend.matrixMultiply(input, wQuery)
 
         // Compute keys and values only for new positions
-        val newKeys = matrixMultiply(input, wKey)
-        val newValues = matrixMultiply(input, wValue)
+        val newKeys = backend.backend.matrixMultiply(input, wKey)
+        val newValues = backend.backend.matrixMultiply(input, wValue)
 
         // Update cache with new keys and values
         for (i in 0 until inputLength) {
@@ -190,7 +196,7 @@ class CachedMultiHeadAttentionLayer(
         currentCacheLength = totalLength
 
         // Final output projection
-        output = matrixMultiply(attentionOutput!!, wOutput)
+        output = backend.backend.matrixMultiply(attentionOutput!!, wOutput)
         return output!!
     }
 
@@ -352,7 +358,7 @@ class CachedMultiHeadAttentionLayer(
     }
 
 
-    // Backward pass implementation (same as original)
+    // Backward pass implementation (migrated to use compute backend)
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
@@ -363,19 +369,19 @@ class CachedMultiHeadAttentionLayer(
     ): Matrix {
         val input = currentInput!!
 
-        gradWOutput = matrixMultiply(transpose(attentionOutput!!), delta)
-        val gradAttentionOutput = matrixMultiply(delta, transpose(wOutput))
+        gradWOutput = backend.backend.matrixMultiply(backend.backend.transpose(attentionOutput!!), delta)
+        val gradAttentionOutput = backend.backend.matrixMultiply(delta, backend.backend.transpose(wOutput))
 
-        gradWQuery = matrixMultiply(transpose(input), gradAttentionOutput)
-        gradWKey = matrixMultiply(transpose(input), gradAttentionOutput)
-        gradWValue = matrixMultiply(transpose(input), gradAttentionOutput)
+        gradWQuery = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
+        gradWKey = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
+        gradWValue = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
 
+        val gradQ = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wQuery))
+        val gradK = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wKey))
+        val gradV = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wValue))
+
+        // Combine gradients
         val gradInput = Array(input.size) { FloatArray(input[0].size) { 0.0f } }
-
-        val gradQ = matrixMultiply(gradAttentionOutput, transpose(wQuery))
-        val gradK = matrixMultiply(gradAttentionOutput, transpose(wKey))
-        val gradV = matrixMultiply(gradAttentionOutput, transpose(wValue))
-
         for (i in 0 until input.size) {
             for (j in 0 until input[0].size) {
                 gradInput[i][j] = gradQ[i][j] + gradK[i][j] + gradV[i][j]

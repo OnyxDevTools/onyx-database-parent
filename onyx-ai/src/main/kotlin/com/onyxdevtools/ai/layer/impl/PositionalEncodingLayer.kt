@@ -47,7 +47,7 @@ import kotlin.math.sin
  * @param embeddingSize The dimensionality of the input embeddings.
  *                     Must match the embedding dimension of input tokens.
  * @see EmbeddingLayer
- * @see MultiHeadAttentionLayer
+ * @see CachedMultiHeadAttentionLayer
  */
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
