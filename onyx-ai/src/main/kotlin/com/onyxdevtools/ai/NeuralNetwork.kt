@@ -597,5 +597,31 @@ data class NeuralNetwork(
                 throw RuntimeException("Failed to deserialize model from file: $filePath", e)
             }
         }
+
+        /**
+         * Load a model from *path* if the file exists, otherwise create one with the
+         * supplied [creator] lambda.
+         *
+         * @param path    Path to the serialized model file.
+         * @param creator Lambda that builds a brand‑new NeuralNetwork when the file
+         *                is missing (or you want to start from scratch).
+         */
+        fun loadOrCreate(path: String, creator: () -> NeuralNetwork): NeuralNetwork {
+            val f = File(path)
+            return if (f.isFile && f.canRead()) {
+                try {
+                    loadFromFile(path).also {
+                        println("✅ Loaded model from $path")
+                    }
+                } catch (e: Exception) {
+                    // If the file is corrupted we fall back to a fresh model
+                    println("⚠️  Failed to load model from $path (${e.message}) – creating a new one.")
+                    creator()
+                }
+            } else {
+                println("📂 No existing model at $path – creating a new one.")
+                creator()
+            }
+        }
     }
 }
