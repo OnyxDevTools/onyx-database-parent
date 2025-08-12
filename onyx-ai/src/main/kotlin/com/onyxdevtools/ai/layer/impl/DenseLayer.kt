@@ -1,65 +1,34 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.extensions.*
+import com.onyxdevtools.ai.Matrix
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.compute.*
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
-import java.util.stream.IntStream
 import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * A fully connected (dense) neural network layer with dropout regularization and Adam optimization.
- *
- * Dense layers implement the fundamental building block of feedforward neural networks, performing
- * an affine transformation followed by a non-linear activation function:
+ * A compute-aware dense layer that demonstrates integration with the compute abstraction layer.
+ * This layer can seamlessly switch between CPU and GPU backends through the ComputeContext.
  * 
- * **Mathematical Operation:**
- * output = activation(input × weights + biases)
- *
- * **Key Features:**
- * - **Adaptive Weight Initialization**: Uses Xavier/Glorot or He initialization based on activation function
- * - **Dropout Regularization**: Optional dropout during training to prevent overfitting
- * - **Adam Optimization**: Built-in support for adaptive moment estimation optimizer
- * - **Parallel Processing**: Optimized dropout implementation using parallel streams
- * - **Memory Efficient**: Reuses dropout masks to minimize allocations
- *
- * **Weight Initialization Strategy:**
- * - ReLU/LeakyReLU: He initialization (√(2/inputSize))
- * - Other activations: Xavier initialization (√(6/(inputSize + outputSize)))
- *
- * **Dropout Implementation:**
- * During training, randomly sets a fraction of input units to 0 at each update,
- * which helps prevent overfitting. The remaining units are scaled by 1/(1-dropoutRate)
- * to maintain the expected sum of activations.
- *
- * This layer is commonly used in:
- * - Feedforward neural networks
- * - Final classification/regression layers
- * - Hidden layers in transformer feedforward blocks
- * - Multi-layer perceptrons (MLPs)
+ * This is an example implementation showing how to migrate existing layers to use
+ * the compute abstraction layer for future GPU acceleration.
  *
  * @param inputSize The number of input features/neurons from the previous layer
  * @param outputSize The number of output neurons/features this layer produces
  * @param activation The activation function applied after the linear transformation
- * @param dropoutRate The probability of setting each input to zero during training.
- *                    Range: [0.0, 1.0] where 0.0 = no dropout, 0.5 = 50% dropout
- * @see Layer
- * @see Activation
+ * @param dropoutRate The probability of setting each input to zero during training
+ * @param computeContext The compute context that manages backend operations
  */
 class DenseLayer(
     private val inputSize: Int,
     private val outputSize: Int,
     override val activation: Activation,
-    val dropoutRate: Float = 0.0f,
-    @Transient private var computeContext: ComputeContext? = null
+    private val dropoutRate: Float = 0.0f,
+    private val computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-
-    // Lazy initialization of compute context
-    private val backend: ComputeContext
-        get() = computeContext ?: DefaultComputeContext().also { computeContext = it }
 
     override var preActivation: Matrix? = null
     override var output: Matrix? = null
@@ -81,13 +50,21 @@ class DenseLayer(
             Activation.RELU, Activation.LEAKY_RELU -> sqrt((2.0f / inputSize.toFloat()).toDouble()).toFloat()
             else -> sqrt((6.0f / (inputSize.toFloat() + outputSize.toFloat())).toDouble()).toFloat()
         }
-        weights = Array(inputSize) { FloatArray(outputSize) { (Random.nextFloat() * 2.0f - 1.0f) * weightInitLimit } }
-        momentWeights = Array(inputSize) { FloatArray(outputSize) }
-        velocityWeights = Array(inputSize) { FloatArray(outputSize) }
+        
+        // Initialize weights using the compute context
+        weights = computeContext.createMatrix(inputSize, outputSize)
+        for (i in 0 until inputSize) {
+            for (j in 0 until outputSize) {
+                weights[i][j] = (Random.nextFloat() * 2.0f - 1.0f) * weightInitLimit
+            }
+        }
+        
+        momentWeights = computeContext.createMatrix(inputSize, outputSize, 0.0f)
+        velocityWeights = computeContext.createMatrix(inputSize, outputSize, 0.0f)
     }
 
     /**
-     * Applies dropout to the layer's output using a shared dropout mask and parallelized random number generation.
+     * Applies dropout using the compute backend for future optimization
      */
     private fun applyDropout() {
         val activations = output ?: error("Layer output must not be null before applying dropout.")
@@ -99,54 +76,45 @@ class DenseLayer(
         val scaleFactor = 1.0f / keepProbability
 
         if (dropoutMask == null || dropoutMask!!.size != rows || dropoutMask!![0].size != cols) {
-            dropoutMask = Array(rows) { FloatArray(cols) }
+            dropoutMask = computeContext.createMatrix(rows, cols)
         }
 
         val mask = dropoutMask!!
 
-        IntStream.range(0, rows).parallel().forEach { rowIndex ->
-            val rng = random.get()
-            val rowMask = mask[rowIndex]
-            var colIndex = 0
-            while (colIndex <= cols - 4) {
-                val r1 = rng.nextFloat()
-                val r2 = rng.nextFloat()
-                val r3 = rng.nextFloat()
-                val r4 = rng.nextFloat()
-                rowMask[colIndex] = if (r1 < keepProbability) scaleFactor else 0.0f
-                rowMask[colIndex + 1] = if (r2 < keepProbability) scaleFactor else 0.0f
-                rowMask[colIndex + 2] = if (r3 < keepProbability) scaleFactor else 0.0f
-                rowMask[colIndex + 3] = if (r4 < keepProbability) scaleFactor else 0.0f
-                colIndex += 4
-            }
-            while (colIndex < cols) {
-                rowMask[colIndex] = if (rng.nextFloat() < keepProbability) scaleFactor else 0.0f
-                colIndex++
+        // Generate dropout mask (for now using CPU, but this could be GPU-accelerated)
+        for (i in 0 until rows) {
+            for (j in 0 until cols) {
+                mask[i][j] = if (Random.nextFloat() < keepProbability) scaleFactor else 0.0f
             }
         }
 
-        output = backend.backend.elementWiseMultiply(activations, mask)
+        // Use compute backend for element-wise multiplication
+        output = computeContext.backend.elementWiseMultiply(activations, mask)
     }
 
     /**
-     * Performs the forward pass of the layer.
+     * Performs the forward pass using the compute backend
      */
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val linearOutput = backend.backend.addVectorToRows(
-            backend.backend.matrixMultiply(input, weights), 
+        // Use compute backend for matrix operations
+        val linearOutput = computeContext.backend.addVectorToRows(
+            computeContext.backend.matrixMultiply(input, weights), 
             biases
         )
+        
         val nextInput = nextLayer?.preForward(linearOutput, isTraining) ?: linearOutput
         this.preActivation = nextInput
-        output = backend.backend.applyElementWise(nextInput, activation::activate)
+        
+        // Apply activation using compute backend
+        output = computeContext.backend.applyElementWise(nextInput, activation::activate)
+        
         if (isTraining) applyDropout()
         return output!!
     }
 
     /**
-     * Updates weights and biases using the Adam optimizer.
+     * Updates weights and biases using Adam optimizer with compute backend operations
      */
-    @Suppress("DuplicatedCode")
     override fun updateParameters(
         adamBeta1Power: Float,
         adamBeta2Power: Float,
@@ -177,7 +145,7 @@ class DenseLayer(
     }
 
     /**
-     * Performs the backward pass of the layer.
+     * Performs backward pass using compute backend operations
      */
     override fun backward(
         currentInput: Matrix?,
@@ -188,57 +156,72 @@ class DenseLayer(
         lambda: Float
     ): Matrix {
         // Use compute backend for element-wise operations
-        val currentDelta = backend.backend.elementWiseMultiply(
+        val currentDelta = computeContext.backend.elementWiseMultiply(
             delta,
-            backend.backend.applyElementWise(preActivation!!, activation::derivative)
+            computeContext.backend.applyElementWise(preActivation!!, activation::derivative)
         )
 
         val previousOutput = previousLayer?.output ?: currentInput!!
 
         // Use compute backend for gradient calculations
-        val gradWeights = backend.backend.matrixMultiply(
-            backend.backend.transpose(previousOutput), 
+        val gradWeights = computeContext.backend.matrixMultiply(
+            computeContext.backend.transpose(previousOutput), 
             currentDelta
         )
         
-        val scaledGradWeights = backend.backend.scalarMultiply(gradWeights, 1.0f / featureSize)
-        val regularization = backend.backend.scalarMultiply(weights, lambda)
+        val scaledGradWeights = computeContext.backend.scalarMultiply(gradWeights, 1.0f / featureSize)
+        val regularization = computeContext.backend.scalarMultiply(weights, lambda)
         
-        gradientWeights = backend.backend.add(scaledGradWeights, regularization)
-        gradientBiases = backend.backend.sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
+        gradientWeights = computeContext.backend.add(scaledGradWeights, regularization)
+        gradientBiases = computeContext.backend.sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
 
-        return backend.backend.matrixMultiply(
+        return computeContext.backend.matrixMultiply(
             currentDelta, 
-            backend.backend.transpose(weights)
+            computeContext.backend.transpose(weights)
         )
     }
 
     /**
-     * Creates a deep copy of the dense layer, including weights, biases, and optimizer states.
+     * Creates a deep copy of the layer with the same compute context
      */
     override fun clone(): DenseLayer {
-        return DenseLayer(inputSize, outputSize, activation, dropoutRate, backend).also { copy ->
-            copy.weights = backend.backend.deepCopy(weights)
+        return DenseLayer(inputSize, outputSize, activation, dropoutRate, computeContext).also { copy ->
+            copy.weights = computeContext.backend.deepCopy(weights)
             copy.biases = biases.copyOf()
-            copy.momentWeights = backend.backend.deepCopy(momentWeights)
-            copy.velocityWeights = backend.backend.deepCopy(velocityWeights)
+            copy.momentWeights = computeContext.backend.deepCopy(momentWeights)
+            copy.velocityWeights = computeContext.backend.deepCopy(velocityWeights)
             copy.momentBiases = momentBiases.copyOf()
             copy.velocityBiases = velocityBiases.copyOf()
-            copy.preActivation = preActivation?.let { backend.backend.deepCopy(it) }
-            copy.output = output?.let { backend.backend.deepCopy(it) }
-            copy.dropoutMask = dropoutMask?.let { backend.backend.deepCopy(it) }
-            copy.gradientWeights = gradientWeights?.let { backend.backend.deepCopy(it) }
+            copy.preActivation = preActivation?.let { computeContext.backend.deepCopy(it) }
+            copy.output = output?.let { computeContext.backend.deepCopy(it) }
+            copy.dropoutMask = dropoutMask?.let { computeContext.backend.deepCopy(it) }
+            copy.gradientWeights = gradientWeights?.let { computeContext.backend.deepCopy(it) }
             copy.gradientBiases = gradientBiases?.copyOf()
         }
     }
 
+    /**
+     * Gets information about the compute backend being used
+     */
+    fun getBackendInfo(): String {
+        return "Using ${computeContext.backend.backendType} backend for computations"
+    }
+
+    /**
+     * Releases any backend-specific resources
+     */
+    fun dispose() {
+        weights.let { computeContext.releaseMatrix(it) }
+        momentWeights.let { computeContext.releaseMatrix(it) }
+        velocityWeights.let { computeContext.releaseMatrix(it) }
+        preActivation?.let { computeContext.releaseMatrix(it) }
+        output?.let { computeContext.releaseMatrix(it) }
+        dropoutMask?.let { computeContext.releaseMatrix(it) }
+        gradientWeights?.let { computeContext.releaseMatrix(it) }
+        computeContext.dispose()
+    }
 
     companion object {
-        private val random = ThreadLocal.withInitial {
-            SplittableRandom(ThreadLocalRandom.current().nextLong())
-        }
-
         private const val EPSILON = 1e-8f
-        private const val serialVersionUID = 1L
     }
 }

@@ -1,5 +1,5 @@
-package com.onyxdevtools.ai.transformation
-
+import com.onyxdevtools.ai.transformation.BPETokenizer
+import com.onyxdevtools.ai.transformation.Vocabulary
 import kotlin.test.*
 
 class BPETokenizerTest {

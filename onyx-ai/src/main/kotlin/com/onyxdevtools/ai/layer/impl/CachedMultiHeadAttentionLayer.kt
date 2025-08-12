@@ -2,6 +2,7 @@ package com.onyxdevtools.ai.layer.impl
 
 import Activation
 import com.onyxdevtools.ai.Constants.EPSILON
+import com.onyxdevtools.ai.Matrix
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.compute.*

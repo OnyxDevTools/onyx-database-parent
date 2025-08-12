@@ -1,13 +1,11 @@
 package com.onyxdevtools.ai.extensions
 
+import com.onyxdevtools.ai.Matrix
 import jdk.incubator.vector.FloatVector
 import jdk.incubator.vector.VectorOperators
 import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
 import kotlin.math.*
-
-// Matrix typealias
-typealias Matrix = Array<FloatArray>
 
 // Vector API Specifications
 private val FLOAT_SPEC: VectorSpecies<Float> = FloatVector.SPECIES_PREFERRED

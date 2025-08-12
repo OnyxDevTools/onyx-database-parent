@@ -2,6 +2,7 @@
 
 package com.onyxdevtools.ai
 
+import com.onyxdevtools.ai.Matrix
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
@@ -11,7 +12,6 @@ import java.io.*
 import kotlin.apply
 import kotlin.math.min
 
-typealias Matrix = Array<FloatArray>
 
 /**
  * Represents a multi-layer neural network using backpropagation and the Adam optimizer.

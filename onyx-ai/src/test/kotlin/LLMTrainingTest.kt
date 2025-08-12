@@ -12,6 +12,7 @@ import com.onyxdevtools.ai.transformation.Vocabulary
 import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.test.Test
 import java.io.File
+import kotlin.test.Ignore
 import kotlin.test.assertTrue
 
 class LLMTrainingTest {
@@ -49,10 +50,10 @@ class LLMTrainingTest {
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
             CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
             LayerNormalizationLayer(embeddingDim),
-            ComputeAwareDenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            ComputeAwareDenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
+            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
+            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
             LayerNormalizationLayer(embeddingDim),
-            ComputeAwareDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
+            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR) // ← Optimized output layer!
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.0001f)
@@ -172,10 +173,10 @@ class LLMTrainingTest {
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
             CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
             LayerNormalizationLayer(embeddingDim),
-            ComputeAwareDenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-            ComputeAwareDenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
+            DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
+            DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
             LayerNormalizationLayer(embeddingDim),
-            ComputeAwareDenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
+            DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
         )
 
         var model = NeuralNetwork(layers, learningRate = 0.001f)
