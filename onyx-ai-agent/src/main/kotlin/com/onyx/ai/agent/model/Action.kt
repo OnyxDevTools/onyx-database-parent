@@ -10,6 +10,6 @@ enum class Action {
     @SerialName("delete_file") DELETE_FILE,
     @SerialName("read_file")   READ_FILE,
     @SerialName("run_command") RUN_COMMAND,
-    @SerialName("complete")    COMPLETE,
-    @SerialName("none")    NONE
+    @SerialName("none")    NONE,
+    @SerialName("complete")    COMPLETE
 }

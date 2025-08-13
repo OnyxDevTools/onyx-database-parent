@@ -103,20 +103,30 @@ class CodingAgent(
             Action.CREATE_FILE -> {
                 requireNotNull(task.path) { "CREATE_FILE needs a path" }
                 requireNotNull(task.content) { "CREATE_FILE needs content" }
-                ProjectIO.write(task.path, task.content)
-                val result = "📄 Created ${task.path}"
+                ProjectIO.write(task.path, task.content, task.line_start, task.line_end)
+                val lineInfo = if (task.line_start != null || task.line_end != null) {
+                    " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
+                } else ""
+                val result = "📄 Created ${task.path}$lineInfo"
                 println(result)
                 result
             }
 
             Action.EDIT_FILE -> {
                 requireNotNull(task.path) { "EDIT_FILE needs a path" }
-                val old = ProjectIO.read(task.path)
+                val old = if (task.line_start != null || task.line_end != null) {
+                    ProjectIO.read(task.path, task.line_start, task.line_end)
+                } else {
+                    ProjectIO.read(task.path)
+                }
                 val new = task.content
                     ?: throw IllegalArgumentException("EDIT_FILE needs content")
-                ProjectIO.write(task.path, new)
+                ProjectIO.write(task.path, new, task.line_start, task.line_end)
                 val diff = ProjectIO.diff(old, new)
-                val result = "✏️  Edited ${task.path}\n$diff"
+                val lineInfo = if (task.line_start != null || task.line_end != null) {
+                    " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
+                } else ""
+                val result = "✏️  Edited ${task.path}$lineInfo\n$diff"
                 println(result)
                 result
             }
@@ -131,9 +141,12 @@ class CodingAgent(
 
             Action.READ_FILE -> {
                 requireNotNull(task.path) { "READ_FILE needs a path" }
-                val content = ProjectIO.read(task.path)
-                val result = "📖 Read ${task.path}:\n$content"
-                println("📖 Read ${task.path} (${content.length} characters)")
+                val content = ProjectIO.read(task.path, task.line_start, task.line_end)
+                val lineInfo = if (task.line_start != null || task.line_end != null) {
+                    " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
+                } else ""
+                val result = "📖 Read ${task.path}$lineInfo:\n$content"
+                println("📖 Read ${task.path}$lineInfo (${content.length} characters)")
                 result
             }
 
@@ -159,7 +172,7 @@ class CodingAgent(
                 result
             }
             Action.NONE -> {
-                val result = "What is your next action?  Run unit tests, write tests, or write code? etc...."
+                val result = "You did not respond with any functions to execute.  What is your next action?  Run unit tests, write tests, or write code? etc...."
                 result
             }
         }

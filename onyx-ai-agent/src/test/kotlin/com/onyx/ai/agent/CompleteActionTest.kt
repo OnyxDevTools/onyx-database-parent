@@ -31,8 +31,8 @@ class CompleteActionTest {
         // Then it should contain COMPLETE
         assertTrue(actions.contains(Action.COMPLETE))
         
-        // And it should be the last action (sixth action after the original five)
-        assertEquals(6, actions.size)
+        // And it should be the last action (seventh action after the original six)
+        assertEquals(7, actions.size)
         assertEquals(Action.COMPLETE, actions.last())
     }
     
