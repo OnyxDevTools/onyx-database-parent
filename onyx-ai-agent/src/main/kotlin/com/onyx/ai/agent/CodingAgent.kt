@@ -152,10 +152,17 @@ class CodingAgent(
             Action.RUN_COMMAND -> {
                 requireNotNull(task.instruction) { "RUN_COMMAND needs an instruction" }
                 println("🚀 Running: ${task.instruction}")
-                val proc = ProcessBuilder(*task.instruction.split("\\s+".toRegex()).toTypedArray())
+                
+                // Execute command through shell to handle complex syntax properly
+                val proc = if (System.getProperty("os.name").lowercase().contains("windows")) {
+                    ProcessBuilder("cmd", "/c", task.instruction)
+                } else {
+                    ProcessBuilder("/bin/sh", "-c", task.instruction)
+                }
                     .directory(ProjectIO.root.toFile())
                     .redirectErrorStream(true)
                     .start()
+                    
                 val output = proc.inputStream.bufferedReader().readText()
                 val exitCode = proc.waitFor()
                 val result = "📤 Command: ${task.instruction}\nExit Code: $exitCode\nOutput:\n$output"
