@@ -63,17 +63,65 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
             return super.matrixMultiply(a, b)
         }
         
-        val m = a.size.toLong()
-        val k = a[0].size.toLong()
-        val n = b[0].size.toLong()
-
-        val work = m * k * n
-        if (work <= SIMPLE_WORK_MAX) {
-            return matrixMultiplyBasic(a, b)
-        } else {
-            // For larger matrices, always use the parallel JVM implementation
-            // This implicitly leverages vectorization via the Java Vector API when available
-            return matrixMultiplySkinnyVectorized(a, b)
+        val m = a.size
+        val k = a[0].size  
+        val n = b[0].size
+        val work = m.toLong() * k.toLong() * n.toLong()
+        
+        // Intelligent method selection based on matrix characteristics
+        return selectOptimalMethod(a, b, work)
+    }
+    
+    /**
+     * Select the optimal matrix multiplication method based on matrix characteristics
+     * and benchmark results
+     */
+    private fun selectOptimalMethod(a: Matrix, b: Matrix, totalOps: Long): Matrix {
+        val m = a.size
+        val k = a[0].size
+        val n = b[0].size
+        val maxDim = maxOf(m, k, n)
+        val minDim = minOf(m, k, n)
+        
+        // Calculate aspect ratio to detect skinny matrices
+        val aspectRatio = maxDim.toDouble() / minDim.toDouble()
+        val isSkinny = aspectRatio >= 4.0
+        
+        return when {
+            // Very small matrices - basic method has less overhead
+            totalOps <= 64_000L -> matrixMultiplyBasic(a, b)
+            
+            // Small matrices - vectorized sequential often fastest due to lower overhead
+            totalOps <= SIMPLE_WORK_MAX -> {
+                if (isSkinny) {
+                    matrixMultiplySkinnyVectorized(a, b)
+                } else {
+                    matrixMultiplyBasic(a, b)
+                }
+            }
+            
+            // Medium matrices - consider parallelization 
+            totalOps <= 100_000_000L -> {
+                if (isSkinny && n >= PARALLEL_COLS_MIN) {
+                    // Skinny matrices with wide result benefit from vectorized parallel
+                    matrixMultiplySkinnyVectorizedParallel(a, b)
+                } else if (m >= PARALLEL_ROWS_MIN && n >= PARALLEL_COLS_MIN) {
+                    // Square-ish matrices benefit from blocked parallel
+                    matrixMultiplyParallelJVM(a, b)
+                } else {
+                    // Too small for effective parallelization
+                    matrixMultiplySkinnyVectorized(a, b)
+                }
+            }
+            
+            // Large matrices - parallelization almost always beneficial
+            else -> {
+                if (isSkinny) {
+                    matrixMultiplySkinnyVectorizedParallel(a, b)
+                } else {
+                    matrixMultiplyParallelJVM(a, b)
+                }
+            }
         }
     }
     
