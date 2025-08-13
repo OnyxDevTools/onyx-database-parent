@@ -53,27 +53,22 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
         require(a[0].size == b.size) { 
             "Matrix dimensions don't match for multiplication: ${a.size}x${a[0].size} * ${b.size}x${b[0].size}" 
         }
-        
+
+        val m = a.size.toLong()
+
         // If Vector API is not available, fall back to basic implementation
         if (FLOAT_SPEC == null) {
-            return super.matrixMultiply(a, b)
-        }
-        
-        val m = a.size.toLong()
-        val k = a[0].size.toLong()
-        val n = b[0].size.toLong()
-
-        val work = m * k * n
-        return if (work <= SIMPLE_WORK_MAX) {
-            matrixMultiplyBasic(a, b)
-        } else {
-            if (isVectorAPIAvailable) {
-                matrixMultiplySkinnyVectorizedParallel(a,b)
+            return if (m <= 15) {
+                matrixMultiplyBasic(a, b)
             } else {
-                // For larger matrices, always use the parallel JVM implementation
-                // This implicitly leverages vectorization via the Java Vector API when available
-                matrixMultiplySkinnyVectorizedParallel(a, b)
+                matrixMultiplyParallelJVM(a, b)
             }
+        }
+
+        return if (isVectorAPIAvailable) {
+            matrixMultiplySkinnyVectorizedParallel(a,b)
+        } else {
+            matrixMultiplyParallelJVM(a, b)
         }
     }
 
