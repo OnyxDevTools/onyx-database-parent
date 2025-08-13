@@ -17,10 +17,12 @@ fun main() {
 
     // First request – the model will return JSON describing tasks:
     val first = """
+        only change what you need to change.  please be surgical
+        
         only focus in onyx-ai-agent module
         Increase the read timeout call to ollama to 15 minutes and make sure the unit tests pass.
         
-        You may complete your task only if the unit tests pass.
+        You may complete your task only if the unit tests pass.  If it broke, fix it!
        "./gradlew onyx-ai-agent:test"
     """.trimIndent()
 
