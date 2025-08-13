@@ -51,63 +51,55 @@ class ProjectContextTest {
     }
     
     @Test
-    fun `test agent readme ingestion`() {
-        // Create an Agent.md file
-        val agentMd = """
-            # Test Project
-            This is a test project for the AI agent.
-            
-            ## Guidelines
-            - Use Kotlin for all code
-            - Follow testing best practices
+    fun `test gitignore pattern loading`() {
+        // Create a .gitignore file
+        val gitignoreContent = """
+            *.class
+            target/
+            build/
+            *.log
         """.trimIndent()
         
-        tempDir.resolve("Agent.md").toFile().writeText(agentMd)
+        tempDir.resolve(".gitignore").toFile().writeText(gitignoreContent)
         
         // Use reflection to access private method for testing
-        val method = agent::class.java.getDeclaredMethod("getAgentReadme")
+        val method = agent::class.java.getDeclaredMethod("loadGitignorePatterns")
         method.isAccessible = true
-        val readme = method.invoke(agent) as String
+        @Suppress("UNCHECKED_CAST")
+        val patterns = method.invoke(agent) as List<String>
         
-        // Verify that the readme content is read correctly
-        assertContains(readme, "Test Project")
-        assertContains(readme, "Use Kotlin for all code")
+        // Verify that gitignore patterns are loaded correctly
+        assertTrue(patterns.contains("*.class"))
+        assertTrue(patterns.contains("target/"))
+        assertTrue(patterns.contains("build/"))
     }
     
     @Test
-    fun `test prompt enrichment with project context`() {
-        // Create test project structure
+    fun `test file filtering with gitignore`() {
+        // Create test files and structure
         tempDir.resolve("src/main/kotlin").toFile().mkdirs()
-        tempDir.resolve("build.gradle.kts").toFile().writeText("plugins { kotlin(\"jvm\") }")
-        tempDir.resolve("src/main/kotlin/Calculator.kt").toFile().writeText("class Calculator")
+        tempDir.resolve("build").toFile().mkdirs()
+        tempDir.resolve("target").toFile().mkdirs()
         
-        val agentMd = """
-            # Calculator Project
-            Build a calculator with basic operations.
-        """.trimIndent()
-        tempDir.resolve("Agent.md").toFile().writeText(agentMd)
+        val testFile = tempDir.resolve("src/main/kotlin/Test.kt")
+        testFile.toFile().writeText("class Test")
         
-        val originalPrompt = "Add a multiply function to the calculator"
+        val buildFile = tempDir.resolve("build/classes/Test.class")
+        buildFile.parent.toFile().mkdirs()
+        buildFile.toFile().writeText("compiled")
         
-        // Use reflection to access private method
-        val method = agent::class.java.getDeclaredMethod("enrichPromptWithProjectContext", String::class.java)
+        val targetFile = tempDir.resolve("target/test.jar")
+        targetFile.toFile().writeText("jar")
+        
+        // Use reflection to test file filtering
+        val method = agent::class.java.getDeclaredMethod("getProjectFileList")
         method.isAccessible = true
-        val enrichedPrompt = method.invoke(agent, originalPrompt) as String
+        @Suppress("UNCHECKED_CAST")
+        val fileList = method.invoke(agent) as List<String>
         
-        // Verify the prompt contains original request
-        assertContains(enrichedPrompt, originalPrompt)
-        
-        // Verify the prompt contains project context
-        assertContains(enrichedPrompt, "PROJECT CONTEXT:")
-        assertContains(enrichedPrompt, "Project Structure:")
-        assertContains(enrichedPrompt, "build.gradle.kts")
-        assertContains(enrichedPrompt, "Calculator.kt")
-        
-        // Verify the prompt contains Agent.md content
-        assertContains(enrichedPrompt, "Agent Documentation:")
-        assertContains(enrichedPrompt, "Calculator Project")
-        
-        // Verify working directory is included
-        assertContains(enrichedPrompt, "Working Directory:")
+        // Verify that source files are included but build artifacts are excluded
+        assertTrue(fileList.contains("src/main/kotlin/Test.kt"))
+        assertTrue(!fileList.any { it.contains("build/") })
+        assertTrue(!fileList.any { it.contains("target/") })
     }
 }

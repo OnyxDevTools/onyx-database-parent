@@ -50,8 +50,18 @@ class CodingAgent(
                 break
             }
 
-            // 3️⃣  Echo the JSON back to the history (so the model sees its own output)
-            history.assistant(taskResponse.toString())
+            // 3️⃣  Store the assistant's response with thinking and content preserved
+            val assistantResponse = buildString {
+                if (taskResponse.content.isNotEmpty()) {
+                    appendLine("RESPONSE: ${taskResponse.content}")
+                    appendLine()
+                }
+                appendLine("PLANNED ACTIONS:")
+                taskResponse.tasks.forEachIndexed { index, task ->
+                    appendLine("${index + 1}. ${task.action}: ${task.instruction ?: task.path ?: task.content}")
+                }
+            }
+            history.assistant(assistantResponse, taskResponse.thinking.takeIf { it.isNotEmpty() })
 
             // 4️⃣  Safety: ask the human before any file‑system change (unless auto-approve)
             if (!autoApprove && taskResponse.tasks.any { it.action != Action.RUN_COMMAND && it.action != Action.COMPLETE }) {
@@ -154,41 +164,12 @@ class CodingAgent(
     private fun isComplete(): Boolean = isComplete.get()
 
     private fun buildFeedbackPrompt(taskResults: List<String>): String {
-        val combinedResults = taskResults.joinToString("\n").lowercase()
-        val hasSuccess = combinedResults.contains("build successful") ||
-                        combinedResults.contains("tests passed") ||
-                        combinedResults.contains("all tests passed")
-
         return buildString {
-            appendLine("TASK EXECUTION RESULTS:")
-            appendLine("=" .repeat(50))
             taskResults.forEachIndexed { index, result ->
-                appendLine("Task ${index + 1} result:")
                 appendLine(result)
-                appendLine("---")
             }
             appendLine()
-
-            if (hasSuccess) {
-                appendLine("🎉 SUCCESS DETECTED! The task appears to have completed successfully.")
-                appendLine("You should now use the 'complete' function to signal completion.")
-                appendLine()
-                appendLine("CRITICAL: Use the 'complete' function call NOW with this format:")
-                appendLine("{\"function_name\": \"complete\", \"content\": \"Your completion summary here\"}")
-                appendLine()
-                appendLine("DO NOT continue with more tasks - signal completion instead!")
-            } else {
-                appendLine("Continue working on the task. When finished, use 'complete' function to signal completion.")
-            }
-
-            appendLine()
-            appendLine("AVAILABLE FUNCTIONS:")
-            appendLine("- complete: Signal task completion (USE THIS WHEN DONE!)")
-            appendLine("- run_command: Execute shell commands")
-            appendLine("- read_file: Read files")
-            appendLine("- create_file: Create files")
-            appendLine("- edit_file: Edit files")
-            appendLine("- delete_file: Delete files")
+            appendLine("Continue working on the task. When finished, use 'complete' function to signal completion.")
         }
     }
 

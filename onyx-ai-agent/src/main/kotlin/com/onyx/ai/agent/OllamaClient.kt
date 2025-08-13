@@ -34,9 +34,9 @@ class OllamaClient(
             json(Json { ignoreUnknownKeys = true })
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 300_000
+            requestTimeoutMillis = 100_000
             connectTimeoutMillis = 5_000
-            socketTimeoutMillis = 300_000
+            socketTimeoutMillis = 100_000
         }
     }
 
@@ -52,7 +52,7 @@ class OllamaClient(
         - create_file: Create new files with any content
         - edit_file: Modify existing files completely (full file replacement)
         - delete_file: Remove files when needed
-        - complete: Signal that the task has been completed successfully
+        - complete: Signal that the task has been completed successfully.  If files needed to be changed they have been already done and it compiles and unit tests have run successfully.
         
         CRITICAL COMPLETION RULES:
         1. When tests pass or builds succeed, USE THE 'complete' FUNCTION IMMEDIATELY
@@ -205,9 +205,7 @@ class OllamaClient(
 
     /** Overloaded version that accepts chat history */
     suspend fun askForTasks(messages: List<ChatHistory.Msg>): TaskResponse = withContext(Dispatchers.IO) {
-        val lastUserMessage = messages.lastOrNull { it.role == "user" }?.content
-            ?: "Continue with the previous task"
-        askForTasksInternal(lastUserMessage, messages)
+        askForTasksInternal("", messages)
     }
 
     private suspend fun askForTasksInternal(userPrompt: String, previousMessages: List<ChatHistory.Msg>? = null): TaskResponse {
@@ -219,18 +217,19 @@ class OllamaClient(
                 put("content", systemPrompt)
             })
 
-            // Add previous messages if provided
+            // Add previous messages if provided - these already contain the full conversation context
             previousMessages?.forEach { msg ->
                 if (msg.role != "system") { // Don't duplicate system messages
                     add(buildJsonObject {
                         put("role", msg.role)
                         put("content", msg.content)
+                        msg.thinking?.let { put("thinking", it) }
                     })
                 }
             }
 
-            // Current user message
-            if (userPrompt.isNotEmpty()) {
+            // Only add userPrompt if we don't have previous messages (first iteration)
+            if (previousMessages == null && userPrompt.isNotEmpty()) {
                 add(buildJsonObject {
                     put("role", "user")
                     put("content", userPrompt)

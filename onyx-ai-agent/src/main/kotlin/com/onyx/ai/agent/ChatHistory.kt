@@ -25,30 +25,41 @@ class ChatHistory(
     private val client: OllamaClient
 ) {
     @kotlinx.serialization.Serializable
-    data class Msg(val role: String, val content: String)
+    data class Msg(val role: String, val content: String, val thinking: String? = null)
 
     private val messages = mutableListOf<Msg>()
     private var tokenCount = 0
 
     /** Public helpers ---------------------------------------------------- */
     fun user(text: String)      = add(Msg("user", text))
-    fun assistant(text: String) = add(Msg("assistant", text))
+    fun assistant(text: String, thinking: String? = null) = add(Msg("assistant", text, thinking))
     fun system(text: String)    = add(Msg("system", text))
 
     /** Append a message and update the token counter. */
     private fun add(msg: Msg) {
         messages += msg
         tokenCount += approxTokenCount(msg.content)
+        msg.thinking?.let { tokenCount += approxTokenCount(it) }
     }
 
     /** Payload that the `/api/chat` endpoint expects (plain‑text chat). */
-    private fun payload(): String = Json.encodeToString(
-        mapOf(
-            "model"    to model,
-            "messages" to messages,
-            "stream"   to false
+    private fun payload(): String {
+        val messagesJson = messages.map { msg ->
+            buildJsonObject {
+                put("role", msg.role)
+                put("content", msg.content)
+                msg.thinking?.let { put("thinking", it) }
+            }
+        }
+        
+        return Json.encodeToString(
+            buildJsonObject {
+                put("model", model)
+                put("messages", JsonArray(messagesJson))
+                put("stream", false)
+            }
         )
-    )
+    }
     
     /** Get the current messages for external use */
     fun getMessages(): List<Msg> = messages.toList()
