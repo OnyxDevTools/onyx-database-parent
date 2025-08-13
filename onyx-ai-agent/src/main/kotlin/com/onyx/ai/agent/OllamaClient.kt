@@ -48,6 +48,11 @@ class OllamaClient(
         
         You have access to these tools for interacting with the project:
         - run_command: Execute shell commands to gather information, build projects, run tests, etc.
+        - read_file: Read and examine existing files to understand code structure
+        - create_file: Create new files with any content
+        - edit_file: Modify existing files completely (full file replacement)
+        - delete_file: Remove files when needed
+        - complete: Signal that the task has been completed successfully.  If files needed to be changed they have been already done and it compiles and unit tests have run successfully.
 
         CRITICAL COMPLETION RULES:
         1. When tests pass and the builds succeed and you have met all the criteria for the original request, USE THE 'complete' FUNCTION IMMEDIATELY
@@ -55,6 +60,12 @@ class OllamaClient(
         
         Always think step by step and use information-gathering commands before making changes.
         But once successful, STOP and use 'complete' function.
+        
+        You must respond with a tool_calls array containing the tool calls you wish to make.
+        Each tool call must contain a 'function' object with the name of the function to call and the arguments.
+        The arguments must be a JSON object.  If that is empty, the user will just ask you for the next command.  
+        If you intend to complete you must pass the complete function in the tool_calls array.
+        
     """.trimIndent()
 
     /** -------------------------------------------------------------
@@ -269,7 +280,7 @@ class OllamaClient(
         if (toolCalls.isNullOrEmpty()) {
             // No tool calls and no JSON tasks, create a simple response
             return TaskResponse(listOf(
-                Task(action = Action.NONE, instruction = "echo 'Processing request: $userPrompt'")
+                Task(action = Action.NONE)
             ), content = content, thinking = thinking)
         }
 

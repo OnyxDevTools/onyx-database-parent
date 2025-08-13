@@ -18,6 +18,11 @@ object ProjectIO {
         if (lineStart == null && lineEnd == null) {
             return read(relPath)
         }
+
+        val file = root.resolve(relPath)
+        if (!Files.exists(file) || !Files.isRegularFile(file)) {
+            return "File is not found or is not a regular file: $relPath"
+        }
         
         val allLines = root.resolve(relPath).readText().lines()
         val start = (lineStart ?: 1) - 1  // Convert to 0-based

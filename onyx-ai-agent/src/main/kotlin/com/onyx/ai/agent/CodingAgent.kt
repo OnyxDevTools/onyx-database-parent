@@ -172,8 +172,7 @@ class CodingAgent(
                 result
             }
             Action.NONE -> {
-                val result = "You did not respond with any functions to execute.  What is your next action?  Run unit tests, write tests, or write code? etc...."
-                result
+                "You did not respond with any functions to execute.  What is your next action?  Run unit tests, write tests, or write code? etc...."
             }
         }
     }
