@@ -9,5 +9,6 @@ enum class Action {
     @SerialName("edit_file")   EDIT_FILE,
     @SerialName("delete_file") DELETE_FILE,
     @SerialName("read_file")   READ_FILE,
-    @SerialName("run_command") RUN_COMMAND
+    @SerialName("run_command") RUN_COMMAND,
+    @SerialName("complete")    COMPLETE
 }

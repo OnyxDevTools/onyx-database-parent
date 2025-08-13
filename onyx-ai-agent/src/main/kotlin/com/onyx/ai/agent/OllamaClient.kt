@@ -46,9 +46,13 @@ class OllamaClient(
         - create_file: Create new files with any content
         - edit_file: Modify existing files completely (full file replacement)
         - delete_file: Remove files when needed
+        - complete: Signal that the task has been completed successfully
         
         When you need to perform any file operations or execute commands, use the appropriate tool.
         You can use multiple tools in sequence to solve complex problems iteratively.
+        
+        IMPORTANT: When you have successfully completed the user's request, use the 'complete' tool
+        to signal task completion with a summary of what was accomplished.
         
         Always think step by step and use information-gathering commands before making changes.
     """.trimIndent()
@@ -147,6 +151,23 @@ class OllamaClient(
                         })
                     })
                     put("required", buildJsonArray { add("path") })
+                })
+            })
+        })
+        add(buildJsonObject {
+            put("type", "function")
+            put("function", buildJsonObject {
+                put("name", "complete")
+                put("description", "Signal that the task has been completed successfully - use this when you have accomplished the user's request")
+                put("parameters", buildJsonObject {
+                    put("type", "object")
+                    put("properties", buildJsonObject {
+                        put("content", buildJsonObject {
+                            put("type", "string")
+                            put("description", "A summary message describing what was accomplished")
+                        })
+                    })
+                    put("required", buildJsonArray { })
                 })
             })
         })
@@ -310,6 +331,15 @@ class OllamaClient(
                     
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File deletion queued: $path")
+                        put("status", "success")
+                    })
+                }
+                "complete" -> {
+                    val content = argsObj["content"]?.jsonPrimitive?.content ?: "Task completed successfully"
+                    tasks.add(Task(action = Action.COMPLETE, content = content))
+                    
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "Task completion signaled: $content")
                         put("status", "success")
                     })
                 }

@@ -52,7 +52,7 @@ class CodingAgent(
             history.assistant(taskResponse.toString())
 
             // 4️⃣  Safety: ask the human before any file‑system change (unless auto-approve)
-            if (!autoApprove && taskResponse.tasks.any { it.action != Action.RUN_COMMAND }) {
+            if (!autoApprove && taskResponse.tasks.any { it.action != Action.RUN_COMMAND && it.action != Action.COMPLETE }) {
                 println("\n⚠️  The plan contains file changes. Type \"yes\" to continue:")
                 val ok = java.util.Scanner(System.`in`).nextLine()
                 if (ok.lowercase() != "yes") {
@@ -138,13 +138,25 @@ class CodingAgent(
                 println(result)
                 result
             }
+
+            Action.COMPLETE -> {
+                val message = task.content ?: "Task completed successfully"
+                val result = "🎉 COMPLETE: $message"
+                println(result)
+                result
+            }
         }
     }
     
     private fun isComplete(taskResults: List<String>): Boolean {
         val combinedResults = taskResults.joinToString("\n").lowercase()
         
-        // Look for completion indicators
+        // Check for explicit COMPLETE action first (highest priority)
+        if (combinedResults.contains("🎉 complete:")) {
+            return true
+        }
+        
+        // Look for other completion indicators
         return when {
             combinedResults.contains("build successful") -> true
             combinedResults.contains("tests passed") -> true
@@ -163,7 +175,16 @@ class CodingAgent(
                 appendLine(result)
                 appendLine("---")
             }
-            appendLine("Based on these results, what should be done next? If everything is working correctly, respond with an empty task list.")
+            appendLine()
+            appendLine("Based on these results, what should be done next?")
+            appendLine()
+            appendLine("IMPORTANT: If you have successfully completed the user's request:")
+            appendLine("- Use the 'complete' action to signal task completion")
+            appendLine("- Provide a summary of what was accomplished in the 'content' field")
+            appendLine("- This will properly end the iterative process")
+            appendLine()
+            appendLine("If more work is needed, continue with the appropriate tasks.")
+            appendLine("If everything is working correctly but you haven't used 'complete' yet, use it now!")
         }
     }
     
@@ -191,6 +212,13 @@ class CodingAgent(
             appendLine("  * Testing: run tests and analyze results")
             appendLine("  * Git operations: status, log, diff, branch")
             appendLine("  * System diagnostics and file analysis")
+            appendLine()
+            appendLine("🎉 TASK COMPLETION:")
+            appendLine("- complete: Signal that the task has been completed successfully")
+            appendLine("  * Use this action when you have accomplished the user's request")
+            appendLine("  * Provide a completion message in the 'content' field")
+            appendLine("  * This will stop the iterative process and mark the task as done")
+            appendLine("  * Example: {\"action\": \"complete\", \"content\": \"Successfully implemented feature X and all tests pass\"}")
             appendLine()
             appendLine("🔄 ITERATIVE PROBLEM SOLVING:")
             appendLine("- You can provide MULTIPLE tasks in a single response")
