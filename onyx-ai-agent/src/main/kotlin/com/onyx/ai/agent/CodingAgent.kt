@@ -158,6 +158,10 @@ class CodingAgent(
                 isComplete.set(true)
                 result
             }
+            Action.NONE -> {
+                val result = "What is your next action?  Run unit tests, write tests, or write code? etc...."
+                result
+            }
         }
     }
 

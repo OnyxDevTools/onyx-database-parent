@@ -48,26 +48,10 @@ class OllamaClient(
         
         You have access to these tools for interacting with the project:
         - run_command: Execute shell commands to gather information, build projects, run tests, etc.
-        - read_file: Read and examine existing files to understand code structure
-        - create_file: Create new files with any content
-        - edit_file: Modify existing files completely (full file replacement)
-        - delete_file: Remove files when needed
-        - complete: Signal that the task has been completed successfully.  If files needed to be changed they have been already done and it compiles and unit tests have run successfully.
-        
+
         CRITICAL COMPLETION RULES:
-        1. When tests pass or builds succeed, USE THE 'complete' FUNCTION IMMEDIATELY
-        2. When the user's request has been fulfilled, USE THE 'complete' FUNCTION IMMEDIATELY  
-        3. Do NOT continue exploring or reading more files after success - USE 'complete'
-        4. The 'complete' function is MANDATORY when work is done - not optional
-        5. If you see "BUILD SUCCESSFUL" or "tests passed", call 'complete' function NOW
-        
-        COMPLETION DETECTION KEYWORDS:
-        - "BUILD SUCCESSFUL" -> call complete function immediately
-        - "tests passed" -> call complete function immediately  
-        - "All tests passed" -> call complete function immediately
-        - Task appears finished -> call complete function immediately
-        
-        DO NOT endlessly explore files. When the task is done, signal completion!
+        1. When tests pass and the builds succeed and you have met all the criteria for the original request, USE THE 'complete' FUNCTION IMMEDIATELY
+        2. The 'complete' function is MANDATORY when work is done - not optional
         
         Always think step by step and use information-gathering commands before making changes.
         But once successful, STOP and use 'complete' function.
@@ -106,6 +90,14 @@ class OllamaClient(
                             put("type", "string")
                             put("description", "The file path to read")
                         })
+                        put("line_start", buildJsonObject {
+                            put("type", "integer")
+                            put("description", "Optional starting line number (1-based) to read from")
+                        })
+                        put("line_end", buildJsonObject {
+                            put("type", "integer")
+                            put("description", "Optional ending line number (1-based) to read until")
+                        })
                     })
                     put("required", buildJsonArray { add("path") })
                 })
@@ -127,6 +119,14 @@ class OllamaClient(
                             put("type", "string")
                             put("description", "The content to write to the file")
                         })
+                        put("line_start", buildJsonObject {
+                            put("type", "integer")
+                            put("description", "Optional starting line number (1-based) to write from")
+                        })
+                        put("line_end", buildJsonObject {
+                            put("type", "integer")
+                            put("description", "Optional ending line number (1-based) to write until")
+                        })
                     })
                     put("required", buildJsonArray { add("path"); add("content") })
                 })
@@ -147,6 +147,14 @@ class OllamaClient(
                         put("content", buildJsonObject {
                             put("type", "string")
                             put("description", "The new content for the file")
+                        })
+                        put("line_start", buildJsonObject {
+                            put("type", "integer")
+                            put("description", "Optional starting line number (1-based) to replace from")
+                        })
+                        put("line_end", buildJsonObject {
+                            put("type", "integer")
+                            put("description", "Optional ending line number (1-based) to replace until")
                         })
                     })
                     put("required", buildJsonArray { add("path"); add("content") })
@@ -258,24 +266,11 @@ class OllamaClient(
         val thinking = message["thinking"]?.jsonPrimitive?.contentOrNull ?: ""
 
         // If no tool calls, try to parse content as direct JSON response
-        if (toolCalls == null || toolCalls.isEmpty()) {
-
-            if (content.contains("tasks")) {
-                try {
-                    val jsonOnly = extractJsonObject(content)
-                    return Json.decodeFromString<TaskResponse>(jsonOnly)
-                } catch (e: Exception) {
-                    // If parsing fails, create a simple task from the content
-                    return TaskResponse(listOf(
-                        Task(action = Action.RUN_COMMAND, instruction = "echo 'No specific tasks identified'")
-                    ), content = content, thinking = thinking)
-                }
-            } else {
-                // No tool calls and no JSON tasks, create a simple response
-                return TaskResponse(listOf(
-                    Task(action = Action.RUN_COMMAND, instruction = "echo 'Processing request: $userPrompt'")
-                ), content = content, thinking = thinking)
-            }
+        if (toolCalls.isNullOrEmpty()) {
+            // No tool calls and no JSON tasks, create a simple response
+            return TaskResponse(listOf(
+                Task(action = Action.NONE, instruction = "echo 'Processing request: $userPrompt'")
+            ), content = content, thinking = thinking)
         }
 
         // 2) Execute the requested tool calls
@@ -314,7 +309,9 @@ class OllamaClient(
                 }
                 "read_file" -> {
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
-                    tasks.add(Task(action = Action.READ_FILE, path = path))
+                    val lineStart = argsObj["line_start"]?.jsonPrimitive?.intOrNull
+                    val lineEnd = argsObj["line_end"]?.jsonPrimitive?.intOrNull
+                    tasks.add(Task(action = Action.READ_FILE, path = path, line_start = lineStart, line_end = lineEnd))
 
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File read queued: $path")
@@ -324,7 +321,9 @@ class OllamaClient(
                 "create_file" -> {
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
                     val content = argsObj["content"]?.jsonPrimitive?.content ?: ""
-                    tasks.add(Task(action = Action.CREATE_FILE, path = path, content = content))
+                    val lineStart = argsObj["line_start"]?.jsonPrimitive?.intOrNull
+                    val lineEnd = argsObj["line_end"]?.jsonPrimitive?.intOrNull
+                    tasks.add(Task(action = Action.CREATE_FILE, path = path, content = content, line_start = lineStart, line_end = lineEnd))
 
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File creation queued: $path")
@@ -334,7 +333,9 @@ class OllamaClient(
                 "edit_file" -> {
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
                     val content = argsObj["content"]?.jsonPrimitive?.content ?: ""
-                    tasks.add(Task(action = Action.EDIT_FILE, path = path, content = content))
+                    val lineStart = argsObj["line_start"]?.jsonPrimitive?.intOrNull
+                    val lineEnd = argsObj["line_end"]?.jsonPrimitive?.intOrNull
+                    tasks.add(Task(action = Action.EDIT_FILE, path = path, content = content, line_start = lineStart, line_end = lineEnd))
 
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File edit queued: $path")
