@@ -27,6 +27,9 @@ class MetalComputeBackend : CPUComputeBackend() {
 
     // Define threshold based on granular benchmark analysis: Metal consistently wins for very large matrices.
     private val METAL_HIGH_OPS_THRESHOLD = 10_000_000L // Metal consistently wins for total operations >= 1 billion
+    // Add near top of class (replace old METAL_HIGH_OPS_THRESHOLD)
+    private val GEMM_CUTOVER_OPS = 6_000_000L     // ops = rowsA * colsA * colsB
+    private val GEMV_CUTOVER_WORK = 2_000_000L    // work ≈ colsA * max(rowsA, colsB) when one dim == 1
 
     companion object {
         /**
@@ -239,12 +242,19 @@ class MetalComputeBackend : CPUComputeBackend() {
         val rowsB = b.size
         val colsB = b[0].size
 
-        // Use a more accurate threshold based on total operations (rowsA * colsA * colsB)
-        // This value needs to be determined by systematic benchmarking.
-        val totalOperations = rowsA.toLong() * colsA.toLong() * colsB.toLong()
+        // Shape-aware GPU decision
+        val isGemvLike = (rowsA == 1 || colsB == 1)
+        val totalOps = rowsA.toLong() * colsA.toLong() * colsB.toLong()
 
-        // Decision logic for Metal vs. CPU
-        if (totalOperations < METAL_HIGH_OPS_THRESHOLD) {
+        val useGPU = if (isGemvLike) {
+            // For GEMV-like shapes, use a lower cutover based on effective work (K * output_len)
+            val work = colsA.toLong() * max(rowsA, colsB).toLong()
+            work >= GEMV_CUTOVER_WORK
+        } else {
+            totalOps >= GEMM_CUTOVER_OPS
+        }
+
+        if (!useGPU) {
             return super.matrixMultiply(a, b)
         }
 
@@ -252,13 +262,11 @@ class MetalComputeBackend : CPUComputeBackend() {
         var bufferB = 0L
         var bufferResult = 0L
         return try {
-            // Create GPU buffers
             bufferA = createMatrixBuffer(a)
             bufferB = createMatrixBuffer(b)
             val resultSize = rowsA * colsB
-            bufferResult = createTrackedBuffer(resultSize * 4) // 4 bytes per float
+            bufferResult = createTrackedBuffer(resultSize * 4)
 
-            // Perform GPU matrix multiplication
             val success = gpuMatrixMultiply(
                 metalContext,
                 bufferA, rowsA, colsA,
@@ -267,26 +275,19 @@ class MetalComputeBackend : CPUComputeBackend() {
             )
 
             if (!success) {
-                // Fallback to CPU
                 releaseTempBuffers(bufferA, bufferB, bufferResult)
                 return super.matrixMultiply(a, b)
             }
 
-            // Copy result back from GPU
             val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
             val result = Array(rowsA) { row ->
-                FloatArray(colsB) { col ->
-                    resultData[row * colsB + col]
-                }
+                FloatArray(colsB) { col -> resultData[row * colsB + col] }
             }
 
-            // Cleanup
             releaseTempBuffers(bufferA, bufferB, bufferResult)
-
             result
         } catch (e: Exception) {
             println("Metal matrix multiplication failed, falling back to CPU: ${e.message}")
-            // Ensure cleanup on exception
             releaseTempBuffers(bufferA, bufferB, bufferResult)
             super.matrixMultiply(a, b)
         }
