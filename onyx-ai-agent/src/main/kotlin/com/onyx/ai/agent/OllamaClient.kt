@@ -66,6 +66,7 @@ class OllamaClient(
         The arguments must be a JSON object.  If that is empty, the user will just ask you for the next command.  
         If you intend to complete you must pass the complete function in the tool_calls array.
         
+        If it does not compile, you must fix the compile errors.  If it does not pass unit tests, you must fix the unit tests.
     """.trimIndent()
 
     /** -------------------------------------------------------------
