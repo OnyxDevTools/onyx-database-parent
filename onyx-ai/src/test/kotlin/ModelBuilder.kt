@@ -237,7 +237,7 @@ fun main() {
 
             model = model.trainStreamingSparse(
                 source = source,
-                batchSize = 1,
+                batchSize = 4,
                 maxEpochs = 1,
                 patience = Int.MAX_VALUE,
                 testFrac = 0.0f,
