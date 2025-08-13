@@ -124,7 +124,7 @@ id<MTLLibrary> loadMetalLibrary(id<MTLDevice> device) {
         "    output[col * rows + row] = input[row * cols + col];\n"
         "}\n"
         "\n"
-        "// Softmax kernels\n"
+        "// Softmax kernel - first pass to find max\n"
         "kernel void softmax_max_pass(\n"
         "    const device float* input [[buffer(0)]],\n"
         "    device float* max_values [[buffer(1)]],\n"
@@ -141,6 +141,7 @@ id<MTLLibrary> loadMetalLibrary(id<MTLDevice> device) {
         "    max_values[row] = max_val;\n"
         "}\n"
         "\n"
+        "// Softmax kernel - second pass to compute exp and sum\n"
         "kernel void softmax_exp_sum_pass(\n"
         "    const device float* input [[buffer(0)]],\n"
         "    device float* output [[buffer(1)]],\n"
@@ -154,6 +155,7 @@ id<MTLLibrary> loadMetalLibrary(id<MTLDevice> device) {
         "    device float* row_output = output + row * cols;\n"
         "    float max_val = max_values[row];\n"
         "    \n"
+        "    // Compute exp(x - max) and accumulate sum\n"
         "    for (uint col = 0; col < cols; col++) {\n"
         "        float exp_val = exp(row_input[col] - max_val);\n"
         "        row_output[col] = exp_val;\n"
@@ -163,6 +165,7 @@ id<MTLLibrary> loadMetalLibrary(id<MTLDevice> device) {
         "    sum_values[row] = sum;\n"
         "}\n"
         "\n"
+        "// Softmax kernel - third pass to normalize\n"
         "kernel void softmax_normalize_pass(\n"
         "    device float* output [[buffer(0)]],\n"
         "    const device float* sum_values [[buffer(1)]],\n"
@@ -174,6 +177,63 @@ id<MTLLibrary> loadMetalLibrary(id<MTLDevice> device) {
         "    \n"
         "    for (uint col = 0; col < cols; col++) {\n"
         "        row_output[col] /= sum;\n"
+        "    }\n"
+        "}\n"
+        "\n"
+        "// Optimized matrix multiplication with tiling\n"
+        "kernel void matrix_multiply_tiled(\n"
+        "    const device float* A [[buffer(0)]],\n"
+        "    const device float* B [[buffer(1)]],\n"
+        "    device float* C [[buffer(2)]],\n"
+        "    constant uint& rowsA [[buffer(3)]],\n"
+        "    constant uint& colsA [[buffer(4)]],\n"
+        "    constant uint& colsB [[buffer(5)]],\n"
+        "    uint2 gid [[thread_position_in_grid]],\n"
+        "    uint2 local_id [[thread_position_in_threadgroup]]\n"
+        ") {\n"
+        "    const uint TILE_SIZE = 16;\n"
+        "    \n"
+        "    threadgroup float tileA[TILE_SIZE][TILE_SIZE];\n"
+        "    threadgroup float tileB[TILE_SIZE][TILE_SIZE];\n"
+        "    \n"
+        "    uint row = gid.y;\n"
+        "    uint col = gid.x;\n"
+        "    \n"
+        "    float sum = 0.0;\n"
+        "    \n"
+        "    uint tilesInK = (colsA + TILE_SIZE - 1) / TILE_SIZE;\n"
+        "    \n"
+        "    for (uint tileIdx = 0; tileIdx < tilesInK; tileIdx++) {\n"
+        "        // Load tile A\n"
+        "        uint aRow = row;\n"
+        "        uint aCol = tileIdx * TILE_SIZE + local_id.x;\n"
+        "        if (aRow < rowsA && aCol < colsA) {\n"
+        "            tileA[local_id.y][local_id.x] = A[aRow * colsA + aCol];\n"
+        "        } else {\n"
+        "            tileA[local_id.y][local_id.x] = 0.0;\n"
+        "        }\n"
+        "        \n"
+        "        // Load tile B\n"
+        "        uint bRow = tileIdx * TILE_SIZE + local_id.y;\n"
+        "        uint bCol = col;\n"
+        "        if (bRow < colsA && bCol < colsB) {\n"
+        "            tileB[local_id.y][local_id.x] = B[bRow * colsB + bCol];\n"
+        "        } else {\n"
+        "            tileB[local_id.y][local_id.x] = 0.0;\n"
+        "        }\n"
+        "        \n"
+        "        threadgroup_barrier(mem_flags::mem_threadgroup);\n"
+        "        \n"
+        "        // Compute partial sum\n"
+        "        for (uint k = 0; k < TILE_SIZE; k++) {\n"
+        "            sum += tileA[local_id.y][k] * tileB[k][local_id.x];\n"
+        "        }\n"
+        "        \n"
+        "        threadgroup_barrier(mem_flags::mem_threadgroup);\n"
+        "    }\n"
+        "    \n"
+        "    if (row < rowsA && col < colsB) {\n"
+        "        C[row * colsB + col] = sum;\n"
         "    }\n"
         "}\n";
         
@@ -340,18 +400,18 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_initializeMetalContext(JNIE
         NSError* error = nil;
         NSLog(@"Attempting to create Metal compute pipelines...");
         
-        // Matrix multiply pipeline
-        id<MTLFunction> matrixMultiplyFunction = [context->library newFunctionWithName:@"matrix_multiply"];
+        // Matrix multiply pipeline (using tiled kernel)
+        id<MTLFunction> matrixMultiplyFunction = [context->library newFunctionWithName:@"matrix_multiply_tiled"];
         if (matrixMultiplyFunction) {
             context->matrixMultiplyPipeline = [device newComputePipelineStateWithFunction:matrixMultiplyFunction error:&error];
             if (context->matrixMultiplyPipeline && !error) {
-                NSLog(@"Successfully created matrix multiply pipeline");
+                NSLog(@"Successfully created tiled matrix multiply pipeline");
             } else {
-                NSLog(@"Failed to create matrix multiply pipeline: %@", error ? error.localizedDescription : @"unknown error");
+                NSLog(@"Failed to create tiled matrix multiply pipeline: %@", error ? error.localizedDescription : @"unknown error");
                 context->matrixMultiplyPipeline = nil;
             }
         } else {
-            NSLog(@"Matrix multiply function not found in library - will use CPU fallback");
+            NSLog(@"Tiled matrix multiply function not found in library - will use CPU fallback");
         }
         
         // Matrix add pipeline
@@ -497,7 +557,6 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_createGPUBuffer(JNIEnv* env
         id<MTLBuffer> buffer = [ctx->device newBufferWithLength:size options:options];
         
         if (!buffer) {
-            NSLog(@"Failed to create Metal buffer of size %d", size);
             return 0;
         }
         
@@ -506,8 +565,7 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_createGPUBuffer(JNIEnv* env
         // We add +1 retain count for JNI, so total retain count = 2
         CFRetain((__bridge CFTypeRef)buffer);
         
-        NSLog(@"Created Metal buffer: %p, size: %d bytes, retain count after CFRetain should be 2", buffer, size);
-        
+
         return reinterpret_cast<jlong>(buffer);
     }
 }
@@ -556,15 +614,13 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_releaseGPUBuffer(JNIEnv* en
             id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)((void*)bufferHandle);
             
             if (buffer) {
-                NSLog(@"Releasing Metal buffer: %p", buffer);
-                
+
                 // CRITICAL FIX: We need to release TWICE to properly decrement reference count
                 // 1st CFRelease: decrements the +1 we added with CFRetain (retain count: 2 -> 1)
                 // 2nd CFRelease: decrements the original ARC reference (retain count: 1 -> 0, buffer deallocated)
                 CFRelease((__bridge CFTypeRef)buffer);  // Remove our JNI reference
                 CFRelease((__bridge CFTypeRef)buffer);  // Remove the ARC reference to actually free the buffer
                 
-                NSLog(@"Released Metal buffer: %p (should now be deallocated)", buffer);
             }
         }
     }
@@ -598,9 +654,11 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuMatrixMultiply(
         [encoder setBytes:&colsA length:sizeof(uint32_t) atIndex:4];
         [encoder setBytes:&colsB length:sizeof(uint32_t) atIndex:5];
         
-        // Calculate optimal thread group size
-        MTLSize threadsPerThreadgroup = MTLSizeMake(16, 16, 1);
-        MTLSize threadsPerGrid = MTLSizeMake(colsB, rowsA, 1);
+        // Calculate optimal thread group size for tiled kernel
+        const uint TILE_SIZE = 16;
+        MTLSize threadsPerThreadgroup = MTLSizeMake(TILE_SIZE, TILE_SIZE, 1);
+        MTLSize threadsPerGrid = MTLSizeMake((colsB + TILE_SIZE - 1) / TILE_SIZE * TILE_SIZE,
+                                             (rowsA + TILE_SIZE - 1) / TILE_SIZE * TILE_SIZE, 1);
         
         [encoder dispatchThreads:threadsPerGrid threadsPerThreadgroup:threadsPerThreadgroup];
         [encoder endEncoding];

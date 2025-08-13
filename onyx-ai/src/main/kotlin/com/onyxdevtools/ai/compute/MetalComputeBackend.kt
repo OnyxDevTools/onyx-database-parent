@@ -18,7 +18,7 @@ class MetalComputeBackend : ComputeBackend {
     override val backendType: ComputeBackendType = ComputeBackendType.METAL
     
     // Native Metal interface handle
-    private var metalContext: Long = 0L
+    internal var metalContext: Long = 0L
     
     // Memory management tracking - track all allocated buffers for cleanup
     private val gpuBuffers = mutableSetOf<Long>()
@@ -202,7 +202,7 @@ class MetalComputeBackend : ComputeBackend {
         val colsB = b[0].size
         
         // For small matrices, use CPU to avoid GPU transfer overhead
-        if (rowsA * colsA * colsB < 10000) {
+        if (rowsA * colsA * colsB < 100000) {
             return matrixMultiplyCPU(a, b)
         }
         
@@ -353,7 +353,7 @@ class MetalComputeBackend : ComputeBackend {
         val cols = a[0].size
         
         // For small matrices, use CPU
-        if (rows * cols < 1000) {
+        if (rows * cols < 100000) {
             return elementWiseMultiplyCPU(a, b)
         }
         
