@@ -145,9 +145,8 @@ class CodingAgent(
                 val lineInfo = if (task.line_start != null || task.line_end != null) {
                     " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
                 } else ""
-                val result = "📖 Read ${task.path}$lineInfo:\n$content"
                 println("📖 Read ${task.path}$lineInfo (${content.length} characters)")
-                result
+                content
             }
 
             Action.RUN_COMMAND -> {
@@ -171,6 +170,7 @@ class CodingAgent(
                 isComplete.set(true)
                 result
             }
+
             Action.NONE -> {
                 "You did not respond with any functions to execute.  What is your next action?  Run unit tests, write tests, or write code? etc...."
             }

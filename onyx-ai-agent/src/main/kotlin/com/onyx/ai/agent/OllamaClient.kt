@@ -34,9 +34,9 @@ class OllamaClient(
             json(Json { ignoreUnknownKeys = true })
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 100_000
+            requestTimeoutMillis = 900_000
             connectTimeoutMillis = 5_000
-            socketTimeoutMillis = 100_000
+            socketTimeoutMillis = 900_000
         }
     }
 
@@ -45,12 +45,12 @@ class OllamaClient(
     ------------------------------------------------------------- */
     private val systemPrompt = """
         You are a powerful AI coding assistant that can perform comprehensive software development tasks.
-        
+
         You have access to these tools for interacting with the project:
         - run_command: Execute shell commands to gather information, build projects, run tests, etc.
         - read_file: Read and examine existing files to understand code structure
         - create_file: Create new files with any content
-        - edit_file: Modify existing files completely (full file replacement)
+        - edit_file: Modify existing files completely
         - delete_file: Remove files when needed
         - complete: Signal that the task has been completed successfully.  If files needed to be changed they have been already done and it compiles and unit tests have run successfully.
 
@@ -162,11 +162,11 @@ class OllamaClient(
                         })
                         put("line_start", buildJsonObject {
                             put("type", "integer")
-                            put("description", "Optional starting line number (1-based) to replace from")
+                            put("description", "Optional starting line number (1-based) to replace from.  If you provide a partial edit, this is required otherwise it will corrupt the file.  Be mindful of the file position you read from.")
                         })
                         put("line_end", buildJsonObject {
                             put("type", "integer")
-                            put("description", "Optional ending line number (1-based) to replace until")
+                            put("description", "Optional ending line number (1-based) to replace until.  .  If you provide a partial edit, this is required otherwise it will corrupt the file. Be mindful of the file position you read from.")
                         })
                     })
                     put("required", buildJsonArray { add("path"); add("content") })
@@ -397,57 +397,75 @@ class OllamaClient(
                 put("content", "")
                 put("tool_calls", toolCalls)
             })
-
-            // Add tool results
-            toolResults.forEach { result ->
-                add(buildJsonObject {
-                    put("role", "tool")
-                    put("content", result.toString())
-                })
-            }
         }
 
-        val secondBody = buildJsonObject {
+        // Re-send with tool call results and await final tool output
+        val finalBody = buildJsonObject {
             put("model", model)
             put("stream", false)
             put("messages", followupMessages)
+            put("tools", tools)
         }
 
-        val secondResp = http.post("$baseUrl/api/chat") {
+        val finalResp = http.post("$baseUrl/api/chat") {
             bearerHeader()
             contentType(ContentType.Application.Json)
-            setBody(secondBody)
+            setBody(finalBody)
         }.bodyAsText()
 
-        // Removed tracing of the json response
+        val finalRoot = Json.parseToJsonElement(finalResp).jsonObject
+        val finalMessage = finalRoot["message"]?.jsonObject ?: throw IllegalStateException("No message in follow‑up response")
+        val finalContent = finalMessage["content"]?.jsonPrimitive?.contentOrNull ?: ""
+        val finalThinking = finalMessage["thinking"]?.jsonPrimitive?.contentOrNull ?: ""
 
-        val finalRoot = Json.parseToJsonElement(secondResp).jsonObject
-        val finalMessage = finalRoot["message"]?.jsonObject
-        val finalContent = finalMessage?.get("content")?.jsonPrimitive?.contentOrNull ?: ""
+        val finalToolCalls = finalMessage["tool_calls"]?.jsonArray
 
-        // Try to parse final response as TaskResponse
-        return try {
-            val jsonOnly = extractJsonObject(finalContent)
-            Json.decodeFromString<TaskResponse>(jsonOnly)
-        } catch (e: Exception) {
-            // If parsing fails, create a simple response
-            TaskResponse(listOf(
-                Task(action = Action.RUN_COMMAND, instruction = "echo 'Task completed'")
-            ), content = content, thinking = thinking)
+        // If tool calls present, execute them and return tasks
+        if (finalToolCalls != null && finalToolCalls.isNotEmpty()) {
+            val finalTaskResults = mutableListOf<Task>()
+            for (tc in finalToolCalls) {
+                val f = tc.jsonObject["function"]?.jsonObject ?: continue
+                val fname = f["name"]?.jsonPrimitive?.content ?: continue
+                val fargs = f["arguments"]?.jsonObject ?: buildJsonObject {}
+                when (fname) {
+                    "run_command" -> {
+                        val instr = fargs["instruction"]?.jsonPrimitive?.content ?: ""
+                        finalTaskResults.add(Task(action = Action.RUN_COMMAND, instruction = instr))
+                    }
+                    "read_file" -> {
+                        val p = fargs["path"]?.jsonPrimitive?.content ?: ""
+                        val ls = fargs["line_start"]?.jsonPrimitive?.intOrNull
+                        val le = fargs["line_end"]?.jsonPrimitive?.intOrNull
+                        finalTaskResults.add(Task(action = Action.READ_FILE, path = p, line_start = ls, line_end = le))
+                    }
+                    "create_file" -> {
+                        val p = fargs["path"]?.jsonPrimitive?.content ?: ""
+                        val c = fargs["content"]?.jsonPrimitive?.content ?: ""
+                        val ls = fargs["line_start"]?.jsonPrimitive?.intOrNull
+                        val le = fargs["line_end"]?.jsonPrimitive?.intOrNull
+                        finalTaskResults.add(Task(action = Action.CREATE_FILE, path = p, content = c, line_start = ls, line_end = le))
+                    }
+                    "edit_file" -> {
+                        val p = fargs["path"]?.jsonPrimitive?.content ?: ""
+                        val c = fargs["content"]?.jsonPrimitive?.content ?: ""
+                        val ls = fargs["line_start"]?.jsonPrimitive?.intOrNull
+                        val le = fargs["line_end"]?.jsonPrimitive?.intOrNull
+                        finalTaskResults.add(Task(action = Action.EDIT_FILE, path = p, content = c, line_start = ls, line_end = le))
+                    }
+                    "delete_file" -> {
+                        val p = fargs["path"]?.jsonPrimitive?.content ?: ""
+                        finalTaskResults.add(Task(action = Action.DELETE_FILE, path = p))
+                    }
+                    "complete" -> {
+                        val c = fargs["content"]?.jsonPrimitive?.content ?: "Task completed successfully"
+                        finalTaskResults.add(Task(action = Action.COMPLETE, content = c))
+                    }
+                }
+            }
+            return TaskResponse(finalTaskResults, content = finalContent, thinking = finalThinking)
         }
-    }
 
-    /** -------------------------------------------------------------
-    Helper – extracts the first JSON object from a possibly noisy string.
-    Throws IllegalArgumentException if no `{…}` can be found.
-    ------------------------------------------------------------- */
-    private fun extractJsonObject(text: String): String {
-        val trimmed = text.trim()
-        val start = trimmed.indexOf('{')
-        val end = trimmed.lastIndexOf('}')
-        require(start != -1 && end != -1 && end > start) {
-            "No JSON object could be detected in LLM output: $trimmed"
-        }
-        return trimmed.substring(start, end + 1)
+        // Fallback: return content as a final task if no tool calls
+        return TaskResponse(listOf(Task(action = Action.NONE)), content = finalContent, thinking = finalThinking)
     }
 }
