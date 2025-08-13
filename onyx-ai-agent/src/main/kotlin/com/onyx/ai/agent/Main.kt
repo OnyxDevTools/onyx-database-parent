@@ -17,10 +17,10 @@ fun main() {
 
     // First request – the model will return JSON describing tasks:
     val first = """
-        Cleanup the comments within onyx-ai-agent classes and make sure they are accurate and relavant
-        
-        only respond with a complete task when you have checked all files
-         "./gradlew onyx-ai-agent:test"
+        only focus in onyx-ai-agent module
+        Increase the read timeout call to ollama to 15 minutes and make sure the unit tests pass
+        I keep getting these ❌ Failed to get tasks from LLM: Request timeout has expired [url=https://ollama.com/api/chat, request_timeout=unknown ms]
+       "./gradlew onyx-ai-agent:test"
     """.trimIndent()
 
     println("🚀 Starting first task...")

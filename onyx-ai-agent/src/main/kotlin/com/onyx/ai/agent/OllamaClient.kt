@@ -5,6 +5,7 @@ import com.onyx.ai.agent.model.Task
 import com.onyx.ai.agent.model.Action
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -31,6 +32,11 @@ class OllamaClient(
     internal val http = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 300_000
+            connectTimeoutMillis = 5_000
+            socketTimeoutMillis = 300_000
         }
     }
 
@@ -196,14 +202,14 @@ class OllamaClient(
     suspend fun askForTasks(userPrompt: String): TaskResponse = withContext(Dispatchers.IO) {
         askForTasksInternal(userPrompt)
     }
-    
+
     /** Overloaded version that accepts chat history */
     suspend fun askForTasks(messages: List<ChatHistory.Msg>): TaskResponse = withContext(Dispatchers.IO) {
-        val lastUserMessage = messages.lastOrNull { it.role == "user" }?.content 
+        val lastUserMessage = messages.lastOrNull { it.role == "user" }?.content
             ?: "Continue with the previous task"
         askForTasksInternal(lastUserMessage, messages)
     }
-    
+
     private suspend fun askForTasksInternal(userPrompt: String, previousMessages: List<ChatHistory.Msg>? = null): TaskResponse {
         // 1) First call: provide the functions as tools
         val messages = buildJsonArray {
@@ -212,7 +218,7 @@ class OllamaClient(
                 put("role", "system")
                 put("content", systemPrompt)
             })
-            
+
             // Add previous messages if provided
             previousMessages?.forEach { msg ->
                 if (msg.role != "system") { // Don't duplicate system messages
@@ -222,7 +228,7 @@ class OllamaClient(
                     })
                 }
             }
-            
+
             // Current user message
             if (userPrompt.isNotEmpty()) {
                 add(buildJsonObject {
@@ -300,7 +306,7 @@ class OllamaClient(
                 "run_command" -> {
                     val instruction = argsObj["instruction"]?.jsonPrimitive?.content ?: ""
                     tasks.add(Task(action = Action.RUN_COMMAND, instruction = instruction))
-                    
+
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "Command queued: $instruction")
                         put("status", "success")
@@ -309,7 +315,7 @@ class OllamaClient(
                 "read_file" -> {
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
                     tasks.add(Task(action = Action.READ_FILE, path = path))
-                    
+
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File read queued: $path")
                         put("status", "success")
@@ -319,7 +325,7 @@ class OllamaClient(
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
                     val content = argsObj["content"]?.jsonPrimitive?.content ?: ""
                     tasks.add(Task(action = Action.CREATE_FILE, path = path, content = content))
-                    
+
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File creation queued: $path")
                         put("status", "success")
@@ -329,7 +335,7 @@ class OllamaClient(
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
                     val content = argsObj["content"]?.jsonPrimitive?.content ?: ""
                     tasks.add(Task(action = Action.EDIT_FILE, path = path, content = content))
-                    
+
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File edit queued: $path")
                         put("status", "success")
@@ -338,7 +344,7 @@ class OllamaClient(
                 "delete_file" -> {
                     val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
                     tasks.add(Task(action = Action.DELETE_FILE, path = path))
-                    
+
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "File deletion queued: $path")
                         put("status", "success")
@@ -347,7 +353,7 @@ class OllamaClient(
                 "complete" -> {
                     val content = argsObj["content"]?.jsonPrimitive?.content ?: "Task completed successfully"
                     tasks.add(Task(action = Action.COMPLETE, content = content))
-                    
+
                     toolResults.add(buildJsonObject {
                         put("tool_call_result", "Task completion signaled: $content")
                         put("status", "success")
@@ -371,14 +377,14 @@ class OllamaClient(
         val followupMessages = buildJsonArray {
             // Include all previous messages
             messages.forEach { add(it) }
-            
+
             // Add the assistant's tool call message
             add(buildJsonObject {
                 put("role", "assistant")
                 put("content", "")
                 put("tool_calls", toolCalls)
             })
-            
+
             // Add tool results
             toolResults.forEach { result ->
                 add(buildJsonObject {

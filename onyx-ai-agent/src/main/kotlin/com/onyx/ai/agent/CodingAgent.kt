@@ -3,6 +3,7 @@ package com.onyx.ai.agent
 import com.onyx.ai.agent.model.Action
 import com.onyx.ai.agent.model.Task
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicBoolean
 
 class CodingAgent(
     private val ollama: OllamaClient = OllamaClient(
@@ -13,10 +14,11 @@ class CodingAgent(
     private val projectDirectory: String? = null
 ) {
     private val history = ChatHistory(model = ollama.model, client = ollama)
+    private var isComplete: AtomicBoolean = AtomicBoolean(false)
 
     init {
         // Configure project directory if specified
-        projectDirectory?.let { 
+        projectDirectory?.let {
             ProjectIO.root = java.nio.file.Paths.get(it)
             println("📁 Project directory set to: $it")
         }
@@ -26,13 +28,13 @@ class CodingAgent(
     fun handleUserInput(userPrompt: String) = runBlocking {
         // Enrich the prompt with project context
         var currentPrompt = enrichPromptWithProjectContext(userPrompt)
-        var maxIterations = 10 // Prevent infinite loops
+        val maxIterations = 1000
         var iteration = 0
-        
+
         while (iteration < maxIterations) {
             iteration++
             println("\n🔄 Iteration $iteration")
-            
+
             // 1️⃣  Store the user message (or feedback from previous iteration)
             history.user(currentPrompt)
 
@@ -71,7 +73,7 @@ class CodingAgent(
             println("\n✅  All ${taskResponse.tasks.size} tasks finished.")
 
             // 6️⃣  Check if we should continue (look for completion indicators)
-            if (isComplete(taskResults) || taskResponse.tasks.isEmpty()) {
+            if (isComplete() || taskResponse.tasks.isEmpty()) {
                 println("🎉 Task completion detected!")
                 break
             }
@@ -79,7 +81,7 @@ class CodingAgent(
             // 7️⃣  Send results back to LLM for next iteration
             currentPrompt = buildFeedbackPrompt(taskResults)
         }
-        
+
         if (iteration >= maxIterations) {
             println("⚠️  Maximum iterations reached. Stopping.")
         }
@@ -143,23 +145,20 @@ class CodingAgent(
                 val message = task.content ?: "Task completed successfully"
                 val result = "🎉 COMPLETE: $message"
                 println(result)
+                isComplete.set(true)
                 result
             }
         }
     }
-    
-    private fun isComplete(taskResults: List<String>): Boolean {
-        // ONLY complete when the agent explicitly invokes the COMPLETE action
-        val combinedResults = taskResults.joinToString("\n").lowercase()
-        return combinedResults.contains("🎉 complete:")
-    }
-    
+
+    private fun isComplete(): Boolean = isComplete.get()
+
     private fun buildFeedbackPrompt(taskResults: List<String>): String {
         val combinedResults = taskResults.joinToString("\n").lowercase()
-        val hasSuccess = combinedResults.contains("build successful") || 
-                        combinedResults.contains("tests passed") || 
+        val hasSuccess = combinedResults.contains("build successful") ||
+                        combinedResults.contains("tests passed") ||
                         combinedResults.contains("all tests passed")
-        
+
         return buildString {
             appendLine("TASK EXECUTION RESULTS:")
             appendLine("=" .repeat(50))
@@ -169,7 +168,7 @@ class CodingAgent(
                 appendLine("---")
             }
             appendLine()
-            
+
             if (hasSuccess) {
                 appendLine("🎉 SUCCESS DETECTED! The task appears to have completed successfully.")
                 appendLine("You should now use the 'complete' function to signal completion.")
@@ -181,7 +180,7 @@ class CodingAgent(
             } else {
                 appendLine("Continue working on the task. When finished, use 'complete' function to signal completion.")
             }
-            
+
             appendLine()
             appendLine("AVAILABLE FUNCTIONS:")
             appendLine("- complete: Signal task completion (USE THIS WHEN DONE!)")
@@ -192,12 +191,12 @@ class CodingAgent(
             appendLine("- delete_file: Delete files")
         }
     }
-    
+
     private fun enrichPromptWithProjectContext(userPrompt: String): String {
         return buildString {
             appendLine(userPrompt)
             appendLine()
-            
+
             // Add comprehensive capability explanation
             appendLine("IMPORTANT - YOUR FULL CAPABILITIES:")
             appendLine("====================================")
@@ -239,11 +238,11 @@ class CodingAgent(
             appendLine("4. Test and verify your work")
             appendLine("5. Iterate until completion")
             appendLine()
-            
+
             // Add project structure information
             appendLine("PROJECT CONTEXT:")
             appendLine("=================")
-            
+
             val projectFiles = getProjectFileList()
             appendLine("Project Structure:")
             projectFiles.take(20).forEach { appendLine("  $it") }
@@ -252,7 +251,7 @@ class CodingAgent(
                 appendLine("  Use 'run_command' with 'find' or 'ls' to explore more")
             }
             appendLine()
-            
+
             // Add Agent.md content if it exists
             val agentReadme = getAgentReadme()
             if (agentReadme.isNotEmpty()) {
@@ -260,14 +259,14 @@ class CodingAgent(
                 appendLine(agentReadme)
                 appendLine()
             }
-            
+
             appendLine("Working Directory: ${ProjectIO.root}")
             appendLine()
             appendLine("REMEMBER: You have FULL access to explore, understand, and modify this project!")
             appendLine("Start by gathering information if you need to understand the codebase better.")
         }
     }
-    
+
     private fun getProjectFileList(): List<String> {
         return try {
             val gitignorePatterns = loadGitignorePatterns()
@@ -282,12 +281,12 @@ class CodingAgent(
             listOf("Error reading project files: ${e.message}")
         }
     }
-    
+
     private fun isHiddenFile(file: java.io.File): Boolean {
         val path = file.relativeTo(ProjectIO.root.toFile()).path
         return path.split("/").any { it.startsWith(".") }
     }
-    
+
     private fun isGitignored(file: java.io.File, gitignorePatterns: List<String>): Boolean {
         val relativePath = file.relativeTo(ProjectIO.root.toFile()).path
         return gitignorePatterns.any { pattern ->
@@ -305,7 +304,7 @@ class CodingAgent(
             }
         }
     }
-    
+
     private fun loadGitignorePatterns(): List<String> {
         return try {
             val gitignoreFile = ProjectIO.root.resolve(".gitignore").toFile()
@@ -336,7 +335,7 @@ class CodingAgent(
             emptyList()
         }
     }
-    
+
     private fun getAgentReadme(): String {
         return try {
             val readmePath = ProjectIO.root.resolve("Agent.md")
