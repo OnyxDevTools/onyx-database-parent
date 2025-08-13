@@ -48,13 +48,23 @@ class OllamaClient(
         - delete_file: Remove files when needed
         - complete: Signal that the task has been completed successfully
         
-        When you need to perform any file operations or execute commands, use the appropriate tool.
-        You can use multiple tools in sequence to solve complex problems iteratively.
+        CRITICAL COMPLETION RULES:
+        1. When tests pass or builds succeed, USE THE 'complete' FUNCTION IMMEDIATELY
+        2. When the user's request has been fulfilled, USE THE 'complete' FUNCTION IMMEDIATELY  
+        3. Do NOT continue exploring or reading more files after success - USE 'complete'
+        4. The 'complete' function is MANDATORY when work is done - not optional
+        5. If you see "BUILD SUCCESSFUL" or "tests passed", call 'complete' function NOW
         
-        IMPORTANT: When you have successfully completed the user's request, use the 'complete' tool
-        to signal task completion with a summary of what was accomplished.
+        COMPLETION DETECTION KEYWORDS:
+        - "BUILD SUCCESSFUL" -> call complete function immediately
+        - "tests passed" -> call complete function immediately  
+        - "All tests passed" -> call complete function immediately
+        - Task appears finished -> call complete function immediately
+        
+        DO NOT endlessly explore files. When the task is done, signal completion!
         
         Always think step by step and use information-gathering commands before making changes.
+        But once successful, STOP and use 'complete' function.
     """.trimIndent()
 
     /** -------------------------------------------------------------

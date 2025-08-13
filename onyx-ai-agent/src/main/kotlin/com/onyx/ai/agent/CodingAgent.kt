@@ -149,42 +149,47 @@ class CodingAgent(
     }
     
     private fun isComplete(taskResults: List<String>): Boolean {
+        // ONLY complete when the agent explicitly invokes the COMPLETE action
         val combinedResults = taskResults.joinToString("\n").lowercase()
-        
-        // Check for explicit COMPLETE action first (highest priority)
-        if (combinedResults.contains("🎉 complete:")) {
-            return true
-        }
-        
-        // Look for other completion indicators
-        return when {
-            combinedResults.contains("build successful") -> true
-            combinedResults.contains("tests passed") -> true
-            combinedResults.contains("all tests passed") -> true
-            combinedResults.contains("build failure") && combinedResults.contains("error") -> false
-            taskResults.isEmpty() -> true
-            else -> false
-        }
+        return combinedResults.contains("🎉 complete:")
     }
     
     private fun buildFeedbackPrompt(taskResults: List<String>): String {
+        val combinedResults = taskResults.joinToString("\n").lowercase()
+        val hasSuccess = combinedResults.contains("build successful") || 
+                        combinedResults.contains("tests passed") || 
+                        combinedResults.contains("all tests passed")
+        
         return buildString {
-            appendLine("Here are the results from the previous tasks:")
+            appendLine("TASK EXECUTION RESULTS:")
+            appendLine("=" .repeat(50))
             taskResults.forEachIndexed { index, result ->
                 appendLine("Task ${index + 1} result:")
                 appendLine(result)
                 appendLine("---")
             }
             appendLine()
-            appendLine("Based on these results, what should be done next?")
+            
+            if (hasSuccess) {
+                appendLine("🎉 SUCCESS DETECTED! The task appears to have completed successfully.")
+                appendLine("You should now use the 'complete' function to signal completion.")
+                appendLine()
+                appendLine("CRITICAL: Use the 'complete' function call NOW with this format:")
+                appendLine("{\"function_name\": \"complete\", \"content\": \"Your completion summary here\"}")
+                appendLine()
+                appendLine("DO NOT continue with more tasks - signal completion instead!")
+            } else {
+                appendLine("Continue working on the task. When finished, use 'complete' function to signal completion.")
+            }
+            
             appendLine()
-            appendLine("IMPORTANT: If you have successfully completed the user's request:")
-            appendLine("- Use the 'complete' action to signal task completion")
-            appendLine("- Provide a summary of what was accomplished in the 'content' field")
-            appendLine("- This will properly end the iterative process")
-            appendLine()
-            appendLine("If more work is needed, continue with the appropriate tasks.")
-            appendLine("If everything is working correctly but you haven't used 'complete' yet, use it now!")
+            appendLine("AVAILABLE FUNCTIONS:")
+            appendLine("- complete: Signal task completion (USE THIS WHEN DONE!)")
+            appendLine("- run_command: Execute shell commands")
+            appendLine("- read_file: Read files")
+            appendLine("- create_file: Create files")
+            appendLine("- edit_file: Edit files")
+            appendLine("- delete_file: Delete files")
         }
     }
     
