@@ -458,12 +458,12 @@ class BPETokenizer(
         out = out.replace(Regex("(“|‘|«|‹) *"), "$1")
 
         // Tighten around parens/brackets/braces
-        out = out.replace(Regex("\\( "), "(")
-            .replace(Regex(" \\)"), ")")
-            .replace(Regex("\\[ "), "[")
-            .replace(Regex(" \\]"), "]")
-            .replace(Regex("\\{ "), "{")
-            .replace(Regex(" \\}"), "}{")
+        out = out.replace(Regex("\\( +"), "(")
+            .replace(Regex(" +\\)"), ")")
+            .replace(Regex("\\[ +"), "[")
+            .replace(Regex(" +\\]"), "]")
+            .replace(Regex("\\{ +"), "{")
+            .replace(Regex(" +\\}"), "}")
 
         // Ellipsis & dashes
         out = out.replace(Regex(" *…"), "…")

@@ -1,5 +1,4 @@
 import com.onyxdevtools.ai.NeuralNetwork
-import com.onyxdevtools.ai.data.DefaultSequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
@@ -32,7 +31,7 @@ fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
 
 // ---------------------------------------------------------------
 // Helper that returns a *factory* – i.e. a lambda that builds a
-// brand‑new Sequence each time it is invoked.
+// brand-new Sequence each time it is invoked.
 // ---------------------------------------------------------------
 fun makeCorpusSource(
     booksDir: File,
@@ -42,13 +41,12 @@ fun makeCorpusSource(
     epochSeed: Long            // different for every epoch
 ): () -> Sequence<Pair<FloatArray, IntArray>> = {
     generateCorpusSequence(
-        booksDir,
-        vocab,
-        seqLen,
-        stride,
+        booksDir = booksDir,
+        vocabulary = vocab,
+        seqLength = seqLen,
+        stride = stride,
         shuffleFiles = true,
-        rng = Random(epochSeed),          // <-- NEW: seed changes each epoch
-        shuffleWithinFile = true,         // <-- enable full shuffling
+        rng = Random(epochSeed),
         randomStartOffset = true
     )
 }
@@ -60,108 +58,60 @@ fun generateCorpusSequence(
     stride: Int,
     shuffleFiles: Boolean = true,
     rng: Random? = null,
-    shuffleWithinFile: Boolean = false,
     randomStartOffset: Boolean = false
 ): Sequence<Pair<FloatArray, IntArray>> {
 
     require(seqLength > 0) { "seqLength must be > 0" }
-    require(stride > 0)   { "stride must be > 0" }
+    require(stride > 0) { "stride must be > 0" }
     require(stride <= seqLength) { "stride may not be larger than seqLength" }
 
     val tokenizer = BPETokenizer(vocabulary)
 
-    // -----------------------------------------------------------------
-    // 1️⃣  Determine the file order for this *epoch*
-    // -----------------------------------------------------------------
     val allFiles = booksDir.listFiles()
         ?.filter { it.isFile && it.extension.contains("txt") }
         ?: emptyList()
+    val files = if (shuffleFiles) (rng?.let { allFiles.shuffled(it) } ?: allFiles.shuffled()) else allFiles
 
-    val files = if (shuffleFiles) {
-        (rng?.let { allFiles.shuffled(it) } ?: allFiles.shuffled())
-    } else allFiles
+    // Cache special token IDs
+    val nlId  = vocabulary.getId("\n")
+    val sotId = vocabulary.getId("[SOT]")
+    val eotId = vocabulary.getId("[EOT]")
 
-    // -----------------------------------------------------------------
-    // 2️⃣  The mutable buffer that is kept *across* file boundaries
-    // -----------------------------------------------------------------
-    val buffer = mutableListOf<Int>()
+    val buffer = ArrayList<Int>(seqLength * 2)
 
-    // -----------------------------------------------------------------
-    // 3️⃣  Build the lazy sequence
-    // -----------------------------------------------------------------
     return sequence {
-        for (file in files) {
-            // ---------------------------------------------------------
-            // 3a) Load the whole file into a token list
-            // ---------------------------------------------------------
-            val fileTokens = mutableListOf<Int>()
+        for ((idx, file) in files.withIndex()) {
+            // Insert hard boundary between documents (except before the first)
+            if (idx > 0) buffer.add(eotId)
+            // Optional start-of-text marker per doc
+            buffer.add(sotId)
+
+            // --- Load tokens in original order (do NOT shuffle within a file) ---
             file.forEachLine { line ->
                 for (tok in tokenizer.tokenize(line)) {
-                    fileTokens.add(vocabulary.getId(tok))
+                    buffer.add(vocabulary.getId(tok))
                 }
-                fileTokens.add(vocabulary.getId("\n"))
+                buffer.add(nlId)
             }
 
-            // ---------------------------------------------------------
-            // 3b) Optional per‑file shuffling
-            // ---------------------------------------------------------
-            val shuffledFileTokens = if (shuffleWithinFile) {
-                val list = fileTokens.toMutableList()
-                val r = rng ?: Random.Default
-                for (i in list.indices.reversed()) {
-                    val j = r.nextInt(i + 1)
-                    val tmp = list[i]; list[i] = list[j]; list[j] = tmp
-                }
-                list
-            } else fileTokens
-
-            // ---------------------------------------------------------
-            // 3c) Random start offset – we simply drop the first `offset`
-            //     tokens from the *buffer* before we start pulling windows.
-            // ---------------------------------------------------------
-            val offset = if (randomStartOffset) {
-                (rng?.nextInt(stride) ?: 0)
-            } else 0
-
-            // If we already have some tokens from the previous file we keep them.
-            // The offset applies **after** we have appended the new file tokens.
-            buffer.addAll(shuffledFileTokens)
-            if (offset > 0 && buffer.size >= offset) {
-                repeat(offset) { buffer.removeAt(0) }
+            // Optional random offset after appending this file
+            if (randomStartOffset) {
+                val off = (rng?.nextInt(stride) ?: 0)
+                val toDrop = minOf(off, buffer.size)
+                repeat(toDrop) { buffer.removeAt(0) }
             }
 
-            // ---------------------------------------------------------
-            // 3d) Emit full‑size windows while we have enough tokens
-            // ---------------------------------------------------------
-            while (buffer.size >= seqLength) {
-                // ── INPUT (seqLength tokens) ───────────────────────
-                val inp = FloatArray(seqLength) { idx ->
-                    // convert token‑id → float (the network expects FloatArray)
-                    buffer[idx].toFloat()
-                }
+            // --- Emit windows. Need +1 for next-token targets ---
+            while (buffer.size >= seqLength + 1) {
+                val inp = FloatArray(seqLength) { i -> buffer[i].toFloat() }
+                val tgt = IntArray(seqLength)   { i -> buffer[i + 1] }
+                yield(inp to tgt)
 
-                // ── TARGET (next‑token for every position) ──────────
-                val tgt = IntArray(seqLength) { idx ->
-                    buffer[idx + 1]               // shifted by one
-                }
-
-                yield(Pair(inp, tgt))
-
-                // ── SLIDE THE WINDOW ---------------------------------
-                // stride == seqLength → we drop the whole window.
-                // If you want overlapping windows, change `stride`.
-                repeat(stride) { buffer.removeAt(0) }
+                // Slide
+                repeat(stride) { if (buffer.isNotEmpty()) buffer.removeAt(0) }
             }
         }
-
-        // -----------------------------------------------------------------
-        // 4️⃣  What to do with the *final* leftover (< seqLength) tokens?
-        // -----------------------------------------------------------------
-        // We *do not* discard them.  Because `makeCorpusSource` creates a fresh
-        // Sequence for every epoch, the leftover will become the *prefix* of the
-        // first file of the *next* epoch – exactly the “remainder should be part
-        // of the next training cycle” you asked for.
-        // No extra code is needed; just leave `buffer` as‑is.
+        // leftover (< seqLen+1) stays in buffer; next epoch's source starts fresh
     }
 }
 
@@ -237,7 +187,6 @@ fun main() {
 
     // Parameters
     val maxSequenceLength = 1024
-    val stride = maxSequenceLength
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
@@ -271,9 +220,6 @@ fun main() {
         NeuralNetwork(layers, learningRate = 0.001f)
     }
 
-    // Create comprehensive loss function instance
-    val comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, stride)
-
     // Train the model using sparse streaming training (memory efficient!)
     try {
         val maxEpochs = 200
@@ -285,7 +231,7 @@ fun main() {
                 books,
                 vocabulary,
                 maxSequenceLength,
-                stride,
+                strideForEpoch(epochIdx, maxSequenceLength),
                 epochSeed = baseSeed + epochIdx
             )
 
@@ -297,7 +243,7 @@ fun main() {
                 testFrac = 0.0f,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
-                comprehensiveLossFn = comprehensiveLossFn,
+                comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, strideForEpoch(epochIdx, maxSequenceLength)),
                 saveModelPath = "/mnt/onyx/books/onyx-llm-$epochIdx.ser"
             )
 
@@ -309,4 +255,10 @@ fun main() {
         println("Training failed with exception: ${e.message}")
         e.printStackTrace()
     }
+}
+
+fun strideForEpoch(epoch: Int, seqLen: Int): Int = when {
+    epoch < 2  -> seqLen / 4   // e.g., 256 when seqLen=1024
+    epoch < 5  -> seqLen / 2   // 512
+    else       -> seqLen       // 1024 (no overlap)
 }

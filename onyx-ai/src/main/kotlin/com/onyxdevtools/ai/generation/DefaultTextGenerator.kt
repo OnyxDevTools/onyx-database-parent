@@ -356,7 +356,7 @@ fun NeuralNetwork.chat(
 ): String {
     val tokenizer = BPETokenizer(vocabulary)
     val textGenerator = DefaultTextGenerator()
-    return "[SOT][U]" + textGenerator.generate(this, tokenizer, vocabulary, prompt, maxTokens, seqLength) + "[EOT]"
+    return textGenerator.generate(this, tokenizer, vocabulary, "[SOT][U]$prompt[A]", maxTokens, seqLength)
 }
 
 /**
