@@ -126,7 +126,7 @@ open class BasicCPUComputeBackend : ComputeBackend {
      * Basic matrix multiplication implementation that works on all platforms.
      * This is the foundation that optimized implementations can build upon.
      */
-    protected fun matrixMultiplyBasic(matrixA: Matrix, matrixB: Matrix): Matrix {
+    internal fun matrixMultiplyBasic(matrixA: Matrix, matrixB: Matrix): Matrix {
         val numRows = matrixA.size
         val sharedDim = matrixA[0].size
         val numCols = matrixB[0].size

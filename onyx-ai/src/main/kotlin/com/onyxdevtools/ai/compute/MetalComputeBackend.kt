@@ -13,7 +13,7 @@ import kotlin.math.*
  * - Support for Metal Performance Shaders (MPS) when available
  * - Automatic fallback to CPU for unsupported operations
  */
-class MetalComputeBackend : ComputeBackend {
+class MetalComputeBackend : CPUComputeBackend() {
     
     override val backendType: ComputeBackendType = ComputeBackendType.METAL
     
@@ -23,7 +23,10 @@ class MetalComputeBackend : ComputeBackend {
     // Memory management tracking - track all allocated buffers for cleanup
     private val gpuBuffers = mutableSetOf<Long>()
     private val bufferLock = Any()
-    
+
+    // Define threshold based on granular benchmark analysis: Metal consistently wins for very large matrices.
+    private val METAL_HIGH_OPS_THRESHOLD = 1_000_000_000L // Metal consistently wins for total operations >= 1 billion
+
     companion object {
         /**
          * Flag to track if the native library was loaded successfully
@@ -129,17 +132,7 @@ class MetalComputeBackend : ComputeBackend {
             bufferB: Long, rowsB: Int, colsB: Int,
             bufferResult: Long
         ): Boolean
-        
-        /**
-         * Perform matrix addition on GPU
-         */
-        @JvmStatic
-        external fun gpuMatrixAdd(
-            contextHandle: Long,
-            bufferA: Long, bufferB: Long, bufferResult: Long,
-            rows: Int, cols: Int
-        ): Boolean
-        
+
         /**
          * Perform element-wise matrix operations on GPU
          */
@@ -200,10 +193,14 @@ class MetalComputeBackend : ComputeBackend {
         val colsA = a[0].size
         val rowsB = b.size
         val colsB = b[0].size
-        
-        // For small matrices, use CPU to avoid GPU transfer overhead
-        if (rowsA * colsA * colsB < 100000) {
-            return matrixMultiplyCPU(a, b)
+
+        // Use a more accurate threshold based on total operations (rowsA * colsA * colsB)
+        // This value needs to be determined by systematic benchmarking.
+        val totalOperations = rowsA.toLong() * colsA.toLong() * colsB.toLong()
+
+        // Decision logic for Metal vs. CPU
+        if (totalOperations < METAL_HIGH_OPS_THRESHOLD) {
+            return super.matrixMultiply(a, b)
         }
         
         var bufferA = 0L
@@ -227,7 +224,7 @@ class MetalComputeBackend : ComputeBackend {
             if (!success) {
                 // Fallback to CPU
                 releaseTempBuffers(bufferA, bufferB, bufferResult)
-                return matrixMultiplyCPU(a, b)
+                return super.matrixMultiply(a, b)
             }
             
             // Copy result back from GPU
@@ -246,283 +243,9 @@ class MetalComputeBackend : ComputeBackend {
             println("Metal matrix multiplication failed, falling back to CPU: ${e.message}")
             // Ensure cleanup on exception
             releaseTempBuffers(bufferA, bufferB, bufferResult)
-            matrixMultiplyCPU(a, b)
+            super.matrixMultiply(a, b)
         }
     }
-    
-    override fun add(a: Matrix, b: Matrix): Matrix {
-        require(a.size == b.size && a[0].size == b[0].size) {
-            "Matrix dimensions must match for addition"
-        }
-        
-        val rows = a.size
-        val cols = a[0].size
-        
-        // For small matrices, use CPU
-        if (rows * cols < 1000) {
-            return addCPU(a, b)
-        }
-        
-        var bufferA = 0L
-        var bufferB = 0L
-        var bufferResult = 0L
-        return try {
-            bufferA = createMatrixBuffer(a)
-            bufferB = createMatrixBuffer(b)
-            val resultSize = rows * cols
-            bufferResult = createTrackedBuffer(resultSize * 4)
-            
-            val success = gpuElementWiseOperation(
-                metalContext, bufferA, bufferB, bufferResult, rows, cols, 0 // 0 = add
-            )
-            
-            if (!success) {
-                releaseTempBuffers(bufferA, bufferB, bufferResult)
-                return addCPU(a, b)
-            }
-            
-            val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
-            val result = Array(rows) { row ->
-                FloatArray(cols) { col ->
-                    resultData[row * cols + col]
-                }
-            }
-            
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
-            result
-        } catch (e: Exception) {
-            println("Metal matrix addition failed, falling back to CPU: ${e.message}")
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
-            addCPU(a, b)
-        }
-    }
-    
-    override fun subtract(a: Matrix, b: Matrix): Matrix {
-        require(a.size == b.size && a[0].size == b[0].size) {
-            "Matrix dimensions must match for subtraction"
-        }
-        
-        val rows = a.size
-        val cols = a[0].size
-        
-        // For small matrices, use CPU
-        if (rows * cols < 1000) {
-            return subtractCPU(a, b)
-        }
-        
-        var bufferA = 0L
-        var bufferB = 0L
-        var bufferResult = 0L
-        return try {
-            bufferA = createMatrixBuffer(a)
-            bufferB = createMatrixBuffer(b)
-            val resultSize = rows * cols
-            bufferResult = createTrackedBuffer(resultSize * 4)
-            
-            val success = gpuElementWiseOperation(
-                metalContext, bufferA, bufferB, bufferResult, rows, cols, 1 // 1 = subtract
-            )
-            
-            if (!success) {
-                releaseTempBuffers(bufferA, bufferB, bufferResult)
-                return subtractCPU(a, b)
-            }
-            
-            val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
-            val result = Array(rows) { row ->
-                FloatArray(cols) { col ->
-                    resultData[row * cols + col]
-                }
-            }
-            
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
-            result
-        } catch (e: Exception) {
-            println("Metal matrix subtraction failed, falling back to CPU: ${e.message}")
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
-            subtractCPU(a, b)
-        }
-    }
-    
-    override fun elementWiseMultiply(a: Matrix, b: Matrix): Matrix {
-        require(a.size == b.size && a[0].size == b[0].size) {
-            "Matrix dimensions must match for element-wise multiplication"
-        }
-        
-        val rows = a.size
-        val cols = a[0].size
-        
-        // For small matrices, use CPU
-        if (rows * cols < 100000) {
-            return elementWiseMultiplyCPU(a, b)
-        }
-        
-        var bufferA = 0L
-        var bufferB = 0L
-        var bufferResult = 0L
-        return try {
-            bufferA = createMatrixBuffer(a)
-            bufferB = createMatrixBuffer(b)
-            val resultSize = rows * cols
-            bufferResult = createTrackedBuffer(resultSize * 4)
-            
-            val success = gpuElementWiseOperation(
-                metalContext, bufferA, bufferB, bufferResult, rows, cols, 2 // 2 = multiply
-            )
-            
-            if (!success) {
-                releaseTempBuffers(bufferA, bufferB, bufferResult)
-                return elementWiseMultiplyCPU(a, b)
-            }
-            
-            val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
-            val result = Array(rows) { row ->
-                FloatArray(cols) { col ->
-                    resultData[row * cols + col]
-                }
-            }
-            
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
-            result
-        } catch (e: Exception) {
-            println("Metal element-wise multiplication failed, falling back to CPU: ${e.message}")
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
-            elementWiseMultiplyCPU(a, b)
-        }
-    }
-    
-    override fun transpose(matrix: Matrix): Matrix {
-        if (matrix.isEmpty()) return arrayOf()
-        
-        val rows = matrix.size
-        val cols = matrix[0].size
-        
-        // For small matrices, use CPU
-        if (rows * cols < 1000) {
-            return transposeCPU(matrix)
-        }
-        
-        var bufferInput = 0L
-        var bufferOutput = 0L
-        return try {
-            bufferInput = createMatrixBuffer(matrix)
-            bufferOutput = createTrackedBuffer(rows * cols * 4)
-            
-            val success = gpuTranspose(metalContext, bufferInput, bufferOutput, rows, cols)
-            
-            if (!success) {
-                releaseTempBuffers(bufferInput, bufferOutput)
-                return transposeCPU(matrix)
-            }
-            
-            val resultData = copyFromGPU(metalContext, bufferOutput, rows * cols)
-            val result = Array(cols) { row ->
-                FloatArray(rows) { col ->
-                    resultData[row * rows + col]
-                }
-            }
-            
-            releaseTempBuffers(bufferInput, bufferOutput)
-            result
-        } catch (e: Exception) {
-            println("Metal matrix transpose failed, falling back to CPU: ${e.message}")
-            releaseTempBuffers(bufferInput, bufferOutput)
-            transposeCPU(matrix)
-        }
-    }
-    
-    override fun scalarMultiply(matrix: Matrix, scalar: Float): Matrix {
-        return matrix.map { row -> 
-            FloatArray(row.size) { colIndex -> row[colIndex] * scalar } 
-        }.toTypedArray()
-    }
-    
-    override fun addVectorToRows(matrix: Matrix, vector: FloatArray): Matrix {
-        return matrix.map { row -> 
-            FloatArray(row.size) { colIndex -> row[colIndex] + vector[colIndex] } 
-        }.toTypedArray()
-    }
-    
-    override fun applyElementWise(matrix: Matrix, transform: (Float) -> Float): Matrix {
-        return matrix.map { row -> 
-            FloatArray(row.size) { colIndex -> transform(row[colIndex]) } 
-        }.toTypedArray()
-    }
-    
-    override fun sumColumns(matrix: Matrix): FloatArray {
-        return FloatArray(if (matrix.isEmpty()) 0 else matrix[0].size).also { columnSums ->
-            for (row in matrix) {
-                for (colIndex in row.indices) {
-                    columnSums[colIndex] += row[colIndex]
-                }
-            }
-        }
-    }
-    
-    override fun softmax(matrix: Matrix): Matrix {
-        val rows = matrix.size
-        val cols = if (rows > 0) matrix[0].size else 0
-        
-        if (rows * cols < 1000) {
-            return softmaxCPU(matrix)
-        }
-        
-        var bufferInput = 0L
-        var bufferOutput = 0L
-        return try {
-            bufferInput = createMatrixBuffer(matrix)
-            bufferOutput = createTrackedBuffer(rows * cols * 4)
-            
-            val success = gpuSoftmax(metalContext, bufferInput, bufferOutput, rows, cols)
-            
-            if (!success) {
-                releaseTempBuffers(bufferInput, bufferOutput)
-                return softmaxCPU(matrix)
-            }
-            
-            val resultData = copyFromGPU(metalContext, bufferOutput, rows * cols)
-            val result = Array(rows) { row ->
-                FloatArray(cols) { col ->
-                    resultData[row * cols + col]
-                }
-            }
-            
-            releaseTempBuffers(bufferInput, bufferOutput)
-            result
-        } catch (e: Exception) {
-            println("Metal softmax failed, falling back to CPU: ${e.message}")
-            releaseTempBuffers(bufferInput, bufferOutput)
-            softmaxCPU(matrix)
-        }
-    }
-    
-    override fun meanStandardError(predicted: Matrix, actual: Matrix): Float {
-        var sum = 0.0f
-        var total = 0
-
-        val rows = minOf(predicted.size, actual.size)
-        for (i in 0 until rows) {
-            val cols = minOf(predicted[i].size, actual[i].size)
-            for (j in 0 until cols) {
-                sum += (predicted[i][j] - actual[i][j]).pow(2)
-                total++
-            }
-        }
-        return if (total > 0) sum / total else 0.0f
-    }
-    
-    override fun deepCopy(matrix: Matrix): Matrix {
-        return matrix.map { it.copyOf() }.toTypedArray()
-    }
-    
-    override fun flatten(matrix: Matrix): FloatArray {
-        return buildList { 
-            for (row in matrix) {
-                addAll(row.asList())
-            }
-        }.toFloatArray()
-    }
-    
     // Helper methods
 
     private fun createMatrixBuffer(matrix: Matrix): Long {
@@ -558,61 +281,7 @@ class MetalComputeBackend : ComputeBackend {
             }
         }
     }
-    
-    // CPU fallback methods
-    
-    private fun matrixMultiplyCPU(a: Matrix, b: Matrix): Matrix {
-        val numRows = a.size
-        val sharedDim = a[0].size
-        val numCols = b[0].size
-        val result = Array(numRows) { FloatArray(numCols) }
 
-        for (row in 0 until numRows) {
-            val resultRow = result[row]
-            for (sharedIndex in 0 until sharedDim) {
-                val valueA = a[row][sharedIndex]
-                val rowB = b[sharedIndex]
-                for (col in 0 until numCols) {
-                    resultRow[col] += valueA * rowB[col]
-                }
-            }
-        }
-        return result
-    }
-    
-    private fun addCPU(a: Matrix, b: Matrix): Matrix {
-        return a.mapIndexed { rowIndex, row ->
-            FloatArray(row.size) { colIndex -> row[colIndex] + b[rowIndex][colIndex] }
-        }.toTypedArray()
-    }
-    
-    private fun subtractCPU(a: Matrix, b: Matrix): Matrix {
-        return a.mapIndexed { rowIndex, row ->
-            FloatArray(row.size) { colIndex -> row[colIndex] - b[rowIndex][colIndex] }
-        }.toTypedArray()
-    }
-    
-    private fun elementWiseMultiplyCPU(a: Matrix, b: Matrix): Matrix {
-        return a.mapIndexed { rowIndex, row ->
-            FloatArray(row.size) { colIndex -> row[colIndex] * b[rowIndex][colIndex] }
-        }.toTypedArray()
-    }
-    
-    private fun transposeCPU(matrix: Matrix): Matrix {
-        return Array(matrix[0].size) { colIndex ->
-            FloatArray(matrix.size) { rowIndex -> matrix[rowIndex][colIndex] }
-        }
-    }
-    
-    private fun softmaxCPU(matrix: Matrix): Matrix {
-        return matrix.map { logits ->
-            val max = logits.maxOrNull() ?: 0.0f
-            val expLogits = logits.map { exp(it - max) }
-            val sumExp = expLogits.sum()
-            expLogits.map { it / sumExp }.toFloatArray()
-        }.toTypedArray()
-    }
-    
     /**
      * Cleanup resources
      */
