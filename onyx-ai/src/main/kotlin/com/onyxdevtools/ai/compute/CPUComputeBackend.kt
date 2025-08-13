@@ -20,9 +20,9 @@ import java.util.stream.IntStream
  * Falls back to BasicCPUComputeBackend implementation if Java Vector API is not available.
  */
 open class CPUComputeBackend : BasicCPUComputeBackend() {
-    
+
     // Vector API Specifications
-    private val FLOAT_SPEC: VectorSpecies<Float>? by lazy { 
+    private val FLOAT_SPEC: VectorSpecies<Float>? by lazy {
         try {
             FloatVector.SPECIES_PREFERRED
         } catch (e: Throwable) {
@@ -30,7 +30,7 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
             null
         }
     }
-    
+
     // Performance constants
     private companion object {
         // Threshold for using basic sequential multiplication (total operations)

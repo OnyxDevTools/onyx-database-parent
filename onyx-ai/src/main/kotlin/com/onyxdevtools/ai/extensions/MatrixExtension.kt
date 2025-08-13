@@ -8,7 +8,7 @@ import java.util.stream.IntStream
 import kotlin.math.*
 
 // Vector API Specifications
-private val FLOAT_SPEC: VectorSpecies<Float> = FloatVector.SPECIES_PREFERRED
+private val FLOAT_SPEC: VectorSpecies<Float> by lazy { FloatVector.SPECIES_PREFERRED }
 
 // Performance constants
 private const val SIMPLE_WORK_MAX = 50_000

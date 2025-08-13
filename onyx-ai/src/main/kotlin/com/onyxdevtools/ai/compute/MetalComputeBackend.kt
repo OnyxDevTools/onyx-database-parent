@@ -1,6 +1,7 @@
 package com.onyxdevtools.ai.compute
 
 import com.onyxdevtools.ai.Matrix
+import java.util.*
 import kotlin.math.*
 
 /**
@@ -38,12 +39,56 @@ class MetalComputeBackend : CPUComputeBackend() {
          */
         init {
             try {
+                // First try to load from standard library path
                 System.loadLibrary("onyx-metal")
                 nativeLibraryLoaded = true
             } catch (e: UnsatisfiedLinkError) {
-                nativeLibraryLoaded = false
-                println("Metal native library not available: ${e.message}")
+                try {
+                    // Fallback: try to load from resources (for IDE environments)
+                    loadLibraryFromResources()
+                    nativeLibraryLoaded = true
+                } catch (resourceException: Exception) {
+                    nativeLibraryLoaded = false
+                    println("Metal native library not available: ${e.message}")
+                    println("Resource loading also failed: ${resourceException.message}")
+                }
             }
+        }
+        
+        /**
+         * Load native library from embedded resources
+         */
+        private fun loadLibraryFromResources() {
+            val osName = System.getProperty("os.name").lowercase(Locale.getDefault())
+            val libraryName = when {
+                osName.contains("mac") -> "libonyx-metal.dylib"
+                osName.contains("linux") -> "libonyx-metal.so"
+                osName.contains("windows") -> "onyx-metal.dll"
+                else -> throw UnsupportedOperationException("Unsupported OS: $osName")
+            }
+            
+            val resourcePath = "/native/$libraryName"
+            val inputStream = MetalComputeBackend::class.java.getResourceAsStream(resourcePath)
+                ?: throw RuntimeException("Native library not found in resources: $resourcePath")
+            
+            // Create temporary file
+            val tempFile = java.io.File.createTempFile("onyx-metal", when {
+                osName.contains("mac") -> ".dylib"
+                osName.contains("linux") -> ".so"
+                osName.contains("windows") -> ".dll"
+                else -> ".lib"
+            })
+            tempFile.deleteOnExit()
+            
+            // Copy library to temp file
+            inputStream.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            
+            // Load the temporary library
+            System.load(tempFile.absolutePath)
         }
 
         /**
