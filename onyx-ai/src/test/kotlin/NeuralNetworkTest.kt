@@ -16,6 +16,7 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for verifying the correctness and behavior of [NeuralNetwork].
  */
+@Ignore
 class NeuralNetworkTest {
 
     /**

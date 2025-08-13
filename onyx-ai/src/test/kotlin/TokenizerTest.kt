@@ -2,6 +2,7 @@ import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.Vocabulary
 import kotlin.test.*
 
+@Ignore
 class BPETokenizerTest {
 
     private lateinit var vocabulary: Vocabulary

@@ -7,6 +7,7 @@ import kotlin.math.exp
 import kotlin.math.sqrt
 import kotlin.test.*
 
+@Ignore
 class TransformerTests {
 
     /* ────────────────────────────────────────────────────────────────

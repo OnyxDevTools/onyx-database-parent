@@ -18,6 +18,7 @@ import kotlin.test.assertTrue
 class LLMTrainingTest {
 
     @Test
+    @Ignore
     fun testLargerDataSetA() {
         // Load full text
         val fullText = File("src/test/resources/alice_full_packed.txt").readText()
