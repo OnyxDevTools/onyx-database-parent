@@ -252,14 +252,15 @@ class OllamaClient(
         }.bodyAsText()
 
         // Removed tracing of the json response
-
         val root = Json.parseToJsonElement(firstResp).jsonObject
         val message = root["message"]?.jsonObject ?: error("No message in response")
         val toolCalls = message["tool_calls"]?.jsonArray
+        val content = message["content"]?.jsonPrimitive?.contentOrNull ?: ""
+        val thinking = message["thinking"]?.jsonPrimitive?.contentOrNull ?: ""
 
         // If no tool calls, try to parse content as direct JSON response
         if (toolCalls == null || toolCalls.isEmpty()) {
-            val content = message["content"]?.jsonPrimitive?.contentOrNull ?: ""
+
             if (content.contains("tasks")) {
                 try {
                     val jsonOnly = extractJsonObject(content)
@@ -268,13 +269,13 @@ class OllamaClient(
                     // If parsing fails, create a simple task from the content
                     return TaskResponse(listOf(
                         Task(action = Action.RUN_COMMAND, instruction = "echo 'No specific tasks identified'")
-                    ))
+                    ), content = content, thinking = thinking)
                 }
             } else {
                 // No tool calls and no JSON tasks, create a simple response
                 return TaskResponse(listOf(
                     Task(action = Action.RUN_COMMAND, instruction = "echo 'Processing request: $userPrompt'")
-                ))
+                ), content = content, thinking = thinking)
             }
         }
 
@@ -370,7 +371,7 @@ class OllamaClient(
 
         // If we have tasks from tool calls, return them
         if (tasks.isNotEmpty()) {
-            return TaskResponse(tasks)
+            return TaskResponse(tasks, content = content, thinking = thinking)
         }
 
         // 3) If no tasks were generated, send tool results back for final completion
@@ -420,28 +421,8 @@ class OllamaClient(
             // If parsing fails, create a simple response
             TaskResponse(listOf(
                 Task(action = Action.RUN_COMMAND, instruction = "echo 'Task completed'")
-            ))
+            ), content = content, thinking = thinking)
         }
-    }
-
-    /** -------------------------------------------------------------
-    Plain‑text chat – used for summarising, follow‑up questions, etc.
-    ------------------------------------------------------------- */
-    suspend fun chatPlain(messages: List<JsonObject>): String = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            put("model", model)
-            put("messages", JsonArray(messages))
-            put("stream", false)
-        }
-
-        val raw = http.post("$baseUrl/api/chat") {
-            contentType(ContentType.Application.Json)
-            bearerHeader()
-            setBody(body)
-        }.bodyAsText()
-
-        val outer = Json.parseToJsonElement(raw).jsonObject
-        outer["message"]!!.jsonObject["content"]!!.jsonPrimitive.content
     }
 
     /** -------------------------------------------------------------

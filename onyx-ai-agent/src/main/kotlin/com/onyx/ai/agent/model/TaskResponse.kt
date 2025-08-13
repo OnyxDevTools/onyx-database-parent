@@ -4,4 +4,4 @@ import kotlinx.serialization.Serializable
 
 /** Whole response object coming from Ollama */
 @Serializable
-data class TaskResponse(val tasks: List<Task>)
+data class TaskResponse(val tasks: List<Task>, val content: String = "", val thinking: String = "")

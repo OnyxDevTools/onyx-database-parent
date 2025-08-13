@@ -10,9 +10,6 @@ import com.github.difflib.UnifiedDiffUtils        // <-- NEW
 object ProjectIO {
     /** Root of the project you want the agent to touch. */
     var root: Path = Paths.get("").toAbsolutePath()
-        set(value) {
-            field = value
-        }
 
     fun read(relPath: String): String = root.resolve(relPath).readText()
 
