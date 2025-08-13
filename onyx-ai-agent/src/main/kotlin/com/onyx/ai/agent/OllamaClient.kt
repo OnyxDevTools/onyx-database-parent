@@ -1,6 +1,8 @@
 package com.onyx.ai.agent
 
 import com.onyx.ai.agent.model.TaskResponse
+import com.onyx.ai.agent.model.Task
+import com.onyx.ai.agent.model.Action
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -17,7 +19,7 @@ class OllamaClient(
     internal val model: String = "gpt-oss:20b",
 
     /** Base URL of the *actual* Ollama server (or an OpenAI‑compatible proxy). */
-    internal val baseUrl: String = "https://ollama.com",   // <-- most likely change needed
+    internal val baseUrl: String = "https://ollama.com",
 
     /** Secret bearer token – required by Ollama as of v0.1.27 and by every proxy that expects a key */
     private val apiKey: String
@@ -33,128 +35,132 @@ class OllamaClient(
     }
 
     /** -------------------------------------------------------------
-    1️⃣  System prompt that *forces* JSON‑only output.
+    System prompt that explains the available tools and when to use them
     ------------------------------------------------------------- */
     private val systemPrompt = """
-        You are a powerful AI coding assistant that can perform comprehensive software development tasks through a JSON-based action system.
+        You are a powerful AI coding assistant that can perform comprehensive software development tasks.
         
-        CRITICAL INSTRUCTIONS:
-        - You MUST respond with ONLY a JSON object, nothing else
-        - Do NOT use tool_calls, function calls, or any external tools
-        - Do NOT wrap JSON in markdown code blocks or fences
-        - Do NOT add explanatory text before or after the JSON
-        - Do NOT use repo_browser, apply_patch, or any other tools
+        You have access to these tools for interacting with the project:
+        - run_command: Execute shell commands to gather information, build projects, run tests, etc.
+        - read_file: Read and examine existing files to understand code structure
+        - create_file: Create new files with any content
+        - edit_file: Modify existing files completely (full file replacement)
+        - delete_file: Remove files when needed
         
-        YOUR CAPABILITIES:
-        You can perform MULTIPLE tasks in sequence and iteratively solve complex problems:
+        When you need to perform any file operations or execute commands, use the appropriate tool.
+        You can use multiple tools in sequence to solve complex problems iteratively.
         
-        📂 FILE OPERATIONS:
-        - "read_file": Read and examine existing files to understand code structure
-        - "create_file": Create new files with any content
-        - "edit_file": Modify existing files completely (full file replacement)
-        - "delete_file": Remove files when needed
-        
-        💻 COMMAND EXECUTION:
-        - "run_command": Execute ANY shell commands to:
-          * Gather information (ls, find, grep, cat, etc.)
-          * Build and compile projects (gradle, maven, make, etc.)
-          * Run tests and check results
-          * Install dependencies
-          * Git operations
-          * System exploration and diagnostics
-        
-        🔄 ITERATIVE PROBLEM SOLVING:
-        - You can provide multiple tasks in a single response
-        - Each task result will be sent back to you for analysis
-        - You can then provide additional tasks based on the results
-        - Continue until the problem is fully solved
-        - Use terminal commands to gather information before making changes
-        
-        Your response must be a valid JSON object matching this exact schema:
-        {
-          "tasks": [
-            {
-              "action": "create_file|edit_file|delete_file|read_file|run_command",
-              "path": "<file-path-when-needed>",
-              "content": "<file-content-when-needed>",
-              "instruction": "<command-when-needed>"
-            }
-          ]
-        }
-        
-        EXAMPLES:
-        
-        Explore project structure:
-        {"tasks":[{"action":"run_command","instruction":"find . -name '*.kt' | head -10"}]}
-        
-        Read a file to understand it:
-        {"tasks":[{"action":"read_file","path":"src/main/kotlin/Main.kt"}]}
-        
-        Multiple sequential tasks:
-        {"tasks":[
-          {"action":"run_command","instruction":"ls -la"},
-          {"action":"read_file","path":"build.gradle.kts"},
-          {"action":"run_command","instruction":"./gradlew test"}
-        ]}
-        
-        IMPORTANT: Think step by step and use information-gathering commands before making changes!
+        Always think step by step and use information-gathering commands before making changes.
     """.trimIndent()
 
     /** -------------------------------------------------------------
-    The JSON‑schema we send to Ollama (only used when talking to a *real* Ollama server).
+    Tool definitions for function calling
     ------------------------------------------------------------- */
-    private val taskSchema = JsonObject(
-        mapOf(
-            "type" to JsonPrimitive("object"),
-            "properties" to JsonObject(
-                mapOf(
-                    "tasks" to JsonObject(
-                        mapOf(
-                            "type" to JsonPrimitive("array"),
-                            "items" to JsonObject(
-                                mapOf(
-                                    "type" to JsonPrimitive("object"),
-                                    "properties" to JsonObject(
-                                        mapOf(
-                                            "action" to JsonObject(
-                                                mapOf(
-                                                    "type" to JsonPrimitive("string"),
-                                                    "enum" to JsonArray(
-                                                        listOf(
-                                                            JsonPrimitive("create_file"),
-                                                            JsonPrimitive("edit_file"),
-                                                            JsonPrimitive("delete_file"),
-                                                            JsonPrimitive("read_file"),
-                                                            JsonPrimitive("run_command")
-                                                        )
-                                                    )
-                                                )
-                                            ),
-                                            "path" to JsonObject(mapOf("type" to JsonPrimitive("string"))),
-                                            "content" to JsonObject(mapOf("type" to JsonPrimitive("string"))),
-                                            "instruction" to JsonObject(mapOf("type" to JsonPrimitive("string")))
-                                        )
-                                    ),
-                                    "required" to JsonArray(listOf(JsonPrimitive("action")))
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            "required" to JsonArray(listOf(JsonPrimitive("tasks")))
-        )
-    )
+    private val tools = buildJsonArray {
+        add(buildJsonObject {
+            put("type", "function")
+            put("function", buildJsonObject {
+                put("name", "run_command")
+                put("description", "Execute shell commands to gather information, build projects, run tests, install dependencies, etc.")
+                put("parameters", buildJsonObject {
+                    put("type", "object")
+                    put("properties", buildJsonObject {
+                        put("instruction", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The shell command to execute")
+                        })
+                    })
+                    put("required", buildJsonArray { add("instruction") })
+                })
+            })
+        })
+        add(buildJsonObject {
+            put("type", "function")
+            put("function", buildJsonObject {
+                put("name", "read_file")
+                put("description", "Read and examine existing files to understand code structure")
+                put("parameters", buildJsonObject {
+                    put("type", "object")
+                    put("properties", buildJsonObject {
+                        put("path", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The file path to read")
+                        })
+                    })
+                    put("required", buildJsonArray { add("path") })
+                })
+            })
+        })
+        add(buildJsonObject {
+            put("type", "function")
+            put("function", buildJsonObject {
+                put("name", "create_file")
+                put("description", "Create new files with any content")
+                put("parameters", buildJsonObject {
+                    put("type", "object")
+                    put("properties", buildJsonObject {
+                        put("path", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The file path to create")
+                        })
+                        put("content", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The content to write to the file")
+                        })
+                    })
+                    put("required", buildJsonArray { add("path"); add("content") })
+                })
+            })
+        })
+        add(buildJsonObject {
+            put("type", "function")
+            put("function", buildJsonObject {
+                put("name", "edit_file")
+                put("description", "Modify existing files completely (full file replacement)")
+                put("parameters", buildJsonObject {
+                    put("type", "object")
+                    put("properties", buildJsonObject {
+                        put("path", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The file path to edit")
+                        })
+                        put("content", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The new content for the file")
+                        })
+                    })
+                    put("required", buildJsonArray { add("path"); add("content") })
+                })
+            })
+        })
+        add(buildJsonObject {
+            put("type", "function")
+            put("function", buildJsonObject {
+                put("name", "delete_file")
+                put("description", "Remove files when needed")
+                put("parameters", buildJsonObject {
+                    put("type", "object")
+                    put("properties", buildJsonObject {
+                        put("path", buildJsonObject {
+                            put("type", "string")
+                            put("description", "The file path to delete")
+                        })
+                    })
+                    put("required", buildJsonArray { add("path") })
+                })
+            })
+        })
+    }
 
     /** -------------------------------------------------------------
-    Helper – adds   Authorization: Bearer <apiKey>
+    Helper – adds Authorization: Bearer <apiKey>
     ------------------------------------------------------------- */
     private fun HttpRequestBuilder.bearerHeader() {
         header(HttpHeaders.Authorization, "Bearer $apiKey")
     }
 
     /** -------------------------------------------------------------
-    2️⃣  Ask the model for a **structured list of tasks**.
+    Ask the model for a structured list of tasks using function calling
     ------------------------------------------------------------- */
     suspend fun askForTasks(userPrompt: String): TaskResponse = withContext(Dispatchers.IO) {
         askForTasksInternal(userPrompt)
@@ -168,105 +174,218 @@ class OllamaClient(
     }
     
     private suspend fun askForTasksInternal(userPrompt: String, previousMessages: List<ChatHistory.Msg>? = null): TaskResponse {
-        /* --------- Build the request body ----------------------- */
-        val body = buildJsonObject {
-            put("model", model)
-
-            // ---- messages ----------------------------------------------------
-            put("messages", buildJsonArray {
-                // system message – bans tool calls & forces JSON
-                add(buildJsonObject {
-                    put("role", "system")
-                    put("content", systemPrompt)
-                })
-                
-                // Add previous messages if provided
-                previousMessages?.forEach { msg ->
-                    if (msg.role != "system") { // Don't duplicate system messages
-                        add(buildJsonObject {
-                            put("role", msg.role)
-                            put("content", msg.content)
-                        })
-                    }
+        // 1) First call: provide the functions as tools
+        val messages = buildJsonArray {
+            // System message
+            add(buildJsonObject {
+                put("role", "system")
+                put("content", systemPrompt)
+            })
+            
+            // Add previous messages if provided
+            previousMessages?.forEach { msg ->
+                if (msg.role != "system") { // Don't duplicate system messages
+                    add(buildJsonObject {
+                        put("role", msg.role)
+                        put("content", msg.content)
+                    })
                 }
-                
-                // actual user request
+            }
+            
+            // Current user message
+            if (userPrompt.isNotEmpty()) {
                 add(buildJsonObject {
                     put("role", "user")
                     put("content", userPrompt)
                 })
-            })
+            }
+        }
 
+        val firstBody = buildJsonObject {
+            put("model", model)
             put("stream", false)
+            put("messages", messages)
+            put("tools", tools)
+        }
 
-            // -----------------------------------------------------------------
-            // ---- Two possible flavours – pick the one that matches your backend
-            // -----------------------------------------------------------------
-            if (baseUrl.contains("ollama", ignoreCase = true)) {
-                // Pure Ollama server – it understands the `format` key
-                put("format", taskSchema)
+        val firstResp = http.post("$baseUrl/api/chat") {
+            bearerHeader()
+            contentType(ContentType.Application.Json)
+            setBody(firstBody)
+        }.bodyAsText()
+
+        println("🟢 First response: $firstResp")
+
+        val root = Json.parseToJsonElement(firstResp).jsonObject
+        val message = root["message"]?.jsonObject ?: error("No message in response")
+        val toolCalls = message["tool_calls"]?.jsonArray
+
+        // If no tool calls, try to parse content as direct JSON response
+        if (toolCalls == null || toolCalls.isEmpty()) {
+            val content = message["content"]?.jsonPrimitive?.contentOrNull ?: ""
+            if (content.contains("tasks")) {
+                try {
+                    val jsonOnly = extractJsonObject(content)
+                    return Json.decodeFromString<TaskResponse>(jsonOnly)
+                } catch (e: Exception) {
+                    // If parsing fails, create a simple task from the content
+                    return TaskResponse(listOf(
+                        Task(action = Action.RUN_COMMAND, instruction = "echo 'No specific tasks identified'")
+                    ))
+                }
             } else {
-                // OpenAI‑compatible proxy – use `options.response_format`
-                put("options", buildJsonObject {
-                    put("response_format", "json_object")
-                    // Disable tools (OpenAI 1.0+)
-                    put("tool_choice", "none")
+                // No tool calls and no JSON tasks, create a simple response
+                return TaskResponse(listOf(
+                    Task(action = Action.RUN_COMMAND, instruction = "echo 'Processing request: $userPrompt'")
+                ))
+            }
+        }
+
+        // 2) Execute the requested tool calls
+        val toolResults = mutableListOf<JsonObject>()
+        val tasks = mutableListOf<Task>()
+
+        for (call in toolCalls) {
+            val callObj = call.jsonObject
+            val function = callObj["function"]?.jsonObject ?: continue
+            val name = function["name"]?.jsonPrimitive?.content ?: continue
+            val argsEl = function["arguments"]
+
+            // Parse arguments - handle both JsonObject and string formats
+            val argsObj = when {
+                argsEl is JsonObject -> argsEl
+                argsEl is JsonPrimitive && argsEl.isString -> {
+                    try {
+                        Json.parseToJsonElement(argsEl.content).jsonObject
+                    } catch (e: Exception) {
+                        buildJsonObject { }
+                    }
+                }
+                else -> buildJsonObject { }
+            }
+
+            // Convert tool call to task and prepare result
+            when (name) {
+                "run_command" -> {
+                    val instruction = argsObj["instruction"]?.jsonPrimitive?.content ?: ""
+                    tasks.add(Task(action = Action.RUN_COMMAND, instruction = instruction))
+                    
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "Command queued: $instruction")
+                        put("status", "success")
+                    })
+                }
+                "read_file" -> {
+                    val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
+                    tasks.add(Task(action = Action.READ_FILE, path = path))
+                    
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "File read queued: $path")
+                        put("status", "success")
+                    })
+                }
+                "create_file" -> {
+                    val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
+                    val content = argsObj["content"]?.jsonPrimitive?.content ?: ""
+                    tasks.add(Task(action = Action.CREATE_FILE, path = path, content = content))
+                    
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "File creation queued: $path")
+                        put("status", "success")
+                    })
+                }
+                "edit_file" -> {
+                    val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
+                    val content = argsObj["content"]?.jsonPrimitive?.content ?: ""
+                    tasks.add(Task(action = Action.EDIT_FILE, path = path, content = content))
+                    
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "File edit queued: $path")
+                        put("status", "success")
+                    })
+                }
+                "delete_file" -> {
+                    val path = argsObj["path"]?.jsonPrimitive?.content ?: ""
+                    tasks.add(Task(action = Action.DELETE_FILE, path = path))
+                    
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "File deletion queued: $path")
+                        put("status", "success")
+                    })
+                }
+                else -> {
+                    toolResults.add(buildJsonObject {
+                        put("tool_call_result", "Unknown tool: $name")
+                        put("status", "error")
+                    })
+                }
+            }
+        }
+
+        // If we have tasks from tool calls, return them
+        if (tasks.isNotEmpty()) {
+            return TaskResponse(tasks)
+        }
+
+        // 3) If no tasks were generated, send tool results back for final completion
+        val followupMessages = buildJsonArray {
+            // Include all previous messages
+            messages.forEach { add(it) }
+            
+            // Add the assistant's tool call message
+            add(buildJsonObject {
+                put("role", "assistant")
+                put("content", "")
+                put("tool_calls", toolCalls)
+            })
+            
+            // Add tool results
+            toolResults.forEach { result ->
+                add(buildJsonObject {
+                    put("role", "tool")
+                    put("content", result.toString())
                 })
             }
         }
 
-        /* --------- Send the HTTP request ------------------------ */
-        val raw = http.post("$baseUrl/api/chat") {
-            contentType(ContentType.Application.Json)
+        val secondBody = buildJsonObject {
+            put("model", model)
+            put("stream", false)
+            put("messages", followupMessages)
+        }
+
+        val secondResp = http.post("$baseUrl/api/chat") {
             bearerHeader()
-            setBody(body)
+            contentType(ContentType.Application.Json)
+            setBody(secondBody)
         }.bodyAsText()
 
-        // -----------------------------------------------------------------
-        // 3️⃣ Show the raw payload – helps you debug the next time
-        // -----------------------------------------------------------------
-        println("🟢 Raw HTTP response:\n$raw")
+        println("🟢 Second response: $secondResp")
 
-        // -----------------------------------------------------------------
-        // 4️⃣ Extract the assistant's `content` field (the model's reply)
-        // -----------------------------------------------------------------
-        val outer = Json.parseToJsonElement(raw).jsonObject
-        val messageObj = outer["message"]?.jsonObject
-            ?: error("Response does not contain a `message` object")
+        val finalRoot = Json.parseToJsonElement(secondResp).jsonObject
+        val finalMessage = finalRoot["message"]?.jsonObject
+        val finalContent = finalMessage?.get("content")?.jsonPrimitive?.contentOrNull ?: ""
 
-        // Some proxies put the answer into `content`, others into `tool_calls`,
-        // `thinking` etc. We first try `content`.
-        val rawContent = messageObj["content"]?.jsonPrimitive?.contentOrNull
-            ?: messageObj["thinking"]?.jsonPrimitive?.contentOrNull
-            ?: ""
-
-        // -----------------------------------------------------------------
-        // 5️⃣ Guard‑rail: pull out the first JSON object that appears
-        // -----------------------------------------------------------------
-        val jsonOnly = extractJsonObject(rawContent)
-
-        // -----------------------------------------------------------------
-        // 6️⃣ Deserialize to our DTO
-        // -----------------------------------------------------------------
-        return Json.decodeFromString<TaskResponse>(jsonOnly)
+        // Try to parse final response as TaskResponse
+        return try {
+            val jsonOnly = extractJsonObject(finalContent)
+            Json.decodeFromString<TaskResponse>(jsonOnly)
+        } catch (e: Exception) {
+            // If parsing fails, create a simple response
+            TaskResponse(listOf(
+                Task(action = Action.RUN_COMMAND, instruction = "echo 'Task completed'")
+            ))
+        }
     }
 
     /** -------------------------------------------------------------
-    3️⃣  Plain‑text chat – used for summarising, follow‑up questions, etc.
+    Plain‑text chat – used for summarising, follow‑up questions, etc.
     ------------------------------------------------------------- */
     suspend fun chatPlain(messages: List<JsonObject>): String = withContext(Dispatchers.IO) {
         val body = buildJsonObject {
             put("model", model)
             put("messages", JsonArray(messages))
             put("stream", false)
-
-            // Same handling for pure Ollama vs OpenAI‑proxy as above
-            if (baseUrl.contains("ollama", ignoreCase = true).not()) {
-                put("options", buildJsonObject {
-                    put("response_format", "text")
-                    put("tool_choice", "none")
-                })
-            }
         }
 
         val raw = http.post("$baseUrl/api/chat") {
@@ -280,11 +399,10 @@ class OllamaClient(
     }
 
     /** -------------------------------------------------------------
-    Helper – extracts the **first** JSON object from a possibly noisy string.
+    Helper – extracts the first JSON object from a possibly noisy string.
     Throws IllegalArgumentException if no `{…}` can be found.
     ------------------------------------------------------------- */
     private fun extractJsonObject(text: String): String {
-        // Trim whitespace first – makes debugging output a little cleaner
         val trimmed = text.trim()
         val start = trimmed.indexOf('{')
         val end = trimmed.lastIndexOf('}')
