@@ -245,7 +245,7 @@ class OllamaClient(
             setBody(firstBody)
         }.bodyAsText()
 
-        println("🟢 First response: $firstResp")
+        // Removed tracing of the json response
 
         val root = Json.parseToJsonElement(firstResp).jsonObject
         val message = root["message"]?.jsonObject ?: error("No message in response")
@@ -400,7 +400,7 @@ class OllamaClient(
             setBody(secondBody)
         }.bodyAsText()
 
-        println("🟢 Second response: $secondResp")
+        // Removed tracing of the json response
 
         val finalRoot = Json.parseToJsonElement(secondResp).jsonObject
         val finalMessage = finalRoot["message"]?.jsonObject

@@ -17,8 +17,10 @@ fun main() {
 
     // First request – the model will return JSON describing tasks:
     val first = """
-        I want you to add a feature that enriches the onyx agent located within onyx-ai-agent
-        Run the test using "./gradlew onyx-ai-agent:test" to verify everything works.
+        Cleanup the comments within onyx-ai-agent classes and make sure they are accurate and relavant
+        
+        only respond with a complete task when you have checked all files
+         "./gradlew onyx-ai-agent:test"
     """.trimIndent()
 
     println("🚀 Starting first task...")
