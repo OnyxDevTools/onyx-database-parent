@@ -26,7 +26,6 @@ class CodingAgent(
 
     /** Public entry – give the user request, get a JSON task list, execute it. */
     fun handleUserInput(userPrompt: String) = runBlocking {
-        // Enrich the prompt with project context
         var currentPrompt = userPrompt
         val maxIterations = 1000
         var iteration = 0
@@ -63,8 +62,8 @@ class CodingAgent(
             }
             history.assistant(assistantResponse, taskResponse.thinking.takeIf { it.isNotEmpty() })
 
-            // 4️⃣  Safety: ask the human before any file‑system change (unless auto-approve)
-            if (!autoApprove && taskResponse.tasks.any { it.action != Action.RUN_COMMAND && it.action != Action.COMPLETE }) {
+            // 4️⃣  Safety: ask the human before any file-system change (unless auto-approve)
+            if (!autoApprove && taskResponse.tasks.any { it.action !in setOf(Action.RUN_COMMAND, Action.COMPLETE) }) {
                 println("\n⚠️  The plan contains file changes. Type \"yes\" to continue:")
                 val ok = java.util.Scanner(System.`in`).nextLine()
                 if (ok.lowercase() != "yes") {
@@ -82,7 +81,7 @@ class CodingAgent(
 
             println("\n✅  All ${taskResponse.tasks.size} tasks finished.")
 
-            // 6️⃣  Check if we should continue (look for completion indicators)
+            // 6️⃣  Stop if complete or if nothing else to do
             if (isComplete() || taskResponse.tasks.isEmpty()) {
                 println("🎉 Task completed!")
                 break
@@ -100,33 +99,31 @@ class CodingAgent(
     /** --------------------------------------------------------------- */
     private fun execute(task: Task): String {
         return when (task.action) {
+            // Treat CREATE_FILE as whole-file write
             Action.CREATE_FILE -> {
                 requireNotNull(task.path) { "CREATE_FILE needs a path" }
                 requireNotNull(task.content) { "CREATE_FILE needs content" }
-                ProjectIO.write(task.path, task.content, task.line_start, task.line_end)
-                val lineInfo = if (task.line_start != null || task.line_end != null) {
-                    " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
-                } else ""
-                val result = "📄 Created ${task.path}$lineInfo"
+
+                // Old content (for diff); if file doesn't exist, treat as empty
+                val old = runCatching { ProjectIO.read(task.path) }.getOrElse { "" }
+                ProjectIO.write(task.path, task.content)
+                val diff = ProjectIO.diff(old, task.content)
+
+                val result = "📄 Created ${task.path} (whole-file)\n$diff"
                 println(result)
                 result
             }
 
+            // Whole-file replace (create if missing)
             Action.EDIT_FILE -> {
                 requireNotNull(task.path) { "EDIT_FILE needs a path" }
-                val old = if (task.line_start != null || task.line_end != null) {
-                    ProjectIO.read(task.path, task.line_start, task.line_end)
-                } else {
-                    ProjectIO.read(task.path)
-                }
-                val new = task.content
-                    ?: throw IllegalArgumentException("EDIT_FILE needs content")
-                ProjectIO.write(task.path, new, task.line_start, task.line_end)
+                val new = task.content ?: throw IllegalArgumentException("EDIT_FILE needs content")
+
+                val old = runCatching { ProjectIO.read(task.path) }.getOrElse { "" }
+                ProjectIO.write(task.path, new)
+
                 val diff = ProjectIO.diff(old, new)
-                val lineInfo = if (task.line_start != null || task.line_end != null) {
-                    " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
-                } else ""
-                val result = "✏️  Edited ${task.path}$lineInfo\n$diff"
+                val result = "✏️  Edited ${task.path} (whole-file)\n$diff"
                 println(result)
                 result
             }
@@ -139,21 +136,19 @@ class CodingAgent(
                 result
             }
 
+            // Whole-file read only
             Action.READ_FILE -> {
                 requireNotNull(task.path) { "READ_FILE needs a path" }
-                val content = ProjectIO.read(task.path, task.line_start, task.line_end)
-                val lineInfo = if (task.line_start != null || task.line_end != null) {
-                    " (lines ${task.line_start ?: 1}-${task.line_end ?: "end"})"
-                } else ""
-                println("📖 Read ${task.path}$lineInfo (${content.length} characters)")
+                val content = runCatching { ProjectIO.read(task.path) }
+                    .getOrElse { ex -> "Error reading ${task.path}: ${ex.message}" }
+                println("📖 Read ${task.path} (${content.length} characters)")
                 content
             }
 
             Action.RUN_COMMAND -> {
                 requireNotNull(task.instruction) { "RUN_COMMAND needs an instruction" }
                 println("🚀 Running: ${task.instruction}")
-                
-                // Execute command through shell to handle complex syntax properly
+
                 val proc = if (System.getProperty("os.name").lowercase().contains("windows")) {
                     ProcessBuilder("cmd", "/c", task.instruction)
                 } else {
@@ -162,7 +157,7 @@ class CodingAgent(
                     .directory(ProjectIO.root.toFile())
                     .redirectErrorStream(true)
                     .start()
-                    
+
                 val output = proc.inputStream.bufferedReader().readText()
                 val exitCode = proc.waitFor()
                 val result = "📤 Command: ${task.instruction}\nExit Code: $exitCode\nOutput:\n$output"
@@ -179,7 +174,7 @@ class CodingAgent(
             }
 
             Action.NONE -> {
-                "You did not respond with any functions to execute.  What is your next action?  Run unit tests, write tests, or write code? etc...."
+                "You did not respond with any functions to execute. What is your next action? Run unit tests, write tests, or write code?"
             }
         }
     }
@@ -188,9 +183,7 @@ class CodingAgent(
 
     private fun buildFeedbackPrompt(taskResults: List<String>): String {
         return buildString {
-            taskResults.forEachIndexed { index, result ->
-                appendLine(result)
-            }
+            taskResults.forEachIndexed { _, result -> appendLine(result) }
             appendLine()
             appendLine("Continue working on the task. When finished, use 'complete' function to signal completion.")
         }
@@ -242,7 +235,6 @@ class CodingAgent(
                     .map { it.trim() }
                     .filter { it.isNotEmpty() && !it.startsWith("#") }
             } else {
-                // Default patterns to ignore common files
                 listOf(
                     "*.class",
                     "*.log",
