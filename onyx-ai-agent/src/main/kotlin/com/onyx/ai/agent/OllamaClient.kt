@@ -34,9 +34,10 @@ class OllamaClient(
             json(Json { ignoreUnknownKeys = true })
         }
         install(HttpTimeout) {
-            requestTimeoutMillis = 100_000
+            // Increase read timeout to 15 minutes (900,000 ms)
+            requestTimeoutMillis = 900_000
             connectTimeoutMillis = 5_000
-            socketTimeoutMillis = 100_000
+            socketTimeoutMillis = 900_000
         }
     }
 
@@ -49,7 +50,7 @@ class OllamaClient(
         You have access to these tools for interacting with the project (STRICT RULES):
         - run_command: Execute shell commands to gather information, build projects, run tests, etc.
         - read_file: Read an existing file **in its entirety**. Arguments: { path } ONLY. Never request line ranges.
-        - write_file: Write/replace a file **in its entirety** (create if missing). Arguments: { path, content } ONLY.
+        - write_file: Write/replace a file **in its entirety** (create if it does not exist). Arguments: { path, content } ONLY.
           Never pass start_line, end_line, patch, or diff. Always provide the full final file contents.
         - delete_file: Remove files when needed.
         - complete: Signal that the task has been completed successfully. If files needed changes, they have already been written,
