@@ -5,7 +5,6 @@ import jdk.incubator.vector.FloatVector
 import jdk.incubator.vector.VectorOperators
 import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
-import kotlin.math.*
 
 /**
  * High-performance CPU compute backend that extends BasicCPUComputeBackend 
@@ -35,16 +34,13 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
     // Performance constants
     private companion object {
         // Threshold for using basic sequential multiplication (total operations)
-        const val SIMPLE_WORK_MAX = 8_000_000L // Increased based on benchmarks
-        const val SKINNY_DIM = 64
-        const val PARALLEL_ROWS_MIN = 64
-        const val PARALLEL_COLS_MIN = 256
-        
+        const val SIMPLE_WORK_MAX = 4_000_000L
+
         /**
          * Check if the Java Vector API is available on this platform
          */
-        fun isVectorAPIAvailable(): Boolean {
-            return try {
+        val isVectorAPIAvailable: Boolean by lazy {
+            return@lazy try {
                 FloatVector.SPECIES_PREFERRED
                 true
             } catch (e: Throwable) {
@@ -63,144 +59,24 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
             return super.matrixMultiply(a, b)
         }
         
-        val m = a.size
-        val k = a[0].size  
-        val n = b[0].size
-        val work = m.toLong() * k.toLong() * n.toLong()
-        
-        // Intelligent method selection based on matrix characteristics
-        return selectOptimalMethod(a, b, work)
-    }
-    
-    /**
-     * Select the optimal matrix multiplication method based on matrix characteristics
-     * and benchmark results
-     */
-    private fun selectOptimalMethod(a: Matrix, b: Matrix, totalOps: Long): Matrix {
-        val m = a.size
-        val k = a[0].size
-        val n = b[0].size
-        val maxDim = maxOf(m, k, n)
-        val minDim = minOf(m, k, n)
-        
-        // Calculate aspect ratio to detect skinny matrices
-        val aspectRatio = maxDim.toDouble() / minDim.toDouble()
-        val isSkinny = aspectRatio >= 4.0
-        
-        return when {
-            // Very small matrices - basic method has less overhead
-            totalOps <= 64_000L -> matrixMultiplyBasic(a, b)
-            
-            // Small matrices - vectorized sequential often fastest due to lower overhead
-            totalOps <= SIMPLE_WORK_MAX -> {
-                if (isSkinny) {
-                    matrixMultiplySkinnyVectorized(a, b)
-                } else {
-                    matrixMultiplyBasic(a, b)
-                }
-            }
-            
-            // Medium matrices - consider parallelization 
-            totalOps <= 100_000_000L -> {
-                if (isSkinny && n >= PARALLEL_COLS_MIN) {
-                    // Skinny matrices with wide result benefit from vectorized parallel
-                    matrixMultiplySkinnyVectorizedParallel(a, b)
-                } else if (m >= PARALLEL_ROWS_MIN && n >= PARALLEL_COLS_MIN) {
-                    // Square-ish matrices benefit from blocked parallel
-                    matrixMultiplyParallelJVM(a, b)
-                } else {
-                    // Too small for effective parallelization
-                    matrixMultiplySkinnyVectorized(a, b)
-                }
-            }
-            
-            // Large matrices - parallelization almost always beneficial
-            else -> {
-                if (isSkinny) {
-                    matrixMultiplySkinnyVectorizedParallel(a, b)
-                } else {
-                    matrixMultiplyParallelJVM(a, b)
-                }
-            }
-        }
-    }
-    
-    // Override other operations with vectorized versions if beneficial
-    // These methods remain as they are, as their vectorized versions are explicitly called
-    // and have shown benefits for their specific operations.
-    override fun add(a: Matrix, b: Matrix): Matrix {
-        return if (FLOAT_SPEC != null && a.isNotEmpty() && a[0].size > 16) {
-            addVectorized(a, b)
+        val m = a.size.toLong()
+        val k = a[0].size.toLong()
+        val n = b[0].size.toLong()
+
+        val work = m * k * n
+        return if (work <= SIMPLE_WORK_MAX) {
+            matrixMultiplyBasic(a, b)
         } else {
-            super.add(a, b)
+            if (isVectorAPIAvailable) {
+                matrixMultiplySkinnyVectorizedParallel(a,b)
+            } else {
+                // For larger matrices, always use the parallel JVM implementation
+                // This implicitly leverages vectorization via the Java Vector API when available
+                matrixMultiplySkinnyVectorizedParallel(a, b)
+            }
         }
     }
-    
-    override fun scalarMultiply(matrix: Matrix, scalar: Float): Matrix {
-        return if (FLOAT_SPEC != null && matrix.isNotEmpty() && matrix[0].size > 16) {
-            scalarMultiplyVectorized(matrix, scalar)
-        } else {
-            super.scalarMultiply(matrix, scalar)
-        }
-    }
-    
-    // Internal optimized implementations for benchmarking and internal use
-    
-    internal fun addVectorized(a: Matrix, b: Matrix): Matrix {
-        val species = FLOAT_SPEC!!
-        
-        return a.mapIndexed { rowIndex, row ->
-            val rowB = b[rowIndex]
-            val result = FloatArray(row.size)
-            
-            var i = 0
-            val loopBound = species.loopBound(row.size)
-            
-            // Vectorized loop
-            while (i < loopBound) {
-                val va = FloatVector.fromArray(species, row, i)
-                val vb = FloatVector.fromArray(species, rowB, i)
-                va.add(vb).intoArray(result, i)
-                i += species.length()
-            }
-            
-            // Handle remaining elements
-            while (i < row.size) {
-                result[i] = row[i] + rowB[i]
-                i++
-            }
-            
-            result
-        }.toTypedArray()
-    }
-    
-    internal fun scalarMultiplyVectorized(matrix: Matrix, scalar: Float): Matrix {
-        val species = FLOAT_SPEC!!
-        val scalarVector = FloatVector.broadcast(species, scalar)
-        
-        return matrix.map { row ->
-            val result = FloatArray(row.size)
-            
-            var i = 0
-            val loopBound = species.loopBound(row.size)
-            
-            // Vectorized loop
-            while (i < loopBound) {
-                val va = FloatVector.fromArray(species, row, i)
-                va.mul(scalarVector).intoArray(result, i)
-                i += species.length()
-            }
-            
-            // Handle remaining elements
-            while (i < row.size) {
-                result[i] = row[i] * scalar
-                i++
-            }
-            
-            result
-        }.toTypedArray()
-    }
-    
+
     internal fun matrixMultiplyParallelJVM(A: Matrix, B: Matrix): Matrix {
         val m = A.size
         val k = A[0].size
@@ -238,15 +114,6 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
         }
         return result
     }
-    
-    internal fun matrixMultiplySkinnyVectorized(A: Matrix, B: Matrix): Matrix {
-        val m = A.size
-        val k = A[0].size
-        val n = B[0].size
-
-        val result = Array(m) { FloatArray(n) }
-        return matrixMultiplySkinnyVectorizedFloat(A, B, result)
-    }
 
     internal fun transposeParallelTiled(B: Array<FloatArray>, tile: Int = 64): Array<FloatArray> {
         val k = B.size
@@ -277,81 +144,6 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
             }
         }
         return Bt
-    }
-
-    internal fun matrixMultiplySkinnyVectorizedFloat(A: Matrix, B: Matrix, result: Matrix): Matrix {
-        val m = A.size
-        val k = A[0].size
-        val n = B[0].size
-        val tile = 8
-        val species = FLOAT_SPEC!!
-
-        val Bt = transposeParallelTiled(B, 64)
-
-        for (i in 0 until m) {
-            val aRow = A[i]
-            val resultRow = result[i]
-            var j = 0
-
-            while (j + tile <= n) {
-                var acc0 = 0.0f; var acc1 = 0.0f; var acc2 = 0.0f; var acc3 = 0.0f
-                var acc4 = 0.0f; var acc5 = 0.0f; var acc6 = 0.0f; var acc7 = 0.0f
-
-                var p = 0
-                val upper = species.loopBound(k)
-
-                while (p < upper) {
-                    val va = FloatVector.fromArray(species, aRow, p)
-                    val vb0 = FloatVector.fromArray(species, Bt[j + 0], p)
-                    val vb1 = FloatVector.fromArray(species, Bt[j + 1], p)
-                    val vb2 = FloatVector.fromArray(species, Bt[j + 2], p)
-                    val vb3 = FloatVector.fromArray(species, Bt[j + 3], p)
-                    val vb4 = FloatVector.fromArray(species, Bt[j + 4], p)
-                    val vb5 = FloatVector.fromArray(species, Bt[j + 5], p)
-                    val vb6 = FloatVector.fromArray(species, Bt[j + 6], p)
-                    val vb7 = FloatVector.fromArray(species, Bt[j + 7], p)
-
-                    acc0 += va.mul(vb0).reduceLanes(VectorOperators.ADD)
-                    acc1 += va.mul(vb1).reduceLanes(VectorOperators.ADD)
-                    acc2 += va.mul(vb2).reduceLanes(VectorOperators.ADD)
-                    acc3 += va.mul(vb3).reduceLanes(VectorOperators.ADD)
-                    acc4 += va.mul(vb4).reduceLanes(VectorOperators.ADD)
-                    acc5 += va.mul(vb5).reduceLanes(VectorOperators.ADD)
-                    acc6 += va.mul(vb6).reduceLanes(VectorOperators.ADD)
-                    acc7 += va.mul(vb7).reduceLanes(VectorOperators.ADD)
-
-                    p += species.length()
-                }
-
-                while (p < k) {
-                    val a = aRow[p]
-                    acc0 += a * Bt[j + 0][p]
-                    acc1 += a * Bt[j + 1][p]
-                    acc2 += a * Bt[j + 2][p]
-                    acc3 += a * Bt[j + 3][p]
-                    acc4 += a * Bt[j + 4][p]
-                    acc5 += a * Bt[j + 5][p]
-                    acc6 += a * Bt[j + 6][p]
-                    acc7 += a * Bt[j + 7][p]
-                    p++
-                }
-
-                resultRow[j + 0] = acc0; resultRow[j + 1] = acc1; resultRow[j + 2] = acc2; resultRow[j + 3] = acc3
-                resultRow[j + 4] = acc4; resultRow[j + 5] = acc5; resultRow[j + 6] = acc6; resultRow[j + 7] = acc7
-                j += tile
-            }
-
-            while (j < n) {
-                var acc = 0.0f
-                for (p in 0 until k) {
-                    acc += aRow[p] * Bt[j][p]
-                }
-                resultRow[j] = acc
-                j++
-            }
-        }
-
-        return result
     }
 
     internal fun matrixMultiplySkinnyVectorizedParallel(A: Matrix, B: Matrix): Matrix {

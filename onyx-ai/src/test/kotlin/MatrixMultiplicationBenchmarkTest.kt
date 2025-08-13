@@ -118,18 +118,6 @@ class MatrixMultiplicationBenchmarkTest {
             val results = vectorCpuTime / measurementIterations
             println("  CPU Parallel Vector:   ${results} ms")
 
-            // --- Vectorized Parallel Benchmark ---
-            var singleCpuTime = 0L
-            for (i in 0 until measurementIterations) {
-                singleCpuTime += measureTimeMillis {
-                    cpuBackend.matrixMultiplySkinnyVectorized(matrixA, matrixB)
-                }
-            }
-            val res = singleCpuTime / measurementIterations
-            println("  CPU Sequentia Vector:   ${res} ms")
-
-
-
             // --- CPU Parallel Benchmark ---
             var totalCpuVectorzedParallelTime = 0L
             for (i in 0 until measurementIterations) {
