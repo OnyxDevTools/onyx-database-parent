@@ -51,7 +51,7 @@ class OllamaClient(
         - run_command: Execute shell commands to gather information, build projects, run tests, etc.
         - read_file: Read an existing file **in its entirety**. Arguments: { path } ONLY. Never request line ranges.
         - write_file: Write/replace a file **in its entirety** (create if it does not exist). Arguments: { path, content } ONLY.
-          Never pass start_line, end_line, patch, or diff. Always provide the full final file contents.
+          Never pass start_line, end_line, patch, or diff. Always provide the full final file contents.  This is a drop in replacement.
         - delete_file: Remove files when needed.
         - complete: Signal that the task has been completed successfully. If files needed changes, they have already been written,
           the project compiles, and unit tests have run successfully.

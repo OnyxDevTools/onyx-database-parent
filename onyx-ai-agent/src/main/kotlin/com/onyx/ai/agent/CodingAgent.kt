@@ -32,7 +32,6 @@ class CodingAgent(
 
         while (iteration < maxIterations) {
             iteration++
-            println("\n🔄 Iteration $iteration")
 
             // 1️⃣  Store the user message (or feedback from previous iteration)
             history.user(currentPrompt)
@@ -48,6 +47,9 @@ class CodingAgent(
                 println("❌ Failed to get tasks from LLM: ${e.message}")
                 break
             }
+
+            // Display LLM thinking instead of a plain iteration number
+            println("\n🔄 ${taskResponse.thinking}")
 
             // 3️⃣  Store the assistant's response with thinking and content preserved
             val assistantResponse = buildString {
