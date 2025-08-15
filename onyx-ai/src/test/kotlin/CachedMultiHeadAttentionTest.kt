@@ -1,6 +1,7 @@
 import Activation
 import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.compute.DefaultComputeContext
+import com.onyxdevtools.ai.toTensor
 import org.junit.Assert.*
 import kotlin.test.Test
 
@@ -11,12 +12,10 @@ class CachedMultiHeadAttentionTest {
     
     @Test
     fun testCachedAttentionWithComputeBackend() {
-        val computeContext = DefaultComputeContext()
         val layer = CachedMultiHeadAttentionLayer(
             tokensPerSample = 4,
             modelSize = 8,
             headCount = 2,
-            computeContext = computeContext
         )
         
         // Test basic forward pass without cache
@@ -27,7 +26,7 @@ class CachedMultiHeadAttentionTest {
             floatArrayOf(0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f, 1.1f)
         )
         
-        val output = layer.forward(input, isTraining = false, nextLayer = null)
+        val output = layer.forward(input.toTensor(), isTraining = false, nextLayer = null)
         
         // Verify output dimensions
         assertEquals(4, output.size)
@@ -58,7 +57,7 @@ class CachedMultiHeadAttentionTest {
             floatArrayOf(0.1f, 0.2f, 0.3f, 0.4f)
         )
         
-        val output1 = layer.forward(firstToken, isTraining = false, nextLayer = null)
+        val output1 = layer.forward(firstToken.toTensor(), isTraining = false, nextLayer = null)
         assertEquals(1, output1.size)
         assertEquals(4, output1[0].size)
         
@@ -67,7 +66,7 @@ class CachedMultiHeadAttentionTest {
             floatArrayOf(0.5f, 0.6f, 0.7f, 0.8f)
         )
         
-        val output2 = layer.forward(secondToken, isTraining = false, nextLayer = null)
+        val output2 = layer.forward(secondToken.toTensor(), isTraining = false, nextLayer = null)
         assertEquals(1, output2.size)
         assertEquals(4, output2[0].size)
         
@@ -93,14 +92,14 @@ class CachedMultiHeadAttentionTest {
         
         // Process some tokens
         val token1 = arrayOf(floatArrayOf(1.0f, 2.0f, 3.0f, 4.0f))
-        layer.forward(token1, isTraining = false, nextLayer = null)
+        layer.forward(token1.toTensor(), isTraining = false, nextLayer = null)
         
         // Clear cache
         layer.clearCache()
         
         // Should work after clearing
         val token2 = arrayOf(floatArrayOf(0.5f, 1.5f, 2.5f, 3.5f))
-        val output = layer.forward(token2, isTraining = false, nextLayer = null)
+        val output = layer.forward(token2.toTensor(), isTraining = false, nextLayer = null)
         
         assertNotNull(output)
         assertEquals(1, output.size)
@@ -110,7 +109,7 @@ class CachedMultiHeadAttentionTest {
         layer.disableCache()
         
         // Should still work without cache
-        val output2 = layer.forward(token2, isTraining = false, nextLayer = null)
+        val output2 = layer.forward(token2.toTensor(), isTraining = false, nextLayer = null)
         assertNotNull(output2)
     }
     

@@ -1,123 +1,109 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
-import com.onyxdevtools.ai.extensions.deepCopy
+import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.createTensor
 import com.onyxdevtools.ai.layer.Layer
-import java.util.*
 import kotlin.math.sqrt
+import java.util.Random
 
-/**
- * Embedding layer that converts discrete token IDs into dense vector representations.
- *
- * Embedding layers are fundamental components in natural language processing models,
- * transforming sparse one-hot encoded tokens into dense, learnable vector representations.
- * This transformation allows neural networks to learn semantic relationships between
- * tokens in a continuous vector space.
- *
- * **Mathematical Operation:**
- * Given input token IDs, the layer performs a lookup operation:
- * output[i] = weights[tokenId[i]]
- *
- * Where weights is a learnable embedding matrix of shape [vocabSize, embeddingSize].
- *
- * **Key Features:**
- * - **Learnable Representations**: Embedding vectors are learned during training
- * - **Semantic Similarity**: Similar tokens develop similar embedding vectors
- * - **Dimensionality Control**: Configurable embedding dimension for memory/performance trade-offs
- * - **Adam Optimization**: Built-in Adam optimizer support for efficient training
- * - **Gradient Accumulation**: Properly accumulates gradients for repeated tokens
- *
- * **Architecture Usage:**
- * Embedding layers are typically used as:
- * - Input layers in language models (GPT, BERT, etc.)
- * - Word embedding layers in NLP tasks
- * - Token representation in sequence-to-sequence models
- * - First layer in transformer architectures
- *
- * **Training Behavior:**
- * During backpropagation, gradients flow only to the embedding vectors corresponding
- * to the tokens present in the input batch. This sparse gradient update makes
- * training efficient even with large vocabularies.
- *
- * **Memory Considerations:**
- * Memory usage scales with vocabSize × embeddingSize. For large vocabularies,
- * consider techniques like:
- * - Subword tokenization (BPE, WordPiece)
- * - Embedding dimension reduction
- * - Gradient checkpointing
- *
- * @param vocabSize The size of the vocabulary (number of unique tokens).
- *                  Must be greater than the maximum token ID that will be input.
- * @param embeddingSize The dimensionality of the embedding vectors.
- *                     Common values are 128, 256, 512, 768, or 1024.
- * @see Layer
- * @see BPETokenizer
- * @see Vocabulary
- */
 class EmbeddingLayer(
     private val vocabSize: Int,
     private val embeddingSize: Int
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var preActivation: Tensor? = null
+    override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
-    private val random: Random = Random()
+    private val random = Random()
 
-    private var weights: Matrix
-    private var momentWeights: Matrix
-    private var velocityWeights: Matrix
-    private var gradientWeights: Matrix? = null
+    // Learnable parameters (Tensors)
+    private var weights: Tensor              // [vocabSize, embeddingSize]
+    private var momentWeights: Tensor        // Adam m
+    private var velocityWeights: Tensor      // Adam v
+    private var gradientWeights: Tensor? = null
 
     init {
-        weights = Array(vocabSize) { FloatArray(embeddingSize) { random.nextGaussian().toFloat() * 0.02f } }
-        // Initialize moment and velocity matrices for Adam optimizer
-        momentWeights = Array(vocabSize) { FloatArray(embeddingSize) { 0.0f } }
-        velocityWeights = Array(vocabSize) { FloatArray(embeddingSize) { 0.0f } }
+        // weights ~ N(0, 0.02)
+        weights = createTensor(vocabSize, embeddingSize) { _, _ ->
+            (random.nextGaussian().toFloat() * 0.02f)
+        }
+        momentWeights = createTensor(vocabSize, embeddingSize) // zeros
+        velocityWeights = createTensor(vocabSize, embeddingSize)
     }
 
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        val batchSize = input.size
-        val sequenceLength = input[0].size
-        // Convert input token IDs to embeddings and flatten batch and sequence dimensions
-        val embeddings = Array(batchSize * sequenceLength) { i ->
-            val b = i / sequenceLength
-            val t = i % sequenceLength
-            val tokenId = input[b][t].toInt()
-            weights[tokenId].copyOf() // Lookup embedding vector
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
+        // Expect input as [batchSize, sequenceLength] with token ids stored as floats
+        val batchSize = input.rows
+        val sequenceLength = input.cols
+
+        val outRows = batchSize * sequenceLength
+        val out = createTensor(outRows, embeddingSize)
+
+        var i = 0
+        var b = 0
+        while (b < batchSize) {
+            var t = 0
+            while (t < sequenceLength) {
+                val tokenId = input[b, t].toInt()
+                require(tokenId in 0 until vocabSize) {
+                    "Token id $tokenId out of range [0, $vocabSize)"
+                }
+                var d = 0
+                while (d < embeddingSize) {
+                    out[i, d] = weights[tokenId, d]
+                    d++
+                }
+                i++; t++
+            }
+            b++
         }
-        preActivation = embeddings
-        output = embeddings
-        return output!!
+
+        preActivation = out
+        output = out
+        return out
     }
 
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
-        val batchSize = currentInput!!.size
-        val sequenceLength = currentInput[0].size
-        // Initialize gradient matrix for weights
-        gradientWeights = Array(vocabSize) { FloatArray(embeddingSize) { 0.0f } }
-        var deltaIndex = 0
-        // Accumulate gradients for each token's embedding
-        for (b in 0 until batchSize) {
-            for (t in 0 until sequenceLength) {
-                val tokenId = currentInput[b][t].toInt()
-                for (d in 0 until embeddingSize) {
-                    gradientWeights!![tokenId][d] += delta[deltaIndex][d]
-                }
-                deltaIndex++
-            }
+    ): Tensor {
+        val input = currentInput ?: error("EmbeddingLayer.backward: currentInput is null")
+
+        val batchSize = input.rows
+        val sequenceLength = input.cols
+        require(delta.rows == batchSize * sequenceLength && delta.cols == embeddingSize) {
+            "delta shape ${delta.rows}x${delta.cols} incompatible with ${(batchSize * sequenceLength)}x$embeddingSize"
         }
-        // Return zero matrix for input gradient (no backprop to token IDs)
-        return Array(batchSize) { FloatArray(sequenceLength) { 0.0f } }
+
+        // Accumulate gradients only for used tokens
+        val gW = gradientWeights ?: createTensor(vocabSize, embeddingSize).also { gradientWeights = it }
+
+        var i = 0
+        var b = 0
+        while (b < batchSize) {
+            var t = 0
+            while (t < sequenceLength) {
+                val tokenId = input[b, t].toInt()
+                if (tokenId in 0 until vocabSize) {
+                    var d = 0
+                    while (d < embeddingSize) {
+                        gW[tokenId, d] = gW[tokenId, d] + delta[i, d]
+                        d++
+                    }
+                }
+                i++; t++
+            }
+            b++
+        }
+
+        // No gradient to token ids → return zeros with same [batchSize, sequenceLength]
+        return createTensor(batchSize, sequenceLength) // zeros
     }
 
     @Suppress("DuplicatedCode")
@@ -128,29 +114,49 @@ class EmbeddingLayer(
         adamBeta2: Float,
         learningRate: Float
     ) {
-        // Adam optimizer update for embedding weights
+        val gW = gradientWeights ?: return // nothing to update if no grads accumulated
+
         fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
         fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
-        for (i in 0 until vocabSize) {
-            for (j in 0 until embeddingSize) {
-                val gradient = gradientWeights!![i][j]
-                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1.0f - adamBeta1) * gradient
-                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1.0f - adamBeta2) * gradient * gradient
-                weights[i][j] = weights[i][j] - learningRate * correctMoment(momentWeights[i][j]) /
-                        (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
+
+        var i = 0
+        while (i < vocabSize) {
+            var j = 0
+            while (j < embeddingSize) {
+                val g = gW[i, j]
+                // Adam moments
+                momentWeights[i, j]   = adamBeta1 * momentWeights[i, j]   + (1f - adamBeta1) * g
+                velocityWeights[i, j] = adamBeta2 * velocityWeights[i, j] + (1f - adamBeta2) * g * g
+
+                // Update weight
+                val mHat = correctMoment(momentWeights[i, j])
+                val vHat = correctVelocity(velocityWeights[i, j])
+                weights[i, j] = weights[i, j] - learningRate * (mHat / (sqrt(vHat) + EPSILON))
+                j++
             }
+            i++
         }
+
+        // (Optional) zero grads after update
+        gradientWeights = createTensor(vocabSize, embeddingSize)
     }
 
     override fun clone(): Layer {
         return EmbeddingLayer(vocabSize, embeddingSize).also { copy ->
-            copy.weights = weights.deepCopy()
-            copy.momentWeights = momentWeights.deepCopy()
-            copy.velocityWeights = velocityWeights.deepCopy()
-            copy.gradientWeights = gradientWeights?.deepCopy()
-            copy.preActivation = preActivation?.deepCopy()
-            copy.output = output?.deepCopy()
+            // Copy learned state
+            // (weights/moments/velocities are Tensors, use copy() you added on Tensor)
+            copyAs(copy)
         }
+    }
+
+    // Helper to copy internal tensors to another instance
+    private fun copyAs(dst: EmbeddingLayer) {
+        dst.preActivation   = this.preActivation?.copy()
+        dst.output          = this.output?.copy()
+        dst.weights         = this.weights.copy()
+        dst.momentWeights   = this.momentWeights.copy()
+        dst.velocityWeights = this.velocityWeights.copy()
+        dst.gradientWeights = this.gradientWeights?.copy()
     }
 
     companion object {

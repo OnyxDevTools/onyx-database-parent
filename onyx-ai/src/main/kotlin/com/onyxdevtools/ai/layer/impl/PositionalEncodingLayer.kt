@@ -1,88 +1,41 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
-import com.onyxdevtools.ai.extensions.add
+import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.createTensor
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 
 /**
- * Positional encoding layer that adds position information to token embeddings in transformer architectures.
- *
- * Transformer models lack inherent understanding of sequence order since attention mechanisms
- * are permutation-invariant. This layer addresses this by adding deterministic positional
- * encodings to input embeddings, allowing the model to understand token positions within sequences.
- *
- * **Mathematical Formulation:**
- * Uses sine and cosine functions with different frequencies as described in "Attention Is All You Need":
- * - PE(pos, 2i) = sin(pos / 10000^(2i / d_model))
- * - PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
- *
- * Where:
- * - pos = position in the sequence
- * - i = dimension index
- * - d_model = embedding dimension
- *
- * **Key Properties:**
- * - **Deterministic**: Same position always gets the same encoding
- * - **Unique**: Each position has a unique encoding pattern
- * - **Relative Distance**: Model can learn to attend to relative positions
- * - **Extrapolation**: Can handle sequences longer than seen during training
- * - **No Parameters**: Fixed encodings require no training
- *
- * **Advantages over Learned Positional Embeddings:**
- * - Works with variable sequence lengths
- * - Can extrapolate to longer sequences
- * - No additional parameters to learn
- * - Captures smooth positional relationships
- *
- * **Usage in Architecture:**
- * Typically applied immediately after the embedding layer and before
- * the first transformer block in models like GPT, BERT, and T5.
- *
- * @param tokensPerSample The maximum sequence length that will be processed.
- *                       Determines the size of the precomputed encoding matrix.
- * @param embeddingSize The dimensionality of the input embeddings.
- *                     Must match the embedding dimension of input tokens.
- * @see EmbeddingLayer
- * @see CachedMultiHeadAttentionLayer
+ * Positional encoding layer that adds position information to token embeddings.
  */
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
     private val embeddingSize: Int
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var preActivation: Tensor? = null
+    override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
-    // Precomputed positional encoding matrix of shape (sequenceLength, embeddingDim)
-    private val positionalEncoding: Matrix
-
-    init {
-        positionalEncoding = computePositionalEncoding(tokensPerSample, embeddingSize)
-    }
+    // Precomputed positional encoding matrix of shape (tokensPerSample, embeddingSize)
+    private val positionalEncoding: Tensor = computePositionalEncoding(tokensPerSample, embeddingSize)
 
     /**
-     * Computes the positional encoding matrix using sine and cosine functions.
-     * For position pos and dimension i:
-     * - pe[pos, 2k] = sin(pos / 10000^(2k / embeddingDim))
-     * - pe[pos, 2k+1] = cos(pos / 10000^(2k / embeddingDim))
+     * Computes positional encoding as a Tensor (seqLen x embDim).
+     * For column c: even -> sin, odd -> cos; exponent uses floor(c/2) like the paper (2k / d_model).
      */
-    private fun computePositionalEncoding(seqLen: Int, embDim: Int): Matrix {
-        val pe = Array(seqLen) { FloatArray(embDim) }
-        for (pos in 0 until seqLen) {
-            for (i in 0 until embDim step 2) {
-            val denominator = 10000.0.pow((i / embDim.toDouble()))
-            pe[pos][i] = sin(pos / denominator).toFloat()
-            if (i + 1 < embDim) {
-                pe[pos][i + 1] = cos(pos / denominator).toFloat()
-            }
-            }
+    private fun computePositionalEncoding(seqLen: Int, embDim: Int): Tensor {
+        return Tensor(seqLen, embDim) { pos, c ->
+            // exponent = floor(c/2) * 2 / embDim  == (c - (c % 2)) / embDim
+            val base = (c - (c and 1)).toDouble()        // even index for the pair
+            val exponent = base / embDim.toDouble()
+            val denom = 10000.0.pow(exponent)
+            val angle = pos.toDouble() / denom
+            if ((c and 1) == 0) sin(angle).toFloat() else cos(angle).toFloat()
         }
-        return pe
     }
 
     /**
@@ -90,49 +43,61 @@ class PositionalEncodingLayer(
      * Input shape: (batchSize * sequenceLength, embeddingDim)
      * Output shape: (batchSize * sequenceLength, embeddingDim)
      */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         if (input.isEmpty()) {
             preActivation = input
             output = input
-            return output!!
+            return input
         }
-        
-        // Handle cases where input size is less than tokensPerSample
-        val actualSequenceLength = minOf(input.size, tokensPerSample)
-        val batchSize = maxOf(1, input.size / tokensPerSample)
-        
-        // Create positional encodings matrix matching input shape exactly
-        val posEncodings = Array(input.size) { i ->
-            val t = i % actualSequenceLength
-            if (t < positionalEncoding.size) {
-                positionalEncoding[t].copyOf()
-            } else {
-                FloatArray(embeddingSize) // Zero vector for positions beyond precomputed range
+
+        require(input.cols == embeddingSize) {
+            "Input embedding dimension ${input.cols} must equal $embeddingSize"
+        }
+
+        // Number of rows in input and PE rows available
+        val rows = input.rows
+        val cols = input.cols
+        val peRows = positionalEncoding.rows  // == tokensPerSample
+
+        // Allocate output like input (keeps heap/metal/gpu kind if your createTensor does that)
+        val out = createTensor(rows, cols)
+
+        // Reuse scratch buffers
+        val xRow = FloatArray(cols)
+        val pRow = FloatArray(cols)
+
+        var r = 0
+        while (r < rows) {
+            input.readRowInto(r, xRow)
+            // use modulo across the sequence length
+            val t = r % peRows
+            positionalEncoding.readRowInto(t, pRow)
+
+            var c = 0
+            while (c < cols) {
+                out[r, c] = xRow[c] + pRow[c]
+                c++
             }
+            r++
         }
-        
+
         preActivation = input
-        output = add(input, posEncodings) // Element-wise addition
-        return output!!
+        output = out
+        return out
     }
 
     /**
-     * Passes the gradient through unchanged, as positional encodings are fixed.
+     * Gradients pass through unchanged (PE is fixed).
      */
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
-        return delta
-    }
+    ): Tensor = delta
 
-    /**
-     * No learnable parameters to update.
-     */
     override fun updateParameters(
         adamBeta1Power: Float,
         adamBeta2Power: Float,
@@ -140,13 +105,8 @@ class PositionalEncodingLayer(
         adamBeta2: Float,
         learningRate: Float
     ) {
-        // No-op
+        // No parameters.
     }
 
-    /**
-     * Creates a new instance with the same parameters.
-     */
-    override fun clone(): Layer {
-        return PositionalEncodingLayer(tokensPerSample, embeddingSize)
-    }
+    override fun clone(): Layer = PositionalEncodingLayer(tokensPerSample, embeddingSize)
 }

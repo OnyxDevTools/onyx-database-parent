@@ -1,120 +1,104 @@
 package com.onyxdevtools.ai.compute
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.createTensor
 import jdk.incubator.vector.FloatVector
 import jdk.incubator.vector.VectorOperators
 import jdk.incubator.vector.VectorSpecies
 import java.util.stream.IntStream
 
-/**
- * High-performance CPU compute backend that extends BasicCPUComputeBackend 
- * with SIMD vectorization and other optimizations for maximum performance 
- * on modern CPUs that support the Java Vector API.
- * 
- * This backend uses:
- * - Java Vector API for SIMD operations (falls back to basic implementation if not available)
- * - Cache-friendly algorithms
- * - Multi-threading for large operations
- * - Optimized memory access patterns
- * 
- * Falls back to BasicCPUComputeBackend implementation if Java Vector API is not available.
- */
 open class CPUComputeBackend : BasicCPUComputeBackend() {
 
-    // Vector API Specifications
+    // Vector API
     private val FLOAT_SPEC: VectorSpecies<Float>? by lazy {
-        try {
-            FloatVector.SPECIES_PREFERRED
-        } catch (e: Throwable) {
-            // Vector API not available, will use basic implementations
-            null
-        }
+        try { FloatVector.SPECIES_PREFERRED } catch (_: Throwable) { null }
     }
 
-    // Performance constants
     private companion object {
-        // Threshold for using basic sequential multiplication (total operations)
         const val SIMPLE_WORK_MAX = 4_000_000L
-
-        /**
-         * Check if the Java Vector API is available on this platform
-         */
         val isVectorAPIAvailable: Boolean by lazy {
-            return@lazy try {
-                FloatVector.SPECIES_PREFERRED
-                true
-            } catch (e: Throwable) {
-                false
-            }
+            try { FloatVector.SPECIES_PREFERRED; true } catch (_: Throwable) { false }
         }
     }
-    
-    override fun matrixMultiply(a: Matrix, b: Matrix): Matrix {
-        require(a[0].size == b.size) { 
-            "Matrix dimensions don't match for multiplication: ${a.size}x${a[0].size} * ${b.size}x${b[0].size}" 
+
+    override fun matrixMultiply(a: Tensor, b: Tensor): Tensor {
+        require(a.cols == b.rows) {
+            "Matrix dimensions don't match for multiplication: ${a.rows}x${a.cols} * ${b.rows}x${b.cols}"
         }
 
-        val m = a.size.toLong()
+        val m = a.rows.toLong()
+        val totalOps = a.rows.toLong() * a.cols.toLong() * b.cols.toLong()
 
-        // If Vector API is not available, fall back to basic implementation
+        // No Vector API available → choose basic vs parallel-JVM based on problem size
         if (FLOAT_SPEC == null) {
-            return if (m <= 15) {
+            return if (totalOps <= SIMPLE_WORK_MAX) {
                 matrixMultiplyBasic(a, b)
             } else {
                 matrixMultiplyParallelJVM(a, b)
             }
         }
 
-        return if (m <= 10) {
+        // Vector API present
+        return if (!isVectorAPIAvailable || totalOps <= SIMPLE_WORK_MAX / 2) {
             matrixMultiplyBasic(a, b)
-        } else if (isVectorAPIAvailable) {
-            matrixMultiplySkinnyVectorizedParallel(a,b)
         } else {
-            matrixMultiplyParallelJVM(a, b)
+            matrixMultiplySkinnyVectorizedParallel(a, b)
         }
     }
 
-    internal fun matrixMultiplyParallelJVM(A: Matrix, B: Matrix): Matrix {
-        val m = A.size
-        val k = A[0].size
-        val n = B[0].size
+    /** Parallel JVM GEMM with tiled transpose of B for cache-friendly access. */
+    internal fun matrixMultiplyParallelJVM(A: Tensor, B: Tensor): Tensor {
+        val m = A.rows
+        val k = A.cols
+        val n = B.cols
 
-        val result = Array(m) { FloatArray(n) }
+        val out = createTensor(m, n)
+
+        val Bt = transposeParallelTiled(B) // n x k (FloatArray rows)
 
         val blockSize = 64
-        // Always parallelize if work is above SIMPLE_WORK_MAX
-        // The transposeParallelTiled is already parallelized
-        val BTransposed = transposeParallelTiled(B)
         val numRowBlocks = (m + blockSize - 1) / blockSize
 
         IntStream.range(0, numRowBlocks).parallel().forEach { blockIndex ->
             val rowStart = blockIndex * blockSize
             val rowEnd = minOf(rowStart + blockSize, m)
 
-            for (colStart in 0 until n step blockSize) {
+            var colStart = 0
+            while (colStart < n) {
                 val colEnd = minOf(colStart + blockSize, n)
 
-                for (kStart in 0 until k step blockSize) {
+                var kStart = 0
+                while (kStart < k) {
                     val kEnd = minOf(kStart + blockSize, k)
 
-                    for (rowIndex in rowStart until rowEnd) {
-                        for (colIndex in colStart until colEnd) {
-                            var dotProduct = 0.0f
-                            for (kIndex in kStart until kEnd) {
-                                dotProduct += A[rowIndex][kIndex] * BTransposed[colIndex][kIndex]
+                    var i = rowStart
+                    while (i < rowEnd) {
+                        // pull A row segment as needed
+                        var j = colStart
+                        while (j < colEnd) {
+                            var acc = 0.0f
+                            var p = kStart
+                            while (p < kEnd) {
+                                acc += A[i, p] * Bt[j][p] // Bt[j] is FloatArray
+                                p++
                             }
-                            result[rowIndex][colIndex] = result[rowIndex][colIndex] + dotProduct
+                            out[i, j] = out[i, j] + acc
+                            j++
                         }
+                        i++
                     }
+                    kStart += blockSize
                 }
+                colStart += blockSize
             }
         }
-        return result
+        return out
     }
 
-    internal fun transposeParallelTiled(B: Array<FloatArray>, tile: Int = 64): Array<FloatArray> {
-        val k = B.size
-        val n = B[0].size
+    /** Transpose B into FloatArray blocks for fast column access in GEMM/Vector API. */
+    internal fun transposeParallelTiled(B: Tensor, tile: Int = 64): Array<FloatArray> {
+        val k = B.rows
+        val n = B.cols
         val Bt = Array(n) { FloatArray(k) }
 
         val tCols = (n + tile - 1) / tile
@@ -129,7 +113,8 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
                 val i1 = minOf(k, i0 + tile)
                 var i = i0
                 while (i < i1) {
-                    val src = B[i]
+                    // read one source row as array once
+                    val src: FloatArray = B[i].toFloatArray()
                     var j = j0
                     while (j < j1) {
                         Bt[j][i] = src[j]
@@ -143,19 +128,20 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
         return Bt
     }
 
-    internal fun matrixMultiplySkinnyVectorizedParallel(A: Matrix, B: Matrix): Matrix {
-        val m = A.size
-        val k = A[0].size
-        val n = B[0].size
+    /** Vectorized (FloatVector) × parallel over rows; uses Bt rows (FloatArray) for fast loads. */
+    internal fun matrixMultiplySkinnyVectorizedParallel(A: Tensor, B: Tensor): Tensor {
+        val m = A.rows
+        val k = A.cols
+        val n = B.cols
 
-        val Bt = transposeParallelTiled(B, tile = 64)
+        val Bt = transposeParallelTiled(B, tile = 64) // n x k
 
-        val result = Array(m) { FloatArray(n) }
+        val out = createTensor(m, n)
         val species = FLOAT_SPEC!!
         val L = species.length()
 
         IntStream.range(0, m).parallel().forEach { i ->
-            val aRow = A[i]
+            val aRow: FloatArray = A[i].toFloatArray()
             var j = 0
             while (j < n) {
                 val btRow = Bt[j]
@@ -172,10 +158,10 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
                     acc += aRow[p] * btRow[p]
                     p++
                 }
-                result[i][j] = acc
+                out[i, j] = acc
                 j++
             }
         }
-        return result
+        return out
     }
 }

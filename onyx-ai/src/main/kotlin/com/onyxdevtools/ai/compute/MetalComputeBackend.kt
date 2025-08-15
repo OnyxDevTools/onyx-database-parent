@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.compute
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import java.util.*
 import kotlin.math.*
 
@@ -232,15 +232,15 @@ class MetalComputeBackend : CPUComputeBackend() {
         }
     }
 
-    override fun matrixMultiply(a: Matrix, b: Matrix): Matrix {
-        require(a[0].size == b.size) {
-            "Matrix dimensions don't match for multiplication: ${a.size}x${a[0].size} * ${b.size}x${b[0].size}"
+    override fun matrixMultiply(a: Tensor, b: Tensor): Tensor {
+        require(a.cols == b.rows) {
+            "Matrix dimensions don't match for multiplication: ${a.rows}x${a.cols} * ${b.rows}x${b.cols}"
         }
 
-        val rowsA = a.size
-        val colsA = a[0].size
-        val rowsB = b.size
-        val colsB = b[0].size
+        val rowsA = a.rows
+        val colsA = a.cols
+        val rowsB = b.rows
+        val colsB = b.cols
 
         // Shape-aware GPU decision
         val isGemvLike = (rowsA == 1 || colsB == 1)
@@ -278,10 +278,7 @@ class MetalComputeBackend : CPUComputeBackend() {
             }
 
             val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
-            val result = Array(rowsA) { row ->
-                FloatArray(colsB) { col -> resultData[row * colsB + col] }
-            }
-
+            val result = Tensor(rowsA, colsB) { r, c -> resultData[r * colsB + c] }
             releaseTempBuffers(bufferA, bufferB, bufferResult)
             result
         } catch (e: Exception) {
@@ -292,13 +289,13 @@ class MetalComputeBackend : CPUComputeBackend() {
     }
     // Helper methods
 
-    private fun createMatrixBuffer(matrix: Matrix): Long {
-        val size = matrix.size * matrix[0].size
+    private fun createMatrixBuffer(tensor: Tensor): Long {
+        val size = tensor.rows * tensor.cols
         val buffer = createGPUBuffer(metalContext, size * 4)
         synchronized(bufferLock) {
             gpuBuffers.add(buffer)
         }
-        val flatData = flatten(matrix)
+        val flatData = flatten(tensor)
         copyToGPU(metalContext, buffer, flatData)
         return buffer
     }
@@ -358,3 +355,5 @@ class MetalComputeBackend : CPUComputeBackend() {
         dispose()
     }
 }
+
+val metalCompute = MetalComputeBackend()

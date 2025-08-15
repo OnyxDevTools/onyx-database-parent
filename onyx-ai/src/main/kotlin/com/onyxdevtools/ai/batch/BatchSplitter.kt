@@ -1,5 +1,6 @@
 package com.onyxdevtools.ai.batch
 
+import com.onyxdevtools.ai.Tensor
 
 /**
  * A tuple of four values representing the result of batch splitting operations.
@@ -38,11 +39,11 @@ interface BatchSplitter<YIn, YOut> {
      * @return A [Quad] containing (training features, training targets, test features, test targets).
      */
     fun splitBatch(
-        x: Array<FloatArray>,
+        x: Tensor,
         y: YIn,
         testFraction: Float = 0.1f,
         shuffle: Boolean = true
-    ): Quad<Array<FloatArray>, YOut, Array<FloatArray>, YOut>
+    ): Quad<Tensor, YOut, Tensor, YOut>
 }
 
 /**

@@ -4,6 +4,7 @@ import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.transformation.fitAndTransform
 import com.onyxdevtools.ai.transformation.impl.CategoricalIndexer
 import com.onyxdevtools.ai.transformation.inverse
+import com.onyxdevtools.ai.createTensor
 import org.junit.Ignore
 import kotlin.math.abs
 import kotlin.test.Test
@@ -73,11 +74,17 @@ class CategoricalIndexerTest {
     @Test
     fun `indexer works in per-column transform list`() {
         // Matrix: 2 feature columns (category, numeric)
-        val x: Matrix = arrayOf(
-            floatArrayOf(1.0f, 100.0f),
-            floatArrayOf(2.0f, 200.0f),
-            floatArrayOf(1.0f, 300.0f)
-        )
+        val x: Tensor = createTensor(3, 2) { r: Int, c: Int ->
+            when {
+                r == 0 && c == 0 -> 1.0f
+                r == 0 && c == 1 -> 100.0f
+                r == 1 && c == 0 -> 2.0f
+                r == 1 && c == 1 -> 200.0f
+                r == 2 && c == 0 -> 1.0f
+                r == 2 && c == 1 -> 300.0f
+                else -> 0.0f
+            }
+        }
 
         // Column-0 → indexer, Column-1 → untouched
         val transforms = listOf(
@@ -88,20 +95,20 @@ class CategoricalIndexerTest {
         val xEnc = transforms.fitAndTransform(x)
 
         // Expect column-0 encoded as 0,1,0 (categories 1.0<2.0)
-        assertEquals(0.0f, xEnc[0][0])
-        assertEquals(1.0f, xEnc[1][0])
-        assertEquals(0.0f, xEnc[2][0])
+        assertEquals(0.0f, xEnc[0, 0])
+        assertEquals(1.0f, xEnc[1, 0])
+        assertEquals(0.0f, xEnc[2, 0])
 
         // Column-1 unchanged
-        assertEquals(100.0f, xEnc[0][1])
-        assertEquals(200.0f, xEnc[1][1])
-        assertEquals(300.0f, xEnc[2][1])
+        assertEquals(100.0f, xEnc[0, 1])
+        assertEquals(200.0f, xEnc[1, 1])
+        assertEquals(300.0f, xEnc[2, 1])
 
         // Inverse must restore original matrix
         val xBack = transforms.inverse(xEnc)
-        for (i in x.indices) {
-            for (j in x[i].indices) {
-                assertTrue(abs(x[i][j] - xBack[i][j]) < EPSILON)
+        for (i in 0 until x.rows) {
+            for (j in 0 until x.cols) {
+                assertTrue(abs(x[i, j] - xBack[i, j]) < EPSILON)
             }
         }
     }

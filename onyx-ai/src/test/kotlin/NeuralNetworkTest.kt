@@ -1,7 +1,5 @@
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.extensions.flatten
-import com.onyxdevtools.ai.extensions.meanStandardError
 import com.onyxdevtools.ai.layer.impl.BatchNormalizationLayer
 import com.onyxdevtools.ai.layer.impl.DenseLayer
 import org.junit.Assert.*
@@ -25,12 +23,12 @@ class NeuralNetworkTest {
      * @param size Number of samples to generate.
      * @return A pair of feature and label matrices.
      */
-    private fun generateLinearRegressionData(size: Int): Pair<Matrix, Matrix> {
+    private fun generateLinearRegressionData(size: Int): Pair<Tensor, Tensor> {
         val features = Array(size) { FloatArray(1) { Random.nextFloat() * 10.0f - 5.0f } }
         val labels = Array(size) {
             FloatArray(1) { 2 * features[it][0] + 3 + (Random.nextFloat() * 0.1f - 0.05f) }
-        }
-        return features to labels
+        }.toTensor()
+        return features.toTensor() to labels
     }
 
     /**
@@ -39,10 +37,10 @@ class NeuralNetworkTest {
     @Test
     fun `predict output dimensions match last layer`() {
         val model = NeuralNetwork(listOf(DenseLayer(3, 4, Activation.RELU), DenseLayer(4, 2, Activation.LINEAR)))
-        val input = Array(5) { FloatArray(3) { Random.nextFloat() } }
+        val input = Array(5) { FloatArray(3) { Random.nextFloat() } }.toTensor()
         val output = model.predict(input)
-        assertEquals(5, output.size)
-        assertEquals(2, output[0].size)
+        assertEquals(5, output.rows)
+        assertEquals(2, output.cols)
     }
 
     /**
@@ -85,8 +83,8 @@ class NeuralNetworkTest {
     @Test
     @Ignore
     fun `sample weights influence training`() {
-        val features = Array(100) { FloatArray(1) { it.toFloat() } }
-        val labels = Array(100) { FloatArray(1) { if (it < 50) 1.0f else 10.0f } }
+        val features = Array(100) { FloatArray(1) { it.toFloat() } }.toTensor()
+        val labels = Array(100) { FloatArray(1) { if (it < 50) 1.0f else 10.0f } }.toTensor()
         val weights = FloatArray(100) { if (it < 50) 1.0f else 0.1f }
 
         val weightedModel = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)), learningRate = 0.05f)
@@ -127,7 +125,7 @@ class NeuralNetworkTest {
     fun `dropout scaling keeps expectation`() {
         val dropoutLayer = DenseLayer(10, 10, Activation.LINEAR, dropoutRate = 0.5f)
         val model = NeuralNetwork(listOf(dropoutLayer))
-        val input = Array(2000) { FloatArray(10) { 1.0f } }
+        val input = Array(2000) { FloatArray(10) { 1.0f } }.toTensor()
 
         val trainOutput = model.predict(input, isTraining = true)
         val evalOutput = model.predict(input, isTraining = false)
@@ -147,7 +145,7 @@ class NeuralNetworkTest {
         ObjectOutputStream(outputStream).use { it.writeObject(model) }
         val serializedData = outputStream.toByteArray()
         val deserialized = ObjectInputStream(ByteArrayInputStream(serializedData)).readObject() as NeuralNetwork
-        assertNotNull(deserialized.predict(arrayOf(floatArrayOf(0.0f, 0.0f))))
+        assertNotNull(deserialized.predict(arrayOf(floatArrayOf(0.0f, 0.0f)).toTensor()))
     }
 
     /**
@@ -155,8 +153,8 @@ class NeuralNetworkTest {
      */
     @Test
     fun `mismatched weight length throws`() {
-        val features = Array(2) { FloatArray(1) { 0.0f } }
-        val labels = Array(2) { FloatArray(1) { 0.0f } }
+        val features = Array(2) { FloatArray(1) { 0.0f } }.toTensor()
+        val labels = Array(2) { FloatArray(1) { 0.0f } }.toTensor()
         val weights = FloatArray(1) { 1.0f } // Incorrect length
         val model = NeuralNetwork(listOf(DenseLayer(1, 1, Activation.LINEAR)))
         assertThrows(IllegalArgumentException::class.java) {

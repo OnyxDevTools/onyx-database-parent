@@ -52,7 +52,7 @@ class NeuralNetworkBuilderTest {
             }
         }
 
-        val input  = Array(4) { FloatArray(3) { 1.0f } }
+        val input  = Array(4) { FloatArray(3) { 1.0f } }.toTensor()
         val output = model.predict(input)
 
         assertEquals(4, output.size)       // rows
@@ -130,7 +130,7 @@ class NeuralNetworkBuilderTest {
     @Test
     fun `column pipeline applies and restores single column while leaving others`() {
         val rows = 5
-        val matrix = Array(rows) { r -> floatArrayOf((r + 1).toFloat(), 100.0f) }
+        val matrix = Array(rows) { r -> floatArrayOf((r + 1).toFloat(), 100.0f) }.toTensor()
 
         // Build per-column transform list: pipeline for col-0, null for col-1
         val transforms = listOf(

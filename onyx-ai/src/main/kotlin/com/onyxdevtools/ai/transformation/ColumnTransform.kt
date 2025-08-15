@@ -1,107 +1,112 @@
 package com.onyxdevtools.ai.transformation
 
-import com.onyxdevtools.ai.Matrix
-import java.io.Serializable
+import com.onyxdevtools.ai.Tensor
 
 typealias ColumnTransforms = List<ColumnTransform?>
 
-/**
- * Interface for transformations that operate on entire matrices.
- *
- * A [ColumnTransform] may optionally collect statistics from a dataset via [fit],
- * which are then used by [apply] or [inverse]. Examples include standardization,
- * normalization, or whitening transforms.
- *
- * Implementations are expected to be serializable so they can be persisted and reused.
- */
-interface ColumnTransform : Serializable {
-
-    /**
-     * Computes any necessary statistics from the input column to prepare for transformation.
-     *
-     * This method is a no-op by default and can be overridden by stateful transforms.
-     *
-     * @param values The input column to fit on.
-     */
+interface ColumnTransform : java.io.Serializable {
     fun fit(values: FloatArray) = Unit
-
-    /**
-     * Applies the transformation to the provided column.
-     *
-     * @param values The input column to transform.
-     * @return A new column with the transformation applied.
-     */
     fun apply(values: FloatArray): FloatArray = values
-
-    /**
-     * Reverses the transformation previously applied to a column.
-     *
-     * This method returns the original column unchanged by default, but can be overridden
-     * for transforms where an inverse exists (e.g., standardization).
-     *
-     * @param values The transformed column to invert.
-     * @return A column representing the inverse transformation, if supported.
-     */
     fun inverse(values: FloatArray): FloatArray = values
-
-    /**
-     * Identify whether the transform has been fit
-     *
-     * @return Boolean true for whether it has been fit
-     */
     fun isFitted(): Boolean = true
-
-    /**
-     * Clone the transform so that if the state is mutated during stream fitting, it does not impact the best model
-     *
-     * @return An identical deep copy of the ColumnTransform
-     */
     fun clone(): ColumnTransform
 }
 
-fun ColumnTransforms.fitAndTransform(matrix: Matrix): Matrix {
-    val rows = matrix.size
-    val cols = matrix[0].size
-    require(size == cols) { "Must supply one ColumnTransform (or null) per column" }
+fun ColumnTransforms.fitAndTransform(tensor: Tensor): Tensor {
+    val rows = tensor.rows
+    val cols = tensor.cols
+    require(this.size == cols) { "Must supply one ColumnTransform (or null) per column" }
 
-    val result = Array(rows) { matrix[it].clone() }
+    // start from a copy of the input
+    val result = tensor.copy()
 
-    for (c in 0 until cols) {
-        val t = this[c] ?: continue
+    var c = 0
+    while (c < cols) {
+        val t = this[c]
+        if (t != null) {
+            // extract column c
+            val col = FloatArray(rows)
+            var r = 0
+            while (r < rows) {
+                col[r] = result[r, c]
+                r++
+            }
 
-        val col = FloatArray(rows) { r -> result[r][c] }
-        t.fit(col)
-        val transformed = t.apply(col)
+            // fit + transform column
+            t.fit(col)
+            val transformed = t.apply(col)
+            require(transformed.size == rows) { "Transformed column $c has wrong length ${transformed.size}, expected $rows" }
 
-        for (r in 0 until rows) result[r][c] = transformed[r]
+            // write back
+            r = 0
+            while (r < rows) {
+                result[r, c] = transformed[r]
+                r++
+            }
+        }
+        c++
     }
     return result
 }
 
-/** Apply already-fitted transforms to a new matrix. */
-fun ColumnTransforms.apply(matrix: Matrix): Matrix {
-    val rows = matrix.size
-    val result = Array(rows) { matrix[it].clone() }
+/** Apply already-fitted transforms to a new tensor (no fitting). */
+fun ColumnTransforms.apply(tensor: Tensor): Tensor {
+    val rows = tensor.rows
+    val cols = tensor.cols
+    require(this.size == cols) { "Must supply one ColumnTransform (or null) per column" }
 
-    forEachIndexed { c, t ->
-        if (t == null) return@forEachIndexed
-        val col = FloatArray(rows) { r -> result[r][c] }
-        val transformed = t.apply(col)
-        for (r in 0 until rows) result[r][c] = transformed[r]
+    val result = tensor.copy()
+
+    var c = 0
+    while (c < cols) {
+        val t = this[c]
+        if (t != null) {
+            val col = FloatArray(rows)
+            var r = 0
+            while (r < rows) {
+                col[r] = result[r, c]
+                r++
+            }
+            val transformed = t.apply(col)
+            require(transformed.size == rows) { "Transformed column $c has wrong length ${transformed.size}, expected $rows" }
+            r = 0
+            while (r < rows) {
+                result[r, c] = transformed[r]
+                r++
+            }
+        }
+        c++
     }
     return result
 }
 
 /** Restore original scale column-by-column. */
-fun ColumnTransforms.inverse(matrix: Matrix): Matrix {
-    val rows = matrix.size
-    val result = Array(rows) { matrix[it].clone() }
+fun ColumnTransforms.inverse(tensor: Tensor): Tensor {
+    val rows = tensor.rows
+    val cols = tensor.cols
+    require(this.size == cols) { "Must supply one ColumnTransform (or null) per column" }
 
-    forEachIndexed { c, t ->
-        if (t == null) return@forEachIndexed
-        val col = FloatArray(rows) { r -> result[r][c] }
-        val restored = t.inverse(col)
-        for (r in 0 until rows) result[r][c] = restored[r]
+    val result = tensor.copy()
+
+    var c = 0
+    while (c < cols) {
+        val t = this[c]
+        if (t != null) {
+            val col = FloatArray(rows)
+            var r = 0
+            while (r < rows) {
+                col[r] = result[r, c]
+                r++
+            }
+            val restored = t.inverse(col)
+            require(restored.size == rows) { "Inverse column $c has wrong length ${restored.size}, expected $rows" }
+            r = 0
+            while (r < rows) {
+                result[r, c] = restored[r]
+                r++
+            }
+        }
+        c++
     }
     return result
 }

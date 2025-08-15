@@ -1,7 +1,7 @@
-import com.onyxdevtools.ai.Matrix
 import com.onyxdevtools.ai.compute.MetalComputeBackend
 import com.onyxdevtools.ai.compute.ComputeBackendFactory
 import com.onyxdevtools.ai.compute.ComputeBackendType
+import com.onyxdevtools.ai.toTensor
 import org.junit.Assert.*
 import kotlin.test.Test
 
@@ -74,7 +74,7 @@ class MetalComputeBackendTest {
                 floatArrayOf(7.0f, 8.0f)
             )
             
-            val result = backend.matrixMultiply(a, b)
+            val result = backend.matrixMultiply(a.toTensor(), b.toTensor())
             
             assertEquals(2, result.size)
             assertEquals(2, result[0].size)
@@ -104,7 +104,7 @@ class MetalComputeBackendTest {
                 FloatArray(size) { j -> (i * j + 1).toFloat() }
             }
             
-            val result = backend.matrixMultiply(a, b)
+            val result = backend.matrixMultiply(a.toTensor(), b.toTensor())
             
             assertEquals(size, result.size)
             assertEquals(size, result[0].size)
@@ -128,11 +128,11 @@ class MetalComputeBackendTest {
             val a = arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
+            ).toTensor()
             val b = arrayOf(
                 floatArrayOf(5.0f, 6.0f),
                 floatArrayOf(7.0f, 8.0f)
-            )
+            ).toTensor()
             
             val result = backend.add(a, b)
             
@@ -158,11 +158,11 @@ class MetalComputeBackendTest {
             val a = arrayOf(
                 floatArrayOf(5.0f, 6.0f),
                 floatArrayOf(7.0f, 8.0f)
-            )
+            ).toTensor()
             val b = arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
+            ).toTensor()
             
             val result = backend.subtract(a, b)
             
@@ -188,11 +188,11 @@ class MetalComputeBackendTest {
             val a = arrayOf(
                 floatArrayOf(2.0f, 3.0f),
                 floatArrayOf(4.0f, 5.0f)
-            )
+            ).toTensor()
             val b = arrayOf(
                 floatArrayOf(6.0f, 7.0f),
                 floatArrayOf(8.0f, 9.0f)
-            )
+            ).toTensor()
             
             val result = backend.elementWiseMultiply(a, b)
             
@@ -218,8 +218,8 @@ class MetalComputeBackendTest {
             val matrix = arrayOf(
                 floatArrayOf(1.0f, 2.0f, 3.0f),
                 floatArrayOf(4.0f, 5.0f, 6.0f)
-            )
-            
+            ).toTensor()
+
             val result = backend.transpose(matrix)
             
             assertEquals(3, result.size)
@@ -246,7 +246,7 @@ class MetalComputeBackendTest {
             val matrix = arrayOf(
                 floatArrayOf(1.0f, 2.0f, 3.0f),
                 floatArrayOf(4.0f, 5.0f, 6.0f)
-            )
+            ).toTensor()
             
             val result = backend.softmax(matrix)
             
@@ -314,7 +314,7 @@ class MetalComputeBackendTest {
             val matrix = arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
+            ).toTensor()
             
             val result = backend.scalarMultiply(matrix, scalar)
             

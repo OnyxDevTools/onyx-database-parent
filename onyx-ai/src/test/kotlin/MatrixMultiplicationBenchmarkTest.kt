@@ -1,5 +1,7 @@
 package com.onyxdevtools.ai.compute
 
+import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.createTensor
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -24,9 +26,9 @@ class MatrixMultiplicationBenchmarkTest {
         metalBackend.dispose()
     }
 
-    private fun createRandomMatrix(rows: Int, cols: Int): Array<FloatArray> {
+    private fun createRandomTensor(rows: Int, cols: Int): Tensor {
         val random = Random(System.currentTimeMillis())
-        return Array(rows) { FloatArray(cols) { random.nextFloat() * 100f } }
+        return createTensor(rows, cols) { r, c -> random.nextFloat() * 100f }
     }
 
     @Test
@@ -75,8 +77,8 @@ class MatrixMultiplicationBenchmarkTest {
         val measurementIterations = 10 // Number of actual measurement runs
 
         for ((rowsA, colsA, colsB) in testDimensions) {
-            val matrixA = createRandomMatrix(rowsA, colsA)
-            val matrixB = createRandomMatrix(colsA, colsB) // colsA must equal rowsB
+            val matrixA = createRandomTensor(rowsA, colsA)
+            val matrixB = createRandomTensor(colsA, colsB) // colsA must equal rowsB
 
             println("\nBenchmarking ${rowsA}x${colsA} * ${colsA}x${colsB} (Total Ops: ${rowsA.toLong() * colsA.toLong() * colsB.toLong()})")
 
@@ -172,8 +174,8 @@ class MatrixMultiplicationBenchmarkTest {
         assumeTrue("Metal is not available on this system", MetalComputeBackend.isMetalAvailable())
 
         val matrixSize = 2000
-        val matrixA = createRandomMatrix(matrixSize, matrixSize)
-        val matrixB = createRandomMatrix(matrixSize, matrixSize)
+        val matrixA = createRandomTensor(matrixSize, matrixSize)
+        val matrixB = createRandomTensor(matrixSize, matrixSize)
 
         println("\n--- Element-wise Multiplication Benchmark (${matrixSize}x${matrixSize}) ---")
 

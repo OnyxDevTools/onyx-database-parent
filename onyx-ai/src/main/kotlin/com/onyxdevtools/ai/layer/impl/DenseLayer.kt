@@ -1,11 +1,10 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.compute.*
-import java.util.*
-import java.util.concurrent.ThreadLocalRandom
+import com.onyxdevtools.ai.createTensor
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -30,19 +29,19 @@ class DenseLayer(
     private val computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var preActivation: Tensor? = null
+    override var output: Tensor? = null
 
-    var weights: Matrix
+    var weights: Tensor
     private var biases = FloatArray(outputSize) { 0.0f }
 
-    private var momentWeights: Matrix
-    private var velocityWeights: Matrix
+    private var momentWeights: Tensor
+    private var velocityWeights: Tensor
     private var momentBiases = FloatArray(outputSize)
     private var velocityBiases = FloatArray(outputSize)
 
-    private var dropoutMask: Matrix? = null
-    private var gradientWeights: Matrix? = null
+    private var dropoutMask: Tensor? = null
+    private var gradientWeights: Tensor? = null
     private var gradientBiases: FloatArray? = null
 
     init {
@@ -52,15 +51,15 @@ class DenseLayer(
         }
         
         // Initialize weights using the compute context
-        weights = computeContext.createMatrix(inputSize, outputSize)
+        weights = createTensor(inputSize, outputSize)
         for (i in 0 until inputSize) {
             for (j in 0 until outputSize) {
                 weights[i][j] = (Random.nextFloat() * 2.0f - 1.0f) * weightInitLimit
             }
         }
         
-        momentWeights = computeContext.createMatrix(inputSize, outputSize, 0.0f)
-        velocityWeights = computeContext.createMatrix(inputSize, outputSize, 0.0f)
+        momentWeights = createTensor(inputSize, outputSize) { _, _ -> 0.0f }
+        velocityWeights = createTensor(inputSize, outputSize) { _, _ -> 0.0f }
     }
 
     /**
@@ -76,7 +75,7 @@ class DenseLayer(
         val scaleFactor = 1.0f / keepProbability
 
         if (dropoutMask == null || dropoutMask!!.size != rows || dropoutMask!![0].size != cols) {
-            dropoutMask = computeContext.createMatrix(rows, cols)
+            dropoutMask = createTensor(rows, cols)
         }
 
         val mask = dropoutMask!!
@@ -95,7 +94,7 @@ class DenseLayer(
     /**
      * Performs the forward pass using the compute backend
      */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         // Use compute backend for matrix operations
         val linearOutput = computeContext.backend.addVectorToRows(
             computeContext.backend.matrixMultiply(input, weights), 
@@ -148,13 +147,13 @@ class DenseLayer(
      * Performs backward pass using compute backend operations
      */
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
+    ): Tensor {
         // Use compute backend for element-wise operations
         val currentDelta = computeContext.backend.elementWiseMultiply(
             delta,

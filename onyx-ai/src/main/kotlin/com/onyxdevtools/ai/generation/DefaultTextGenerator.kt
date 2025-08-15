@@ -2,9 +2,12 @@ package com.onyxdevtools.ai.generation
 
 import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.NeuralNetwork
+import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.createTensor
 import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.Vocabulary
+import kotlin.math.min
 
 /**
  * High-performance text generator optimized for autoregressive generation.
@@ -59,6 +62,24 @@ class DefaultTextGenerator : TextGenerator {
                 layer.disableCache()
             }
         }
+    }
+
+    /** Build a 1×L tensor holding token IDs. */
+    private fun tokensToTensor(ids: List<Int>): Tensor {
+        val t = createTensor(1, ids.size)
+        var c = 0
+        while (c < ids.size) {
+            t[0, c] = ids[c].toFloat()
+            c++
+        }
+        return t
+    }
+
+    /** Build a 1×1 tensor for a single token ID. */
+    private fun singleTokenTensor(id: Int): Tensor {
+        val t = createTensor(1, 1)
+        t[0, 0] = id.toFloat()
+        return t
     }
 
     /**
@@ -148,47 +169,65 @@ class DefaultTextGenerator : TextGenerator {
      * Only sorts enough to get the top-k elements.
      */
     private fun partialSort(indices: IntArray, probs: FloatArray, k: Int) {
+        fun swap(a: Int, b: Int) {
+            val tmp = indices[a]
+            indices[a] = indices[b]
+            indices[b] = tmp
+        }
+
         fun partition(low: Int, high: Int): Int {
             val pivot = probs[indices[high]]
             var i = low - 1
-
-            for (j in low until high) {
-                if (probs[indices[j]] >= pivot) { // Sort descending
+            var j = low
+            while (j < high) {
+                if (probs[indices[j]] >= pivot) { // Descending
                     i++
-                    val temp = indices[i]
-                    indices[i] = indices[j]
-                    indices[j] = temp
+                    swap(i, j)
                 }
+                j++
             }
-
-            val temp = indices[i + 1]
-            indices[i + 1] = indices[high]
-            indices[high] = temp
-
+            swap(i + 1, high)
             return i + 1
         }
 
-        fun quickSelectTop(low: Int, high: Int, k: Int) {
-            if (low < high) {
-                val pi = partition(low, high)
-
+        fun quickSelectTop(low: Int, high: Int, kth: Int) {
+            var lo = low
+            var hi = high
+            val kIdx = kth
+            while (lo <= hi) {
+                val pi = partition(lo, hi)
                 when {
-                    pi == k - 1 -> return // Found exact k-th element
-                    pi > k - 1 -> quickSelectTop(low, pi - 1, k)
-                    else -> quickSelectTop(pi + 1, high, k)
+                    pi == kIdx -> return
+                    pi > kIdx -> hi = pi - 1
+                    else -> lo = pi + 1
                 }
             }
         }
 
         if (k >= indices.size) {
-            // Full sort needed - convert to list, sort, then copy back
-            val sortedIndices = indices.toList().sortedByDescending { probs[it] }
-            for (i in indices.indices) {
-                indices[i] = sortedIndices[i]
+            // Full sort (descending by probs), custom for IntArray
+            sortRangeDescByProbs(indices, 0, indices.size, probs)
+        } else if (k > 0) {
+            // Put the top-k in positions [0, k)
+            quickSelectTop(0, indices.size - 1, k - 1)
+            // Order the first k descending (cheap pass)
+            sortRangeDescByProbs(indices, 0, k, probs)
+        }
+    }
+
+    // Add this helper (right below partialSort is fine):
+    private fun sortRangeDescByProbs(indices: IntArray, from: Int, to: Int, probs: FloatArray) {
+        var i = from + 1
+        while (i < to) {
+            val keyIdx = indices[i]
+            val keyProb = probs[keyIdx]
+            var j = i - 1
+            while (j >= from && probs[indices[j]] < keyProb) {
+                indices[j + 1] = indices[j]
+                j--
             }
-        } else {
-            // Partial sort
-            quickSelectTop(0, indices.size - 1, k)
+            indices[j + 1] = keyIdx
+            i++
         }
     }
 
@@ -278,32 +317,44 @@ class DefaultTextGenerator : TextGenerator {
 
             // Repetition bookkeeping
             val seenCounts = IntArray(vocabSize) { 0 }
-            ids.forEach { if (it in seenCounts.indices) seenCounts[it]++ }
+            for (t in ids) if (t in 0 until vocabSize) seenCounts[t]++
 
             // Generation loop - optimized for single token at a time
             for (generation in 0 until maxGenerate) {
-                // For the first prediction, use the full prompt
-                // For subsequent predictions, only use the last token (KV cache handles the rest)
-                val hasCachedLayers = model.layers.any { l -> l is CachedMultiHeadAttentionLayer }
-                val input = if (hasCachedLayers && ids.size > 1) {
-                    // Use only the last token - cache handles the history
-                    arrayOf(floatArrayOf(ids.last().toFloat()))
+                val hasCachedLayers = model.layers.any { it is CachedMultiHeadAttentionLayer }
+
+                // Build input tensor
+                val input: Tensor = if (hasCachedLayers && ids.size > 1) {
+                    // Use only the last token (1×1); cache handles the history
+                    singleTokenTensor(ids.last())
                 } else {
-                    // First time or no cache - use full sequence (truncated if needed)
+                    // First step (or no cache): pass the full sequence as 1×L
                     val current = if (ids.size > seqLength) ids.takeLast(seqLength) else ids
-                    current.map { floatArrayOf(it.toFloat()) }.toTypedArray()
+                    tokensToTensor(current)
                 }
 
                 // Get predictions from model
                 val predictions = model.predict(input)
-                val logits = predictions[predictions.size - 1] // Get the last time step prediction
+                val lastRow = predictions.rows - 1
+                val cols = predictions.cols
 
-                // Copy to our cached buffer
-                System.arraycopy(logits, 0, cachedLogits, 0, minOf(logits.size, cachedLogits!!.size))
+                // Copy last step logits into cachedLogits
+                val copy = min(cols, cachedLogits!!.size)
+                var c = 0
+                while (c < copy) {
+                    cachedLogits!![c] = predictions[lastRow, c]
+                    c++
+                }
+                // If vocab > cols, fill rest with very negative
+                c = cols
+                while (c < cachedLogits!!.size) {
+                    cachedLogits!![c] = Float.NEGATIVE_INFINITY
+                    c++
+                }
 
                 // Mask special tokens
-                neverSample.forEach { bad ->
-                    if (bad in cachedLogits!!.indices) cachedLogits!![bad] = Float.NEGATIVE_INFINITY
+                for (bad in neverSample) {
+                    if (bad in 0 until cachedLogits!!.size) cachedLogits!![bad] = Float.NEGATIVE_INFINITY
                 }
 
                 // Apply repetition penalty
@@ -316,13 +367,25 @@ class DefaultTextGenerator : TextGenerator {
                 if (useNoRepeatNgram) {
                     val mask = BooleanArray(cachedProbs!!.size) { true }
                     blockNGramRepetition(mask, ids, 2)
-                    for (i in mask.indices) {
+                    var i = 0
+                    while (i < mask.size) {
                         if (!mask[i]) cachedProbs!![i] = 0.0f
+                        i++
                     }
-
                     // Renormalize
-                    val sum = cachedProbs!!.sum().coerceAtLeast(EPSILON)
-                    for (i in cachedProbs!!.indices) cachedProbs!![i] /= sum
+                    var s = 0.0f
+                    i = 0
+                    while (i < cachedProbs!!.size) {
+                        s += cachedProbs!![i]
+                        i++
+                    }
+                    val denom = if (s <= 0f) EPSILON else s
+                    val inv = 1.0f / denom
+                    i = 0
+                    while (i < cachedProbs!!.size) {
+                        cachedProbs!![i] *= inv
+                        i++
+                    }
                 }
 
                 // Sample next token efficiently
@@ -330,14 +393,13 @@ class DefaultTextGenerator : TextGenerator {
                 ids += nextId
 
                 // Update repetition tracking
-                if (nextId in seenCounts.indices) seenCounts[nextId]++
+                if (nextId in 0 until vocabSize) seenCounts[nextId]++
 
                 // Check for end of text
                 if (eotId != null && nextId == eotId) break
             }
 
             return tokenizer.decode(ids)
-
         } finally {
             // Clean up caches
             disableCaching(model)
@@ -345,9 +407,7 @@ class DefaultTextGenerator : TextGenerator {
     }
 }
 
-/**
- * Extension function for convenient optimized text generation.
- */
+/** Extension: optimized text generation with conversational prompt. */
 fun NeuralNetwork.chat(
     prompt: String,
     vocabulary: Vocabulary,
@@ -359,9 +419,7 @@ fun NeuralNetwork.chat(
     return textGenerator.generate(this, tokenizer, vocabulary, "[SOT][U]$prompt[A]", maxTokens, seqLength)
 }
 
-/**
- * Extension function for convenient optimized text generation.
- */
+/** Extension: optimized completion. */
 fun NeuralNetwork.complete(
     prompt: String,
     vocabulary: Vocabulary,
@@ -372,3 +430,4 @@ fun NeuralNetwork.complete(
     val textGenerator = DefaultTextGenerator()
     return "[SOT][U]" + textGenerator.generate(this, tokenizer, vocabulary, prompt, maxTokens, seqLength)
 }
+
