@@ -121,25 +121,50 @@ class DenseLayer(
         adamBeta2: Float,
         learningRate: Float
     ) {
-        fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
-        fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
+        // Constants reused across operations
+        val oneMinusBeta1 = 1f - adamBeta1
+        val oneMinusBeta2 = 1f - adamBeta2
+        val biasCorrect1 = 1f / (1f - adamBeta1Power)
+        val biasCorrect2 = 1f / (1f - adamBeta2Power)
 
-        for (i in 0 until inputSize) {
-            for (j in 0 until outputSize) {
-                val gradient = gradientWeights!![i][j]
-                momentWeights[i][j] = adamBeta1 * momentWeights[i][j] + (1.0f - adamBeta1) * gradient
-                velocityWeights[i][j] = adamBeta2 * velocityWeights[i][j] + (1.0f - adamBeta2) * gradient * gradient
-                weights[i][j] = weights[i][j] - learningRate *
-                        correctMoment(momentWeights[i][j]) / (sqrt(correctVelocity(velocityWeights[i][j])) + EPSILON)
-            }
-        }
+        // ----- Weight updates on compute backend (GPU capable) -----
+        val gradients = gradientWeights
+            ?: error("Gradient weights must be calculated before updating parameters")
+
+        // m_t = beta1 * m_{t-1} + (1 - beta1) * g_t
+        val mScaled = computeContext.backend.scalarMultiply(momentWeights, adamBeta1)
+        val gScaled = computeContext.backend.scalarMultiply(gradients, oneMinusBeta1)
+        momentWeights = computeContext.backend.add(mScaled, gScaled)
+
+        // v_t = beta2 * v_{t-1} + (1 - beta2) * (g_t ⊙ g_t)
+        val vScaled = computeContext.backend.scalarMultiply(velocityWeights, adamBeta2)
+        val gSquared = computeContext.backend.elementWiseMultiply(gradients, gradients)
+        val gSquaredScaled = computeContext.backend.scalarMultiply(gSquared, oneMinusBeta2)
+        velocityWeights = computeContext.backend.add(vScaled, gSquaredScaled)
+
+        // Compute bias-corrected moments
+        val mHat = computeContext.backend.scalarMultiply(momentWeights, biasCorrect1)
+        val vHat = computeContext.backend.scalarMultiply(velocityWeights, biasCorrect2)
+
+        // weights = weights - lr * mHat / (sqrt(vHat) + eps)
+        val sqrtVHat = computeContext.backend.applyElementWise(vHat) { sqrt(it) }
+        val denom = computeContext.backend.applyElementWise(sqrtVHat) { it + EPSILON }
+        val invDenom = computeContext.backend.applyElementWise(denom) { 1f / it }
+        val update = computeContext.backend.elementWiseMultiply(mHat, invDenom)
+        val scaledUpdate = computeContext.backend.scalarMultiply(update, learningRate)
+        weights = computeContext.backend.subtract(weights, scaledUpdate)
+
+        // ----- Bias updates (kept on CPU due to small size) -----
+        fun correctMoment(m: Float) = m / (1f - adamBeta1Power)
+        fun correctVelocity(v: Float) = v / (1f - adamBeta2Power)
 
         for (j in 0 until outputSize) {
             val gradient = gradientBiases!![j]
-            momentBiases[j] = adamBeta1 * momentBiases[j] + (1.0f - adamBeta1) * gradient
-            velocityBiases[j] = adamBeta2 * velocityBiases[j] + (1.0f - adamBeta2) * gradient * gradient
+            momentBiases[j] = adamBeta1 * momentBiases[j] + oneMinusBeta1 * gradient
+            velocityBiases[j] = adamBeta2 * velocityBiases[j] + oneMinusBeta2 * gradient * gradient
             biases[j] = biases[j] - learningRate *
-                    correctMoment(momentBiases[j]) / (sqrt(correctVelocity(velocityBiases[j])) + EPSILON)
+                    correctMoment(momentBiases[j]) /
+                    (sqrt(correctVelocity(velocityBiases[j])) + EPSILON)
         }
     }
 
