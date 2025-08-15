@@ -19,7 +19,7 @@ object ComputeBackendFactory {
         return when {
             isMetalAvailable() -> {
                 try {
-                    MetalComputeBackend()
+                    metalCompute
                 } catch (e: Exception) {
                     println("Metal backend failed to initialize: ${e.message}")
                     println("Falling back to CPU backend")
@@ -63,7 +63,7 @@ object ComputeBackendFactory {
             throw RuntimeException("Metal backend is not available on this system")
         }
         return try {
-            MetalComputeBackend()
+            metalCompute
         } catch (e: Exception) {
             println("Failed to initialize Metal backend: ${e.message}")
             println("Falling back to CPU backend")
