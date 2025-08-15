@@ -285,10 +285,15 @@ class MetalTensor(
 
     override fun dispose() {
         if (ownsGpuBuffer && gpuBufferHandle != 0L && metal != null) {
-            try { MetalComputeBackend.releaseGPUBuffer(metal.metalContext, gpuBufferHandle) } catch (_: Throwable) {}
-            cleanable?.clean()
-            cleanable = null
+            if (cleanable != null) {
+                // Cleaner will release the GPU buffer exactly once
+                cleanable!!.clean()
+                cleanable = null
+            } else {
+                try { MetalComputeBackend.releaseGPUBuffer(metal.metalContext, gpuBufferHandle) } catch (_: Throwable) {}
+            }
             gpuBufferHandle = 0L
+            ownsGpuBuffer = false
         }
     }
 }
