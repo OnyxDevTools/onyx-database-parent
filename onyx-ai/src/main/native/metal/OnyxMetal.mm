@@ -614,13 +614,11 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_releaseGPUBuffer(JNIEnv* en
             id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)((void*)bufferHandle);
             
             if (buffer) {
-
-                // CRITICAL FIX: We need to release TWICE to properly decrement reference count
-                // 1st CFRelease: decrements the +1 we added with CFRetain (retain count: 2 -> 1)
-                // 2nd CFRelease: decrements the original ARC reference (retain count: 1 -> 0, buffer deallocated)
-                CFRelease((__bridge CFTypeRef)buffer);  // Remove our JNI reference
-                CFRelease((__bridge CFTypeRef)buffer);  // Remove the ARC reference to actually free the buffer
-                
+                // Release the additional retain from createGPUBuffer. ARC will
+                // handle its own retain, so a single CFRelease is sufficient
+                // to free the buffer when no other references exist.
+                CFRelease((__bridge CFTypeRef)buffer);
+                buffer = nil;
             }
         }
     }
