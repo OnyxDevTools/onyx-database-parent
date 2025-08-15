@@ -676,6 +676,24 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuMatrixMultiply(
     }
 }
 
+// GPU matrix multiplication where the right-hand matrix is logically
+// transposed and the result is scaled by the provided factor. This
+// functionality is currently not implemented in the Metal backend, so we
+// return JNI_FALSE to trigger the CPU fallback in Kotlin code. Having this
+// stub prevents UnsatisfiedLinkError crashes when the method is invoked.
+JNIEXPORT jboolean JNICALL
+Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuMatrixMultiplyTransposeScale(
+    JNIEnv* env, jclass clazz, jlong contextHandle,
+    jlong bufferA, jint rowsA, jint colsA,
+    jlong bufferB, jint rowsB, jint colsB,
+    jfloat scale,
+    jlong bufferResult
+) {
+    @autoreleasepool {
+        return JNI_FALSE; // Not implemented, fall back to CPU
+    }
+}
+
 // GPU element-wise operations
 JNIEXPORT jboolean JNICALL
 Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuElementWiseOperation(
