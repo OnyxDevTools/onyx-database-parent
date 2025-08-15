@@ -73,13 +73,6 @@ sealed class Tensor {
 
     /** Range of row indices (compat with Array.indices usage). */
     val indices: IntRange get() = 0 until rows
-    /** Explicit row/col index ranges when needed. */
-    val rowIndices: IntRange get() = 0 until rows
-    val colIndices: IntRange get() = 0 until cols
-
-    /** First row as a copy, or null if empty. Enables: tensor.firstOrNull()?.size */
-    fun firstOrNull(): FloatArray? =
-        if (rows == 0) null else FloatArray(cols).also { readRowInto(0, it) }
 
     /** Deep clone (same backing kind as this tensor). */
     fun clone(): Tensor = this.copy()
@@ -643,21 +636,6 @@ fun allocateLike(like: Tensor, rows: Int, cols: Int): Tensor = when (like) {
     is HeapTensor  -> HeapTensor(FloatArray(rows * cols), rows, cols)
     is MetalTensor -> MetalTensor(Tensor.allocateDirectBuffer(rows * cols), rows, cols, null)
     is GPUTensor   -> GPUTensor(Tensor.allocateDirectBuffer(rows * cols), rows, cols)
-}
-
-fun Tensor.rowCopy(row: Int): FloatArray = FloatArray(cols).also { readRowInto(row, it) }
-
-// Row helpers (drop anywhere in your ai package)
-fun Tensor.Row.average(): Float {
-    if (size == 0) return 0f
-    var s = 0f; var c = 0
-    while (c < size) { s += this[c]; c++ }
-    return s / size
-}
-inline fun Tensor.Row.sumOf(selector: (Float) -> Double): Double {
-    var s = 0.0; var c = 0
-    while (c < size) { s += selector(this[c]); c++ }
-    return s
 }
 
 /** Array<FloatArray> (rows x cols) -> Tensor via createTensor initializer. */
