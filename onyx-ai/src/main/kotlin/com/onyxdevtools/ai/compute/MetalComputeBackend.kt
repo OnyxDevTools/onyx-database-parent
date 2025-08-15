@@ -183,6 +183,19 @@ class MetalComputeBackend : CPUComputeBackend() {
         ): Boolean
 
         /**
+         * Perform matrix multiplication on GPU where the right-hand matrix is
+         * logically transposed and the result is scaled by the provided factor.
+         */
+        @JvmStatic
+        external fun gpuMatrixMultiplyTransposeScale(
+            contextHandle: Long,
+            bufferA: Long, rowsA: Int, colsA: Int,
+            bufferB: Long, rowsB: Int, colsB: Int,
+            scale: Float,
+            bufferResult: Long
+        ): Boolean
+
+        /**
          * Perform element-wise matrix operations on GPU
          */
         @JvmStatic
@@ -277,6 +290,61 @@ class MetalComputeBackend : CPUComputeBackend() {
             println("Metal matrix multiplication failed, falling back to CPU: ${e.message}")
             releaseTempBuffers(bufferA, bufferB, bufferResult)
             super.matrixMultiply(a, b)
+        }
+    }
+
+    /**
+     * Computes `scale * a * b^T` on the GPU without explicitly transposing `b`.
+     * Falls back to CPU implementation if the GPU path fails.
+     */
+    fun matrixMultiplyTransposeScale(a: Tensor, b: Tensor, scale: Float): Tensor {
+        require(a.cols == b.cols) {
+            "Matrix dimensions don't match for A * B^T: ${a.rows}x${a.cols} * ${b.rows}x${b.cols}"
+        }
+
+        val rowsA = a.rows
+        val colsA = a.cols
+        val rowsB = b.rows
+        val colsB = b.cols
+
+        var bufferA = 0L
+        var bufferB = 0L
+        var bufferResult = 0L
+        return try {
+            bufferA = createMatrixBuffer(a)
+            bufferB = createMatrixBuffer(b)
+            val resultSize = rowsA * rowsB
+            bufferResult = createTrackedBuffer(resultSize * 4)
+
+            val success = gpuMatrixMultiplyTransposeScale(
+                metalContext,
+                bufferA, rowsA, colsA,
+                bufferB, rowsB, colsB,
+                scale,
+                bufferResult
+            )
+
+            if (!success) {
+                releaseTempBuffers(bufferA, bufferB, bufferResult)
+                val cpuTransposed = super.transpose(b)
+                val cpuResult = super.matrixMultiply(a, cpuTransposed)
+                return super.scalarMultiply(cpuResult, scale)
+            }
+
+            val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
+            val buf = Tensor.allocateDirectBuffer(resultSize)
+            for (i in 0 until resultSize) {
+                buf.put(i, resultData[i])
+            }
+            val result = MetalTensor(buf, rowsA, rowsB, this, bufferResult, true)
+            synchronized(bufferLock) { gpuBuffers.remove(bufferResult) }
+            releaseTempBuffers(bufferA, bufferB)
+            result
+        } catch (e: Exception) {
+            releaseTempBuffers(bufferA, bufferB, bufferResult)
+            val cpuTransposed = super.transpose(b)
+            val cpuResult = super.matrixMultiply(a, cpuTransposed)
+            super.scalarMultiply(cpuResult, scale)
         }
     }
 
