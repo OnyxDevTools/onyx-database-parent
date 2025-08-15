@@ -61,6 +61,10 @@ class CachedMultiHeadAttentionLayer(
     private var attentionWeights: Tensor? = null
     private var attentionOutput: Tensor? = null
 
+    // Precomputed causal mask so masking happens on GPU
+    private val causalMask: Tensor = createTensor(tokensPerSample, tokensPerSample) { r, c ->
+        if (c > r) -1e9f else 0f
+    }
     init {
         require(modelSize % headCount == 0) {
             "Model size ($modelSize) must be divisible by head count ($headCount)"
@@ -188,46 +192,25 @@ class CachedMultiHeadAttentionLayer(
         java.util.Arrays.fill(outVec, 0.0f)
         val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
 
+        val mask = createTensor(totalLength, totalLength) { r, c -> if (c > r) -1e9f else 0f }
+
         for (h in 0 until headCount) {
             val off = h * headSize
+            val headColsStart = off
 
-            // scores[t] = (q_h · k_h[t]) * scale
-            var maxScore = Float.NEGATIVE_INFINITY
-            val scores = FloatArray(totalLength)
-            var t = 0
-            while (t < totalLength) {
-                val kt = kSeq[t]
-                var s = 0.0f
-                var d = 0
-                while (d < headSize) { s += qVec[off + d] * kt[off + d]; d++ }
-                s *= scale
-                scores[t] = s
-                if (s > maxScore) maxScore = s
-                t++
-            }
+            val qHead = createTensor(1, headSize) { _, d -> qVec[headColsStart + d] }
+            val kHead = createTensor(totalLength, headSize) { r, d -> kSeq[r][headColsStart + d] }
+            val vHead = createTensor(totalLength, headSize) { r, d -> vSeq[r][headColsStart + d] }
 
-            // softmax
-            var sumExp = 0.0f
-            t = 0
-            while (t < totalLength) {
-                val e = kotlin.math.exp((scores[t] - maxScore).toDouble()).toFloat()
-                scores[t] = e
-                sumExp += e
-                t++
-            }
-            val inv = 1.0f / (sumExp + 1e-9f)
+            var scores = qHead.multiply(kHead.transpose()).scale(scale)
+            scores = scores.add(mask)
+            val attn = scores.softmax()
+            val headOut = attn.multiply(vHead)
 
-            // out_h = Σ_t softmax[t] * v_h[t]
-            t = 0
-            while (t < totalLength) {
-                val w = scores[t] * inv
-                val vt = vSeq[t]
-                var d = 0
-                while (d < headSize) {
-                    outVec[off + d] += w * vt[off + d]
-                    d++
-                }
-                t++
+            var d = 0
+            while (d < headSize) {
+                outVec[off + d] = headOut[0, d]
+                d++
             }
         }
     }
@@ -241,57 +224,57 @@ class CachedMultiHeadAttentionLayer(
     ): Tensor {
         val totalTokens = q.rows
         val result = createTensor(totalTokens, modelSize)
-
-        val scoresBuffer = Array(tokensPerSample) { FloatArray(tokensPerSample) }
-        val attentionBuf = Array(tokensPerSample) { FloatArray(tokensPerSample) }
         val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
+
+        fun sliceRows(t: Tensor, from: Int, until: Int): Tensor {
+            val out = createTensor(until - from, t.cols)
+            var r = from
+            var dst = 0
+            while (r < until) {
+                var c = 0
+                while (c < t.cols) { out[dst, c] = t[r, c]; c++ }
+                r++; dst++
+            }
+            return out
+        }
+
+        fun sliceCols(t: Tensor, from: Int, until: Int): Tensor {
+            val out = createTensor(t.rows, until - from)
+            var r = 0
+            while (r < t.rows) {
+                var c = from
+                var dst = 0
+                while (c < until) { out[r, dst] = t[r, c]; c++; dst++ }
+                r++
+            }
+            return out
+        }
 
         for (batch in 0 until batchSize) {
             val startIdx = batch * tokensPerSample
+            val endIdx = startIdx + tokensPerSample
+            val qBatch = sliceRows(q, startIdx, endIdx)
+            val kBatch = sliceRows(k, startIdx, endIdx)
+            val vBatch = sliceRows(v, startIdx, endIdx)
 
             for (head in 0 until headCount) {
                 val headStartCol = head * headSize
+                val headEndCol = headStartCol + headSize
 
-                // scores
+                val qHead = sliceCols(qBatch, headStartCol, headEndCol)
+                val kHead = sliceCols(kBatch, headStartCol, headEndCol)
+                val vHead = sliceCols(vBatch, headStartCol, headEndCol)
+
+                var scores = qHead.multiply(kHead.transpose()).scale(scale)
+                scores = scores.add(causalMask)
+                val attn = scores.softmax()
+                val headResult = attn.multiply(vHead)
+
                 var i = 0
-                while (i < tokensPerSample) {
-                    var j = 0
-                    while (j < tokensPerSample) {
-                        var score = 0.0f
-                        var d = 0
-                        while (d < headSize) {
-                            score += q[startIdx + i][headStartCol + d] * k[startIdx + j][headStartCol + d]
-                            d++
-                        }
-                        scoresBuffer[i][j] = score * scale
-                        j++
-                    }
-                    i++
-                }
-
-                // causal mask
-                i = 0
-                while (i < tokensPerSample) {
-                    var j = i + 1
-                    while (j < tokensPerSample) { scoresBuffer[i][j] = Float.NEGATIVE_INFINITY; j++ }
-                    i++
-                }
-
-                // softmax
-                applySoftmaxInPlace(scoresBuffer, attentionBuf)
-
-                // weighted sum
-                i = 0
                 while (i < tokensPerSample) {
                     var d = 0
                     while (d < headSize) {
-                        var outVal = 0.0f
-                        var j = 0
-                        while (j < tokensPerSample) {
-                            outVal += attentionBuf[i][j] * v[startIdx + j][headStartCol + d]
-                            j++
-                        }
-                        result[startIdx + i][headStartCol + d] = outVal
+                        result[startIdx + i, headStartCol + d] = headResult[i, d]
                         d++
                     }
                     i++
@@ -301,27 +284,6 @@ class CachedMultiHeadAttentionLayer(
 
         attentionWeights = result
         return result
-    }
-
-    private fun applySoftmaxInPlace(input: Array<FloatArray>, output: Array<FloatArray>) {
-        var i = 0
-        while (i < input.size) {
-            val row = input[i]
-            var maxVal = row[0]
-            var j = 1
-            while (j < row.size) { if (row[j] > maxVal) maxVal = row[j]; j++ }
-            var sum = 0.0f
-            j = 0
-            while (j < row.size) {
-                val e = kotlin.math.exp((row[j] - maxVal).toDouble()).toFloat()
-                output[i][j] = e; sum += e
-                j++
-            }
-            val inv = 1.0f / (sum + 1e-9f)
-            j = 0
-            while (j < row.size) { output[i][j] *= inv; j++ }
-            i++
-        }
     }
 
     // ======= Backward/update =======
