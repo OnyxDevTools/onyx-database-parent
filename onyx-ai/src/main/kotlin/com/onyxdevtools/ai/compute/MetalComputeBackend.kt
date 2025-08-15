@@ -328,7 +328,10 @@ class MetalComputeBackend : CPUComputeBackend() {
                 releaseTempBuffers(bufferA, bufferB, bufferResult)
                 val cpuTransposed = super.transpose(b)
                 val cpuResult = super.matrixMultiply(a, cpuTransposed)
-                return super.scalarMultiply(cpuResult, scale)
+                val cpuScaled = super.scalarMultiply(cpuResult, scale)
+                cpuTransposed.dispose()
+                cpuResult.dispose()
+                return cpuScaled
             }
 
             val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
@@ -344,7 +347,10 @@ class MetalComputeBackend : CPUComputeBackend() {
             releaseTempBuffers(bufferA, bufferB, bufferResult)
             val cpuTransposed = super.transpose(b)
             val cpuResult = super.matrixMultiply(a, cpuTransposed)
-            super.scalarMultiply(cpuResult, scale)
+            val cpuScaled = super.scalarMultiply(cpuResult, scale)
+            cpuTransposed.dispose()
+            cpuResult.dispose()
+            cpuScaled
         }
     }
 
