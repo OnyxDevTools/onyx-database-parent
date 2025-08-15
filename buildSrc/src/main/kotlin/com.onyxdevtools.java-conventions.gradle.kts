@@ -41,18 +41,26 @@ fun base64Decode(prop: String): String? {
 }
 
 signing {
-    useInMemoryPgpKeys(base64Decode("signing.secretKey"), project.findProperty("signing.password") as String)
-    sign(publishing.publications)
+    val secretKey = base64Decode("signing.secretKey")
+    val signingPassword = project.findProperty("signing.password") as String?
+    if (secretKey != null && signingPassword != null) {
+        useInMemoryPgpKeys(secretKey, signingPassword)
+        sign(publishing.publications)
+    }
 }
 
 publishing {
 
     repositories {
-        maven {
-            url = URI("https://maven.pkg.github.com/OnyxDevTools/onyx-database-parent")
-            credentials {
-                username = project.property("ossrhUsername") as String
-                password = project.property("ossrhPassword") as String
+        val ossrhUser = project.findProperty("ossrhUsername") as String?
+        val ossrhPass = project.findProperty("ossrhPassword") as String?
+        if (ossrhUser != null && ossrhPass != null) {
+            maven {
+                url = URI("https://maven.pkg.github.com/OnyxDevTools/onyx-database-parent")
+                credentials {
+                    username = ossrhUser
+                    password = ossrhPass
+                }
             }
         }
     }

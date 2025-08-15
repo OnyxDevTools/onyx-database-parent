@@ -1,6 +1,8 @@
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 #include <jni.h>
+#include <unordered_set>
+#include <mutex>
 
 // Metal context structure
 typedef struct {
@@ -16,6 +18,10 @@ typedef struct {
     id<MTLComputePipelineState> softmaxExpSumPipeline;
     id<MTLComputePipelineState> softmaxNormalizePipeline;
 } MetalContext;
+
+// Track active GPU buffers to avoid double releases
+static std::unordered_set<void*> gActiveBuffers;
+static std::mutex gBufferMutex;
 
 // Helper function to load Metal library using default library approach
 id<MTLLibrary> loadMetalLibrary(id<MTLDevice> device) {
@@ -555,16 +561,19 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_createGPUBuffer(JNIEnv* env
         MTLResourceOptions options = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
         
         id<MTLBuffer> buffer = [ctx->device newBufferWithLength:size options:options];
-        
+
         if (!buffer) {
             return 0;
         }
-        
+
         // CRITICAL: We must explicitly retain the buffer for Java/JNI ownership
         // The buffer created by newBufferWithLength has retain count = 1 from ARC
         // We add +1 retain count for JNI, so total retain count = 2
         CFRetain((__bridge CFTypeRef)buffer);
-        
+        {
+            std::lock_guard<std::mutex> lock(gBufferMutex);
+            gActiveBuffers.insert((void*)buffer);
+        }
 
         return reinterpret_cast<jlong>(buffer);
     }
@@ -610,15 +619,21 @@ JNIEXPORT void JNICALL
 Java_com_onyxdevtools_ai_compute_MetalComputeBackend_releaseGPUBuffer(JNIEnv* env, jclass clazz, jlong contextHandle, jlong bufferHandle) {
     @autoreleasepool {
         if (bufferHandle != 0) {
-            // Cast the handle back to the Metal buffer
-            id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)((void*)bufferHandle);
-            
-            if (buffer) {
-                // Release the additional retain from createGPUBuffer. ARC will
-                // handle its own retain, so a single CFRelease is sufficient
-                // to free the buffer when no other references exist.
-                CFRelease((__bridge CFTypeRef)buffer);
-                buffer = nil;
+            void* key = (void*)bufferHandle;
+            bool shouldRelease = false;
+            {
+                std::lock_guard<std::mutex> lock(gBufferMutex);
+                auto it = gActiveBuffers.find(key);
+                if (it != gActiveBuffers.end()) {
+                    gActiveBuffers.erase(it);
+                    shouldRelease = true;
+                }
+            }
+            if (shouldRelease) {
+                id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)(key);
+                if (buffer) {
+                    CFRelease((__bridge CFTypeRef)buffer);
+                }
             }
         }
     }
