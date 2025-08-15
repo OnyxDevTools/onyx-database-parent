@@ -458,4 +458,4 @@ class MetalComputeBackend : CPUComputeBackend() {
     }
 }
 
-val metalCompute = MetalComputeBackend()
+val metalCompute by lazy { MetalComputeBackend() }
