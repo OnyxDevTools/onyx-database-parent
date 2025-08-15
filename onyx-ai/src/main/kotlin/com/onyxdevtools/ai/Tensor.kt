@@ -6,6 +6,7 @@ import com.onyxdevtools.ai.compute.BasicCPUComputeBackend
 import com.onyxdevtools.ai.compute.CPUComputeBackend
 import com.onyxdevtools.ai.compute.ComputeBackend
 import com.onyxdevtools.ai.compute.MetalComputeBackend
+import java.lang.ref.Cleaner
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -207,12 +208,22 @@ class MetalTensor(
     internal var gpuBufferHandle: Long = 0L,
     private var ownsGpuBuffer: Boolean = false
 ) : Tensor() {
+    companion object {
+        private val cleaner: Cleaner = Cleaner.create()
+    }
+
+    private var cleanable: Cleaner.Cleanable? = null
+
     init {
         require(rows >= 0 && cols >= 0) { "rows/cols must be non-negative" }
         require(buffer.capacity() >= rows * cols) {
             "buffer too small: ${buffer.capacity()} < ${rows * cols}"
         }
+        if (metal != null && gpuBufferHandle != 0L && ownsGpuBuffer) {
+            registerCleaner()
+        }
     }
+
     private fun idx(r: Int, c: Int) = r * cols + c
     override operator fun get(r: Int, c: Int): Float = buffer.get(idx(r, c))
     override operator fun set(r: Int, c: Int, v: Float) { buffer.put(idx(r, c), v) }
@@ -222,6 +233,14 @@ class MetalTensor(
         while (c < cols) { dest[c] = buffer.get(off + c); c++ }
     }
     override fun asFloatBufferOrNull(): FloatBuffer = buffer
+
+    private fun registerCleaner() {
+        val context = metal!!.metalContext
+        val handle = gpuBufferHandle
+        cleanable = cleaner.register(this, Runnable {
+            try { MetalComputeBackend.releaseGPUBuffer(context, handle) } catch (_: Throwable) {}
+        })
+    }
 
     /**
      * Ensure this tensor has an associated GPU buffer. If not, one will be created
@@ -238,6 +257,7 @@ class MetalTensor(
             gpuBufferHandle = MetalComputeBackend.createGPUBuffer(metal.metalContext, size * 4)
             MetalComputeBackend.copyToGPU(metal.metalContext, gpuBufferHandle, data)
             ownsGpuBuffer = true
+            registerCleaner()
         }
         return gpuBufferHandle
     }
@@ -245,6 +265,8 @@ class MetalTensor(
     override fun dispose() {
         if (ownsGpuBuffer && gpuBufferHandle != 0L && metal != null) {
             try { MetalComputeBackend.releaseGPUBuffer(metal.metalContext, gpuBufferHandle) } catch (_: Throwable) {}
+            cleanable?.clean()
+            cleanable = null
             gpuBufferHandle = 0L
         }
     }
