@@ -204,8 +204,8 @@ class MetalTensor(
     override val rows: Int,
     override val cols: Int,
     internal val metal: MetalComputeBackend? = null,
-    private var gpuBufferHandle: Long = 0L,
-    private val ownsGpuBuffer: Boolean = false
+    internal var gpuBufferHandle: Long = 0L,
+    private var ownsGpuBuffer: Boolean = false
 ) : Tensor() {
     init {
         require(rows >= 0 && cols >= 0) { "rows/cols must be non-negative" }
@@ -222,6 +222,26 @@ class MetalTensor(
         while (c < cols) { dest[c] = buffer.get(off + c); c++ }
     }
     override fun asFloatBufferOrNull(): FloatBuffer = buffer
+
+    /**
+     * Ensure this tensor has an associated GPU buffer. If not, one will be created
+     * and populated with the current CPU buffer contents. Subsequent calls will
+     * reuse the same buffer to avoid redundant CPU↔GPU transfers.
+     */
+    internal fun ensureGpuBuffer(): Long {
+        if (gpuBufferHandle == 0L && metal != null) {
+            val size = rows * cols
+            val data = FloatArray(size)
+            buffer.position(0)
+            buffer.get(data)
+            buffer.position(0)
+            gpuBufferHandle = MetalComputeBackend.createGPUBuffer(metal.metalContext, size * 4)
+            MetalComputeBackend.copyToGPU(metal.metalContext, gpuBufferHandle, data)
+            ownsGpuBuffer = true
+        }
+        return gpuBufferHandle
+    }
+
     override fun dispose() {
         if (ownsGpuBuffer && gpuBufferHandle != 0L && metal != null) {
             try { MetalComputeBackend.releaseGPUBuffer(metal.metalContext, gpuBufferHandle) } catch (_: Throwable) {}
