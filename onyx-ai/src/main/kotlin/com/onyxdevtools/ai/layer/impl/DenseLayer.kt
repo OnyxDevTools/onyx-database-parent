@@ -95,11 +95,13 @@ class DenseLayer(
      * Performs the forward pass using the compute backend
      */
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
-        // Use compute backend for matrix operations
-        val linearOutput = computeContext.backend.addVectorToRows(
-            computeContext.backend.matrixMultiply(input, weights), 
-            biases
-        )
+        // Use compute backend for matrix operations. Release intermediate
+        // results immediately to avoid holding on to large temporary tensors
+        // across iterations which can lead to native memory leaks on GPU
+        // backends.
+        val mm = computeContext.backend.matrixMultiply(input, weights)
+        val linearOutput = computeContext.backend.addVectorToRows(mm, biases)
+        computeContext.releaseMatrix(mm)
         
         val nextInput = nextLayer?.preForward(linearOutput, isTraining) ?: linearOutput
         this.preActivation = nextInput
@@ -134,13 +136,22 @@ class DenseLayer(
         // m_t = beta1 * m_{t-1} + (1 - beta1) * g_t
         val mScaled = computeContext.backend.scalarMultiply(momentWeights, adamBeta1)
         val gScaled = computeContext.backend.scalarMultiply(gradients, oneMinusBeta1)
-        momentWeights = computeContext.backend.add(mScaled, gScaled)
+        val newMoment = computeContext.backend.add(mScaled, gScaled)
+        computeContext.releaseMatrix(momentWeights)
+        computeContext.releaseMatrix(mScaled)
+        computeContext.releaseMatrix(gScaled)
+        momentWeights = newMoment
 
         // v_t = beta2 * v_{t-1} + (1 - beta2) * (g_t ⊙ g_t)
         val vScaled = computeContext.backend.scalarMultiply(velocityWeights, adamBeta2)
         val gSquared = computeContext.backend.elementWiseMultiply(gradients, gradients)
         val gSquaredScaled = computeContext.backend.scalarMultiply(gSquared, oneMinusBeta2)
-        velocityWeights = computeContext.backend.add(vScaled, gSquaredScaled)
+        val newVelocity = computeContext.backend.add(vScaled, gSquaredScaled)
+        computeContext.releaseMatrix(velocityWeights)
+        computeContext.releaseMatrix(vScaled)
+        computeContext.releaseMatrix(gSquared)
+        computeContext.releaseMatrix(gSquaredScaled)
+        velocityWeights = newVelocity
 
         // Compute bias-corrected moments
         val mHat = computeContext.backend.scalarMultiply(momentWeights, biasCorrect1)
@@ -152,7 +163,20 @@ class DenseLayer(
         val invDenom = computeContext.backend.applyElementWise(denom) { 1f / it }
         val update = computeContext.backend.elementWiseMultiply(mHat, invDenom)
         val scaledUpdate = computeContext.backend.scalarMultiply(update, learningRate)
-        weights = computeContext.backend.subtract(weights, scaledUpdate)
+        val newWeights = computeContext.backend.subtract(weights, scaledUpdate)
+        computeContext.releaseMatrix(weights)
+        weights = newWeights
+        computeContext.releaseMatrix(mHat)
+        computeContext.releaseMatrix(vHat)
+        computeContext.releaseMatrix(sqrtVHat)
+        computeContext.releaseMatrix(denom)
+        computeContext.releaseMatrix(invDenom)
+        computeContext.releaseMatrix(update)
+        computeContext.releaseMatrix(scaledUpdate)
+
+        // gradients are no longer needed after weight update
+        computeContext.releaseMatrix(gradients)
+        gradientWeights = null
 
         // ----- Bias updates (kept on CPU due to small size) -----
         fun correctMoment(m: Float) = m / (1f - adamBeta1Power)
@@ -166,6 +190,7 @@ class DenseLayer(
                     correctMoment(momentBiases[j]) /
                     (sqrt(correctVelocity(velocityBiases[j])) + EPSILON)
         }
+        gradientBiases = null
     }
 
     /**
@@ -179,30 +204,34 @@ class DenseLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        // Use compute backend for element-wise operations
-        val currentDelta = computeContext.backend.elementWiseMultiply(
-            delta,
-            computeContext.backend.applyElementWise(preActivation!!, activation::derivative)
-        )
+        // Use compute backend for element-wise operations and release temporaries
+        val derivative = computeContext.backend.applyElementWise(preActivation!!, activation::derivative)
+        val currentDelta = computeContext.backend.elementWiseMultiply(delta, derivative)
+        computeContext.releaseMatrix(derivative)
 
         val previousOutput = previousLayer?.output ?: currentInput!!
 
         // Use compute backend for gradient calculations
-        val gradWeights = computeContext.backend.matrixMultiply(
-            computeContext.backend.transpose(previousOutput), 
-            currentDelta
-        )
-        
+        val prevOutputT = computeContext.backend.transpose(previousOutput)
+        val gradWeights = computeContext.backend.matrixMultiply(prevOutputT, currentDelta)
+        computeContext.releaseMatrix(prevOutputT)
+
         val scaledGradWeights = computeContext.backend.scalarMultiply(gradWeights, 1.0f / featureSize)
+        computeContext.releaseMatrix(gradWeights)
         val regularization = computeContext.backend.scalarMultiply(weights, lambda)
-        
+
+        gradientWeights?.let { computeContext.releaseMatrix(it) }
         gradientWeights = computeContext.backend.add(scaledGradWeights, regularization)
+        computeContext.releaseMatrix(scaledGradWeights)
+        computeContext.releaseMatrix(regularization)
         gradientBiases = computeContext.backend.sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
 
-        return computeContext.backend.matrixMultiply(
-            currentDelta, 
-            computeContext.backend.transpose(weights)
-        )
+        val weightT = computeContext.backend.transpose(weights)
+        val prevDelta = computeContext.backend.matrixMultiply(currentDelta, weightT)
+        computeContext.releaseMatrix(weightT)
+        computeContext.releaseMatrix(currentDelta)
+
+        return prevDelta
     }
 
     /**

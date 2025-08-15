@@ -60,7 +60,9 @@ class DefaultComputeContext : ComputeContext {
     override fun copyFromBackend(tensor: Tensor): Tensor = tensor
     
     override fun releaseMatrix(tensor: Tensor) {
-        // No-op for CPU matrices
+        // Ensure any underlying resources (e.g. GPU buffers) are released.
+        // For heap-backed tensors this is effectively a no-op.
+        tensor.dispose()
     }
     
     override fun getMemoryInfo(): ComputeMemoryInfo {
