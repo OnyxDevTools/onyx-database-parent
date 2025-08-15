@@ -382,12 +382,8 @@ class MetalComputeBackend : CPUComputeBackend() {
                 releaseTempBuffers(inputBuffer, outputBuffer)
                 return super.transpose(tensor)
             }
-            val resultData = copyFromGPU(metalContext, outputBuffer, rows * cols)
             val buf = Tensor.allocateDirectBuffer(rows * cols)
-            for (i in 0 until rows * cols) {
-                buf.put(i, resultData[i])
-            }
-            val result = MetalTensor(buf, cols, rows, this, outputBuffer, true)
+            val result = MetalTensor(buf, cols, rows, this, outputBuffer, true, false)
             synchronized(bufferLock) { gpuBuffers.remove(outputBuffer) }
             releaseTempBuffers(inputBuffer)
             result
@@ -440,12 +436,8 @@ class MetalComputeBackend : CPUComputeBackend() {
                 releaseTempBuffers(bufferA, bufferB, bufferResult)
                 null
             } else {
-                val resultData = copyFromGPU(metalContext, bufferResult, rows * cols)
                 val buf = Tensor.allocateDirectBuffer(rows * cols)
-                for (i in 0 until rows * cols) {
-                    buf.put(i, resultData[i])
-                }
-                val result = MetalTensor(buf, rows, cols, this, bufferResult, true)
+                val result = MetalTensor(buf, rows, cols, this, bufferResult, true, false)
                 synchronized(bufferLock) { gpuBuffers.remove(bufferResult) }
                 releaseTempBuffers(bufferA, bufferB)
                 result
