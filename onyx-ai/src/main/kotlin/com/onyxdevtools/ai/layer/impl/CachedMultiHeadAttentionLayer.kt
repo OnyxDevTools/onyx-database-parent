@@ -4,6 +4,8 @@ import Activation
 import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.createTensor
+import com.onyxdevtools.ai.MetalTensor
+import com.onyxdevtools.ai.compute.metalCompute
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.sqrt
 
@@ -199,7 +201,11 @@ class CachedMultiHeadAttentionLayer(
             val kHead = createTensor(totalLength, headSize) { r, d -> kSeq[r][headColsStart + d] }
             val vHead = createTensor(totalLength, headSize) { r, d -> vSeq[r][headColsStart + d] }
 
-            val scores = qHead.multiply(kHead.transpose()).scale(scale)
+            val scores = if (qHead is MetalTensor && kHead is MetalTensor) {
+                metalCompute.matrixMultiplyTransposeScale(qHead, kHead, scale)
+            } else {
+                qHead.multiply(kHead.transpose()).scale(scale)
+            }
             val attn = scores.softmax()
             val headOut = attn.multiply(vHead)
 
@@ -261,8 +267,12 @@ class CachedMultiHeadAttentionLayer(
                 val kHead = sliceCols(kBatch, headStartCol, headEndCol)
                 val vHead = sliceCols(vBatch, headStartCol, headEndCol)
 
-                var scores = qHead.multiply(kHead.transpose()).scale(scale)
-                scores = scores.add(causalMask)
+                val rawScores = if (qHead is MetalTensor && kHead is MetalTensor) {
+                    metalCompute.matrixMultiplyTransposeScale(qHead, kHead, scale)
+                } else {
+                    qHead.multiply(kHead.transpose()).scale(scale)
+                }
+                var scores = rawScores.add(causalMask)
                 val attn = scores.softmax()
                 val headResult = attn.multiply(vHead)
 
