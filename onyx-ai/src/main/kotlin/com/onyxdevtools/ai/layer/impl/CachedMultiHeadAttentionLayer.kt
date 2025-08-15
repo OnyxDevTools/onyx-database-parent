@@ -120,6 +120,11 @@ class CachedMultiHeadAttentionLayer(
      */
     fun clearCache() {
         currentCacheLength = 0
+        queries = null
+        keys = null
+        values = null
+        attentionWeights = null
+        attentionOutput = null
     }
 
     /**
@@ -130,6 +135,11 @@ class CachedMultiHeadAttentionLayer(
         valueCache = null
         currentCacheLength = 0
         maxCacheLength = 0
+        queries = null
+        keys = null
+        values = null
+        attentionWeights = null
+        attentionOutput = null
     }
 
     override fun forward(input: FlexibleMatrix, isTraining: Boolean, nextLayer: Layer?): FlexibleMatrix {
@@ -167,7 +177,6 @@ class CachedMultiHeadAttentionLayer(
      */
     private fun forwardWithCache(input: FlexibleMatrix): FlexibleMatrix {
         val inputLength = input.rows
-        val batchSize = 1 // For now, assume batch size = 1 during inference
         
         // Compute queries for all positions (always needed)
         queries = matrixMultiply(input, wQuery)
@@ -186,19 +195,15 @@ class CachedMultiHeadAttentionLayer(
         
         // Get all keys and values from cache (up to current position + new positions)
         val totalLength = currentCacheLength + inputLength
-        keys = createMatrix(totalLength, modelSize, input.isSinglePrecision) { r, c ->
-            keyCache!![r, c]
-        }
-        values = createMatrix(totalLength, modelSize, input.isSinglePrecision) { r, c ->
-            valueCache!![r, c]
-        }
-        
+        keys = keyCache
+        values = valueCache
+
         // Compute attention with cached keys/values
-        attentionOutput = computeCachedAttention(queries!!, keys!!, values!!, inputLength, totalLength)
-        
+        attentionOutput = computeCachedAttention(queries!!, keyCache!!, valueCache!!, inputLength, totalLength)
+
         // Update cache length
         currentCacheLength = totalLength
-        
+
         // Final output projection
         output = matrixMultiply(attentionOutput!!, wOutput)
         return output!!
