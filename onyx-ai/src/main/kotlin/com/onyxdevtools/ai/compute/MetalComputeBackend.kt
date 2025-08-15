@@ -247,9 +247,7 @@ class MetalComputeBackend : CPUComputeBackend() {
         val totalOps = rowsA.toLong() * colsA.toLong() * colsB.toLong()
 
         val useGPU = if (isGemvLike) {
-            // For GEMV-like shapes, use a lower cutover based on effective work (K * output_len)
-            val work = colsA.toLong() * max(rowsA, colsB).toLong()
-            work >= GEMV_CUTOVER_WORK
+            false
         } else {
             totalOps >= GEMM_CUTOVER_OPS
         }

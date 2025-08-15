@@ -65,7 +65,9 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
             }
         }
 
-        return if (isVectorAPIAvailable) {
+        return if (m <= 10) {
+            matrixMultiplyBasic(a, b)
+        } else if (isVectorAPIAvailable) {
             matrixMultiplySkinnyVectorizedParallel(a,b)
         } else {
             matrixMultiplyParallelJVM(a, b)

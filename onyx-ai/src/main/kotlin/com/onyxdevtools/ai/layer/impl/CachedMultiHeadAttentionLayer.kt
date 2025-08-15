@@ -9,19 +9,10 @@ import com.onyxdevtools.ai.compute.*
 import kotlin.math.sqrt
 
 /**
- * Optimized Multi-Head Attention with Key-Value caching for autoregressive generation.
- *
- * This implementation dramatically speeds up text generation by caching previous key and value
- * computations during autoregressive inference. In standard generation, keys and values for
- * earlier positions never change, but the standard attention layer recomputes them every time.
- *
- * KV caching provides 10-50x speedup for autoregressive generation by:
- * - Storing computed keys and values for previous positions
- * - Only computing keys/values for new positions
- * - Reusing cached computations for attention calculation
- *
- * Memory tradeoff: Uses O(batch_size * max_seq_len * model_size) additional memory
- * Speed benefit: O(seq_len) complexity instead of O(seq_len²) per token
+ * Optimized Multi-Head Attention with per-sequence KV caching.
+ * Training path unchanged. Inference path:
+ *  - No copying of whole K/V each step
+ *  - Supports batched 1-step input (B rows)
  */
 class CachedMultiHeadAttentionLayer(
     private val tokensPerSample: Int,
@@ -30,7 +21,7 @@ class CachedMultiHeadAttentionLayer(
     @Transient private var computeContext: ComputeContext? = null
 ) : Layer {
 
-    // Lazy initialization of compute context
+    // Lazy init of compute context
     private val backend: ComputeContext
         get() = computeContext ?: DefaultComputeContext().also { computeContext = it }
 
@@ -40,19 +31,21 @@ class CachedMultiHeadAttentionLayer(
 
     private val headSize = modelSize / headCount
 
-    // Weight matrices (same as original)
-    private var wQuery: Matrix
-    private var wKey: Matrix
-    private var wValue: Matrix
-    private var wOutput: Matrix
+    // Weights
+    internal var wQuery: Matrix
+    internal var wKey: Matrix
+    internal var wValue: Matrix
+    internal var wOutput: Matrix
 
-    // KV Cache - stores keys and values for all positions up to current
-    private var keyCache: Matrix? = null
-    private var valueCache: Matrix? = null
-    private var currentCacheLength = 0
+    // ======= NEW: per-sequence KV cache (for inference) =======
+    private var batchSize: Int = 1
     private var maxCacheLength = 0
+    // kCache[b][t][d], vCache[b][t][d]
+    private var kCache: Array<Array<FloatArray>>? = null
+    private var vCache: Array<Array<FloatArray>>? = null
+    private var curLen: IntArray? = null
 
-    // Gradients and Adam optimizer state (same as original)
+    // Gradients/optimizer state
     private var gradWQuery: Matrix? = null
     private var gradWKey: Matrix? = null
     private var gradWValue: Matrix? = null
@@ -67,7 +60,7 @@ class CachedMultiHeadAttentionLayer(
     private var momentWOutput: Matrix
     private var velocityWOutput: Matrix
 
-    // Cached values for backward pass
+    // Cached fwd values for training
     private var queries: Matrix? = null
     private var keys: Matrix? = null
     private var values: Matrix? = null
@@ -78,204 +71,170 @@ class CachedMultiHeadAttentionLayer(
         require(modelSize % headCount == 0) {
             "Model size ($modelSize) must be divisible by head count ($headCount)"
         }
-
         val random = java.util.Random()
         val scale = 0.02f
-
-        // Initialize weights
         wQuery = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
-        wKey = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
+        wKey   = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
         wValue = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
-        wOutput = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
+        wOutput= Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
 
-        // Initialize Adam optimizer state
-        momentWQuery = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        velocityWQuery = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        momentWKey = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        velocityWKey = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        momentWValue = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        velocityWValue = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        momentWOutput = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
-        velocityWOutput = Array(modelSize) { FloatArray(modelSize) { 0.0f } }
+        momentWQuery = Array(modelSize) { FloatArray(modelSize) }
+        velocityWQuery = Array(modelSize) { FloatArray(modelSize) }
+        momentWKey = Array(modelSize) { FloatArray(modelSize) }
+        velocityWKey = Array(modelSize) { FloatArray(modelSize) }
+        momentWValue = Array(modelSize) { FloatArray(modelSize) }
+        velocityWValue = Array(modelSize) { FloatArray(modelSize) }
+        momentWOutput = Array(modelSize) { FloatArray(modelSize) }
+        velocityWOutput = Array(modelSize) { FloatArray(modelSize) }
     }
 
-    /**
-     * Initializes the KV cache for autoregressive generation.
-     * Call this before starting text generation to enable caching.
-     */
+    /** Initialize per-sequence cache. Backwards-compatible default for batchSize=1. */
     fun initializeCache(maxSequenceLength: Int, batchSize: Int = 1) {
-        maxCacheLength = maxSequenceLength
-
-        // Cache stores keys and values for all positions
-        keyCache = Array(maxSequenceLength * batchSize) { FloatArray(modelSize) { 0.0f } }
-        valueCache = Array(maxSequenceLength * batchSize) { FloatArray(modelSize) { 0.0f } }
-        currentCacheLength = 0
+        require(maxSequenceLength > 0) { "maxSequenceLength must be > 0" }
+        require(batchSize > 0) { "batchSize must be > 0" }
+        this.maxCacheLength = maxSequenceLength
+        this.batchSize = batchSize
+        kCache = Array(batchSize) { Array(maxSequenceLength) { FloatArray(modelSize) } }
+        vCache = Array(batchSize) { Array(maxSequenceLength) { FloatArray(modelSize) } }
+        curLen = IntArray(batchSize) { 0 }
     }
 
-    /**
-     * Clears the KV cache, resetting to the beginning of a sequence.
-     */
+    /** Reset lengths; keep buffers. */
     fun clearCache() {
-        currentCacheLength = 0
+        curLen?.fill(0)
     }
 
-    /**
-     * Disables KV caching for training mode.
-     */
+    /** Disable caches. */
     fun disableCache() {
-        keyCache = null
-        valueCache = null
-        currentCacheLength = 0
+        kCache = null
+        vCache = null
+        curLen = null
         maxCacheLength = 0
+        batchSize = 1
     }
 
     override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
-        return if (isTraining || keyCache == null) {
-            // Training mode or cache disabled - use standard attention
+        return if (isTraining || kCache == null) {
             forwardStandard(input, isTraining)
         } else {
-            // Inference mode with caching enabled
-            forwardWithCache(input)
+            forwardWithCache(input) // input is B×modelSize (B can be 1)
         }
     }
 
-    /**
-     * Standard forward pass without caching (used during training).
-     */
+    /** Standard path for training (unchanged). */
     private fun forwardStandard(input: Matrix, isTraining: Boolean): Matrix {
-        val batchSize = input.size / tokensPerSample
+        val batchSizeLocal = input.size / tokensPerSample
 
-        // Compute Q, K, V matrices
         queries = backend.backend.matrixMultiply(input, wQuery)
-        keys = backend.backend.matrixMultiply(input, wKey)
-        values = backend.backend.matrixMultiply(input, wValue)
+        keys    = backend.backend.matrixMultiply(input, wKey)
+        values  = backend.backend.matrixMultiply(input, wValue)
 
-        // Compute attention for all heads
-        attentionOutput = computeMultiHeadAttention(queries!!, keys!!, values!!, batchSize)
-
-        // Final output projection
+        attentionOutput = computeMultiHeadAttention(queries!!, keys!!, values!!, batchSizeLocal)
         output = backend.backend.matrixMultiply(attentionOutput!!, wOutput)
         return output!!
     }
 
-    /**
-     * Optimized forward pass with KV caching for autoregressive generation.
-     * Only computes keys and values for new positions.
-     */
+    /** Cached inference path: append K/V per sequence and compute attention without rebuilding arrays. */
     private fun forwardWithCache(input: Matrix): Matrix {
-        val inputLength = input.size
+        val B = input.size
+        val kC = kCache ?: error("Cache not initialized")
+        val vC = vCache ?: error("Cache not initialized")
+        val lens = curLen ?: error("Cache not initialized")
+        require(B <= lens.size) { "Input batch $B exceeds initialized cache batch ${lens.size}" }
 
-        // Check cache bounds
-        require(currentCacheLength + inputLength <= maxCacheLength) {
-            "Cache overflow: trying to store ${currentCacheLength + inputLength} tokens but max is $maxCacheLength"
+        // Project batch once (GEMM with rows=B)
+        val Q = backend.backend.matrixMultiply(input, wQuery) // [B, D]
+        val K = backend.backend.matrixMultiply(input, wKey)   // [B, D]
+        val V = backend.backend.matrixMultiply(input, wValue) // [B, D]
+
+        val out = Array(B) { FloatArray(modelSize) }
+
+        // For each sequence in the batch: append K/V and attend to its own cache
+        var b = 0
+        while (b < B) {
+            val len = lens[b]
+            require(len + 1 <= maxCacheLength) { "Cache overflow for seq $b: $len+1 > $maxCacheLength" }
+
+            // Append new K,V (no full-array copies)
+            System.arraycopy(K[b], 0, kC[b][len], 0, modelSize)
+            System.arraycopy(V[b], 0, vC[b][len], 0, modelSize)
+            val total = len + 1
+
+            // Compute attn for this sequence
+            computeCachedAttentionSingle(
+                qVec = Q[b],
+                kSeq = kC[b],
+                vSeq = vC[b],
+                totalLength = total,
+                outVec = out[b]
+            )
+            lens[b] = total
+            b++
         }
 
-        // Compute queries for all positions (always needed)
-        queries = backend.backend.matrixMultiply(input, wQuery)
-
-        // Compute keys and values only for new positions
-        val newKeys = backend.backend.matrixMultiply(input, wKey)
-        val newValues = backend.backend.matrixMultiply(input, wValue)
-
-        // Update cache with new keys and values
-        for (i in 0 until inputLength) {
-            for (j in 0 until modelSize) {
-                keyCache!![currentCacheLength + i][j] = newKeys[i][j]
-                valueCache!![currentCacheLength + i][j] = newValues[i][j]
-            }
-        }
-
-        // Get all keys and values from cache (up to current position + new positions)
-        val totalLength = currentCacheLength + inputLength
-        keys = Array(totalLength) { r -> FloatArray(modelSize) { c -> keyCache!![r][c] } }
-        values = Array(totalLength) { r -> FloatArray(modelSize) { c -> valueCache!![r][c] } }
-
-        // Compute attention with cached keys/values
-        attentionOutput = computeCachedAttention(queries!!, keys!!, values!!, inputLength, totalLength)
-
-        // Update cache length
-        currentCacheLength = totalLength
-
-        // Final output projection
-        output = backend.backend.matrixMultiply(attentionOutput!!, wOutput)
+        output = backend.backend.matrixMultiply(out, wOutput) // [B, D]
         return output!!
     }
 
-    /**
-     * Computes attention using cached keys and values.
-     * Only computes attention for the new query positions.
-     */
-    private fun computeCachedAttention(
-        queries: Matrix,
-        keys: Matrix,
-        values: Matrix,
-        queryLength: Int,
-        totalLength: Int
-    ): Matrix {
-        val result = Array(queryLength) { FloatArray(modelSize) { 0.0f } }
-        val scale = 1.0 / sqrt(headSize.toDouble())
+    /** Single-sequence cached attention: softmax(q·K) then weighted sum over V, per head. */
+    private fun computeCachedAttentionSingle(
+        qVec: FloatArray,
+        kSeq: Array<FloatArray>,
+        vSeq: Array<FloatArray>,
+        totalLength: Int,
+        outVec: FloatArray
+    ) {
+        java.util.Arrays.fill(outVec, 0.0f)
+        val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
 
-        // Process each head
-        for (head in 0 until headCount) {
-            val headStartCol = head * headSize
+        for (h in 0 until headCount) {
+            val off = h * headSize
 
-            // For each new query position
-            for (queryPos in 0 until queryLength) {
-                val actualQueryPos = totalLength - queryLength + queryPos
-
-                // Compute attention scores with all key positions (including cache)
-                val scores = DoubleArray(totalLength)
-                for (keyPos in 0 until totalLength) {
-                    var score = 0.0f
-                    for (d in 0 until headSize) {
-                        score += queries[queryPos][headStartCol + d] * keys[keyPos][headStartCol + d]
-                    }
-                    scores[keyPos] = score * scale
+            // scores[t] = (q_h · k_h[t]) * scale
+            var maxScore = Float.NEGATIVE_INFINITY
+            val scores = FloatArray(totalLength)
+            var t = 0
+            while (t < totalLength) {
+                val kt = kSeq[t]
+                var s = 0.0f
+                var d = 0
+                while (d < headSize) {
+                    s += qVec[off + d] * kt[off + d]
+                    d++
                 }
+                s *= scale
+                scores[t] = s
+                if (s > maxScore) maxScore = s
+                t++
+            }
 
-                // Apply causal mask - can only attend to previous positions
-                for (keyPos in actualQueryPos + 1 until totalLength) {
-                    scores[keyPos] = Double.NEGATIVE_INFINITY
-                }
+            // softmax
+            var sumExp = 0.0f
+            t = 0
+            while (t < totalLength) {
+                val e = kotlin.math.exp((scores[t] - maxScore).toDouble()).toFloat()
+                scores[t] = e
+                sumExp += e
+                t++
+            }
+            val inv = 1.0f / (sumExp + 1e-9f)
 
-                // Apply softmax
-                var maxScore = if (scores.isNotEmpty()) scores[0] else 0.0
-                for (score in scores) {
-                    if (score > maxScore) maxScore = score
+            // out_h = Σ_t softmax[t] * v_h[t]
+            t = 0
+            while (t < totalLength) {
+                val w = scores[t] * inv
+                val vt = vSeq[t]
+                var d = 0
+                while (d < headSize) {
+                    outVec[off + d] += w * vt[off + d]
+                    d++
                 }
-                var sumExp = 0.0
-                for (i in scores.indices) {
-                    if (scores[i] != Double.NEGATIVE_INFINITY) {
-                        scores[i] = kotlin.math.exp(scores[i] - maxScore)
-                        sumExp += scores[i]
-                    } else {
-                        scores[i] = 0.0
-                    }
-                }
-
-                if (sumExp > 0.0) {
-                    for (i in scores.indices) {
-                        scores[i] /= sumExp
-                    }
-                }
-
-                // Apply attention to values
-                for (d in 0 until headSize) {
-                    var output = 0.0f
-                    for (keyPos in 0 until totalLength) {
-                        output += (scores[keyPos] * values[keyPos][headStartCol + d]).toFloat()
-                    }
-                    result[queryPos][headStartCol + d] = output
-                }
+                t++
             }
         }
-
-        return result
     }
 
-    /**
-     * Standard multi-head attention computation (same as original implementation).
-     */
+    /** Training-time multi-head attention (unchanged) */
     private fun computeMultiHeadAttention(
         q: Matrix,
         k: Matrix,
@@ -295,7 +254,7 @@ class CachedMultiHeadAttentionLayer(
             for (head in 0 until headCount) {
                 val headStartCol = head * headSize
 
-                // Compute attention scores
+                // scores
                 for (i in 0 until tokensPerSample) {
                     for (j in 0 until tokensPerSample) {
                         var score = 0.0f
@@ -306,24 +265,24 @@ class CachedMultiHeadAttentionLayer(
                     }
                 }
 
-                // Apply causal mask for training
+                // causal mask
                 for (i in 0 until tokensPerSample) {
                     for (j in i + 1 until tokensPerSample) {
                         scoresBuffer[i][j] = Float.NEGATIVE_INFINITY
                     }
                 }
 
-                // Apply softmax
+                // softmax
                 applySoftmaxInPlace(scoresBuffer, attentionBuffer)
 
-                // Apply attention to values
+                // weighted sum
                 for (i in 0 until tokensPerSample) {
                     for (d in 0 until headSize) {
-                        var output = 0.0f
+                        var outVal = 0.0f
                         for (j in 0 until tokensPerSample) {
-                            output += attentionBuffer[i][j] * v[startIdx + j][headStartCol + d]
+                            outVal += attentionBuffer[i][j] * v[startIdx + j][headStartCol + d]
                         }
-                        result[startIdx + i][headStartCol + d] = output
+                        result[startIdx + i][headStartCol + d] = outVal
                     }
                 }
             }
@@ -333,33 +292,21 @@ class CachedMultiHeadAttentionLayer(
         return result
     }
 
-    /**
-     * High-performance in-place softmax.
-     */
     private fun applySoftmaxInPlace(input: Matrix, output: Matrix) {
         for (i in 0 until input.size) {
             var maxVal = input[i][0]
-            for (j in 1 until input[i].size) {
-                val value = input[i][j]
-                if (value > maxVal) maxVal = value
-            }
-
+            for (j in 1 until input[i].size) if (input[i][j] > maxVal) maxVal = input[i][j]
             var sum = 0.0f
             for (j in 0 until input[i].size) {
-                val expVal = kotlin.math.exp(input[i][j] - maxVal)
-                output[i][j] = expVal
-                sum += expVal
+                val e = kotlin.math.exp((input[i][j] - maxVal).toDouble()).toFloat()
+                output[i][j] = e; sum += e
             }
-
-            val invSum = 1.0f / sum
-            for (j in 0 until input[i].size) {
-                output[i][j] = (output[i][j] * invSum)
-            }
+            val inv = 1.0f / (sum + 1e-9f)
+            for (j in 0 until input[i].size) output[i][j] *= inv
         }
     }
 
-
-    // Backward pass implementation (migrated to use compute backend)
+    // ======= Backward/update (unchanged) =======
     override fun backward(
         currentInput: Matrix?,
         delta: Matrix,
@@ -374,26 +321,22 @@ class CachedMultiHeadAttentionLayer(
         val gradAttentionOutput = backend.backend.matrixMultiply(delta, backend.backend.transpose(wOutput))
 
         gradWQuery = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
-        gradWKey = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
+        gradWKey   = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
         gradWValue = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttentionOutput)
 
         val gradQ = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wQuery))
         val gradK = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wKey))
         val gradV = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wValue))
 
-        // Combine gradients
-        val gradInput = Array(input.size) { FloatArray(input[0].size) { 0.0f } }
+        val gradInput = Array(input.size) { FloatArray(input[0].size) }
         for (i in 0 until input.size) {
             for (j in 0 until input[0].size) {
                 gradInput[i][j] = gradQ[i][j] + gradK[i][j] + gradV[i][j]
             }
         }
-
         return gradInput
     }
 
-
-    // Parameter updates (same as original)
     @Suppress("DuplicatedCode")
     override fun updateParameters(
         adamBeta1Power: Float,
@@ -402,8 +345,8 @@ class CachedMultiHeadAttentionLayer(
         adamBeta2: Float,
         learningRate: Float
     ) {
-        fun correctMoment(moment: Float) = moment / (1.0f - adamBeta1Power)
-        fun correctVelocity(velocity: Float) = velocity / (1.0f - adamBeta2Power)
+        fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
+        fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
 
         updateWeightMatrix(wQuery, gradWQuery!!, momentWQuery, velocityWQuery,
             adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
@@ -428,13 +371,11 @@ class CachedMultiHeadAttentionLayer(
     ) {
         for (i in 0 until weights.size) {
             for (j in 0 until weights[i].size) {
-                val gradient = gradients[i][j].toDouble()
-
-                moment[i][j] = (beta1 * moment[i][j] + (1 - beta1) * gradient).toFloat()
-                velocity[i][j] = (beta2 * velocity[i][j] + (1 - beta2) * gradient * gradient).toFloat()
-
-                weights[i][j] = (weights[i][j] - learningRate * correctMoment(moment[i][j]) /
-                        (sqrt(correctVelocity(velocity[i][j])) + EPSILON))
+                val g = gradients[i][j]
+                moment[i][j]   = beta1 * moment[i][j] + (1 - beta1) * g
+                velocity[i][j] = beta2 * velocity[i][j] + (1 - beta2) * g * g
+                weights[i][j]  = weights[i][j] - learningRate *
+                        correctMoment(moment[i][j]) / (sqrt(correctVelocity(velocity[i][j])) + EPSILON)
             }
         }
     }
@@ -442,9 +383,9 @@ class CachedMultiHeadAttentionLayer(
     override fun clone(): Layer {
         return CachedMultiHeadAttentionLayer(tokensPerSample, modelSize, headCount).also { copy ->
             copy.wQuery = wQuery.deepCopy()
-            copy.wKey = wKey.deepCopy()
+            copy.wKey   = wKey.deepCopy()
             copy.wValue = wValue.deepCopy()
-            copy.wOutput = wOutput.deepCopy()
+            copy.wOutput= wOutput.deepCopy()
 
             copy.momentWQuery = momentWQuery.deepCopy()
             copy.velocityWQuery = velocityWQuery.deepCopy()
@@ -466,9 +407,7 @@ class CachedMultiHeadAttentionLayer(
             copy.gradWKey = gradWKey?.deepCopy()
             copy.gradWValue = gradWValue?.deepCopy()
             copy.gradWOutput = gradWOutput?.deepCopy()
-
-            // Note: Don't copy cache state - each instance should have its own cache
+            // cache state intentionally not cloned
         }
     }
-
 }
