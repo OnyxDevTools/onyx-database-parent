@@ -1,6 +1,7 @@
 package com.onyxdevtools.ai.compute
 
 import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.MetalTensor
 import java.util.*
 import kotlin.math.*
 
@@ -278,8 +279,13 @@ class MetalComputeBackend : CPUComputeBackend() {
             }
 
             val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
-            val result = Tensor(rowsA, colsB) { r, c -> resultData[r * colsB + c] }
-            releaseTempBuffers(bufferA, bufferB, bufferResult)
+            val buf = Tensor.allocateDirectBuffer(resultSize)
+            for (i in 0 until resultSize) {
+                buf.put(i, resultData[i])
+            }
+            val result = MetalTensor(buf, rowsA, colsB, this, bufferResult, true)
+            synchronized(bufferLock) { gpuBuffers.remove(bufferResult) }
+            releaseTempBuffers(bufferA, bufferB)
             result
         } catch (e: Exception) {
             println("Metal matrix multiplication failed, falling back to CPU: ${e.message}")
@@ -287,9 +293,114 @@ class MetalComputeBackend : CPUComputeBackend() {
             super.matrixMultiply(a, b)
         }
     }
+
+    override fun add(a: Tensor, b: Tensor): Tensor {
+        gpuElementWise(a, b, 0)?.let { return it }
+        return super.add(a, b)
+    }
+
+    override fun subtract(a: Tensor, b: Tensor): Tensor {
+        gpuElementWise(a, b, 1)?.let { return it }
+        return super.subtract(a, b)
+    }
+
+    override fun elementWiseMultiply(a: Tensor, b: Tensor): Tensor {
+        gpuElementWise(a, b, 2)?.let { return it }
+        return super.elementWiseMultiply(a, b)
+    }
+
+    override fun transpose(tensor: Tensor): Tensor {
+        var inputBuffer = 0L
+        var outputBuffer = 0L
+        val rows = tensor.rows
+        val cols = tensor.cols
+        return try {
+            inputBuffer = createMatrixBuffer(tensor)
+            outputBuffer = createTrackedBuffer(rows * cols * 4)
+            val success = gpuTranspose(metalContext, inputBuffer, outputBuffer, rows, cols)
+            if (!success) {
+                releaseTempBuffers(inputBuffer, outputBuffer)
+                return super.transpose(tensor)
+            }
+            val resultData = copyFromGPU(metalContext, outputBuffer, rows * cols)
+            val buf = Tensor.allocateDirectBuffer(rows * cols)
+            for (i in 0 until rows * cols) {
+                buf.put(i, resultData[i])
+            }
+            val result = MetalTensor(buf, cols, rows, this, outputBuffer, true)
+            synchronized(bufferLock) { gpuBuffers.remove(outputBuffer) }
+            releaseTempBuffers(inputBuffer)
+            result
+        } catch (e: Exception) {
+            releaseTempBuffers(inputBuffer, outputBuffer)
+            super.transpose(tensor)
+        }
+    }
+
+    override fun softmax(tensor: Tensor): Tensor {
+        var inputBuffer = 0L
+        var outputBuffer = 0L
+        val rows = tensor.rows
+        val cols = tensor.cols
+        return try {
+            inputBuffer = createMatrixBuffer(tensor)
+            outputBuffer = createTrackedBuffer(rows * cols * 4)
+            val success = gpuSoftmax(metalContext, inputBuffer, outputBuffer, rows, cols)
+            if (!success) {
+                releaseTempBuffers(inputBuffer, outputBuffer)
+                return super.softmax(tensor)
+            }
+            val resultData = copyFromGPU(metalContext, outputBuffer, rows * cols)
+            val buf = Tensor.allocateDirectBuffer(rows * cols)
+            for (i in 0 until rows * cols) {
+                buf.put(i, resultData[i])
+            }
+            val result = MetalTensor(buf, rows, cols, this, outputBuffer, true)
+            synchronized(bufferLock) { gpuBuffers.remove(outputBuffer) }
+            releaseTempBuffers(inputBuffer)
+            result
+        } catch (e: Exception) {
+            releaseTempBuffers(inputBuffer, outputBuffer)
+            super.softmax(tensor)
+        }
+    }
+
+    private fun gpuElementWise(a: Tensor, b: Tensor, op: Int): Tensor? {
+        var bufferA = 0L
+        var bufferB = 0L
+        var bufferResult = 0L
+        val rows = a.rows
+        val cols = a.cols
+        return try {
+            bufferA = createMatrixBuffer(a)
+            bufferB = createMatrixBuffer(b)
+            bufferResult = createTrackedBuffer(rows * cols * 4)
+            val success = gpuElementWiseOperation(metalContext, bufferA, bufferB, bufferResult, rows, cols, op)
+            if (!success) {
+                releaseTempBuffers(bufferA, bufferB, bufferResult)
+                null
+            } else {
+                val resultData = copyFromGPU(metalContext, bufferResult, rows * cols)
+                val buf = Tensor.allocateDirectBuffer(rows * cols)
+                for (i in 0 until rows * cols) {
+                    buf.put(i, resultData[i])
+                }
+                val result = MetalTensor(buf, rows, cols, this, bufferResult, true)
+                synchronized(bufferLock) { gpuBuffers.remove(bufferResult) }
+                releaseTempBuffers(bufferA, bufferB)
+                result
+            }
+        } catch (e: Exception) {
+            releaseTempBuffers(bufferA, bufferB, bufferResult)
+            null
+        }
+    }
     // Helper methods
 
     private fun createMatrixBuffer(tensor: Tensor): Long {
+        if (tensor is MetalTensor && tensor.metal === this) {
+            return tensor.ensureGpuBuffer()
+        }
         val size = tensor.rows * tensor.cols
         val buffer = createGPUBuffer(metalContext, size * 4)
         synchronized(bufferLock) {
@@ -299,7 +410,7 @@ class MetalComputeBackend : CPUComputeBackend() {
         copyToGPU(metalContext, buffer, flatData)
         return buffer
     }
-    
+
     private fun createTrackedBuffer(size: Int): Long {
         val buffer = createGPUBuffer(metalContext, size)
         synchronized(bufferLock) {
@@ -311,13 +422,18 @@ class MetalComputeBackend : CPUComputeBackend() {
     private fun releaseTempBuffers(vararg buffers: Long) {
         buffers.forEach { buffer ->
             if (buffer != 0L) {
-                try {
-                    releaseGPUBuffer(metalContext, buffer)
-                    synchronized(bufferLock) {
-                        gpuBuffers.remove(buffer)
+                var shouldRelease = false
+                synchronized(bufferLock) {
+                    if (gpuBuffers.remove(buffer)) {
+                        shouldRelease = true
                     }
-                } catch (e: Exception) {
-                    println("Warning: Failed to release temp buffer $buffer: ${e.message}")
+                }
+                if (shouldRelease) {
+                    try {
+                        releaseGPUBuffer(metalContext, buffer)
+                    } catch (e: Exception) {
+                        println("Warning: Failed to release temp buffer $buffer: ${e.message}")
+                    }
                 }
             }
         }
