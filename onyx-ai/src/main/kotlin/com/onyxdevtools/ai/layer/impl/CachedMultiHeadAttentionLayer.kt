@@ -191,9 +191,6 @@ class CachedMultiHeadAttentionLayer(
     ) {
         java.util.Arrays.fill(outVec, 0.0f)
         val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
-
-        val mask = createTensor(totalLength, totalLength) { r, c -> if (c > r) -1e9f else 0f }
-
         for (h in 0 until headCount) {
             val off = h * headSize
             val headColsStart = off
@@ -202,8 +199,7 @@ class CachedMultiHeadAttentionLayer(
             val kHead = createTensor(totalLength, headSize) { r, d -> kSeq[r][headColsStart + d] }
             val vHead = createTensor(totalLength, headSize) { r, d -> vSeq[r][headColsStart + d] }
 
-            var scores = qHead.multiply(kHead.transpose()).scale(scale)
-            scores = scores.add(mask)
+            val scores = qHead.multiply(kHead.transpose()).scale(scale)
             val attn = scores.softmax()
             val headOut = attn.multiply(vHead)
 
