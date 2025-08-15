@@ -206,7 +206,8 @@ class MetalTensor(
     override val cols: Int,
     internal val metal: MetalComputeBackend? = null,
     internal var gpuBufferHandle: Long = 0L,
-    private var ownsGpuBuffer: Boolean = false
+    private var ownsGpuBuffer: Boolean = false,
+    private var cpuBufferValid: Boolean = true
 ) : Tensor() {
     companion object {
         private val cleaner: Cleaner = Cleaner.create()
@@ -225,9 +226,36 @@ class MetalTensor(
     }
 
     private fun idx(r: Int, c: Int) = r * cols + c
-    override operator fun get(r: Int, c: Int): Float = buffer.get(idx(r, c))
-    override operator fun set(r: Int, c: Int, v: Float) { buffer.put(idx(r, c), v) }
+
+    private fun ensureCpuBuffer() {
+        if (!cpuBufferValid && gpuBufferHandle != 0L && metal != null) {
+            val size = rows * cols
+            val data = MetalComputeBackend.copyFromGPU(metal.metalContext, gpuBufferHandle, size)
+            buffer.position(0)
+            for (i in 0 until size) buffer.put(i, data[i])
+            buffer.position(0)
+            cpuBufferValid = true
+        }
+    }
+
+    override operator fun get(r: Int, c: Int): Float {
+        ensureCpuBuffer()
+        return buffer.get(idx(r, c))
+    }
+
+    override operator fun set(r: Int, c: Int, v: Float) {
+        ensureCpuBuffer()
+        buffer.put(idx(r, c), v)
+        if (gpuBufferHandle != 0L && ownsGpuBuffer && metal != null) {
+            try { MetalComputeBackend.releaseGPUBuffer(metal.metalContext, gpuBufferHandle) } catch (_: Throwable) {}
+        }
+        gpuBufferHandle = 0L
+        ownsGpuBuffer = false
+        cpuBufferValid = true
+    }
+
     override fun readRowInto(row: Int, dest: FloatArray) {
+        ensureCpuBuffer()
         val off = row * cols
         var c = 0
         while (c < cols) { dest[c] = buffer.get(off + c); c++ }
