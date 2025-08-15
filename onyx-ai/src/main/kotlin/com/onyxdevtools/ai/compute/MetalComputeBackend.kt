@@ -243,20 +243,6 @@ class MetalComputeBackend : CPUComputeBackend() {
         val rowsB = b.rows
         val colsB = b.cols
 
-        // Shape-aware GPU decision
-        val isGemvLike = (rowsA == 1 || colsB == 1)
-        val totalOps = rowsA.toLong() * colsA.toLong() * colsB.toLong()
-
-        val useGPU = if (isGemvLike) {
-            false
-        } else {
-            totalOps >= GEMM_CUTOVER_OPS
-        }
-
-        if (!useGPU) {
-            return super.matrixMultiply(a, b)
-        }
-
         var bufferA = 0L
         var bufferB = 0L
         var bufferResult = 0L
