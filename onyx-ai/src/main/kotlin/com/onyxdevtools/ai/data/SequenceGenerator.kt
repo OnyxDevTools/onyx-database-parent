@@ -1,10 +1,11 @@
 package com.onyxdevtools.ai.data
 
 import com.onyxdevtools.ai.transformation.Vocabulary
+import com.onyxdevtools.ai.Tensor
 
 /**
  * Sealed class representing different target representations for sequence generation.
- * Allows generators to return either dense one-hot vectors or sparse token IDs.
+ * Allows generators to return either dense Tensor vectors or sparse token IDs.
  */
 sealed class SequenceTarget {
     /**
@@ -12,15 +13,30 @@ sealed class SequenceTarget {
      * Memory usage: O(vocab_size × seq_length) per training example.
      * Compatible with standard categorical cross-entropy loss.
      */
-    data class Dense(val vectors: Array<FloatArray>) : SequenceTarget() {
+    data class Dense(val vectors: Tensor) : SequenceTarget() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
             other as Dense
-            return vectors.contentDeepEquals(other.vectors)
+            if (vectors.size != other.vectors.size || vectors.columnSize != other.vectors.columnSize) return false
+            for (r in 0 until vectors.size) {
+                for (c in 0 until vectors.columnSize) {
+                    if (vectors[r, c] != other.vectors[r, c]) return false
+                }
+            }
+            return true
         }
 
-        override fun hashCode(): Int = vectors.contentDeepHashCode()
+        override fun hashCode(): Int {
+            var result = vectors.size
+            result = 31 * result + vectors.columnSize
+            for (r in 0 until vectors.size) {
+                for (c in 0 until vectors.columnSize) {
+                    result = 31 * result + vectors[r, c].hashCode()
+                }
+            }
+            return result
+        }
     }
 
     /**
@@ -84,7 +100,7 @@ interface SequenceGenerator {
      *               create less overlap and fewer training examples.
      * @return A Sequence of training pairs where:
      *         - First element (FloatArray): Input sequence representation
-     *         - Second element (Array<FloatArray>): Target sequence representations
+     *         - Second element (IntArray): Target sequence representations
      *         The Sequence is lazy-evaluated for memory efficiency with large datasets.
      * @throws IllegalArgumentException if seqLength <= 0, stride <= 0, or
      *                                 tokens list is too short for the specified sequence length

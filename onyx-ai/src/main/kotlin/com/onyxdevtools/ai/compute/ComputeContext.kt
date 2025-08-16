@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.compute
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 
 /**
  * ComputeContext provides a high-level interface for managing compute operations
@@ -15,29 +15,29 @@ interface ComputeContext {
     /**
      * Creates a new matrix with the specified dimensions
      */
-    fun createMatrix(rows: Int, cols: Int): Matrix
+    fun createMatrix(rows: Int, cols: Int): Tensor
     
     /**
      * Creates a new matrix with the specified dimensions and initial value
      */
-    fun createMatrix(rows: Int, cols: Int, initialValue: Float): Matrix
+    fun createMatrix(rows: Int, cols: Int, initialValue: Float): Tensor
     
     /**
      * Transfers a matrix to the backend's preferred memory space (GPU for GPU backends)
      * For CPU backend, this is typically a no-op
      */
-    fun copyToBackend(matrix: Matrix): Matrix
+    fun copyToBackend(tensor: Tensor): Tensor
     
     /**
      * Transfers a matrix from the backend's memory space back to CPU
      * For CPU backend, this is typically a no-op
      */
-    fun copyFromBackend(matrix: Matrix): Matrix
+    fun copyFromBackend(tensor: Tensor): Tensor
     
     /**
      * Releases any backend-specific resources associated with a matrix
      */
-    fun releaseMatrix(matrix: Matrix)
+    fun releaseMatrix(tensor: Tensor)
     
     /**
      * Gets memory usage statistics for the backend
@@ -65,19 +65,19 @@ data class ComputeMemoryInfo(
 class DefaultComputeContext : ComputeContext {
     override val backend: ComputeBackend = ComputeBackendFactory.createBest()
     
-    override fun createMatrix(rows: Int, cols: Int): Matrix {
-        return Array(rows) { FloatArray(cols) }
+    override fun createMatrix(rows: Int, cols: Int): Tensor {
+        return Tensor(rows, cols)
     }
     
-    override fun createMatrix(rows: Int, cols: Int, initialValue: Float): Matrix {
-        return Array(rows) { FloatArray(cols) { initialValue } }
+    override fun createMatrix(rows: Int, cols: Int, initialValue: Float): Tensor {
+        return Tensor(rows, cols) { _, _ -> initialValue }
     }
     
-    override fun copyToBackend(matrix: Matrix): Matrix = matrix
+    override fun copyToBackend(tensor: Tensor): Tensor = tensor
     
-    override fun copyFromBackend(matrix: Matrix): Matrix = matrix
+    override fun copyFromBackend(tensor: Tensor): Tensor = tensor
     
-    override fun releaseMatrix(matrix: Matrix) {
+    override fun releaseMatrix(tensor: Tensor) {
         // No-op for CPU matrices
     }
     

@@ -1,4 +1,4 @@
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.compute.MetalComputeBackend
 import com.onyxdevtools.ai.compute.ComputeBackendFactory
 import com.onyxdevtools.ai.compute.ComputeBackendType
@@ -65,14 +65,14 @@ class MetalComputeBackendTest {
             val backend = MetalComputeBackend()
             
             // Test small matrices (should fall back to CPU)
-            val a = arrayOf(
+            val a = Tensor.from(arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
-            val b = arrayOf(
+            ))
+            val b = Tensor.from(arrayOf(
                 floatArrayOf(5.0f, 6.0f),
                 floatArrayOf(7.0f, 8.0f)
-            )
+            ))
             
             val result = backend.matrixMultiply(a, b)
             
@@ -97,12 +97,12 @@ class MetalComputeBackendTest {
             
             // Create larger matrices that should use GPU
             val size = 64
-            val a = Array(size) { i ->
+            val a = Tensor.from(Array(size) { i ->
                 FloatArray(size) { j -> (i + j).toFloat() }
-            }
-            val b = Array(size) { i ->
+            })
+            val b = Tensor.from(Array(size) { i ->
                 FloatArray(size) { j -> (i * j + 1).toFloat() }
-            }
+            })
             
             val result = backend.matrixMultiply(a, b)
             
@@ -125,14 +125,14 @@ class MetalComputeBackendTest {
         try {
             val backend = MetalComputeBackend()
             
-            val a = arrayOf(
+            val a = Tensor.from(arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
-            val b = arrayOf(
+            ))
+            val b = Tensor.from(arrayOf(
                 floatArrayOf(5.0f, 6.0f),
                 floatArrayOf(7.0f, 8.0f)
-            )
+            ))
             
             val result = backend.add(a, b)
             
@@ -155,14 +155,14 @@ class MetalComputeBackendTest {
         try {
             val backend = MetalComputeBackend()
             
-            val a = arrayOf(
+            val a = Tensor.from(arrayOf(
                 floatArrayOf(5.0f, 6.0f),
                 floatArrayOf(7.0f, 8.0f)
-            )
-            val b = arrayOf(
+            ))
+            val b = Tensor.from(arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
+            ))
             
             val result = backend.subtract(a, b)
             
@@ -185,14 +185,14 @@ class MetalComputeBackendTest {
         try {
             val backend = MetalComputeBackend()
             
-            val a = arrayOf(
+            val a = Tensor.from(arrayOf(
                 floatArrayOf(2.0f, 3.0f),
                 floatArrayOf(4.0f, 5.0f)
-            )
-            val b = arrayOf(
+            ))
+            val b = Tensor.from(arrayOf(
                 floatArrayOf(6.0f, 7.0f),
                 floatArrayOf(8.0f, 9.0f)
-            )
+            ))
             
             val result = backend.elementWiseMultiply(a, b)
             
@@ -215,10 +215,10 @@ class MetalComputeBackendTest {
         try {
             val backend = MetalComputeBackend()
             
-            val matrix = arrayOf(
+            val matrix = Tensor.from(arrayOf(
                 floatArrayOf(1.0f, 2.0f, 3.0f),
                 floatArrayOf(4.0f, 5.0f, 6.0f)
-            )
+            ))
             
             val result = backend.transpose(matrix)
             
@@ -243,10 +243,10 @@ class MetalComputeBackendTest {
         try {
             val backend = MetalComputeBackend()
             
-            val matrix = arrayOf(
+            val matrix = Tensor.from(arrayOf(
                 floatArrayOf(1.0f, 2.0f, 3.0f),
                 floatArrayOf(4.0f, 5.0f, 6.0f)
-            )
+            ))
             
             val result = backend.softmax(matrix)
             
@@ -311,10 +311,10 @@ class MetalComputeBackendTest {
             
             // Test operations that should work even if GPU operations fail
             val scalar = 2.5f
-            val matrix = arrayOf(
+            val matrix = Tensor.from(arrayOf(
                 floatArrayOf(1.0f, 2.0f),
                 floatArrayOf(3.0f, 4.0f)
-            )
+            ))
             
             val result = backend.scalarMultiply(matrix, scalar)
             

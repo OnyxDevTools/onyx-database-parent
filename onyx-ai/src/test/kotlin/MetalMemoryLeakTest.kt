@@ -1,5 +1,6 @@
 package com.onyxdevtools.ai.compute
 
+import com.onyxdevtools.ai.Tensor
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.After
@@ -99,8 +100,8 @@ class MetalMemoryLeakTest {
             
             // Create large matrices to force GPU usage
             val size = 500
-            val matrixA = Array(size) { FloatArray(size) { (it * 0.01f) } }
-            val matrixB = Array(size) { FloatArray(size) { (it * 0.02f) } }
+            val matrixA = Tensor.from(Array(size) { FloatArray(size) { (it * 0.01f) } })
+            val matrixB = Tensor.from(Array(size) { FloatArray(size) { (it * 0.02f) } })
             
             // Perform operations that create temporary GPU buffers
             val result1 = backend.matrixMultiply(matrixA, matrixB)

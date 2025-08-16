@@ -1,4 +1,5 @@
 import com.onyxdevtools.ai.NeuralNetwork
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.data.SparseSequenceGenerator
 import com.onyxdevtools.ai.data.SequenceGenerator
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
@@ -18,6 +19,7 @@ import kotlin.test.assertTrue
 class LLMTrainingTest {
 
     @Test
+//    @Ignore("This test takes a long time to run")
     fun testLargerDataSetA() {
         // Load full text
         val fullText = File("src/test/resources/alice_full_packed.txt").readText()
@@ -101,9 +103,9 @@ class LLMTrainingTest {
 
                     // For comprehensive loss, compute on sparse validation set
                     val valIndices = (0 until tokens.size - seqLength step stride).take(100) // small val set
-                    val valInputs = valIndices.map { i ->
+                    val valInputs = Tensor.from(valIndices.map { i ->
                         tokens.subList(i, i + seqLength).map { it.toFloat() }.toFloatArray()
-                    }.toTypedArray()
+                    }.toTypedArray())
                     val valSparseTargets = valIndices.flatMap { i ->
                         tokens.subList(i + 1, i + 1 + seqLength)
                     }.toIntArray()
@@ -159,8 +161,8 @@ class LLMTrainingTest {
             }
         }
 
-        val inputSequences = trainingInputs.toTypedArray()
-        val targetSequences = trainingTargets.toTypedArray()
+        val inputSequences = Tensor.from(trainingInputs.toTypedArray())
+        val targetSequences = Tensor.from(trainingTargets.toTypedArray())
 
         // Configure neural network with tokensPerSample=1
         val embeddingDim = 8
@@ -219,7 +221,9 @@ class LLMTrainingTest {
 
         // Show sample predictions
         inputSequences.forEachIndexed { idx, input ->
-            val prediction = model.predict(arrayOf(input))[0]
+            // Predict on single-sample row by creating a 1×N tensor from the row
+            val sampleTensor = Tensor(1, input.size) { _, c -> input[c] }
+            val prediction = model.predict(sampleTensor)[0]
             val predictedToken = prediction.indices.maxByOrNull { prediction[it] } ?: 0
             val actualToken = targetSequences[idx].indices.indexOfFirst { targetSequences[idx][it] == 1.0f }
             println("Input: ${input[0].toInt()} -> Predicted: $predictedToken, Actual: $actualToken")

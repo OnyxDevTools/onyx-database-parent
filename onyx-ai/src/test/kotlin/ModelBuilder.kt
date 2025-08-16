@@ -1,4 +1,5 @@
 import com.onyxdevtools.ai.NeuralNetwork
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.generation.chat
 import com.onyxdevtools.ai.layer.impl.*
@@ -163,7 +164,7 @@ class ComprehensiveLossFunction(
         /* -------------------------------------------------------------
          * 3️⃣  Convert to the shapes expected by the network.
          * ------------------------------------------------------------- */
-        val valInputs = valPairs.map { it.first }.toTypedArray()
+        val valInputs = Tensor.from(valPairs.map { it.first }.toTypedArray())
         val valSparseTargets = valPairs.flatMap { it.second.toList() }.toIntArray()
 
         /* -------------------------------------------------------------

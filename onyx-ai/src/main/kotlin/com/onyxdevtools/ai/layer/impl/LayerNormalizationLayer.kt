@@ -1,7 +1,7 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -43,15 +43,15 @@ import kotlin.math.sqrt
  */
 class LayerNormalizationLayer(private val size: Int) : Layer {
 
-    override var output: Matrix? = null
-    override var preActivation: Matrix? = null
+    override var output: Tensor? = null
+    override var preActivation: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
     private var gamma = FloatArray(size) { 1.0f }
     private var beta = FloatArray(size) { 0.0f }
     private var mean: FloatArray? = null
     private var variance: FloatArray? = null
-    private var normalized: Matrix? = null
+    private var normalized: Tensor? = null
 
     private var gradGamma: FloatArray? = null
     private var gradBeta: FloatArray? = null
@@ -64,72 +64,114 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
     /**
      * Normalizes the input using layer statistics and applies learned affine transformation.
      */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         val batchSize = input.size
         mean = FloatArray(batchSize) { i -> input[i].average().toFloat() }
         variance = FloatArray(batchSize) { i ->
             input[i].sumOf { (it - mean!![i]).pow(2).toDouble() }.toFloat() / size
         }
 
-        normalized = Array(batchSize) { i ->
-            FloatArray(size) { j -> (input[i][j] - mean!![i]) / sqrt(variance!![i] + EPSILON) }
-        }
+        normalized = Tensor(batchSize, size)
+        output = Tensor(batchSize, size)
 
-        output = Array(batchSize) { i ->
-            FloatArray(size) { j -> gamma[j] * normalized!![i][j] + beta[j] }
+        val cols = size
+        for (i in 0 until batchSize) {
+            val mu  = mean!![i]
+            val inv = 1f / sqrt(variance!![i] + EPSILON)  // computed once per row
+
+            var j = 0
+            while (j < cols) {
+                val z = (input[i, j] - mu) * inv
+                normalized!![i, j] = z
+                output!![i, j] = z * gamma[j] + beta[j]
+                j++
+            }
         }
 
         return output!!
     }
 
-    /**
-     * Computes the backward pass of the layer normalization layer.
-     */
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
-        val batchSize = delta.size
-        val input = currentInput!!
+    ): Tensor {
+        val x = requireNotNull(currentInput) { "currentInput required" }
 
-        // Gradients w.r.t. gamma and beta
-        gradGamma = FloatArray(size) { j ->
-            (0 until batchSize).sumOf { i -> (delta[i][j] * normalized!![i][j]).toDouble() }.toFloat()
-        }
-        gradBeta = FloatArray(size) { j ->
-            (0 until batchSize).sumOf { i -> delta[i][j].toDouble() }.toFloat()
-        }
+        val batchSize = delta.size          // rows
+        val width     = this.size           // cols (feature size)
 
-        // Gradient w.r.t. normalized input
-        val gradNormalized = Array(batchSize) { i ->
-            FloatArray(size) { j -> delta[i][j] * gamma[j] }
-        }
+        // --- outputs of this backward step ---
+        val gradInput = Tensor(batchSize, width)
 
-        // Gradient w.r.t. variance
-        val gradVariance = FloatArray(batchSize) { i ->
-            val sum = (0 until size).sumOf { j -> (gradNormalized[i][j] * (input[i][j] - mean!![i])).toDouble() }.toFloat()
-            -0.5f * sum / (variance!![i] + EPSILON).pow(1.5f)
-        }
+        // --- grads wrt gamma/beta (per feature) ---
+        val gradGammaLocal = FloatArray(width) // sum_i delta * normalized
+        val gradBetaLocal  = FloatArray(width) // sum_i delta
 
-        // Gradient w.r.t. mean
-        val gradMean = FloatArray(batchSize) { i ->
-            val sum1 = (0 until size).sumOf { j -> gradNormalized[i][j].toDouble() }.toFloat()
-            -sum1 / sqrt(variance!![i] + EPSILON)
-        }
+        // --- needed intermediates (per row) ---
+        val gradMean      = FloatArray(batchSize)
+        val gradVariance  = FloatArray(batchSize)
 
-        // Gradient w.r.t. input
-        val gradInput = Array(batchSize) { i ->
-            FloatArray(size) { j ->
-                val term1 = gradNormalized[i][j] / sqrt(variance!![i] + EPSILON)
-                val term2 = gradMean[i] / size
-                val term3 = gradVariance[i] * 2.0f * (input[i][j] - mean!![i]) / size
-                term1 + term2 + term3
+        // raw buffers for speed
+        val xData   = x.data
+        val dData   = delta.data
+        val nData   = normalized!!.data      // from forward: (x - mu) / sqrt(var + eps)
+        val outData = gradInput.data
+        val gammaW  = gamma                  // FloatArray[length = width]
+        val meanV   = mean!!                  // FloatArray[length = batchSize]
+        val varV    = variance!!              // FloatArray[length = batchSize]
+
+        var base = 0
+        var row  = 0
+        while (row < batchSize) {
+            val mu      = meanV[row]
+            val varEps  = varV[row] + EPSILON
+            val inv     = 1f / sqrt(varEps)         // (var+eps)^(-1/2)
+            val inv3    = inv * inv * inv           // (var+eps)^(-3/2)
+
+            var sum1 = 0f                            // Σ_j (delta * gamma)
+            var sum2 = 0f                            // Σ_j (delta * gamma * (x - mu))
+
+            // ---- Pass 1 over row: accumulate grads for gamma/beta and row sums ----
+            var j = 0
+            while (j < width) {
+                val d   = dData[base + j]
+                val xij = xData[base + j]
+                val gnj = d * gammaW[j]             // gradNormalized(i,j)
+                sum1 += gnj
+                sum2 += gnj * (xij - mu)
+
+                gradBetaLocal[j]  += d
+                gradGammaLocal[j] += d * nData[base + j] // use cached normalized
+                j++
             }
+
+            gradMean[row]     = -sum1 * inv
+            gradVariance[row] = -0.5f * sum2 * inv3
+
+            // ---- Pass 2 over row: write gradInput ----
+            val term2    = gradMean[row] / width
+            val gvScaled = (2f * gradVariance[row]) / width
+
+            j = 0
+            while (j < width) {
+                val d   = dData[base + j]
+                val xij = xData[base + j]
+                val gnj = d * gammaW[j]
+                outData[base + j] = inv * gnj + term2 + gvScaled * (xij - mu)
+                j++
+            }
+
+            base += width
+            row++
         }
+
+        // publish parameter grads
+        gradGamma = gradGammaLocal
+        gradBeta  = gradBetaLocal
 
         return gradInput
     }
@@ -154,11 +196,13 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
 
             momentGamma[j] = adamBeta1 * momentGamma[j] + (1.0f - adamBeta1) * gradientGamma
             velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1.0f - adamBeta2) * gradientGamma * gradientGamma
-            gamma[j] = gamma[j] - learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
+            gamma[j] =
+                gamma[j] - learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
 
             momentBeta[j] = adamBeta1 * momentBeta[j] + (1.0f - adamBeta1) * gradientBeta
             velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1.0f - adamBeta2) * gradientBeta * gradientBeta
-            beta[j] = beta[j] - learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
+            beta[j] =
+                beta[j] - learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
         }
     }
 

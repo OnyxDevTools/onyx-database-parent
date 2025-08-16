@@ -2,11 +2,11 @@ package com.onyxdevtools.ai.layer.impl
 
 import Activation
 import com.onyxdevtools.ai.Constants.EPSILON
-import com.onyxdevtools.ai.Matrix
-import com.onyxdevtools.ai.extensions.*
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.compute.*
 import kotlin.math.sqrt
+import kotlin.math.exp
 
 /**
  * Optimized Multi-Head Attention with per-sequence KV caching.
@@ -25,47 +25,50 @@ class CachedMultiHeadAttentionLayer(
     private val backend: ComputeContext
         get() = computeContext ?: DefaultComputeContext().also { computeContext = it }
 
-    override var output: Matrix? = null
-    override var preActivation: Matrix? = null
+    override var output: Tensor? = null
+    override var preActivation: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
     private val headSize = modelSize / headCount
 
     // Weights
-    internal var wQuery: Matrix
-    internal var wKey: Matrix
-    internal var wValue: Matrix
-    internal var wOutput: Matrix
+    internal var wQuery: Tensor
+    internal var wKey: Tensor
+    internal var wValue: Tensor
+    internal var wOutput: Tensor
 
-    // ======= NEW: per-sequence KV cache (for inference) =======
+    // ======= Per-sequence KV cache (for inference) =======
     private var batchSize: Int = 1
     private var maxCacheLength = 0
-    // kCache[b][t][d], vCache[b][t][d]
-    private var kCache: Array<Array<FloatArray>>? = null
-    private var vCache: Array<Array<FloatArray>>? = null
+    // kCache[b] is a Tensor of shape (maxSequenceLength, modelSize)
+    private var kCache: Array<Tensor>? = null
+    private var vCache: Array<Tensor>? = null
     private var curLen: IntArray? = null
 
     // Gradients/optimizer state
-    private var gradWQuery: Matrix? = null
-    private var gradWKey: Matrix? = null
-    private var gradWValue: Matrix? = null
-    private var gradWOutput: Matrix? = null
+    private var gradWQuery: Tensor? = null
+    private var gradWKey: Tensor? = null
+    private var gradWValue: Tensor? = null
+    private var gradWOutput: Tensor? = null
 
-    private var momentWQuery: Matrix
-    private var velocityWQuery: Matrix
-    private var momentWKey: Matrix
-    private var velocityWKey: Matrix
-    private var momentWValue: Matrix
-    private var velocityWValue: Matrix
-    private var momentWOutput: Matrix
-    private var velocityWOutput: Matrix
+    private var momentWQuery: Tensor
+    private var velocityWQuery: Tensor
+    private var momentWKey: Tensor
+    private var velocityWKey: Tensor
+    private var momentWValue: Tensor
+    private var velocityWValue: Tensor
+    private var momentWOutput: Tensor
+    private var velocityWOutput: Tensor
 
     // Cached fwd values for training
-    private var queries: Matrix? = null
-    private var keys: Matrix? = null
-    private var values: Matrix? = null
-    private var attentionWeights: Matrix? = null
-    private var attentionOutput: Matrix? = null
+    private var queries: Tensor? = null
+    private var keys: Tensor? = null
+    private var values: Tensor? = null
+    private var attentionWeights: Tensor? = null
+    private var attentionOutput: Tensor? = null
+
+    // Scratch (to avoid per-step allocs in cached path)
+    private var scratchScores: FloatArray = FloatArray(0)
 
     init {
         require(modelSize % headCount == 0) {
@@ -73,19 +76,19 @@ class CachedMultiHeadAttentionLayer(
         }
         val random = java.util.Random()
         val scale = 0.02f
-        wQuery = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
-        wKey   = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
-        wValue = Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
-        wOutput= Array(modelSize) { FloatArray(modelSize) { random.nextGaussian().toFloat() * scale } }
+        wQuery = Tensor(modelSize, modelSize) { _, _ -> (random.nextGaussian() * scale).toFloat() }
+        wKey   = Tensor(modelSize, modelSize) { _, _ -> (random.nextGaussian() * scale).toFloat() }
+        wValue = Tensor(modelSize, modelSize) { _, _ -> (random.nextGaussian() * scale).toFloat() }
+        wOutput= Tensor(modelSize, modelSize) { _, _ -> (random.nextGaussian() * scale).toFloat() }
 
-        momentWQuery = Array(modelSize) { FloatArray(modelSize) }
-        velocityWQuery = Array(modelSize) { FloatArray(modelSize) }
-        momentWKey = Array(modelSize) { FloatArray(modelSize) }
-        velocityWKey = Array(modelSize) { FloatArray(modelSize) }
-        momentWValue = Array(modelSize) { FloatArray(modelSize) }
-        velocityWValue = Array(modelSize) { FloatArray(modelSize) }
-        momentWOutput = Array(modelSize) { FloatArray(modelSize) }
-        velocityWOutput = Array(modelSize) { FloatArray(modelSize) }
+        momentWQuery = Tensor(modelSize, modelSize)
+        velocityWQuery = Tensor(modelSize, modelSize)
+        momentWKey = Tensor(modelSize, modelSize)
+        velocityWKey = Tensor(modelSize, modelSize)
+        momentWValue = Tensor(modelSize, modelSize)
+        velocityWValue = Tensor(modelSize, modelSize)
+        momentWOutput = Tensor(modelSize, modelSize)
+        velocityWOutput = Tensor(modelSize, modelSize)
     }
 
     /** Initialize per-sequence cache. Backwards-compatible default for batchSize=1. */
@@ -94,9 +97,10 @@ class CachedMultiHeadAttentionLayer(
         require(batchSize > 0) { "batchSize must be > 0" }
         this.maxCacheLength = maxSequenceLength
         this.batchSize = batchSize
-        kCache = Array(batchSize) { Array(maxSequenceLength) { FloatArray(modelSize) } }
-        vCache = Array(batchSize) { Array(maxSequenceLength) { FloatArray(modelSize) } }
+        kCache = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
+        vCache = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
         curLen = IntArray(batchSize) { 0 }
+        ensureScratch(maxSequenceLength)
     }
 
     /** Reset lengths; keep buffers. */
@@ -111,9 +115,10 @@ class CachedMultiHeadAttentionLayer(
         curLen = null
         maxCacheLength = 0
         batchSize = 1
+        scratchScores = FloatArray(0)
     }
 
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         return if (isTraining || kCache == null) {
             forwardStandard(input, isTraining)
         } else {
@@ -121,9 +126,9 @@ class CachedMultiHeadAttentionLayer(
         }
     }
 
-    /** Standard path for training (unchanged). */
-    private fun forwardStandard(input: Matrix, isTraining: Boolean): Matrix {
-        val batchSizeLocal = input.size / tokensPerSample
+    /** Standard path for training. */
+    private fun forwardStandard(input: Tensor, isTraining: Boolean): Tensor {
+        val batchSizeLocal = input.rows / tokensPerSample
 
         queries = backend.backend.matrixMultiply(input, wQuery)
         keys    = backend.backend.matrixMultiply(input, wKey)
@@ -135,8 +140,8 @@ class CachedMultiHeadAttentionLayer(
     }
 
     /** Cached inference path: append K/V per sequence and compute attention without rebuilding arrays. */
-    private fun forwardWithCache(input: Matrix): Matrix {
-        val B = input.size
+    private fun forwardWithCache(input: Tensor): Tensor {
+        val B = input.rows
         val kC = kCache ?: error("Cache not initialized")
         val vC = vCache ?: error("Cache not initialized")
         val lens = curLen ?: error("Cache not initialized")
@@ -147,7 +152,7 @@ class CachedMultiHeadAttentionLayer(
         val K = backend.backend.matrixMultiply(input, wKey)   // [B, D]
         val V = backend.backend.matrixMultiply(input, wValue) // [B, D]
 
-        val out = Array(B) { FloatArray(modelSize) }
+        val out = Tensor(B, modelSize) // [B, D], zero-initialized
 
         // For each sequence in the batch: append K/V and attend to its own cache
         var b = 0
@@ -155,18 +160,18 @@ class CachedMultiHeadAttentionLayer(
             val len = lens[b]
             require(len + 1 <= maxCacheLength) { "Cache overflow for seq $b: $len+1 > $maxCacheLength" }
 
-            // Append new K,V (no full-array copies)
-            System.arraycopy(K[b], 0, kC[b][len], 0, modelSize)
-            System.arraycopy(V[b], 0, vC[b][len], 0, modelSize)
+            // Append new K,V (copy row b → row len)
+            kC[b].copyRowFrom(K, b, len)
+            vC[b].copyRowFrom(V, b, len)
             val total = len + 1
 
-            // Compute attn for this sequence
+            // Compute attention for this sequence into out[b,*]
             computeCachedAttentionSingle(
-                qVec = Q[b],
+                q = Q, qRow = b,
                 kSeq = kC[b],
                 vSeq = vC[b],
                 totalLength = total,
-                outVec = out[b]
+                out = out, outRow = b
             )
             lens[b] = total
             b++
@@ -178,41 +183,39 @@ class CachedMultiHeadAttentionLayer(
 
     /** Single-sequence cached attention: softmax(q·K) then weighted sum over V, per head. */
     private fun computeCachedAttentionSingle(
-        qVec: FloatArray,
-        kSeq: Array<FloatArray>,
-        vSeq: Array<FloatArray>,
+        q: Tensor,
+        qRow: Int,
+        kSeq: Tensor,
+        vSeq: Tensor,
         totalLength: Int,
-        outVec: FloatArray
+        out: Tensor,
+        outRow: Int
     ) {
-        java.util.Arrays.fill(outVec, 0.0f)
-        val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
+        out.zeroRow(outRow)
 
-        for (h in 0 until headCount) {
+        val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
+        ensureScratch(totalLength)
+        val scores = scratchScores
+
+        var h = 0
+        while (h < headCount) {
             val off = h * headSize
 
             // scores[t] = (q_h · k_h[t]) * scale
             var maxScore = Float.NEGATIVE_INFINITY
-            val scores = FloatArray(totalLength)
             var t = 0
             while (t < totalLength) {
-                val kt = kSeq[t]
-                var s = 0.0f
-                var d = 0
-                while (d < headSize) {
-                    s += qVec[off + d] * kt[off + d]
-                    d++
-                }
-                s *= scale
+                val s = q.dotRowSegment(qRow, kSeq, t, off, headSize) * scale
                 scores[t] = s
                 if (s > maxScore) maxScore = s
                 t++
             }
 
-            // softmax
+            // softmax over t
             var sumExp = 0.0f
             t = 0
             while (t < totalLength) {
-                val e = kotlin.math.exp((scores[t] - maxScore).toDouble()).toFloat()
+                val e = exp((scores[t] - maxScore).toDouble()).toFloat()
                 scores[t] = e
                 sumExp += e
                 t++
@@ -223,99 +226,110 @@ class CachedMultiHeadAttentionLayer(
             t = 0
             while (t < totalLength) {
                 val w = scores[t] * inv
-                val vt = vSeq[t]
                 var d = 0
                 while (d < headSize) {
-                    outVec[off + d] += w * vt[off + d]
+                    out[outRow, off + d] = out[outRow, off + d] + w * vSeq[t, off + d]
                     d++
                 }
                 t++
             }
+            h++
         }
     }
 
-    /** Training-time multi-head attention (unchanged) */
+    /** Training-time multi-head attention. Returns Tensor(totalTokens, modelSize). */
     private fun computeMultiHeadAttention(
-        q: Matrix,
-        k: Matrix,
-        v: Matrix,
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
         batchSize: Int
-    ): Matrix {
-        val totalTokens = q.size
-        val result = Array(totalTokens) { FloatArray(modelSize) { 0.0f } }
+    ): Tensor {
+        val totalTokens = q.rows
+        val result = Tensor(totalTokens, modelSize) // zeros
 
-        val scoresBuffer = Array(tokensPerSample) { FloatArray(tokensPerSample) { 0.0f } }
-        val attentionBuffer = Array(tokensPerSample) { FloatArray(tokensPerSample) { 0.0f } }
-        val scale = 1.0 / sqrt(headSize.toDouble())
+        // Reusable buffers per-head
+        val scores = Tensor(tokensPerSample, tokensPerSample) // unnormalized logits
+        val attn   = Tensor(tokensPerSample, tokensPerSample) // softmax
 
-        for (batch in 0 until batchSize) {
+        val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
+
+        var batch = 0
+        while (batch < batchSize) {
             val startIdx = batch * tokensPerSample
 
-            for (head in 0 until headCount) {
+            var head = 0
+            while (head < headCount) {
                 val headStartCol = head * headSize
 
-                // scores
-                for (i in 0 until tokensPerSample) {
-                    for (j in 0 until tokensPerSample) {
-                        var score = 0.0f
-                        for (d in 0 until headSize) {
-                            score += q[startIdx + i][headStartCol + d] * k[startIdx + j][headStartCol + d]
-                        }
-                        scoresBuffer[i][j] = (score * scale).toFloat()
+                // scores[i,j] = q[i]·k[j] (within the head)
+                var i = 0
+                while (i < tokensPerSample) {
+                    var j = 0
+                    while (j < tokensPerSample) {
+                        val s = q.dotRowSegment(
+                            row = startIdx + i,
+                            other = k,
+                            otherRow = startIdx + j,
+                            offset = headStartCol,
+                            length = headSize
+                        )
+                        scores[i, j] = s * scale
+                        j++
                     }
+                    i++
                 }
 
-                // causal mask
-                for (i in 0 until tokensPerSample) {
-                    for (j in i + 1 until tokensPerSample) {
-                        scoresBuffer[i][j] = Float.NEGATIVE_INFINITY
+                // causal mask: j > i → -inf
+                i = 0
+                while (i < tokensPerSample) {
+                    var j2 = i + 1
+                    while (j2 < tokensPerSample) {
+                        scores[i, j2] = Float.NEGATIVE_INFINITY
+                        j2++
                     }
+                    i++
                 }
 
-                // softmax
-                applySoftmaxInPlace(scoresBuffer, attentionBuffer)
+                // softmax row-wise
+                scores.softmaxRowsInto(attn)
 
-                // weighted sum
-                for (i in 0 until tokensPerSample) {
-                    for (d in 0 until headSize) {
+                // weighted sum over V per head into result
+                i = 0
+                while (i < tokensPerSample) {
+                    var d = 0
+                    while (d < headSize) {
                         var outVal = 0.0f
-                        for (j in 0 until tokensPerSample) {
-                            outVal += attentionBuffer[i][j] * v[startIdx + j][headStartCol + d]
+                        var j3 = 0
+                        while (j3 < tokensPerSample) {
+                            outVal += attn[i, j3] * v[startIdx + j3, headStartCol + d]
+                            j3++
                         }
-                        result[startIdx + i][headStartCol + d] = outVal
+                        result[startIdx + i, headStartCol + d] = outVal
+                        d++
                     }
+                    i++
                 }
+
+                head++
             }
+            batch++
         }
 
-        attentionWeights = result
+        attentionWeights = attn // (last-head softmax; kept for compatibility)
+        attentionOutput = result
         return result
     }
 
-    private fun applySoftmaxInPlace(input: Matrix, output: Matrix) {
-        for (i in 0 until input.size) {
-            var maxVal = input[i][0]
-            for (j in 1 until input[i].size) if (input[i][j] > maxVal) maxVal = input[i][j]
-            var sum = 0.0f
-            for (j in 0 until input[i].size) {
-                val e = kotlin.math.exp((input[i][j] - maxVal).toDouble()).toFloat()
-                output[i][j] = e; sum += e
-            }
-            val inv = 1.0f / (sum + 1e-9f)
-            for (j in 0 until input[i].size) output[i][j] *= inv
-        }
-    }
-
-    // ======= Backward/update (unchanged) =======
+    // ======= Backward/update =======
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
-        val input = currentInput!!
+    ): Tensor {
+        val input = currentInput ?: error("currentInput is null in backward()")
 
         gradWOutput = backend.backend.matrixMultiply(backend.backend.transpose(attentionOutput!!), delta)
         val gradAttentionOutput = backend.backend.matrixMultiply(delta, backend.backend.transpose(wOutput))
@@ -328,11 +342,15 @@ class CachedMultiHeadAttentionLayer(
         val gradK = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wKey))
         val gradV = backend.backend.matrixMultiply(gradAttentionOutput, backend.backend.transpose(wValue))
 
-        val gradInput = Array(input.size) { FloatArray(input[0].size) }
-        for (i in 0 until input.size) {
-            for (j in 0 until input[0].size) {
-                gradInput[i][j] = gradQ[i][j] + gradK[i][j] + gradV[i][j]
+        val gradInput = Tensor(input.rows, input.cols)
+        var i = 0
+        while (i < input.rows) {
+            var j = 0
+            while (j < input.cols) {
+                gradInput[i, j] = gradQ[i, j] + gradK[i, j] + gradV[i, j]
+                j++
             }
+            i++
         }
         return gradInput
     }
@@ -359,24 +377,30 @@ class CachedMultiHeadAttentionLayer(
     }
 
     private fun updateWeightMatrix(
-        weights: Matrix,
-        gradients: Matrix,
-        moment: Matrix,
-        velocity: Matrix,
+        weights: Tensor,
+        gradients: Tensor,
+        moment: Tensor,
+        velocity: Tensor,
         beta1: Float,
         beta2: Float,
         learningRate: Float,
         correctMoment: (Float) -> Float,
         correctVelocity: (Float) -> Float
     ) {
-        for (i in 0 until weights.size) {
-            for (j in 0 until weights[i].size) {
-                val g = gradients[i][j]
-                moment[i][j]   = beta1 * moment[i][j] + (1 - beta1) * g
-                velocity[i][j] = beta2 * velocity[i][j] + (1 - beta2) * g * g
-                weights[i][j]  = weights[i][j] - learningRate *
-                        correctMoment(moment[i][j]) / (sqrt(correctVelocity(velocity[i][j])) + EPSILON)
+        var i = 0
+        while (i < weights.rows) {
+            var j = 0
+            while (j < weights.cols) {
+                val g = gradients[i, j]
+                val m = beta1 * moment[i, j] + (1 - beta1) * g
+                val v = beta2 * velocity[i, j] + (1 - beta2) * g * g
+                moment[i, j] = m
+                velocity[i, j] = v
+                weights[i, j] = weights[i, j] - learningRate *
+                        (correctMoment(m) / (sqrt(correctVelocity(v)) + EPSILON))
+                j++
             }
+            i++
         }
     }
 
@@ -408,6 +432,14 @@ class CachedMultiHeadAttentionLayer(
             copy.gradWValue = gradWValue?.deepCopy()
             copy.gradWOutput = gradWOutput?.deepCopy()
             // cache state intentionally not cloned
+        }
+    }
+
+    // ---- helpers -----------------------------------------------------------
+
+    private fun ensureScratch(n: Int) {
+        if (scratchScores.size < n) {
+            scratchScores = FloatArray(n)
         }
     }
 }

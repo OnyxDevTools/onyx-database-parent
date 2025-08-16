@@ -1,7 +1,10 @@
 package com.onyxdevtools.ai.compute
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
+import java.util.concurrent.ForkJoinTask
+import java.util.concurrent.RecursiveAction
 import kotlin.math.*
+import kotlin.math.exp as dexp // Kotlin's exp is Double
 
 /**
  * Basic CPU compute backend that works on all platforms including Android.
@@ -12,143 +15,400 @@ import kotlin.math.*
  * with platform-specific optimizations.
  */
 open class BasicCPUComputeBackend : ComputeBackend {
-    
+
+    private val PARALLEL_THRESHOLD = 50_000
+
     override val backendType: ComputeBackendType = ComputeBackendType.CPU
-    
-    override fun matrixMultiply(a: Matrix, b: Matrix): Matrix {
+
+    override fun matrixMultiply(a: Tensor, b: Tensor): Tensor {
         require(a[0].size == b.size) { 
             "Matrix dimensions don't match for multiplication: ${a.size}x${a[0].size} * ${b.size}x${b[0].size}" 
         }
-        
-        return matrixMultiplyBasic(a, b)
-    }
-    
-    override fun add(a: Matrix, b: Matrix): Matrix {
-        require(a.size == b.size) { 
-            "Matrix row dimensions don't match for addition: ${a.size} vs ${b.size}" 
-        }
-        
-        if (a.isEmpty()) return arrayOf()
-        
-        return a.mapIndexed { rowIndex, row ->
-            val rowB = b[rowIndex]
-            require(row.size == rowB.size) { 
-                "Matrix column dimensions don't match at row $rowIndex: ${row.size} vs ${rowB.size}" 
+
+        val numRows = a.size
+        val sharedDim = a[0].size
+        val numCols = b[0].size
+        return Tensor(numRows, numCols) { row, col ->
+            var sum = 0.0f
+            val rowA = a[row]
+            for (sharedIndex in 0 until sharedDim) {
+                sum += rowA[sharedIndex] * b[sharedIndex][col]
             }
-            FloatArray(row.size) { colIndex -> row[colIndex] + rowB[colIndex] }
-        }.toTypedArray()
-    }
-    
-    override fun subtract(a: Matrix, b: Matrix): Matrix {
-        return a.mapIndexed { rowIndex, row ->
-            FloatArray(row.size) { colIndex -> row[colIndex] - b[rowIndex][colIndex] }
-        }.toTypedArray()
-    }
-    
-    override fun elementWiseMultiply(a: Matrix, b: Matrix): Matrix {
-        return a.mapIndexed { rowIndex, row ->
-            FloatArray(row.size) { colIndex -> row[colIndex] * b[rowIndex][colIndex] }
-        }.toTypedArray()
-    }
-    
-    override fun transpose(matrix: Matrix): Matrix {
-        return if (matrix.isEmpty()) arrayOf()
-        else Array(matrix[0].size) { colIndex ->
-            FloatArray(matrix.size) { rowIndex -> matrix[rowIndex][colIndex] }
+            sum
         }
     }
-    
-    override fun scalarMultiply(matrix: Matrix, scalar: Float): Matrix {
-        return matrix.map { row -> 
-            FloatArray(row.size) { colIndex -> row[colIndex] * scalar } 
-        }.toTypedArray()
+
+    private inline fun forEachChunk(total: Int, chunks: Int, body: (start: Int, end: Int, chunkIdx: Int) -> Unit) {
+        if (total <= 0 || chunks <= 1) { body(0, total, 0); return }
+        val base = total / chunks
+        val rem  = total % chunks
+        var start = 0
+        for (i in 0 until chunks) {
+            val size = base + if (i < rem) 1 else 0
+            val end = start + size
+            if (size > 0) body(start, end, i)
+            start = end
+        }
     }
-    
-    override fun addVectorToRows(matrix: Matrix, vector: FloatArray): Matrix {
-        return matrix.map { row -> 
-            FloatArray(row.size) { colIndex -> row[colIndex] + vector[colIndex] } 
-        }.toTypedArray()
+
+    private fun maybeParallelByRows(rows: Int, cols: Int, block: (rStart: Int, rEnd: Int) -> Unit) {
+        val ops = rows * cols
+        if (ops <= PARALLEL_THRESHOLD || rows <= 1) {
+            block(0, rows)
+            return
+        }
+        val cores = min(Runtime.getRuntime().availableProcessors(), rows)
+        val tasks = ArrayList<RecursiveAction>(cores)
+        forEachChunk(rows, cores) { rs, re, _ ->
+            tasks += object : RecursiveAction() {
+                override fun compute() { block(rs, re) }
+            }
+        }
+        ForkJoinTask.invokeAll(tasks)
     }
-    
-    override fun applyElementWise(matrix: Matrix, transform: (Float) -> Float): Matrix {
-        return matrix.map { row -> 
-            FloatArray(row.size) { colIndex -> transform(row[colIndex]) } 
-        }.toTypedArray()
-    }
-    
-    override fun sumColumns(matrix: Matrix): FloatArray {
-        return FloatArray(if (matrix.isEmpty()) 0 else matrix[0].size).also { columnSums ->
-            for (row in matrix) {
-                for (colIndex in row.indices) {
-                    columnSums[colIndex] += row[colIndex]
+
+    /* -------------------- Elementwise ops -------------------- */
+
+    override fun add(a: Tensor, b: Tensor): Tensor {
+        // Supports element-wise addition with optional row or column broadcast
+        val rows = a.size
+        val cols = a.columnSize
+        require(!a.isEmpty() && (a.size == b.size && a.columnSize == b.columnSize
+            || b.rows == 1 && b.columnSize == cols
+            || b.columnSize == 1 && b.rows == rows)) {
+            "Shape mismatch for add: (${a.size}x${a.columnSize}) + (${b.rows}x${b.columnSize})"
+        }
+        if (rows == 0 || cols == 0) return Tensor(0, 0)
+        val out = Tensor(rows, cols)
+
+        maybeParallelByRows(rows, cols) { rs, re ->
+            for (r in rs until re) {
+                val ar = a[r]
+                val orow = out[r]
+                when {
+                    b.size == a.size && b.columnSize == cols -> {
+                        val br = b[r]
+                        for (c in 0 until cols) orow[c] = ar[c] + br[c]
+                    }
+                    b.rows == 1 && b.columnSize == cols -> {
+                        val br0 = b[0]
+                        for (c in 0 until cols) orow[c] = ar[c] + br0[c]
+                    }
+                    b.columnSize == 1 && b.rows == rows -> {
+                        val bv = b[r, 0]
+                        for (c in 0 until cols) orow[c] = ar[c] + bv
+                    }
                 }
             }
-        }
-    }
-    
-    override fun softmax(matrix: Matrix): Matrix {
-        return matrix.map { logits ->
-            val max = logits.maxOrNull() ?: 0.0f  // For numerical stability
-            val expLogits = logits.map { exp(it - max) }
-            val sumExp = expLogits.sum()
-            expLogits.map { it / sumExp }.toFloatArray()
-        }.toTypedArray()
-    }
-    
-    override fun meanStandardError(predicted: Matrix, actual: Matrix): Float {
-        var sum = 0.0f
-        var total = 0
-
-        val rows = minOf(predicted.size, actual.size)
-        for (i in 0 until rows) {
-            val cols = minOf(predicted[i].size, actual[i].size)
-            for (j in 0 until cols) {
-                sum += (predicted[i][j] - actual[i][j]).pow(2)
-                total++
-            }
-        }
-        return if (total > 0) sum / total else 0.0f
-    }
-    
-    override fun deepCopy(matrix: Matrix): Matrix {
-        return matrix.map { it.copyOf() }.toTypedArray()
-    }
-
-    override fun flatten(matrix: Matrix): FloatArray {
-        // 1) figure out total size (no boxing)
-        var total = 0
-        for (row in matrix) total += row.size
-
-        // 2) single allocation + bulk copies
-        val out = FloatArray(total)
-        var dst = 0
-        for (row in matrix) {
-            System.arraycopy(row, 0, out, dst, row.size)
-            dst += row.size
         }
         return out
     }
 
-    /**
-     * Basic matrix multiplication implementation that works on all platforms.
-     * This is the foundation that optimized implementations can build upon.
-     */
-    internal fun matrixMultiplyBasic(matrixA: Matrix, matrixB: Matrix): Matrix {
-        val numRows = matrixA.size
-        val sharedDim = matrixA[0].size
-        val numCols = matrixB[0].size
-        val result = Array(numRows) { FloatArray(numCols) }
+    override fun subtract(a: Tensor, b: Tensor): Tensor {
+        // Supports element-wise subtraction with optional row or column broadcast
+        val rows = a.size
+        val cols = a.columnSize
+        require(!a.isEmpty() && (a.size == b.size && a.columnSize == b.columnSize
+            || b.rows == 1 && b.columnSize == cols
+            || b.columnSize == 1 && b.rows == rows)) {
+            "Shape mismatch for subtract: (${a.size}x${a.columnSize}) - (${b.rows}x${b.columnSize})"
+        }
+        if (rows == 0 || cols == 0) return Tensor(0, 0)
+        val out = Tensor(rows, cols)
 
-        for (row in 0 until numRows) {
-            val resultRow = result[row]
-            for (sharedIndex in 0 until sharedDim) {
-                val valueA = matrixA[row][sharedIndex]
-                val rowB = matrixB[sharedIndex]
-                for (col in 0 until numCols) {
-                    resultRow[col] += valueA * rowB[col]
+        maybeParallelByRows(rows, cols) { rs, re ->
+            for (r in rs until re) {
+                val ar = a[r]
+                val orow = out[r]
+                when {
+                    b.size == a.size && b.columnSize == cols -> {
+                        val br = b[r]
+                        for (c in 0 until cols) orow[c] = ar[c] - br[c]
+                    }
+                    b.rows == 1 && b.columnSize == cols -> {
+                        val br0 = b[0]
+                        for (c in 0 until cols) orow[c] = ar[c] - br0[c]
+                    }
+                    b.columnSize == 1 && b.rows == rows -> {
+                        val bv = b[r, 0]
+                        for (c in 0 until cols) orow[c] = ar[c] - bv
+                    }
                 }
             }
         }
-        return result
+        return out
+    }
+
+    override fun elementWiseMultiply(a: Tensor, b: Tensor): Tensor {
+        // Supports element-wise multiply with optional row or column broadcast
+        val rows = a.size
+        val cols = a.columnSize
+        require(!a.isEmpty() && (a.size == b.size && a.columnSize == b.columnSize
+            || b.rows == 1 && b.columnSize == cols
+            || b.columnSize == 1 && b.rows == rows)) {
+            "Shape mismatch for elementWiseMultiply: (${a.size}x${a.columnSize}) ⊙ (${b.rows}x${b.columnSize})"
+        }
+        if (rows == 0 || cols == 0) return Tensor(0, 0)
+        val out = Tensor(rows, cols)
+
+        maybeParallelByRows(rows, cols) { rs, re ->
+            for (r in rs until re) {
+                val ar = a[r]
+                val orow = out[r]
+                when {
+                    b.size == a.size && b.columnSize == cols -> {
+                        val br = b[r]
+                        for (c in 0 until cols) orow[c] = ar[c] * br[c]
+                    }
+                    b.rows == 1 && b.columnSize == cols -> {
+                        val br0 = b[0]
+                        for (c in 0 until cols) orow[c] = ar[c] * br0[c]
+                    }
+                    b.columnSize == 1 && b.rows == rows -> {
+                        val bv = b[r, 0]
+                        for (c in 0 until cols) orow[c] = ar[c] * bv
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    override fun scalarMultiply(tensor: Tensor, scalar: Float): Tensor {
+        val rows = tensor.size
+        val cols = tensor.columnSize
+        val out = Tensor(rows, cols)
+
+        maybeParallelByRows(rows, cols) { rs, re ->
+            var r = rs
+            while (r < re) {
+                val tr = tensor[r]
+                val orow = out[r]
+                var c = 0
+                while (c < cols) {
+                    orow[c] = tr[c] * scalar
+                    c++
+                }
+                r++
+            }
+        }
+        return out
+    }
+
+    override fun addVectorToRows(tensor: Tensor, vector: FloatArray): Tensor {
+        val rows = tensor.size
+        val cols = tensor.columnSize
+        require(vector.size == cols) { "Vector length ${vector.size} must equal tensor column size $cols" }
+        val out = Tensor(rows, cols)
+
+        maybeParallelByRows(rows, cols) { rs, re ->
+            var r = rs
+            while (r < re) {
+                val tr = tensor[r]
+                val orow = out[r]
+                var c = 0
+                while (c < cols) {
+                    orow[c] = tr[c] + vector[c]
+                    c++
+                }
+                r++
+            }
+        }
+        return out
+    }
+
+    override fun applyElementWise(tensor: Tensor, transform: (Float) -> Float): Tensor {
+        val rows = tensor.size
+        val cols = tensor.columnSize
+        val out = Tensor(rows, cols)
+
+        maybeParallelByRows(rows, cols) { rs, re ->
+            var r = rs
+            while (r < re) {
+                val tr = tensor[r]
+                val orow = out[r]
+                var c = 0
+                while (c < cols) {
+                    orow[c] = transform(tr[c])
+                    c++
+                }
+                r++
+            }
+        }
+        return out
+    }
+
+    /* -------------------- Transpose (tiled for cache) -------------------- */
+
+    override fun transpose(tensor: Tensor): Tensor {
+        val rows = tensor.size
+        val cols = tensor.columnSize
+        if (rows == 0 || cols == 0) return Tensor(0, 0)
+
+        val out = Tensor(cols, rows)
+        val tile = 32 // good default for L1/L2
+
+        // Parallelize by row tiles if large
+        val ops = rows * cols
+        if (ops <= PARALLEL_THRESHOLD) {
+            var r0 = 0
+            while (r0 < rows) {
+                val rEnd = min(r0 + tile, rows)
+                var c0 = 0
+                while (c0 < cols) {
+                    val cEnd = min(c0 + tile, cols)
+                    var r = r0
+                    while (r < rEnd) {
+                        val inRow = tensor[r]
+                        var c = c0
+                        while (c < cEnd) {
+                            out[c][r] = inRow[c]
+                            c++
+                        }
+                        r++
+                    }
+                    c0 += tile
+                }
+                r0 += tile
+            }
+        } else {
+            val cores = min(Runtime.getRuntime().availableProcessors(), (rows + tile - 1) / tile)
+            val tasks = ArrayList<RecursiveAction>(cores)
+            forEachChunk(rows, cores) { rs, re, _ ->
+                val startTile = (rs / tile) * tile
+                val endTile   = re
+                tasks += object : RecursiveAction() {
+                    override fun compute() {
+                        var r0 = startTile
+                        while (r0 < endTile) {
+                            val rEnd = min(r0 + tile, rows)
+                            var c0 = 0
+                            while (c0 < cols) {
+                                val cEnd = min(c0 + tile, cols)
+                                var r = r0
+                                while (r < rEnd) {
+                                    val inRow = tensor[r]
+                                    var c = c0
+                                    while (c < cEnd) {
+                                        out[c][r] = inRow[c]
+                                        c++
+                                    }
+                                    r++
+                                }
+                                c0 += tile
+                            }
+                            r0 += tile
+                        }
+                    }
+                }
+            }
+            ForkJoinTask.invokeAll(tasks)
+        }
+        return out
+    }
+
+    /* -------------------- Reductions / row-wise -------------------- */
+
+    override fun sumColumns(tensor: Tensor): FloatArray {
+        val rows = tensor.size
+        val cols = tensor.columnSize
+        if (rows == 0 || cols == 0) return FloatArray(cols)
+
+        val ops = rows * cols
+        if (ops <= PARALLEL_THRESHOLD) {
+            val out = FloatArray(cols)
+            var r = 0
+            while (r < rows) {
+                val tr = tensor[r]
+                var c = 0
+                while (c < cols) {
+                    out[c] += tr[c]
+                    c++
+                }
+                r++
+            }
+            return out
+        }
+
+        val cores = min(Runtime.getRuntime().availableProcessors(), rows)
+        val partials = Array(cores) { FloatArray(cols) }
+        val tasks = ArrayList<RecursiveAction>(cores)
+        forEachChunk(rows, cores) { rs, re, idx ->
+            tasks += object : RecursiveAction() {
+                override fun compute() {
+                    val acc = partials[idx]
+                    var r = rs
+                    while (r < re) {
+                        val tr = tensor[r]
+                        var c = 0
+                        while (c < cols) {
+                            acc[c] += tr[c]
+                            c++
+                        }
+                        r++
+                    }
+                }
+            }
+        }
+        ForkJoinTask.invokeAll(tasks)
+
+        // reduce partials
+        val out = FloatArray(cols)
+        var i = 0
+        while (i < cores) {
+            val acc = partials[i]
+            var c = 0
+            while (c < cols) {
+                out[c] += acc[c]
+                c++
+            }
+            i++
+        }
+        return out
+    }
+
+    /* -------------------- Softmax (numerically stable, row-wise) -------------------- */
+
+    override fun softmax(tensor: Tensor): Tensor {
+        val rows = tensor.size
+        val cols = tensor.columnSize
+        val out = Tensor(rows, cols)
+
+        maybeParallelByRows(rows, cols) { rs, re ->
+            var r = rs
+            while (r < re) {
+                val inRow = tensor[r]
+                val outRow = out[r]
+
+                // 1) find max
+                var maxVal = Float.NEGATIVE_INFINITY
+                var c = 0
+                while (c < cols) {
+                    val v = inRow[c]
+                    if (v > maxVal) maxVal = v
+                    c++
+                }
+
+                // 2) exponentiate (shifted) into outRow, accumulate sum
+                var sumExp = 0.0
+                c = 0
+                while (c < cols) {
+                    val e = dexp((inRow[c] - maxVal).toDouble())
+                    outRow[c] = e.toFloat()
+                    sumExp += e
+                    c++
+                }
+
+                // 3) normalize
+                val inv = (1.0 / sumExp).toFloat()
+                c = 0
+                while (c < cols) {
+                    outRow[c] *= inv
+                    c++
+                }
+                r++
+            }
+        }
+        return out
     }
 }

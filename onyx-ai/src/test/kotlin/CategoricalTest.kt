@@ -73,11 +73,11 @@ class CategoricalIndexerTest {
     @Test
     fun `indexer works in per-column transform list`() {
         // Matrix: 2 feature columns (category, numeric)
-        val x: Matrix = arrayOf(
+        val x: Tensor = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 100.0f),
             floatArrayOf(2.0f, 200.0f),
             floatArrayOf(1.0f, 300.0f)
-        )
+        ))
 
         // Column-0 → indexer, Column-1 → untouched
         val transforms = listOf(

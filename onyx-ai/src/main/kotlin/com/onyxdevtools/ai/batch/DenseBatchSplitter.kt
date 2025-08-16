@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.batch
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 
 /**
  * Batch splitter implementation for dense matrix targets.
@@ -17,7 +17,7 @@ import com.onyxdevtools.ai.Matrix
  * val (xTrain, yTrain, xTest, yTest) = splitter.splitBatch(features, targets, testFraction = 0.2)
  * ```
  */
-class DenseBatchSplitter : BatchSplitter<Matrix, Matrix> {
+class DenseBatchSplitter : BatchSplitter<Tensor, Tensor> {
     
     /**
      * Splits dense feature and target matrices into training and test subsets.
@@ -34,24 +34,27 @@ class DenseBatchSplitter : BatchSplitter<Matrix, Matrix> {
      * @throws IllegalArgumentException if testFraction is not in [0.0, 1.0] or if x and y have different numbers of samples.
      */
     override fun splitBatch(
-        x: Array<FloatArray>,
-        y: Matrix,
+        x: Tensor,
+        y: Tensor,
         testFraction: Float,
         shuffle: Boolean
-    ): Quad<Array<FloatArray>, Matrix, Array<FloatArray>, Matrix> {
+    ): Quad<Tensor, Tensor, Tensor, Tensor> {
         require(testFraction in 0.0..1.0) { "Test fraction must be between 0.0 and 1.0" }
         require(x.size == y.size) { "Features and targets must have the same number of samples" }
-        
-        val idx = x.indices.toMutableList().apply { if (shuffle) shuffle() }
+
+        val idx = (0 until x.size).toMutableList().apply { if (shuffle) shuffle() }
         val testSize = (idx.size * testFraction).toInt().coerceAtLeast(1)
         val testIdx = idx.take(testSize)
         val trainIdx = idx.drop(testSize)
 
-        fun subset(src: Matrix, ids: List<Int>) = Array(ids.size) { i -> src[ids[i]] }
+        fun subset(src: Tensor, ids: List<Int>): Tensor {
+            val cols = src.columnSize
+            return Tensor(ids.size, cols) { r, c -> src[ids[r]][c] }
+        }
 
         return Quad(
             subset(x, trainIdx), subset(y, trainIdx),
-            subset(x, testIdx),  subset(y, testIdx)
+            subset(x, testIdx), subset(y, testIdx)
         )
     }
 }

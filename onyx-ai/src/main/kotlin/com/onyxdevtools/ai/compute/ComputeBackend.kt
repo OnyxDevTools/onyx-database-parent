@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.compute
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 
 /**
  * Core compute backend interface that abstracts linear algebra operations.
@@ -12,68 +12,53 @@ interface ComputeBackend {
     /**
      * Performs matrix multiplication: A × B
      */
-    fun matrixMultiply(a: Matrix, b: Matrix): Matrix
+    fun matrixMultiply(a: Tensor, b: Tensor): Tensor
     
     /**
      * Performs element-wise addition: A + B
      */
-    fun add(a: Matrix, b: Matrix): Matrix
+    fun add(a: Tensor, b: Tensor): Tensor
     
     /**
      * Performs element-wise subtraction: A - B  
      */
-    fun subtract(a: Matrix, b: Matrix): Matrix
+    fun subtract(a: Tensor, b: Tensor): Tensor
     
     /**
      * Performs element-wise multiplication: A ⊙ B
      */
-    fun elementWiseMultiply(a: Matrix, b: Matrix): Matrix
+    fun elementWiseMultiply(a: Tensor, b: Tensor): Tensor
     
     /**
      * Transposes the matrix: A^T
      */
-    fun transpose(matrix: Matrix): Matrix
+    fun transpose(tensor: Tensor): Tensor
     
     /**
      * Multiplies matrix by scalar: scalar × A
      */
-    fun scalarMultiply(matrix: Matrix, scalar: Float): Matrix
+    fun scalarMultiply(tensor: Tensor, scalar: Float): Tensor
     
     /**
      * Adds a vector to each row of the matrix
      */
-    fun addVectorToRows(matrix: Matrix, vector: FloatArray): Matrix
+    fun addVectorToRows(tensor: Tensor, vector: FloatArray): Tensor
     
     /**
      * Applies element-wise transformation function
      */
-    fun applyElementWise(matrix: Matrix, transform: (Float) -> Float): Matrix
+    fun applyElementWise(tensor: Tensor, transform: (Float) -> Float): Tensor
     
     /**
      * Computes sum of each column
      */
-    fun sumColumns(matrix: Matrix): FloatArray
+    fun sumColumns(tensor: Tensor): FloatArray
     
     /**
      * Applies softmax activation function
      */
-    fun softmax(matrix: Matrix): Matrix
-    
-    /**
-     * Calculates mean standard error between predicted and actual matrices
-     */
-    fun meanStandardError(predicted: Matrix, actual: Matrix): Float
-    
-    /**
-     * Creates a deep copy of the matrix
-     */
-    fun deepCopy(matrix: Matrix): Matrix
-    
-    /**
-     * Flattens matrix to 1D array in row-major order
-     */
-    fun flatten(matrix: Matrix): FloatArray
-    
+    fun softmax(tensor: Tensor): Tensor
+
     /**
      * Gets the backend type identifier
      */

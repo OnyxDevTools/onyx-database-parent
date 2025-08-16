@@ -60,9 +60,9 @@ class DefaultSequenceGenerator(private val vocabulary: Vocabulary) : SequenceGen
      *               create more overlapping sequences but increase dataset size.
      * @param shuffle Whether to randomize the order of sequence starts (default: true).
      *                If false, sequences are generated in sequential order.
-     * @return A lazy Sequence of training pairs where:
-     *         - First element: Input sequence as FloatArray of token IDs (padded if needed)
-     *         - Second element: Target sequences as Array<FloatArray> of one-hot vectors (all-zero for ignore/padded)
+ * @return A lazy Sequence of training pairs where:
+ *         - First element: Input sequence as FloatArray of token IDs (padded if needed)
+ *         - Second element: Target sequences as IntArray of token IDs (ignore positions marked with -1)
      *         Each target vector has size equal to vocabulary.size.
      * @throws IllegalArgumentException if parameters are invalid, tokens are empty,
      *                                  or contain IDs outside vocabulary range

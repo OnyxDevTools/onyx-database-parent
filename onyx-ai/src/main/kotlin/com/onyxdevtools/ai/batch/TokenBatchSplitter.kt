@@ -1,5 +1,7 @@
 package com.onyxdevtools.ai.batch
 
+import com.onyxdevtools.ai.Tensor
+
 /**
  * Batch splitter implementation for sparse token targets.
  *
@@ -34,17 +36,22 @@ class TokenBatchSplitter : BatchSplitter<Array<IntArray>, List<IntArray>> {
      * @throws IllegalArgumentException if testFraction is not in [0.0, 1.0] or if x and y have different numbers of samples.
      */
     override fun splitBatch(
-        x: Array<FloatArray>,
+        x: Tensor,
         y: Array<IntArray>,
         testFraction: Float,
         shuffle: Boolean
-    ): Quad<Array<FloatArray>, List<IntArray>, Array<FloatArray>, List<IntArray>> {
+    ): Quad<Tensor, List<IntArray>, Tensor, List<IntArray>> {
         require(testFraction in 0.0..1.0) { "Test fraction must be between 0.0 and 1.0" }
         require(x.size == y.size) { "Features and targets must have the same number of samples" }
         
-        // Handle very small datasets by ensuring at least one training sample
+        // Handle very small datasets by ensuring at least one training sample (all go to train, none to test)
         if (x.size <= 2) {
-            return Quad(x, y.toList(), emptyArray(), emptyList())
+            return Quad(
+                x,
+                y.toList(),
+                Tensor(0, x.columnSize),
+                emptyList()
+            )
         }
 
         val idx = x.indices.toMutableList().apply { if (shuffle) shuffle() }
@@ -54,8 +61,10 @@ class TokenBatchSplitter : BatchSplitter<Array<IntArray>, List<IntArray>> {
         val testIdx = idx.take(testSize)
         val trainIdx = idx.drop(testSize)
 
-        fun subsetInputs(src: Array<FloatArray>, ids: List<Int>) =
-            Array(ids.size) { i -> src[ids[i]] }
+        fun subsetInputs(src: Tensor, ids: List<Int>): Tensor {
+            val cols = src.columnSize
+            return Tensor(ids.size, cols) { r, c -> src[ids[r]][c] }
+        }
         fun subsetSparse(src: Array<IntArray>, ids: List<Int>) =
             ids.map { src[it] }
 

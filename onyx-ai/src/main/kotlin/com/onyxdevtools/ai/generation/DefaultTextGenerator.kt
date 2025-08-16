@@ -2,6 +2,7 @@ package com.onyxdevtools.ai.generation
 
 import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.NeuralNetwork
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.Vocabulary
@@ -285,21 +286,21 @@ class DefaultTextGenerator : TextGenerator {
                 // For the first prediction, use the full prompt
                 // For subsequent predictions, only use the last token (KV cache handles the rest)
                 val hasCachedLayers = model.layers.any { l -> l is CachedMultiHeadAttentionLayer }
-                val input = if (hasCachedLayers && ids.size > 1) {
+                val inputTensor = if (hasCachedLayers && ids.size > 1) {
                     // Use only the last token - cache handles the history
-                    arrayOf(floatArrayOf(ids.last().toFloat()))
+                    Tensor(1, 1) { _, _ -> ids.last().toFloat() }
                 } else {
                     // First time or no cache - use full sequence (truncated if needed)
                     val current = if (ids.size > seqLength) ids.takeLast(seqLength) else ids
-                    current.map { floatArrayOf(it.toFloat()) }.toTypedArray()
+                    Tensor(current.size, 1) { r, _ -> current[r].toFloat() }
                 }
 
                 // Get predictions from model
-                val predictions = model.predict(input)
-                val logits = predictions[predictions.size - 1] // Get the last time step prediction
+                val predictions = model.predict(inputTensor)
+                val logits = predictions[predictions.size - 1]  // last time-step prediction
 
                 // Copy to our cached buffer
-                System.arraycopy(logits, 0, cachedLogits, 0, minOf(logits.size, cachedLogits!!.size))
+                logits.copyInto(cachedLogits!!)
 
                 // Mask special tokens
                 neverSample.forEach { bad ->

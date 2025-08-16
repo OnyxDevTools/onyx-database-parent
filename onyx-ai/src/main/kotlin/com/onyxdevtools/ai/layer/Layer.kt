@@ -1,7 +1,7 @@
 package com.onyxdevtools.ai.layer
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 
 /**
  * Represents a neural network layer.
@@ -12,12 +12,12 @@ interface Layer : java.io.Serializable {
     /**
      * The output matrix after the activation function has been applied.
      */
-    var output: Matrix?
+    var output: Tensor?
 
     /**
      * The pre-activation output (i.e., the raw result before the activation function is applied).
      */
-    var preActivation: Matrix?
+    var preActivation: Tensor?
 
     /**
      * The activation function used by this layer.
@@ -40,10 +40,10 @@ interface Layer : java.io.Serializable {
      * @return The output matrix after applying layer operations.
      */
     fun forward(
-        input: Matrix,
+        input: Tensor,
         isTraining: Boolean,
         nextLayer: Layer?
-    ): Matrix = input
+    ): Tensor = input
 
     /**
      * Updates this layer's learnable parameters using the Adam optimizer.
@@ -74,13 +74,13 @@ interface Layer : java.io.Serializable {
      * @return The gradient with respect to the input of this layer (to pass backward).
      */
     fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix
+    ): Tensor
 
     /**
      * Prepares the input for forward propagation.
@@ -90,5 +90,5 @@ interface Layer : java.io.Serializable {
      * @param isTraining Identify if the predict is training or not
      * @return The processed input matrix.
      */
-    fun preForward(input: Matrix, isTraining: Boolean): Matrix = input
+    fun preForward(input: Tensor, isTraining: Boolean): Tensor = input
 }

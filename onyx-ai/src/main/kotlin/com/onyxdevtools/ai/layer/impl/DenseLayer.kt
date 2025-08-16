@@ -1,11 +1,9 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.compute.*
-import java.util.*
-import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -30,19 +28,19 @@ class DenseLayer(
     private val computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
 
-    override var preActivation: Matrix? = null
-    override var output: Matrix? = null
+    override var preActivation: Tensor? = null
+    override var output: Tensor? = null
 
-    var weights: Matrix
+    var weights: Tensor
     private var biases = FloatArray(outputSize) { 0.0f }
 
-    private var momentWeights: Matrix
-    private var velocityWeights: Matrix
+    private var momentWeights: Tensor
+    private var velocityWeights: Tensor
     private var momentBiases = FloatArray(outputSize)
     private var velocityBiases = FloatArray(outputSize)
 
-    private var dropoutMask: Matrix? = null
-    private var gradientWeights: Matrix? = null
+    private var dropoutMask: Tensor? = null
+    private var gradientWeights: Tensor? = null
     private var gradientBiases: FloatArray? = null
 
     init {
@@ -95,7 +93,7 @@ class DenseLayer(
     /**
      * Performs the forward pass using the compute backend
      */
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         // Use compute backend for matrix operations
         val linearOutput = computeContext.backend.addVectorToRows(
             computeContext.backend.matrixMultiply(input, weights), 
@@ -148,13 +146,13 @@ class DenseLayer(
      * Performs backward pass using compute backend operations
      */
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
+    ): Tensor {
         // Use compute backend for element-wise operations
         val currentDelta = computeContext.backend.elementWiseMultiply(
             delta,
@@ -186,25 +184,18 @@ class DenseLayer(
      */
     override fun clone(): DenseLayer {
         return DenseLayer(inputSize, outputSize, activation, dropoutRate, computeContext).also { copy ->
-            copy.weights = computeContext.backend.deepCopy(weights)
+            copy.weights = weights.deepCopy()
             copy.biases = biases.copyOf()
-            copy.momentWeights = computeContext.backend.deepCopy(momentWeights)
-            copy.velocityWeights = computeContext.backend.deepCopy(velocityWeights)
+            copy.momentWeights = momentWeights.deepCopy()
+            copy.velocityWeights = velocityWeights.deepCopy()
             copy.momentBiases = momentBiases.copyOf()
             copy.velocityBiases = velocityBiases.copyOf()
-            copy.preActivation = preActivation?.let { computeContext.backend.deepCopy(it) }
-            copy.output = output?.let { computeContext.backend.deepCopy(it) }
-            copy.dropoutMask = dropoutMask?.let { computeContext.backend.deepCopy(it) }
-            copy.gradientWeights = gradientWeights?.let { computeContext.backend.deepCopy(it) }
+            copy.preActivation = preActivation?.deepCopy()
+            copy.output = output?.let { it.deepCopy() }
+            copy.dropoutMask = dropoutMask?.deepCopy()
+            copy.gradientWeights = gradientWeights?.deepCopy()
             copy.gradientBiases = gradientBiases?.copyOf()
         }
-    }
-
-    /**
-     * Gets information about the compute backend being used
-     */
-    fun getBackendInfo(): String {
-        return "Using ${computeContext.backend.backendType} backend for computations"
     }
 
     /**

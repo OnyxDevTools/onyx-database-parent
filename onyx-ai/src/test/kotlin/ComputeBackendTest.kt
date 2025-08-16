@@ -1,5 +1,5 @@
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.compute.*
-import com.onyxdevtools.ai.Matrix
 import org.junit.Assert.*
 import kotlin.test.Test
 
@@ -13,14 +13,14 @@ class ComputeBackendTest {
         val backend = CPUComputeBackend()
         
         // Test matrix multiplication
-        val a = arrayOf(
+        val a = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 2.0f),
             floatArrayOf(3.0f, 4.0f)
-        )
-        val b = arrayOf(
+        ))
+        val b = Tensor.from(arrayOf(
             floatArrayOf(5.0f, 6.0f),
             floatArrayOf(7.0f, 8.0f)
-        )
+        ))
         
         val result = backend.matrixMultiply(a, b)
         assertEquals(19.0f, result[0][0], 0.001f) // 1*5 + 2*7 = 19
@@ -33,14 +33,14 @@ class ComputeBackendTest {
     fun testCPUBackendElementWiseOperations() {
         val backend = CPUComputeBackend()
         
-        val a = arrayOf(
+        val a = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 2.0f),
             floatArrayOf(3.0f, 4.0f)
-        )
-        val b = arrayOf(
+        ))
+        val b = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 1.0f),
             floatArrayOf(1.0f, 1.0f)
-        )
+        ))
         
         // Test addition
         val sum = backend.add(a, b)
@@ -110,14 +110,14 @@ class ComputeBackendTest {
         val backend = BasicCPUComputeBackend()
         
         // Test matrix multiplication
-        val a = arrayOf(
+        val a = Tensor.from(arrayOf(
             floatArrayOf(2.0f, 3.0f),
             floatArrayOf(1.0f, 4.0f)
-        )
-        val b = arrayOf(
+        ))
+        val b = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 2.0f),
             floatArrayOf(3.0f, 1.0f)
-        )
+        ))
         
         val result = backend.matrixMultiply(a, b)
         assertEquals(11.0f, result[0][0], 0.001f) // 2*1 + 3*3 = 11
@@ -144,9 +144,9 @@ class ComputeBackendTest {
     fun testSoftmaxOperation() {
         val backend = CPUComputeBackend()
         
-        val input = arrayOf(
+        val input = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 2.0f, 3.0f)
-        )
+        ))
         
         val result = backend.softmax(input)
         

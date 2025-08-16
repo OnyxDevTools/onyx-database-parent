@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.loss
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import kotlin.math.exp
 import kotlin.math.ln
 
@@ -48,7 +48,7 @@ class CrossEntropyLoss : LossFunction {
      * @throws IllegalArgumentException if matrix dimensions don't match or targets
      *                                 are not properly one-hot encoded
      */
-    override fun calculate(predictions: Matrix, targets: Matrix): Float {
+    override fun calculate(predictions: Tensor, targets: Tensor): Float {
         var loss = 0.0
         val batchSize = targets.size
 

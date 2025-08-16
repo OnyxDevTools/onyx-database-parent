@@ -1,4 +1,5 @@
 import Activation
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.impl.DenseLayer
 import com.onyxdevtools.ai.compute.DefaultComputeContext
 import org.junit.Assert.*
@@ -15,10 +16,10 @@ class DenseLayerTest {
         val layer = DenseLayer(2, 3, Activation.RELU, 0.0f, computeContext)
         
         // Test basic forward pass
-        val input = arrayOf(
+        val input = Tensor.from(arrayOf(
             floatArrayOf(1.0f, 2.0f),
             floatArrayOf(3.0f, 4.0f)
-        )
+        ))
         
         val output = layer.forward(input, isTraining = false, nextLayer = null)
         
@@ -39,9 +40,9 @@ class DenseLayerTest {
         // Test with default constructor (should work with lazy initialization)
         val layer = DenseLayer(2, 3, Activation.TANH, 0.1f)
         
-        val input = arrayOf(
+        val input = Tensor.from(arrayOf(
             floatArrayOf(0.5f, -0.5f)
-        )
+        ))
         
         val output = layer.forward(input, isTraining = true, nextLayer = null)
         

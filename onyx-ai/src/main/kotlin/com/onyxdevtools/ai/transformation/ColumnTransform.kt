@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.transformation
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import java.io.Serializable
 
 typealias ColumnTransforms = List<ColumnTransform?>
@@ -59,30 +59,28 @@ interface ColumnTransform : Serializable {
     fun clone(): ColumnTransform
 }
 
-fun ColumnTransforms.fitAndTransform(matrix: Matrix): Matrix {
-    val rows = matrix.size
-    val cols = matrix[0].size
+fun ColumnTransforms.fitAndTransform(tensor: Tensor): Tensor {
+    val rows = tensor.size
+    val cols = tensor.columnSize
     require(size == cols) { "Must supply one ColumnTransform (or null) per column" }
 
-    val result = Array(rows) { matrix[it].clone() }
+    val result = Tensor(rows, cols) { r, c -> tensor[r][c] }
 
     for (c in 0 until cols) {
         val t = this[c] ?: continue
-
         val col = FloatArray(rows) { r -> result[r][c] }
         t.fit(col)
         val transformed = t.apply(col)
-
         for (r in 0 until rows) result[r][c] = transformed[r]
     }
     return result
 }
 
 /** Apply already-fitted transforms to a new matrix. */
-fun ColumnTransforms.apply(matrix: Matrix): Matrix {
-    val rows = matrix.size
-    val result = Array(rows) { matrix[it].clone() }
-
+fun ColumnTransforms.apply(tensor: Tensor): Tensor {
+    val rows = tensor.size
+    val cols = tensor.columnSize
+    val result = Tensor(rows, cols) { r, c -> tensor[r][c] }
     forEachIndexed { c, t ->
         if (t == null) return@forEachIndexed
         val col = FloatArray(rows) { r -> result[r][c] }
@@ -93,10 +91,10 @@ fun ColumnTransforms.apply(matrix: Matrix): Matrix {
 }
 
 /** Restore original scale column-by-column. */
-fun ColumnTransforms.inverse(matrix: Matrix): Matrix {
-    val rows = matrix.size
-    val result = Array(rows) { matrix[it].clone() }
-
+fun ColumnTransforms.inverse(tensor: Tensor): Tensor {
+    val rows = tensor.size
+    val cols = tensor.columnSize
+    val result = Tensor(rows, cols) { r, c -> tensor[r][c] }
     forEachIndexed { c, t ->
         if (t == null) return@forEachIndexed
         val col = FloatArray(rows) { r -> result[r][c] }

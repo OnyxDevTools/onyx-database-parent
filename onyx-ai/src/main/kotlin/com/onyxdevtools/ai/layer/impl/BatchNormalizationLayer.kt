@@ -1,7 +1,7 @@
 package com.onyxdevtools.ai.layer.impl
 
 import Activation
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import java.io.Serializable
@@ -16,15 +16,15 @@ import kotlin.math.sqrt
  */
 class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
 
-    override var output: Matrix? = null
-    override var preActivation: Matrix? = null
+    override var output: Tensor? = null
+    override var preActivation: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
     private var gamma = FloatArray(size) { 1.0f }
     private var beta = FloatArray(size)
     private var mean: FloatArray? = null
     private var variance: FloatArray? = null
-    private var normalized: Matrix? = null
+    private var normalized: Tensor? = null
 
     // Added running statistics
     private var runningMean = FloatArray(size) { 0.0f }
@@ -67,7 +67,7 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
         }
     }
 
-    override fun preForward(input: Matrix, isTraining: Boolean): Matrix {
+    override fun preForward(input: Tensor, isTraining: Boolean): Tensor {
         if (isTraining) {
             // Compute batch statistics
             val meanVector = FloatArray(size) { j -> input.sumOf { it[j].toDouble() }.toFloat() / input.size }
@@ -77,9 +77,9 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
             this.variance = varianceVector
 
             // Normalize using batch statistics
-            this.normalized = input.map { row ->
-                FloatArray(row.size) { j -> (row[j] - meanVector[j]) / sqrt(varianceVector[j] + EPSILON) }
-            }.toTypedArray()
+            this.normalized = Tensor(input.size, input.columnSize) { r, c ->
+                (input[r, c] - meanVector[c]) / sqrt(varianceVector[c] + EPSILON)
+            }
 
             // Update running statistics (not used for current normalization)
             for (j in 0 until size) {
@@ -88,21 +88,21 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
             }
         } else {
             // Use running statistics for inference
-            this.normalized = input.map { row ->
-                FloatArray(row.size) { j -> (row[j] - runningMean[j]) / sqrt(runningVariance[j] + EPSILON) }
-            }.toTypedArray()
+            this.normalized = Tensor(input.size, input.columnSize) { r, c ->
+                (input[r, c] - runningMean[c]) / sqrt(runningVariance[c] + EPSILON)
+            }
         }
 
         // Apply affine transformation
-        this.output = this.normalized!!.map { row ->
-            FloatArray(row.size) { j -> gamma[j] * row[j] + beta[j] }
-        }.toTypedArray()
+        this.output = Tensor(input.size, input.columnSize) { r, c ->
+            gamma[c] * this.normalized!![r, c] + beta[c]
+        }
 
         return output!!
     }
 
     // Implement forward to use isTraining from the network
-    override fun forward(input: Matrix, isTraining: Boolean, nextLayer: Layer?): Matrix {
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         return preForward(input, isTraining)
     }
 
@@ -110,13 +110,13 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
      * Computes the backward pass of the batch normalization layer.
      */
     override fun backward(
-        currentInput: Matrix?,
-        delta: Matrix,
+        currentInput: Tensor?,
+        delta: Tensor,
         featureSize: Float,
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Matrix {
+    ): Tensor {
         checkNotNull(previousLayer) { "BatchNormalization Layer must not be the output layer." }
 
         // CHANGED:  use delta directly; BN shouldn’t apply activation derivative
@@ -139,13 +139,25 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
             // CHANGED:  no “/ featureSize” here – keep sums
         }
 
-        return Array(adjustedDelta.size) { i ->
-            FloatArray(size) { j ->
-                val xHat = normalized!![i][j]
-                val dY = adjustedDelta[i][j]
-                gamma[j] * inverseStdDev[j] * (featureSize * dY - gradBeta!![j] - xHat * gradGamma!![j]) / featureSize
+        val rows = adjustedDelta.rows
+        val cols = size // or adjustedDelta.cols
+        val out = Tensor(rows, cols)
+
+        var r = 0
+        while (r < rows) {
+            val base = r * cols
+            var c = 0
+            while (c < cols) {
+                val xHat = normalized!![r, c]
+                val dY   = adjustedDelta[r, c]
+                out.data[base + c] =
+                    gamma[c] * inverseStdDev[c] *
+                            (featureSize * dY - gradBeta!![c] - xHat * gradGamma!![c]) / featureSize
+                c++
             }
+            r++
         }
+        return out
     }
 
     override fun clone(): Layer {

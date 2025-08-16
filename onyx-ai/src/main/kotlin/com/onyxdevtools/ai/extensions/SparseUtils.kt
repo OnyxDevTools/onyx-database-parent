@@ -1,5 +1,6 @@
 package com.onyxdevtools.ai.extensions
 
+import com.onyxdevtools.ai.Tensor
 import kotlin.math.exp
 import kotlin.math.ln
 
@@ -24,24 +25,23 @@ import kotlin.math.ln
  * @throws IllegalArgumentException if array dimensions don't match or contain invalid values
  */
 fun sparseCategoricalCrossEntropy(
-    predicted: Array<FloatArray>,
+    predicted: Tensor,
     sparseTargets: IntArray,
     sampleWeights: FloatArray? = null
 ): Float {
-    require(predicted.size == sparseTargets.size) {
-        "Predictions and targets must have same number of samples"
-    }
+    require(predicted.size == sparseTargets.size) { "Predictions and targets must have same number of samples" }
     require(sampleWeights == null || sampleWeights.size == sparseTargets.size) {
         "Sample weights size must match targets size"
     }
     
-    val vocabSize = predicted.firstOrNull()?.size ?: return 0.0f
+    if (predicted.size == 0) return 0.0f
+    val vocabSize = predicted.columnSize
     val weights = sampleWeights ?: FloatArray(sparseTargets.size) { 1.0f }
     
     var totalLoss = 0.0f
     var totalWeight = 0.0f
     
-    for (i in predicted.indices) {
+    for (i in 0 until predicted.size) {
         val targetId = sparseTargets[i]
         if (targetId == -1) continue  // Skip ignored positions
         
@@ -53,11 +53,9 @@ fun sparseCategoricalCrossEntropy(
         val weight = weights[i]
         
         // Compute log-softmax for numerical stability (optimized - no temporary collections)
-        val maxLogit = logits.maxOrNull()?.toFloat() ?: continue
+        val maxLogit = logits.maxOrNull() ?: continue
         var sumExp = 0.0f
-        for (logit in logits) {
-            sumExp += exp(logit - maxLogit)
-        }
+        for (logit in logits) sumExp += exp(logit - maxLogit)
         val logSumExp = ln(sumExp) + maxLogit
         val logProb = logits[targetId] - logSumExp
         
@@ -86,22 +84,21 @@ fun sparseCategoricalCrossEntropy(
  * @throws IllegalArgumentException if array dimensions don't match or contain invalid values
  */
 fun sparseCategoricalCrossEntropyGradients(
-    predicted: Array<FloatArray>,
+    predicted: Tensor,
     sparseTargets: IntArray,
     sampleWeights: FloatArray? = null
-): Array<FloatArray> {
-    require(predicted.size == sparseTargets.size) {
-        "Predictions and targets must have same number of samples"
-    }
+): Tensor {
+    require(predicted.size == sparseTargets.size) { "Predictions and targets must have same number of samples" }
     require(sampleWeights == null || sampleWeights.size == sparseTargets.size) {
         "Sample weights size must match targets size"
     }
     
-    val vocabSize = predicted.firstOrNull()?.size ?: return emptyArray()
+    if (predicted.size == 0) return Tensor(0, 0)
+    val vocabSize = predicted.columnSize
     val weights = sampleWeights ?: FloatArray(sparseTargets.size) { 1.0f }
-    val gradients = Array(predicted.size) { FloatArray(vocabSize) }
+    val gradients = Tensor(predicted.size, vocabSize)
     
-    for (i in predicted.indices) {
+    for (i in 0 until predicted.size) {
         val targetId = sparseTargets[i]
         if (targetId == -1) continue  // Skip ignored positions - gradients remain 0
         
@@ -117,18 +114,12 @@ fun sparseCategoricalCrossEntropyGradients(
         
         // First pass: compute sum of exponentials
         var sumExp = 0.0f
-        for (logit in logits) {
-            sumExp += exp(logit - maxLogit)
-        }
+        for (logit in logits) sumExp += exp(logit - maxLogit)
         
         // Second pass: compute gradients using softmax probabilities
-        for (j in logits.indices) {
+        for (j in 0 until vocabSize) {
             val softmaxProb = exp(logits[j] - maxLogit) / sumExp
-            gradients[i][j] = weight * if (j == targetId) {
-                softmaxProb - 1.0f  // Target position: p - 1
-            } else {
-                softmaxProb  // Non-target position: p
-            }
+            gradients[i, j] = weight * if (j == targetId) softmaxProb - 1.0f else softmaxProb
         }
     }
     

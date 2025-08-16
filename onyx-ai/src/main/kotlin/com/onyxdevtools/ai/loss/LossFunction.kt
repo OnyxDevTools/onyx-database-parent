@@ -1,6 +1,6 @@
 package com.onyxdevtools.ai.loss
 
-import com.onyxdevtools.ai.Matrix
+import com.onyxdevtools.ai.Tensor
 
 /**
  * Interface defining the contract for loss functions used in neural network training.
@@ -30,5 +30,5 @@ interface LossFunction {
      * @return The calculated loss value as a Float. Lower values indicate better predictions.
      * @throws IllegalArgumentException if matrix dimensions don't match
      */
-    fun calculate(predictions: Matrix, targets: Matrix): Float
+    fun calculate(predictions: Tensor, targets: Tensor): Float
 }

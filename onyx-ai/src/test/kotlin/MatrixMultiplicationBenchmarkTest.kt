@@ -5,16 +5,20 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
-import kotlin.system.measureTimeMillis
+import kotlin.system.measureNanoTime
 import kotlin.random.Random
+import com.onyxdevtools.ai.Tensor
+import kotlin.system.measureNanoTime
 
 class MatrixMultiplicationBenchmarkTest {
 
+    private lateinit var basicCPUComputeBackend: BasicCPUComputeBackend
     private lateinit var cpuBackend: CPUComputeBackend
     private lateinit var metalBackend: MetalComputeBackend
 
     @Before
     fun setup() {
+        basicCPUComputeBackend = BasicCPUComputeBackend()
         cpuBackend = CPUComputeBackend()
         metalBackend = MetalComputeBackend()
     }
@@ -24,10 +28,10 @@ class MatrixMultiplicationBenchmarkTest {
         metalBackend.dispose()
     }
 
-    private fun createRandomMatrix(rows: Int, cols: Int): Array<FloatArray> {
-        val random = Random(System.currentTimeMillis())
-        return Array(rows) { FloatArray(cols) { random.nextFloat() * 100f } }
-    }
+private fun createRandomMatrix(rows: Int, cols: Int): Tensor {
+    val random = Random(System.currentTimeMillis())
+    return Tensor(rows, cols) { _, _ -> random.nextFloat() * 100f }
+}
 
     @Test
     fun benchmarkMatrixMultiplicationThresholds() {
@@ -36,43 +40,11 @@ class MatrixMultiplicationBenchmarkTest {
 
         println("\n--- Matrix Multiplication Benchmarks (CPU Sequential vs. CPU Parallel vs. Metal) ---")
 
-        // Define matrix dimensions to test (rowsA, colsA, colsB)
-        val testDimensions = listOf(
-            Triple(32, 32, 32),
-            Triple(64, 64, 64),
-            Triple(128, 128, 128),
-            Triple(200, 200, 200), // Intermediate size
-            Triple(256, 256, 256),
-            Triple(300, 300, 300), // Intermediate size
-            Triple(400, 400, 400), // Intermediate size
-            Triple(512, 512, 512),
-            Triple(700, 700, 700), // Intermediate size
-            Triple(1024, 1024, 1024),
-            Triple(1500, 1500, 1500), // Intermediate size
+        val testDimensions = (1 .. 100).map {
+            Triple(it, it, it)
+        }
 
-            // Rectangular matrices
-            Triple(20, 60, 60),
-            Triple(40, 120, 120),
-            Triple(80, 240, 240),
-            Triple(160, 512, 512),
-
-            Triple(40, 20, 60),
-            Triple(120, 40, 120),
-            Triple(240, 80, 240),
-            Triple(512, 160, 512),
-
-
-            Triple(100, 500, 100),
-            Triple(500, 100, 500),
-            Triple(100, 1000, 100),
-            Triple(1000, 100, 1000),
-            Triple(50, 2000, 50),
-            Triple(50, 3000, 50),
-//            Triple(2000, 50, 2000)
-        )
-
-        val warmUpIterations = 5 // Number of warm-up runs
-        val measurementIterations = 10 // Number of actual measurement runs
+        val measurementIterations = 1000 // Number of actual measurement runs
 
         for ((rowsA, colsA, colsB) in testDimensions) {
             val matrixA = createRandomMatrix(rowsA, colsA)
@@ -80,88 +52,45 @@ class MatrixMultiplicationBenchmarkTest {
 
             println("\nBenchmarking ${rowsA}x${colsA} * ${colsA}x${colsB} (Total Ops: ${rowsA.toLong() * colsA.toLong() * colsB.toLong()})")
 
-            // Warm-up phase
-            for (i in 0 until warmUpIterations) {
-                cpuBackend.matrixMultiplyBasic(matrixA, matrixB)
-                cpuBackend.matrixMultiplyParallelJVM(matrixA, matrixB)
-                cpuBackend.matrixMultiplySkinnyVectorizedParallel(matrixA, matrixB)
-                metalBackend.matrixMultiply(matrixA, matrixB)
-            }
-
             // --- CPU Sequential Benchmark ---
             var totalCpuSequentialTime = 0L
             for (i in 0 until measurementIterations) {
-                totalCpuSequentialTime += measureTimeMillis {
-                    cpuBackend.matrixMultiplyBasic(matrixA, matrixB)
+                totalCpuSequentialTime += measureNanoTime {
+                    basicCPUComputeBackend.matrixMultiply(matrixA, matrixB)
                 }
             }
             val cpuSequentialTime = totalCpuSequentialTime / measurementIterations
-            println("  CPU Sequential: ${cpuSequentialTime} ms")
+            println("  CPU Sequential: $cpuSequentialTime ms")
 
             // --- CPU Parallel Benchmark ---
             var totalCpuParallelTime = 0L
             for (i in 0 until measurementIterations) {
-                totalCpuParallelTime += measureTimeMillis {
+                totalCpuParallelTime += measureNanoTime {
                     cpuBackend.matrixMultiplyParallelJVM(matrixA, matrixB)
                 }
             }
             val cpuParallelTime = totalCpuParallelTime / measurementIterations
-            println("  CPU Parallel:   ${cpuParallelTime} ms")
+            println("  CPU Parallel:   $cpuParallelTime ms")
 
             // --- Vectorized Parallel Benchmark ---
             var vectorCpuTime = 0L
             for (i in 0 until measurementIterations) {
-                vectorCpuTime += measureTimeMillis {
-                    cpuBackend.matrixMultiplySkinnyVectorizedParallel(matrixA, matrixB)
+                vectorCpuTime += measureNanoTime {
+                    cpuBackend.matrixMultiplyParallelVector(matrixA, matrixB)
                 }
             }
             val results = vectorCpuTime / measurementIterations
-            println("  CPU Parallel Vector:   ${results} ms")
-
-            // --- CPU Parallel Benchmark ---
-            var totalCpuVectorzedParallelTime = 0L
-            for (i in 0 until measurementIterations) {
-                totalCpuVectorzedParallelTime += measureTimeMillis {
-                    cpuBackend.matrixMultiplyParallelJVM(matrixA, matrixB)
-                }
-            }
-            val cpuVectorzedParallelTime = totalCpuVectorzedParallelTime / measurementIterations
-            println("  Vectorized CPU Parallel:   ${cpuVectorzedParallelTime} ms")
+            println("  CPU Parallel Vector:   $results ms")
 
             // --- Metal Benchmark ---
             var totalMetalTime = 0L
             for (i in 0 until measurementIterations) {
-                totalMetalTime += measureTimeMillis {
+                totalMetalTime += measureNanoTime {
                     metalBackend.matrixMultiply(matrixA, matrixB)
                 }
             }
             val metalTime = totalMetalTime / measurementIterations
-            println("  Metal:          ${metalTime} ms")
-
-            // Calculate and print ratios
-            if (metalTime > 0) { // Avoid division by zero
-                if (cpuSequentialTime > 0) {
-                    println("  Ratio (CPU Seq / Metal): %.2f".format(cpuSequentialTime.toDouble() / metalTime.toDouble()))
-                } else {
-                    println("  Ratio (CPU Seq / Metal): N/A (CPU Seq time was 0)")
-                }
-                if (cpuParallelTime > 0) {
-                    println("  Ratio (CPU Par / Metal): %.2f".format(cpuParallelTime.toDouble() / metalTime.toDouble()))
-                } else {
-                    println("  Ratio (CPU Par / Metal): N/A (CPU Par time was 0)")
-                }
-            } else {
-                println("  Ratio (X / Metal): N/A (Metal time was 0)")
-            }
-            if (cpuParallelTime > 0) {
-                if (cpuSequentialTime > 0) {
-                    println("  Ratio (CPU Seq / CPU Par): %.2f".format(cpuSequentialTime.toDouble() / cpuParallelTime.toDouble()))
-                } else {
-                    println("  Ratio (CPU Seq / CPU Par): N/A (CPU Seq time was 0)")
-                }
-            } else {
-                println("  Ratio (CPU Seq / CPU Par): N/A (CPU Par time was 0)")
-            }
+            println("  Metal:          $metalTime ms")
         }
     }
 
@@ -186,7 +115,7 @@ class MatrixMultiplicationBenchmarkTest {
         // --- CPU Benchmark ---
         var totalCpuTime = 0L
         for (i in 0 until 10) {
-            totalCpuTime += measureTimeMillis {
+            totalCpuTime += measureNanoTime {
                 cpuBackend.elementWiseMultiply(matrixA, matrixB)
             }
         }
@@ -196,7 +125,7 @@ class MatrixMultiplicationBenchmarkTest {
         // --- Metal Benchmark ---
         var totalMetalTime = 0L
         for (i in 0 until 10) {
-            totalMetalTime += measureTimeMillis {
+            totalMetalTime += measureNanoTime {
                 metalBackend.elementWiseMultiply(matrixA, matrixB)
             }
         }

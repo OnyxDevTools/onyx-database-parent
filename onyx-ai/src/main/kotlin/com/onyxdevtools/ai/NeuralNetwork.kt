@@ -2,7 +2,6 @@
 
 package com.onyxdevtools.ai
 
-import com.onyxdevtools.ai.Matrix
 import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
@@ -11,18 +10,12 @@ import com.onyxdevtools.ai.batch.TokenBatchSplitter
 import java.io.*
 import kotlin.apply
 import kotlin.math.min
-
+import kotlin.math.ln
 
 /**
  * Represents a multi-layer neural network using backpropagation and the Adam optimizer.
  *
- * @property layers List of layers composing the network.
- * @param featureTransforms Feature transforms used to normalize and transform feature data before training
- * @param valueTransforms Value transformations used to normalize and transform the outputs
- * @property learningRate Learning rate for parameter updates.
- * @property lambda Regularization parameter.
- * @property beta1 Exponential decay rate for the first moment estimates (Adam).
- * @property beta2 Exponential decay rate for the second moment estimates (Adam).
+ * This Tensor-only version fixes unresolved functions and Tensor mismatches.
  */
 @Suppress("MemberVisibilityCanBePrivate")
 data class NeuralNetwork(
@@ -37,7 +30,7 @@ data class NeuralNetwork(
 
     private var beta1Power = 1.0f
     private var beta2Power = 1.0f
-    private var lastInput: Matrix? = null
+    private var lastInput: Tensor? = null
 
     fun withTransforms(
         feature: ColumnTransforms = featureTransforms ?: emptyList(),
@@ -54,15 +47,12 @@ data class NeuralNetwork(
      * @return Output matrix after processing through all layers.
      */
     fun predict(
-        input: Matrix,
+        input: Tensor,
         isTraining: Boolean = false,
         returnOriginalScale: Boolean = false,
         skipFeatureTransform: Boolean = false
-    ): Matrix {
-        val x = if (skipFeatureTransform)
-            input
-        else
-            featureTransforms?.apply(input) ?: input
+    ): Tensor {
+        val x: Tensor = if (skipFeatureTransform) input else (featureTransforms?.apply(input) ?: input)
         lastInput = x
 
         var out = x
@@ -76,80 +66,36 @@ data class NeuralNetwork(
             out
     }
 
-    /**
-     * Feeds an input matrix forward through the network.
-     *
-     * @param input Input matrix.
-     * @return Output matrix after processing through all layers.
-     */
-    fun predict(
-        input: Matrix
-    ): Matrix = predict(input = input, isTraining = false, returnOriginalScale = true)
+    /** Convenience default: de-normalized prediction */
+    fun predict(input: Tensor): Tensor = predict(input = input, isTraining = false, returnOriginalScale = true)
 
-    /**
-     * Performs the backward pass to compute gradients using dense targets.
-     *
-     * @param predicted The predicted output.
-     * @param actual The true labels (dense one-hot encoded).
-     * @param sampleWeights Optional sample weights.
-     */
+    // -------------------- Backward (dense targets) --------------------------
+
     private fun backward(
-        predicted: Matrix,
-        actual: Matrix,
+        predicted: Tensor,
+        actual: Tensor,
         sampleWeights: FloatArray? = null
     ) {
-        val sampleCount = actual.size.toFloat()
-        val weights = sampleWeights ?: FloatArray(actual.size) { 1.0f }
+        val sampleCount = actual.rows.toFloat()
 
-        // Compute softmax probabilities
-        val probs = softmax(predicted)
+        // softmax over rows
+        val probs = predicted.softmaxRows()
 
-        // Delta for CE loss: probs - actual
-        var delta: Matrix = subtract(probs, actual).mapIndexed { r, row ->
-            FloatArray(row.size) { c -> row[c] * weights[r] }
-        }.toTypedArray()
+        // CE gradient: probs - actual
+        var delta: Tensor = probs.sub(actual)
+
+        // optional per-row weights
+        if (sampleWeights != null) {
+            require(sampleWeights.size == actual.rows) {
+                "sampleWeights size (${sampleWeights.size}) must equal number of rows (${actual.rows})"
+            }
+            delta = Tensor(delta.rows, delta.cols) { r, c -> delta[r, c] * sampleWeights[r] }
+        }
 
         for (i in layers.lastIndex downTo 0) {
             val layer = layers[i]
-            val nextLayer = layers.getOrNull(i + 1)      // forward-order "next"
-            val previousLayer = layers.getOrNull(i - 1)      // forward-order "prev"
-
-            val inputToLayer = previousLayer?.output ?: lastInput
-            ?: error("No input recorded for layer $i")
-
-            delta = layer.backward(
-                currentInput = inputToLayer,                 // <-- change
-                delta = delta,
-                featureSize = sampleCount,
-                nextLayer = nextLayer,
-                previousLayer = previousLayer,
-                lambda = lambda
-            )
-        }
-    }
-
-    /**
-     * Performs the backward pass to compute gradients using sparse targets.
-     *
-     * @param predicted The predicted output logits.
-     * @param sparseTargets The true labels as token IDs (sparse representation).
-     * @param sampleWeights Optional sample weights.
-     */
-    private fun backwardSparse(
-        predicted: Matrix,
-        sparseTargets: IntArray,
-        sampleWeights: FloatArray? = null
-    ) {
-        val sampleCount = predicted.size.toFloat()
-        
-        var delta: Matrix = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
-
-        val startIndex = layers.lastIndex
-
-        for (i in startIndex downTo 0) {
-            val layer = layers[i]
-            val nextLayer = layers.getOrNull(i + 1)      // forward-order "next"
-            val previousLayer = layers.getOrNull(i - 1)      // forward-order "prev"
+            val nextLayer = layers.getOrNull(i + 1)
+            val previousLayer = layers.getOrNull(i - 1)
 
             val inputToLayer = previousLayer?.output ?: lastInput
             ?: error("No input recorded for layer $i")
@@ -165,49 +111,69 @@ data class NeuralNetwork(
         }
     }
 
-    /**
-     * Updates the network parameters using the Adam optimization algorithm.
-     */
+    // -------------------- Backward (sparse targets) ------------------------
+
+    private fun backwardSparse(
+        predicted: Tensor,
+        sparseTargets: IntArray,
+        sampleWeights: FloatArray? = null
+    ) {
+        val sampleCount = predicted.rows.toFloat()
+
+        // dCE/dlogits for sparse targets (row-wise softmax + gradient)
+        var delta = sparseCategoricalCrossEntropyGradients(predicted, sparseTargets, sampleWeights)
+
+        val startIndex = layers.lastIndex
+        for (i in startIndex downTo 0) {
+            val layer = layers[i]
+            val nextLayer = layers.getOrNull(i + 1)
+            val previousLayer = layers.getOrNull(i - 1)
+
+            val inputToLayer = previousLayer?.output ?: lastInput
+            ?: error("No input recorded for layer $i")
+
+            delta = layer.backward(
+                currentInput = inputToLayer,
+                delta = delta,
+                featureSize = sampleCount,
+                nextLayer = nextLayer,
+                previousLayer = previousLayer,
+                lambda = lambda
+            )
+        }
+    }
+
+    // -------------------- Parameter update ---------------------------------
+
     private fun updateParameters() {
         beta1Power *= beta1
         beta2Power *= beta2
-
         layers.forEach { layer ->
             layer.updateParameters(beta1Power, beta2Power, beta1, beta2, learningRate)
         }
     }
 
-    /**
-     * Trains the neural network using mini-batch gradient descent with early stopping.
-     *
-     * @param trainingFeatures The input feature matrix.
-     * @param trainingValues The expected output matrix.
-     * @param trainingWeights Optional sample weights.
-     * @param batchSize Size of each mini-batch.
-     * @param maxEpochs Maximum number of training epochs.
-     * @param patience Number of epochs without improvement before early stopping.
-     * @param shuffle Whether to shuffle data each epoch.
-     * @param lossFn Custom loss evaluation function.
-     * @return The best model observed during training.
-     */
+    // -------------------- Train (fixed-size labels in a single Tensor) -----
+
     fun train(
-        trainingFeatures: Matrix,
-        trainingValues: Matrix,
+        trainingFeatures: Tensor,
+        trainingValues: Tensor,
         trainingWeights: FloatArray? = null,
         batchSize: Int = 32,
         maxEpochs: Int = 100,
         patience: Int = 10,
         shuffle: Boolean = true,
         tokensPerSample: Int = 1,
-        lossFn: (NeuralNetwork) -> Float = { n -> n.predict(trainingFeatures).meanStandardError(trainingValues) },
+        lossFn: (NeuralNetwork) -> Float = { n -> meanStandardError(n.predict(trainingFeatures), trainingValues) },
     ): NeuralNetwork {
 
-        require(trainingWeights == null || trainingWeights.size == trainingFeatures.size) {
-            "Sample weights size must match number of training samples"
+        require(trainingWeights == null || trainingWeights.size == trainingFeatures.rows) {
+            "Sample weights size (${trainingWeights?.size}) must match number of training samples (${trainingFeatures.rows})"
         }
 
-        val x = featureTransforms?.fitAndTransform(trainingFeatures) ?: trainingFeatures
-        val y = valueTransforms?.fitAndTransform(trainingValues) ?: trainingValues
+        // Fit transforms once up-front
+        val x: Tensor = featureTransforms?.fitAndTransform(trainingFeatures) ?: trainingFeatures
+        val y: Tensor = valueTransforms?.fitAndTransform(trainingValues) ?: trainingValues
 
         var bestLoss = Float.POSITIVE_INFINITY
         var bestModel: NeuralNetwork = this.clone()
@@ -218,22 +184,36 @@ data class NeuralNetwork(
         for (epoch in 1..maxEpochs) {
             if (shuffle) indices.shuffle()
 
-            for (batchStart in indices.indices step batchSize) {
+            var batchStart = 0
+            while (batchStart < indices.size) {
                 val batchEnd = min(batchStart + batchSize, indices.size)
-                val batchIndices = indices.subList(batchStart, batchEnd)
+                val batchSeqIdx = indices.subList(batchStart, batchEnd)
 
-                val batchFeatures = batchIndices.map { x[it] }.toTypedArray()
-                val batchTargetIndices = batchIndices.flatMap { seqIdx ->
+                // gather feature rows by sample
+                val batchX = gatherRows(x, batchSeqIdx)
+
+                // target rows: expand each sample → its token rows
+                val tokenRowIdx = batchSeqIdx.flatMap { seqIdx ->
                     (seqIdx * tokensPerSample until (seqIdx + 1) * tokensPerSample)
                 }
-                val batchLabels = batchTargetIndices.map { y[it] }.toTypedArray()
-                val batchWeights = trainingWeights?.let { weights ->
-                    batchIndices.map { weights[it] }.toFloatArray()
+                val batchY = gatherRows(y, tokenRowIdx)
+
+                // expand sample weights (if any) to per-token rows
+                val weightsExpanded: FloatArray? = trainingWeights?.let { w ->
+                    val arr = FloatArray(tokenRowIdx.size)
+                    var pos = 0
+                    for (seqIdx in batchSeqIdx) {
+                        val wv = w[seqIdx]
+                        repeat(tokensPerSample) { arr[pos++] = wv }
+                    }
+                    arr
                 }
 
-                val batchPredictions = predict(batchFeatures, isTraining = true, skipFeatureTransform = true)
-                backward(batchPredictions, batchLabels, batchWeights)
+                val pred = predict(batchX, isTraining = true, skipFeatureTransform = true)
+                backward(pred, batchY, weightsExpanded)
                 updateParameters()
+
+                batchStart = batchEnd
             }
 
             val loss = lossFn(this)
@@ -248,31 +228,17 @@ data class NeuralNetwork(
         return bestModel
     }
 
-    /**
-     * Trains the neural network on streaming data using mini-batch gradient descent with early stopping.
-     *
-     * @receiver The neural network instance to train.
-     * @param source A lambda that provides a lazy [Sequence] of input-output pairs, where each pair is a feature vector ([FloatArray])
-     *               and its corresponding label vector ([FloatArray]).
-     * @param batchSize Number of samples per training batch. Default is 1024.
-     * @param maxEpochs Maximum number of full passes over the data. Default is 20.
-     * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
-     * @param testFrac Fraction of each batch reserved for testing/validation. Range: 0.0–1.0. Default is 0.1.
-     * @param shuffle Whether to shuffle each batch before splitting into train/test subsets. Default is true.
-     * @param lossFn Function to compute loss given predicted and actual matrices; defaults to mean standard error.
-     * @param saveModelPath Optional path to save the model on every improvement. If null, no saving occurs.
-     * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
-     */
+    // -------------------- Train (streaming, dense labels per sequence) -----
+
     fun trainStreaming(
-        source: () -> Sequence<Pair<FloatArray, Array<FloatArray>>>,
+        source: () -> Sequence<Pair<FloatArray, Tensor>>,
         batchSize: Int = 1024,
         maxEpochs: Int = 20,
         patience: Int = 5,
         testFrac: Float = 0.1f,
         shuffle: Boolean = true,
         trace: Boolean = true,
-        lossFn: (pred: Matrix, actual: Matrix) -> Float =
-            { p, a -> p.meanStandardError(a) },
+        lossFn: (pred: Tensor, actual: Tensor) -> Float = { p, a -> meanStandardError(p, a) },
         comprehensiveLossFn: ((NeuralNetwork) -> Float)? = null,
         saveModelPath: String? = null,
     ): NeuralNetwork {
@@ -283,67 +249,75 @@ data class NeuralNetwork(
 
         repeat(maxEpochs) { epoch ->
             val bx = mutableListOf<FloatArray>()
-            val by = mutableListOf<Array<FloatArray>>()
+            var by = mutableListOf<Tensor>() // keep as sequences of rows, convert later
             var runningTrainLoss = 0.0f
             var runningTestLoss = 0.0f
             var testSamples = 0
 
             for ((inputSeq, targetSeqs) in source()) {
-                bx += inputSeq; by += targetSeqs
+                bx += inputSeq
+                by += targetSeqs
                 if (bx.size == batchSize) {
-                    // --- split batch --------------------------------------------------
+                    // --- split batch by sequences -----------------------------------
                     val seqSplitter = SequentialBatchSplitter()
-                    val (xTrainRaw, yTrainRawList, xTestRaw, yTestRawList) =
-                        seqSplitter.splitBatch(
-                            bx.toTypedArray(), by.toTypedArray(),
-                            testFraction = testFrac, shuffle = shuffle
-                        )
+                    val (xTrainRaw, yTrainRawList, xTestRaw, yTestRawList) = seqSplitter.splitBatch(
+                        Tensor(bx.size, bx[0].size) { r, c -> bx[r][c] },
+                        by.toTypedArray(),
+                        testFraction = testFrac,
+                        shuffle = shuffle
+                    )
 
-                    // --- fit+transform *only* on training slice ----------------------
-                    val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
-                    val yTrainFlat = yTrainRawList.flatMap { it.toList() }.toTypedArray()
-                    val yTrain = valueTransforms?.fitAndTransform(yTrainFlat) ?: yTrainFlat
+                    // --- features: fit+transform ONLY on train ----------------------
+                    val xTrain: Tensor = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
+
+                    // --- labels: flatten lists of sequences -> Tensor ---------------
+                    val yTrainTensor = concatSequencesToTensor(yTrainRawList.toList())
+                    val yTrain: Tensor = valueTransforms?.fitAndTransform(yTrainTensor) ?: yTrainTensor
 
                     // --- train step ---------------------------------------------------
                     val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
                     backward(predTrain, yTrain)
                     updateParameters()
 
-                    // --- evaluate on test slice (do NOT refit transforms) ------------
-                    val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
-                    val yTestFlat = yTestRawList.flatMap { it.toList() }.toTypedArray()
-                    val yTest = valueTransforms?.apply(yTestFlat) ?: yTestFlat
+                    // --- evaluate on test slice --------------------------------------
+                    val xTest: Tensor = featureTransforms?.apply(xTestRaw) ?: xTestRaw
+                    val yTestTensor = concatSequencesToTensor(yTestRawList.toList())
+                    val yTest: Tensor = valueTransforms?.apply(yTestTensor) ?: yTestTensor
+
                     val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
 
-                    runningTrainLoss += lossFn(predTrain, yTrain) * xTrain.size
-                    runningTestLoss += lossFn(predTest, yTest) * xTest.size
-                    testSamples += xTest.size
+                    runningTrainLoss += lossFn(predTrain, yTrain) * xTrain.rows
+                    runningTestLoss += lossFn(predTest, yTest) * xTest.rows
+                    testSamples += xTest.rows
 
                     bx.clear(); by.clear()
                 }
             }
 
-            // left-overs
+            // leftovers --------------------------------------------------------------
             if (bx.isNotEmpty()) {
                 val seqSplitter = SequentialBatchSplitter()
                 val (xT, yTList, xv, yvList) = seqSplitter.splitBatch(
-                    bx.toTypedArray(), by.toTypedArray(),
-                    testFraction = testFrac, shuffle = shuffle
+                    Tensor(bx.size, bx[0].size) { r, c -> bx[r][c] },
+                    by.toTypedArray(),
+                    testFraction = testFrac,
+                    shuffle = shuffle
                 )
-                val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
-                val yTfFlat = yTList.flatMap { it.toList() }.toTypedArray()
-                val yTf = valueTransforms?.fitAndTransform(yTfFlat) ?: yTfFlat
+
+                val xTf: Tensor = featureTransforms?.fitAndTransform(xT) ?: xT
+                val yTfTensor = concatSequencesToTensor(yTList.toList())
+                val yTf: Tensor = valueTransforms?.fitAndTransform(yTfTensor) ?: yTfTensor
                 val predT = predict(xTf, true, skipFeatureTransform = true)
                 backward(predT, yTf); updateParameters()
 
-                val xv2 = featureTransforms?.apply(xv) ?: xv
-                val yvFlat = yvList.flatMap { it.toList() }.toTypedArray()
-                val yv2 = valueTransforms?.apply(yvFlat) ?: yvFlat
+                val xv2: Tensor = featureTransforms?.apply(xv) ?: xv
+                val yvTensor = concatSequencesToTensor(yvList.toList())
+                val yv2: Tensor = valueTransforms?.apply(yvTensor) ?: yvTensor
                 val predV = predict(xv2, false, skipFeatureTransform = true)
 
-                runningTrainLoss += lossFn(predT, yTf) * xTf.size
-                runningTestLoss += lossFn(predV, yv2) * xv2.size
-                testSamples += xv2.size
+                runningTrainLoss += lossFn(predT, yTf) * xTf.rows
+                runningTestLoss += lossFn(predV, yv2) * xv2.rows
+                testSamples += xv2.rows
             }
 
             val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
@@ -355,52 +329,25 @@ data class NeuralNetwork(
                 bestLoss = epochTestLoss
                 best = this.clone()
                 epochsWithoutImprovement = 0
-                
-                // Save model to disk if saveModelPath is provided
+
                 saveModelPath?.let { path ->
                     try {
                         best.saveToFile(path)
-                        if (trace) {
-                            println("Model saved to $path (loss: $epochTestLoss)")
-                        }
+                        if (trace) println("Model saved to $path (loss: $epochTestLoss)")
                     } catch (e: Exception) {
-                        if (trace) {
-                            println("Warning: Failed to save model to $path: ${e.message}")
-                        }
+                        if (trace) println("Warning: Failed to save model to $path: ${e.message}")
                     }
                 }
             } else if (++epochsWithoutImprovement >= patience) {
-                if (trace)
-                    println("early stop at epoch $epoch")
+                if (trace) println("early stop at epoch $epoch")
                 return best
             }
         }
         return best
     }
 
-    /**
-     * Memory-efficient training on streaming data using sparse targets and categorical cross-entropy.
-     * 
-     * This method dramatically reduces memory usage compared to trainStreaming() by working directly
-     * with sparse target representations (token IDs) instead of dense one-hot vectors.
-     * 
-     * Memory comparison for vocab_size=50K, batch_size=1024, seq_length=512:
-     * - trainStreaming (dense): ~200GB RAM for targets alone
-     * - trainStreamingSparse: ~4MB RAM for targets
-     *
-     * @param source A lambda that provides a lazy [Sequence] of input-output pairs with sparse targets,
-     *               where each pair is a feature vector ([FloatArray]) and sparse target array ([IntArray]).
-     * @param batchSize Number of samples per training batch. Default is 1024.
-     * @param maxEpochs Maximum number of full passes over the data. Default is 20.
-     * @param patience Number of consecutive epochs without loss improvement before early stopping. Default is 5.
-     * @param testFrac Fraction of each batch reserved for testing/validation. Range: 0.0–1.0. Default is 0.1.
-     * @param shuffle Whether to shuffle each batch before splitting into train/test subsets. Default is true.
-     * @param lossFn Function to compute sparse categorical cross-entropy loss given predictions and sparse targets.
-     * @param comprehensiveLossFn Optional comprehensive loss function for final evaluation.
-     * @param trace Whether to print training progress. Default is true.
-     * @param saveModelPath Optional path to save the model on every improvement. If null, no saving occurs.
-     * @return A clone of this [NeuralNetwork] corresponding to the epoch with the best observed test loss.
-     */
+    // -------------------- Train (streaming, sparse targets) ----------------
+
     fun trainStreamingSparse(
         source: () -> Sequence<Pair<FloatArray, IntArray>>,
         batchSize: Int = 1024,
@@ -409,9 +356,9 @@ data class NeuralNetwork(
         testFrac: Float = 0.1f,
         shuffle: Boolean = true,
         trace: Boolean = true,
-        lossFn: (pred: Matrix, sparseTargets: IntArray) -> Float =
+        lossFn: (pred: Tensor, sparseTargets: IntArray) -> Float =
             { p, s -> sparseCategoricalCrossEntropy(p, s) },
-        probeFn: () -> Unit = {  },
+        probeFn: () -> Unit = { },
         comprehensiveLossFn: ((NeuralNetwork) -> Float)? = null,
         saveModelPath: String? = null,
     ): NeuralNetwork {
@@ -431,61 +378,56 @@ data class NeuralNetwork(
             for ((inputSeq, targetSeq) in source()) {
                 bx += inputSeq; by += targetSeq
                 if (bx.size == batchSize) {
-                    // --- split batch --------------------------------------------------
                     val tokenSplitter = TokenBatchSplitter()
-                    val (xTrainRaw, yTrainRaw, xTestRaw, yTestRaw) =
-                        tokenSplitter.splitBatch(
-                            bx.toTypedArray(), by.toTypedArray(),
-                            testFraction = testFrac, shuffle = shuffle
-                        )
+                    val (xTrainRaw, yTrainRaw, xTestRaw, yTestRaw) = tokenSplitter.splitBatch(
+                        Tensor(bx.size, bx[0].size) { r, c -> bx[r][c] },
+                        by.toTypedArray(), testFraction = testFrac, shuffle = shuffle
+                    )
 
-                    // --- fit+transform *only* on training slice ----------------------
-                    val xTrain = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
-                    val yTrainFlat = yTrainRaw.flatMap { it.toList() }.toIntArray()
+                    val xTrain: Tensor = featureTransforms?.fitAndTransform(xTrainRaw) ?: xTrainRaw
+                    val yTrainFlat: IntArray = yTrainRaw.flatMap { it.toList() }.toIntArray()
 
-                    // --- train step ---------------------------------------------------
                     val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
                     backwardSparse(predTrain, yTrainFlat)
                     updateParameters()
 
-                    // --- evaluate on test slice (do NOT refit transforms) ------------
-                    val xTest = featureTransforms?.apply(xTestRaw) ?: xTestRaw
-                    val yTestFlat = yTestRaw.flatMap { it.toList() }.toIntArray()
+                    val xTest: Tensor = featureTransforms?.apply(xTestRaw) ?: xTestRaw
+                    val yTestFlat: IntArray = yTestRaw.flatMap { it.toList() }.toIntArray()
 
-                    runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.size
+                    runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.rows
 
-                    if (xTest.isNotEmpty()) {
+                    if (xTest.rows > 0) {
                         val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
-                        runningTestLoss += lossFn(predTest, yTestFlat) * xTest.size
-                        testSamples += xTest.size
+                        runningTestLoss += lossFn(predTest, yTestFlat) * xTest.rows
+                        testSamples += xTest.rows
                     }
 
                     bx.clear(); by.clear()
                 }
-                if (iter.rem(100) == 0)
-                    probeFn.invoke()
+                if (iter.rem(100) == 0) probeFn.invoke()
                 iter++
             }
 
-            // left-overs
+            // leftovers
             if (bx.isNotEmpty()) {
                 val tokenSplitter = TokenBatchSplitter()
                 val (xT, yT, xv, yv) = tokenSplitter.splitBatch(
-                    bx.toTypedArray(), by.toTypedArray(),
+                    Tensor(bx.size, bx[0].size) { r, c -> bx[r][c] },
+                    by.toTypedArray(),
                     testFraction = testFrac, shuffle = shuffle
                 )
-                val xTf = featureTransforms?.fitAndTransform(xT) ?: xT
+                val xTf: Tensor = featureTransforms?.fitAndTransform(xT) ?: xT
                 val yTfFlat = yT.flatMap { it.toList() }.toIntArray()
                 val predT = predict(xTf, true, skipFeatureTransform = true)
                 backwardSparse(predT, yTfFlat); updateParameters()
 
-                val xv2 = featureTransforms?.apply(xv) ?: xv
+                val xv2: Tensor = featureTransforms?.apply(xv) ?: xv
                 val yvFlat = yv.flatMap { it.toList() }.toIntArray()
                 val predV = predict(xv2, false, skipFeatureTransform = true)
 
-                runningTrainLoss += lossFn(predT, yTfFlat) * xTf.size
-                runningTestLoss += lossFn(predV, yvFlat) * xv2.size
-                testSamples += xv2.size
+                runningTrainLoss += sparseCategoricalCrossEntropy(predT, yTfFlat) * xTf.rows
+                runningTestLoss += sparseCategoricalCrossEntropy(predV, yvFlat) * xv2.rows
+                testSamples += xv2.rows
             }
 
             val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
@@ -497,56 +439,35 @@ data class NeuralNetwork(
                 bestLoss = epochTestLoss
                 best = this.clone()
                 epochsWithoutImprovement = 0
-                
-                // Save model to disk if saveModelPath is provided
+
                 saveModelPath?.let { path ->
                     try {
                         best.saveToFile(path)
-                        if (trace) {
-                            println("Model saved to $path (loss: $epochTestLoss)")
-                        }
+                        if (trace) println("Model saved to $path (loss: $epochTestLoss)")
                     } catch (e: Exception) {
-                        if (trace) {
-                            println("Warning: Failed to save model to $path: ${e.message}")
-                        }
+                        if (trace) println("Warning: Failed to save model to $path: ${e.message}")
                     }
                 }
             } else if (++epochsWithoutImprovement >= patience) {
-                if (trace)
-                    println("early stop at epoch $epoch")
+                if (trace) println("early stop at epoch $epoch")
                 return best
             }
         }
         return best
     }
 
-    /**
-     * Performs a single training step on a batch of raw input and label matrices.
-     *
-     * This method:
-     * 1. Fits and transforms the raw feature and label matrices using configured transforms.
-     * 2. Executes a forward pass in training mode (skipping feature transforms).
-     * 3. Performs backpropagation and updates model parameters using Adam optimizer.
-     *
-     * @param xRaw Raw feature matrix (samples × features) to train on.
-     * @param yRaw Raw label matrix (samples × outputs) corresponding to [xRaw].
-     */
-    private fun trainOnBatch(xRaw: Matrix, yRaw: Matrix) {
-        // 1. fit + transform in ONE call; each column transform updates itself
-        val x = featureTransforms?.fitAndTransform(xRaw) ?: xRaw
-        val y = valueTransforms?.fitAndTransform(yRaw) ?: yRaw
+    // -------------------- One-batch helper ---------------------------------
 
-        // 2. forward / backward / Adam
+    private fun trainOnBatch(xRaw: Tensor, yRaw: Tensor) {
+        val x: Tensor = featureTransforms?.fitAndTransform(xRaw) ?: xRaw
+        val y: Tensor = valueTransforms?.fitAndTransform(yRaw) ?: yRaw
         val pred = predict(x, isTraining = true, skipFeatureTransform = true)
         backward(pred, y)
         updateParameters()
     }
 
-    /**
-     * Creates a deep copy of the current neural network including internal state.
-     *
-     * @return A cloned instance of this neural network.
-     */
+    // -------------------- Clone / Save / Load -------------------------------
+
     fun clone(): NeuralNetwork =
         NeuralNetwork(
             layers = layers.map { it.clone() },
@@ -562,11 +483,6 @@ data class NeuralNetwork(
             this.lastInput = this@NeuralNetwork.lastInput?.deepCopy()
         }
 
-    /**
-     * Saves this neural network to a file using Java serialization.
-     *
-     * @param filePath Path where to save the model.
-     */
     fun saveToFile(filePath: String) {
         try {
             ObjectOutputStream(FileOutputStream(filePath)).use { oos ->
@@ -579,13 +495,7 @@ data class NeuralNetwork(
 
     companion object {
         private const val serialVersionUID = 1L
-        
-        /**
-         * Loads a neural network from a file using Java deserialization.
-         *
-         * @param filePath Path to the saved model file.
-         * @return The loaded neural network.
-         */
+
         fun loadFromFile(filePath: String): NeuralNetwork {
             return try {
                 ObjectInputStream(FileInputStream(filePath)).use { ois ->
@@ -598,23 +508,12 @@ data class NeuralNetwork(
             }
         }
 
-        /**
-         * Load a model from *path* if the file exists, otherwise create one with the
-         * supplied [creator] lambda.
-         *
-         * @param path    Path to the serialized model file.
-         * @param creator Lambda that builds a brand‑new NeuralNetwork when the file
-         *                is missing (or you want to start from scratch).
-         */
         fun loadOrCreate(path: String, creator: () -> NeuralNetwork): NeuralNetwork {
             val f = File(path)
             return if (f.isFile && f.canRead()) {
                 try {
-                    loadFromFile(path).also {
-                        println("✅ Loaded model from $path")
-                    }
+                    loadFromFile(path).also { println("✅ Loaded model from $path") }
                 } catch (e: Exception) {
-                    // If the file is corrupted we fall back to a fresh model
                     println("⚠️  Failed to load model from $path (${e.message}) – creating a new one.")
                     creator()
                 }
@@ -623,5 +522,105 @@ data class NeuralNetwork(
                 creator()
             }
         }
+    }
+
+    // ======================= Private helpers ===============================
+
+    /** Gather arbitrary rows from [src] into a new Tensor (rows = indices.size). */
+    private fun gatherRows(src: Tensor, indices: List<Int>): Tensor {
+        if (indices.isEmpty()) return Tensor(0, src.cols)
+        val out = Tensor(indices.size, src.cols)
+        var r = 0
+        while (r < indices.size) {
+            out.copyRowFrom(src, indices[r], r)
+            r++
+        }
+        return out
+    }
+
+    /** Flatten a list of (sequence → rows) into one Tensor. */
+    private fun concatSequencesToTensor(seqs: List<Tensor>): Tensor {
+        if (seqs.isEmpty()) return Tensor(0, 0)
+        val cols = if (seqs[0].isEmpty()) 0 else seqs[0][0].size
+        var totalRows = 0
+        for (s in seqs) totalRows += s.size
+        val out = Tensor(totalRows, cols)
+        var r = 0
+        for (s in seqs) {
+            for (row in s) {
+                var c = 0
+                while (c < cols) { out[r, c] = row[c]; c++ }
+                r++
+            }
+        }
+        return out
+    }
+
+    /** Mean squared error between two tensors. */
+    private fun meanStandardError(pred: Tensor, actual: Tensor): Float {
+        require(pred.rows == actual.rows && pred.cols == actual.cols) {
+            "MSE shape mismatch: pred=${pred.rows}x${pred.cols}, actual=${actual.rows}x${actual.cols}"
+        }
+        val n = pred.rows * pred.cols
+        var i = 0
+        var sum = 0.0f
+        while (i < n) {
+            val d = pred.data[i] - actual.data[i]
+            sum += d * d
+            i++
+        }
+        return sum / n
+    }
+
+    /** Sparse CE loss: mean over rows of -log softmax(row)[target]. */
+    private fun sparseCategoricalCrossEntropy(logits: Tensor, targets: IntArray): Float {
+        require(logits.rows == targets.size) {
+            "Targets length (${targets.size}) must equal logits rows (${logits.rows})"
+        }
+        val R = logits.rows
+        val C = logits.cols
+        var loss = 0.0f
+        var r = 0
+        while (r < R) {
+            val t = targets[r]
+            require(t in 0 until C) { "Target id $t out of [0, $C)" }
+            // log-softmax for row r
+            var maxV = logits[r, 0]
+            var c = 1
+            while (c < C) { val v = logits[r, c]; if (v > maxV) maxV = v; c++ }
+            var sumExp = 0.0
+            c = 0
+            while (c < C) { sumExp += kotlin.math.exp((logits[r, c] - maxV).toDouble()); c++ }
+            val logProbT = (logits[r, t] - maxV).toFloat() - ln(sumExp).toFloat()
+            loss += (-logProbT)
+            r++
+        }
+        return loss / R
+    }
+
+    /** d/dlogits of sparse CE (with softmax): probs - onehot(target). Optional per-row weights. */
+    private fun sparseCategoricalCrossEntropyGradients(
+        logits: Tensor,
+        targets: IntArray,
+        sampleWeights: FloatArray? = null
+    ): Tensor {
+        require(logits.rows == targets.size) {
+            "Targets length (${targets.size}) must equal logits rows (${logits.rows})"
+        }
+        val probs = logits.softmaxRows()
+        val out = Tensor(probs.rows, probs.cols)
+        var r = 0
+        while (r < probs.rows) {
+            val t = targets[r]
+            val w = sampleWeights?.getOrNull(r) ?: 1.0f
+            var c = 0
+            while (c < probs.cols) {
+                val oneHot = if (c == t) 1.0f else 0.0f
+                out[r, c] = (probs[r, c] - oneHot) * w
+                c++
+            }
+            r++
+        }
+        return out
     }
 }

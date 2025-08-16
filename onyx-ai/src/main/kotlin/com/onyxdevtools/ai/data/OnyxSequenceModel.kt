@@ -11,6 +11,5 @@ data class SequenceEntry(
     @Identifier
     var id: Long = Random.nextLong(),
     @Attribute
-    var data: MutableMap<String, Pair<FloatArray, Array<FloatArray>>> = hashMapOf(),
+    var data: MutableMap<String, Pair<FloatArray, IntArray>> = hashMapOf(),
 ) : ManagedEntity()
-
