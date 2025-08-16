@@ -1,6 +1,7 @@
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 #include <jni.h>
+#include <algorithm>  // for std::min
 
 // Metal context structure
 typedef struct {
@@ -594,16 +595,45 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_copyFromGPU(JNIEnv* env, jc
         // FIXED: Use proper bridge cast to access the buffer without transferring ownership
         id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)((void*)bufferHandle);
         if (!buffer) return NULL;
-        
+
         jfloatArray result = env->NewFloatArray(size);
         if (!result) return NULL;
-        
+
         float* bufferData = static_cast<float*>([buffer contents]);
         env->SetFloatArrayRegion(result, 0, size, bufferData);
-        
+
         return result;
     }
 }
+
+    // void copyFromGPUInto(long ctx, long bufferHandle, float[] dst, int size)
+    JNIEXPORT void JNICALL
+    Java_com_onyxdevtools_ai_compute_MetalComputeBackend_copyFromGPUInto(
+        JNIEnv* env, jclass, jlong /*contextHandle*/, jlong bufferHandle,
+        jfloatArray dst, jint size) {
+      @autoreleasepool {
+        if (!dst || size <= 0) return;
+
+        id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)((void*)bufferHandle);
+        if (!buffer) return;
+
+        const jsize dstLen = env->GetArrayLength(dst);
+        if (dstLen <= 0) return;
+
+        size_t maxFloatsByBuffer = buffer.length / sizeof(jfloat);
+        jsize toCopy = (jsize)std::min((size_t)dstLen, (size_t)std::min((size_t)size, maxFloatsByBuffer));
+        if (toCopy <= 0) return;
+
+        const float* src = (const float*)[buffer contents];
+        // Critical section avoids extra pin/copy gymnastics inside the JVM.
+        jboolean isCopy = JNI_FALSE;
+        jfloat* dstPtr = (jfloat*)env->GetPrimitiveArrayCritical(dst, &isCopy);
+        if (!dstPtr) return;
+
+       memcpy(dstPtr, src, (size_t)toCopy * sizeof(jfloat));
+       env->ReleasePrimitiveArrayCritical(dst, dstPtr, 0);
+      }
+    }
 
 // Release GPU buffer
 JNIEXPORT void JNICALL

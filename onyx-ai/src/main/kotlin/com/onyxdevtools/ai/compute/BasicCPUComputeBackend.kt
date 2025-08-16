@@ -113,13 +113,20 @@ open class BasicCPUComputeBackend : ComputeBackend {
     override fun deepCopy(matrix: Matrix): Matrix {
         return matrix.map { it.copyOf() }.toTypedArray()
     }
-    
+
     override fun flatten(matrix: Matrix): FloatArray {
-        return buildList { 
-            for (row in matrix) {
-                addAll(row.asList())
-            }
-        }.toFloatArray()
+        // 1) figure out total size (no boxing)
+        var total = 0
+        for (row in matrix) total += row.size
+
+        // 2) single allocation + bulk copies
+        val out = FloatArray(total)
+        var dst = 0
+        for (row in matrix) {
+            System.arraycopy(row, 0, out, dst, row.size)
+            dst += row.size
+        }
+        return out
     }
 
     /**

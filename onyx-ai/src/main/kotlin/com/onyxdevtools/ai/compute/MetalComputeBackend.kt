@@ -164,6 +164,8 @@ class MetalComputeBackend : CPUComputeBackend() {
         @JvmStatic
         external fun copyFromGPU(contextHandle: Long, bufferHandle: Long, size: Int): FloatArray
 
+        @JvmStatic
+        external fun copyFromGPUInto(contextHandle: Long, bufferHandle: Long, destination: FloatArray, size: Int)
         /**
          * Release GPU buffer
          */
@@ -277,7 +279,8 @@ class MetalComputeBackend : CPUComputeBackend() {
                 return super.matrixMultiply(a, b)
             }
 
-            val resultData = copyFromGPU(metalContext, bufferResult, resultSize)
+            val resultData = FloatArray(resultSize)
+            copyFromGPUInto(metalContext, bufferResult, resultData, resultSize)
             val result = Array(rowsA) { row ->
                 FloatArray(colsB) { col -> resultData[row * colsB + col] }
             }
