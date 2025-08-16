@@ -11,10 +11,11 @@ val basicCompute = BasicCPUComputeBackend()
  * - Iterates over rows: for (row in tensor) { for (x in row) { ... } }
  * - size == number of rows; columnSize == number of columns
  */
-class Tensor (
+class Tensor internal constructor(
     val rows: Int,
     val cols: Int,
-    val data: FloatArray
+    private var data: FloatArray?,
+    private var gpuHandle: Long? = null
 ) : Iterable<Tensor.Row> {
 
     init {
