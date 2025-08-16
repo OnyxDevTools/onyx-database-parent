@@ -187,7 +187,7 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 1024
+    val maxSequenceLength = 512
 
     // Configure neural network
     val embeddingDim = maxSequenceLength

@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 class LLMTrainingTest {
 
     @Test
-//    @Ignore("This test takes a long time to run")
+    @Ignore("This test takes a long time to run")
     fun testLargerDataSetA() {
         // Load full text
         val fullText = File("src/test/resources/alice_full_packed.txt").readText()
