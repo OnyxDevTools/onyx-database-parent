@@ -9,7 +9,9 @@ import kotlin.system.measureNanoTime
 import kotlin.random.Random
 import com.onyxdevtools.ai.Tensor
 import kotlin.system.measureNanoTime
+import kotlin.test.Ignore
 
+@Ignore("Benchmark tests are disabled by default. Enable them manually to see the results.")
 class MatrixMultiplicationBenchmarkTest {
 
     private lateinit var basicCPUComputeBackend: BasicCPUComputeBackend
