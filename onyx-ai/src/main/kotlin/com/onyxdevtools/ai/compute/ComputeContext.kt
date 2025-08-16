@@ -48,6 +48,14 @@ interface ComputeContext {
      * Disposes of the compute context and releases all resources
      */
     fun dispose()
+    /**
+     * Creates a row-vector tensor (1 x n) for broadcasting operations.
+     */
+    fun createRowVector(vector: FloatArray): Tensor
+    /**
+     * Creates a column-vector tensor (m x 1) for broadcasting operations.
+     */
+    fun createColVector(vector: FloatArray): Tensor
 }
 
 /**
@@ -92,5 +100,23 @@ class DefaultComputeContext : ComputeContext {
     
     override fun dispose() {
         // No-op for CPU backend
+    }
+
+    override fun createRowVector(vector: FloatArray): Tensor {
+        val cols = vector.size
+        val t = Tensor(1, cols)
+        val row = t[0]
+        for (j in 0 until cols) {
+            row[j] = vector[j]
+        }
+        return t
+    }
+    override fun createColVector(vector: FloatArray): Tensor {
+        val rows = vector.size
+        val t = Tensor(rows, 1)
+        for (i in 0 until rows) {
+            t[i, 0] = vector[i]
+        }
+        return t
     }
 }

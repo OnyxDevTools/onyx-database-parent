@@ -3,12 +3,15 @@ package com.onyxdevtools.ai.layer.impl
 import Activation
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
+import com.onyxdevtools.ai.compute.ComputeContext
+import com.onyxdevtools.ai.compute.DefaultComputeContext
 import java.util.Random
 import kotlin.math.sqrt
 
 class EmbeddingLayer(
     private val vocabSize: Int,
-    private val embeddingSize: Int
+    private val embeddingSize: Int,
+    private val computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
 
     override var preActivation: Tensor? = null
@@ -37,33 +40,17 @@ class EmbeddingLayer(
         // input shape: (batchSize, sequenceLength), containing token IDs as floats
         val batchSize = input.size
         val sequenceLength = input[0].size
-
-        // Flatten (B, T) → (B*T, D)
-        val outRows = batchSize * sequenceLength
-        val out = Tensor(outRows, embeddingSize)
-
-        val src = weights.data
-        val dst = out.data
-        val width = embeddingSize
-
-        var i = 0
-        var b = 0
-        while (b < batchSize) {
-            var t = 0
-            while (t < sequenceLength) {
-                val tokenId = input[b, t].toInt()
+        // Flatten token IDs and gather corresponding embedding rows via backend
+        val flatIds = IntArray(batchSize * sequenceLength) { idx ->
+            val b = idx / sequenceLength
+            val t = idx % sequenceLength
+            input[b, t].toInt().also { tokenId ->
                 require(tokenId in 0 until vocabSize) {
                     "Token id $tokenId out of range [0, $vocabSize)"
                 }
-                val srcOff = tokenId * width
-                val dstOff = i * width
-                System.arraycopy(src, srcOff, dst, dstOff, width)
-                i++
-                t++
             }
-            b++
         }
-
+        val out = computeContext.backend.gatherRows(weights, flatIds)
         preActivation = out
         output = out
         return out

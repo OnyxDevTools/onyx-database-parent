@@ -3,13 +3,16 @@ package com.onyxdevtools.ai.layer.impl
 import Activation
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
+import com.onyxdevtools.ai.compute.ComputeContext
+import com.onyxdevtools.ai.compute.DefaultComputeContext
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
-    private val embeddingSize: Int
+    private val embeddingSize: Int,
+    private val computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
 
     override var preActivation: Tensor? = null
@@ -50,22 +53,12 @@ class PositionalEncodingLayer(
         val effectiveSeqLen = minOf(input.size, tokensPerSample)
         val width = embeddingSize
 
-        // Build a Tensor with identical shape to input and fill rows by repeating PE rows
-        val posEnc = Tensor(input.size, width)
-        val src = positionalEncoding.data
-        val dst = posEnc.data
-
-        var r = 0
-        while (r < input.size) {
-            val t = r % effectiveSeqLen                  // position within current sequence
-            val srcOff = t * width
-            val dstOff = r * width
-            System.arraycopy(src, srcOff, dst, dstOff, width)
-            r++
-        }
-
+        // Build positional encoding for each row via backend gatherRows
+        val rows = input.size
+        val indices = IntArray(rows) { r -> r % effectiveSeqLen }
+        val posEnc = computeContext.backend.gatherRows(positionalEncoding, indices)
         preActivation = input
-        output = input.add(posEnc) // element-wise addition (Tensor + Tensor)
+        output = computeContext.backend.add(input, posEnc)
         return output!!
     }
 

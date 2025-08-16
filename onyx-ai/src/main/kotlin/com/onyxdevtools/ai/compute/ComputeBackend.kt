@@ -58,6 +58,13 @@ interface ComputeBackend {
      * Applies softmax activation function
      */
     fun softmax(tensor: Tensor): Tensor
+    /**
+     * Gathers rows from a parameter matrix according to the given indices.
+     * @param params  The source matrix (numParams x cols)
+     * @param indices The output row indices into params (length = output rows)
+     * @return Tensor of shape (indices.size x params.columnSize)
+     */
+    fun gatherRows(params: Tensor, indices: IntArray): Tensor
 
     /**
      * Gets the backend type identifier

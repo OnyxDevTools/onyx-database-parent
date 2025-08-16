@@ -411,4 +411,19 @@ open class BasicCPUComputeBackend : ComputeBackend {
         }
         return out
     }
+
+    override fun gatherRows(params: Tensor, indices: IntArray): Tensor {
+        val outRows = indices.size
+        val cols = params.columnSize
+        if (outRows == 0 || cols == 0) return Tensor(outRows, cols)
+        val out = Tensor(outRows, cols)
+        maybeParallelByRows(outRows, cols) { rs, re ->
+            for (r in rs until re) {
+                val src = params[indices[r]]
+                val dst = out[r]
+                for (c in 0 until cols) dst[c] = src[c]
+            }
+        }
+        return out
+    }
 }

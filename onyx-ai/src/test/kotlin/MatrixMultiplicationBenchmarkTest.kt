@@ -40,8 +40,8 @@ private fun createRandomMatrix(rows: Int, cols: Int): Tensor {
 
         println("\n--- Matrix Multiplication Benchmarks (CPU Sequential vs. CPU Parallel vs. Metal) ---")
 
-        val testDimensions = (1 .. 100).map {
-            Triple(it, it, it)
+        val testDimensions = (1 .. 100).map { i ->
+            Triple(i, 128, 1024)
         }
 
         val measurementIterations = 1000 // Number of actual measurement runs
@@ -51,6 +51,16 @@ private fun createRandomMatrix(rows: Int, cols: Int): Tensor {
             val matrixB = createRandomMatrix(colsA, colsB) // colsA must equal rowsB
 
             println("\nBenchmarking ${rowsA}x${colsA} * ${colsA}x${colsB} (Total Ops: ${rowsA.toLong() * colsA.toLong() * colsB.toLong()})")
+
+            // --- Metal Benchmark ---
+            var totalMetalTime = 0L
+            for (i in 0 until measurementIterations) {
+                totalMetalTime += measureNanoTime {
+                    metalBackend.matrixMultiply(matrixA, matrixB)
+                }
+            }
+            val metalTime = totalMetalTime / measurementIterations
+            println("  Metal:          $metalTime ms")
 
             // --- CPU Sequential Benchmark ---
             var totalCpuSequentialTime = 0L
@@ -82,15 +92,6 @@ private fun createRandomMatrix(rows: Int, cols: Int): Tensor {
             val results = vectorCpuTime / measurementIterations
             println("  CPU Parallel Vector:   $results ms")
 
-            // --- Metal Benchmark ---
-            var totalMetalTime = 0L
-            for (i in 0 until measurementIterations) {
-                totalMetalTime += measureNanoTime {
-                    metalBackend.matrixMultiply(matrixA, matrixB)
-                }
-            }
-            val metalTime = totalMetalTime / measurementIterations
-            println("  Metal:          $metalTime ms")
         }
     }
 

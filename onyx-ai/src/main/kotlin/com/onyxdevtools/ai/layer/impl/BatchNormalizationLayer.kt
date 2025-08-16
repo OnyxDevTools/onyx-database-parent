@@ -14,7 +14,13 @@ import kotlin.math.sqrt
  *
  * @param size The number of features to normalize.
  */
-class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
+import com.onyxdevtools.ai.compute.ComputeContext
+import com.onyxdevtools.ai.compute.DefaultComputeContext
+
+class BatchNormalizationLayer(
+    private val size: Int,
+    private val computeContext: ComputeContext = DefaultComputeContext()
+) : Layer, Serializable {
 
     override var output: Tensor? = null
     override var preActivation: Tensor? = null
@@ -68,43 +74,51 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     }
 
     override fun preForward(input: Tensor, isTraining: Boolean): Tensor {
+        val rows = input.rows
+        val cols = input.columnSize
+        // 1) Batch statistics: mean & variance per column
+        val sumCols = computeContext.backend.sumColumns(input)
+        val meanArr = FloatArray(cols) { j -> sumCols[j] / rows }
+        val meanRow = computeContext.createRowVector(meanArr)
+        val centered = computeContext.backend.subtract(input, meanRow)
+
+        val sq = computeContext.backend.elementWiseMultiply(centered, centered)
+        val varSum = computeContext.backend.sumColumns(sq)
+        val varArr = FloatArray(cols) { j -> varSum[j] / rows }
+        val varRow = computeContext.createRowVector(varArr)
+
+        // Update running stats
         if (isTraining) {
-            // Compute batch statistics
-            val meanVector = FloatArray(size) { j -> input.sumOf { it[j].toDouble() }.toFloat() / input.size }
-            val varianceVector = FloatArray(size) { j -> input.sumOf { (it[j] - meanVector[j]).pow(2).toDouble() }.toFloat() / input.size }
-
-            this.mean = meanVector
-            this.variance = varianceVector
-
-            // Normalize using batch statistics
-            this.normalized = Tensor(input.size, input.columnSize) { r, c ->
-                (input[r, c] - meanVector[c]) / sqrt(varianceVector[c] + EPSILON)
-            }
-
-            // Update running statistics (not used for current normalization)
-            for (j in 0 until size) {
-                runningMean[j] = momentum * runningMean[j] + (1.0f - momentum) * meanVector[j]
-                runningVariance[j] = momentum * runningVariance[j] + (1.0f - momentum) * varianceVector[j]
-            }
-        } else {
-            // Use running statistics for inference
-            this.normalized = Tensor(input.size, input.columnSize) { r, c ->
-                (input[r, c] - runningMean[c]) / sqrt(runningVariance[c] + EPSILON)
+            for (j in 0 until cols) {
+                runningMean[j]     = momentum * runningMean[j]     + (1 - momentum) * meanArr[j]
+                runningVariance[j] = momentum * runningVariance[j] + (1 - momentum) * varArr[j]
             }
         }
 
-        // Apply affine transformation
-        this.output = Tensor(input.size, input.columnSize) { r, c ->
-            gamma[c] * this.normalized!![r, c] + beta[c]
-        }
+        // 2) Normalize (use running stats if not training)
+        val normBase = if (isTraining) varRow else computeContext.createRowVector(
+            FloatArray(cols) { j -> runningVariance[j] }
+        )
+        // invStd = 1 / sqrt(var + EPSILON)
+        val invStdRow = computeContext.backend.applyElementWise(
+            computeContext.backend.add(
+                normBase,
+                computeContext.createRowVector(FloatArray(cols) { EPSILON })
+            ), { v -> 1f / sqrt(v) }
+        )
+        this.normalized = computeContext.backend.elementWiseMultiply(centered, invStdRow)
 
+        // 3) Affine transform: gamma * x̂ + beta
+        val gammaRow = computeContext.createRowVector(gamma)
+        val betaRow  = computeContext.createRowVector(beta)
+        this.output = computeContext.backend.add(
+            computeContext.backend.elementWiseMultiply(normalized!!, gammaRow),
+            betaRow
+        )
         return output!!
     }
 
-    // Implement forward to use isTraining from the network
-    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
-        return preForward(input, isTraining)
-    }
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor = preForward(input, isTraining)
 
     /**
      * Computes the backward pass of the batch normalization layer.
@@ -119,45 +133,47 @@ class BatchNormalizationLayer(private val size: Int) : Layer, Serializable {
     ): Tensor {
         checkNotNull(previousLayer) { "BatchNormalization Layer must not be the output layer." }
 
-        // CHANGED:  use delta directly; BN shouldn’t apply activation derivative
-        val adjustedDelta = delta
+        val rows = delta.rows
+        val cols = size
 
-        require(adjustedDelta[0].size == size) {
-            "Batch Normalization layer expects width=$size but got ${adjustedDelta[0].size}"
-        }
+        // Parameter gradients: gradGamma = Σ delta * x̂, gradBeta = Σ delta
+        val gradGammaArr = computeContext.backend.sumColumns(
+            computeContext.backend.elementWiseMultiply(delta, normalized!!)
+        )
+        val gradBetaArr = computeContext.backend.sumColumns(delta)
+        gradGamma = gradGammaArr
+        gradBeta = gradBetaArr
 
-        val inverseStdDev = variance!!.map { (1.0f / sqrt(it + EPSILON)) }.toFloatArray()
+        // invStdRow = 1 / sqrt(variance + EPSILON)
+        val invStdRow = computeContext.backend.applyElementWise(
+            computeContext.createRowVector(
+                FloatArray(cols) { j -> variance!![j] + EPSILON }
+            ), { v -> 1f / sqrt(v) }
+        )
 
-        gradGamma = FloatArray(size)
-        gradBeta = FloatArray(size)
+        // dYg = delta * gamma
+        val gammaRow = computeContext.createRowVector(gamma)
+        val dYg = computeContext.backend.elementWiseMultiply(delta, gammaRow)
 
-        for (j in 0 until size) {
-            for (i in adjustedDelta.indices) {
-                gradGamma!![j] += adjustedDelta[i][j] * normalized!![i][j]
-                gradBeta!![j] += adjustedDelta[i][j]
-            }
-            // CHANGED:  no “/ featureSize” here – keep sums
-        }
+        // sumDY = Σ dYg, sumDYX = Σ dYg * x̂
+        val sumDY  = computeContext.backend.sumColumns(dYg)
+        val sumDYX = computeContext.backend.sumColumns(
+            computeContext.backend.elementWiseMultiply(dYg, normalized!!)
+        )
+        val sumDYRow  = computeContext.createRowVector(sumDY)
+        val sumDYXRow = computeContext.createRowVector(sumDYX)
 
-        val rows = adjustedDelta.rows
-        val cols = size // or adjustedDelta.cols
-        val out = Tensor(rows, cols)
+        // dx_hat = (rows * dYg - sumDYRow - x̂ * sumDYXRow) * (1/rows)
+        val num = computeContext.backend.subtract(
+            computeContext.backend.scalarMultiply(dYg, rows.toFloat()),
+            computeContext.backend.add(sumDYRow,
+                computeContext.backend.elementWiseMultiply(normalized!!, sumDYXRow)
+            )
+        )
+        val dxHat = computeContext.backend.scalarMultiply(num, 1f / rows)
 
-        var r = 0
-        while (r < rows) {
-            val base = r * cols
-            var c = 0
-            while (c < cols) {
-                val xHat = normalized!![r, c]
-                val dY   = adjustedDelta[r, c]
-                out.data[base + c] =
-                    gamma[c] * inverseStdDev[c] *
-                            (featureSize * dY - gradBeta!![c] - xHat * gradGamma!![c]) / featureSize
-                c++
-            }
-            r++
-        }
-        return out
+        // dX = dx_hat * invStdRow
+        return computeContext.backend.elementWiseMultiply(dxHat, invStdRow)
     }
 
     override fun clone(): Layer {

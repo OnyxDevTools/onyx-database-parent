@@ -26,6 +26,7 @@ class MetalComputeBackend : CPUComputeBackend() {
     private val bufferLock = Any()
 
     private val METAL_HIGH_OPS_THRESHOLD = 250_000
+    private val METAL_DIMENS_THRESHOLD = 16
 
     companion object {
         /**
@@ -240,8 +241,8 @@ class MetalComputeBackend : CPUComputeBackend() {
         val rowsB = b.size
         val colsB = b[0].size
 
-        val operations = rowsA.toLong() * colsA.toLong() * colsB
-        if (operations <= METAL_HIGH_OPS_THRESHOLD) super.matrixMultiply(a, b)
+        val operations = rowsA.toLong() * colsA.toLong() * colsB.toLong()
+        if (operations <= METAL_HIGH_OPS_THRESHOLD || minOf(rowsA, colsA, colsB) < METAL_DIMENS_THRESHOLD) return super.matrixMultiply(a, b)
 
         var bufferA = 0L
         var bufferB = 0L

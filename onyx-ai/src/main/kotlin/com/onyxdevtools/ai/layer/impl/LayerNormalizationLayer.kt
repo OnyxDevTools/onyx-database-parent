@@ -41,7 +41,13 @@ import kotlin.math.sqrt
  * @see Layer
  * @see CachedMultiHeadAttentionLayer
  */
-class LayerNormalizationLayer(private val size: Int) : Layer {
+import com.onyxdevtools.ai.compute.ComputeContext
+import com.onyxdevtools.ai.compute.DefaultComputeContext
+
+class LayerNormalizationLayer(
+    private val size: Int,
+    private val computeContext: ComputeContext = DefaultComputeContext()
+) : Layer {
 
     override var output: Tensor? = null
     override var preActivation: Tensor? = null
@@ -65,115 +71,83 @@ class LayerNormalizationLayer(private val size: Int) : Layer {
      * Normalizes the input using layer statistics and applies learned affine transformation.
      */
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
-        val batchSize = input.size
-        mean = FloatArray(batchSize) { i -> input[i].average().toFloat() }
-        variance = FloatArray(batchSize) { i ->
-            input[i].sumOf { (it - mean!![i]).pow(2).toDouble() }.toFloat() / size
-        }
-
-        normalized = Tensor(batchSize, size)
-        output = Tensor(batchSize, size)
-
+        val batchSize = input.rows
         val cols = size
-        for (i in 0 until batchSize) {
-            val mu  = mean!![i]
-            val inv = 1f / sqrt(variance!![i] + EPSILON)  // computed once per row
 
-            var j = 0
-            while (j < cols) {
-                val z = (input[i, j] - mu) * inv
-                normalized!![i, j] = z
-                output!![i, j] = z * gamma[j] + beta[j]
-                j++
-            }
-        }
+        // 1) Compute per-row mean and variance via transpose & column-sum
+        val xT = computeContext.backend.transpose(input)
+        val sumRows = computeContext.backend.sumColumns(xT)
+        val meanArr = FloatArray(batchSize) { i -> sumRows[i] / cols }
+        val meanCol = computeContext.createColVector(meanArr)
 
+        val centered = computeContext.backend.subtract(input, meanCol)
+        val sq = computeContext.backend.elementWiseMultiply(centered, centered)
+        val varSum = computeContext.backend.sumColumns(computeContext.backend.transpose(sq))
+        val varArr = FloatArray(batchSize) { i -> varSum[i] / cols }
+        mean = meanArr
+        variance = varArr
+        val varCol = computeContext.createColVector(varArr)
+
+        // 2) Normalize: (x - mu) / sqrt(var + eps)
+        val invStdCol = computeContext.backend.applyElementWise(
+            computeContext.backend.add(
+                varCol,
+                computeContext.createColVector(FloatArray(batchSize) { EPSILON })
+            ), { v -> 1f / sqrt(v) }
+        )
+        normalized = computeContext.backend.elementWiseMultiply(centered, invStdCol)
+
+        // 3) Affine gamma, beta broadcast across rows
+        val gammaRow = computeContext.createRowVector(gamma)
+        val betaRow = computeContext.createRowVector(beta)
+        output = computeContext.backend.add(
+            computeContext.backend.elementWiseMultiply(normalized!!, gammaRow),
+            betaRow
+        )
         return output!!
     }
 
     override fun backward(
-        currentInput: Tensor?,
-        delta: Tensor,
-        featureSize: Float,
-        nextLayer: Layer?,
-        previousLayer: Layer?,
-        lambda: Float
+        currentInput: Tensor?, delta: Tensor, featureSize: Float,
+        nextLayer: Layer?, previousLayer: Layer?, lambda: Float
     ): Tensor {
-        val x = requireNotNull(currentInput) { "currentInput required" }
+        val width     = size
 
-        val batchSize = delta.size          // rows
-        val width     = this.size           // cols (feature size)
+        // Parameter gradients: gradGamma[c] = Σ_r delta[r,c]*x̂[r,c], gradBeta[c]=Σ_r delta[r,c]
+        gradGamma = computeContext.backend.sumColumns(
+            computeContext.backend.elementWiseMultiply(delta, normalized!!)
+        )
+        gradBeta  = computeContext.backend.sumColumns(delta)
 
-        // --- outputs of this backward step ---
-        val gradInput = Tensor(batchSize, width)
+        // Prepare row-vectors for gamma and invStd: invStd = 1/√(var+eps)
+        val gammaRow = computeContext.createRowVector(gamma)
+        val invStdRow = computeContext.backend.applyElementWise(
+            computeContext.createRowVector(FloatArray(width) { j -> variance!![j] + EPSILON }),
+            { v -> 1f / sqrt(v) }
+        )
 
-        // --- grads wrt gamma/beta (per feature) ---
-        val gradGammaLocal = FloatArray(width) // sum_i delta * normalized
-        val gradBetaLocal  = FloatArray(width) // sum_i delta
+        // dYg = delta * gamma
+        val dYg = computeContext.backend.elementWiseMultiply(delta, gammaRow)
 
-        // --- needed intermediates (per row) ---
-        val gradMean      = FloatArray(batchSize)
-        val gradVariance  = FloatArray(batchSize)
+        // sumDY[c] = Σ_r dYg[r,c], sumDYX[c] = Σ_r dYg[r,c] * x̂[r,c]
+        val sumDY  = computeContext.backend.sumColumns(dYg)
+        val sumDYX = computeContext.backend.sumColumns(
+            computeContext.backend.elementWiseMultiply(dYg, normalized!!)
+        )
+        val sumDYRow  = computeContext.createRowVector(sumDY)
+        val sumDYXRow = computeContext.createRowVector(sumDYX)
 
-        // raw buffers for speed
-        val xData   = x.data
-        val dData   = delta.data
-        val nData   = normalized!!.data      // from forward: (x - mu) / sqrt(var + eps)
-        val outData = gradInput.data
-        val gammaW  = gamma                  // FloatArray[length = width]
-        val meanV   = mean!!                  // FloatArray[length = batchSize]
-        val varV    = variance!!              // FloatArray[length = batchSize]
+        // dx_hat = (dYg - sumDYRow/width - x̂ * (sumDYXRow/width))
+        val invWidth = 1f / width.toFloat()
+        val term1 = computeContext.backend.scalarMultiply(sumDYRow, invWidth)
+        val term2 = computeContext.backend.scalarMultiply(sumDYXRow, invWidth)
+        val dxHat = computeContext.backend.subtract(
+            computeContext.backend.subtract(dYg, term1),
+            computeContext.backend.elementWiseMultiply(normalized!!, term2)
+        )
 
-        var base = 0
-        var row  = 0
-        while (row < batchSize) {
-            val mu      = meanV[row]
-            val varEps  = varV[row] + EPSILON
-            val inv     = 1f / sqrt(varEps)         // (var+eps)^(-1/2)
-            val inv3    = inv * inv * inv           // (var+eps)^(-3/2)
-
-            var sum1 = 0f                            // Σ_j (delta * gamma)
-            var sum2 = 0f                            // Σ_j (delta * gamma * (x - mu))
-
-            // ---- Pass 1 over row: accumulate grads for gamma/beta and row sums ----
-            var j = 0
-            while (j < width) {
-                val d   = dData[base + j]
-                val xij = xData[base + j]
-                val gnj = d * gammaW[j]             // gradNormalized(i,j)
-                sum1 += gnj
-                sum2 += gnj * (xij - mu)
-
-                gradBetaLocal[j]  += d
-                gradGammaLocal[j] += d * nData[base + j] // use cached normalized
-                j++
-            }
-
-            gradMean[row]     = -sum1 * inv
-            gradVariance[row] = -0.5f * sum2 * inv3
-
-            // ---- Pass 2 over row: write gradInput ----
-            val term2    = gradMean[row] / width
-            val gvScaled = (2f * gradVariance[row]) / width
-
-            j = 0
-            while (j < width) {
-                val d   = dData[base + j]
-                val xij = xData[base + j]
-                val gnj = d * gammaW[j]
-                outData[base + j] = inv * gnj + term2 + gvScaled * (xij - mu)
-                j++
-            }
-
-            base += width
-            row++
-        }
-
-        // publish parameter grads
-        gradGamma = gradGammaLocal
-        gradBeta  = gradBetaLocal
-
-        return gradInput
+        // dX = dx_hat * invStdRow
+        return computeContext.backend.elementWiseMultiply(dxHat, invStdRow)
     }
 
     /**
