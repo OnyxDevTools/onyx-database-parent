@@ -406,7 +406,11 @@ data class NeuralNetwork(
                     }
 
                     if (micro == gradAccumSteps) {
+                        // scale LR to average summed grads across micro-batches
+                        val prevLR = this.learningRate
+                        this.learningRate = prevLR / gradAccumSteps
                         updateParameters()
+                        this.learningRate = prevLR
                         micro = 0
                         updates += 1
                         probeFn.invoke()
@@ -442,7 +446,11 @@ data class NeuralNetwork(
             }
 
             if (micro > 0) {
+                // flush remaining accumulated gradients with scaled LR
+                val prevLR = this.learningRate
+                this.learningRate = prevLR / gradAccumSteps
                 updateParameters()
+                this.learningRate = prevLR
                 updates += 1
                 micro = 0
                 probeFn.invoke()
