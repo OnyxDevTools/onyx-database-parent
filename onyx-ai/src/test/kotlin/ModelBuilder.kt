@@ -191,12 +191,18 @@ fun main() {
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
-    val numHeads = 8
+    val numHeads = 128
     val ffHiddenDim = 128
     var totalProbes = 0
 
+    val headLayer = RotaryMultiHeadAttentionLayer(modelSize = embeddingDim, headCount = numHeads)
     val checkProbe = { net: NeuralNetwork ->
-        askProbes(net, vocabulary, maxSequenceLength)
+
+        if (totalProbes > 2) {
+//            headLayer.initializeCache(maxSequenceLength, 1) // 1 concurrent stream.  Can probably comment this out.
+            askProbes(net, vocabulary, maxSequenceLength)
+            headLayer.disableCache() // 1 concurrent stream.  Can probably comment this out.
+        }
         totalProbes++
         if (totalProbes % 1000 == 0) {
             net.saveToFile("/mnt/onyx/books/model-checkpoint.ser")
@@ -207,7 +213,7 @@ fun main() {
     val layers = listOf(
         EmbeddingLayer(vocabulary.size, embeddingDim),
         PositionalEncodingLayer(maxSequenceLength, embeddingDim),
-        CachedMultiHeadAttentionLayer(maxSequenceLength, embeddingDim, numHeads),
+        headLayer,
         LayerNormalizationLayer(embeddingDim),
         DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
         DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),

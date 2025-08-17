@@ -4,6 +4,7 @@ import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
+import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.Vocabulary
 
@@ -34,8 +35,9 @@ class DefaultTextGenerator : TextGenerator {
      */
     private fun enableCaching(model: NeuralNetwork, maxSequenceLength: Int) {
         model.layers.forEach { layer ->
-            if (layer is CachedMultiHeadAttentionLayer) {
-                layer.initializeCache(maxSequenceLength)
+            when (layer) {
+                is CachedMultiHeadAttentionLayer -> layer.initializeCache(maxSequenceLength)
+                is RotaryMultiHeadAttentionLayer -> layer.initializeCache(maxSequenceLength)
             }
         }
     }
@@ -45,8 +47,9 @@ class DefaultTextGenerator : TextGenerator {
      */
     private fun clearCaches(model: NeuralNetwork) {
         model.layers.forEach { layer ->
-            if (layer is CachedMultiHeadAttentionLayer) {
-                layer.clearCache()
+            when (layer) {
+                is CachedMultiHeadAttentionLayer -> layer.clearCache()
+                is RotaryMultiHeadAttentionLayer -> layer.clearCache()
             }
         }
     }
@@ -56,8 +59,9 @@ class DefaultTextGenerator : TextGenerator {
      */
     private fun disableCaching(model: NeuralNetwork) {
         model.layers.forEach { layer ->
-            if (layer is CachedMultiHeadAttentionLayer) {
-                layer.disableCache()
+            when (layer) {
+                is CachedMultiHeadAttentionLayer -> layer.disableCache()
+                is RotaryMultiHeadAttentionLayer -> layer.disableCache()
             }
         }
     }
@@ -270,32 +274,28 @@ class DefaultTextGenerator : TextGenerator {
             cachedProbs = FloatArray(vocabSize)
         }
 
-        // Enable KV caching for significant speedup
+        // Enable KV caching for significant speedup, and prime the cache with prompt tokens
         enableCaching(model, seqLength + maxGenerate)
-
         try {
             // Encode prompt using causal encoding
             val ids = tokenizer.encodeCausal(prompt, false).toMutableList()
 
-            // Repetition bookkeeping
+            // Prime the attention cache by feeding each prompt token (batchSize=1)
+            if (model.layers.any { l -> l is CachedMultiHeadAttentionLayer || l is RotaryMultiHeadAttentionLayer }) {
+                for (tok in ids) {
+                    model.predict(Tensor(1, 1) { _, _ -> tok.toFloat() })
+                }
+            }
+
+            // Repetition bookkeeping for sampling penalty
             val seenCounts = IntArray(vocabSize) { 0 }
             ids.forEach { if (it in seenCounts.indices) seenCounts[it]++ }
 
-            // Generation loop - optimized for single token at a time
+            // Generation loop: always one token at a time using KV cache
             for (generation in 0 until maxGenerate) {
-                // For the first prediction, use the full prompt
-                // For subsequent predictions, only use the last token (KV cache handles the rest)
-                val hasCachedLayers = model.layers.any { l -> l is CachedMultiHeadAttentionLayer }
-                val inputTensor = if (hasCachedLayers && ids.size > 1) {
-                    // Use only the last token - cache handles the history
-                    Tensor(1, 1) { _, _ -> ids.last().toFloat() }
-                } else {
-                    // First time or no cache - use full sequence (truncated if needed)
-                    val current = if (ids.size > seqLength) ids.takeLast(seqLength) else ids
-                    Tensor(current.size, 1) { r, _ -> current[r].toFloat() }
-                }
+                val inputTensor = Tensor(1, 1) { _, _ -> ids.last().toFloat() }
 
-                // Get predictions from model
+                // Get predictions from model (single-token)
                 val predictions = model.predict(inputTensor)
                 val logits = predictions[predictions.size - 1]  // last time-step prediction
 

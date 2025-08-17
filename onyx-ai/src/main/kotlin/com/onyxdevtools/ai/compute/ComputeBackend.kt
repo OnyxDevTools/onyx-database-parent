@@ -70,6 +70,13 @@ interface ComputeBackend {
      * Gets the backend type identifier
      */
     val backendType: ComputeBackendType
+
+    fun multiHeadAttentionAllHeads(
+        q: Tensor, k: Tensor, v: Tensor,
+        headCount: Int, headSize: Int,
+        causal: Boolean, scale: Float
+    ): Tensor
+
 }
 
 /**

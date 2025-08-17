@@ -30,13 +30,11 @@ class Tensor (
 
     /** 2D access: tensor[i, j] */
     operator fun get(row: Int, col: Int): Float {
-        checkBounds(row, col)
         return data[offsetOf(row, col)]
     }
 
     /** 2D write: tensor[i, j] = v */
     operator fun set(row: Int, col: Int, value: Float) {
-        checkBounds(row, col)
         data[offsetOf(row, col)] = value
     }
 
@@ -132,11 +130,6 @@ class Tensor (
         if (row !in 0 until rows) throw IndexOutOfBoundsException("row=$row size=$rows")
     }
 
-    private fun checkBounds(row: Int, col: Int) {
-        if (row !in 0 until rows) throw IndexOutOfBoundsException("row=$row size=$rows")
-        if (col !in 0 until cols) throw IndexOutOfBoundsException("col=$col size=$cols")
-    }
-
     val indices: IntRange get() = 0 until rows
     val colIndices: IntRange get() = 0 until cols
     fun isEmpty() = rows == 0 || cols == 0
@@ -181,6 +174,40 @@ class Tensor (
         while (c < cols) {
             this[dstRow, c] = src[srcRow, c]
             c++
+        }
+    }
+
+    /**
+     * Extract a contiguous block of columns into a new Tensor.
+     * @param startCol first column index to include
+     * @param numCols number of columns to extract
+     */
+    fun sliceColumns(startCol: Int, numCols: Int): Tensor {
+        require(startCol >= 0 && numCols >= 0 && startCol + numCols <= cols) {
+            "Invalid sliceColumns range: start=$startCol, num=$numCols, cols=$cols"
+        }
+        val result = Tensor(rows, numCols)
+        for (r in 0 until rows) {
+            val srcOff = r * cols + startCol
+            val dstOff = r * numCols
+            System.arraycopy(data, srcOff, result.data, dstOff, numCols)
+        }
+        return result
+    }
+
+    /**
+     * Overwrite a contiguous block of columns with another Tensor's data.
+     * @param startCol first column index to overwrite
+     * @param block Tensor whose dimensions are (rows x block.cols)
+     */
+    fun setColumns(startCol: Int, block: Tensor) {
+        require(block.rows == rows && startCol >= 0 && startCol + block.cols <= cols) {
+            "Invalid setColumns: start=$startCol, block=${block.rows}x${block.cols}, this=${rows}x${cols}"
+        }
+        for (r in 0 until rows) {
+            val dstOff = r * cols + startCol
+            val srcOff = r * block.cols
+            System.arraycopy(block.data, srcOff, data, dstOff, block.cols)
         }
     }
 

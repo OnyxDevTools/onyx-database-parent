@@ -1,9 +1,13 @@
 package com.onyxdevtools.ai.compute
 
 import com.onyxdevtools.ai.Tensor
+import java.util.*
 import java.util.concurrent.ForkJoinTask
 import java.util.concurrent.RecursiveAction
+import java.util.stream.IntStream
+import kotlin.collections.ArrayList
 import kotlin.math.*
+import kotlin.math.exp
 import kotlin.math.exp as dexp // Kotlin's exp is Double
 
 /**
@@ -424,6 +428,106 @@ open class BasicCPUComputeBackend : ComputeBackend {
                 for (c in 0 until cols) dst[c] = src[c]
             }
         }
+        return out
+    }
+
+    /**
+     * Single-shot multi-head attention for all heads:
+     * Input shapes: q,k,v = [seqLen, headCount*headSize]
+     * Output: [seqLen, headCount*headSize]
+     * Computes (softmax(Q_h K_h^T / scale) V_h) per head h without slicing/allocs.
+     */
+    override fun multiHeadAttentionAllHeads(
+        q: Tensor,
+        k: Tensor,
+        v: Tensor,
+        headCount: Int,
+        headSize: Int,
+        causal: Boolean,
+        scale: Float
+    ): Tensor {
+        val seqLen = q.size
+        val modelSize = headCount * headSize
+        require(q[0].size == modelSize && k[0].size == modelSize && v[0].size == modelSize) {
+            "Expected q,k,v cols = headCount*headSize ($modelSize)"
+        }
+
+        val qArr = q.data
+        val kArr = k.data
+        val vArr = v.data
+
+        val out = Tensor(seqLen, modelSize) { _, _ -> 0f }
+        val oArr = out.data
+
+        val threads = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+        val rowsPerThread = (seqLen + threads - 1) / threads
+
+        IntStream.range(0, threads).parallel().forEach { t ->
+            val rStart = t * rowsPerThread
+            val rEnd = min(seqLen, rStart + rowsPerThread)
+
+            // per-thread scratch
+            val scores = FloatArray(seqLen)
+
+            var i = rStart
+            while (i < rEnd) {
+                var h = 0
+                while (h < headCount) {
+                    val off = h * headSize
+
+                    // pass 1: scores + running max
+                    var maxScore = Float.NEGATIVE_INFINITY
+                    var j = 0
+                    while (j < seqLen) {
+                        var dot = 0.0f
+                        var d = 0
+                        val qBase = i * modelSize + off
+                        val kBase = j * modelSize + off
+                        while (d < headSize) {
+                            dot += qArr[qBase + d] * kArr[kBase + d]
+                            d++
+                        }
+                        var s = dot * scale
+                        if (causal && j > i) s = Float.NEGATIVE_INFINITY
+                        scores[j] = s
+                        if (s > maxScore) maxScore = s
+                        j++
+                    }
+
+                    // pass 2: softmax normalize
+                    var sumExp = 0.0f
+                    j = 0
+                    while (j < seqLen) {
+                        val e = exp((scores[j] - maxScore).toDouble()).toFloat()
+                        scores[j] = e
+                        sumExp += e
+                        j++
+                    }
+                    val invSum = 1.0f / (sumExp + 1e-9f)
+
+                    // pass 3: accumulate weighted V into out
+                    val oBase = i * modelSize + off
+                    // (row i, head h) writes a disjoint slice; fill to be explicit
+                    Arrays.fill(oArr, oBase, oBase + headSize, 0f)
+
+                    j = 0
+                    while (j < seqLen) {
+                        val w = scores[j] * invSum
+                        var d = 0
+                        val vBase = j * modelSize + off
+                        while (d < headSize) {
+                            oArr[oBase + d] += w * vArr[vBase + d]
+                            d++
+                        }
+                        j++
+                    }
+
+                    h++
+                }
+                i++
+            }
+        }
+
         return out
     }
 }

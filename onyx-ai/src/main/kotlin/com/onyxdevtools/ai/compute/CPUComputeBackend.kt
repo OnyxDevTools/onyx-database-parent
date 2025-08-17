@@ -3,7 +3,9 @@ package com.onyxdevtools.ai.compute
 import com.onyxdevtools.ai.Tensor
 import jdk.incubator.vector.FloatVector
 import jdk.incubator.vector.VectorSpecies
+import java.util.*
 import java.util.stream.IntStream
+import kotlin.math.exp
 import kotlin.math.min
 
 /**
@@ -48,8 +50,8 @@ open class CPUComputeBackend : BasicCPUComputeBackend() {
 
         return when {
             operations <= 50_000 -> super.matrixMultiply(a, b)
-            isVectorAPIAvailable -> matrixMultiplyParallelJVM(a, b)
-            else -> matrixMultiplyParallelVector(a, b)
+            isVectorAPIAvailable -> matrixMultiplyParallelVector(a, b)
+            else -> matrixMultiplyParallelJVM(a, b)
         }
     }
 

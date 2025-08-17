@@ -182,3 +182,110 @@ kernel void matrix_multiply_tiled(
         C[row * colsB + col] = sum;
     }
 }
+
+
+kernel void mha_pass1_max(
+    const device float* Q [[buffer(0)]],
+    const device float* K [[buffer(1)]],
+    device float* maxVals  [[buffer(2)]],    // [seqLen * headCount]
+    constant uint& seqLen   [[buffer(3)]],
+    constant uint& headCnt  [[buffer(4)]],
+    constant uint& headSz   [[buffer(5)]],
+    constant float& scale   [[buffer(6)]],
+    constant uint& causal   [[buffer(7)]],
+    uint2 tid [[thread_position_in_grid]]
+) {
+    uint h = tid.x, i = tid.y;
+    if (h >= headCnt || i >= seqLen) return;
+    uint model = headCnt * headSz;
+    const device float* qi = Q + i * model + h * headSz;
+
+    float maxv = -INFINITY;
+    for (uint j = 0; j < seqLen; ++j) {
+        if (causal && j > i) break;
+        const device float* kj = K + j * model + h * headSz;
+        float dot = 0.0f;
+        #pragma clang loop vectorize(enable)
+        for (uint d = 0; d < headSz; ++d) dot += qi[d] * kj[d];
+        float s = dot * scale;
+        if (s > maxv) maxv = s;
+    }
+    maxVals[i * headCnt + h] = maxv;
+}
+
+kernel void mha_pass2_sumexp(
+    const device float* Q [[buffer(0)]],
+    const device float* K [[buffer(1)]],
+    const device float* maxVals [[buffer(2)]], // [seqLen * headCount]
+    device float* sumVals [[buffer(3)]],       // [seqLen * headCount]
+    constant uint& seqLen   [[buffer(4)]],
+    constant uint& headCnt  [[buffer(5)]],
+    constant uint& headSz   [[buffer(6)]],
+    constant float& scale   [[buffer(7)]],
+    constant uint& causal   [[buffer(8)]],
+    uint2 tid [[thread_position_in_grid]]
+) {
+    uint h = tid.x, i = tid.y;
+    if (h >= headCnt || i >= seqLen) return;
+    uint model = headCnt * headSz;
+    const device float* qi = Q + i * model + h * headSz;
+    float maxv = maxVals[i * headCnt + h];
+
+    float sum = 0.0f;
+    for (uint j = 0; j < seqLen; ++j) {
+        if (causal && j > i) break;
+        const device float* kj = K + j * model + h * headSz;
+        float dot = 0.0f;
+        #pragma clang loop vectorize(enable)
+        for (uint d = 0; d < headSz; ++d) dot += qi[d] * kj[d];
+        sum += exp(dot * scale - maxv);
+    }
+    sumVals[i * headCnt + h] = sum;
+}
+
+kernel void mha_pass3_out(
+    const device float* Q [[buffer(0)]],
+    const device float* K [[buffer(1)]],
+    const device float* V [[buffer(2)]],
+    const device float* maxVals [[buffer(3)]], // [seqLen * headCount]
+    const device float* sumVals [[buffer(4)]], // [seqLen * headCount]
+    device float* Out [[buffer(5)]],           // [seqLen * headCnt * headSz]
+    constant uint& seqLen   [[buffer(6)]],
+    constant uint& headCnt  [[buffer(7)]],
+    constant uint& headSz   [[buffer(8)]],
+    constant float& scale   [[buffer(9)]],
+    constant uint& causal   [[buffer(10)]],
+    uint2 tid [[thread_position_in_grid]]
+) {
+    uint h = tid.x, i = tid.y;
+    if (h >= headCnt || i >= seqLen) return;
+    uint model = headCnt * headSz;
+
+    const device float* qi = Q + i * model + h * headSz;
+    device float* out = Out + i * model + h * headSz;
+
+    // zero out row/head slice
+    #pragma clang loop vectorize(enable)
+    for (uint d = 0; d < headSz; ++d) out[d] = 0.0f;
+
+    float maxv = maxVals[i * headCnt + h];
+    float sum  = sumVals[i * headCnt + h];
+    float inv  = 1.0f / (sum + 1e-9f);
+
+    for (uint j = 0; j < seqLen; ++j) {
+        if (causal && j > i) break;
+        const device float* kj = K + j * model + h * headSz;
+        const device float* vj = V + j * model + h * headSz;
+
+        float dot = 0.0f;
+        #pragma clang loop vectorize(enable)
+        for (uint d = 0; d < headSz; ++d) dot += qi[d] * kj[d];
+
+        float w = exp(dot * scale - maxv) * inv;
+
+        #pragma clang loop vectorize(enable)
+        for (uint d = 0; d < headSz; ++d) {
+            out[d] += w * vj[d];
+        }
+    }
+}

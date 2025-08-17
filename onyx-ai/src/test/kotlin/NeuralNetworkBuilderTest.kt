@@ -8,6 +8,8 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
+import com.onyxdevtools.ai.layer.impl.DynamicPositionalEncodingLayer
 
 class NeuralNetworkBuilderTest {
 
@@ -57,6 +59,28 @@ class NeuralNetworkBuilderTest {
 
         assertEquals(4, output.size)       // rows
         assertEquals(2, output[0].size)    // cols
+    }
+
+    @Test
+    fun `dynamic positional encoding builder adds correct layer`() {
+        val model = neuralNetwork {
+            layers {
+                dynamicPositionalEncoding(8)
+            }
+        }
+        assertEquals(1, model.layers.size)
+        assertTrue(model.layers[0] is DynamicPositionalEncodingLayer)
+    }
+
+    @Test
+    fun `rotary mha builder adds correct layer`() {
+        val model = neuralNetwork {
+            layers {
+                rotaryMultiHeadAttention(modelSize = 16, headCount = 4)
+            }
+        }
+        assertEquals(1, model.layers.size)
+        assertTrue(model.layers[0] is RotaryMultiHeadAttentionLayer)
     }
 
     /* --------------------------------------------------------------------- */

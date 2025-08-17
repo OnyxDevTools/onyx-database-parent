@@ -7,7 +7,7 @@ import kotlin.math.*
 /**
  * Metal compute backend that leverages Apple's Metal framework for GPU acceleration
  * on macOS and iOS platforms.
- * 
+ *
  * This backend provides:
  * - High-performance GPU matrix operations using Metal compute shaders
  * - Optimized memory transfers between CPU and GPU
@@ -15,12 +15,12 @@ import kotlin.math.*
  * - Automatic fallback to CPU for unsupported operations
  */
 class MetalComputeBackend : CPUComputeBackend() {
-    
+
     override val backendType: ComputeBackendType = ComputeBackendType.METAL
-    
+
     // Native Metal interface handle
     internal var metalContext: Long = 0L
-    
+
     // Memory management tracking - track all allocated buffers for cleanup
     private val gpuBuffers = mutableSetOf<Long>()
     private val bufferLock = Any()
@@ -54,7 +54,7 @@ class MetalComputeBackend : CPUComputeBackend() {
                 }
             }
         }
-        
+
         /**
          * Load native library from embedded resources
          */
@@ -66,27 +66,29 @@ class MetalComputeBackend : CPUComputeBackend() {
                 osName.contains("windows") -> "onyx-metal.dll"
                 else -> throw UnsupportedOperationException("Unsupported OS: $osName")
             }
-            
+
             val resourcePath = "/native/$libraryName"
             val inputStream = MetalComputeBackend::class.java.getResourceAsStream(resourcePath)
                 ?: throw RuntimeException("Native library not found in resources: $resourcePath")
-            
+
             // Create temporary file
-            val tempFile = java.io.File.createTempFile("onyx-metal", when {
-                osName.contains("mac") -> ".dylib"
-                osName.contains("linux") -> ".so"
-                osName.contains("windows") -> ".dll"
-                else -> ".lib"
-            })
+            val tempFile = java.io.File.createTempFile(
+                "onyx-metal", when {
+                    osName.contains("mac") -> ".dylib"
+                    osName.contains("linux") -> ".so"
+                    osName.contains("windows") -> ".dll"
+                    else -> ".lib"
+                }
+            )
             tempFile.deleteOnExit()
-            
+
             // Copy library to temp file
             inputStream.use { input ->
                 tempFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
             }
-            
+
             // Load the temporary library
             System.load(tempFile.absolutePath)
         }
@@ -149,6 +151,15 @@ class MetalComputeBackend : CPUComputeBackend() {
         @JvmStatic
         external fun createGPUBuffer(contextHandle: Long, size: Int): Long
 
+        @JvmStatic
+        external fun gpuMultiHeadAttention(
+            contextHandle: Long,
+            bufferQ: Long, bufferK: Long, bufferV: Long,
+            seqLen: Int, headCount: Int, headSize: Int,
+            scale: Float, causal: Int,
+            bufferOut: Long
+        ): Boolean
+
         /**
          * Copy data from CPU to GPU buffer
          */
@@ -163,6 +174,7 @@ class MetalComputeBackend : CPUComputeBackend() {
 
         @JvmStatic
         external fun copyFromGPUInto(contextHandle: Long, bufferHandle: Long, destination: FloatArray, size: Int)
+
         /**
          * Release GPU buffer
          */
@@ -211,6 +223,52 @@ class MetalComputeBackend : CPUComputeBackend() {
         ): Boolean
     }
 
+    override fun multiHeadAttentionAllHeads(
+        q: Tensor, k: Tensor, v: Tensor,
+        headCount: Int, headSize: Int,
+        causal: Boolean, scale: Float
+    ): Tensor {
+        val seqLen = q.size
+        val model = headCount * headSize
+        require(q[0].size == model && k[0].size == model && v[0].size == model)
+
+        // Heuristic: big enough to benefit from GPU
+        val work = 1L * seqLen * seqLen * headSize * headCount
+        val wantGPU = (metalContext != 0L) && work >= 250_000L
+
+        if (!wantGPU) {
+            if (metalContext == 0L) println("Metal: context=0 (library not loaded or init failed) -> CPU MHA")
+            return super.multiHeadAttentionAllHeads(q, k, v, headCount, headSize, causal, scale)
+        }
+
+        var qBuf = 0L; var kBuf = 0L; var vBuf = 0L; var outBuf = 0L
+        return try {
+            qBuf = createMatrixBuffer(q)
+            kBuf = createMatrixBuffer(k)
+            vBuf = createMatrixBuffer(v)
+            outBuf = createTrackedBuffer(seqLen * model * 4)
+
+            val ok = gpuMultiHeadAttention(
+                metalContext, qBuf, kBuf, vBuf,
+                seqLen, headCount, headSize, scale, if (causal) 1 else 0, outBuf
+            )
+            if (!ok) {
+                println("Metal MHA: gpuMultiHeadAttention returned false -> CPU fallback")
+                releaseTempBuffers(qBuf, kBuf, vBuf, outBuf)
+                return super.multiHeadAttentionAllHeads(q, k, v, headCount, headSize, causal, scale)
+            }
+
+            val out = FloatArray(seqLen * model)
+            copyFromGPUInto(metalContext, outBuf, out, out.size)
+            releaseTempBuffers(qBuf, kBuf, vBuf, outBuf)
+            Tensor(seqLen, model, out)
+        } catch (e: Exception) {
+            println("Metal MHA: exception '${e.message}' -> CPU fallback")
+            releaseTempBuffers(qBuf, kBuf, vBuf, outBuf)
+            super.multiHeadAttentionAllHeads(q, k, v, headCount, headSize, causal, scale)
+        }
+    }
+
     init {
         if (!isMetalAvailable()) {
             throw RuntimeException("Metal framework is not available on this system")
@@ -242,7 +300,12 @@ class MetalComputeBackend : CPUComputeBackend() {
         val colsB = b[0].size
 
         val operations = rowsA.toLong() * colsA.toLong() * colsB.toLong()
-        if (operations <= METAL_HIGH_OPS_THRESHOLD || minOf(rowsA, colsA, colsB) < METAL_DIMENS_THRESHOLD) return super.matrixMultiply(a, b)
+        if (operations <= METAL_HIGH_OPS_THRESHOLD || minOf(
+                rowsA,
+                colsA,
+                colsB
+            ) < METAL_DIMENS_THRESHOLD
+        ) return super.matrixMultiply(a, b)
 
         var bufferA = 0L
         var bufferB = 0L
@@ -287,7 +350,7 @@ class MetalComputeBackend : CPUComputeBackend() {
         copyToGPU(metalContext, buffer, tensor.data)
         return buffer
     }
-    
+
     private fun createTrackedBuffer(size: Int): Long {
         val buffer = createGPUBuffer(metalContext, size)
         synchronized(bufferLock) {
@@ -327,7 +390,7 @@ class MetalComputeBackend : CPUComputeBackend() {
                 }
                 gpuBuffers.clear()
             }
-            
+
             // Dispose Metal context
             if (metalContext != 0L) {
                 disposeMetalContext(metalContext)
@@ -337,7 +400,7 @@ class MetalComputeBackend : CPUComputeBackend() {
             println("Warning: Error during MetalComputeBackend disposal: ${e.message}")
         }
     }
-    
+
     @Throws(Throwable::class)
     protected fun finalize() {
         dispose()
