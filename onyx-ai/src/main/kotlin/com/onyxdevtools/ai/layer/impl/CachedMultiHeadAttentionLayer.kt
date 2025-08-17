@@ -4,6 +4,7 @@ import Activation
 import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
+import java.lang.ThreadLocal
 import com.onyxdevtools.ai.compute.*
 import kotlin.math.sqrt
 import kotlin.math.exp
@@ -37,13 +38,38 @@ class CachedMultiHeadAttentionLayer(
     internal var wValue: Tensor
     internal var wOutput: Tensor
 
-    // ======= Per-sequence KV cache (for inference) =======
-    private var batchSize: Int = 1
-    private var maxCacheLength = 0
-    // kCache[b] is a Tensor of shape (maxSequenceLength, modelSize)
-    private var kCache: Array<Tensor>? = null
-    private var vCache: Array<Tensor>? = null
-    private var curLen: IntArray? = null
+    // ==================== Thread-local KV Cache ====================
+    private data class KVCache(
+        val batchSize: Int,
+        val maxCacheLength: Int,
+        val kCache: Array<Tensor>,
+        val vCache: Array<Tensor>,
+        val curLen: IntArray,
+        val scratch: FloatArray
+    )
+    private val threadLocalCache = ThreadLocal<KVCache>()
+    private fun currentCache(): KVCache? = threadLocalCache.get()
+
+    /** Initialize per-thread KV cache buffers. */
+    fun initializeCache(maxSequenceLength: Int, batchSize: Int = 1) {
+        require(maxSequenceLength > 0) { "maxSequenceLength must be > 0" }
+        require(batchSize > 0) { "batchSize must be > 0" }
+        val kbuf = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
+        val vbuf = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
+        val lens = IntArray(batchSize)
+        val scratch = FloatArray(maxSequenceLength)
+        threadLocalCache.set(KVCache(batchSize, maxSequenceLength, kbuf, vbuf, lens, scratch))
+    }
+
+    /** Reset only the per-thread lengths; keep buffers. */
+    fun clearCache() {
+        currentCache()?.curLen?.fill(0)
+    }
+
+    /** Disable per-thread caching entirely. */
+    fun disableCache() {
+        threadLocalCache.remove()
+    }
 
     // Gradients/optimizer state
     private var gradWQuery: Tensor? = null
@@ -67,9 +93,6 @@ class CachedMultiHeadAttentionLayer(
     private var attentionWeights: Tensor? = null
     private var attentionOutput: Tensor? = null
 
-    // Scratch (to avoid per-step allocs in cached path)
-    private var scratchScores: FloatArray = FloatArray(0)
-
     init {
         require(modelSize % headCount == 0) {
             "Model size ($modelSize) must be divisible by head count ($headCount)"
@@ -92,37 +115,13 @@ class CachedMultiHeadAttentionLayer(
     }
 
     /** Initialize per-sequence cache. Backwards-compatible default for batchSize=1. */
-    fun initializeCache(maxSequenceLength: Int, batchSize: Int = 1) {
-        require(maxSequenceLength > 0) { "maxSequenceLength must be > 0" }
-        require(batchSize > 0) { "batchSize must be > 0" }
-        this.maxCacheLength = maxSequenceLength
-        this.batchSize = batchSize
-        kCache = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
-        vCache = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
-        curLen = IntArray(batchSize) { 0 }
-        ensureScratch(maxSequenceLength)
-    }
-
-    /** Reset lengths; keep buffers. */
-    fun clearCache() {
-        curLen?.fill(0)
-    }
-
-    /** Disable caches. */
-    fun disableCache() {
-        kCache = null
-        vCache = null
-        curLen = null
-        maxCacheLength = 0
-        batchSize = 1
-        scratchScores = FloatArray(0)
-    }
 
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
-        return if (isTraining || kCache == null) {
+        val cache = currentCache()
+        return if (isTraining || cache == null) {
             forwardStandard(input, isTraining)
         } else {
-            forwardWithCache(input) // input is B×modelSize (B can be 1)
+            forwardWithCache(input, cache)
         }
     }
 
@@ -139,46 +138,39 @@ class CachedMultiHeadAttentionLayer(
         return output!!
     }
 
-    /** Cached inference path: append K/V per sequence and compute attention without rebuilding arrays. */
-    private fun forwardWithCache(input: Tensor): Tensor {
+    /** Cached inference path: append K/V per sequence and compute attention using per-thread buffers. */
+    private fun forwardWithCache(input: Tensor, cache: KVCache): Tensor {
         val B = input.rows
-        val kC = kCache ?: error("Cache not initialized")
-        val vC = vCache ?: error("Cache not initialized")
-        val lens = curLen ?: error("Cache not initialized")
-        require(B <= lens.size) { "Input batch $B exceeds initialized cache batch ${lens.size}" }
+        require(B <= cache.batchSize) { "Input batch $B exceeds initialized cache batch ${cache.batchSize}" }
 
-        // Project batch once (GEMM with rows=B)
-        val Q = backend.backend.matrixMultiply(input, wQuery) // [B, D]
-        val K = backend.backend.matrixMultiply(input, wKey)   // [B, D]
-        val V = backend.backend.matrixMultiply(input, wValue) // [B, D]
+        // Project batch once
+        val Q = backend.backend.matrixMultiply(input, wQuery)
+        val K = backend.backend.matrixMultiply(input, wKey)
+        val V = backend.backend.matrixMultiply(input, wValue)
 
-        val out = Tensor(B, modelSize) // [B, D], zero-initialized
+        val out = Tensor(B, modelSize)
+        for (b in 0 until B) {
+            val len = cache.curLen[b]
+            require(len + 1 <= cache.maxCacheLength) { "Cache overflow for seq $b: ${len + 1} > ${cache.maxCacheLength}" }
 
-        // For each sequence in the batch: append K/V and attend to its own cache
-        var b = 0
-        while (b < B) {
-            val len = lens[b]
-            require(len + 1 <= maxCacheLength) { "Cache overflow for seq $b: $len+1 > $maxCacheLength" }
-
-            // Append new K,V (copy row b → row len)
-            kC[b].copyRowFrom(K, b, len)
-            vC[b].copyRowFrom(V, b, len)
+            cache.kCache[b].copyRowFrom(K, b, len)
+            cache.vCache[b].copyRowFrom(V, b, len)
             val total = len + 1
 
-            // Compute attention for this sequence into out[b,*]
             computeCachedAttentionSingle(
                 q = Q, qRow = b,
-                kSeq = kC[b],
-                vSeq = vC[b],
+                kSeq = cache.kCache[b],
+                vSeq = cache.vCache[b],
                 totalLength = total,
-                out = out, outRow = b
+                out = out, outRow = b,
+                scratch = cache.scratch
             )
-            lens[b] = total
-            b++
+            cache.curLen[b] = total
         }
 
-        output = backend.backend.matrixMultiply(out, wOutput) // [B, D]
-        return output!!
+        val Y = backend.backend.matrixMultiply(out, wOutput)
+        output = Y
+        return Y
     }
 
     /** Single-sequence cached attention: softmax(q·K) then weighted sum over V, per head. */
@@ -189,13 +181,13 @@ class CachedMultiHeadAttentionLayer(
         vSeq: Tensor,
         totalLength: Int,
         out: Tensor,
-        outRow: Int
+        outRow: Int,
+        scratch: FloatArray
     ) {
         out.zeroRow(outRow)
 
         val scale = (1.0 / sqrt(headSize.toDouble())).toFloat()
-        ensureScratch(totalLength)
-        val scores = scratchScores
+        val scores = scratch
 
         var h = 0
         while (h < headCount) {
@@ -435,11 +427,4 @@ class CachedMultiHeadAttentionLayer(
         }
     }
 
-    // ---- helpers -----------------------------------------------------------
-
-    private fun ensureScratch(n: Int) {
-        if (scratchScores.size < n) {
-            scratchScores = FloatArray(n)
-        }
-    }
 }

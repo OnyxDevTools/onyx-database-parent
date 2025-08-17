@@ -3,6 +3,7 @@ package com.onyxdevtools.ai.layer.impl
 import Activation
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.layer.Layer
+import java.lang.ThreadLocal
 import com.onyxdevtools.ai.compute.ComputeContext
 import com.onyxdevtools.ai.compute.DefaultComputeContext
 import kotlin.math.cos
@@ -48,14 +49,17 @@ class RotaryMultiHeadAttentionLayer(
     private val invFreq: FloatArray
 
     // Per-sequence KV cache
-    private var batchSize: Int = 1
-    private var maxCacheLength: Int = 0
-    private var kCache: Array<Tensor>? = null
-    private var vCache: Array<Tensor>? = null
-    private var curLen: IntArray? = null
-
-    // Scratch for cached path
-    private var scratchScores: FloatArray = FloatArray(0)
+    // ==================== Thread-local KV Cache ====================
+    private data class KVCache(
+        val batchSize: Int,
+        val maxCacheLength: Int,
+        val kCache: Array<Tensor>,
+        val vCache: Array<Tensor>,
+        val curLen: IntArray,
+        val scratch: FloatArray
+    )
+    private val threadLocalCache = ThreadLocal<KVCache>()
+    private fun currentCache(): KVCache? = threadLocalCache.get()
 
     // RoPE lookup tables: [position][pairIndex]
     private var ropeCos: Array<FloatArray> = emptyArray()
@@ -108,10 +112,11 @@ class RotaryMultiHeadAttentionLayer(
     }
 
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
-        return if (isTraining || kCache == null) {
+        val cache = currentCache()
+        return if (isTraining || cache == null) {
             forwardStandard(input)
         } else {
-            forwardWithCache(input)
+            forwardWithCache(input, cache)
         }
     }
 
@@ -149,9 +154,6 @@ class RotaryMultiHeadAttentionLayer(
         ropeSin = sinNew
     }
 
-    private fun ensureScratch(n: Int) {
-        if (scratchScores.size < n) scratchScores = FloatArray(n)
-    }
 
     /** In-place RoPE application to tensor x of shape [seqLen, modelSize]. */
     private fun applyRoPEInPlace(x: Tensor, startPos: Int = 0): Tensor {
@@ -202,26 +204,20 @@ class RotaryMultiHeadAttentionLayer(
     fun initializeCache(maxSequenceLength: Int, batchSize: Int = 1) {
         require(maxSequenceLength > 0) { "maxSequenceLength must be > 0" }
         require(batchSize > 0) { "batchSize must be > 0" }
-        this.maxCacheLength = maxSequenceLength
-        this.batchSize = batchSize
-        kCache = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
-        vCache = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
-        curLen = IntArray(batchSize) { 0 }
-        ensureScratch(maxSequenceLength)
+        val kbuf = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
+        val vbuf = Array(batchSize) { Tensor(maxSequenceLength, modelSize) }
+        val lens = IntArray(batchSize)
+        val scratch = FloatArray(maxSequenceLength)
+        threadLocalCache.set(KVCache(batchSize, maxSequenceLength, kbuf, vbuf, lens, scratch))
         ensureRopeTables(maxSequenceLength)
     }
 
-    /** Reset per-sequence cache lengths; buffers retained. */
-    fun clearCache() { curLen?.fill(0) }
+    /** Reset per-thread cache lengths; buffers retained. */
+    fun clearCache() { currentCache()?.curLen?.fill(0) }
 
-    /** Disable cache and free buffers. */
+    /** Disable per-thread cache and free buffers. */
     fun disableCache() {
-        kCache = null
-        vCache = null
-        curLen = null
-        maxCacheLength = 0
-        batchSize = 1
-        scratchScores = FloatArray(0)
+        threadLocalCache.remove()
         ropeCos = emptyArray()
         ropeSin = emptyArray()
     }
@@ -247,12 +243,9 @@ class RotaryMultiHeadAttentionLayer(
         return output!!
     }
 
-    private fun forwardWithCache(input: Tensor): Tensor {
+    private fun forwardWithCache(input: Tensor, cache: KVCache): Tensor {
         val B = input.rows
-        val kC = kCache ?: error("Cache not initialized")
-        val vC = vCache ?: error("Cache not initialized")
-        val lens = curLen ?: error("Cache not initialized")
-        require(B <= lens.size) { "Batch size $B exceeds cache batchSize ${lens.size}" }
+        require(B <= cache.batchSize) { "Batch size $B exceeds cache batchSize ${cache.batchSize}" }
 
         val Q = backend.backend.matrixMultiply(input, wQuery)
         val K = backend.backend.matrixMultiply(input, wKey)
@@ -262,29 +255,31 @@ class RotaryMultiHeadAttentionLayer(
 
         var b = 0
         while (b < B) {
-            val len = lens[b]
-            require(len + 1 <= maxCacheLength) { "Cache overflow: $len+1 > $maxCacheLength" }
+            val len = cache.curLen[b]
+            require(len + 1 <= cache.maxCacheLength) { "Cache overflow: ${len + 1} > ${cache.maxCacheLength}" }
 
             // append K/V (unrotated) for position = len
-            kC[b].copyRowFrom(K, b, len)
-            vC[b].copyRowFrom(V, b, len)
+            cache.kCache[b].copyRowFrom(K, b, len)
+            cache.vCache[b].copyRowFrom(V, b, len)
 
             val total = len + 1
             computeCachedAttentionSingleRoPE(
                 qRaw = Q,
                 qRow = b,
-                kSeq = kC[b],
-                vSeq = vC[b],
+                kSeq = cache.kCache[b],
+                vSeq = cache.vCache[b],
                 totalLength = total,
                 out = out,
-                outRow = b
+                outRow = b,
+                scratch = cache.scratch
             )
-            lens[b] = total
+            cache.curLen[b] = total
             b++
         }
 
-        output = backend.backend.matrixMultiply(out, wOutput)
-        return output!!
+        val Y = backend.backend.matrixMultiply(out, wOutput)
+        output = Y
+        return Y
     }
 
     /**
@@ -299,13 +294,13 @@ class RotaryMultiHeadAttentionLayer(
         vSeq: Tensor,
         totalLength: Int,
         out: Tensor,
-        outRow: Int
+        outRow: Int,
+        scratch: FloatArray
     ) {
         out.zeroRow(outRow)
-        ensureScratch(totalLength)
         ensureRopeTables(totalLength)
 
-        val scores = scratchScores
+        val scores = scratch
         val posQ = totalLength - 1
         val cq = ropeCos[posQ]
         val sq = ropeSin[posQ]

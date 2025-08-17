@@ -245,8 +245,6 @@ data class NeuralNetwork(
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
-        disableInferenceCaches()
-
         var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
@@ -369,7 +367,6 @@ data class NeuralNetwork(
     ): NeuralNetwork {
 
         // disable inference caches so no cached path is used during streaming-sparse training
-        disableInferenceCaches()
         var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
@@ -419,7 +416,6 @@ data class NeuralNetwork(
                         micro = 0
                         updates += 1
                         probeFn.invoke()
-                        disableInferenceCaches() // Clear after probing
                     }
 
                     bx.clear(); by.clear()
@@ -555,13 +551,6 @@ data class NeuralNetwork(
     }
 
     // ======================= Private helpers ===============================
-
-    /** Disable any inference caches (CachedMultiHeadAttention or RotaryMultiHeadAttention). */
-    private fun disableInferenceCaches() {
-        layers.filterIsInstance<CachedMultiHeadAttentionLayer>().forEach { it.disableCache() }
-        layers.filterIsInstance<RotaryMultiHeadAttentionLayer>().forEach { it.disableCache() }
-    }
-
     /** Gather arbitrary rows from [src] into a new Tensor (rows = indices.size). */
     private fun gatherRows(src: Tensor, indices: List<Int>): Tensor {
         if (indices.isEmpty()) return Tensor(0, src.cols)
