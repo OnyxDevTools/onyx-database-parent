@@ -197,31 +197,36 @@ fun main() {
     val ffHiddenDim = ffnDim(maxSequenceLength) // e.g., 4096 -> 11008
     var totalProbes = 0
 
-    val headLayer = RotaryMultiHeadAttentionLayer(modelSize = maxSequenceLength, headCount = numHeads)
+    val cachedLayers = arrayListOf<RotaryMultiHeadAttentionLayer>()
+
     val checkProbe = { net: NeuralNetwork ->
 
         if (totalProbes > 2) {
-//            headLayer.initializeCache(maxSequenceLength, 1) // 1 concurrent stream.  Can probably comment this out.
             askProbes(net, vocabulary, maxSequenceLength)
-            headLayer.disableCache() // 1 concurrent stream.  Can probably comment this out.
+            cachedLayers.forEach { it.clearCache() }
         }
         totalProbes++
-        if (totalProbes % 4 == 0) {
+        if (totalProbes % 100 == 0) {
             net.saveToFile("/Volumes/onyx/books/model-checkpoint2.ser")
             println("✅ Saved checkpoint after $totalProbes")
         }
     }
 
     val underLayers = arrayListOf<Layer>()
+
     repeat(12) {
         // Block: x = x + Attn(RMSNorm(x)); x = x + MLP(RMSNorm(x))
+        val headLayer = RotaryMultiHeadAttentionLayer(
+            modelSize = maxSequenceLength,
+            headCount = numHeads,
+        )
+
+        cachedLayers.add(headLayer)
+
         underLayers.add(ResidualLayer(
             layers = listOf(
                 LayerNormalizationLayer(maxSequenceLength),
-                RotaryMultiHeadAttentionLayer(
-                    modelSize = maxSequenceLength,
-                    headCount = numHeads,
-                )
+                headLayer
             )
         ))
 
@@ -276,7 +281,7 @@ fun main() {
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
                 comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, strideForEpoch(epochIdx, maxSequenceLength)),
-                saveModelPath = "/mnt/onyx/books/onyx-llm-$epochIdx.ser"
+                saveModelPath = "/Volumes/onyx/books/onyx-llm-$epochIdx.ser"
             )
 
             println("=== Finished epoch ${epochIdx + 1} ===")

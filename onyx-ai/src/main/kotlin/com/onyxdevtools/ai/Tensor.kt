@@ -1,6 +1,10 @@
 package com.onyxdevtools.ai
 
 import com.onyxdevtools.ai.compute.BasicCPUComputeBackend
+import java.io.InvalidObjectException
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
 
 val basicCompute = BasicCPUComputeBackend()
 
@@ -15,7 +19,7 @@ class Tensor (
     val rows: Int,
     val cols: Int,
     val data: FloatArray
-) : Iterable<Tensor.Row> {
+) : Iterable<Tensor.Row>, Serializable {
 
     init {
         require(rows >= 0 && cols >= 0) { "rows=$rows cols=$cols must be non-negative" }
@@ -108,6 +112,11 @@ class Tensor (
             private var c = 0
             override fun hasNext() = c < base.cols
             override fun next(): Float = base.data[base.rowOffset(row) + c++]
+        }
+
+        companion object {
+            @JvmField
+            val serialVersionUID: Long = 1L
         }
     }
 
@@ -254,9 +263,32 @@ class Tensor (
         return sum
     }
 
-// ---- Factories ------------------------------------------------------------
+    // -- Java serialization hooks (keep defaults, add validation) --
+    @Suppress("unused")
+    @Throws(java.io.IOException::class)
+    private fun writeObject(out: ObjectOutputStream) {
+        out.defaultWriteObject() // rows, cols, data
+    }
+
+    @Suppress("unused")
+    @Throws(java.io.IOException::class, ClassNotFoundException::class)
+    private fun readObject(`in`: ObjectInputStream) {
+        `in`.defaultReadObject()
+        // Re-validate invariants after deserialization
+        if (rows < 0 || cols < 0) {
+            throw InvalidObjectException("rows=$rows cols=$cols must be non-negative")
+        }
+        if (data.size != rows * cols) {
+            throw InvalidObjectException("Backing size ${data.size} != rows*cols=${rows * cols}")
+        }
+    }
+
+    // ---- Factories ------------------------------------------------------------
 
     companion object {
+        @JvmField
+        val serialVersionUID: Long = 1L
+
         fun zeros(rows: Int, cols: Int): Tensor = Tensor(rows, cols)
         fun ones(rows: Int, cols: Int): Tensor {
             val t = Tensor(rows, cols)

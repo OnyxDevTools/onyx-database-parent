@@ -355,6 +355,7 @@ data class NeuralNetwork(
         patience: Int = 5,
         testFrac: Float = 0.1f,
         shuffle: Boolean = true,
+        gradAccumSteps: Int = 1,
         trace: Boolean = true,
         lossFn: (pred: Tensor, sparseTargets: IntArray) -> Float =
             { p, s -> sparseCategoricalCrossEntropy(p, s) },
@@ -374,7 +375,8 @@ data class NeuralNetwork(
             var runningTestLoss = 0.0f
             var testSamples = 0
 
-            var iter = 0
+            var micro = 0
+            var updates = 0
             for ((inputSeq, targetSeq) in source()) {
                 bx += inputSeq; by += targetSeq
                 if (bx.size == batchSize) {
@@ -389,7 +391,7 @@ data class NeuralNetwork(
 
                     val predTrain = predict(xTrain, isTraining = true, skipFeatureTransform = true)
                     backwardSparse(predTrain, yTrainFlat)
-                    updateParameters()
+                    micro += 1
 
                     val xTest: Tensor = featureTransforms?.apply(xTestRaw) ?: xTestRaw
                     val yTestFlat: IntArray = yTestRaw.flatMap { it.toList() }.toIntArray()
@@ -402,11 +404,19 @@ data class NeuralNetwork(
                         testSamples += xTest.rows
                     }
 
+                    if (micro == gradAccumSteps) {
+                        // scale LR to average summed grads across micro-batches
+                        val prevLR = this.learningRate
+                        this.learningRate = prevLR / gradAccumSteps
+                        updateParameters()
+                        this.learningRate = prevLR
+                        micro = 0
+                        updates += 1
+                        probeFn.invoke()
+                    }
 
                     bx.clear(); by.clear()
                 }
-                if (iter.rem(100) == 0) probeFn.invoke()
-                iter++
             }
 
             // leftovers
@@ -421,7 +431,7 @@ data class NeuralNetwork(
                 val yTfFlat = yT.flatMap { it.toList() }.toIntArray()
                 val predT = predict(xTf, isTraining = true, skipFeatureTransform = true)
                 backwardSparse(predT, yTfFlat)
-                updateParameters()
+                micro += 1
 
                 val xv2: Tensor = featureTransforms?.apply(xv) ?: xv
                 val yvFlat = yv.flatMap { it.toList() }.toIntArray()
@@ -432,6 +442,16 @@ data class NeuralNetwork(
                 testSamples += xv2.rows
             }
 
+            if (micro > 0) {
+                // flush remaining accumulated gradients with scaled LR
+                val prevLR = this.learningRate
+                this.learningRate = prevLR / gradAccumSteps
+                updateParameters()
+                this.learningRate = prevLR
+                updates += 1
+                micro = 0
+                probeFn.invoke()
+            }
 
             val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
 
