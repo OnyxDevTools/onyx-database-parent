@@ -2,6 +2,7 @@ import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.extensions.sparseCategoricalCrossEntropy
 import com.onyxdevtools.ai.generation.chat
+import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.OnyxVocabulary
@@ -190,14 +191,13 @@ fun main() {
     val maxSequenceLength = 1024
 
     // Configure neural network
-    val embeddingDim = maxSequenceLength
     val numHeads = 128
 
     fun ffnDim(d: Int) = ((8 * d) / 3).let { ((it + 255) / 256) * 256 } // round up to 256
     val ffHiddenDim = ffnDim(maxSequenceLength) // e.g., 4096 -> 11008
     var totalProbes = 0
 
-    val headLayer = RotaryMultiHeadAttentionLayer(modelSize = embeddingDim, headCount = numHeads)
+    val headLayer = RotaryMultiHeadAttentionLayer(modelSize = maxSequenceLength, headCount = numHeads)
     val checkProbe = { net: NeuralNetwork ->
 
         if (totalProbes > 2) {
@@ -212,15 +212,38 @@ fun main() {
         }
     }
 
-    val layers = listOf(
-        EmbeddingLayer(vocabulary.size, embeddingDim),
-        PositionalEncodingLayer(maxSequenceLength, embeddingDim),
-        headLayer,
-        LayerNormalizationLayer(embeddingDim),
-        DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
-        DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
-        LayerNormalizationLayer(embeddingDim),
-        DenseLayer(embeddingDim, vocabulary.size, Activation.LINEAR)
+    val underLayers = arrayListOf<Layer>()
+    repeat(12) {
+        // Block: x = x + Attn(RMSNorm(x)); x = x + MLP(RMSNorm(x))
+        underLayers.add(ResidualLayer(
+            layers = listOf(
+                LayerNormalizationLayer(maxSequenceLength),
+                RotaryMultiHeadAttentionLayer(
+                    modelSize = maxSequenceLength,
+                    headCount = numHeads,
+                )
+            )
+        ))
+
+        underLayers.add(ResidualLayer(
+           layers = listOf(
+               LayerNormalizationLayer(maxSequenceLength),
+               SwiGLULayer(maxSequenceLength, ffHiddenDim, maxSequenceLength)
+           )
+        ))
+    }
+
+    val layers = arrayListOf(
+        EmbeddingLayer(vocabulary.size, maxSequenceLength),
+        PositionalEncodingLayer(maxSequenceLength, maxSequenceLength)
+    )
+    layers.addAll(underLayers)
+
+    layers.add(
+        LayerNormalizationLayer(maxSequenceLength),
+    )
+    layers.add(
+        DenseLayer(maxSequenceLength, vocabulary.size, Activation.LINEAR)
     )
     val checkpointPath = "/mnt/onyx/books/onyx-llm-checkpoint.ser"   // <‑‑ the file you keep saving to
 

@@ -53,8 +53,8 @@ class SwiGLULayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        // backprop through final projection
-        val dHidden = projOut.backward(gateTensor, delta, featureSize, nextLayer, this, lambda)
+        // backprop through final projection (use gate tensor as input, no previousLayer to compute correct weight gradients)
+        val dHidden = projOut.backward(gateTensor, delta, featureSize, nextLayer, null, lambda)
         // distribute gradients through gating
         val mask = computeContext.backend.applyElementWise(
             proj1.output!!,
