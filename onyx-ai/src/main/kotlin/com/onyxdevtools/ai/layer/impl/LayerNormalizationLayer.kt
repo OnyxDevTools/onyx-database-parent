@@ -192,6 +192,14 @@ class LayerNormalizationLayer(
             copy.velocityGamma = velocityGamma.copyOf()
             copy.momentBeta = momentBeta.copyOf()
             copy.velocityBeta = velocityBeta.copyOf()
+
+            copy.mean = mean?.copyOf()
+            copy.variance = variance?.copyOf()
+            copy.normalized = normalized?.deepCopy()
+            copy.preActivation = preActivation?.deepCopy()
+            copy.output = output?.deepCopy()
+            copy.gradGamma = gradGamma?.copyOf()
+            copy.gradBeta = gradBeta?.copyOf()
         }
     }
 

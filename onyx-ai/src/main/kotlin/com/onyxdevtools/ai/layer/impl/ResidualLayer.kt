@@ -67,8 +67,10 @@ class ResidualLayer(
     }
 
     override fun clone(): Layer {
-        val cloned = layers.map { it.clone() }
-        return ResidualLayer(cloned, computeContext)
+        return ResidualLayer(layers.map { it.clone() }, computeContext).also { copy ->
+            copy.preActivation = preActivation?.deepCopy()
+            copy.output = output?.deepCopy()
+        }
     }
 
     /**

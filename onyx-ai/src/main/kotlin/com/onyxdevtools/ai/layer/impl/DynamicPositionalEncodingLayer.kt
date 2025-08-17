@@ -77,7 +77,10 @@ class DynamicPositionalEncodingLayer(
         learningRate: Float
     ) { /* no-op */ }
 
-    override fun clone(): Layer = DynamicPositionalEncodingLayer(embeddingSize, computeContext)
+    override fun clone(): Layer = DynamicPositionalEncodingLayer(embeddingSize, computeContext).also { copy ->
+        copy.preActivation = preActivation?.deepCopy()
+        copy.output = output?.deepCopy()
+    }
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()

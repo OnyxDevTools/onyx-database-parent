@@ -88,11 +88,15 @@ class SwiGLULayer(
         hiddenSize,
         outputSize,
         computeContext
-    ).also { copy ->
-        copy.proj1 = proj1.clone() as DenseLayer
-        copy.proj2 = proj2.clone() as DenseLayer
-        copy.projOut = projOut.clone() as DenseLayer
-    }
+        ).also { copy ->
+            copy.proj1 = proj1.clone() as DenseLayer
+            copy.proj2 = proj2.clone() as DenseLayer
+            copy.projOut = projOut.clone() as DenseLayer
+
+            copy.gateTensor = gateTensor?.deepCopy()
+            copy.preActivation = preActivation?.deepCopy()
+            copy.output = output?.deepCopy()
+        }
 
     /**
      * Releases backend resources.
