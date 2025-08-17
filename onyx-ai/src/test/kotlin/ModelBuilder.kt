@@ -188,10 +188,10 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 1024
+    val maxSequenceLength = 512
 
     // Configure neural network
-    val numHeads = 128
+    val numHeads = 32
 
     fun ffnDim(d: Int) = ((8 * d) / 3).let { ((it + 255) / 256) * 256 } // round up to 256
     val ffHiddenDim = ffnDim(maxSequenceLength) // e.g., 4096 -> 11008
@@ -235,7 +235,7 @@ fun main() {
 
     val layers = arrayListOf(
         EmbeddingLayer(vocabulary.size, maxSequenceLength),
-        PositionalEncodingLayer(maxSequenceLength, maxSequenceLength)
+//        PositionalEncodingLayer(maxSequenceLength, maxSequenceLength)
     )
     layers.addAll(underLayers)
 
