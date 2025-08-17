@@ -3,6 +3,7 @@ package com.onyxdevtools.ai.generation
 import com.onyxdevtools.ai.Constants.EPSILON
 import com.onyxdevtools.ai.NeuralNetwork
 import com.onyxdevtools.ai.Tensor
+import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
 import com.onyxdevtools.ai.transformation.BPETokenizer
 import com.onyxdevtools.ai.transformation.Vocabulary
@@ -35,6 +36,7 @@ class DefaultTextGenerator : TextGenerator {
     private fun enableCaching(model: NeuralNetwork, maxSequenceLength: Int) {
         model.layers.forEach { layer ->
             when (layer) {
+                is CachedMultiHeadAttentionLayer -> layer.initializeCache(maxSequenceLength)
                 is RotaryMultiHeadAttentionLayer -> layer.initializeCache(maxSequenceLength)
             }
         }
@@ -46,6 +48,7 @@ class DefaultTextGenerator : TextGenerator {
     private fun clearCaches(model: NeuralNetwork) {
         model.layers.forEach { layer ->
             when (layer) {
+                is CachedMultiHeadAttentionLayer -> layer.clearCache()
                 is RotaryMultiHeadAttentionLayer -> layer.clearCache()
             }
         }
@@ -57,6 +60,7 @@ class DefaultTextGenerator : TextGenerator {
     private fun disableCaching(model: NeuralNetwork) {
         model.layers.forEach { layer ->
             when (layer) {
+                is CachedMultiHeadAttentionLayer -> layer.disableCache()
                 is RotaryMultiHeadAttentionLayer -> layer.disableCache()
             }
         }
@@ -277,7 +281,7 @@ class DefaultTextGenerator : TextGenerator {
             val ids = tokenizer.encodeCausal(prompt, false).toMutableList()
 
             // Prime the attention cache by feeding each prompt token (batchSize=1)
-            if (model.layers.any { l ->  l is RotaryMultiHeadAttentionLayer }) {
+            if (model.layers.any { l -> l is CachedMultiHeadAttentionLayer || l is RotaryMultiHeadAttentionLayer }) {
                 for (tok in ids) {
                     model.predict(Tensor(1, 1) { _, _ -> tok.toFloat() })
                 }
