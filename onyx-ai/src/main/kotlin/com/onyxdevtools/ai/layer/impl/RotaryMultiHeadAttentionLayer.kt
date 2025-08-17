@@ -88,16 +88,20 @@ class RotaryMultiHeadAttentionLayer(
     init {
         require(modelSize % headCount == 0) { "modelSize must be divisible by headCount" }
         headSize = modelSize / headCount
-        require(headSize > 1) { "headSize must be >= 2 for RoPE, but got $headSize" }
+        require(headSize >= 2 && headSize % 2 == 0) { "headSize must be even and >= 2 for RoPE, got $headSize" }
         headPairs = headSize / 2
         invSqrtHead = (1.0 / sqrt(headSize.toDouble())).toFloat()
 
         val rand = java.util.Random()
-        val scale = 0.02f
-        wQuery = Tensor(modelSize, modelSize) { _, _ -> (rand.nextGaussian() * scale).toFloat() }
-        wKey   = Tensor(modelSize, modelSize) { _, _ -> (rand.nextGaussian() * scale).toFloat() }
-        wValue = Tensor(modelSize, modelSize) { _, _ -> (rand.nextGaussian() * scale).toFloat() }
-        wOutput= Tensor(modelSize, modelSize) { _, _ -> (rand.nextGaussian() * scale).toFloat() }
+        val d = modelSize
+        val std = (1.0 / sqrt(d.toDouble())).toFloat()
+
+        fun randn(std: Float) = (rand.nextGaussian() * std).toFloat()
+
+        wQuery = Tensor(d, d) { _, _ -> randn(std) }
+        wKey   = Tensor(d, d) { _, _ -> randn(std) }
+        wValue = Tensor(d, d) { _, _ -> randn(std) }
+        wOutput= Tensor(d, d) { _, _ -> randn(std) }
 
         invFreq = FloatArray(headPairs) { j -> (1.0 / base.pow(2.0 * j / headSize)).toFloat() }
         // initialize optimizer state
@@ -368,6 +372,62 @@ class RotaryMultiHeadAttentionLayer(
         }
     }
 
+    private fun applyRoPEBackwardInPlace(grad: Tensor, startPos: Int = 0): Tensor {
+        val seqLen = grad.rows
+        if (seqLen == 0) return grad
+        ensureRopeTables(startPos + seqLen)
+
+        var i = 0
+        while (i < seqLen) {
+            val pos = startPos + i
+            val cosRow = ropeCos[pos]
+            val sinRow = ropeSin[pos]
+            var h = 0
+            while (h < headCount) {
+                val base = h * headSize
+                var p = 0
+                var j = 0
+                while (j < headSize) {
+                    val g1 = grad[i, base + j    ] // d a'
+                    val g2 = grad[i, base + j + 1] // d b'
+                    val c = cosRow[p]
+                    val s = sinRow[p]
+                    // [a'; b'] = [ a c - b s; b c + a s ]  =>  d[a;b] = R(θ)^T * d[a';b']
+                    val da = g1 * c + g2 * s
+                    val db = g2 * c - g1 * s
+                    grad[i, base + j    ] = da
+                    grad[i, base + j + 1] = db
+                    j += 2; p++
+                }
+                h++
+            }
+            i++
+        }
+        return grad
+    }
+
+    // --- small helpers ----------------------------------------------------------
+    private fun sliceCols(src: Tensor, start: Int, len: Int): Tensor {
+        val T = src.rows
+        val out = Tensor(T, len)
+        var i = 0
+        while (i < T) {
+            var j = 0
+            while (j < len) { out[i, j] = src[i, start + j]; j++ }
+            i++
+        }
+        return out
+    }
+    private fun addSlice(dst: Tensor, start: Int, src: Tensor) {
+        val T = src.rows; val len = src.cols
+        var i = 0
+        while (i < T) { var j = 0; while (j < len) { dst[i, start + j] += src[i, j]; j++ }; i++ }
+    }
+    // safe accumulate (Option A)
+    private fun acc(old: Tensor?, step: Tensor, add: (Tensor, Tensor) -> Tensor): Tensor =
+        if (old == null) step else add(old, step)
+
+    // --- replacement backward ---------------------------------------------------
     override fun backward(
         currentInput: Tensor?,
         delta: Tensor,
@@ -376,28 +436,141 @@ class RotaryMultiHeadAttentionLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        val input = currentInput ?: error("currentInput is null in backward()")
+        val X   = currentInput ?: error("currentInput is null in backward()")
+        val Qr  = queries ?: error("queries missing for backward()")   // RoPE-rotated
+        val Kr  = keys    ?: error("keys missing for backward()")      // RoPE-rotated
+        val V   = values  ?: error("values missing for backward()")
+        val O   = attentionOutput ?: error("attentionOutput missing for backward()")
 
-        // output projection gradient
-        gradWOutput = backend.backend.matrixMultiply(backend.backend.transpose(attentionOutput!!), delta)
-        val gradAttnOut = backend.backend.matrixMultiply(delta, backend.backend.transpose(wOutput))
+        val T = Qr.rows
+        // 1) dWo and dO (pre-output-proj)
+        var gWOutStep = backend.backend.matrixMultiply(backend.backend.transpose(O), delta)
+        var dO = backend.backend.matrixMultiply(delta, backend.backend.transpose(wOutput))
 
-        // query/key/value projection gradients
-        gradWQuery = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttnOut)
-        gradWKey   = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttnOut)
-        gradWValue = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttnOut)
+        // per-head grads we’ll accumulate here
+        val dQ_rot = Tensor(T, modelSize) // still in RoPE space
+        val dK_rot = Tensor(T, modelSize)
+        val dV_raw = Tensor(T, modelSize)
 
-        // backprop into input via Q,K,V
-        val gradQ = backend.backend.matrixMultiply(gradAttnOut, backend.backend.transpose(wQuery))
-        val gradK = backend.backend.matrixMultiply(gradAttnOut, backend.backend.transpose(wKey))
-        val gradV = backend.backend.matrixMultiply(gradAttnOut, backend.backend.transpose(wValue))
+        // 2) per-head attention backward
+        var h = 0
+        while (h < headCount) {
+            val off = h * headSize
 
-        // sum gradients from all projections
-        val gradInput = Tensor(input.rows, input.cols)
-        for (i in 0 until input.rows) {
-            for (j in 0 until input.cols) {
-                gradInput[i, j] = gradQ[i, j] + gradK[i, j] + gradV[i, j]
+            val Qh = sliceCols(Qr, off, headSize)   // [T, dh]
+            val Kh = sliceCols(Kr, off, headSize)   // [T, dh]
+            val Vh = sliceCols(V,  off, headSize)   // [T, dh]
+            val dOh= sliceCols(dO, off, headSize)   // [T, dh]
+
+            // Scores (scaled) S = Qh Kh^T / sqrt(dh), with causal mask
+            val S = backend.backend.matrixMultiply(Qh, backend.backend.transpose(Kh)) // [T,T]
+            var i = 0
+            while (i < T) {
+                var j = 0
+                while (j < T) {
+                    var s = S[i, j] * invSqrtHead
+                    if (j > i) s = Float.NEGATIVE_INFINITY
+                    S[i, j] = s
+                    j++
+                }
+                i++
             }
+
+            // Softmax row-wise -> A
+            val A = Tensor(T, T)
+            i = 0
+            while (i < T) {
+                var maxv = Float.NEGATIVE_INFINITY
+                var j2 = 0
+                while (j2 < T) { val v = S[i, j2]; if (v > maxv) maxv = v; j2++ }
+                var sum = 0.0f
+                j2 = 0
+                while (j2 < T) { val e = kotlin.math.exp((S[i, j2] - maxv).toDouble()).toFloat(); A[i, j2] = e; sum += e; j2++ }
+                val inv = 1.0f / (sum + 1e-9f)
+                j2 = 0
+                while (j2 < T) { A[i, j2] = A[i, j2] * inv; j2++ }
+                i++
+            }
+
+            // dV_h, dA_h
+            val dVh = backend.backend.matrixMultiply(backend.backend.transpose(A), dOh) // [T,dh]
+            val dAh = backend.backend.matrixMultiply(dOh, backend.backend.transpose(Vh)) // [T,T]
+
+            // dS_h via softmax Jacobian and unscale by invSqrtHead
+            val dSh = Tensor(T, T)
+            i = 0
+            while (i < T) {
+                var dot = 0.0f
+                var j3 = 0
+                while (j3 < T) { dot += dAh[i, j3] * A[i, j3]; j3++ }
+                j3 = 0
+                while (j3 < T) {
+                    var g = (dAh[i, j3] - dot) * A[i, j3]
+                    if (j3 > i) g = 0.0f
+                    dSh[i, j3] = g * invSqrtHead
+                    j3++
+                }
+                i++
+            }
+
+            // dQ_rot_h, dK_rot_h
+            val dQh = backend.backend.matrixMultiply(dSh, Kh)                       // [T,dh]
+            val dKh = backend.backend.matrixMultiply(backend.backend.transpose(dSh), Qh) // [T,dh]
+
+            // accumulate into full tensors
+            addSlice(dQ_rot, off, dQh)
+            addSlice(dK_rot, off, dKh)
+            addSlice(dV_raw, off, dVh)
+
+            h++
+        }
+
+        // 3) invert RoPE for Q/K grads
+        applyRoPEBackwardInPlace(dQ_rot, startPos = 0)
+        applyRoPEBackwardInPlace(dK_rot, startPos = 0)
+        val dQ_raw = dQ_rot
+        val dK_raw = dK_rot
+
+        // 4) weight grads (this step)
+        var gWQStep = backend.backend.matrixMultiply(backend.backend.transpose(X), dQ_raw)
+        var gWKStep = backend.backend.matrixMultiply(backend.backend.transpose(X), dK_raw)
+        var gWVStep = backend.backend.matrixMultiply(backend.backend.transpose(X), dV_raw)
+
+        // 5) scale by batch/token count and add L2 (classic L2)
+        if (featureSize > 1f) {
+            val s = 1f / featureSize
+            gWOutStep = backend.backend.scalarMultiply(gWOutStep, s)
+            gWQStep   = backend.backend.scalarMultiply(gWQStep,   s)
+            gWKStep   = backend.backend.scalarMultiply(gWKStep,   s)
+            gWVStep   = backend.backend.scalarMultiply(gWVStep,   s)
+        }
+        if (lambda != 0f) {
+            gWOutStep = backend.backend.add(gWOutStep, backend.backend.scalarMultiply(wOutput, lambda))
+            gWQStep   = backend.backend.add(gWQStep,   backend.backend.scalarMultiply(wQuery,  lambda))
+            gWKStep   = backend.backend.add(gWKStep,   backend.backend.scalarMultiply(wKey,    lambda))
+            gWVStep   = backend.backend.add(gWVStep,   backend.backend.scalarMultiply(wValue,  lambda))
+        }
+
+        // 6) ACCUMULATE (Option A)
+        gradWOutput = acc(gradWOutput, gWOutStep, backend.backend::add)
+        gradWQuery  = acc(gradWQuery,  gWQStep,   backend.backend::add)
+        gradWKey    = acc(gradWKey,    gWKStep,   backend.backend::add)
+        gradWValue  = acc(gradWValue,  gWVStep,   backend.backend::add)
+
+        // 7) dX = dQ Wq^T + dK Wk^T + dV Wv^T
+        val dX_q = backend.backend.matrixMultiply(dQ_raw, backend.backend.transpose(wQuery))
+        val dX_k = backend.backend.matrixMultiply(dK_raw, backend.backend.transpose(wKey))
+        val dX_v = backend.backend.matrixMultiply(dV_raw, backend.backend.transpose(wValue))
+
+        val gradInput = Tensor(X.rows, X.cols)
+        var r = 0
+        while (r < gradInput.rows) {
+            var c = 0
+            while (c < gradInput.cols) {
+                gradInput[r, c] = dX_q[r, c] + dX_k[r, c] + dX_v[r, c]
+                c++
+            }
+            r++
         }
         return gradInput
     }
@@ -420,6 +593,11 @@ class RotaryMultiHeadAttentionLayer(
             adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
         updateWeightMatrix(wOutput, gradWOutput!!, momentWOutput, velocityWOutput,
             adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+
+        gradWQuery = null
+        gradWKey = null
+        gradWValue = null
+        gradWOutput = null
     }
 
     /**

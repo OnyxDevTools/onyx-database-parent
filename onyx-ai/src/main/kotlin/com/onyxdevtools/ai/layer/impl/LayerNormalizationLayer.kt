@@ -48,7 +48,8 @@ class LayerNormalizationLayer(
     private val size: Int,
     @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-    @kotlin.jvm.Transient private var ctx = computeContext
+    @kotlin.jvm.Transient
+    private var ctx = computeContext
 
     override var output: Tensor? = null
     override var preActivation: Tensor? = null
@@ -68,118 +69,159 @@ class LayerNormalizationLayer(
     private var momentBeta = FloatArray(size) { 0.0f }
     private var velocityBeta = FloatArray(size) { 0.0f }
 
-    /**
-     * Normalizes the input using layer statistics and applies learned affine transformation.
-     */
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
+        require(input.columnSize == size) {
+            "LayerNorm size mismatch: input has ${input.columnSize} features, expected $size"
+        }
         val batchSize = input.rows
         val cols = size
 
-        // 1) Compute per-row mean and variance via transpose & column-sum
-        val xT = ctx.backend.transpose(input)
-        val sumRows = ctx.backend.sumColumns(xT)
+        // per-row mean
+        val xT = ctx.backend.transpose(input)                                  // [cols x rows]
+        val sumRows = ctx.backend.sumColumns(xT)                                // length rows
         val meanArr = FloatArray(batchSize) { i -> sumRows[i] / cols }
         val meanCol = ctx.createColVector(meanArr)
 
         val centered = ctx.backend.subtract(input, meanCol)
         val sq = ctx.backend.elementWiseMultiply(centered, centered)
-        val varSum = ctx.backend.sumColumns(ctx.backend.transpose(sq))
+
+        // per-row variance
+        val varSum = ctx.backend.sumColumns(ctx.backend.transpose(sq))          // length rows
         val varArr = FloatArray(batchSize) { i -> varSum[i] / cols }
         mean = meanArr
         variance = varArr
-        val varCol = ctx.createColVector(varArr)
 
-        // 2) Normalize: (x - mu) / sqrt(var + eps)
+        // invStd per row (column vector)
         val invStdCol = ctx.backend.applyElementWise(
-            ctx.backend.add(
-                varCol,
-                ctx.createColVector(FloatArray(batchSize) { EPSILON })
-            ), { v -> 1f / sqrt(v) }
-        )
+            ctx.createColVector(FloatArray(batchSize) { i -> varArr[i] + EPSILON })
+        ) { v -> 1f / sqrt(v) }
+
         normalized = ctx.backend.elementWiseMultiply(centered, invStdCol)
 
-        // 3) Affine gamma, beta broadcast across rows
+        // affine: broadcast gamma/beta row-wise
         val gammaRow = ctx.createRowVector(gamma)
         val betaRow = ctx.createRowVector(beta)
         output = ctx.backend.add(
             ctx.backend.elementWiseMultiply(normalized!!, gammaRow),
             betaRow
         )
+        preActivation = output
         return output!!
     }
 
     override fun backward(
-        currentInput: Tensor?, delta: Tensor, featureSize: Float,
-        nextLayer: Layer?, previousLayer: Layer?, lambda: Float
+        currentInput: Tensor?,
+        delta: Tensor,
+        featureSize: Float,
+        nextLayer: Layer?,
+        previousLayer: Layer?,
+        lambda: Float
     ): Tensor {
-        val width     = size
+        val rows = delta.rows
+        val cols = size
 
-        // Parameter gradients: gradGamma[c] = Σ_r delta[r,c]*x̂[r,c], gradBeta[c]=Σ_r delta[r,c]
-        gradGamma = ctx.backend.sumColumns(
+        // ---- PARAM GRADS (this micro-batch step) ----
+        val dGammaStep = ctx.backend.sumColumns(
             ctx.backend.elementWiseMultiply(delta, normalized!!)
         )
-        gradBeta  = ctx.backend.sumColumns(delta)
+        val dBetaStep  = ctx.backend.sumColumns(delta)
 
-        // Prepare row-vectors for gamma and invStd: invStd = 1/√(var+eps)
-        val gammaRow = ctx.createRowVector(gamma)
-        val invStdRow = ctx.backend.applyElementWise(
-            ctx.createRowVector(FloatArray(width) { j -> variance!![j] + EPSILON }),
-            { v -> 1f / sqrt(v) }
-        )
+        // Optional: average over examples/tokens (matches your Dense/MHA convention)
+        if (featureSize > 1f) {
+            val s = 1f / featureSize
+            var j = 0
+            while (j < cols) {
+                dGammaStep[j] *= s
+                dBetaStep [j] *= s
+                j++
+            }
+        }
 
-        // dYg = delta * gamma
-        val dYg = ctx.backend.elementWiseMultiply(delta, gammaRow)
+        // ---- ACCUMULATE PARAM GRADS (Option A) ----
+        if (gradGamma == null) gradGamma = FloatArray(cols) { 0f }
+        if (gradBeta  == null) gradBeta  = FloatArray(cols) { 0f }
+        var j = 0
+        while (j < cols) {
+            gradGamma!![j] += dGammaStep[j]
+            gradBeta!! [j] += dBetaStep [j]
+            j++
+        }
 
-        // sumDY[c] = Σ_r dYg[r,c], sumDYX[c] = Σ_r dYg[r,c] * x̂[r,c]
-        val sumDY  = ctx.backend.sumColumns(dYg)
-        val sumDYX = ctx.backend.sumColumns(
-            ctx.backend.elementWiseMultiply(dYg, normalized!!)
-        )
-        val sumDYRow  = ctx.createRowVector(sumDY)
-        val sumDYXRow = ctx.createRowVector(sumDYX)
+        // ---- INPUT GRAD ----
+        // dYg = delta ⊙ gamma (broadcast gamma row-wise)
+        val gammaRow = ctx.createRowVector(gamma)                    // [1 x cols]
+        val dYg = ctx.backend.elementWiseMultiply(delta, gammaRow)   // [rows x cols]
 
-        // dx_hat = (dYg - sumDYRow/width - x̂ * (sumDYXRow/width))
-        val invWidth = 1f / width.toFloat()
-        val term1 = ctx.backend.scalarMultiply(sumDYRow, invWidth)
-        val term2 = ctx.backend.scalarMultiply(sumDYXRow, invWidth)
+        // Row-wise means: mean_over_features(...)
+        val sumDY   = ctx.backend.sumColumns(ctx.backend.transpose(dYg))                 // length rows
+        val dYgXhat = ctx.backend.elementWiseMultiply(dYg, normalized!!)
+        val sumDYX  = ctx.backend.sumColumns(ctx.backend.transpose(dYgXhat))            // length rows
+
+        val invWidth = 1f / cols.toFloat()
+        val meanDYCol  = ctx.createColVector(FloatArray(rows) { r -> sumDY[r]  * invWidth }) // [rows x 1]
+        val meanDYXCol = ctx.createColVector(FloatArray(rows) { r -> sumDYX[r] * invWidth }) // [rows x 1]
+
+        // dxHat = dYg - mean_row(dYg) - x̂ ⊙ mean_row(dYg ⊙ x̂)
         val dxHat = ctx.backend.subtract(
-            ctx.backend.subtract(dYg, term1),
-            ctx.backend.elementWiseMultiply(normalized!!, term2)
+            ctx.backend.subtract(dYg, meanDYCol),
+            ctx.backend.elementWiseMultiply(normalized!!, meanDYXCol)
         )
 
-        // dX = dx_hat * invStdRow
-        return ctx.backend.elementWiseMultiply(dxHat, invStdRow)
+        // invStd per row (column vector)
+        val invStdCol = ctx.backend.applyElementWise(
+            ctx.createColVector(FloatArray(rows) { r -> variance!![r] + EPSILON })
+        ) { v -> 1f / sqrt(v) }
+
+        // dX
+        return ctx.backend.elementWiseMultiply(dxHat, invStdCol)
     }
+
 
     /**
      * Updates gamma and beta parameters using the Adam optimizer.
      */
-    @Suppress("DuplicatedCode")
     override fun updateParameters(
-        adamBeta1Power: Float,
-        adamBeta2Power: Float,
-        adamBeta1: Float,
-        adamBeta2: Float,
-        learningRate: Float
-    ) {
-        fun correctMoment(moment: Float) = moment / (1.0f - adamBeta1Power)
-        fun correctVelocity(velocity: Float) = velocity / (1.0f - adamBeta2Power)
+    adamBeta1Power: Float,
+    adamBeta2Power: Float,
+    adamBeta1: Float,
+    adamBeta2: Float,
+    learningRate: Float
+) {
+    // If nothing accumulated, skip
+    val gG = gradGamma
+    val gB = gradBeta
+    if (gG == null && gB == null) return
 
-        for (j in 0 until size) {
-            val gradientGamma = gradGamma!![j]
-            val gradientBeta = gradBeta!![j]
+    fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
+    fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
 
-            momentGamma[j] = adamBeta1 * momentGamma[j] + (1.0f - adamBeta1) * gradientGamma
-            velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1.0f - adamBeta2) * gradientGamma * gradientGamma
-            gamma[j] =
-                gamma[j] - learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
+    val GG = gG ?: FloatArray(size) // treat missing as zeros
+    val GB = gB ?: FloatArray(size)
 
-            momentBeta[j] = adamBeta1 * momentBeta[j] + (1.0f - adamBeta1) * gradientBeta
-            velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1.0f - adamBeta2) * gradientBeta * gradientBeta
-            beta[j] =
-                beta[j] - learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
-        }
+    var j = 0
+    while (j < size) {
+        // gamma
+        val ggam = GG[j]
+        momentGamma[j]   = adamBeta1 * momentGamma[j]   + (1f - adamBeta1) * ggam
+        velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1f - adamBeta2) * ggam * ggam
+        gamma[j] -= learningRate * (correctMoment(momentGamma[j]) /
+                   (sqrt(correctVelocity(velocityGamma[j])) + EPSILON))
+
+        // beta
+        val gbet = GB[j]
+        momentBeta[j]   = adamBeta1 * momentBeta[j]   + (1f - adamBeta1) * gbet
+        velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1f - adamBeta2) * gbet * gbet
+        beta[j] -= learningRate * (correctMoment(momentBeta[j]) /
+                  (sqrt(correctVelocity(velocityBeta[j])) + EPSILON))
+
+        j++
     }
+
+    // clear for next accumulation window
+    gradGamma = null
+    gradBeta  = null
+}
+
 
     /**
      * Creates a deep copy of the layer normalization layer.

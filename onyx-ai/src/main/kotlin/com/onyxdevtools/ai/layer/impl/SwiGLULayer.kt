@@ -5,8 +5,7 @@ import com.onyxdevtools.ai.Tensor
 import com.onyxdevtools.ai.compute.ComputeContext
 import com.onyxdevtools.ai.compute.DefaultComputeContext
 import com.onyxdevtools.ai.layer.Layer
-import com.onyxdevtools.ai.layer.impl.DenseLayer
-import kotlin.math.exp
+
 
 /**
  * SwiGLU layer: gated feed-forward unit using the Swish (SiLU) activation.
@@ -23,7 +22,8 @@ class SwiGLULayer(
     private val outputSize: Int,
     @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-    @kotlin.jvm.Transient private var ctx = computeContext
+    @kotlin.jvm.Transient
+    private var ctx = computeContext
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
@@ -37,7 +37,8 @@ class SwiGLULayer(
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         val x1 = proj1.forward(input, isTraining, null)
         val x2 = proj2.forward(input, isTraining, null)
-        val gate = ctx.backend.applyElementWise(x1) { v -> v / (1f + exp(-v)) }
+
+        val gate = ctx.backend.applyElementWise(x1) { v -> swishf(v) }
         gateTensor = gate
         val gated = ctx.backend.elementWiseMultiply(gate, x2)
         val out = projOut.forward(gated, isTraining, nextLayer)
@@ -54,17 +55,16 @@ class SwiGLULayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        // backprop through final projection (use gate tensor as input, no previousLayer to compute correct weight gradients)
+        // dHidden through final linear, using gate as the "input" to projOut
         val dHidden = projOut.backward(gateTensor, delta, featureSize, nextLayer, null, lambda)
-        // distribute gradients through gating
-        val mask = ctx.backend.applyElementWise(
-            proj1.output!!,
-            { v ->
-                val s = 1f / (1f + exp(-v))
-                s * (1f + v * (1f - s))
-            }
-        )
+
+        // mask = d swish(x1) / d x1
+        val mask = ctx.backend.applyElementWise(proj1.output!!) { v -> dswishf(v) }
+
+        // d x1 = dHidden ⊙ x2 ⊙ swish'(x1)
         val d1 = ctx.backend.elementWiseMultiply(dHidden, ctx.backend.elementWiseMultiply(proj2.output!!, mask))
+
+        // d x2 = dHidden ⊙ swish(x1)  (== gate)
         val d2 = ctx.backend.elementWiseMultiply(dHidden, gateTensor!!)
         val dx1 = proj1.backward(currentInput, d1, featureSize, this, previousLayer, lambda)
         val dx2 = proj2.backward(currentInput, d2, featureSize, this, previousLayer, lambda)
@@ -88,15 +88,15 @@ class SwiGLULayer(
         hiddenSize,
         outputSize,
         computeContext
-        ).also { copy ->
-            copy.proj1 = proj1.clone() as DenseLayer
-            copy.proj2 = proj2.clone() as DenseLayer
-            copy.projOut = projOut.clone() as DenseLayer
+    ).also { copy ->
+        copy.proj1 = proj1.clone() as DenseLayer
+        copy.proj2 = proj2.clone() as DenseLayer
+        copy.projOut = projOut.clone() as DenseLayer
 
-            copy.gateTensor = gateTensor?.deepCopy()
-            copy.preActivation = preActivation?.deepCopy()
-            copy.output = output?.deepCopy()
-        }
+        copy.gateTensor = gateTensor?.deepCopy()
+        copy.preActivation = preActivation?.deepCopy()
+        copy.output = output?.deepCopy()
+    }
 
     /**
      * Releases backend resources.
@@ -107,6 +107,29 @@ class SwiGLULayer(
         projOut.dispose()
         ctx.dispose()
     }
+
+    private fun sigmoidf(x: Float): Float {
+        // stable sigmoid using Float math (via Double then back)
+        return if (x >= 0f) {
+            val z = kotlin.math.exp(-x.toDouble()).toFloat()
+            1f / (1f + z)
+        } else {
+            val z = kotlin.math.exp(x.toDouble()).toFloat()
+            z / (1f + z)
+        }
+    }
+
+    private fun swishf(x: Float): Float {
+        val s = sigmoidf(x)
+        return x * s
+    }
+
+    private fun dswishf(x: Float): Float {
+        // swish'(x) = s + x*s*(1 - s)
+        val s = sigmoidf(x)
+        return s * (1f + x * (1f - s))
+    }
+
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()

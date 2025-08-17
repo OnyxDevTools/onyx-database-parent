@@ -197,7 +197,7 @@ fun main() {
     val ffHiddenDim = ffnDim(maxSequenceLength) // e.g., 4096 -> 11008
     var totalProbes = 0
 
-    val cachedLayers = arrayListOf<RotaryMultiHeadAttentionLayer>()
+    
 
     val checkProbe = { net: NeuralNetwork ->
 
@@ -215,17 +215,13 @@ fun main() {
 
     repeat(12) {
         // Block: x = x + Attn(RMSNorm(x)); x = x + MLP(RMSNorm(x))
-        val headLayer = RotaryMultiHeadAttentionLayer(
-            modelSize = maxSequenceLength,
-            headCount = numHeads,
-        )
-
-        cachedLayers.add(headLayer)
-
         underLayers.add(ResidualLayer(
             layers = listOf(
                 LayerNormalizationLayer(maxSequenceLength),
-                headLayer
+                RotaryMultiHeadAttentionLayer(
+                    modelSize = maxSequenceLength,
+                    headCount = numHeads,
+                )
             )
         ))
 
@@ -249,7 +245,7 @@ fun main() {
     layers.add(
         DenseLayer(maxSequenceLength, vocabulary.size, Activation.LINEAR)
     )
-    val checkpointPath = "/Volumes/onyx/books/onyx-llm-checkpoint.ser"   // <‑‑ the file you keep saving to
+    val checkpointPath = "/Volumes/onyx/books/onyx-llm-checkpoint-1.ser"   // <‑‑ the file you keep saving to
 
     var model = NeuralNetwork.loadOrCreate(checkpointPath) {
         // This lambda is only executed when the file does **not** exist
@@ -281,7 +277,7 @@ fun main() {
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
                 comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, strideForEpoch(epochIdx, maxSequenceLength)),
-                saveModelPath = "/Volumes/onyx/books/onyx-llm-$epochIdx.ser"
+                saveModelPath = "/Volumes/onyx/books/onyx-llm-$epochIdx-1.ser"
             )
 
             println("=== Finished epoch ${epochIdx + 1} ===")

@@ -6,6 +6,8 @@ import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.compute.ComputeContext
 import com.onyxdevtools.ai.compute.DefaultComputeContext
 import java.util.Random
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 class EmbeddingLayer(
@@ -19,39 +21,39 @@ class EmbeddingLayer(
     override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
-    private val random: Random = Random()
+    private val random = java.util.Random()
 
-    // Learnable parameters and Adam buffers (all as Tensors)
     private var weights: Tensor
     private var momentWeights: Tensor
     private var velocityWeights: Tensor
     private var gradientWeights: Tensor? = null
+    // NEW: track which rows were touched this step for sparse updates
+    private var touchedIds: IntArray? = null
 
     init {
-        // weights ~ N(0, 0.02)
+        // Glorot-normal-ish for embeddings: std = 1/sqrt(d)
+        val std = (1.0 / sqrt(embeddingSize.toDouble())).toFloat()
         weights = Tensor(vocabSize, embeddingSize) { _, _ ->
-            (random.nextGaussian().toFloat() * 0.02f)
+            (random.nextGaussian().toFloat() * std)
         }
-        // Adam buffers start at 0
-        momentWeights = Tensor(vocabSize, embeddingSize) { _, _ -> 0.0f }
-        velocityWeights = Tensor(vocabSize, embeddingSize) { _, _ -> 0.0f }
+        momentWeights   = Tensor(vocabSize, embeddingSize) { _, _ -> 0f }
+        velocityWeights = Tensor(vocabSize, embeddingSize) { _, _ -> 0f }
     }
 
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
-        // input shape: (batchSize, sequenceLength), containing token IDs as floats
-        val batchSize = input.size
-        val sequenceLength = input[0].size
-        // Flatten token IDs and gather corresponding embedding rows via backend
+        // input: [batchSize, sequenceLength] of token IDs (as floats)
+        val batchSize = input.rows
+        val sequenceLength = input.columnSize
+
         val flatIds = IntArray(batchSize * sequenceLength) { idx ->
             val b = idx / sequenceLength
             val t = idx % sequenceLength
-            input[b, t].toInt().also { tokenId ->
-                require(tokenId in 0 until vocabSize) {
-                    "Token id $tokenId out of range [0, $vocabSize)"
-                }
+            toTokenId(input[b, t]).also { id ->
+                require(id in 0 until vocabSize) { "Token id $id out of range [0, $vocabSize)" }
             }
         }
-        val out = ctx.backend.gatherRows(weights, flatIds)
+
+        val out = ctx.backend.gatherRows(weights, flatIds) // [batchSize*sequenceLength, embeddingSize]
         preActivation = out
         output = out
         return out
@@ -65,43 +67,87 @@ class EmbeddingLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        // currentInput shape: (batchSize, sequenceLength)
         val x = requireNotNull(currentInput) { "currentInput required for EmbeddingLayer.backward" }
-        val batchSize = x.size
-        val sequenceLength = x[0].size
+        val batchSize = x.rows
+        val sequenceLength = x.columnSize
         val width = embeddingSize
 
-        // Initialize / reset gradients for the embedding matrix
-        val gw = Tensor(vocabSize, embeddingSize) { _, _ -> 0.0f }
-        val g = gw.data
-        val d = delta.data
+        // Safety: delta must match forward's gather shape
+        require(delta.rows == batchSize * sequenceLength && delta.columnSize == width) {
+            "delta shape ${delta.rows}x${delta.columnSize} != expected ${batchSize * sequenceLength}x$width"
+        }
+
+        // ---- ACCUM BUFFER: create once, then accumulate every micro-batch ----
+        if (gradientWeights == null) {
+            gradientWeights = Tensor(vocabSize, embeddingSize) { _, _ -> 0.0f }
+        }
+        val G = gradientWeights!!.data                // accumulated grads buffer
+        val D = delta.data
+        val W = weights.data
+
+        // Track which vocab rows we touched in THIS micro-batch
+        val touchedThis = BooleanArray(vocabSize)
 
         var deltaIndex = 0
+        val scale = if (featureSize > 1f) 1f / featureSize else 1f
+
         var b = 0
         while (b < batchSize) {
             var t = 0
             while (t < sequenceLength) {
-                val tokenId = x[b, t].toInt()
-                require(tokenId in 0 until vocabSize) {
-                    "Token id $tokenId out of range [0, $vocabSize)"
-                }
-                val gOff = tokenId * width
-                val dOff = deltaIndex * width
+                val tokenId = toTokenId(x[b, t])
+                require(tokenId in 0 until vocabSize) { "Token id $tokenId out of range [0, $vocabSize)" }
+                val baseG = tokenId * width
+                val baseD = deltaIndex * width
                 var j = 0
                 while (j < width) {
-                    g[gOff + j] += d[dOff + j]
+                    G[baseG + j] += D[baseD + j] * scale     // accumulate dW for that row
                     j++
                 }
+                touchedThis[tokenId] = true
                 deltaIndex++
                 t++
             }
             b++
         }
 
-        gradientWeights = gw
+        // Optional L2 decay only on touched rows (classic L2, not decoupled AdamW)
+        if (lambda != 0f) {
+            var id = 0
+            while (id < vocabSize) {
+                if (touchedThis[id]) {
+                    val base = id * width
+                    var j = 0
+                    while (j < width) {
+                        G[base + j] += lambda * W[base + j]
+                        j++
+                    }
+                }
+                id++
+            }
+        }
 
-        // No gradient to token IDs (they're discrete) → return zeros shaped like input
-        return Tensor(batchSize, sequenceLength) // zero-initialized
+        // ---- Merge touched IDs across micro-batches for sparse Adam update ----
+        val prev = touchedIds
+        if (prev == null) {
+            // first accumulation window: pack current set
+            var cnt = 0; for (i in 0 until vocabSize) if (touchedThis[i]) cnt++
+            touchedIds = IntArray(cnt).also { arr ->
+                var k = 0; for (i in 0 until vocabSize) if (touchedThis[i]) arr[k++] = i
+            }
+        } else {
+            // union previous + current
+            val mark = BooleanArray(vocabSize)
+            for (id in prev) mark[id] = true
+            for (i in 0 until vocabSize) if (touchedThis[i]) mark[i] = true
+            var cnt = 0; for (i in 0 until vocabSize) if (mark[i]) cnt++
+            touchedIds = IntArray(cnt).also { arr ->
+                var k = 0; for (i in 0 until vocabSize) if (mark[i]) arr[k++] = i
+            }
+        }
+
+        // No gradient through discrete token IDs
+        return Tensor(batchSize, sequenceLength) // zeros
     }
 
     @Suppress("DuplicatedCode")
@@ -112,7 +158,8 @@ class EmbeddingLayer(
         adamBeta2: Float,
         learningRate: Float
     ) {
-        val gw = gradientWeights ?: return // nothing to update if no backward yet
+        val gw = gradientWeights ?: return
+        val ids = touchedIds
 
         fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
         fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
@@ -121,20 +168,45 @@ class EmbeddingLayer(
         val M = momentWeights.data
         val V = velocityWeights.data
         val G = gw.data
+        val width = embeddingSize
 
-        val n = vocabSize * embeddingSize
-        var i = 0
-        while (i < n) {
-            val g = G[i]
-            val m = adamBeta1 * M[i] + (1.0f - adamBeta1) * g
-            val v = adamBeta2 * V[i] + (1.0f - adamBeta2) * g * g
-            M[i] = m
-            V[i] = v
-            val mHat = correctMoment(m)
-            val vHat = correctVelocity(v)
-            W[i] = W[i] - learningRate * mHat / (sqrt(vHat) + EPSILON)
-            i++
+        if (ids != null && ids.isNotEmpty()) {
+            // Sparse row-wise Adam
+            var p = 0
+            while (p < ids.size) {
+                val row = ids[p]
+                val base = row * width
+                var j = 0
+                while (j < width) {
+                    val idx = base + j
+                    val g = G[idx]
+                    val m = adamBeta1 * M[idx] + (1.0f - adamBeta1) * g
+                    val v = adamBeta2 * V[idx] + (1.0f - adamBeta2) * g * g
+                    M[idx] = m
+                    V[idx] = v
+                    W[idx] -= learningRate * (correctMoment(m) / (sqrt(correctVelocity(v)) + EPSILON))
+                    j++
+                }
+                p++
+            }
+        } else {
+            // Dense fallback (first step or if not tracking ids)
+            val n = vocabSize * embeddingSize
+            var i = 0
+            while (i < n) {
+                val g = G[i]
+                val m = adamBeta1 * M[i] + (1.0f - adamBeta1) * g
+                val v = adamBeta2 * V[i] + (1.0f - adamBeta2) * g * g
+                M[i] = m
+                V[i] = v
+                W[i] -= learningRate * (correctMoment(m) / (sqrt(correctVelocity(v)) + EPSILON))
+                i++
+            }
         }
+
+        // Prevent double application on the next step
+        gradientWeights = null
+        touchedIds = null
     }
 
     override fun clone(): Layer {
@@ -148,13 +220,19 @@ class EmbeddingLayer(
         }
     }
 
-    companion object {
-        private const val EPSILON = 1e-8f
-    }
+    companion object { private const val EPSILON = 1e-8f }
+
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
         ctx = computeContext
+    }
+
+    // ---- helpers ----
+    private fun toTokenId(x: Float): Int {
+        val r = x.roundToInt()
+        require(abs(x - r) < 1e-3f) { "Non-integer token id: $x" }
+        return r
     }
 }

@@ -357,7 +357,8 @@ fun NeuralNetwork.chat(
 ): String {
     val tokenizer = BPETokenizer(vocabulary)
     val textGenerator = DefaultTextGenerator()
-    return textGenerator.generate(this, tokenizer, vocabulary, "[SOT][U]$prompt[A]", maxTokens, seqLength)
+    // Add a trailing space after the assistant marker so the first generated token is prefixed by a whitespace token
+    return textGenerator.generate(this, tokenizer, vocabulary, "[SOT][U]$prompt[A] ", maxTokens, seqLength)
 }
 
 /**
