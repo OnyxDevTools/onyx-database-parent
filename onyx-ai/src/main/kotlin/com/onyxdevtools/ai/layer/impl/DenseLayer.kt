@@ -21,8 +21,8 @@ import kotlin.random.Random
  * @param computeContext The compute context that manages backend operations
  */
 class DenseLayer(
-    private val inputSize: Int,
-    private val outputSize: Int,
+    val inputSize: Int,
+    val outputSize: Int,
     override val activation: Activation,
     private val dropoutRate: Float = 0.0f,
     private val computeContext: ComputeContext = DefaultComputeContext()

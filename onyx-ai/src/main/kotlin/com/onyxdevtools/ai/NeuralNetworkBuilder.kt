@@ -6,6 +6,8 @@ import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.ColumnTransform
 import com.onyxdevtools.ai.transformation.impl.*
 import com.onyxdevtools.ai.layer.impl.DynamicPositionalEncodingLayer
+import com.onyxdevtools.ai.layer.impl.SwiGLULayer
+import com.onyxdevtools.ai.layer.impl.ResidualLayer
 
 /**
  * A builder-style DSL for constructing a [NeuralNetwork].
@@ -203,6 +205,27 @@ class LayerBuilder {
      */
     fun rotaryMultiHeadAttention(modelSize: Int, headCount: Int) {
         layers += RotaryMultiHeadAttentionLayer(modelSize, headCount)
+    }
+
+    /**
+     * Adds a SwiGLU feed-forward layer (gated linear unit with Swish activation).
+     *
+     * @param inputSize The number of input features.
+     * @param hiddenSize The hidden dimension for gating.
+     * @param outputSize The number of output features.
+     */
+    fun swiGLU(inputSize: Int, hiddenSize: Int, outputSize: Int) {
+        layers += SwiGLULayer(inputSize, hiddenSize, outputSize)
+    }
+
+    /**
+     * Adds a residual connection block wrapping the specified sub-layers.
+     *
+     * @param block A lambda to configure the layers within the residual branch.
+     */
+    fun residual(block: LayerBuilder.() -> Unit) {
+        val branch = LayerBuilder().apply(block).build()
+        layers += ResidualLayer(branch)
     }
 
     /**
