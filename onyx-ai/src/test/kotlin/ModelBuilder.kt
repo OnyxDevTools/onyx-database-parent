@@ -203,11 +203,10 @@ fun main() {
 
         if (totalProbes > 2) {
             askProbes(net, vocabulary, maxSequenceLength)
-            cachedLayers.forEach { it.clearCache() }
         }
         totalProbes++
         if (totalProbes % 100 == 0) {
-            net.saveToFile("/Volumes/onyx/books/model-checkpoint2.ser")
+            net.saveToFile("/Volumes/onyx/books/model-checkpoint.ser")
             println("✅ Saved checkpoint after $totalProbes")
         }
     }
