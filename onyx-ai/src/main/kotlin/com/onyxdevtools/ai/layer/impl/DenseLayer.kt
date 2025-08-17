@@ -25,7 +25,7 @@ class DenseLayer(
     val outputSize: Int,
     override val activation: Activation,
     private val dropoutRate: Float = 0.0f,
-    private val computeContext: ComputeContext = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
 ) : Layer {
 
     override var preActivation: Tensor? = null
@@ -202,17 +202,24 @@ class DenseLayer(
      * Releases any backend-specific resources
      */
     fun dispose() {
-        weights.let { computeContext.releaseMatrix(it) }
-        momentWeights.let { computeContext.releaseMatrix(it) }
-        velocityWeights.let { computeContext.releaseMatrix(it) }
-        preActivation?.let { computeContext.releaseMatrix(it) }
-        output?.let { computeContext.releaseMatrix(it) }
-        dropoutMask?.let { computeContext.releaseMatrix(it) }
-        gradientWeights?.let { computeContext.releaseMatrix(it) }
-        computeContext.dispose()
+        weights.let { computeContext?.releaseMatrix(it) }
+        momentWeights.let { computeContext?.releaseMatrix(it) }
+        velocityWeights.let { computeContext?.releaseMatrix(it) }
+        preActivation?.let { computeContext?.releaseMatrix(it) }
+        output?.let { computeContext?.releaseMatrix(it) }
+        dropoutMask?.let { computeContext?.releaseMatrix(it) }
+        gradientWeights?.let { computeContext?.releaseMatrix(it) }
+        computeContext?.dispose()
     }
 
     companion object {
         private const val EPSILON = 1e-8f
+    }
+
+    @Suppress("unused")
+    @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
+    private fun readObject(`in`: java.io.ObjectInputStream) {
+        `in`.defaultReadObject()
+        computeContext = DefaultComputeContext()
     }
 }

@@ -11,7 +11,7 @@ import kotlin.math.sqrt
 class EmbeddingLayer(
     private val vocabSize: Int,
     private val embeddingSize: Int,
-    private val computeContext: ComputeContext = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
 ) : Layer {
 
     override var preActivation: Tensor? = null
@@ -149,5 +149,11 @@ class EmbeddingLayer(
 
     companion object {
         private const val EPSILON = 1e-8f
+    }
+    @Suppress("unused")
+    @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
+    private fun readObject(`in`: java.io.ObjectInputStream) {
+        `in`.defaultReadObject()
+        computeContext = DefaultComputeContext()
     }
 }

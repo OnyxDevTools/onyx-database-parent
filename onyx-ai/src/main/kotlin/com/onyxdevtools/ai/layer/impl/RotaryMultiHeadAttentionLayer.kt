@@ -61,6 +61,26 @@ class RotaryMultiHeadAttentionLayer(
     private var ropeCos: Array<FloatArray> = emptyArray()
     private var ropeSin: Array<FloatArray> = emptyArray()
 
+    // ======== Training-time buffers for backward/update ========
+    private var queries: Tensor? = null
+    private var keys: Tensor? = null
+    private var values: Tensor? = null
+    private var attentionOutput: Tensor? = null
+
+    // Gradients and optimizer state
+    private var gradWQuery: Tensor? = null
+    private var gradWKey: Tensor? = null
+    private var gradWValue: Tensor? = null
+    private var gradWOutput: Tensor? = null
+    private var momentWQuery: Tensor
+    private var velocityWQuery: Tensor
+    private var momentWKey: Tensor
+    private var velocityWKey: Tensor
+    private var momentWValue: Tensor
+    private var velocityWValue: Tensor
+    private var momentWOutput: Tensor
+    private var velocityWOutput: Tensor
+
     init {
         require(modelSize % headCount == 0) { "modelSize must be divisible by headCount" }
         headSize = modelSize / headCount
@@ -76,6 +96,15 @@ class RotaryMultiHeadAttentionLayer(
         wOutput= Tensor(modelSize, modelSize) { _, _ -> (rand.nextGaussian() * scale).toFloat() }
 
         invFreq = FloatArray(headPairs) { j -> (1.0 / base.pow(2.0 * j / headSize)).toFloat() }
+        // initialize optimizer state
+        momentWQuery = Tensor(modelSize, modelSize)
+        velocityWQuery = Tensor(modelSize, modelSize)
+        momentWKey = Tensor(modelSize, modelSize)
+        velocityWKey = Tensor(modelSize, modelSize)
+        momentWValue = Tensor(modelSize, modelSize)
+        velocityWValue = Tensor(modelSize, modelSize)
+        momentWOutput = Tensor(modelSize, modelSize)
+        velocityWOutput = Tensor(modelSize, modelSize)
     }
 
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
@@ -204,15 +233,16 @@ class RotaryMultiHeadAttentionLayer(
         }
         preActivation = input
 
-        val Q = backend.backend.matrixMultiply(input, wQuery)
-        val K = backend.backend.matrixMultiply(input, wKey)
-        val V = backend.backend.matrixMultiply(input, wValue)
+        // training buffers
+        val Q = backend.backend.matrixMultiply(input, wQuery).also { queries = it }
+        val K = backend.backend.matrixMultiply(input, wKey).also { keys = it }
+        val V = backend.backend.matrixMultiply(input, wValue).also { values = it }
 
         ensureRopeTables(input.rows)
         applyRoPEInPlace(Q, startPos = 0)
         applyRoPEInPlace(K, startPos = 0)
 
-        val attnOut = computeAttention(Q, K, V)
+        val attnOut = computeAttention(Q, K, V).also { attentionOutput = it }
         output = backend.backend.matrixMultiply(attnOut, wOutput)
         return output!!
     }
@@ -350,7 +380,32 @@ class RotaryMultiHeadAttentionLayer(
         nextLayer: Layer?,
         previousLayer: Layer?,
         lambda: Float
-    ): Tensor = delta
+    ): Tensor {
+        val input = currentInput ?: error("currentInput is null in backward()")
+
+        // output projection gradient
+        gradWOutput = backend.backend.matrixMultiply(backend.backend.transpose(attentionOutput!!), delta)
+        val gradAttnOut = backend.backend.matrixMultiply(delta, backend.backend.transpose(wOutput))
+
+        // query/key/value projection gradients
+        gradWQuery = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttnOut)
+        gradWKey   = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttnOut)
+        gradWValue = backend.backend.matrixMultiply(backend.backend.transpose(input), gradAttnOut)
+
+        // backprop into input via Q,K,V
+        val gradQ = backend.backend.matrixMultiply(gradAttnOut, backend.backend.transpose(wQuery))
+        val gradK = backend.backend.matrixMultiply(gradAttnOut, backend.backend.transpose(wKey))
+        val gradV = backend.backend.matrixMultiply(gradAttnOut, backend.backend.transpose(wValue))
+
+        // sum gradients from all projections
+        val gradInput = Tensor(input.rows, input.cols)
+        for (i in 0 until input.rows) {
+            for (j in 0 until input.cols) {
+                gradInput[i, j] = gradQ[i, j] + gradK[i, j] + gradV[i, j]
+            }
+        }
+        return gradInput
+    }
 
     override fun updateParameters(
         adamBeta1Power: Float,
@@ -358,7 +413,46 @@ class RotaryMultiHeadAttentionLayer(
         adamBeta1: Float,
         adamBeta2: Float,
         learningRate: Float
-    ) { /* no-op */ }
+    ) {
+        fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
+        fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
+
+        updateWeightMatrix(wQuery, gradWQuery!!, momentWQuery, velocityWQuery,
+            adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+        updateWeightMatrix(wKey, gradWKey!!, momentWKey, velocityWKey,
+            adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+        updateWeightMatrix(wValue, gradWValue!!, momentWValue, velocityWValue,
+            adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+        updateWeightMatrix(wOutput, gradWOutput!!, momentWOutput, velocityWOutput,
+            adamBeta1, adamBeta2, learningRate, ::correctMoment, ::correctVelocity)
+    }
+
+    /**
+     * Adam update step for a weight matrix.
+     */
+    private fun updateWeightMatrix(
+        weights: Tensor,
+        gradients: Tensor,
+        moment: Tensor,
+        velocity: Tensor,
+        beta1: Float,
+        beta2: Float,
+        learningRate: Float,
+        correctMoment: (Float) -> Float,
+        correctVelocity: (Float) -> Float
+    ) {
+        for (i in 0 until weights.rows) {
+            for (j in 0 until weights.cols) {
+                val g = gradients[i, j]
+                val m = beta1 * moment[i, j] + (1 - beta1) * g
+                val v = beta2 * velocity[i, j] + (1 - beta2) * g * g
+                moment[i, j] = m
+                velocity[i, j] = v
+                weights[i, j] = weights[i, j] - learningRate *
+                    (correctMoment(m) / (sqrt(correctVelocity(v)) + com.onyxdevtools.ai.Constants.EPSILON))
+            }
+        }
+    }
 
     override fun clone(): Layer = RotaryMultiHeadAttentionLayer(modelSize, headCount, base)
 }

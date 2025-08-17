@@ -15,7 +15,7 @@ import com.onyxdevtools.ai.layer.Layer
  */
 class ResidualLayer(
     private val layers: List<Layer>,
-    private val computeContext: ComputeContext = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
 ) : Layer {
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
@@ -82,5 +82,11 @@ class ResidualLayer(
             }
         }
         computeContext.dispose()
+    }
+    @Suppress("unused")
+    @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
+    private fun readObject(`in`: java.io.ObjectInputStream) {
+        `in`.defaultReadObject()
+        computeContext = DefaultComputeContext()
     }
 }

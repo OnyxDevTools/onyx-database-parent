@@ -18,7 +18,7 @@ import kotlin.math.sin
  */
 class DynamicPositionalEncodingLayer(
     private val embeddingSize: Int,
-    private val computeContext: ComputeContext = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
 ) : Layer {
 
     override var preActivation: Tensor? = null
@@ -77,4 +77,10 @@ class DynamicPositionalEncodingLayer(
     ) { /* no-op */ }
 
     override fun clone(): Layer = DynamicPositionalEncodingLayer(embeddingSize)
+    @Suppress("unused")
+    @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
+    private fun readObject(`in`: java.io.ObjectInputStream) {
+        `in`.defaultReadObject()
+        computeContext = DefaultComputeContext()
+    }
 }

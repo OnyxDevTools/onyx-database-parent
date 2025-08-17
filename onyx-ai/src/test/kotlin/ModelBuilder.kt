@@ -188,7 +188,7 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 1024
+    val maxSequenceLength = 256
 
     // Configure neural network
     val numHeads = 32
@@ -274,8 +274,9 @@ fun main() {
 
             model = model.trainStreamingSparse(
                 source = source,
-                batchSize = 4,
+                batchSize = 2,
                 maxEpochs = 1,
+                gradAccumSteps = 64,
                 patience = Int.MAX_VALUE,
                 testFrac = 0.0f,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
