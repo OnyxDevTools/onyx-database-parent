@@ -18,18 +18,18 @@ import kotlin.math.exp
  *   output = Dense(gated -> output)
  */
 class SwiGLULayer(
-    inputSize: Int,
-    hiddenSize: Int,
-    outputSize: Int,
+    private val inputSize: Int,
+    private val hiddenSize: Int,
+    private val outputSize: Int,
     private val computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
-    private val proj1 = DenseLayer(inputSize, hiddenSize, Activation.LINEAR, 0.0f, computeContext)
-    private val proj2 = DenseLayer(inputSize, hiddenSize, Activation.LINEAR, 0.0f, computeContext)
-    private val projOut = DenseLayer(hiddenSize, outputSize, Activation.LINEAR, 0.0f, computeContext)
+    private var proj1 = DenseLayer(inputSize, hiddenSize, Activation.LINEAR, 0.0f, computeContext)
+    private var proj2 = DenseLayer(inputSize, hiddenSize, Activation.LINEAR, 0.0f, computeContext)
+    private var projOut = DenseLayer(hiddenSize, outputSize, Activation.LINEAR, 0.0f, computeContext)
 
     private var gateTensor: Tensor? = null
 
@@ -83,15 +83,14 @@ class SwiGLULayer(
     }
 
     override fun clone(): Layer = SwiGLULayer(
-        proj1.inputSize,
-        proj1.outputSize,
-        projOut.outputSize,
+        inputSize,
+        hiddenSize,
+        outputSize,
         computeContext
     ).also { copy ->
-        // clone internal layers
-        // Note: proj1 and proj2 share input/output sizes
-        // Deep copy state
-        /* cloning handled by DenseLayer.clone() */
+        copy.proj1 = proj1.clone() as DenseLayer
+        copy.proj2 = proj2.clone() as DenseLayer
+        copy.projOut = projOut.clone() as DenseLayer
     }
 
     /**
