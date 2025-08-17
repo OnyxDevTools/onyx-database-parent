@@ -46,8 +46,9 @@ import com.onyxdevtools.ai.compute.DefaultComputeContext
 
 class LayerNormalizationLayer(
     private val size: Int,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
+    @kotlin.jvm.Transient private var ctx = computeContext
 
     override var output: Tensor? = null
     override var preActivation: Tensor? = null
@@ -75,33 +76,33 @@ class LayerNormalizationLayer(
         val cols = size
 
         // 1) Compute per-row mean and variance via transpose & column-sum
-        val xT = computeContext.backend.transpose(input)
-        val sumRows = computeContext.backend.sumColumns(xT)
+        val xT = ctx.backend.transpose(input)
+        val sumRows = ctx.backend.sumColumns(xT)
         val meanArr = FloatArray(batchSize) { i -> sumRows[i] / cols }
-        val meanCol = computeContext.createColVector(meanArr)
+        val meanCol = ctx.createColVector(meanArr)
 
-        val centered = computeContext.backend.subtract(input, meanCol)
-        val sq = computeContext.backend.elementWiseMultiply(centered, centered)
-        val varSum = computeContext.backend.sumColumns(computeContext.backend.transpose(sq))
+        val centered = ctx.backend.subtract(input, meanCol)
+        val sq = ctx.backend.elementWiseMultiply(centered, centered)
+        val varSum = ctx.backend.sumColumns(ctx.backend.transpose(sq))
         val varArr = FloatArray(batchSize) { i -> varSum[i] / cols }
         mean = meanArr
         variance = varArr
-        val varCol = computeContext.createColVector(varArr)
+        val varCol = ctx.createColVector(varArr)
 
         // 2) Normalize: (x - mu) / sqrt(var + eps)
-        val invStdCol = computeContext.backend.applyElementWise(
-            computeContext.backend.add(
+        val invStdCol = ctx.backend.applyElementWise(
+            ctx.backend.add(
                 varCol,
-                computeContext.createColVector(FloatArray(batchSize) { EPSILON })
+                ctx.createColVector(FloatArray(batchSize) { EPSILON })
             ), { v -> 1f / sqrt(v) }
         )
-        normalized = computeContext.backend.elementWiseMultiply(centered, invStdCol)
+        normalized = ctx.backend.elementWiseMultiply(centered, invStdCol)
 
         // 3) Affine gamma, beta broadcast across rows
-        val gammaRow = computeContext.createRowVector(gamma)
-        val betaRow = computeContext.createRowVector(beta)
-        output = computeContext.backend.add(
-            computeContext.backend.elementWiseMultiply(normalized!!, gammaRow),
+        val gammaRow = ctx.createRowVector(gamma)
+        val betaRow = ctx.createRowVector(beta)
+        output = ctx.backend.add(
+            ctx.backend.elementWiseMultiply(normalized!!, gammaRow),
             betaRow
         )
         return output!!
@@ -114,40 +115,40 @@ class LayerNormalizationLayer(
         val width     = size
 
         // Parameter gradients: gradGamma[c] = Σ_r delta[r,c]*x̂[r,c], gradBeta[c]=Σ_r delta[r,c]
-        gradGamma = computeContext.backend.sumColumns(
-            computeContext.backend.elementWiseMultiply(delta, normalized!!)
+        gradGamma = ctx.backend.sumColumns(
+            ctx.backend.elementWiseMultiply(delta, normalized!!)
         )
-        gradBeta  = computeContext.backend.sumColumns(delta)
+        gradBeta  = ctx.backend.sumColumns(delta)
 
         // Prepare row-vectors for gamma and invStd: invStd = 1/√(var+eps)
-        val gammaRow = computeContext.createRowVector(gamma)
-        val invStdRow = computeContext.backend.applyElementWise(
-            computeContext.createRowVector(FloatArray(width) { j -> variance!![j] + EPSILON }),
+        val gammaRow = ctx.createRowVector(gamma)
+        val invStdRow = ctx.backend.applyElementWise(
+            ctx.createRowVector(FloatArray(width) { j -> variance!![j] + EPSILON }),
             { v -> 1f / sqrt(v) }
         )
 
         // dYg = delta * gamma
-        val dYg = computeContext.backend.elementWiseMultiply(delta, gammaRow)
+        val dYg = ctx.backend.elementWiseMultiply(delta, gammaRow)
 
         // sumDY[c] = Σ_r dYg[r,c], sumDYX[c] = Σ_r dYg[r,c] * x̂[r,c]
-        val sumDY  = computeContext.backend.sumColumns(dYg)
-        val sumDYX = computeContext.backend.sumColumns(
-            computeContext.backend.elementWiseMultiply(dYg, normalized!!)
+        val sumDY  = ctx.backend.sumColumns(dYg)
+        val sumDYX = ctx.backend.sumColumns(
+            ctx.backend.elementWiseMultiply(dYg, normalized!!)
         )
-        val sumDYRow  = computeContext.createRowVector(sumDY)
-        val sumDYXRow = computeContext.createRowVector(sumDYX)
+        val sumDYRow  = ctx.createRowVector(sumDY)
+        val sumDYXRow = ctx.createRowVector(sumDYX)
 
         // dx_hat = (dYg - sumDYRow/width - x̂ * (sumDYXRow/width))
         val invWidth = 1f / width.toFloat()
-        val term1 = computeContext.backend.scalarMultiply(sumDYRow, invWidth)
-        val term2 = computeContext.backend.scalarMultiply(sumDYXRow, invWidth)
-        val dxHat = computeContext.backend.subtract(
-            computeContext.backend.subtract(dYg, term1),
-            computeContext.backend.elementWiseMultiply(normalized!!, term2)
+        val term1 = ctx.backend.scalarMultiply(sumDYRow, invWidth)
+        val term2 = ctx.backend.scalarMultiply(sumDYXRow, invWidth)
+        val dxHat = ctx.backend.subtract(
+            ctx.backend.subtract(dYg, term1),
+            ctx.backend.elementWiseMultiply(normalized!!, term2)
         )
 
         // dX = dx_hat * invStdRow
-        return computeContext.backend.elementWiseMultiply(dxHat, invStdRow)
+        return ctx.backend.elementWiseMultiply(dxHat, invStdRow)
     }
 
     /**
@@ -184,7 +185,7 @@ class LayerNormalizationLayer(
      * Creates a deep copy of the layer normalization layer.
      */
     override fun clone(): Layer {
-        return LayerNormalizationLayer(size).also { copy ->
+        return LayerNormalizationLayer(size, computeContext).also { copy ->
             copy.gamma = gamma.copyOf()
             copy.beta = beta.copyOf()
             copy.momentGamma = momentGamma.copyOf()
@@ -198,10 +199,10 @@ class LayerNormalizationLayer(
         private const val EPSILON = 1e-8f
     }
 
-    @Suppress("unused")
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
+        ctx = computeContext
     }
 }

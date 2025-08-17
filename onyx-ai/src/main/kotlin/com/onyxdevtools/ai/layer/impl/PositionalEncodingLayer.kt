@@ -12,8 +12,9 @@ import kotlin.math.sin
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
     private val embeddingSize: Int,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
+    @kotlin.jvm.Transient private var ctx = computeContext
 
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
@@ -56,9 +57,9 @@ class PositionalEncodingLayer(
         // Build positional encoding for each row via backend gatherRows
         val rows = input.size
         val indices = IntArray(rows) { r -> r % effectiveSeqLen }
-        val posEnc = computeContext.backend.gatherRows(positionalEncoding, indices)
+        val posEnc = ctx.backend.gatherRows(positionalEncoding, indices)
         preActivation = input
-        output = computeContext.backend.add(input, posEnc)
+        output = ctx.backend.add(input, posEnc)
         return output!!
     }
 
@@ -79,11 +80,11 @@ class PositionalEncodingLayer(
         learningRate: Float
     ) { /* no-op */ }
 
-    override fun clone(): Layer = PositionalEncodingLayer(tokensPerSample, embeddingSize)
-    @Suppress("unused")
+    override fun clone(): Layer = PositionalEncodingLayer(tokensPerSample, embeddingSize, computeContext)
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
+        ctx = computeContext
     }
 }

@@ -25,9 +25,9 @@ class DenseLayer(
     val outputSize: Int,
     override val activation: Activation,
     private val dropoutRate: Float = 0.0f,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-
+    @kotlin.jvm.Transient private var ctx = computeContext
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
 
@@ -50,15 +50,15 @@ class DenseLayer(
         }
         
         // Initialize weights using the compute context
-        weights = computeContext.createMatrix(inputSize, outputSize)
+        weights = ctx.createMatrix(inputSize, outputSize)
         for (i in 0 until inputSize) {
             for (j in 0 until outputSize) {
                 weights[i][j] = (Random.nextFloat() * 2.0f - 1.0f) * weightInitLimit
             }
         }
         
-        momentWeights = computeContext.createMatrix(inputSize, outputSize, 0.0f)
-        velocityWeights = computeContext.createMatrix(inputSize, outputSize, 0.0f)
+        momentWeights = ctx.createMatrix(inputSize, outputSize, 0.0f)
+        velocityWeights = ctx.createMatrix(inputSize, outputSize, 0.0f)
     }
 
     /**
@@ -74,7 +74,7 @@ class DenseLayer(
         val scaleFactor = 1.0f / keepProbability
 
         if (dropoutMask == null || dropoutMask!!.size != rows || dropoutMask!![0].size != cols) {
-            dropoutMask = computeContext.createMatrix(rows, cols)
+            dropoutMask = ctx.createMatrix(rows, cols)
         }
 
         val mask = dropoutMask!!
@@ -87,7 +87,7 @@ class DenseLayer(
         }
 
         // Use compute backend for element-wise multiplication
-        output = computeContext.backend.elementWiseMultiply(activations, mask)
+        output = ctx.backend.elementWiseMultiply(activations, mask)
     }
 
     /**
@@ -95,8 +95,8 @@ class DenseLayer(
      */
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         // Use compute backend for matrix operations
-        val linearOutput = computeContext.backend.addVectorToRows(
-            computeContext.backend.matrixMultiply(input, weights), 
+        val linearOutput = ctx.backend.addVectorToRows(
+            ctx.backend.matrixMultiply(input, weights), 
             biases
         )
         
@@ -104,7 +104,7 @@ class DenseLayer(
         this.preActivation = nextInput
         
         // Apply activation using compute backend
-        output = computeContext.backend.applyElementWise(nextInput, activation::activate)
+        output = ctx.backend.applyElementWise(nextInput, activation::activate)
         
         if (isTraining) applyDropout()
         return output!!
@@ -154,28 +154,28 @@ class DenseLayer(
         lambda: Float
     ): Tensor {
         // Use compute backend for element-wise operations
-        val currentDelta = computeContext.backend.elementWiseMultiply(
+        val currentDelta = ctx.backend.elementWiseMultiply(
             delta,
-            computeContext.backend.applyElementWise(preActivation!!, activation::derivative)
+            ctx.backend.applyElementWise(preActivation!!, activation::derivative)
         )
 
         val previousOutput = previousLayer?.output ?: currentInput!!
 
         // Use compute backend for gradient calculations
-        val gradWeights = computeContext.backend.matrixMultiply(
-            computeContext.backend.transpose(previousOutput), 
+        val gradWeights = ctx.backend.matrixMultiply(
+            ctx.backend.transpose(previousOutput), 
             currentDelta
         )
         
-        val scaledGradWeights = computeContext.backend.scalarMultiply(gradWeights, 1.0f / featureSize)
-        val regularization = computeContext.backend.scalarMultiply(weights, lambda)
+        val scaledGradWeights = ctx.backend.scalarMultiply(gradWeights, 1.0f / featureSize)
+        val regularization = ctx.backend.scalarMultiply(weights, lambda)
         
-        gradientWeights = computeContext.backend.add(scaledGradWeights, regularization)
-        gradientBiases = computeContext.backend.sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
+        gradientWeights = ctx.backend.add(scaledGradWeights, regularization)
+        gradientBiases = ctx.backend.sumColumns(currentDelta).map { it / featureSize }.toFloatArray()
 
-        return computeContext.backend.matrixMultiply(
+        return ctx.backend.matrixMultiply(
             currentDelta, 
-            computeContext.backend.transpose(weights)
+            ctx.backend.transpose(weights)
         )
     }
 
@@ -202,24 +202,24 @@ class DenseLayer(
      * Releases any backend-specific resources
      */
     fun dispose() {
-        weights.let { computeContext?.releaseMatrix(it) }
-        momentWeights.let { computeContext?.releaseMatrix(it) }
-        velocityWeights.let { computeContext?.releaseMatrix(it) }
-        preActivation?.let { computeContext?.releaseMatrix(it) }
-        output?.let { computeContext?.releaseMatrix(it) }
-        dropoutMask?.let { computeContext?.releaseMatrix(it) }
-        gradientWeights?.let { computeContext?.releaseMatrix(it) }
-        computeContext?.dispose()
+        ctx.releaseMatrix(weights)
+        ctx.releaseMatrix(momentWeights)
+        ctx.releaseMatrix(velocityWeights)
+        preActivation?.let { ctx.releaseMatrix(it) }
+        output?.let { ctx.releaseMatrix(it) }
+        dropoutMask?.let { ctx.releaseMatrix(it) }
+        gradientWeights?.let { ctx.releaseMatrix(it) }
+        ctx.dispose()
     }
 
     companion object {
         private const val EPSILON = 1e-8f
     }
 
-    @Suppress("unused")
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
+        ctx = computeContext
     }
 }

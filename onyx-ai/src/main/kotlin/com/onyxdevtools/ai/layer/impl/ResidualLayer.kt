@@ -15,8 +15,9 @@ import com.onyxdevtools.ai.layer.Layer
  */
 class ResidualLayer(
     private val layers: List<Layer>,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
+    @kotlin.jvm.Transient private var ctx = computeContext
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
@@ -29,7 +30,7 @@ class ResidualLayer(
             x = layer.forward(x, isTraining, nl)
         }
         // residual add
-        val res = computeContext.backend.add(input, x)
+        val res = ctx.backend.add(input, x)
         preActivation = res
         output = res
         return res
@@ -52,7 +53,7 @@ class ResidualLayer(
             grad = layer.backward(prevOut, grad, featureSize, nextL, if (i > 0) layers[i - 1] else previousLayer, lambda)
         }
         // gradient from skip connection
-        return computeContext.backend.add(grad, delta)
+        return ctx.backend.add(grad, delta)
     }
 
     override fun updateParameters(
@@ -81,12 +82,12 @@ class ResidualLayer(
                 else              -> {/* assume layer manages its own disposal */}
             }
         }
-        computeContext.dispose()
+        ctx.dispose()
     }
-    @Suppress("unused")
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
+        ctx = computeContext
     }
 }

@@ -74,18 +74,19 @@ class BatchNormalizationLayer(
     }
 
     override fun preForward(input: Tensor, isTraining: Boolean): Tensor {
+        val ctx = computeContext!!
         val rows = input.rows
         val cols = input.columnSize
         // 1) Batch statistics: mean & variance per column
-        val sumCols = computeContext.backend.sumColumns(input)
+        val sumCols = ctx.backend.sumColumns(input)
         val meanArr = FloatArray(cols) { j -> sumCols[j] / rows }
-        val meanRow = computeContext.createRowVector(meanArr)
-        val centered = computeContext.backend.subtract(input, meanRow)
+        val meanRow = ctx.createRowVector(meanArr)
+        val centered = ctx.backend.subtract(input, meanRow)
 
-        val sq = computeContext.backend.elementWiseMultiply(centered, centered)
-        val varSum = computeContext.backend.sumColumns(sq)
+        val sq = ctx.backend.elementWiseMultiply(centered, centered)
+        val varSum = ctx.backend.sumColumns(sq)
         val varArr = FloatArray(cols) { j -> varSum[j] / rows }
-        val varRow = computeContext.createRowVector(varArr)
+        val varRow = ctx.createRowVector(varArr)
 
         // Update running stats
         if (isTraining) {
@@ -96,23 +97,23 @@ class BatchNormalizationLayer(
         }
 
         // 2) Normalize (use running stats if not training)
-        val normBase = if (isTraining) varRow else computeContext.createRowVector(
+        val normBase = if (isTraining) varRow else ctx.createRowVector(
             FloatArray(cols) { j -> runningVariance[j] }
         )
         // invStd = 1 / sqrt(var + EPSILON)
-        val invStdRow = computeContext.backend.applyElementWise(
-            computeContext.backend.add(
+        val invStdRow = ctx.backend.applyElementWise(
+            ctx.backend.add(
                 normBase,
-                computeContext.createRowVector(FloatArray(cols) { EPSILON })
+                ctx.createRowVector(FloatArray(cols) { EPSILON })
             ), { v -> 1f / sqrt(v) }
         )
-        this.normalized = computeContext.backend.elementWiseMultiply(centered, invStdRow)
+        this.normalized = ctx.backend.elementWiseMultiply(centered, invStdRow)
 
         // 3) Affine transform: gamma * x̂ + beta
-        val gammaRow = computeContext.createRowVector(gamma)
-        val betaRow  = computeContext.createRowVector(beta)
-        this.output = computeContext.backend.add(
-            computeContext.backend.elementWiseMultiply(normalized!!, gammaRow),
+        val gammaRow = ctx.createRowVector(gamma)
+        val betaRow  = ctx.createRowVector(beta)
+        this.output = ctx.backend.add(
+            ctx.backend.elementWiseMultiply(normalized!!, gammaRow),
             betaRow
         )
         return output!!
@@ -137,43 +138,44 @@ class BatchNormalizationLayer(
         val cols = size
 
         // Parameter gradients: gradGamma = Σ delta * x̂, gradBeta = Σ delta
-        val gradGammaArr = computeContext.backend.sumColumns(
-            computeContext.backend.elementWiseMultiply(delta, normalized!!)
+        val ctx = computeContext!!
+        val gradGammaArr = ctx.backend.sumColumns(
+            ctx.backend.elementWiseMultiply(delta, normalized!!)
         )
-        val gradBetaArr = computeContext.backend.sumColumns(delta)
+        val gradBetaArr = ctx.backend.sumColumns(delta)
         gradGamma = gradGammaArr
         gradBeta = gradBetaArr
 
         // invStdRow = 1 / sqrt(variance + EPSILON)
-        val invStdRow = computeContext.backend.applyElementWise(
-            computeContext.createRowVector(
+        val invStdRow = ctx.backend.applyElementWise(
+            ctx.createRowVector(
                 FloatArray(cols) { j -> variance!![j] + EPSILON }
             ), { v -> 1f / sqrt(v) }
         )
 
         // dYg = delta * gamma
-        val gammaRow = computeContext.createRowVector(gamma)
-        val dYg = computeContext.backend.elementWiseMultiply(delta, gammaRow)
+        val gammaRow = ctx.createRowVector(gamma)
+        val dYg = ctx.backend.elementWiseMultiply(delta, gammaRow)
 
         // sumDY = Σ dYg, sumDYX = Σ dYg * x̂
-        val sumDY  = computeContext.backend.sumColumns(dYg)
-        val sumDYX = computeContext.backend.sumColumns(
-            computeContext.backend.elementWiseMultiply(dYg, normalized!!)
+        val sumDY  = ctx.backend.sumColumns(dYg)
+        val sumDYX = ctx.backend.sumColumns(
+            ctx.backend.elementWiseMultiply(dYg, normalized!!)
         )
-        val sumDYRow  = computeContext.createRowVector(sumDY)
-        val sumDYXRow = computeContext.createRowVector(sumDYX)
+        val sumDYRow  = ctx.createRowVector(sumDY)
+        val sumDYXRow = ctx.createRowVector(sumDYX)
 
         // dx_hat = (rows * dYg - sumDYRow - x̂ * sumDYXRow) * (1/rows)
-        val num = computeContext.backend.subtract(
-            computeContext.backend.scalarMultiply(dYg, rows.toFloat()),
-            computeContext.backend.add(sumDYRow,
-                computeContext.backend.elementWiseMultiply(normalized!!, sumDYXRow)
+        val num = ctx.backend.subtract(
+            ctx.backend.scalarMultiply(dYg, rows.toFloat()),
+            ctx.backend.add(sumDYRow,
+                ctx.backend.elementWiseMultiply(normalized!!, sumDYXRow)
             )
         )
-        val dxHat = computeContext.backend.scalarMultiply(num, 1f / rows)
+        val dxHat = ctx.backend.scalarMultiply(num, 1f / rows)
 
         // dX = dx_hat * invStdRow
-        return computeContext.backend.elementWiseMultiply(dxHat, invStdRow)
+        return ctx.backend.elementWiseMultiply(dxHat, invStdRow)
     }
 
     override fun clone(): Layer {

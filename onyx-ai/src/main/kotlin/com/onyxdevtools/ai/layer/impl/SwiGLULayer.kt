@@ -21,8 +21,9 @@ class SwiGLULayer(
     private val inputSize: Int,
     private val hiddenSize: Int,
     private val outputSize: Int,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
+    @kotlin.jvm.Transient private var ctx = computeContext
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
@@ -36,9 +37,9 @@ class SwiGLULayer(
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         val x1 = proj1.forward(input, isTraining, null)
         val x2 = proj2.forward(input, isTraining, null)
-        val gate = computeContext.backend.applyElementWise(x1) { v -> v / (1f + exp(-v)) }
+        val gate = ctx.backend.applyElementWise(x1) { v -> v / (1f + exp(-v)) }
         gateTensor = gate
-        val gated = computeContext.backend.elementWiseMultiply(gate, x2)
+        val gated = ctx.backend.elementWiseMultiply(gate, x2)
         val out = projOut.forward(gated, isTraining, nextLayer)
         preActivation = out
         output = out
@@ -56,18 +57,18 @@ class SwiGLULayer(
         // backprop through final projection (use gate tensor as input, no previousLayer to compute correct weight gradients)
         val dHidden = projOut.backward(gateTensor, delta, featureSize, nextLayer, null, lambda)
         // distribute gradients through gating
-        val mask = computeContext.backend.applyElementWise(
+        val mask = ctx.backend.applyElementWise(
             proj1.output!!,
             { v ->
                 val s = 1f / (1f + exp(-v))
                 s * (1f + v * (1f - s))
             }
         )
-        val d1 = computeContext.backend.elementWiseMultiply(dHidden, computeContext.backend.elementWiseMultiply(proj2.output!!, mask))
-        val d2 = computeContext.backend.elementWiseMultiply(dHidden, gateTensor!!)
+        val d1 = ctx.backend.elementWiseMultiply(dHidden, ctx.backend.elementWiseMultiply(proj2.output!!, mask))
+        val d2 = ctx.backend.elementWiseMultiply(dHidden, gateTensor!!)
         val dx1 = proj1.backward(currentInput, d1, featureSize, this, previousLayer, lambda)
         val dx2 = proj2.backward(currentInput, d2, featureSize, this, previousLayer, lambda)
-        return computeContext.backend.add(dx1, dx2)
+        return ctx.backend.add(dx1, dx2)
     }
 
     override fun updateParameters(
@@ -100,12 +101,12 @@ class SwiGLULayer(
         proj1.dispose()
         proj2.dispose()
         projOut.dispose()
-        computeContext.dispose()
+        ctx.dispose()
     }
-    @Suppress("unused")
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
+        ctx = computeContext
     }
 }

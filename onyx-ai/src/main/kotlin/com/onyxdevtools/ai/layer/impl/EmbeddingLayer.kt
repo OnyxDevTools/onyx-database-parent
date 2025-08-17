@@ -11,8 +11,9 @@ import kotlin.math.sqrt
 class EmbeddingLayer(
     private val vocabSize: Int,
     private val embeddingSize: Int,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext? = DefaultComputeContext()
+    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
+    @kotlin.jvm.Transient private var ctx = computeContext
 
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
@@ -50,7 +51,7 @@ class EmbeddingLayer(
                 }
             }
         }
-        val out = computeContext.backend.gatherRows(weights, flatIds)
+        val out = ctx.backend.gatherRows(weights, flatIds)
         preActivation = out
         output = out
         return out
@@ -137,7 +138,7 @@ class EmbeddingLayer(
     }
 
     override fun clone(): Layer {
-        return EmbeddingLayer(vocabSize, embeddingSize).also { copy ->
+        return EmbeddingLayer(vocabSize, embeddingSize, computeContext).also { copy ->
             copy.weights = this.weights.deepCopy()
             copy.momentWeights = this.momentWeights.deepCopy()
             copy.velocityWeights = this.velocityWeights.deepCopy()
@@ -150,10 +151,10 @@ class EmbeddingLayer(
     companion object {
         private const val EPSILON = 1e-8f
     }
-    @Suppress("unused")
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()
         computeContext = DefaultComputeContext()
+        ctx = computeContext
     }
 }
