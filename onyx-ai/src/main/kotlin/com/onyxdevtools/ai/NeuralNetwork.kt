@@ -7,6 +7,8 @@ import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
 import com.onyxdevtools.ai.batch.SequentialBatchSplitter
 import com.onyxdevtools.ai.batch.TokenBatchSplitter
+import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
+import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
 import java.io.*
 import kotlin.apply
 import kotlin.math.min
@@ -243,6 +245,8 @@ data class NeuralNetwork(
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
+        disableInferenceCaches()
+
         var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
@@ -364,6 +368,8 @@ data class NeuralNetwork(
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
+        // disable inference caches so no cached path is used during streaming-sparse training
+        disableInferenceCaches()
         var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
@@ -413,6 +419,7 @@ data class NeuralNetwork(
                         micro = 0
                         updates += 1
                         probeFn.invoke()
+                        disableInferenceCaches() // Clear after probing
                     }
 
                     bx.clear(); by.clear()
@@ -549,6 +556,12 @@ data class NeuralNetwork(
 
     // ======================= Private helpers ===============================
 
+    /** Disable any inference caches (CachedMultiHeadAttention or RotaryMultiHeadAttention). */
+    private fun disableInferenceCaches() {
+        layers.filterIsInstance<CachedMultiHeadAttentionLayer>().forEach { it.disableCache() }
+        layers.filterIsInstance<RotaryMultiHeadAttentionLayer>().forEach { it.disableCache() }
+    }
+
     /** Gather arbitrary rows from [src] into a new Tensor (rows = indices.size). */
     private fun gatherRows(src: Tensor, indices: List<Int>): Tensor {
         if (indices.isEmpty()) return Tensor(0, src.cols)
@@ -572,7 +585,9 @@ data class NeuralNetwork(
         for (s in seqs) {
             for (row in s) {
                 var c = 0
-                while (c < cols) { out[r, c] = row[c]; c++ }
+                while (c < cols) {
+                    out[r, c] = row[c]; c++
+                }
                 r++
             }
         }
@@ -610,10 +625,14 @@ data class NeuralNetwork(
             // log-softmax for row r
             var maxV = logits[r, 0]
             var c = 1
-            while (c < C) { val v = logits[r, c]; if (v > maxV) maxV = v; c++ }
+            while (c < C) {
+                val v = logits[r, c]; if (v > maxV) maxV = v; c++
+            }
             var sumExp = 0.0
             c = 0
-            while (c < C) { sumExp += kotlin.math.exp((logits[r, c] - maxV).toDouble()); c++ }
+            while (c < C) {
+                sumExp += kotlin.math.exp((logits[r, c] - maxV).toDouble()); c++
+            }
             val logProbT = (logits[r, t] - maxV).toFloat() - ln(sumExp).toFloat()
             loss += (-logProbT)
             r++
