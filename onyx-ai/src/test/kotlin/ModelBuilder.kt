@@ -188,7 +188,7 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 512
+    val maxSequenceLength = 256
 
     // Configure neural network
     val numHeads = 32
@@ -233,8 +233,8 @@ fun main() {
         ))
     }
 
-    val layers = arrayListOf(
-        EmbeddingLayer(vocabulary.size, maxSequenceLength),
+    val layers = arrayListOf<Layer>(
+        EmbeddingLayer(vocabulary.size, maxSequenceLength)
 //        PositionalEncodingLayer(maxSequenceLength, maxSequenceLength)
     )
     layers.addAll(underLayers)
