@@ -207,7 +207,7 @@ fun main() {
         }
         totalProbes++
         if (totalProbes % 4 == 0) {
-            net.saveToFile("/mnt/onyx/books/model-checkpoint.ser")
+            net.saveToFile("/Volumes/onyx/books/model-checkpoint2.ser")
             println("✅ Saved checkpoint after $totalProbes")
         }
     }
@@ -245,7 +245,7 @@ fun main() {
     layers.add(
         DenseLayer(maxSequenceLength, vocabulary.size, Activation.LINEAR)
     )
-    val checkpointPath = "/mnt/onyx/books/onyx-llm-checkpoint.ser"   // <‑‑ the file you keep saving to
+    val checkpointPath = "/Volumes/onyx/books/onyx-llm-checkpoint.ser"   // <‑‑ the file you keep saving to
 
     var model = NeuralNetwork.loadOrCreate(checkpointPath) {
         // This lambda is only executed when the file does **not** exist
