@@ -136,4 +136,12 @@ class SwiGLULayer(
         computeContext = DefaultComputeContext()
         ctx = computeContext
     }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        // Average the accumulated grads once per optimizer step (Recipe A).
+        // DenseLayer.scaleAccumulatedGradients handles null buffers safely.
+        proj1.scaleAccumulatedGradients(f)
+        proj2.scaleAccumulatedGradients(f)
+        projOut.scaleAccumulatedGradients(f)
+    }
 }

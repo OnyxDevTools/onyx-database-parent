@@ -7,7 +7,6 @@ import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.transformation.*
 import com.onyxdevtools.ai.batch.SequentialBatchSplitter
 import com.onyxdevtools.ai.batch.TokenBatchSplitter
-import com.onyxdevtools.ai.layer.impl.CachedMultiHeadAttentionLayer
 import com.onyxdevtools.ai.layer.impl.RotaryMultiHeadAttentionLayer
 import java.io.*
 import kotlin.apply
@@ -411,6 +410,7 @@ data class NeuralNetwork(
                         // scale LR to average summed grads across micro-batches
                         val prevLR = this.learningRate
                         this.learningRate = prevLR / gradAccumSteps
+                        scaleAccumulatedGradients(1f / gradAccumSteps)
                         updateParameters()
                         this.learningRate = prevLR
                         micro = 0
@@ -654,4 +654,11 @@ data class NeuralNetwork(
         }
         return out
     }
+
+    private fun scaleAccumulatedGradients(f: Float) {
+        for (L in layers) {
+            L.scaleAccumulatedGradients(f)
+        }
+    }
+
 }

@@ -91,4 +91,6 @@ interface Layer : java.io.Serializable {
      * @return The processed input matrix.
      */
     fun preForward(input: Tensor, isTraining: Boolean): Tensor = input
+
+    fun scaleAccumulatedGradients(f: Float)
 }

@@ -2,18 +2,9 @@ package com.onyxdevtools.ai.layer.impl
 
 import Activation
 import com.onyxdevtools.ai.Tensor
-import com.onyxdevtools.ai.extensions.*
 import com.onyxdevtools.ai.layer.Layer
 import java.io.Serializable
-import kotlin.math.pow
 import kotlin.math.sqrt
-
-/**
- * A layer that performs batch normalization on its input.
- * Useful for accelerating training and stabilizing learning in deep networks.
- *
- * @param size The number of features to normalize.
- */
 import com.onyxdevtools.ai.compute.ComputeContext
 import com.onyxdevtools.ai.compute.DefaultComputeContext
 
@@ -27,103 +18,84 @@ class BatchNormalizationLayer(
     override val activation: Activation = Activation.LINEAR
 
     private var gamma = FloatArray(size) { 1.0f }
-    private var beta = FloatArray(size)
+    private var beta  = FloatArray(size) { 0.0f }
+
+    // Saved per-batch stats needed for backward (per-feature)
     private var mean: FloatArray? = null
     private var variance: FloatArray? = null
+
+    // Cached normalized activations for backward (same shape as input)
     private var normalized: Tensor? = null
 
-    // Added running statistics
-    private var runningMean = FloatArray(size) { 0.0f }
+    // Running stats for inference
+    private var runningMean     = FloatArray(size) { 0.0f }
     private var runningVariance = FloatArray(size) { 1.0f }
-    private val momentum = 0.9f // Common momentum value; adjust as needed
+    private val momentum = 0.9f
 
+    // Accumulated parameter gradients (Option A)
     private var gradGamma: FloatArray? = null
-    private var gradBeta: FloatArray? = null
+    private var gradBeta : FloatArray? = null
 
-    private var momentGamma = FloatArray(size)
+    // Adam state for params
+    private var momentGamma   = FloatArray(size)
     private var velocityGamma = FloatArray(size)
-    private var momentBeta = FloatArray(size)
-    private var velocityBeta = FloatArray(size)
-
-    /**
-     * Updates gamma and beta parameters using the Adam optimizer.
-     */
-    @Suppress("DuplicatedCode")
-    override fun updateParameters(
-        adamBeta1Power: Float,
-        adamBeta2Power: Float,
-        adamBeta1: Float,
-        adamBeta2: Float,
-        learningRate: Float
-    ) {
-        fun correctMoment(moment: Float) = moment / (1.0f - adamBeta1Power)
-        fun correctVelocity(velocity: Float) = velocity / (1.0f - adamBeta2Power)
-
-        for (j in 0 until size) {
-            val gradientGamma = gradGamma!![j]
-            val gradientBeta = gradBeta!![j]
-
-            momentGamma[j] = adamBeta1 * momentGamma[j] + (1.0f - adamBeta1) * gradientGamma
-            velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1.0f - adamBeta2) * gradientGamma * gradientGamma
-            gamma[j] = gamma[j] - learningRate * correctMoment(momentGamma[j]) / (sqrt(correctVelocity(velocityGamma[j])) + EPSILON)
-
-            momentBeta[j] = adamBeta1 * momentBeta[j] + (1.0f - adamBeta1) * gradientBeta
-            velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1.0f - adamBeta2) * gradientBeta * gradientBeta
-            beta[j] = beta[j] - learningRate * correctMoment(momentBeta[j]) / (sqrt(correctVelocity(velocityBeta[j])) + EPSILON)
-        }
-    }
+    private var momentBeta    = FloatArray(size)
+    private var velocityBeta  = FloatArray(size)
 
     override fun preForward(input: Tensor, isTraining: Boolean): Tensor {
         val ctx = computeContext!!
         val rows = input.rows
         val cols = input.columnSize
-        // 1) Batch statistics: mean & variance per column
-        val sumCols = ctx.backend.sumColumns(input)
-        val meanArr = FloatArray(cols) { j -> sumCols[j] / rows }
-        val meanRow = ctx.createRowVector(meanArr)
-        val centered = ctx.backend.subtract(input, meanRow)
+        require(cols == size) { "BatchNorm: input cols=$cols != size=$size" }
 
-        val sq = ctx.backend.elementWiseMultiply(centered, centered)
-        val varSum = ctx.backend.sumColumns(sq)
-        val varArr = FloatArray(cols) { j -> varSum[j] / rows }
-        val varRow = ctx.createRowVector(varArr)
+        val (muArr, varArr) =
+            if (isTraining) {
+                // compute batch mean/var (per feature)
+                val sumCols = ctx.backend.sumColumns(input)
+                val mu = FloatArray(cols) { j -> sumCols[j] / rows }
+                val centered = ctx.backend.subtract(input, ctx.createRowVector(mu))
+                val sq = ctx.backend.elementWiseMultiply(centered, centered)
+                val varSum = ctx.backend.sumColumns(sq)
+                val va = FloatArray(cols) { j -> varSum[j] / rows }
 
-        // Update running stats
-        if (isTraining) {
-            for (j in 0 until cols) {
-                runningMean[j]     = momentum * runningMean[j]     + (1 - momentum) * meanArr[j]
-                runningVariance[j] = momentum * runningVariance[j] + (1 - momentum) * varArr[j]
+                // save for backward
+                this.mean = mu
+                this.variance = va
+
+                // update running stats
+                var j = 0
+                while (j < cols) {
+                    runningMean[j]     = momentum * runningMean[j]     + (1f - momentum) * mu[j]
+                    runningVariance[j] = momentum * runningVariance[j] + (1f - momentum) * va[j]
+                    j++
+                }
+                mu to va
+            } else {
+                // use running stats for inference
+                runningMean.copyOf() to runningVariance.copyOf()
             }
-        }
 
-        // 2) Normalize (use running stats if not training)
-        val normBase = if (isTraining) varRow else ctx.createRowVector(
-            FloatArray(cols) { j -> runningVariance[j] }
-        )
-        // invStd = 1 / sqrt(var + EPSILON)
+        // normalize: x̂ = (x - μ) / sqrt(σ² + ε)
         val invStdRow = ctx.backend.applyElementWise(
-            ctx.backend.add(
-                normBase,
-                ctx.createRowVector(FloatArray(cols) { EPSILON })
-            ), { v -> 1f / sqrt(v) }
-        )
-        this.normalized = ctx.backend.elementWiseMultiply(centered, invStdRow)
+            ctx.backend.add(ctx.createRowVector(varArr), ctx.createRowVector(FloatArray(cols) { EPSILON }))
+        ) { v -> 1f / sqrt(v) }
 
-        // 3) Affine transform: gamma * x̂ + beta
-        val gammaRow = ctx.createRowVector(gamma)
-        val betaRow  = ctx.createRowVector(beta)
-        this.output = ctx.backend.add(
-            ctx.backend.elementWiseMultiply(normalized!!, gammaRow),
-            betaRow
+        val centered = ctx.backend.subtract(input, ctx.createRowVector(muArr))
+        normalized = ctx.backend.elementWiseMultiply(centered, invStdRow)
+
+        // affine: y = γ ⊙ x̂ + β
+        val y = ctx.backend.add(
+            ctx.backend.elementWiseMultiply(normalized!!, ctx.createRowVector(gamma)),
+            ctx.createRowVector(beta)
         )
-        return output!!
+        preActivation = y
+        output = y
+        return y
     }
 
-    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor = preForward(input, isTraining)
+    override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor =
+        preForward(input, isTraining)
 
-    /**
-     * Computes the backward pass of the batch normalization layer.
-     */
     override fun backward(
         currentInput: Tensor?,
         delta: Tensor,
@@ -132,56 +104,102 @@ class BatchNormalizationLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        checkNotNull(previousLayer) { "BatchNormalization Layer must not be the output layer." }
-
+        val ctx = computeContext!!
         val rows = delta.rows
         val cols = size
+        require(variance != null && mean != null && normalized != null) {
+            "BatchNormalizationLayer.backward called without saved batch stats"
+        }
 
-        // Parameter gradients: gradGamma = Σ delta * x̂, gradBeta = Σ delta
-        val ctx = computeContext!!
-        val gradGammaArr = ctx.backend.sumColumns(
-            ctx.backend.elementWiseMultiply(delta, normalized!!)
-        )
-        val gradBetaArr = ctx.backend.sumColumns(delta)
-        gradGamma = gradGammaArr
-        gradBeta = gradBetaArr
+        // ---- accumulate param grads (per feature) ----
+        val dGammaStep = ctx.backend.sumColumns(ctx.backend.elementWiseMultiply(delta, normalized!!))
+        val dBetaStep  = ctx.backend.sumColumns(delta)
 
-        // invStdRow = 1 / sqrt(variance + EPSILON)
+        val scale = if (featureSize > 1f) 1f / featureSize else 1f
+        if (gradGamma == null) gradGamma = FloatArray(cols) { 0f }
+        if (gradBeta  == null) gradBeta  = FloatArray(cols) { 0f }
+        var j = 0
+        while (j < cols) {
+            gradGamma!![j] += dGammaStep[j] * scale
+            gradBeta!! [j] += dBetaStep [j] * scale
+            j++
+        }
+
+        // ---- input gradient ----
+        // invStd = 1 / sqrt(var + eps)  (per feature, row vector)
         val invStdRow = ctx.backend.applyElementWise(
-            ctx.createRowVector(
-                FloatArray(cols) { j -> variance!![j] + EPSILON }
-            ), { v -> 1f / sqrt(v) }
-        )
+            ctx.backend.add(ctx.createRowVector(variance!!), ctx.createRowVector(FloatArray(cols) { EPSILON }))
+        ) { v -> 1f / sqrt(v) }
 
         // dYg = delta * gamma
-        val gammaRow = ctx.createRowVector(gamma)
-        val dYg = ctx.backend.elementWiseMultiply(delta, gammaRow)
+        val dYg = ctx.backend.elementWiseMultiply(delta, ctx.createRowVector(gamma))
 
-        // sumDY = Σ dYg, sumDYX = Σ dYg * x̂
-        val sumDY  = ctx.backend.sumColumns(dYg)
-        val sumDYX = ctx.backend.sumColumns(
-            ctx.backend.elementWiseMultiply(dYg, normalized!!)
-        )
-        val sumDYRow  = ctx.createRowVector(sumDY)
-        val sumDYXRow = ctx.createRowVector(sumDYX)
+        // sum over batch (per feature)
+        val sumDY  = ctx.backend.sumColumns(dYg)                                    // [cols]
+        val sumDYX = ctx.backend.sumColumns(ctx.backend.elementWiseMultiply(dYg, normalized!!)) // [cols]
 
-        // dx_hat = (rows * dYg - sumDYRow - x̂ * sumDYXRow) * (1/rows)
+        // dx_hat = (rows * dYg - sumDY - x̂ * sumDYX) / rows
         val num = ctx.backend.subtract(
             ctx.backend.scalarMultiply(dYg, rows.toFloat()),
-            ctx.backend.add(sumDYRow,
-                ctx.backend.elementWiseMultiply(normalized!!, sumDYXRow)
+            ctx.backend.add(ctx.createRowVector(sumDY),
+                ctx.backend.elementWiseMultiply(normalized!!, ctx.createRowVector(sumDYX))
             )
         )
         val dxHat = ctx.backend.scalarMultiply(num, 1f / rows)
 
-        // dX = dx_hat * invStdRow
+        // dX = dx_hat * invStd
         return ctx.backend.elementWiseMultiply(dxHat, invStdRow)
+    }
+
+    @Suppress("DuplicatedCode")
+    override fun updateParameters(
+        adamBeta1Power: Float,
+        adamBeta2Power: Float,
+        adamBeta1: Float,
+        adamBeta2: Float,
+        learningRate: Float
+    ) {
+        // nothing to do if no grads accumulated this step
+        if (gradGamma == null && gradBeta == null) return
+
+        fun correctMoment(m: Float) = m / (1.0f - adamBeta1Power)
+        fun correctVelocity(v: Float) = v / (1.0f - adamBeta2Power)
+
+        val gG = gradGamma ?: FloatArray(size) { 0f }
+        val gB = gradBeta  ?: FloatArray(size) { 0f }
+
+        var j = 0
+        while (j < size) {
+            // gamma
+            val gg = gG[j]
+            momentGamma[j]   = adamBeta1 * momentGamma[j]   + (1f - adamBeta1) * gg
+            velocityGamma[j] = adamBeta2 * velocityGamma[j] + (1f - adamBeta2) * gg * gg
+            gamma[j] -= learningRate * (correctMoment(momentGamma[j]) /
+                    (sqrt(correctVelocity(velocityGamma[j])) + EPSILON))
+
+            // beta
+            val gb = gB[j]
+            momentBeta[j]   = adamBeta1 * momentBeta[j]   + (1f - adamBeta1) * gb
+            velocityBeta[j] = adamBeta2 * velocityBeta[j] + (1f - adamBeta2) * gb * gb
+            beta[j] -= learningRate * (correctMoment(momentBeta[j]) /
+                    (sqrt(correctVelocity(velocityBeta[j])) + EPSILON))
+            j++
+        }
+
+        // clear accumulators for next window
+        gradGamma = null
+        gradBeta  = null
+    }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        gradGamma?.let { g -> var i = 0; while (i < g.size) { g[i] *= f; i++ } }
+        gradBeta ?.let { g -> var i = 0; while (i < g.size) { g[i] *= f; i++ } }
     }
 
     override fun clone(): Layer {
         return BatchNormalizationLayer(size).also { copy ->
             copy.gamma = gamma.copyOf()
-            copy.beta = beta.copyOf()
+            copy.beta  = beta.copyOf()
             copy.mean = mean?.copyOf()
             copy.variance = variance?.copyOf()
             copy.normalized = normalized?.deepCopy()
@@ -189,7 +207,7 @@ class BatchNormalizationLayer(
             copy.runningMean = runningMean.copyOf()
             copy.runningVariance = runningVariance.copyOf()
             copy.gradGamma = gradGamma?.copyOf()
-            copy.gradBeta = gradBeta?.copyOf()
+            copy.gradBeta  = gradBeta?.copyOf()
             copy.momentGamma = momentGamma.copyOf()
             copy.velocityGamma = velocityGamma.copyOf()
             copy.momentBeta = momentBeta.copyOf()

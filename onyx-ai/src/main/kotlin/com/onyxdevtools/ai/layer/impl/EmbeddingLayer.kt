@@ -221,4 +221,17 @@ class EmbeddingLayer(
         require(abs(x - r) < 1e-3f) { "Non-integer token id: $x" }
         return r
     }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        val ids = touchedIds ?: return
+        val G = gradientWeights?.data ?: return
+        val w = embeddingSize
+        var p = 0
+        while (p < ids.size) {
+            val base = ids[p] * w
+            var j = 0; while (j < w) { G[base + j] *= f; j++ }
+            p++
+        }
+    }
+
 }

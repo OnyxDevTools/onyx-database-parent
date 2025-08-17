@@ -92,4 +92,12 @@ class ResidualLayer(
         computeContext = DefaultComputeContext()
         ctx = computeContext
     }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        // Residual has no own params; just forward the scaling to inner layers.
+        for (layer in layers) {
+            layer.scaleAccumulatedGradients(f)
+        }
+    }
+
 }

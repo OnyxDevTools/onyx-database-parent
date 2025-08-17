@@ -218,4 +218,10 @@ class LayerNormalizationLayer(
         computeContext = DefaultComputeContext()
         ctx = computeContext
     }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        if (gradGamma != null) { var i=0; while (i<gradGamma!!.size){ gradGamma!![i]*=f; i++ } }
+        if (gradBeta  != null) { var i=0; while (i<gradBeta!! .size){ gradBeta!! [i]*=f; i++ } }
+    }
+
 }

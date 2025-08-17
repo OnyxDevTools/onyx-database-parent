@@ -620,4 +620,11 @@ class RotaryMultiHeadAttentionLayer(
             // cache state intentionally not cloned
         }
     }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        gradWQuery  = gradWQuery ?.let { backend.backend.scalarMultiply(it, f) }
+        gradWKey    = gradWKey   ?.let { backend.backend.scalarMultiply(it, f) }
+        gradWValue  = gradWValue ?.let { backend.backend.scalarMultiply(it, f) }
+        gradWOutput = gradWOutput?.let { backend.backend.scalarMultiply(it, f) }
+    }
 }

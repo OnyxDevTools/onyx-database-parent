@@ -50,7 +50,7 @@ class LLMTrainingTest {
         val layers = listOf(
             EmbeddingLayer(vocabulary.size, embeddingDim),
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
-            CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
+            RotaryMultiHeadAttentionLayer(tokensPerSample, numHeads),
             LayerNormalizationLayer(embeddingDim),
             DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
             DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),
@@ -173,7 +173,7 @@ class LLMTrainingTest {
         val layers = listOf(
             EmbeddingLayer(vocabulary.size, embeddingDim),
             PositionalEncodingLayer(tokensPerSample, embeddingDim),
-            CachedMultiHeadAttentionLayer(tokensPerSample, embeddingDim, numHeads),
+            RotaryMultiHeadAttentionLayer(tokensPerSample, numHeads),
             LayerNormalizationLayer(embeddingDim),
             DenseLayer(embeddingDim, ffHiddenDim, Activation.RELU),
             DenseLayer(ffHiddenDim, embeddingDim, Activation.LINEAR),

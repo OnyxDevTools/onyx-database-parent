@@ -220,4 +220,13 @@ class DenseLayer(
         computeContext = DefaultComputeContext()
         ctx = computeContext
     }
+
+    // add inside class
+    override fun scaleAccumulatedGradients(f: Float) {
+        gradientWeights = gradientWeights?.let { ctx.backend.scalarMultiply(it, f) }
+        gradientBiases?.let { gb ->
+            var i = 0; while (i < gb.size) { gb[i] *= f; i++ }
+        }
+    }
+
 }

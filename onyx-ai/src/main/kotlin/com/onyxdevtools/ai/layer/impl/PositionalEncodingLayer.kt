@@ -90,4 +90,8 @@ class PositionalEncodingLayer(
         computeContext = DefaultComputeContext()
         ctx = computeContext
     }
+
+    override fun scaleAccumulatedGradients(f: Float) {
+        // Fixed (sine/cosine) positional encodings have no gradients to scale.
+    }
 }

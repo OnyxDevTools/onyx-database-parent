@@ -5,7 +5,6 @@ import com.onyxdevtools.ai.layer.Layer
 import com.onyxdevtools.ai.layer.impl.*
 import com.onyxdevtools.ai.transformation.ColumnTransform
 import com.onyxdevtools.ai.transformation.impl.*
-import com.onyxdevtools.ai.layer.impl.DynamicPositionalEncodingLayer
 import com.onyxdevtools.ai.layer.impl.SwiGLULayer
 import com.onyxdevtools.ai.layer.impl.ResidualLayer
 
@@ -166,18 +165,6 @@ class LayerBuilder {
     }
 
     /**
-     * Adds a multi-head attention layer to the network architecture.
-     * Allows the model to jointly attend to information from different representation subspaces.
-     *
-     * @param tokensPerSample The fixed number of tokens per input sample.
-     * @param modelSize The dimensionality of each token's embedding.
-     * @param headCount The number of attention heads to use.
-     */
-    fun multiHeadAttention(tokensPerSample: Int, modelSize: Int, headCount: Int) {
-        layers += CachedMultiHeadAttentionLayer(tokensPerSample, modelSize, headCount)
-    }
-
-    /**
      * Adds a positional encoding layer to the network architecture.
      * Injects information about the position of tokens into their embeddings using sine and cosine functions.
      *
@@ -186,16 +173,6 @@ class LayerBuilder {
      */
     fun positionalEncoding(tokensPerSample: Int, embeddingSize: Int) {
         layers += PositionalEncodingLayer(tokensPerSample, embeddingSize)
-    }
-
-    /**
-     * Adds a dynamic positional encoding layer that computes embeddings based on the input length,
-     * allowing variable-length contexts without precomputing a maximum sequence size.
-     *
-     * @param embeddingSize The dimensionality of the embeddings.
-     */
-    fun dynamicPositionalEncoding(embeddingSize: Int) {
-        layers += DynamicPositionalEncodingLayer(embeddingSize)
     }
 
     /**
