@@ -17,24 +17,19 @@ class ResidualLayer(
     private val layers: List<Layer>,
     @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-    @kotlin.jvm.Transient
-    private var ctx = computeContext
+    @kotlin.jvm.Transient private var ctx = computeContext
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
     override val activation: Activation = Activation.LINEAR
 
     override fun forward(input: Tensor, isTraining: Boolean, nextLayer: Layer?): Tensor {
         var x = input
-        for (i in layers.indices) {
-            val layer = layers[i]
-            // For the last inner layer, surface the *outer* nextLayer
-            val nl = if (i < layers.lastIndex) layers[i + 1] else nextLayer
+        // apply sub-layers sequentially
+        for ((i, layer) in layers.withIndex()) {
+            val nl = if (i < layers.lastIndex) layers[i + 1] else null
             x = layer.forward(x, isTraining, nl)
         }
-        // Residual add: require shape match
-        require(x.rows == input.rows && x.columnSize == input.columnSize) {
-            "Residual add shape mismatch: input=${input.rows}x${input.columnSize}, F(x)=${x.rows}x${x.columnSize}"
-        }
+        // residual add
         val res = ctx.backend.add(input, x)
         preActivation = res
         output = res
@@ -49,20 +44,15 @@ class ResidualLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
+        // backprop through sub-layers
         var grad = delta
-        // Backprop through inner stack
         for (i in layers.indices.reversed()) {
             val layer = layers[i]
             val prevOut = if (i > 0) layers[i - 1].output else currentInput
-            // For the last inner layer, surface the *outer* nextLayer
-            val nl = if (i < layers.lastIndex) layers[i + 1] else nextLayer
-            val pl = if (i > 0) layers[i - 1] else previousLayer
-            grad = layer.backward(prevOut, grad, featureSize, nl, pl, lambda)
+            val nextL = if (i < layers.lastIndex) layers[i + 1] else null
+            grad = layer.backward(prevOut, grad, featureSize, nextL, if (i > 0) layers[i - 1] else previousLayer, lambda)
         }
-        // Skip connection gradient: ∂L/∂x = grad + delta
-        require(grad.rows == delta.rows && grad.columnSize == delta.columnSize) {
-            "Residual grad shape mismatch: grad=${grad.rows}x${grad.columnSize}, delta=${delta.rows}x${delta.columnSize}"
-        }
+        // gradient from skip connection
         return ctx.backend.add(grad, delta)
     }
 
@@ -83,18 +73,19 @@ class ResidualLayer(
         }
     }
 
+    /**
+     * Releases backend resources.
+     */
     fun dispose() {
         layers.forEach {
             when (it) {
                 is ResidualLayer -> it.dispose()
-                is SwiGLULayer -> it.dispose()
-                else -> {/* no-op */
-                }
+                is SwiGLULayer    -> it.dispose()
+                else              -> {/* assume layer manages its own disposal */}
             }
         }
         ctx.dispose()
     }
-
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {
         `in`.defaultReadObject()

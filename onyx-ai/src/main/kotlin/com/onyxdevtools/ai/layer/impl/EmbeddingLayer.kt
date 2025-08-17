@@ -77,17 +77,12 @@ class EmbeddingLayer(
             "delta shape ${delta.rows}x${delta.columnSize} != expected ${batchSize * sequenceLength}x$width"
         }
 
-        // ---- ACCUM BUFFER: create once, then accumulate every micro-batch ----
-        if (gradientWeights == null) {
-            gradientWeights = Tensor(vocabSize, embeddingSize) { _, _ -> 0.0f }
-        }
-        val G = gradientWeights!!.data                // accumulated grads buffer
+        val gw = Tensor(vocabSize, embeddingSize) { _, _ -> 0.0f }
+        val G = gw.data
         val D = delta.data
         val W = weights.data
 
-        // Track which vocab rows we touched in THIS micro-batch
-        val touchedThis = BooleanArray(vocabSize)
-
+        val touched = BooleanArray(vocabSize)
         var deltaIndex = 0
         val scale = if (featureSize > 1f) 1f / featureSize else 1f
 
@@ -96,26 +91,26 @@ class EmbeddingLayer(
             var t = 0
             while (t < sequenceLength) {
                 val tokenId = toTokenId(x[b, t])
-                require(tokenId in 0 until vocabSize) { "Token id $tokenId out of range [0, $vocabSize)" }
                 val baseG = tokenId * width
                 val baseD = deltaIndex * width
+                // accumulate grad for this token’s row
                 var j = 0
                 while (j < width) {
-                    G[baseG + j] += D[baseD + j] * scale     // accumulate dW for that row
+                    G[baseG + j] += D[baseD + j] * scale
                     j++
                 }
-                touchedThis[tokenId] = true
+                touched[tokenId] = true
                 deltaIndex++
                 t++
             }
             b++
         }
 
-        // Optional L2 decay only on touched rows (classic L2, not decoupled AdamW)
+        // Optional L2 weight decay (same semantics as your other layers): add lambda * W to grad for touched rows
         if (lambda != 0f) {
             var id = 0
             while (id < vocabSize) {
-                if (touchedThis[id]) {
+                if (touched[id]) {
                     val base = id * width
                     var j = 0
                     while (j < width) {
@@ -127,24 +122,15 @@ class EmbeddingLayer(
             }
         }
 
-        // ---- Merge touched IDs across micro-batches for sparse Adam update ----
-        val prev = touchedIds
-        if (prev == null) {
-            // first accumulation window: pack current set
-            var cnt = 0; for (i in 0 until vocabSize) if (touchedThis[i]) cnt++
-            touchedIds = IntArray(cnt).also { arr ->
-                var k = 0; for (i in 0 until vocabSize) if (touchedThis[i]) arr[k++] = i
-            }
-        } else {
-            // union previous + current
-            val mark = BooleanArray(vocabSize)
-            for (id in prev) mark[id] = true
-            for (i in 0 until vocabSize) if (touchedThis[i]) mark[i] = true
-            var cnt = 0; for (i in 0 until vocabSize) if (mark[i]) cnt++
-            touchedIds = IntArray(cnt).also { arr ->
-                var k = 0; for (i in 0 until vocabSize) if (mark[i]) arr[k++] = i
-            }
-        }
+        // pack touched ids for sparse Adam update
+        var count = 0
+        for (i in 0 until vocabSize) if (touched[i]) count++
+        val ids = IntArray(count)
+        var k = 0
+        for (i in 0 until vocabSize) if (touched[i]) { ids[k++] = i }
+        touchedIds = ids
+
+        gradientWeights = gw
 
         // No gradient through discrete token IDs
         return Tensor(batchSize, sequenceLength) // zeros

@@ -151,48 +151,31 @@ class DenseLayer(
         previousLayer: Layer?,
         lambda: Float
     ): Tensor {
-        // 1) Dropout backward (inverted dropout)
+        // include dropout gradient
         val afterDropoutDelta =
             if (dropoutRate > 0f && dropoutMask != null)
                 ctx.backend.elementWiseMultiply(delta, dropoutMask!!)
             else delta
 
-        // 2) Activation backward
         val currentDelta = ctx.backend.elementWiseMultiply(
             afterDropoutDelta,
             ctx.backend.applyElementWise(preActivation!!, activation::derivative)
         )
 
-        // 3) Gradients for this micro-batch
         val x = previousLayer?.output ?: currentInput!!
         val gradWeightsRaw = ctx.backend.matrixMultiply(ctx.backend.transpose(x), currentDelta)
 
         val scaledGradWeights = ctx.backend.scalarMultiply(gradWeightsRaw, 1f / featureSize)
         val regularization    = ctx.backend.scalarMultiply(weights, lambda)
-        val gradStep          = ctx.backend.add(scaledGradWeights, regularization) // this step's dW
+        gradientWeights = ctx.backend.add(scaledGradWeights, regularization)
 
-        // 4) ACCUMULATE into running buffers (don't overwrite)
-        gradientWeights = when (val gw = gradientWeights) {
-            null -> gradStep
-            else -> ctx.backend.add(gw, gradStep) // if you have addInPlace, use it here instead
-        }
-
-        val stepBias = ctx.backend
-            .sumColumns(currentDelta)                // length = outputSize
+        gradientBiases = ctx.backend
+            .sumColumns(currentDelta)               // length = outputSize
             .map { it / featureSize }.toFloatArray()
 
-        if (gradientBiases == null) gradientBiases = FloatArray(outputSize) { 0f }
-        val gb = gradientBiases!!
-        var j = 0
-        while (j < outputSize) {
-            gb[j] += stepBias[j]                     // accumulate bias grads
-            j++
-        }
-
-        // 5) Return dX
+        // return dX
         return ctx.backend.matrixMultiply(currentDelta, ctx.backend.transpose(weights))
     }
-
 
     /**
      * Creates a deep copy of the layer with the same compute context
