@@ -40,10 +40,10 @@ class RotaryMultiHeadAttentionLayer(
     private val invSqrtHead: Float
 
     // Projection weights
-    private val wQuery: Tensor
-    private val wKey: Tensor
-    private val wValue: Tensor
-    private val wOutput: Tensor
+    private var wQuery: Tensor
+    private var wKey: Tensor
+    private var wValue: Tensor
+    private var wOutput: Tensor
 
     // Rotary frequency inverses (per pair)
     private val invFreq: FloatArray
@@ -449,5 +449,37 @@ class RotaryMultiHeadAttentionLayer(
         }
     }
 
-    override fun clone(): Layer = RotaryMultiHeadAttentionLayer(modelSize, headCount, base)
+    override fun clone(): Layer {
+        return RotaryMultiHeadAttentionLayer(modelSize, headCount, base).also { copy ->
+            copy.wQuery = wQuery.deepCopy()
+            copy.wKey   = wKey.deepCopy()
+            copy.wValue = wValue.deepCopy()
+            copy.wOutput= wOutput.deepCopy()
+
+            copy.momentWQuery   = momentWQuery.deepCopy()
+            copy.velocityWQuery = velocityWQuery.deepCopy()
+            copy.momentWKey     = momentWKey.deepCopy()
+            copy.velocityWKey   = velocityWKey.deepCopy()
+            copy.momentWValue   = momentWValue.deepCopy()
+            copy.velocityWValue = velocityWValue.deepCopy()
+            copy.momentWOutput  = momentWOutput.deepCopy()
+            copy.velocityWOutput= velocityWOutput.deepCopy()
+
+            copy.preActivation   = preActivation?.deepCopy()
+            copy.output          = output?.deepCopy()
+            copy.queries         = queries?.deepCopy()
+            copy.keys            = keys?.deepCopy()
+            copy.values          = values?.deepCopy()
+            copy.attentionOutput = attentionOutput?.deepCopy()
+
+            copy.gradWQuery = gradWQuery?.deepCopy()
+            copy.gradWKey   = gradWKey?.deepCopy()
+            copy.gradWValue = gradWValue?.deepCopy()
+            copy.gradWOutput= gradWOutput?.deepCopy()
+
+            copy.ropeCos = Array(ropeCos.size) { i -> ropeCos[i].clone() }
+            copy.ropeSin = Array(ropeSin.size) { i -> ropeSin[i].clone() }
+            // cache state intentionally not cloned
+        }
+    }
 }
