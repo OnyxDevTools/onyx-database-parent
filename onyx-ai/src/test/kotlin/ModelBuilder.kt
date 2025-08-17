@@ -206,7 +206,7 @@ fun main() {
             headLayer.disableCache() // 1 concurrent stream.  Can probably comment this out.
         }
         totalProbes++
-        if (totalProbes % 1000 == 0) {
+        if (totalProbes % 4 == 0) {
             net.saveToFile("/mnt/onyx/books/model-checkpoint.ser")
             println("✅ Saved checkpoint after $totalProbes")
         }
@@ -269,11 +269,11 @@ fun main() {
 
             model = model.trainStreamingSparse(
                 source = source,
-                batchSize = 8,
+                batchSize = 4,
                 maxEpochs = 1,
                 patience = Int.MAX_VALUE,
                 testFrac = 0.0f,
-                gradAccumSteps = 256,
+                gradAccumSteps = 64,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
                 comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, strideForEpoch(epochIdx, maxSequenceLength)),
