@@ -273,7 +273,6 @@ fun main() {
                 maxEpochs = 1,
                 patience = Int.MAX_VALUE,
                 testFrac = 0.0f,
-                gradAccumSteps = 64,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
                 comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, strideForEpoch(epochIdx, maxSequenceLength)),
