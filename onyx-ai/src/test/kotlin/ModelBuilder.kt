@@ -187,12 +187,14 @@ fun main() {
     }
 
     // Parameters
-    val maxSequenceLength = 512
+    val maxSequenceLength = 1024
 
     // Configure neural network
     val embeddingDim = maxSequenceLength
     val numHeads = 128
-    val ffHiddenDim = 128
+
+    fun ffnDim(d: Int) = ((8 * d) / 3).let { ((it + 255) / 256) * 256 } // round up to 256
+    val ffHiddenDim = ffnDim(maxSequenceLength) // e.g., 4096 -> 11008
     var totalProbes = 0
 
     val headLayer = RotaryMultiHeadAttentionLayer(modelSize = embeddingDim, headCount = numHeads)
