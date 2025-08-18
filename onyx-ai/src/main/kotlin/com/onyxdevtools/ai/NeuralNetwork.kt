@@ -365,7 +365,6 @@ data class NeuralNetwork(
         saveModelPath: String? = null,
     ): NeuralNetwork {
 
-        // disable inference caches so no cached path is used during streaming-sparse training
         var bestLoss = Float.POSITIVE_INFINITY
         var best = this.clone()
         var epochsWithoutImprovement = 0
@@ -377,8 +376,35 @@ data class NeuralNetwork(
             var runningTestLoss = 0.0f
             var testSamples = 0
 
+            // NEW: per-accumulation (window) test-loss tracker
+            var windowTestLoss = 0.0f
+            var windowTestSamples = 0
+
             var micro = 0
             var updates = 0
+
+            fun flushAccumWindow(label: String) {
+                // Average accumulated grads over the window, then update params
+                scaleAccumulatedGradients(1f / micro)
+                updateParameters()
+                micro = 0
+                updates += 1
+                probeFn.invoke()
+
+                // Print test loss for *the just-finished accumulation window*
+                if (trace) {
+                    if (windowTestSamples > 0) {
+                        val winAvg = windowTestLoss / windowTestSamples
+                        println("$label update $updates  test-loss(window) $winAvg")
+                    } else {
+                        println("$label update $updates  test-loss(window) NA (no test split in window)")
+                    }
+                }
+                // reset window counters for the next accumulation window
+                windowTestLoss = 0.0f
+                windowTestSamples = 0
+            }
+
             for ((inputSeq, targetSeq) in source()) {
                 bx += inputSeq; by += targetSeq
                 if (bx.size == batchSize) {
@@ -402,17 +428,17 @@ data class NeuralNetwork(
 
                     if (xTest.rows > 0) {
                         val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
-                        runningTestLoss += lossFn(predTest, yTestFlat) * xTest.rows
+                        val batchTestLoss = lossFn(predTest, yTestFlat)
+                        runningTestLoss += batchTestLoss * xTest.rows
                         testSamples += xTest.rows
+
+                        // track per-accumulation window loss
+                        windowTestLoss += batchTestLoss * xTest.rows
+                        windowTestSamples += xTest.rows
                     }
 
                     if (micro == gradAccumSteps) {
-                        // Average once across micros; DO NOT change learning rate here.
-                        scaleAccumulatedGradients(1f / micro)   // micro == gradAccumSteps
-                        updateParameters()
-                        micro = 0
-                        updates += 1
-                        probeFn.invoke()
+                        flushAccumWindow(label = "epoch $epoch")
                     }
 
                     bx.clear(); by.clear()
@@ -437,20 +463,25 @@ data class NeuralNetwork(
                 val yvFlat = yv.flatMap { it.toList() }.toIntArray()
                 val predV = predict(xv2, false, skipFeatureTransform = true)
 
-                runningTrainLoss += lossFn(predT, yTfFlat) * xTf.rows
-                runningTestLoss += lossFn(predV, yvFlat) * xv2.rows
+                val batchTrainLoss = lossFn(predT, yTfFlat)
+                runningTrainLoss += batchTrainLoss * xTf.rows
+
+                val batchTestLoss = lossFn(predV, yvFlat)
+                runningTestLoss += batchTestLoss * xv2.rows
                 testSamples += xv2.rows
+
+                // track per-accumulation window loss
+                windowTestLoss += batchTestLoss * xv2.rows
+                windowTestSamples += xv2.rows
             }
 
             // ---- FINAL FLUSH (after leftovers) ----
             if (micro > 0) {
-                scaleAccumulatedGradients(1f / micro)   // handle partial window
-                updateParameters()
-                updates += 1
-                probeFn.invoke()
+                flushAccumWindow(label = "epoch $epoch (final)")
             }
 
-            val epochTestLoss = comprehensiveLossFn?.invoke(this) ?: (runningTestLoss / testSamples)
+            val epochTestLoss = comprehensiveLossFn?.invoke(this)
+                ?: if (testSamples > 0) runningTestLoss / testSamples else Float.NaN
 
             if (trace)
                 println("epoch $epoch  test-loss $epochTestLoss")
