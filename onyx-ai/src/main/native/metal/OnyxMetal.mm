@@ -569,6 +569,8 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuMultiHeadAttention(
         id<MTLBuffer> maxBuf = [ctx->device newBufferWithLength:auxLen options:MTLResourceStorageModeShared];
         id<MTLBuffer> sumBuf = [ctx->device newBufferWithLength:auxLen options:MTLResourceStorageModeShared];
         if (!maxBuf || !sumBuf) { return JNI_FALSE; }
+        // Manually retain temporary buffers since ARC is disabled and newBufferWithLength returns an owned reference.
+        // Retain count after newBufferWithLength: 1, after CFRetain: 2. We must CFRelease twice to fully release below.
         CFRetain((__bridge CFTypeRef)maxBuf);
         CFRetain((__bridge CFTypeRef)sumBuf);
 
@@ -634,7 +636,10 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuMultiHeadAttention(
         [cb waitUntilCompleted];
         BOOL ok = (cb.status == MTLCommandBufferStatusCompleted);
 
+        // Release both the CFRetain and the original newBuffer ownership to avoid leaks.
         CFRelease((__bridge CFTypeRef)maxBuf);
+        CFRelease((__bridge CFTypeRef)maxBuf);
+        CFRelease((__bridge CFTypeRef)sumBuf);
         CFRelease((__bridge CFTypeRef)sumBuf);
         return ok ? JNI_TRUE : JNI_FALSE;
     }
@@ -948,6 +953,8 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuSoftmax(
         id<MTLBuffer> sumBuffer = [context->device newBufferWithLength:rows * sizeof(float) options:MTLResourceStorageModeShared];
 
         // CRITICAL: Manually retain temporary buffers since ARC is disabled
+        // Manually retain temporary buffers since ARC is disabled and newBufferWithLength returns an owned reference.
+        // Retain count after newBufferWithLength: 1, after CFRetain: 2. We will CFRelease twice below.
         CFRetain((__bridge CFTypeRef)maxBuffer);
         CFRetain((__bridge CFTypeRef)sumBuffer);
 
@@ -992,9 +999,10 @@ Java_com_onyxdevtools_ai_compute_MetalComputeBackend_gpuSoftmax(
 
         BOOL success = (commandBuffer.status == MTLCommandBufferStatusCompleted);
 
-        // CRITICAL: Clean up temporary buffers to prevent memory leaks
-        // Since we used CFRetain, we must use CFRelease to properly decrement reference count
+        // Clean up temporary buffers: release both the CFRetain and the original newBuffer ownership.
         CFRelease((__bridge CFTypeRef)maxBuffer);
+        CFRelease((__bridge CFTypeRef)maxBuffer);
+        CFRelease((__bridge CFTypeRef)sumBuffer);
         CFRelease((__bridge CFTypeRef)sumBuffer);
         maxBuffer = nil;
         sumBuffer = nil;

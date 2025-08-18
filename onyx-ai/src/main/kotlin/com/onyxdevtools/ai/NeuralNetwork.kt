@@ -447,7 +447,6 @@ data class NeuralNetwork(
                 scaleAccumulatedGradients(1f / micro)   // handle partial window
                 updateParameters()
                 updates += 1
-                micro = 0
                 probeFn.invoke()
             }
 
@@ -617,7 +616,7 @@ data class NeuralNetwork(
             while (c < C) {
                 sumExp += kotlin.math.exp((logits[r, c] - maxV).toDouble()); c++
             }
-            val logProbT = (logits[r, t] - maxV).toFloat() - ln(sumExp).toFloat()
+            val logProbT = (logits[r, t] - maxV) - ln(sumExp).toFloat()
             loss += (-logProbT)
             r++
         }

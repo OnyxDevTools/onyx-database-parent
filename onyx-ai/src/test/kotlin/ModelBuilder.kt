@@ -269,9 +269,9 @@ fun main() {
 
             model = model.trainStreamingSparse(
                 source = source,
-                batchSize = 2,
+                batchSize = 1,
                 maxEpochs = 1,
-                gradAccumSteps = 64,
+                gradAccumSteps = 256,
                 patience = Int.MAX_VALUE,
                 testFrac = 0.0f,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
