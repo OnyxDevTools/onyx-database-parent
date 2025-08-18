@@ -380,6 +380,9 @@ data class NeuralNetwork(
             var windowTestLoss = 0.0f
             var windowTestSamples = 0
 
+            var windowRunningLoss = 0.0f
+            var windowRunningSamples = 0
+
             var micro = 0
             var updates = 0
 
@@ -396,13 +399,20 @@ data class NeuralNetwork(
                     if (windowTestSamples > 0) {
                         val winAvg = windowTestLoss / windowTestSamples
                         println("$label update $updates  test-loss(window) $winAvg")
-                    } else {
+                    } else if(windowRunningLoss > 0) {
+                        val winAvg = windowRunningLoss / windowRunningSamples
+                        println("$label update $updates  running-loss(window) $winAvg")
+                    }
+                    else {
                         println("$label update $updates  test-loss(window) NA (no test split in window)")
                     }
                 }
                 // reset window counters for the next accumulation window
                 windowTestLoss = 0.0f
                 windowTestSamples = 0
+
+                windowRunningLoss = 0.0f
+                windowRunningSamples = 0
             }
 
             for ((inputSeq, targetSeq) in source()) {
@@ -424,7 +434,11 @@ data class NeuralNetwork(
                     val xTest: Tensor = featureTransforms?.apply(xTestRaw) ?: xTestRaw
                     val yTestFlat: IntArray = yTestRaw.flatMap { it.toList() }.toIntArray()
 
-                    runningTrainLoss += lossFn(predTrain, yTrainFlat) * xTrain.rows
+                    val loss = lossFn(predTrain, yTrainFlat) * xTrain.rows
+
+                    runningTrainLoss += loss
+                    windowTestLoss += loss * xTrain.rows
+                    windowTestSamples += xTrain.rows
 
                     if (xTest.rows > 0) {
                         val predTest = predict(xTest, isTraining = false, skipFeatureTransform = true)
