@@ -211,6 +211,7 @@ class DenseLayer(
     }
 
     companion object {
+        private const val serialVersionUID = 1L
         private const val EPSILON = 1e-8f
     }
 

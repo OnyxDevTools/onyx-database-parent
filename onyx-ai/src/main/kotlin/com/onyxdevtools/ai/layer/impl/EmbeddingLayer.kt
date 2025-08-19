@@ -206,7 +206,10 @@ class EmbeddingLayer(
         }
     }
 
-    companion object { private const val EPSILON = 1e-8f }
+    companion object {
+        private const val EPSILON = 1e-8f
+        private const val serialVersionUID = 1L
+    }
 
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
     private fun readObject(`in`: java.io.ObjectInputStream) {

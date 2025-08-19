@@ -144,4 +144,8 @@ class SwiGLULayer(
         proj2.scaleAccumulatedGradients(f)
         projOut.scaleAccumulatedGradients(f)
     }
+
+    companion object {
+        private const val serialVersionUID = 1L
+    }
 }

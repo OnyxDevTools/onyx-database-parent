@@ -434,4 +434,8 @@ class CachedMultiHeadAttentionLayer(
         gradWValue  = gradWValue ?.let { backend.backend.scalarMultiply(it, f) }
         gradWOutput = gradWOutput?.let { backend.backend.scalarMultiply(it, f) }
     }
+
+    companion object {
+        private const val serialVersionUID = 1L
+    }
 }

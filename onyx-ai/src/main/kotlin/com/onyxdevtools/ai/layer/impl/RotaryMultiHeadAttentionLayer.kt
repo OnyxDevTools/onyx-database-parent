@@ -58,7 +58,8 @@ class RotaryMultiHeadAttentionLayer(
         val curLen: IntArray,
         val scratch: FloatArray
     )
-    private val threadLocalCache = ThreadLocal<KVCache>()
+    @Transient
+    private var threadLocalCache = ThreadLocal<KVCache>()
     private fun currentCache(): KVCache? = threadLocalCache.get()
 
     // RoPE lookup tables: [position][pairIndex]
@@ -692,5 +693,21 @@ class RotaryMultiHeadAttentionLayer(
         gradWKey    = gradWKey   ?.let { backend.backend.scalarMultiply(it, f) }
         gradWValue  = gradWValue ?.let { backend.backend.scalarMultiply(it, f) }
         gradWOutput = gradWOutput?.let { backend.backend.scalarMultiply(it, f) }
+    }
+
+    companion object {
+        private val serialVersionUID = 1L  // optional but recommended
+    }
+
+    @Throws(java.io.IOException::class)
+    private fun writeObject(oos: java.io.ObjectOutputStream) {
+        oos.defaultWriteObject()
+    }
+
+    @Throws(java.io.IOException::class, ClassNotFoundException::class)
+    private fun readObject(ois: java.io.ObjectInputStream) {
+        ois.defaultReadObject()
+        threadLocalCache = ThreadLocal()       // re-init per-thread cache holder
+        computeContext = null                  // let your lazy getter recreate it
     }
 }

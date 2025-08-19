@@ -210,6 +210,7 @@ class LayerNormalizationLayer(
 
     companion object {
         private const val EPSILON = 1e-8f
+        private const val serialVersionUID = 1L
     }
 
     @Throws(java.io.IOException::class, java.lang.ClassNotFoundException::class)
