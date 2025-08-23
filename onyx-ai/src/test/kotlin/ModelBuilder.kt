@@ -16,9 +16,11 @@ val checkpointPath = "/Volumes/onyx/books/model-checkpoint.ser"   // <‑‑ the
 // Add somewhere above train call
 fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
     val qs = listOf(
-        "What are you?",
-        "Who is Alice?",
-        "Who is the White Rabbit?",
+//        "What are you?",
+//        "Who is Alice?",
+//        "Who is the White Rabbit?",
+        "Who is the son of God?",
+        "What are the ten commandments?",
         "Where is Wonderland?",
         "What game does the Queen of Hearts play?",
         "Can you write a hello world program?",
@@ -77,7 +79,7 @@ fun generateCorpusSequence(
     val files = if (shuffleFiles) (rng?.let { allFiles.shuffled(it) } ?: allFiles.shuffled()) else allFiles
 
     // Cache special token IDs
-    val nlId  = vocabulary.getId("\n")
+    val nlId = vocabulary.getId("\n")
     val sotId = vocabulary.getId("[SOT]")
     val eotId = vocabulary.getId("[EOT]")
 
@@ -108,7 +110,7 @@ fun generateCorpusSequence(
             // --- Emit windows. Need +1 for next-token targets ---
             while (buffer.size >= seqLength + 1) {
                 val inp = FloatArray(seqLength) { i -> buffer[i].toFloat() }
-                val tgt = IntArray(seqLength)   { i -> buffer[i + 1] }
+                val tgt = IntArray(seqLength) { i -> buffer[i + 1] }
                 yield(inp to tgt)
 
                 // Slide
@@ -189,18 +191,59 @@ fun main() {
         vocabulary.commit()
     }
 
-    // Parameters
-    val maxSequenceLength = 256
+    // ===== DROP-IN REPLACEMENT: model sizing + stack =====
 
-    // Configure neural network
-    val numHeads = 32
+    // Keep sequence length (context window) separate from model width
+    val seqLen = 256                   // context window for training/inference
+    val dModel = 512                  // embedding/model width (capacity)
+    val numHeads = 8                  // headSize = dModel / numHeads = 64
 
-    fun ffnDim(d: Int) = ((8 * d) / 3).let { ((it + 255) / 256) * 256 } // round up to 256
-    val ffHiddenDim = ffnDim(maxSequenceLength) // e.g., 4096 -> 11008
+    fun ffnDim(d: Int): Int {
+        val raw = (8 * d) / 3          // ~GPT-style MLP multiplier
+        return ((raw + 255) / 256) * 256
+    }
+
+    val ffHiddenDim = ffnDim(dModel)
+
+    // --- Build Transformer ---
+    val blocks = 14
+    val layers = arrayListOf<Layer>(
+        // (vocab -> dModel)
+        EmbeddingLayer(vocabulary.size, dModel)
+    )
+
+    repeat(blocks) {
+        // x = x + Attn(RMSNorm(x))
+        layers.add(
+            ResidualLayer(
+                layers = listOf(
+                    LayerNormalizationLayer(dModel),
+                    RotaryMultiHeadAttentionLayer(
+                        modelSize = dModel,
+                        headCount = numHeads
+                    )
+                )
+            )
+        )
+        // x = x + MLP(RMSNorm(x))
+        layers.add(
+            ResidualLayer(
+                layers = listOf(
+                    LayerNormalizationLayer(dModel),
+                    SwiGLULayer(dModel, ffHiddenDim, dModel)
+                )
+            )
+        )
+    }
+
+    // Final norm + lm_head (dModel -> vocab)
+    layers.add(LayerNormalizationLayer(dModel))
+    layers.add(DenseLayer(dModel, vocabulary.size, Activation.LINEAR))
+
+    // Use seqLen everywhere a *context window* is needed
+    val maxSequenceLength = seqLen  // keep your existing variable name alive if referenced below
+
     var totalProbes = 0
-
-    
-
     val checkProbe = { net: NeuralNetwork ->
 
         if (totalProbes > 2) {
@@ -211,50 +254,24 @@ fun main() {
         println("✅ Saved checkpoint after $totalProbes")
     }
 
-    val underLayers = arrayListOf<Layer>()
-
-    repeat(12) {
-        // Block: x = x + Attn(RMSNorm(x)); x = x + MLP(RMSNorm(x))
-        underLayers.add(ResidualLayer(
-            layers = listOf(
-                LayerNormalizationLayer(maxSequenceLength),
-                RotaryMultiHeadAttentionLayer(
-                    modelSize = maxSequenceLength,
-                    headCount = numHeads,
-                )
-            )
-        ))
-
-        underLayers.add(ResidualLayer(
-           layers = listOf(
-               LayerNormalizationLayer(maxSequenceLength),
-               SwiGLULayer(maxSequenceLength, ffHiddenDim, maxSequenceLength)
-           )
-        ))
+    // Update any calls that used maxSequenceLength as d_model.
+    // For example, training stride calc should use seqLen:
+    fun strideForEpoch(epoch: Int, s: Int): Int = when {
+        epoch < 2 -> s / 4
+        epoch < 5 -> s / 2
+        else -> s
     }
 
-    val layers = arrayListOf<Layer>(
-        EmbeddingLayer(vocabulary.size, maxSequenceLength)
-//        PositionalEncodingLayer(maxSequenceLength, maxSequenceLength)
-    )
-    layers.addAll(underLayers)
-
-    layers.add(
-        LayerNormalizationLayer(maxSequenceLength),
-    )
-    layers.add(
-        DenseLayer(maxSequenceLength, vocabulary.size, Activation.LINEAR)
-    )
 
     var model = NeuralNetwork.loadOrCreate(checkpointPath) {
         // This lambda is only executed when the file does **not** exist
-        NeuralNetwork(layers, learningRate = 0.001f)
+        NeuralNetwork(layers, learningRate = 0.0001f)
     }
 
     // Train the model using sparse streaming training (memory efficient!)
     try {
         val maxEpochs = 200
-        val baseSeed   = 42L                 // any number you like
+        val baseSeed = 42L                 // any number you like
 
         repeat(maxEpochs) { epochIdx ->
             // 1️⃣  Build a *fresh* source for this epoch
@@ -275,7 +292,12 @@ fun main() {
                 testFrac = 0.0f,
                 lossFn = { pred, sparseTargets -> sparseCategoricalCrossEntropy(pred, sparseTargets) },
                 probeFn = { checkProbe(model) },
-                comprehensiveLossFn = ComprehensiveLossFunction(books, vocabulary, maxSequenceLength, strideForEpoch(epochIdx, maxSequenceLength)),
+                comprehensiveLossFn = ComprehensiveLossFunction(
+                    books,
+                    vocabulary,
+                    maxSequenceLength,
+                    strideForEpoch(epochIdx, maxSequenceLength)
+                ),
                 saveModelPath = "/Volumes/onyx/books/onyx-llm-$epochIdx-1.ser"
             )
 
@@ -287,10 +309,4 @@ fun main() {
         println("Training failed with exception: ${e.message}")
         e.printStackTrace()
     }
-}
-
-fun strideForEpoch(epoch: Int, seqLen: Int): Int = when {
-    epoch < 2  -> seqLen / 4   // e.g., 256 when seqLen=1024
-    epoch < 5  -> seqLen / 2   // 512
-    else       -> seqLen       // 1024 (no overlap)
 }
