@@ -24,3 +24,4 @@ gradle.properties
 /target/
 .gradle/
 */.gradle/
+/onyx-ai/property(org.gradle.api.file.Directory, fixed(class org.gradle.api.internal.file.DefaultFilePropertyFactory$FixedDirectory, /Users/tosborn/OnyxWorkspace/onyx-database-parent/onyx-ai/build))/native/lib/libonyx-metal.dylib

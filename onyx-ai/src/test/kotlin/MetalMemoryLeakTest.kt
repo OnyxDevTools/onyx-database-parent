@@ -184,12 +184,4 @@ class MetalMemoryLeakTest {
         // The buffer should be properly released - allow some tolerance for Metal's internal management
         assertTrue("Buffer appears to have leaked: ${leaked / (1024 * 1024)} MB", leaked < 1024 * 1024)
     }
-    
-    companion object {
-        // Helper to access the private metalContext for testing
-        private val MetalComputeBackend.metalContext: Long
-            get() = this::class.java.getDeclaredField("metalContext").apply { 
-                isAccessible = true 
-            }.getLong(this)
-    }
 }

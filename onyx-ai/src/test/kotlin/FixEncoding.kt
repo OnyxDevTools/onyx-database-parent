@@ -10,7 +10,7 @@ fun fixMojibake(s: String): String {
             String(s.toByteArray(Charset.forName("MacRoman")), Charsets.UTF_8),
             )
     // Prefer the version with fewer obvious mojibake markers
-    fun score(t: String) = listOf("â€", "â€™", "Ã", "Â", "‚Ä", "�").sumOf { t.count { ch -> t.contains(it) }.let { it } }
+    fun score(t: String) = listOf("â€", "â€™", "Ã", "Â", "‚Ä", "�").sumOf { t.count { ch -> t.contains(it) } }
     return candidates.minByOrNull(::score) ?: s
 }
 

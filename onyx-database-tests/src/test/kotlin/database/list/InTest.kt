@@ -10,7 +10,6 @@ import org.junit.runners.Parameterized
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 @RunWith(Parameterized::class)
 class InTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(factoryClass) {

@@ -3,7 +3,6 @@ package dev.onyx.ai.layer.impl
 import Activation
 import dev.onyx.ai.Tensor
 import dev.onyx.ai.layer.Layer
-import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**

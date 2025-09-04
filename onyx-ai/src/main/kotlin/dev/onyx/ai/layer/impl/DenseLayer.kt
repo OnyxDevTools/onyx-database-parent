@@ -5,7 +5,6 @@ import dev.onyx.ai.Tensor
 import dev.onyx.ai.layer.Layer
 import dev.onyx.ai.compute.*
 import kotlin.math.sqrt
-import kotlin.random.Random
 
 /**
  * A compute-aware dense layer that demonstrates integration with the compute abstraction layer.
@@ -25,9 +24,9 @@ class DenseLayer(
     val outputSize: Int,
     override val activation: Activation,
     private val dropoutRate: Float = 0.0f,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
+    @Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-    @kotlin.jvm.Transient
+    @Transient
     private var ctx = computeContext
     override var preActivation: Tensor? = null
     override var output: Tensor? = null
@@ -189,7 +188,7 @@ class DenseLayer(
             copy.momentBiases = momentBiases.copyOf()
             copy.velocityBiases = velocityBiases.copyOf()
             copy.preActivation = preActivation?.deepCopy()
-            copy.output = output?.let { it.deepCopy() }
+            copy.output = output?.deepCopy()
             copy.dropoutMask = dropoutMask?.deepCopy()
             copy.gradientWeights = gradientWeights?.deepCopy()
             copy.gradientBiases = gradientBiases?.copyOf()

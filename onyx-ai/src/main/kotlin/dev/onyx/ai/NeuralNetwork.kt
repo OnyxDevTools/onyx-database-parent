@@ -7,7 +7,6 @@ import dev.onyx.ai.layer.Layer
 import dev.onyx.ai.transformation.*
 import dev.onyx.ai.batch.SequentialBatchSplitter
 import dev.onyx.ai.batch.TokenBatchSplitter
-import dev.onyx.ai.layer.impl.RotaryMultiHeadAttentionLayer
 import java.io.*
 import kotlin.apply
 import kotlin.math.min
@@ -250,7 +249,7 @@ data class NeuralNetwork(
 
         repeat(maxEpochs) { epoch ->
             val bx = mutableListOf<FloatArray>()
-            var by = mutableListOf<Tensor>() // keep as sequences of rows, convert later
+            val by = mutableListOf<Tensor>() // keep as sequences of rows, convert later
             var runningTrainLoss = 0.0f
             var runningTestLoss = 0.0f
             var testSamples = 0

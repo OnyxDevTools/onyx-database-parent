@@ -10,7 +10,7 @@ val basicCompute = BasicCPUComputeBackend()
 
 /**
  * Row-major 2D tensor backed by a single FloatArray.
- * - Index like: tensor[i][k]  (row "view" then column)
+ * - Index like: tensor[rows][cols]  (row "view" then column)
  * - Or: tensor[i, k]
  * - Iterates over rows: for (row in tensor) { for (x in row) { ... } }
  * - size == number of rows; columnSize == number of columns
@@ -73,21 +73,6 @@ class Tensor (
         private val base: Tensor,
         private val row: Int
     ) : Iterable<Float> {
-
-        constructor(size: Int, init: () -> Float) : this(
-            Tensor(1, size) { _, _ -> init() },
-            0
-        )
-
-        constructor(size: Int, init: (Int) -> Float) : this(
-            Tensor(1, size) { _, c -> init(c) },
-            0
-        )
-
-        constructor(size: Int, fill: Float) : this(
-            Tensor(1, size) { _, _ -> fill },
-            0
-        )
 
         val size: Int get() = base.cols
         /**
@@ -185,41 +170,6 @@ class Tensor (
             c++
         }
     }
-
-    /**
-     * Extract a contiguous block of columns into a new Tensor.
-     * @param startCol first column index to include
-     * @param numCols number of columns to extract
-     */
-    fun sliceColumns(startCol: Int, numCols: Int): Tensor {
-        require(startCol >= 0 && numCols >= 0 && startCol + numCols <= cols) {
-            "Invalid sliceColumns range: start=$startCol, num=$numCols, cols=$cols"
-        }
-        val result = Tensor(rows, numCols)
-        for (r in 0 until rows) {
-            val srcOff = r * cols + startCol
-            val dstOff = r * numCols
-            System.arraycopy(data, srcOff, result.data, dstOff, numCols)
-        }
-        return result
-    }
-
-    /**
-     * Overwrite a contiguous block of columns with another Tensor's data.
-     * @param startCol first column index to overwrite
-     * @param block Tensor whose dimensions are (rows x block.cols)
-     */
-    fun setColumns(startCol: Int, block: Tensor) {
-        require(block.rows == rows && startCol >= 0 && startCol + block.cols <= cols) {
-            "Invalid setColumns: start=$startCol, block=${block.rows}x${block.cols}, this=${rows}x${cols}"
-        }
-        for (r in 0 until rows) {
-            val dstOff = r * cols + startCol
-            val srcOff = r * block.cols
-            System.arraycopy(block.data, srcOff, data, dstOff, block.cols)
-        }
-    }
-
     // Fill / zero helpers
     fun fill(value: Float) {
         var i = 0
@@ -230,6 +180,7 @@ class Tensor (
         checkRow(row)
         val base = rowOffset(row)
         var c = 0
+
         while (c < cols) { data[base + c] = 0.0f; c++ }
     }
 
@@ -289,7 +240,6 @@ class Tensor (
         @JvmField
         val serialVersionUID: Long = 1L
 
-        fun zeros(rows: Int, cols: Int): Tensor = Tensor(rows, cols)
         fun ones(rows: Int, cols: Int): Tensor {
             val t = Tensor(rows, cols)
             var i = 0

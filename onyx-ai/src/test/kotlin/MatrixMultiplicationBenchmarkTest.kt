@@ -8,7 +8,6 @@ import org.junit.Assume.assumeTrue
 import kotlin.system.measureNanoTime
 import kotlin.random.Random
 import dev.onyx.ai.Tensor
-import kotlin.system.measureNanoTime
 import kotlin.test.Ignore
 
 @Ignore("Benchmark tests are disabled by default. Enable them manually to see the results.")

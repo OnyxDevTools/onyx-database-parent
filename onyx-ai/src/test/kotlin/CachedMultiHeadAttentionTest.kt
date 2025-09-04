@@ -1,4 +1,3 @@
-import Activation
 import dev.onyx.ai.Tensor
 import dev.onyx.ai.layer.impl.CachedMultiHeadAttentionLayer
 import dev.onyx.ai.compute.DefaultComputeContext

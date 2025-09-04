@@ -1,7 +1,7 @@
 import dev.onyx.ai.NeuralNetwork
 import dev.onyx.ai.Tensor
-import dev.onyx.ai.data.SparseSequenceGenerator
 import dev.onyx.ai.data.SequenceGenerator
+import dev.onyx.ai.data.SparseSequenceGenerator
 import dev.onyx.ai.extensions.sparseCategoricalCrossEntropy
 import dev.onyx.ai.generation.chat
 import dev.onyx.ai.layer.impl.*

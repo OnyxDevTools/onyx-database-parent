@@ -5,7 +5,6 @@ import dev.onyx.ai.Tensor
 import dev.onyx.ai.layer.Layer
 import dev.onyx.ai.compute.ComputeContext
 import dev.onyx.ai.compute.DefaultComputeContext
-import java.util.Random
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -13,9 +12,9 @@ import kotlin.math.sqrt
 class EmbeddingLayer(
     private val vocabSize: Int,
     private val embeddingSize: Int,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
+    @Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-    @kotlin.jvm.Transient private var ctx = computeContext
+    @Transient private var ctx = computeContext
 
     override var preActivation: Tensor? = null
     override var output: Tensor? = null

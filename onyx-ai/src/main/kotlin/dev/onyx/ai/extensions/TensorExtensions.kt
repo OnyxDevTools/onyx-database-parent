@@ -1,7 +1,6 @@
 package dev.onyx.ai.extensions
 
 import dev.onyx.ai.Tensor
-import dev.onyx.ai.compute.ComputeBackendFactory
 import kotlin.math.pow
 
 /**

@@ -12,9 +12,9 @@ import kotlin.math.sin
 class PositionalEncodingLayer(
     private val tokensPerSample: Int,
     private val embeddingSize: Int,
-    @kotlin.jvm.Transient private var computeContext: ComputeContext = DefaultComputeContext()
+    @Transient private var computeContext: ComputeContext = DefaultComputeContext()
 ) : Layer {
-    @kotlin.jvm.Transient private var ctx = computeContext
+    @Transient private var ctx = computeContext
 
     override var preActivation: Tensor? = null
     override var output: Tensor? = null

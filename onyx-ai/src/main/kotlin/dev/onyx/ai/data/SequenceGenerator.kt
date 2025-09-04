@@ -1,6 +1,5 @@
 package dev.onyx.ai.data
 
-import dev.onyx.ai.transformation.Vocabulary
 import dev.onyx.ai.Tensor
 
 /**

@@ -89,9 +89,9 @@ class SwiGLULayer(
         outputSize,
         computeContext
     ).also { copy ->
-        copy.proj1 = proj1.clone() as DenseLayer
-        copy.proj2 = proj2.clone() as DenseLayer
-        copy.projOut = projOut.clone() as DenseLayer
+        copy.proj1 = proj1.clone()
+        copy.proj2 = proj2.clone()
+        copy.projOut = projOut.clone()
 
         copy.gateTensor = gateTensor?.deepCopy()
         copy.preActivation = preActivation?.deepCopy()

@@ -21,6 +21,7 @@ import kotlin.math.exp
  * - In-place RoPE rotation (no temp Tensors)
  * - Fused cached-attention using Δ-angle identity (no per-step rotate/alloc)
  */
+@Suppress("LocalVariableName")
 class RotaryMultiHeadAttentionLayer(
     private val modelSize: Int,
     private val headCount: Int,

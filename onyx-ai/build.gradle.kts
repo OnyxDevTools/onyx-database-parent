@@ -17,7 +17,7 @@ kotlin {
 }
 
 // Native library compilation for Metal GPU backend
-val nativeOutputDir = file("$buildDir/native/lib")
+val nativeOutputDir = layout.buildDirectory.dir("native/lib")
 val nativeSourceDir = file("src/main/native/metal")
 
 // Task to build Metal native library on macOS
@@ -27,18 +27,18 @@ val buildMetalLibrary = tasks.register<Exec>("buildMetalLibrary") {
     
     // Only run on macOS
     onlyIf {
-        System.getProperty("os.name").toLowerCase().contains("mac")
+        System.getProperty("os.name").lowercase().contains("mac")
     }
     
     workingDir = nativeSourceDir
     
     // Create output directory
     doFirst {
-        nativeOutputDir.mkdirs()
+        nativeOutputDir.get().asFile.mkdirs()
     }
     
     // Build the native library
-    commandLine("bash", "build.sh", nativeOutputDir.absolutePath)
+    commandLine("bash", "build.sh", nativeOutputDir.get().asFile.absolutePath)
     
     inputs.files(fileTree(nativeSourceDir))
     outputs.dir(nativeOutputDir)
@@ -54,7 +54,7 @@ val copyNativeLibraries = tasks.register<Copy>("copyNativeLibraries") {
     into("src/main/resources/native")
     
     onlyIf {
-        nativeOutputDir.exists() && nativeOutputDir.listFiles()?.isNotEmpty() == true
+        nativeOutputDir.get().asFile.exists() && nativeOutputDir.get().asFile.listFiles()?.isNotEmpty() == true
     }
 }
 
@@ -76,16 +76,14 @@ tasks.withType<Test>().configureEach {
     jvmArgs("--add-modules=jdk.incubator.vector")
     
     // Add native library path for tests
-    systemProperty("java.library.path", 
-        "${System.getProperty("java.library.path")}:${nativeOutputDir.absolutePath}:${file("src/main/resources/native").absolutePath}")
+    systemProperty("java.library.path", "${nativeOutputDir.get().asFile.absolutePath}:${file("src/main/resources/native").absolutePath}")
 }
 
 tasks.withType<JavaExec>().configureEach {
     jvmArgs("--add-modules=jdk.incubator.vector")
     
     // Add native library path for execution
-    systemProperty("java.library.path", 
-        "${System.getProperty("java.library.path")}:${nativeOutputDir.absolutePath}:${file("src/main/resources/native").absolutePath}")
+    systemProperty("java.library.path", "${nativeOutputDir.get().asFile.absolutePath}:${file("src/main/resources/native").absolutePath}")
 }
 
 tasks.withType<JavaCompile>().configureEach {
