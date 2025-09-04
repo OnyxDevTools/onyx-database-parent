@@ -12,7 +12,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(Config.JAVA_VERSION)
+    jvmToolchain(21)
     compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) }
 }
 

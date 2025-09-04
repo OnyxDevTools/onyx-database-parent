@@ -11,7 +11,6 @@ plugins {
 dependencies {
     implementation(project(":onyx-database"))
     implementation(project(":onyx-remote-driver"))
-    implementation("commons-cli:commons-cli:1.3.1")
     implementation("io.ktor:ktor-server-core:${Config.KTOR_VERSION}")
     implementation("io.ktor:ktor-server-netty:${Config.KTOR_VERSION}")
     implementation("io.ktor:ktor-server-websockets:${Config.KTOR_VERSION}")

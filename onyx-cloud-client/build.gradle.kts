@@ -1,6 +1,3 @@
-val ktorVersion = "3.0.3"
-val gsonVersion = "2.8.9"
-val okHttpVersion = "4.12.0"
 
 description = "dev.onyx:onyx-cloud-client"
 
@@ -10,13 +7,13 @@ plugins {
 }
 
 dependencies {
-    implementation("com.squareup.okhttp3:okhttp:$okHttpVersion")
-    implementation("com.google.code.gson:gson:$gsonVersion")
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+    implementation("com.squareup.okhttp3:okhttp:${Config.OK_HTTP_VERSION}")
+    implementation("com.google.code.gson:gson:${Config.GSON_VERSION}")
+    implementation("io.ktor:ktor-client-core:${Config.KTOR_VERSION}")
+    implementation("io.ktor:ktor-client-okhttp:${Config.KTOR_VERSION}")
 
-    api("com.squareup.okhttp3:okhttp:$okHttpVersion")
-    api("io.ktor:ktor-client-okhttp-jvm:3.0.3")
+    api("com.squareup.okhttp3:okhttp:${Config.OK_HTTP_VERSION}")
+    api("io.ktor:ktor-client-okhttp-jvm:${Config.KTOR_VERSION}")
 }
 
 java {

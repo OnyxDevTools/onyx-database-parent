@@ -9,7 +9,6 @@ import com.onyx.persistence.factory.PersistenceManagerFactory
 import com.onyx.persistence.factory.impl.ServerPersistenceManagerFactory
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.network.auth.impl.DefaultAuthenticationManager
-import com.onyx.cli.CommandLineParser
 import com.onyx.network.rmi.OnyxRMIServer
 import com.onyx.interactors.encryption.impl.DefaultEncryptionInteractorInstance
 import com.onyx.interactors.encryption.EncryptionInteractor
@@ -158,33 +157,8 @@ open class DatabaseServer(override val databaseLocation:String) : AbstractDataba
     }
 
     companion object {
-
         const val PERSISTENCE_MANAGER_SERVICE = "1"
         const val AUTHENTICATION_MANAGER_SERVICE = "2"
-
-        /**
-         * Run Database Server Main Method
-         *
-         *
-         * ex:  executable /Database/Location/On/Disk 8080 admin admin
-         *
-         * @param args Command Line Arguments
-         * @throws Exception General Exception
-         * @since 1.0.0
-         */
-        @Suppress("NON_FINAL_MEMBER_IN_OBJECT")
-        @Throws(Exception::class)
-        @JvmStatic
-        open fun main(args: Array<String>) {
-
-            val commandLineParser = CommandLineParser(args)
-            val instance = DatabaseServer(commandLineParser.databaseLocation)
-            commandLineParser.configureDatabaseWithCommandLineOptions(instance)
-
-            instance.start()
-            instance.join()
-        }
-
     }
 }
 

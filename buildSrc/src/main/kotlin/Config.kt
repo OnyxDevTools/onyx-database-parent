@@ -1,5 +1,16 @@
+import org.gradle.api.JavaVersion
+
 object Config {
-    const val KOTLIN_VERSION = "2.1.20"
-    const val JAVA_VERSION = 21
+    // Onyx Version
+    const val ONYX_VERSION = "3.5.3"
+
+    // Took Versions
+    const val JAVA_VERSION = 17
+    val JAVA_TARGET = JavaVersion.VERSION_17
+    const val KOTLIN_VERSION = "2.2.10"
+
+    // 3rd Party Dependencies ( HTTP Client )
     const val KTOR_VERSION = "3.2.3"
+    const val GSON_VERSION = "2.13.1"
+    const val OK_HTTP_VERSION = "5.1.0"
 }

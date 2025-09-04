@@ -12,7 +12,6 @@ dependencies {
     implementation(project(":onyx-remote-database"))
     implementation(project(":onyx-remote-driver"))
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:${Config.KOTLIN_VERSION}")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.1.0")
     testImplementation(kotlin("test"))
 }
 

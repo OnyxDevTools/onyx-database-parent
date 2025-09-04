@@ -26,9 +26,9 @@ dependencies {
 }
 
 group = "dev.onyx"
-version = "3.5.20"
-java.sourceCompatibility = JavaVersion.VERSION_21
-java.targetCompatibility = JavaVersion.VERSION_21
+version = Config.ONYX_VERSION
+java.sourceCompatibility = Config.JAVA_TARGET
+java.targetCompatibility = Config.JAVA_TARGET
 
 java {
     withSourcesJar()
