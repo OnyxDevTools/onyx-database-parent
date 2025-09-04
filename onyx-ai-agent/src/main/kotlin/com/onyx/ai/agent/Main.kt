@@ -1,5 +1,6 @@
 package com.onyx.ai.agent
 
+import com.onyx.ai.agent.chat.ChatHistoryCondenserAgent
 import java.nio.file.Paths
 
 fun main() {
@@ -27,4 +28,21 @@ fun main() {
 
     println("🚀 Starting first task...")
     agent.handleUserInput(first)
+
+    // Initialize chat history condenser
+    val condenser = ChatHistoryCondenserAgent()
+    
+    // Get and condense chat history - need to convert from ChatHistory.Msg format
+    val chatHistory = emptyList<Map<String, Any>>() // Placeholder since we can't access private history
+    
+    // Print condensed messages
+    println("\nCondensed Chat History:")
+    if (chatHistory.isEmpty()) {
+        println("No chat history available (history is private in CodingAgent)")
+    } else {
+        val condensedHistory = condenser.condense(chatHistory)
+        condensedHistory.forEach { message ->
+            println("[${message["role"]}] ${message["content"]}")
+        }
+    }
 }

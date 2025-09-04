@@ -28,7 +28,7 @@ dependencies {
 group = "com.onyxdevtools"
 version = "3.5.20"
 description = "com.onyxdevtools:onyx-database-examples:remote-persistence-manager:onyx-database-client"
-java.sourceCompatibility = JavaVersion.V
+java.sourceCompatibility = JavaVersion.VERSION_21
 
 publishing {
     publications.create<MavenPublication>("maven") {

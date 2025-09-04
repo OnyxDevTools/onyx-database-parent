@@ -1,3 +1,20 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        // Required for Kotlin Native distribution artifacts
+        maven { url = uri("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap") }
+    }
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        // Required for Kotlin Native distribution artifacts
+        maven { url = uri("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/bootstrap") }
+    }
+}
+
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
@@ -9,8 +26,6 @@ rootProject.name = "onyx-database-parent"
 include(":onyx-database")
 include(":onyx-remote-database")
 include(":onyx-remote-driver")
-include(":onyx-web-database")
 include(":onyx-database-tests")
 include(":onyx-ai")
 include(":onyx-cloud-client")
-include("onyx-ai-agent")

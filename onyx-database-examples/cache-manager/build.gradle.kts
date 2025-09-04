@@ -26,7 +26,7 @@ dependencies {
 group = "com.onyxdevtools"
 version = "3.5.20"
 description = "com.onyxdevtools:onyx-database-examples:cache-manager"
-java.sourceCompatibility = JavaVersion.VERSION_17
+java.sourceCompatibility = JavaVersion.VERSION_21
 
 publishing {
     publications.create<MavenPublication>("maven") {

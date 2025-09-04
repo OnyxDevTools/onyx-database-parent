@@ -1,6 +1,7 @@
 package com.onyx.persistence.query
 
 import com.onyx.extension.common.async
+import com.onyx.extension.common.get
 import com.onyx.persistence.IManagedEntity
 import com.onyx.persistence.manager.PersistenceManager
 import com.onyx.persistence.stream.QueryMapStream
@@ -345,6 +346,7 @@ infix fun <T> String.notIn(values: List<T>): QueryCriteria =
 
 @Suppress("FunctionName")
 infix fun <T> String.IN(values: List<T>): QueryCriteria = QueryCriteria(this, QueryCriteriaOperator.IN, values)
+
 infix fun <T> String.gte(value: T): QueryCriteria =
     QueryCriteria(this, QueryCriteriaOperator.GREATER_THAN_EQUAL, value)
 
@@ -419,5 +421,11 @@ fun lower(attribute: String) = "lower($attribute)"
 fun substring(attribute: String, from: Int, length: Int) = "substring($attribute, $from, $length)"
 fun replace(attribute: String, pattern: String, replace: String) = "replace($attribute, '$pattern', '$replace')"
 fun percentile(attribute: String, percent: Double) = "percentile($attribute, $percent)"
+
+// endregion
+
+// region Query Results Extensions
+
+fun List<IManagedEntity>.values(field: String): List<Any> = this.mapNotNull { it.get(field) }
 
 // endregion

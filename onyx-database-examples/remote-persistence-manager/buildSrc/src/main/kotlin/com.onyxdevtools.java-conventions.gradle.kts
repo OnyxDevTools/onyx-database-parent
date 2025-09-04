@@ -20,7 +20,7 @@ dependencies {
 
 group = "com.onyxdevtools"
 version = "3.5.20"
-java.sourceCompatibility = JavaVersion.VERSION_17
+java.sourceCompatibility = JavaVersion.VERSION_21
 
 publishing {
     publications.create<MavenPublication>("maven") {

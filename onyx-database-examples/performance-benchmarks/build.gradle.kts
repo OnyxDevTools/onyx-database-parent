@@ -32,7 +32,7 @@ dependencies {
 group = "com.onyxdevtools"
 version = "1.0"
 description = "com.onyxdevtools:onyx-database-examples:performance-benchmarks"
-java.sourceCompatibility = JavaVersion.VERSION_17
+java.sourceCompatibility = JavaVersion.VERSION_21
 
 publishing {
     publications.create<MavenPublication>("maven") {

@@ -11,7 +11,7 @@ import com.onyxdevtools.ai.transformation.appendToVocabulary
 import kotlin.random.Random
 import java.io.File
 
-val checkpointPath = "/Volumes/onyx/books/model-checkpoint.ser"   // <‑‑ the file you keep saving to
+val checkpointPath = "/Volumes/onyx/books/model-quatro.dat"   // <‑‑ the file you keep saving to
 
 // Add somewhere above train call
 fun askProbes(model: NeuralNetwork, vocab: Vocabulary, seqLen: Int) {
@@ -246,9 +246,9 @@ fun main() {
     var totalProbes = 0
     val checkProbe = { net: NeuralNetwork ->
 
-        if (totalProbes > 2) {
+//        if (totalProbes > 2) {
             askProbes(net, vocabulary, maxSequenceLength)
-        }
+//        }
         totalProbes++
         net.saveToFile(checkpointPath)
         println("✅ Saved checkpoint after $totalProbes")

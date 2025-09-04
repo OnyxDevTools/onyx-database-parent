@@ -1,8 +1,6 @@
 package database.list
 
-import com.onyx.persistence.query.IN
-import com.onyx.persistence.query.from
-import com.onyx.persistence.query.isNull
+import com.onyx.persistence.query.*
 import database.base.PrePopulatedDatabaseTest
 import entities.AllAttributeForFetch
 import entities.NullIndexEntity
@@ -45,6 +43,15 @@ class InTest(override var factoryClass: KClass<*>) : PrePopulatedDatabaseTest(fa
     @Test
     fun testDoubleIn() {
         val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("doubleValue" IN arrayListOf(1.126,1.11)))
+        assertEquals(3, results.size, "Expected 3 results")
+    }
+
+    @Test
+    fun testDoubleInBuilder() {
+        val queryResults = arrayListOf(1.126,1.11).map {
+            AllAttributeForFetch().apply { doubleValue = it }
+        }
+        val results = manager.list<AllAttributeForFetch>(AllAttributeForFetch::class.java, ("doubleValue" `in` queryResults.values("doubleValue")))
         assertEquals(3, results.size, "Expected 3 results")
     }
 
